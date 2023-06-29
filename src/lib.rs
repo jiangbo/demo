@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use futures::channel::oneshot;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -6,6 +7,8 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::console;
 
+#[macro_use]
+mod browser;
 type Context = web_sys::CanvasRenderingContext2d;
 
 #[derive(Deserialize)]
@@ -32,8 +35,8 @@ pub fn main_js() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
     console::log_1(&JsValue::from_str("Hello world!"));
 
-    let window = web_sys::window().unwrap();
-    let document = window.document().unwrap();
+    let window = browser::window().expect("No Window Found");
+    let document = browser::document().expect("No Document Found");
     let canvas = document
         .get_element_by_id("canvas")
         .unwrap()
@@ -91,7 +94,8 @@ pub fn main_js() -> Result<(), JsValue> {
                 )
                 .unwrap();
         }) as Box<dyn FnMut()>);
-        window
+        browser::window()
+            .unwrap()
             .set_interval_with_callback_and_timeout_and_arguments_0(
                 interval_callback.as_ref().unchecked_ref(),
                 50,
