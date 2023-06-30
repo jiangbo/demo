@@ -24,6 +24,7 @@ pub struct WalkTheDog {
     image: Option<web_sys::HtmlImageElement>,
     pub sheet: Option<Sheet>,
     frame: u8,
+    position: engine::Point,
 }
 
 impl WalkTheDog {
@@ -32,6 +33,7 @@ impl WalkTheDog {
             image: None,
             sheet: None,
             frame: 0,
+            position: engine::Point { x: 0, y: 0 },
         }
     }
 }
@@ -39,19 +41,29 @@ impl WalkTheDog {
 impl engine::Game for WalkTheDog {
     async fn initialize(&mut self) -> anyhow::Result<()> {
         let sheet: Sheet = browser::fetch_json("rhb.json").await?.into_serde()?;
-        let image = engine::load_image("rhb.png").await?;
-        // Ok(Box::new(WalkTheDog {
-        //     image: Some(image),
-        //     sheet: Some(sheet),
-        //     frame: self.frame,
-        // }))
-        self.image = Some(image);
-        self.sheet = Some(sheet);
-
-        Ok(())
+        self.image = Some(engine::load_image("rhb.png").await?);
+        Ok(self.sheet = Some(sheet))
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, keystate: &engine::KeyState) {
+        let mut velocity = engine::Point { x: 0, y: 0 };
+        if keystate.is_pressed("ArrowDown") {
+            velocity.y += 3;
+        }
+        if keystate.is_pressed("ArrowUp") {
+            velocity.y -= 3;
+        }
+        if keystate.is_pressed("ArrowRight") {
+            velocity.x += 3;
+        }
+        if keystate.is_pressed("ArrowLeft") {
+            velocity.x -= 3;
+        }
+        if keystate.is_pressed("ArrowLeft") {
+            velocity.x -= 3;
+        }
+        self.position.x += velocity.x;
+        self.position.y += velocity.y;
         if self.frame < 23 {
             self.frame += 1;
         } else {
@@ -83,8 +95,8 @@ impl engine::Game for WalkTheDog {
                     height: sprite.frame.h.into(),
                 },
                 &engine::Rect {
-                    x: 300.0,
-                    y: 300.0,
+                    x: self.position.x.into(),
+                    y: self.position.y.into(),
                     width: sprite.frame.w.into(),
                     height: sprite.frame.h.into(),
                 },
