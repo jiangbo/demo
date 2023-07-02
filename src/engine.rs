@@ -79,7 +79,7 @@ impl GameLoop {
         Ok(())
     }
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Default, Copy)]
 pub struct Point {
     pub x: i16,
     pub y: i16,
@@ -90,7 +90,14 @@ pub struct Rect {
     pub width: f32,
     pub height: f32,
 }
-
+impl Rect {
+    pub fn intersects(&self, rect: &Rect) -> bool {
+        self.x < (rect.x + rect.width)
+            && self.x + self.width > rect.x
+            && self.y < (rect.y + rect.height)
+            && self.y + self.height > rect.y
+    }
+}
 pub struct Renderer {
     context: CanvasRenderingContext2d,
 }
@@ -104,6 +111,7 @@ impl Renderer {
         );
     }
     pub fn draw_image(&self, image: &HtmlImageElement, frame: &Rect, destination: &Rect) {
+        self.draw_rect(destination);
         self.context
             .draw_image_with_html_image_element_and_sw_and_sh_and_dx_and_dy_and_dw_and_dh(
                 image,
@@ -117,6 +125,28 @@ impl Renderer {
                 destination.height.into(),
             )
             .expect("Drawing is throwing exceptions! Unrecoverable error.");
+    }
+    pub fn draw_entire_image(&self, image: &HtmlImageElement, position: &Point) {
+        self.draw_rect(&Rect {
+            x: position.x.into(),
+            y: position.y.into(),
+            width: image.width() as f32,
+            height: image.height() as f32,
+        });
+        self.context
+            .draw_image_with_html_image_element(image, position.x.into(), position.y.into())
+            .expect("Drawing is throwing exceptions! Unrecoverable error.");
+    }
+    pub fn draw_rect(&self, bounding_box: &Rect) {
+        self.context.set_stroke_style(&JsValue::from_str("#FF0000"));
+        self.context.begin_path();
+        self.context.rect(
+            bounding_box.x.into(),
+            bounding_box.y.into(),
+            bounding_box.width.into(),
+            bounding_box.height.into(),
+        );
+        self.context.stroke();
     }
 }
 
@@ -178,5 +208,35 @@ fn process_input(state: &mut KeyState, keyevent_receiver: &mut UnboundedReceiver
                 KeyPress::KeyDown(evt) => state.set_pressed(&evt.code(), evt),
             },
         };
+    }
+}
+pub struct Image {
+    element: HtmlImageElement,
+    position: Point,
+    bounding_box: Rect,
+}
+impl Image {
+    pub fn new(element: HtmlImageElement, position: Point) -> Self {
+        let bounding_box = Rect {
+            x: position.x.into(),
+            y: position.y.into(),
+            width: element.width() as f32,
+            height: element.height() as f32,
+        };
+        Self {
+            element,
+            position,
+            bounding_box,
+        }
+    }
+    pub fn origin(element: HtmlImageElement) -> Self {
+        Image::new(element, Point::default())
+    }
+    pub fn bounding_box(&self) -> &Rect {
+        &self.bounding_box
+    }
+
+    pub fn draw(&self, renderer: &Renderer) {
+        renderer.draw_entire_image(&self.element, &self.position)
     }
 }
