@@ -23,12 +23,12 @@ impl RedHatBoy {
         let sprite = self.current_sprite().expect("Cell not found");
         renderer.draw_image(
             &self.image,
-            &engine::Rect {
-                x: sprite.frame.x.into(),
-                y: sprite.frame.y.into(),
-                width: sprite.frame.w.into(),
-                height: sprite.frame.h.into(),
-            },
+            &engine::Rect::new_from_xy(
+                sprite.frame.x,
+                sprite.frame.y,
+                sprite.frame.w,
+                sprite.frame.h,
+            ),
             &self.destination_box(),
         );
         renderer.draw_rect(&self.bounding_box());
@@ -45,25 +45,26 @@ impl RedHatBoy {
     }
     pub fn destination_box(&self) -> engine::Rect {
         let sprite = self.current_sprite().expect("Cell not found");
-        let x = sprite.sprite_source_size.x as i16;
-        let y = sprite.sprite_source_size.y as i16;
-        engine::Rect {
-            x: (self.state.context().position.x + x).into(),
-            y: (self.state.context().position.y + y).into(),
-            width: sprite.frame.w.into(),
-            height: sprite.frame.h.into(),
-        }
+        engine::Rect::new_from_xy(
+            self.state.context().position.x + sprite.sprite_source_size.x,
+            self.state.context().position.y + sprite.sprite_source_size.y,
+            sprite.frame.w.into(),
+            sprite.frame.h.into(),
+        )
     }
     pub fn bounding_box(&self) -> engine::Rect {
-        const X_OFFSET: f32 = 18.0;
-        const Y_OFFSET: f32 = 14.0;
-        const WIDTH_OFFSET: f32 = 28.0;
-        let mut bounding_box = self.destination_box();
-        bounding_box.x += X_OFFSET;
-        bounding_box.width -= WIDTH_OFFSET;
-        bounding_box.y += Y_OFFSET;
-        bounding_box.height -= Y_OFFSET;
-        bounding_box
+        const X_OFFSET: i16 = 18;
+        const Y_OFFSET: i16 = 14;
+        const WIDTH_OFFSET: i16 = 28;
+        engine::Rect::new_from_xy(
+            self.destination_box().x() + X_OFFSET,
+            self.destination_box().y() + Y_OFFSET,
+            self.destination_box().width - WIDTH_OFFSET,
+            self.destination_box().height - Y_OFFSET,
+        )
+    }
+    pub fn walking_speed(&self) -> i16 {
+        self.state.context().velocity.x
     }
     pub fn pos_y(&self) -> i16 {
         self.state.context().position.y
@@ -84,7 +85,7 @@ impl RedHatBoy {
         self.transition(state::Event::Jump);
     }
 
-    pub fn land_on(&mut self, position: f32) {
+    pub fn land_on(&mut self, position: i16) {
         self.transition(state::Event::Land(position));
     }
 

@@ -6,7 +6,7 @@ mod jump;
 mod over;
 mod run;
 mod slid;
-const RUNNING_SPEED: i16 = 4;
+const RUNNING_SPEED: i16 = 5;
 const GRAVITY: i16 = 1;
 pub const FLOOR: i16 = 479;
 const PLAYER_HEIGHT: i16 = crate::game::HEIGHT - FLOOR;
@@ -17,7 +17,7 @@ pub enum Event {
     Update,
     Jump,
     KnockOut,
-    Land(f32),
+    Land(i16),
 }
 #[derive(Copy, Clone)]
 pub enum RedHatBoyStateMachine {
@@ -114,7 +114,7 @@ impl RedHatBoyContext {
             self.frame = 0;
         }
 
-        self.position.x += self.velocity.x;
+        // self.position.x += self.velocity.x;
         self.position.y += self.velocity.y;
 
         if self.position.y > FLOOR {

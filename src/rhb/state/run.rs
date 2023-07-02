@@ -33,9 +33,9 @@ impl RedHatBoyState<Running> {
             _state: super::fall::Falling {},
         }
     }
-    pub fn land_on(self, position: f32) -> RedHatBoyState<Running> {
+    pub fn land_on(self, position: i16) -> RedHatBoyState<Running> {
         RedHatBoyState {
-            context: self.context.set_on(position as i16),
+            context: self.context.set_on(position),
             _state: Running {},
         }
     }

@@ -26,9 +26,9 @@ impl RedHatBoyState<Sliding> {
             _state: super::run::Running,
         }
     }
-    pub fn land_on(self, position: f32) -> RedHatBoyState<Sliding> {
+    pub fn land_on(self, position: i16) -> RedHatBoyState<Sliding> {
         RedHatBoyState {
-            context: self.context.set_on(position as i16),
+            context: self.context.set_on(position),
             _state: Sliding {},
         }
     }

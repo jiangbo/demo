@@ -24,9 +24,9 @@ impl RedHatBoyState<Jumping> {
             _state: super::fall::Falling {},
         }
     }
-    pub fn land_on(self, position: f32) -> RedHatBoyState<super::run::Running> {
+    pub fn land_on(self, position: i16) -> RedHatBoyState<super::run::Running> {
         RedHatBoyState {
-            context: self.context.reset_frame().set_on(position as i16),
+            context: self.context.reset_frame().set_on(position),
             _state: super::run::Running,
         }
     }
