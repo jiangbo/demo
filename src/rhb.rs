@@ -1,9 +1,9 @@
-use crate::{browser, engine, sheet};
+use crate::{browser, engine};
 
 mod state;
 pub struct RedHatBoy {
     state: state::RedHatBoyStateMachine,
-    sheet: sheet::Sheet,
+    sheet: engine::Sheet,
     image: web_sys::HtmlImageElement,
 }
 
@@ -14,7 +14,7 @@ impl RedHatBoy {
 
         Ok(RedHatBoy {
             state: state::RedHatBoyStateMachine::default(),
-            sheet: json.into_serde::<sheet::Sheet>()?,
+            sheet: json.into_serde::<engine::Sheet>()?,
             image: engine::load_image("rhb.png").await?,
         })
     }
@@ -40,7 +40,7 @@ impl RedHatBoy {
             (self.state.context().frame / 3) + 1
         )
     }
-    fn current_sprite(&self) -> Option<&sheet::Cell> {
+    fn current_sprite(&self) -> Option<&engine::Cell> {
         self.sheet.frames.get(&self.frame_name())
     }
     pub fn destination_box(&self) -> engine::Rect {

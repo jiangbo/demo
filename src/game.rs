@@ -1,7 +1,7 @@
 use gloo_utils::format::JsValueSerdeExt;
 use web_sys::HtmlImageElement;
 
-use crate::{browser, engine, rhb, sheet};
+use crate::{browser, engine, rhb};
 
 pub const HEIGHT: i16 = 600;
 const FIRST_PLATFORM: i16 = 370;
@@ -13,12 +13,12 @@ pub struct Walk {
     platform: Platform,
 }
 struct Platform {
-    sheet: sheet::Sheet,
+    sheet: engine::Sheet,
     image: HtmlImageElement,
     position: engine::Point,
 }
 impl Platform {
-    fn new(sheet: sheet::Sheet, image: HtmlImageElement, position: engine::Point) -> Self {
+    fn new(sheet: engine::Sheet, image: HtmlImageElement, position: engine::Point) -> Self {
         Platform {
             sheet,
             image,
@@ -103,7 +103,7 @@ impl engine::Game for WalkTheDog {
                 let stone = engine::load_image("Stone.png").await?;
                 let platform_sheet = browser::fetch_json("tiles.json").await?;
                 let platform = Platform::new(
-                    platform_sheet.into_serde::<sheet::Sheet>()?,
+                    platform_sheet.into_serde::<engine::Sheet>()?,
                     engine::load_image("tiles.png").await?,
                     engine::Point {
                         x: FIRST_PLATFORM,

@@ -9,6 +9,25 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Mutex};
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, HtmlImageElement, KeyboardEvent};
 
+#[derive(Debug, serde::Deserialize)]
+pub struct SheetRect {
+    pub x: i16,
+    pub y: i16,
+    pub w: i16,
+    pub h: i16,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Cell {
+    pub frame: SheetRect,
+    pub sprite_source_size: SheetRect,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct Sheet {
+    pub frames: std::collections::HashMap<String, Cell>,
+}
 pub async fn load_image(source: &str) -> Result<HtmlImageElement> {
     let image = browser::new_image()?;
     let (complete_tx, complete_rx) = channel::<Result<()>>();
