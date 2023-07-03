@@ -9,10 +9,11 @@ pub fn main_js() -> anyhow::Result<(), wasm_bindgen::JsValue> {
     console_error_panic_hook::set_once();
     log!("hello world");
 
-    Ok(browser::spawn_local(async {
+    browser::spawn_local(async {
         let game = game::WalkTheDog::new();
         engine::GameLoop::start(game)
             .await
             .expect("Could not start game loop");
-    }))
+    });
+    Ok(())
 }

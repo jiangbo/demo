@@ -6,7 +6,7 @@ mod jump;
 mod over;
 mod run;
 mod slid;
-const RUNNING_SPEED: i16 = 5;
+const RUNNING_SPEED: i16 = 4;
 const GRAVITY: i16 = 1;
 pub const FLOOR: i16 = 479;
 const PLAYER_HEIGHT: i16 = crate::game::HEIGHT - FLOOR;
@@ -72,9 +72,9 @@ impl RedHatBoyStateMachine {
     }
     pub fn context(&self) -> &RedHatBoyContext {
         match self {
-            RedHatBoyStateMachine::Idle(state) => &state.context(),
-            RedHatBoyStateMachine::Running(state) => &state.context(),
-            RedHatBoyStateMachine::Sliding(state) => &state.context(),
+            RedHatBoyStateMachine::Idle(state) => state.context(),
+            RedHatBoyStateMachine::Running(state) => state.context(),
+            RedHatBoyStateMachine::Sliding(state) => state.context(),
             RedHatBoyStateMachine::Jumping(state) => state.context(),
             RedHatBoyStateMachine::Falling(state) => state.context(),
             RedHatBoyStateMachine::KnockedOut(state) => state.context(),

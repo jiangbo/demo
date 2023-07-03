@@ -31,7 +31,7 @@ impl RedHatBoy {
             ),
             &self.destination_box(),
         );
-        renderer.draw_rect(&self.bounding_box());
+        renderer.draw_rect(&self.destination_box());
     }
     fn frame_name(&self) -> String {
         format!(
@@ -48,8 +48,8 @@ impl RedHatBoy {
         engine::Rect::new_from_xy(
             self.state.context().position.x + sprite.sprite_source_size.x,
             self.state.context().position.y + sprite.sprite_source_size.y,
-            sprite.frame.w.into(),
-            sprite.frame.h.into(),
+            sprite.frame.w,
+            sprite.frame.h,
         )
     }
     pub fn bounding_box(&self) -> engine::Rect {

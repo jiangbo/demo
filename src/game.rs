@@ -1,5 +1,4 @@
 use gloo_utils::format::JsValueSerdeExt;
-use web_sys::HtmlImageElement;
 
 use crate::{browser, engine, rhb};
 
@@ -9,8 +8,7 @@ const LOW_PLATFORM: i16 = 420;
 pub struct Walk {
     boy: rhb::RedHatBoy,
     backgrounds: [engine::Image; 2],
-    stone: engine::Image,
-    platform: Platform,
+    obstacles: Vec<Box<dyn Obstacle>>,
 }
 impl Walk {
     fn velocity(&self) -> i16 {
@@ -18,45 +16,16 @@ impl Walk {
     }
 }
 struct Platform {
-    sheet: engine::Sheet,
-    image: HtmlImageElement,
+    sheet: engine::SpriteSheet,
     position: engine::Point,
 }
 impl Platform {
-    fn new(sheet: engine::Sheet, image: HtmlImageElement, position: engine::Point) -> Self {
-        Platform {
-            sheet,
-            image,
-            position,
-        }
+    fn new(sheet: engine::SpriteSheet, position: engine::Point) -> Self {
+        Platform { sheet, position }
     }
 
-    fn draw(&self, renderer: &engine::Renderer) {
-        let platform = self
-            .sheet
-            .frames
-            .get("13.png")
-            .expect("13.png does not exist");
-        renderer.draw_image(
-            &self.image,
-            &engine::Rect::new_from_xy(
-                platform.frame.x,
-                platform.frame.y,
-                platform.frame.w * 3,
-                platform.frame.h,
-            ),
-            &self.destination_box(),
-        );
-        for ele in self.bounding_boxes() {
-            renderer.draw_rect(&ele);
-        }
-    }
     pub fn destination_box(&self) -> engine::Rect {
-        let platform = self
-            .sheet
-            .frames
-            .get("13.png")
-            .expect("13.png does not exist");
+        let platform = self.sheet.cell("13.png").expect("13.png does not exist");
         engine::Rect::new_from_xy(
             self.position.x,
             self.position.y,
@@ -90,6 +59,46 @@ impl Platform {
         vec![bounding_box_one, bounding_box_two, bounding_box_three]
     }
 }
+impl Obstacle for Platform {
+    fn move_horizontally(&mut self, x: i16) {
+        self.position.x += x;
+    }
+
+    fn check_intersection(&self, boy: &mut rhb::RedHatBoy) {
+        if let Some(box_to_land_on) = self
+            .bounding_boxes()
+            .iter()
+            .find(|&bounding_box| boy.bounding_box().intersects(bounding_box))
+        {
+            if boy.velocity_y() > 0 && boy.pos_y() < self.position.y {
+                boy.land_on(box_to_land_on.y());
+            } else {
+                boy.knock_out();
+            }
+        }
+    }
+
+    fn draw(&self, renderer: &engine::Renderer) {
+        let platform = self.sheet.cell("13.png").expect("13.png does not exist");
+        let rect = engine::Rect::new_from_xy(
+            platform.frame.x,
+            platform.frame.y,
+            platform.frame.w * 3,
+            platform.frame.h,
+        );
+        self.sheet.draw(renderer, &rect, &self.destination_box());
+        for ele in self.bounding_boxes() {
+            renderer.draw_rect(&ele);
+        }
+    }
+
+    fn right(&self) -> i16 {
+        self.bounding_boxes()
+            .last()
+            .unwrap_or(&engine::Rect::default())
+            .right()
+    }
+}
 pub enum WalkTheDog {
     Loading,
     Loaded(Walk),
@@ -107,12 +116,11 @@ impl engine::Game for WalkTheDog {
                 let stone = engine::load_image("Stone.png").await?;
                 let platform_sheet = browser::fetch_json("tiles.json").await?;
                 let platform = Platform::new(
-                    platform_sheet.into_serde::<engine::Sheet>()?,
-                    engine::load_image("tiles.png").await?,
-                    engine::Point {
-                        x: FIRST_PLATFORM,
-                        y: LOW_PLATFORM,
-                    },
+                    engine::SpriteSheet::new(
+                        platform_sheet.into_serde::<engine::Sheet>()?,
+                        engine::load_image("tiles.png").await?,
+                    ),
+                    engine::Point { x: 200, y: 400 },
                 );
                 let background = engine::load_image("BG.png").await?;
                 let point = engine::Point {
@@ -126,10 +134,16 @@ impl engine::Game for WalkTheDog {
                 let walk = Walk {
                     boy: rhb::RedHatBoy::new().await?,
                     backgrounds,
-                    stone: engine::Image::new(stone, engine::Point { x: 150, y: 546 }),
-                    platform,
+                    obstacles: vec![
+                        Box::new(Barrier::new(engine::Image::new(
+                            stone,
+                            engine::Point { x: 150, y: 546 },
+                        ))),
+                        Box::new(platform),
+                    ],
                 };
-                Ok(*self = WalkTheDog::Loaded(walk))
+                *self = WalkTheDog::Loaded(walk);
+                Ok(())
             }
             WalkTheDog::Loaded(_) => Err(anyhow::anyhow!("Error: Game is initialized!")),
         }
@@ -146,25 +160,8 @@ impl engine::Game for WalkTheDog {
             if keystate.is_pressed("Space") {
                 walk.boy.jump();
             }
-            for bounding_box in &walk.platform.bounding_boxes() {
-                if walk.boy.bounding_box().intersects(bounding_box) {
-                    if walk.boy.velocity_y() > 0 && walk.boy.pos_y() < walk.platform.position.y {
-                        walk.boy.land_on(bounding_box.y());
-                    } else {
-                        walk.boy.knock_out();
-                    }
-                }
-            }
-            if walk
-                .boy
-                .bounding_box()
-                .intersects(walk.stone.bounding_box())
-            {
-                walk.boy.knock_out();
-            }
+
             walk.boy.update();
-            walk.platform.position.x += walk.velocity();
-            walk.stone.move_horizontally(walk.velocity());
             let velocity = walk.velocity();
             let [first_background, second_background] = &mut walk.backgrounds;
             first_background.move_horizontally(velocity);
@@ -175,8 +172,10 @@ impl engine::Game for WalkTheDog {
             if second_background.right() < 0 {
                 second_background.set_x(first_background.right());
             }
-            walk.backgrounds.iter_mut().for_each(|background| {
-                background.move_horizontally(velocity);
+            walk.obstacles.retain(|obstacle| obstacle.right() > 0);
+            walk.obstacles.iter_mut().for_each(|obstacle| {
+                obstacle.move_horizontally(velocity);
+                obstacle.check_intersection(&mut walk.boy);
             });
         }
     }
@@ -191,8 +190,42 @@ impl engine::Game for WalkTheDog {
                 background.draw(renderer);
             });
             walk.boy.draw(renderer);
-            walk.stone.draw(renderer);
-            walk.platform.draw(renderer);
+            walk.obstacles.iter().for_each(|obstacle| {
+                obstacle.draw(renderer);
+            });
         }
+    }
+}
+pub trait Obstacle {
+    fn check_intersection(&self, boy: &mut rhb::RedHatBoy);
+    fn draw(&self, renderer: &engine::Renderer);
+    fn move_horizontally(&mut self, x: i16);
+    fn right(&self) -> i16;
+}
+pub struct Barrier {
+    image: engine::Image,
+}
+impl Barrier {
+    pub fn new(image: engine::Image) -> Self {
+        Barrier { image }
+    }
+}
+impl Obstacle for Barrier {
+    fn check_intersection(&self, boy: &mut rhb::RedHatBoy) {
+        if boy.bounding_box().intersects(self.image.bounding_box()) {
+            boy.knock_out()
+        }
+    }
+
+    fn draw(&self, renderer: &engine::Renderer) {
+        self.image.draw(renderer);
+    }
+
+    fn move_horizontally(&mut self, x: i16) {
+        self.image.move_horizontally(x);
+    }
+
+    fn right(&self) -> i16 {
+        self.image.right()
     }
 }

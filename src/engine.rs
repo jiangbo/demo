@@ -28,6 +28,23 @@ pub struct Cell {
 pub struct Sheet {
     pub frames: std::collections::HashMap<String, Cell>,
 }
+pub struct SpriteSheet {
+    sheet: Sheet,
+    image: HtmlImageElement,
+}
+
+impl SpriteSheet {
+    pub fn new(sheet: Sheet, image: HtmlImageElement) -> Self {
+        SpriteSheet { sheet, image }
+    }
+    pub fn cell(&self, name: &str) -> Option<&Cell> {
+        self.sheet.frames.get(name)
+    }
+    pub fn draw(&self, renderer: &Renderer, source: &Rect, destination: &Rect) {
+        renderer.draw_image(&self.image, source, destination);
+    }
+}
+
 pub async fn load_image(source: &str) -> Result<HtmlImageElement> {
     let image = browser::new_image()?;
     let (complete_tx, complete_rx) = channel::<Result<()>>();
@@ -103,6 +120,7 @@ pub struct Point {
     pub x: i16,
     pub y: i16,
 }
+#[derive(Default)]
 pub struct Rect {
     pub position: Point,
     pub width: i16,
@@ -240,7 +258,7 @@ impl KeyState {
         self.pressed_keys.insert(code.into(), event);
     }
     fn set_released(&mut self, code: &str) {
-        self.pressed_keys.remove(code.into());
+        self.pressed_keys.remove(code);
     }
 }
 fn process_input(state: &mut KeyState, keyevent_receiver: &mut UnboundedReceiver<KeyPress>) {
@@ -257,7 +275,6 @@ fn process_input(state: &mut KeyState, keyevent_receiver: &mut UnboundedReceiver
 }
 pub struct Image {
     element: HtmlImageElement,
-    position: Point,
     bounding_box: Rect,
 }
 impl Image {
@@ -269,7 +286,6 @@ impl Image {
         };
         Self {
             element,
-            position,
             bounding_box,
         }
     }
@@ -278,16 +294,15 @@ impl Image {
     }
 
     pub fn draw(&self, renderer: &Renderer) {
-        renderer.draw_entire_image(&self.element, &self.position)
+        renderer.draw_entire_image(&self.element, &self.bounding_box.position)
     }
     pub fn move_horizontally(&mut self, distance: i16) {
-        self.set_x(self.position.x + distance);
+        self.set_x(self.bounding_box.x() + distance);
     }
     pub fn set_x(&mut self, x: i16) {
         self.bounding_box.set_x(x);
-        self.position.x = x;
     }
     pub fn right(&self) -> i16 {
-        self.bounding_box.x() + self.bounding_box.width
+        self.bounding_box.right()
     }
 }
