@@ -8,11 +8,16 @@
  * {a, b} = {in, 0} if sel == 0
  *          {0, in} if sel == 1
  */
-
+/** Sets a = (in And (Not(sel))) */
+/** Sets b = (in And sel) */
 CHIP DMux {
     IN in, sel;
     OUT a, b;
 
     PARTS:
     // Put your code here:
+    Not(in = sel, out = Notsel);
+    And(a = in, b = Notsel, out = a);
+    
+    And(a = in, b = sel, out = b);
 }

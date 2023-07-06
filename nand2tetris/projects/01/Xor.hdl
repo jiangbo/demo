@@ -7,18 +7,18 @@
  * Exclusive-or gate:
  * out = not (a == b)
  */
-
+/** Sets out = (a And Not(b)) Or (Not(a) And b)) */
 CHIP Xor {
     IN a, b;
     OUT out;
 
     PARTS:
     // Put your code here:
-    Not(in=b,out=nb);
-    And(a=a,b=nb,out=c);
+    Not(in = b, out = Notb);
+    And(a = a, b = Notb, out = aAndNotb);
 
-    Not(in=a,out=na);
-    And(a=na,b=b,out=d);
-    
-    Or(a=c,b=d,out=out);
+    Not(in = a, out = Nota);
+    And(a = Nota, b = b, out = NotaAndb);
+
+    Or(a = aAndNotb, b = NotaAndb, out = out);
 }

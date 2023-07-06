@@ -7,12 +7,12 @@
  * Not gate:
  * out = not in
  */
-
+/** Sets out = in Nand in */
 CHIP Not {
     IN in;
     OUT out;
 
     PARTS:
     // Put your code here:
-    Nand(a=in,b=in,out=out);
+    Nand(a = in, b = in, out = out);
 }

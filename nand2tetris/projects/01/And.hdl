@@ -8,13 +8,13 @@
  * out = 1 if (a == 1 and b == 1)
  *       0 otherwise
  */
-
+/** Sets out = Not(a Nand b) */
 CHIP And {
     IN a, b;
     OUT out;
 
     PARTS:
     // Put your code here:
-    Nand(a=a,b=b,out=c);
-    Not(in=c,out=out);
+    Nand(a = a, b = b, out=aNandb);
+    Not(in = aNandb, out = out);
 }
