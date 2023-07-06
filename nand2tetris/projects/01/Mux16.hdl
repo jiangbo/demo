@@ -8,7 +8,7 @@
  * for i = 0..15 out[i] = a[i] if sel == 0 
  *                        b[i] if sel == 1
  */
-/** Sets out[x] = Mux(a = [x], b = [x]) */
+/** Sets out[x] = Mux(a = [x], b = [x], sel = sel) */
 CHIP Mux16 {
     IN a[16], b[16], sel;
     OUT out[16];
