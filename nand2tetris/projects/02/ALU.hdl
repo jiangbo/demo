@@ -42,5 +42,26 @@ CHIP ALU {
         ng; // 1 if (out < 0),  0 otherwise
 
     PARTS:
-   // Put you code here:
+    // Put you code here:
+    /** 处理输入 x */
+    Mux16(a = x, b = false, sel = zx, out = xOr0);
+    Not16(in = xOr0, out = znx);
+    Mux16(a = xOr0, b = znx, sel = nx, out = x1);
+    /** 处理输入 y */
+    Mux16(a = y, b = false, sel = zy, out = yOr0);
+    Not16(in = yOr0, out = zny);
+    Mux16(a = yOr0, b = zny, sel = ny, out = y1);
+    /** 根据函数不同，选择布尔或者算数逻辑 */
+    Add16(a = x1, b = y1, out = sum);
+    And16(a = x1, b = y1, out = and);
+    Mux16(a = and, b = sum, sel = f, out = o);
+    /** 取反和输出out和符号 */
+    Not16(in = o, out = noto);
+    Mux16(a = o, b = noto, sel = no, out = out, out[15] = ng,
+        out[0..7] = low, out[8..15] = high);
+    /** 判断是否为 0 */
+    Or8Way(in = low, out = a);
+    Or8Way(in = high, out = b);
+    Or(a = a, b = b, out = nzr);
+    Not(in = nzr, out = zr);
 }
