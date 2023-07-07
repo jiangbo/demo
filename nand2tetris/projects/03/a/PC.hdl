@@ -17,4 +17,15 @@ CHIP PC {
 
     PARTS:
     // Put your code here:
+    /** 如果inc为1，将之前输出的值加1 */
+    Inc16(in = ao, out = o);
+    Mux16(a = ao, b = o, sel = inc, out = o1);
+    
+    /** 如果load为1，从输入读取地址 */
+    Mux16(a = o1, b = in, sel = load, out = o2);
+    /** 如果reset为1，从直接为0 */
+    Mux16(a = o2, b = false, sel = reset, out = o3);
+
+    /** 使用寄存器保存之前的值 */
+    Register(in = o3, load = true, out = out, out = ao);
 }
