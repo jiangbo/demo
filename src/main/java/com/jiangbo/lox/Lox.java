@@ -23,7 +23,7 @@ public class Lox {
         // } else {
         //     runPrompt();
         // }
-
+        // 根据实际情况填写
         runFile("C:\\work\\workspace\\demo\\src\\main\\java\\com\\jiangbo\\lox\\test.lox");
     }
 
