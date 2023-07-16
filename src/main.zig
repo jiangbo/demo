@@ -1,59 +1,29 @@
 const std = @import("std");
-const exec = @import("parsexec.zig");
-const location = @import("location.zig");
-const noun = @import("noun.zig");
-const print = std.debug.print;
-
-fn getInput(reader: anytype, buffer: []u8) !?[]const u8 {
-    if (try reader.readUntilDelimiterOrEof(buffer, '\n')) |input| {
-        if (@import("builtin").os.tag == .windows) {
-            return std.mem.trimRight(u8, input, "\r");
-        }
-        return input;
-    }
-    return null;
-}
+const c = @cImport({
+    @cInclude("SDL.h");
+});
 
 pub fn main() !void {
-    print("Welcome to Little Cave Adventure.\n", .{});
-    const reader = std.io.getStdIn().reader();
-    var buffer: [100]u8 = undefined;
+    _ = c.SDL_Init(c.SDL_INIT_VIDEO);
+    defer c.SDL_Quit();
 
-    while (true) {
-        print("--> ", .{});
-        var input = try getInput(reader, buffer[0..]) orelse continue;
-        if (std.mem.eql(u8, input, "quit")) {
-            break;
+    var window = c.SDL_CreateWindow("蒋波", c.SDL_WINDOWPOS_CENTERED, c.SDL_WINDOWPOS_CENTERED, 640, 400, 0);
+    defer c.SDL_DestroyWindow(window);
+
+    var renderer = c.SDL_CreateRenderer(window, 0, c.SDL_RENDERER_PRESENTVSYNC);
+    defer c.SDL_DestroyRenderer(renderer);
+
+    mainloop: while (true) {
+        var sdl_event: c.SDL_Event = undefined;
+        while (c.SDL_PollEvent(&sdl_event) != 0) {
+            switch (sdl_event.type) {
+                c.SDL_QUIT => break :mainloop,
+                else => {},
+            }
         }
-        exec.parseAndExecute(input);
+
+        _ = c.SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
+        _ = c.SDL_RenderClear(renderer);
+        c.SDL_RenderPresent(renderer);
     }
-
-    print("\nBye!\n", .{});
 }
-
-// const std = @import("std");
-
-// pub const Object = struct {
-//     desc: []const u8,
-//     tag: []const u8,
-//     location: ?*const Object = null,
-// };
-
-// pub const objs0 = Object{ .desc = "an open field", .tag = "field" };
-// pub const objs1 = Object{ .desc = "a little cave", .tag = "cave" };
-// pub const objs = [_]Object{
-//     objs0,
-//     objs1,
-//     .{ .desc = "a silver coin", .tag = "silver", .location = &objs0 },
-//     .{ .desc = "a gold coin", .tag = "gold", .location = &objs1 },
-//     .{ .desc = "a burly guard", .tag = "guard", .location = &objs0 },
-//     .{ .desc = "yourself", .tag = "yourself", .location = &objs0 },
-// };
-
-// pub fn main() !void {
-//     if (&objs[0] == objs[2].location.?) {
-//         std.debug.print("eq", .{});
-//     } else {
-//         std.debug.print("neq", .{});
-//     }
-// }

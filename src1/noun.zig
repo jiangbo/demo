@@ -8,7 +8,7 @@ fn objectHasTag(obj: *const object.Object, noun: ?[]const u8) bool {
     return std.mem.eql(u8, tag, obj.tag);
 }
 
-fn getObject(noun: []const u8) ?*object.Object {
+fn getObject(noun: []const u8) ?*const object.Object {
     for (object.objs) |obj| {
         if (objectHasTag(&obj, noun)) {
             return &obj;
@@ -24,17 +24,17 @@ pub fn getVisible(intention: []const u8, noun: []const u8) ?*object.Object {
         return null;
     }
 
-    const obj = o.?;
+    var obj = o.?;
     const player = object.player;
     if (!(obj == player or obj != player.location or
         obj.location == player or
         obj.location == player.location or
         obj.location == null or
-        obj.location.location == player or
-        obj.location.location == player.location))
+        obj.location.?.location == player or
+        obj.location.?.location == player.location))
     {
         print("You don't see any {s} here.\n", .{noun});
-        obj = null;
+        return null;
     }
     return obj;
 }
