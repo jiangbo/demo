@@ -1,6 +1,5 @@
 const std = @import("std");
 const world = @import("world.zig");
-const getVisible = @import("noun.zig").getVisible;
 const print = std.debug.print;
 
 pub fn executeLook(input: ?[]const u8) bool {
@@ -21,8 +20,9 @@ pub fn lookAround() bool {
 pub fn executeGo(input: ?[]const u8) bool {
     const noun = input orelse return false;
 
-    var item = world.getItem(noun) orelse return false;
-    if (item.isLocation() and item.isPlayerNotIn()) {
+    const intention = "where you want to go";
+    var item = world.getVisible(intention, noun) orelse return true;
+    if (item.isLocation() and !item.isPlayerIn()) {
         print("OK.\n", .{});
         world.player.location = item;
         return lookAround();
@@ -36,8 +36,8 @@ pub fn executeGo(input: ?[]const u8) bool {
 
 fn listAtLocation(location: *const world.Item) void {
     var count: i32 = 0;
-    for (world.items) |item| {
-        if (item.isNotPlayer() and item.isLocate(location)) {
+    for (world.items) |*item| {
+        if (!item.isPlayer() and item.isLocate(location)) {
             if (count == 0) {
                 print("You see:\n", .{});
             }

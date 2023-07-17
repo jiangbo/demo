@@ -8,20 +8,28 @@ pub const Item = struct {
     type: Type,
     location: ?*const Item = null,
 
-    pub fn isNotPlayer(self: *const Item) bool {
-        return self.type != .player;
+    pub fn isPlayer(self: *const Item) bool {
+        return self.type == .player;
     }
 
     pub fn isLocation(self: *const Item) bool {
-        return self.type == .field or self.type == .cave;
+        return self.location == null;
     }
 
     pub fn isLocate(self: *const Item, location: *const Item) bool {
         return self.location == location;
     }
 
-    pub fn isPlayerNotIn(self: *const Item) bool {
-        return self != player.location.?;
+    pub fn isPlayerIn(self: *const Item) bool {
+        return self == player.location;
+    }
+
+    pub fn isPlayerItem(self: *const Item) bool {
+        return self.location == player;
+    }
+
+    pub fn isWithPlayer(self: *const Item) bool {
+        return self.isLocate(player.location.?);
     }
 };
 
@@ -45,6 +53,26 @@ pub fn getItem(noun: []const u8) ?*const Item {
             return value;
         }
     }
+    return null;
+}
+
+pub fn getVisible(intention: []const u8, noun: []const u8) ?*const Item {
+    const oitem = getItem(noun);
+    if (oitem == null) {
+        print("I don't understand {s}.\n", .{intention});
+        return null;
+    }
+    const item = oitem.?;
+    if (item.isPlayer() or item.isPlayerIn() or item.isPlayerItem() or
+        //
+        item.isWithPlayer() or item.isLocation() or
+        //
+        item.location.?.isPlayerItem() or item.location.?.isWithPlayer())
+    {
+        return item;
+    }
+
+    print("You don't see any {s} here.\n", .{noun});
     return null;
 }
 
