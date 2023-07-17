@@ -1,5 +1,5 @@
 const std = @import("std");
-const object = @import("object.zig");
+const object = @import("world.zig");
 
 const print = std.debug.print;
 

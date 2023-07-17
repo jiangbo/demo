@@ -1,29 +1,51 @@
 const std = @import("std");
-const c = @cImport({
-    @cInclude("SDL.h");
-});
+const location = @import("location.zig");
+const world = @import("world.zig");
+const print = std.debug.print;
 
 pub fn main() !void {
-    _ = c.SDL_Init(c.SDL_INIT_VIDEO);
-    defer c.SDL_Quit();
+    world.init();
+    print("Welcome to Little Cave Adventure.\n", .{});
+    const reader = std.io.getStdIn().reader();
+    var buffer: [100]u8 = undefined;
+    _ = location.lookAround();
 
-    var window = c.SDL_CreateWindow("蒋波", c.SDL_WINDOWPOS_CENTERED, c.SDL_WINDOWPOS_CENTERED, 640, 400, 0);
-    defer c.SDL_DestroyWindow(window);
-
-    var renderer = c.SDL_CreateRenderer(window, 0, c.SDL_RENDERER_PRESENTVSYNC);
-    defer c.SDL_DestroyRenderer(renderer);
-
-    mainloop: while (true) {
-        var sdl_event: c.SDL_Event = undefined;
-        while (c.SDL_PollEvent(&sdl_event) != 0) {
-            switch (sdl_event.type) {
-                c.SDL_QUIT => break :mainloop,
-                else => {},
-            }
+    while (true) {
+        print("--> ", .{});
+        var input = try getInput(reader, buffer[0..]) orelse continue;
+        if (std.mem.eql(u8, input, "quit")) {
+            break;
         }
+        parseAndExecute(input);
+    }
 
-        _ = c.SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
-        _ = c.SDL_RenderClear(renderer);
-        c.SDL_RenderPresent(renderer);
+    print("\nBye!\n", .{});
+}
+
+fn getInput(reader: anytype, buffer: []u8) !?[]const u8 {
+    if (try reader.readUntilDelimiterOrEof(buffer, '\n')) |input| {
+        if (@import("builtin").os.tag == .windows) {
+            return std.mem.trimRight(u8, input, "\r");
+        }
+        return input;
+    }
+    return null;
+}
+
+pub fn parseAndExecute(input: []const u8) void {
+    var iterator = std.mem.split(u8, input, " ");
+    const verb = iterator.next() orelse return;
+    const noun = iterator.next();
+
+    if (std.mem.eql(u8, verb, "look")) {
+        if (!location.executeLook(noun)) {
+            print("I don't understand what you want to see.\n", .{});
+        }
+    } else if (std.mem.eql(u8, verb, "go")) {
+        if (!location.executeGo(noun)) {
+            print("I don't understand where you want to go.\n", .{});
+        }
+    } else {
+        print("I don't know how to {s}.\n", .{verb});
     }
 }
