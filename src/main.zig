@@ -1,7 +1,7 @@
 const std = @import("std");
 const location = @import("location.zig");
 const world = @import("world.zig");
-const invertory = @import("inventory.zig");
+const inventory = @import("inventory.zig");
 const print = std.debug.print;
 
 pub fn main() !void {
@@ -47,15 +47,15 @@ pub fn parseAndExecute(input: []const u8) void {
             print("I don't understand where you want to go.\n", .{});
         }
     } else if (std.mem.eql(u8, verb, "get")) {
-        invertory.executeGet(noun);
+        inventory.executeGet(noun);
     } else if (std.mem.eql(u8, verb, "drop")) {
-        invertory.executeDrop(noun);
+        inventory.executeDrop(noun);
     } else if (std.mem.eql(u8, verb, "give")) {
-        invertory.executeGive(noun);
+        inventory.executeGive(noun);
     } else if (std.mem.eql(u8, verb, "ask")) {
-        invertory.executeAsk(noun);
+        inventory.executeAsk(noun);
     } else if (std.mem.eql(u8, verb, "inventory")) {
-        invertory.executeInventory();
+        inventory.executeInventory();
     } else {
         print("I don't know how to {s}.\n", .{verb});
     }
