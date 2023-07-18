@@ -6,29 +6,29 @@ const Type = enum { field, cave, silver, gold, guard, player };
 pub const Item = struct {
     desc: []const u8,
     type: Type,
-    location: ?*const Item = null,
+    location: ?*Item = null,
 
-    pub fn isPlayer(self: *const Item) bool {
+    pub fn isPlayer(self: *Item) bool {
         return self.type == .player;
     }
 
-    pub fn isLocation(self: *const Item) bool {
+    pub fn isLocation(self: *Item) bool {
         return self.location == null;
     }
 
-    pub fn isLocate(self: *const Item, location: *const Item) bool {
+    pub fn isLocate(self: *Item, location: *Item) bool {
         return self.location == location;
     }
 
-    pub fn isPlayerIn(self: *const Item) bool {
+    pub fn isPlayerIn(self: *Item) bool {
         return self == player.location;
     }
 
-    pub fn isPlayerItem(self: *const Item) bool {
+    pub fn isPlayerItem(self: *Item) bool {
         return self.location == player;
     }
 
-    pub fn isWithPlayer(self: *const Item) bool {
+    pub fn isWithPlayer(self: *Item) bool {
         return self.isLocate(player.location.?);
     }
 };
@@ -46,7 +46,7 @@ fn toType(noun: []const u8) ?Type {
     return std.meta.stringToEnum(Type, noun);
 }
 
-pub fn getItem(noun: []const u8) ?*const Item {
+pub fn getItem(noun: []const u8) ?*Item {
     const itemType = toType(noun) orelse return null;
     for (items) |*value| {
         if (value.type == itemType) {
@@ -56,7 +56,7 @@ pub fn getItem(noun: []const u8) ?*const Item {
     return null;
 }
 
-pub fn getVisible(intention: []const u8, noun: []const u8) ?*const Item {
+pub fn getVisible(intention: []const u8, noun: []const u8) ?*Item {
     const oitem = getItem(noun);
     if (oitem == null) {
         print("I don't understand {s}.\n", .{intention});

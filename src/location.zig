@@ -34,7 +34,7 @@ pub fn executeGo(input: ?[]const u8) bool {
     return false;
 }
 
-fn listAtLocation(location: *const world.Item) void {
+fn listAtLocation(location: *world.Item) void {
     var count: i32 = 0;
     for (world.items) |*item| {
         if (!item.isPlayer() and item.isLocate(location)) {

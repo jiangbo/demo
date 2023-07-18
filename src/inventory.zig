@@ -4,7 +4,7 @@
 
 // pub fn  executeGet(noun :[] const u8) void
 // {
-//    OBJECT *obj = getVisible("what you want to get", noun);
+//    OBJECT *obj = world.getVisible("what you want to get", noun);
 //    if (obj == NULL)
 //    {
 //       // already handled by getVisible
