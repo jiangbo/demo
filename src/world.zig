@@ -28,6 +28,11 @@ pub const Item = struct {
         return self.location == player;
     }
 
+    pub fn isNpcItem(self: *Item) bool {
+        const location = self.location orelse return false;
+        return location.type == .guard;
+    }
+
     pub fn isWithPlayer(self: *Item) bool {
         return self.isLocate(player.location.?);
     }
@@ -42,13 +47,13 @@ pub var items = [_]Item{
     .{ .desc = "yourself", .type = .player },
 };
 
-fn toType(noun: []const u8) ?Type {
-    return std.meta.stringToEnum(Type, noun);
+fn toType(noun: ?[]const u8) ?Type {
+    return std.meta.stringToEnum(Type, noun orelse return null);
 }
 
-pub fn getItem(noun: []const u8) ?*Item {
+pub fn getItem(noun: ?[]const u8) ?*Item {
     const itemType = toType(noun) orelse return null;
-    for (items) |*value| {
+    for (&items) |*value| {
         if (value.type == itemType) {
             return value;
         }
@@ -56,7 +61,36 @@ pub fn getItem(noun: []const u8) ?*Item {
     return null;
 }
 
-pub fn getVisible(intention: []const u8, noun: []const u8) ?*Item {
+pub fn moveItem(from: *Item, to: ?*Item) void {
+    if (to == null) {
+        return print("There is nobody here to give that to.\n", .{});
+    }
+
+    if (from.isLocation()) {
+        return print("That is way too heavy.\n", .{});
+    }
+
+    describeMove(from, to.?);
+    from.location = to;
+}
+
+fn describeMove(from: *Item, to: *Item) void {
+    if (to == player.location) {
+        print("You drop {s}.\n", .{from.desc});
+    } else if (to != player) {
+        if (to.type == .guard) {
+            print("You give {s} to {s}.\n", .{ from.desc, to.desc });
+        } else {
+            print("You put {s} in {s}.\n", .{ from.desc, to.desc });
+        }
+    } else if (from.isWithPlayer()) {
+        print("You pick up {s}.\n", .{from.desc});
+    } else {
+        print("You get {s} from {s}.\n", .{ from.desc, from.location.?.desc });
+    }
+}
+
+pub fn getVisible(intention: []const u8, noun: ?[]const u8) ?*Item {
     const oitem = getItem(noun);
     if (oitem == null) {
         print("I don't understand {s}.\n", .{intention});
@@ -72,7 +106,7 @@ pub fn getVisible(intention: []const u8, noun: []const u8) ?*Item {
         return item;
     }
 
-    print("You don't see any {s} here.\n", .{noun});
+    print("You don't see any {s} here.\n", .{noun.?});
     return null;
 }
 

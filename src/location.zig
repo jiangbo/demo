@@ -36,7 +36,7 @@ pub fn executeGo(input: ?[]const u8) bool {
 
 fn listAtLocation(location: *world.Item) void {
     var count: i32 = 0;
-    for (world.items) |*item| {
+    for (&world.items) |*item| {
         if (!item.isPlayer() and item.isLocate(location)) {
             if (count == 0) {
                 print("You see:\n", .{});
