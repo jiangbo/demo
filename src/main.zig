@@ -48,14 +48,14 @@ pub fn parseAndExecute(input: []const u8) void {
         }
     } else if (std.mem.eql(u8, verb, "get")) {
         invertory.executeGet(noun);
-        // } else if (std.mem.eql(u8, verb, "drop")) {
-        //     invertory.executeDrop(noun);
-        // } else if (std.mem.eql(u8, verb, "give")) {
-        //     invertory.executeGive(noun);
-        // } else if (std.mem.eql(u8, verb, "ask")) {
-        //     invertory.executeAsk(noun);
-        // } else if (std.mem.eql(u8, verb, "inventory")) {
-        //     invertory.executeInventory();
+    } else if (std.mem.eql(u8, verb, "drop")) {
+        invertory.executeDrop(noun);
+    } else if (std.mem.eql(u8, verb, "give")) {
+        invertory.executeGive(noun);
+    } else if (std.mem.eql(u8, verb, "ask")) {
+        invertory.executeAsk(noun);
+    } else if (std.mem.eql(u8, verb, "inventory")) {
+        invertory.executeInventory();
     } else {
         print("I don't know how to {s}.\n", .{verb});
     }

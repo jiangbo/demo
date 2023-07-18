@@ -7,7 +7,7 @@ pub fn executeLook(input: ?[]const u8) bool {
     if (std.mem.eql(u8, noun, "around")) {
         const location = world.player.location.?;
         print("You are in {s}.\n", .{location.desc});
-        listAtLocation(location);
+        _ = world.listAtLocation(location);
         return true;
     }
     return false;
@@ -32,17 +32,4 @@ pub fn executeGo(input: ?[]const u8) bool {
     }
 
     return false;
-}
-
-fn listAtLocation(location: *world.Item) void {
-    var count: i32 = 0;
-    for (&world.items) |*item| {
-        if (!item.isPlayer() and item.isLocate(location)) {
-            if (count == 0) {
-                print("You see:\n", .{});
-            }
-            print("{s}\n", .{item.desc});
-            count += 1;
-        }
-    }
 }

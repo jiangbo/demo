@@ -15,3 +15,32 @@ pub fn executeGet(noun: ?[]const u8) void {
         world.moveItem(item, world.player);
     }
 }
+
+pub fn executeDrop(noun: ?[]const u8) void {
+    const possession = world.getPossession(world.player, "drop", noun);
+    world.moveItem(possession, world.player.location);
+}
+pub fn executeAsk(noun: ?[]const u8) void {
+    const possession = world.getPossession(actorHere(), "ask", noun);
+    world.moveItem(possession, world.player);
+}
+pub fn executeGive(noun: ?[]const u8) void {
+    const possession = world.getPossession(world.player, "give", noun);
+    world.moveItem(possession, actorHere());
+}
+
+pub fn executeInventory() void {
+    if (world.listAtLocation(world.player) == 0) {
+        print("You are empty-handed.\n", .{});
+    }
+}
+
+fn actorHere() ?*world.Item {
+    const location = world.player.location;
+    for (&world.items) |*item| {
+        if (item.location == location and item.type == .guard) {
+            return item;
+        }
+    }
+    return null;
+}

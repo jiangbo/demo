@@ -61,7 +61,9 @@ pub fn getItem(noun: ?[]const u8) ?*Item {
     return null;
 }
 
-pub fn moveItem(from: *Item, to: ?*Item) void {
+pub fn moveItem(obj: ?*Item, to: ?*Item) void {
+    const from = obj orelse return;
+
     if (to == null) {
         return print("There is nobody here to give that to.\n", .{});
     }
@@ -108,6 +110,45 @@ pub fn getVisible(intention: []const u8, noun: ?[]const u8) ?*Item {
 
     print("You don't see any {s} here.\n", .{noun.?});
     return null;
+}
+
+pub fn listAtLocation(location: *Item) usize {
+    var count: usize = 0;
+    for (&items) |*item| {
+        if (!item.isPlayer() and item.isLocate(location)) {
+            if (count == 0) {
+                print("You see:\n", .{});
+            }
+            print("{s}\n", .{item.desc});
+            count += 1;
+        }
+    }
+    return count;
+}
+
+pub fn getPossession(from: ?*Item, verb: []const u8, noun: ?[]const u8) ?*Item {
+    if (from == null) {
+        print("I don't understand who you want to {s}.\n", .{verb});
+        return null;
+    }
+
+    const item = getItem(noun) orelse {
+        print("I don't understand what you want to {s}.\n", .{verb});
+        return null;
+    };
+
+    if (item == from) {
+        print("You should not be doing that to {s}.\n", .{item.desc});
+        return null;
+    } else if (item.location != from) {
+        if (from == player) {
+            print("You are not holding any {s}.\n", .{noun.?});
+        } else {
+            print("There appears to be no {s} you can get from {s}.\n", .{ noun.?, from.?.desc });
+        }
+        return null;
+    }
+    return item;
 }
 
 pub var player: *Item = &items[5];
