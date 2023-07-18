@@ -17,7 +17,7 @@ pub const Item = struct {
         return self.location == null;
     }
 
-    pub fn isLocate(self: *Item, location: *Item) bool {
+    fn isLocate(self: *Item, location: *Item) bool {
         return self.location == location;
     }
 
@@ -36,6 +36,26 @@ pub const Item = struct {
 
     pub fn isWithPlayer(self: *Item) bool {
         return self.isLocate(player.location.?);
+    }
+
+    fn isPassageWith(self: *Item, item: ?*Item) bool {
+        if (self.isLocation() and (item orelse return false).isLocation()) {
+            return getPassage(self, item) != null;
+        } else {
+            return false;
+        }
+    }
+
+    fn isPlayerLocationItem(self: *Item) bool {
+        if (self.isPlayerItem()) {
+            return true;
+        }
+
+        if (self.location) |item| {
+            return item.isPlayerItem() or item.isWithPlayer();
+        }
+
+        return false;
     }
 };
 
@@ -64,6 +84,17 @@ pub fn getItem(noun: ?[]const u8) ?*Item {
     return null;
 }
 
+pub fn getPassage(from: ?*Item, to: ?*Item) ?*Item {
+    if (from != null and to != null) {
+        for (&items) |*item| {
+            if (item.location == from and item.destination == to) {
+                return item;
+            }
+        }
+    }
+    return null;
+}
+
 pub fn getVisible(intention: []const u8, noun: ?[]const u8) ?*Item {
     const oitem = getItem(noun);
     if (oitem == null) {
@@ -71,11 +102,8 @@ pub fn getVisible(intention: []const u8, noun: ?[]const u8) ?*Item {
         return null;
     }
     const item = oitem.?;
-    if (item.isPlayer() or item.isPlayerIn() or item.isPlayerItem() or
-        //
-        item.isWithPlayer() or item.isLocation() or
-        //
-        item.location.?.isPlayerItem() or item.location.?.isWithPlayer())
+    if (item.isPlayer() or item.isPlayerIn() or item.isWithPlayer() or
+        item.isPassageWith(player.location) or item.isPlayerLocationItem())
     {
         return item;
     }
