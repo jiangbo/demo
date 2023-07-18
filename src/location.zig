@@ -22,21 +22,42 @@ pub fn executeGo(input: ?[]const u8) bool {
 
     const intention = "where you want to go";
     var item = world.getVisible(intention, noun) orelse return true;
-
-    if (world.getPassage(world.player.location, item) != null) {
-        print("OK.\n", .{});
-        world.player.location = item;
-        return lookAround();
-    } else if (!item.isWithPlayer()) {
-        print("You don't see any{s} here.\n", .{noun});
-    } else if (!item.isPlayerIn()) {
-        print("OK.\n", .{});
-        world.player.location = item.destination;
-        return lookAround();
-    } else {
-        print("You can't get much closer than this.\n", .{});
-        return true;
+    switch (item.distanceWithPlayer()) {
+        .distOverthere => {
+            print("OK.\n", .{});
+            world.player.location = item;
+            _ = lookAround();
+        },
+        .distNotHere => {
+            print("2You don't see any {s} here.\n", .{noun});
+        },
+        .distUnknownObject => {
+            return true;
+        },
+        else => {
+            if (item.destination != null) {
+                print("OK.\n", .{});
+                world.player.location = item.destination;
+                _ = lookAround();
+            } else {
+                print("You can't get much closer than this.\n", .{});
+            }
+        },
     }
+    // if (world.getPassage(world.player.location, item) != null) {
+    //     print("OK.\n", .{});
+    //     world.player.location = item;
+    //     return lookAround();
+    // } else if (!item.isWithPlayer()) {
+    //     print("You don't see any {s} here.\n", .{noun});
+    // } else if (!item.isPlayerIn()) {
+    //     print("OK.\n", .{});
+    //     world.player.location = item.destination;
+    //     return lookAround();
+    // } else {
+    //     print("You can't get much closer than this.\n", .{});
+    //     return true;
+    // }
 
-    return false;
+    return true;
 }

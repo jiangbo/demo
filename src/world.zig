@@ -1,6 +1,52 @@
 const std = @import("std");
 const print = std.debug.print;
 
+pub const Distance = enum {
+    distSelf,
+    distHeld,
+    distHeldContained,
+    distLocation,
+    distHere,
+    //
+    distHereContained,
+    distOverthere,
+    distNotHere,
+    distUnknownObject,
+};
+
+pub fn getDistance(from: *Item, to: ?*Item) Distance {
+    if (to == null) {
+        return .distUnknownObject;
+    }
+    if (from == to) {
+        return .distSelf;
+    }
+    if (isHolding(from, to)) {
+        return .distHeld;
+    }
+    if (isHolding(to, from)) {
+        return .distLocation;
+    }
+    if (isHolding(from.location, to)) {
+        return .distHere;
+    }
+    if (getPassage(from.location, to) != null) {
+        return .distOverthere;
+    }
+    if (isHolding(from, to.?.location)) {
+        return .distHeldContained;
+    }
+    if (isHolding(from.location, to.?.location)) {
+        return .distHereContained;
+    }
+    return .distNotHere;
+}
+
+fn isHolding(container: ?*Item, item: ?*Item) bool {
+    if (container == null or item == null) return false;
+    return item.?.location == container;
+}
+
 const Type = enum { field, cave, silver, gold, guard, player, entrance, exit };
 
 pub const Item = struct {
@@ -38,24 +84,8 @@ pub const Item = struct {
         return self.isLocate(player.location.?);
     }
 
-    fn isPassageWith(self: *Item, item: ?*Item) bool {
-        if (self.isLocation() and (item orelse return false).isLocation()) {
-            return getPassage(self, item) != null;
-        } else {
-            return false;
-        }
-    }
-
-    fn isPlayerLocationItem(self: *Item) bool {
-        if (self.isPlayerItem()) {
-            return true;
-        }
-
-        if (self.location) |item| {
-            return item.isPlayerItem() or item.isWithPlayer();
-        }
-
-        return false;
+    pub fn distanceWithPlayer(self: *Item) Distance {
+        return getDistance(player, self);
     }
 };
 
@@ -74,10 +104,12 @@ fn toType(noun: ?[]const u8) ?Type {
     return std.meta.stringToEnum(Type, noun orelse return null);
 }
 
-pub fn getItem(noun: ?[]const u8) ?*Item {
+pub fn getItem(noun: ?[]const u8, from: ?*Item, max: Distance) ?*Item {
     const itemType = toType(noun) orelse return null;
     for (&items) |*value| {
-        if (value.type == itemType) {
+        if (value.type == itemType and
+            @intFromEnum(getDistance(from.?, value)) <= @intFromEnum(max))
+        {
             return value;
         }
     }
@@ -87,29 +119,27 @@ pub fn getItem(noun: ?[]const u8) ?*Item {
 pub fn getPassage(from: ?*Item, to: ?*Item) ?*Item {
     if (from != null and to != null) {
         for (&items) |*item| {
-            if (item.location == from and item.destination == to) {
+            if (isHolding(from, item) and item.destination == to) {
+                print("get passage: {s}", .{item.desc});
                 return item;
             }
         }
     }
+    print("get passage null\n", .{});
     return null;
 }
 
 pub fn getVisible(intention: []const u8, noun: ?[]const u8) ?*Item {
-    const oitem = getItem(noun);
-    if (oitem == null) {
-        print("I don't understand {s}.\n", .{intention});
-        return null;
-    }
-    const item = oitem.?;
-    if (item.isPlayer() or item.isPlayerIn() or item.isWithPlayer() or
-        item.isPassageWith(player.location) or item.isPlayerLocationItem())
-    {
-        return item;
+    const item = getItem(noun, player, Distance.distOverthere);
+    if (item == null) {
+        if (getItem(noun, player, Distance.distNotHere) == null) {
+            print("I don't understand {s}.\n", .{intention});
+        } else {
+            print("1You don't see any {s} here.\n", .{noun.?});
+        }
     }
 
-    print("You don't see any {s} here.\n", .{noun.?});
-    return null;
+    return item;
 }
 
 pub fn listAtLocation(location: *Item) usize {
