@@ -1,12 +1,13 @@
 const std = @import("std");
 const print = std.debug.print;
 
-const Type = enum { field, cave, silver, gold, guard, player };
+const Type = enum { field, cave, silver, gold, guard, player, entrance, exit };
 
 pub const Item = struct {
     desc: []const u8,
     type: Type,
     location: ?*Item = null,
+    destination: ?*Item = null,
 
     pub fn isPlayer(self: *Item) bool {
         return self.type == .player;
@@ -45,6 +46,8 @@ pub var items = [_]Item{
     .{ .desc = "a gold coin", .type = .gold },
     .{ .desc = "a burly guard", .type = .guard },
     .{ .desc = "yourself", .type = .player },
+    .{ .desc = "a cave entrance", .type = .entrance },
+    .{ .desc = "an exit", .type = .exit },
 };
 
 fn toType(noun: ?[]const u8) ?Type {
@@ -59,37 +62,6 @@ pub fn getItem(noun: ?[]const u8) ?*Item {
         }
     }
     return null;
-}
-
-pub fn moveItem(obj: ?*Item, to: ?*Item) void {
-    const from = obj orelse return;
-
-    if (to == null) {
-        return print("There is nobody here to give that to.\n", .{});
-    }
-
-    if (from.isLocation()) {
-        return print("That is way too heavy.\n", .{});
-    }
-
-    describeMove(from, to.?);
-    from.location = to;
-}
-
-fn describeMove(from: *Item, to: *Item) void {
-    if (to == player.location) {
-        print("You drop {s}.\n", .{from.desc});
-    } else if (to != player) {
-        if (to.type == .guard) {
-            print("You give {s} to {s}.\n", .{ from.desc, to.desc });
-        } else {
-            print("You put {s} in {s}.\n", .{ from.desc, to.desc });
-        }
-    } else if (from.isWithPlayer()) {
-        print("You pick up {s}.\n", .{from.desc});
-    } else {
-        print("You get {s} from {s}.\n", .{ from.desc, from.location.?.desc });
-    }
 }
 
 pub fn getVisible(intention: []const u8, noun: ?[]const u8) ?*Item {
@@ -126,31 +98,6 @@ pub fn listAtLocation(location: *Item) usize {
     return count;
 }
 
-pub fn getPossession(from: ?*Item, verb: []const u8, noun: ?[]const u8) ?*Item {
-    if (from == null) {
-        print("I don't understand who you want to {s}.\n", .{verb});
-        return null;
-    }
-
-    const item = getItem(noun) orelse {
-        print("I don't understand what you want to {s}.\n", .{verb});
-        return null;
-    };
-
-    if (item == from) {
-        print("You should not be doing that to {s}.\n", .{item.desc});
-        return null;
-    } else if (item.location != from) {
-        if (from == player) {
-            print("You are not holding any {s}.\n", .{noun.?});
-        } else {
-            print("There appears to be no {s} you can get from {s}.\n", .{ noun.?, from.?.desc });
-        }
-        return null;
-    }
-    return item;
-}
-
 pub var player: *Item = &items[5];
 
 pub fn init() void {
@@ -158,4 +105,10 @@ pub fn init() void {
     items[3].location = &items[1];
     items[4].location = &items[0];
     items[5].location = &items[0];
+
+    items[6].location = &items[0];
+    items[6].destination = &items[1];
+
+    items[7].location = &items[1];
+    items[7].destination = &items[0];
 }

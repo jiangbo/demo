@@ -1,6 +1,6 @@
-const std = @import("std");
 const world = @import("world.zig");
-const print = std.debug.print;
+const system = @import("system.zig");
+const print = @import("std").debug.print;
 
 pub fn executeGet(noun: ?[]const u8) void {
     const intention = "what you want to get";
@@ -12,21 +12,21 @@ pub fn executeGet(noun: ?[]const u8) void {
     } else if (item.isNpcItem()) {
         print("You should ask {s} nicely.\n", .{item.location.?.desc});
     } else {
-        world.moveItem(item, world.player);
+        system.moveItem(item, world.player);
     }
 }
 
 pub fn executeDrop(noun: ?[]const u8) void {
-    const possession = world.getPossession(world.player, "drop", noun);
-    world.moveItem(possession, world.player.location);
+    const possession = system.getPossession(world.player, "drop", noun);
+    system.moveItem(possession, world.player.location);
 }
 pub fn executeAsk(noun: ?[]const u8) void {
-    const possession = world.getPossession(actorHere(), "ask", noun);
-    world.moveItem(possession, world.player);
+    const possession = system.getPossession(actorHere(), "ask", noun);
+    system.moveItem(possession, world.player);
 }
 pub fn executeGive(noun: ?[]const u8) void {
-    const possession = world.getPossession(world.player, "give", noun);
-    world.moveItem(possession, actorHere());
+    const possession = system.getPossession(world.player, "give", noun);
+    system.moveItem(possession, actorHere());
 }
 
 pub fn executeInventory() void {
