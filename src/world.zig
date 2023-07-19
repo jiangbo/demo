@@ -62,8 +62,8 @@ pub fn actorHere() ?*Item {
 }
 
 const Type = enum {
+    ambiguous,
     field,
-    //
     cave,
     silver,
     gold,
@@ -71,6 +71,8 @@ const Type = enum {
     player,
     entrance,
     exit,
+    forest,
+    rock,
 };
 
 pub const Item = struct {
@@ -112,45 +114,84 @@ pub const Item = struct {
     pub fn distanceWithPlayer(self: *Item) Distance {
         return getDistance(player, self);
     }
+
+    pub fn isAmbiguous(self: *Item) bool {
+        return self.type == .ambiguous;
+    }
+
+    pub fn hasTag(self: *Item, noun: Str) bool {
+        for (self.tags) |tag| {
+            if (std.mem.eql(u8, noun, tag)) {
+                return true;
+            }
+        } else return false;
+    }
 };
 
 pub var items = [_]Item{
-    .{ .desc = "an open field", .type = .field, .tags = &[_]Str{"field"} },
-    .{ .desc = "a little cave", .type = .cave, .tags = &[_]Str{"cave"} },
-    .{ .desc = "a silver coin", .type = .silver, .tags = &[_]Str{ "silver", "coin", "silver coin" } },
-    .{ .desc = "a gold coin", .type = .gold, .tags = &[_]Str{ "gold", "coin", "gold coin" } },
-    .{ .desc = "a burly guard", .type = .guard, .tags = &[_]Str{ "guard", "burly guard" } },
+    .{
+        .desc = "an open field",
+        .type = .field,
+        .tags = &[_]Str{"field"},
+    },
+    .{
+        .desc = "a little cave",
+        .type = .cave,
+        .tags = &[_]Str{"cave"},
+    },
+    .{
+        .desc = "a silver coin",
+        .type = .silver,
+        .tags = &[_]Str{ "silver", "coin", "silver coin" },
+    },
+    .{
+        .desc = "a gold coin",
+        .type = .gold,
+        .tags = &[_]Str{ "gold", "coin", "gold coin" },
+    },
+    .{
+        .desc = "a burly guard",
+        .type = .guard,
+        .tags = &[_]Str{ "guard", "burly guard" },
+    },
     .{ .desc = "yourself", .type = .player, .tags = &[_]Str{"yourself"} },
-    .{ .desc = "a cave entrance to the east", .type = .entrance, .tags = &[_]Str{ "east", "entrance" } },
+    .{
+        .desc = "a cave entrance to the east",
+        .type = .entrance,
+        .tags = &[_]Str{ "east", "entrance" },
+    },
     .{ .desc = "an exit to the west", .type = .exit, .tags = &[_]Str{ "west", "exit" } },
+    .{
+        .desc = "dense forest all around",
+        .type = .forest,
+        .tags = &[_]Str{ "west", "north", "south", "forest" },
+    },
+    .{
+        .desc = "solid rock all around",
+        .type = .rock,
+        .tags = &[_]Str{ "east", "north", "south", "rock" },
+    },
 };
 
-fn getItemByNoun(noun: ?Str) ?Type {
-    noun orelse return null;
-    return std.meta.stringToEnum(Type, noun orelse return null);
-}
-
-pub fn getItem(noun: ?Str, from: ?*Item, max: Distance) ?*Item {
+pub fn getItem(noun: ?Str, from: ?*Item, maxDistance: Distance) ?*Item {
     const word = noun orelse return null;
+    const max = @intFromEnum(maxDistance);
 
-    const item = blk: for (&items) |*item| {
-        for (item.tags) |tag| {
-            if (std.mem.eql(u8, word, tag)) break :blk item;
+    var item: ?*Item = null;
+    for (&items) |*value| {
+        if (value.hasTag(word) and getDistanceNumber(from, value) <= max) {
+            if (item != null) return &ambiguous;
+            item = value;
         }
-    } else return null;
-
-    const maxDistanceInt = @intFromEnum(max);
-    if (getDistanceNumber(from, item) <= maxDistanceInt) {
-        return item;
-    } else return null;
+    } else return item;
 }
 
 pub fn getPassage(from: ?*Item, to: ?*Item) ?*Item {
-    if (from != null and to != null) {
-        for (&items) |*item| {
-            if (isHolding(from, item) and item.destination == to) {
-                return item;
-            }
+    if (from == null and to == null) return null;
+
+    for (&items) |*item| {
+        if (isHolding(from, item) and item.destination == to) {
+            return item;
         }
     }
     return null;
@@ -158,14 +199,17 @@ pub fn getPassage(from: ?*Item, to: ?*Item) ?*Item {
 
 pub fn getVisible(intention: Str, noun: ?Str) ?*Item {
     const item = getItem(noun, player, Distance.distOverthere);
+    // print("get item: {s}", .{item.?})
     if (item == null) {
         if (getItem(noun, player, Distance.distNotHere) == null) {
             print("I don't understand {s}.\n", .{intention});
         } else {
             print("You don't see any {s} here.\n", .{noun.?});
         }
+    } else if (item.?.isAmbiguous()) {
+        print("Please be specific about which {s} you mean.\n", .{noun.?});
+        return null;
     }
-
     return item;
 }
 
@@ -184,6 +228,13 @@ pub fn listAtLocation(location: *Item) usize {
 }
 
 pub var player: *Item = &items[5];
+var ambiguous: Item = .{
+    .desc = "ambiguous",
+    .type = .ambiguous,
+    .tags = &[_]Str{
+        "ambiguous",
+    },
+};
 
 pub fn init() void {
     items[2].location = &items[0];
@@ -196,4 +247,7 @@ pub fn init() void {
 
     items[7].location = &items[1];
     items[7].destination = &items[0];
+
+    items[8].location = &items[0];
+    items[9].location = &items[1];
 }
