@@ -1,5 +1,6 @@
 const std = @import("std");
 const print = std.debug.print;
+const Str = []const u8;
 
 pub const Distance = enum {
     distSelf,
@@ -7,15 +8,18 @@ pub const Distance = enum {
     distHeldContained,
     distLocation,
     distHere,
-    //
     distHereContained,
     distOverthere,
     distNotHere,
     distUnknownObject,
 };
 
-pub fn getDistance(from: *Item, to: ?*Item) Distance {
-    if (to == null) {
+pub fn getDistanceNumber(from: ?*Item, to: ?*Item) usize {
+    return @intFromEnum(getDistance(from, to));
+}
+
+pub fn getDistance(from: ?*Item, to: ?*Item) Distance {
+    if (to == null or from == null) {
         return .distUnknownObject;
     }
     if (from == to) {
@@ -27,16 +31,16 @@ pub fn getDistance(from: *Item, to: ?*Item) Distance {
     if (isHolding(to, from)) {
         return .distLocation;
     }
-    if (isHolding(from.location, to)) {
+    if (isHolding(from.?.location, to)) {
         return .distHere;
     }
-    if (getPassage(from.location, to) != null) {
+    if (getPassage(from.?.location, to) != null) {
         return .distOverthere;
     }
     if (isHolding(from, to.?.location)) {
         return .distHeldContained;
     }
-    if (isHolding(from.location, to.?.location)) {
+    if (isHolding(from.?.location, to.?.location)) {
         return .distHereContained;
     }
     return .distNotHere;
@@ -57,11 +61,22 @@ pub fn actorHere() ?*Item {
     return null;
 }
 
-const Type = enum { field, cave, silver, gold, guard, player, entrance, exit };
+const Type = enum {
+    field,
+    //
+    cave,
+    silver,
+    gold,
+    guard,
+    player,
+    entrance,
+    exit,
+};
 
 pub const Item = struct {
-    desc: []const u8,
+    desc: Str,
     type: Type,
+    tags: []const Str,
     location: ?*Item = null,
     destination: ?*Item = null,
 
@@ -100,30 +115,34 @@ pub const Item = struct {
 };
 
 pub var items = [_]Item{
-    .{ .desc = "an open field", .type = .field },
-    .{ .desc = "a little cave", .type = .cave },
-    .{ .desc = "a silver coin", .type = .silver },
-    .{ .desc = "a gold coin", .type = .gold },
-    .{ .desc = "a burly guard", .type = .guard },
-    .{ .desc = "yourself", .type = .player },
-    .{ .desc = "a cave entrance", .type = .entrance },
-    .{ .desc = "an exit", .type = .exit },
+    .{ .desc = "an open field", .type = .field, .tags = &[_]Str{"field"} },
+    .{ .desc = "a little cave", .type = .cave, .tags = &[_]Str{"cave"} },
+    .{ .desc = "a silver coin", .type = .silver, .tags = &[_]Str{ "silver", "coin", "silver coin" } },
+    .{ .desc = "a gold coin", .type = .gold, .tags = &[_]Str{ "gold", "coin", "gold coin" } },
+    .{ .desc = "a burly guard", .type = .guard, .tags = &[_]Str{ "guard", "burly guard" } },
+    .{ .desc = "yourself", .type = .player, .tags = &[_]Str{"yourself"} },
+    .{ .desc = "a cave entrance to the east", .type = .entrance, .tags = &[_]Str{ "east", "entrance" } },
+    .{ .desc = "an exit to the west", .type = .exit, .tags = &[_]Str{ "west", "exit" } },
 };
 
-fn toType(noun: ?[]const u8) ?Type {
+fn getItemByNoun(noun: ?Str) ?Type {
+    noun orelse return null;
     return std.meta.stringToEnum(Type, noun orelse return null);
 }
 
-pub fn getItem(noun: ?[]const u8, from: ?*Item, max: Distance) ?*Item {
-    const itemType = toType(noun) orelse return null;
-    for (&items) |*value| {
-        if (value.type == itemType and
-            @intFromEnum(getDistance(from.?, value)) <= @intFromEnum(max))
-        {
-            return value;
+pub fn getItem(noun: ?Str, from: ?*Item, max: Distance) ?*Item {
+    const word = noun orelse return null;
+
+    const item = blk: for (&items) |*item| {
+        for (item.tags) |tag| {
+            if (std.mem.eql(u8, word, tag)) break :blk item;
         }
-    }
-    return null;
+    } else return null;
+
+    const maxDistanceInt = @intFromEnum(max);
+    if (getDistanceNumber(from, item) <= maxDistanceInt) {
+        return item;
+    } else return null;
 }
 
 pub fn getPassage(from: ?*Item, to: ?*Item) ?*Item {
@@ -137,7 +156,7 @@ pub fn getPassage(from: ?*Item, to: ?*Item) ?*Item {
     return null;
 }
 
-pub fn getVisible(intention: []const u8, noun: ?[]const u8) ?*Item {
+pub fn getVisible(intention: Str, noun: ?Str) ?*Item {
     const item = getItem(noun, player, Distance.distOverthere);
     if (item == null) {
         if (getItem(noun, player, Distance.distNotHere) == null) {
