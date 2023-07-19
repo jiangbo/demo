@@ -47,6 +47,16 @@ fn isHolding(container: ?*Item, item: ?*Item) bool {
     return item.?.location == container;
 }
 
+pub fn actorHere() ?*Item {
+    const location = player.location;
+    for (&items) |*item| {
+        if (isHolding(location, item) and item.type == .guard) {
+            return item;
+        }
+    }
+    return null;
+}
+
 const Type = enum { field, cave, silver, gold, guard, player, entrance, exit };
 
 pub const Item = struct {
@@ -120,12 +130,10 @@ pub fn getPassage(from: ?*Item, to: ?*Item) ?*Item {
     if (from != null and to != null) {
         for (&items) |*item| {
             if (isHolding(from, item) and item.destination == to) {
-                print("get passage: {s}", .{item.desc});
                 return item;
             }
         }
     }
-    print("get passage null\n", .{});
     return null;
 }
 
@@ -135,7 +143,7 @@ pub fn getVisible(intention: []const u8, noun: ?[]const u8) ?*Item {
         if (getItem(noun, player, Distance.distNotHere) == null) {
             print("I don't understand {s}.\n", .{intention});
         } else {
-            print("1You don't see any {s} here.\n", .{noun.?});
+            print("You don't see any {s} here.\n", .{noun.?});
         }
     }
 

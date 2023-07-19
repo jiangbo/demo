@@ -49,7 +49,6 @@ pub fn getPossession(from: ?*world.Item, verb: []const u8, noun: ?[]const u8) ?*
         }
         return null;
     };
-
     if (item == from) {
         print("You should not be doing that to {s}.\n", .{item.desc});
         return null;
