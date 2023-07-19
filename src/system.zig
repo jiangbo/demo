@@ -39,7 +39,8 @@ pub fn getPossession(from: ?*world.Item, verb: []const u8, noun: ?[]const u8) ?*
     }
 
     const max = world.Distance.distHeldContained;
-    const item = world.getItem(noun, from, max) orelse {
+    const item = world.getItem(noun, from, max);
+    if (item == null) {
         if (world.getItem(noun, world.player, world.Distance.distNotHere) == null) {
             print("I don't understand what you want to {s}.\n", .{verb});
         } else if (from == world.player) {
@@ -47,11 +48,14 @@ pub fn getPossession(from: ?*world.Item, verb: []const u8, noun: ?[]const u8) ?*
         } else {
             print("There appears to be no {s} you can get from {s}.\n", .{ noun.?, from.?.desc });
         }
-        return null;
-    };
-    if (item == from) {
-        print("You should not be doing that to {s}.\n", .{item.desc});
-        return null;
+    } else {
+        if (item.?.isAmbiguous()) {
+            print("Please be specific about which {s} you want to {s}.\n", .{ noun.?, verb });
+            return null;
+        } else if (item == from) {
+            print("You should not be doing that to {s}.\n", .{item.?.desc});
+            return null;
+        }
     }
     return item;
 }

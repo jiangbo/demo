@@ -36,7 +36,7 @@ fn getInput(reader: anytype, buffer: []u8) !?[]const u8 {
 pub fn parseAndExecute(input: []const u8) void {
     var iterator = std.mem.split(u8, input, " ");
     const verb = iterator.next() orelse return;
-    const noun = iterator.next();
+    const noun = iterator.rest();
 
     if (std.mem.eql(u8, verb, "look")) {
         if (!location.executeLook(noun)) {
@@ -60,25 +60,3 @@ pub fn parseAndExecute(input: []const u8) void {
         print("I don't know how to {s}.\n", .{verb});
     }
 }
-// const std = @import("std");
-
-// const MyStruct = struct {
-//     name: []const u8,
-//     tags: []const []const u8,
-// };
-
-// pub fn main() void {
-//     const myStruct = MyStruct{
-//         .name = "John Doe",
-//         .tags = &[_][]const u8{
-//             "tag1",
-//             "tag2",
-//             "tag3",
-//         },
-//     };
-
-//     std.debug.print("Name: {s}\n", .{myStruct.name});
-//     for (myStruct.tags) |tag| {
-//         std.debug.print("Tag: {s}\n", .{tag});
-//     }
-// }
