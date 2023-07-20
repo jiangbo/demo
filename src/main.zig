@@ -1,15 +1,13 @@
 const std = @import("std");
 const location = @import("location.zig");
-const world = @import("world.zig");
 const inventory = @import("inventory.zig");
 const print = std.debug.print;
 
 pub fn main() !void {
-    world.init();
     print("Welcome to Little Cave Adventure.\n", .{});
     const reader = std.io.getStdIn().reader();
-    var buffer: [100]u8 = undefined;
     _ = location.lookAround();
+    var buffer: [100]u8 = undefined;
 
     while (true) {
         print("--> ", .{});
@@ -32,6 +30,16 @@ fn getInput(reader: anytype, buffer: []u8) !?[]const u8 {
     }
     return null;
 }
+
+const Action = enum {
+    look,
+    go,
+    get,
+    drop,
+    give,
+    ask,
+    inventory,
+};
 
 pub fn parseAndExecute(input: []const u8) void {
     var iterator = std.mem.split(u8, input, " ");
