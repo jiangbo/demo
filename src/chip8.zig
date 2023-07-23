@@ -5,32 +5,36 @@ const mem = @import("mem.zig");
 const screen = @import("screen.zig");
 const keypad = @import("keypad.zig");
 
+const ENTRY = 0x200;
+
 pub const Emulator = struct {
     cpu: cpu.CPU,
     memory: mem.Memory,
     screen: screen.Screen,
     keypad: keypad.Keypad,
 
-    pub fn new() Emulator {
+    pub fn new(rom: []const u8) Emulator {
         return Emulator{
-            .cpu = cpu.CPU{},
-            .memory = mem.Memory.new(),
+            .cpu = cpu.CPU{ .pc = ENTRY },
+            .memory = mem.Memory.new(rom, ENTRY),
             .screen = screen.Screen.new(),
             .keypad = keypad.Keypad.new(),
         };
     }
 
     pub fn run(self: *Emulator) void {
+        self.memory.screen = &self.screen;
         self.screen.init();
         defer self.screen.deinit();
 
         mainloop: while (true) {
-            self.cpu.cycle();
+            self.cpu.cycle(&self.memory);
             while (self.keypad.pollEvent()) |event| {
                 if (event.type == c.SDL_QUIT)
                     break :mainloop;
             }
-            c.SDL_Delay(30);
+            self.screen.update();
+            c.SDL_Delay(400);
         }
     }
 };

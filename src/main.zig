@@ -2,6 +2,7 @@ const std = @import("std");
 const chip8 = @import("chip8.zig");
 
 pub fn main() !void {
-    var emulator = chip8.Emulator.new();
+    const rom = @embedFile("IBM Logo.ch8");
+    var emulator = chip8.Emulator.new(rom);
     emulator.run();
 }

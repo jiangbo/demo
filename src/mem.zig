@@ -1,14 +1,32 @@
 const std = @import("std");
+const screen = @import("screen.zig");
+
 pub const Memory = struct {
     ram: [4096]u8 = undefined,
     stack: [16]u16 = undefined,
     sp: u8 = 0,
-    register: [16]u8 = std.mem.zeroes([16]u8),
-    pub fn new() Memory {
+    screen: *screen.Screen = undefined,
+
+    pub fn new(rom: []const u8, entry: u16) Memory {
         var memory = Memory{};
-        // @memset(memory.ram, 0);
         @memcpy(memory.ram[0..fonts.len], &fonts);
+        @memcpy(memory.ram[entry .. entry + rom.len], rom);
         return memory;
+    }
+
+    pub fn load(self: *Memory, pc: u16) u16 {
+        const high: u8 = self.ram[pc];
+        return (@as(u16, high) << 8) | self.ram[pc + 1];
+        // return std.mem.readIntSliceBig(u16, self.ram[pc .. pc + 1]);
+    }
+
+    pub fn clearScreen(self: *Memory) void {
+        var screen1 = self.screen;
+        screen1.clear();
+    }
+
+    pub fn setPixel(self: *Memory, x: usize, y: usize) bool {
+        return self.screen.setPixel(x, y);
     }
 
     fn push(self: *Memory, value: u16) void {
