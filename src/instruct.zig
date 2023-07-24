@@ -1,7 +1,6 @@
-// const std = @import("std");
-
 pub const Instruct = struct {
     opcode: u16,
+    code: u4 = undefined,
     nnn: u16 = undefined,
     kk: u8 = undefined,
     x: u8 = undefined,
@@ -9,6 +8,7 @@ pub const Instruct = struct {
     n: u8 = undefined,
 
     pub fn decode(self: *Instruct) void {
+        self.code = @truncate((self.opcode & 0xF000) >> 12);
         self.nnn = self.opcode & 0x0FFF;
         self.kk = @truncate(self.opcode & 0x00FF);
         self.x = @truncate((self.opcode & 0x0F00) >> 8);

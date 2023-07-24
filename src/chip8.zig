@@ -1,5 +1,5 @@
 const c = @cImport(@cInclude("SDL.h"));
-// const std = @import("std");
+const std = @import("std");
 const cpu = @import("cpu.zig");
 const mem = @import("mem.zig");
 const screen = @import("screen.zig");
@@ -14,8 +14,10 @@ pub const Emulator = struct {
     keypad: keypad.Keypad,
 
     pub fn new(rom: []const u8) Emulator {
+        const seed = @as(u64, @intCast(std.time.timestamp()));
+        var prng = std.rand.DefaultPrng.init(seed);
         return Emulator{
-            .cpu = cpu.CPU{ .pc = ENTRY },
+            .cpu = cpu.CPU{ .pc = ENTRY, .prng = prng },
             .memory = mem.Memory.new(rom, ENTRY),
             .screen = screen.Screen.new(),
             .keypad = keypad.Keypad.new(),
@@ -34,7 +36,7 @@ pub const Emulator = struct {
                     break :mainloop;
             }
             self.screen.update();
-            c.SDL_Delay(400);
+            c.SDL_Delay(1000 / 60);
         }
     }
 };
