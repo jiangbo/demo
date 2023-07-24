@@ -35,30 +35,45 @@ pub const CPU = struct {
     fn execute(self: *CPU, memory: *mem.Memory) void {
         const ins = self.instruct;
         var reg = self.register;
-
-        switch (ins.code) {
-            0x0 => {
-                if (ins.opcode == 0x00E0) memory.clearScreen();
-                if (ins.opcode == 0x00EE) self.pc = memory.pop();
-            },
-            0x1 => self.pc = ins.nnn,
-            0x2 => {
+        switch (ins.opcode) {
+            0x00E0 => memory.clearScreen(),
+            0x00EE => self.pc = memory.pop(),
+            0x1000...0x1FFF => self.pc = ins.nnn,
+            0x2000...0x2FFF => {
                 memory.push(self.pc);
                 self.pc = ins.nnn;
             },
-            0x3 => if (reg[ins.x] == ins.kk) self.next(),
-            0x4 => if (reg[ins.x] != ins.kk) self.next(),
-            0x5 => if (reg[ins.x] == reg[ins.y]) self.next(),
-            0x6 => reg[ins.x] = ins.kk,
-            0x7 => reg[ins.x] +%= ins.kk,
-            0x8 => self.code8(),
-            0x9 => if (reg[ins.x] != reg[ins.y]) self.next(),
-            0xA => self.index = ins.nnn,
-            0xB => self.pc = reg[0] + ins.nnn,
-            0xC => reg[ins.x] = self.prng.random().int(u8) & ins.kk,
-            0xD => self.draw(memory),
-            0xE => self.draw(memory),
-            0xF => self.codef(),
+            0x3000...0x3FFF => if (reg[ins.x] == ins.kk) self.next(),
+            0x4000...0x4FFF => if (reg[ins.x] != ins.kk) self.next(),
+            0x5000...0x5FFF => if (reg[ins.x] == reg[ins.y]) self.next(),
+            0x6000...0x6FFF => self.register[ins.x] = ins.kk,
+            0x7000...0x7FFF => self.register[ins.x] +%= ins.kk,
+            0xA000...0xAFFF => self.index = self.instruct.nnn,
+            0xD000...0xDFFF => self.draw(memory),
+            else => |v| std.log.info("unknow opcode: 0x{X:0>4}", .{v}),
+            // switch (ins.code) {
+            // 0x0 => {
+            //     if (ins.opcode == 0x00E0) memory.clearScreen();
+            //     if (ins.opcode == 0x00EE) self.pc = memory.pop();
+            // },
+            // 0x1 => self.pc = ins.nnn,
+            // 0x2 => {
+            //     memory.push(self.pc);
+            //     self.pc = ins.nnn;
+            // },
+            // 0x3 => if (reg[ins.x] == ins.kk) self.next(),
+            // 0x4 => if (reg[ins.x] != ins.kk) self.next(),
+            // 0x5 => if (reg[ins.x] == reg[ins.y]) self.next(),
+            // 0x6 => reg[ins.x] = ins.kk,
+            // 0x7 => reg[ins.x] +%= ins.kk,
+            // 0x8 => self.code8(),
+            // 0x9 => if (reg[ins.x] != reg[ins.y]) self.next(),
+            // 0xA => self.index = ins.nnn,
+            // 0xB => self.pc = reg[0] + ins.nnn,
+            // 0xC => reg[ins.x] = self.prng.random().int(u8) & ins.kk,
+            // 0xD => self.draw(memory),
+            // 0xE => self.draw(memory),
+            // 0xF => self.codef(),
         }
     }
 
