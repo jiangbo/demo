@@ -28,6 +28,14 @@ pub const Memory = struct {
         return self.screen.setPixel(x, y);
     }
 
+    pub fn set(self: *Memory, index: usize, value: u8) void {
+        self.ram[index] = value;
+    }
+
+    pub fn get(self: *Memory, index: usize) u8 {
+        return self.ram[index];
+    }
+
     pub fn push(self: *Memory, value: u16) void {
         self.stack[self.sp] = value;
         self.sp += 1;

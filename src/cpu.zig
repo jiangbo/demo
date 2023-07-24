@@ -57,7 +57,7 @@ pub const CPU = struct {
             0xC => reg[ins.x] = self.prng.random().int(u8) & ins.kk,
             0xD => self.draw(memory),
             0xE => self.draw(memory),
-            0xF => self.codef(),
+            0xF => self.codef(reg, ins, memory),
         }
     }
 
@@ -108,7 +108,30 @@ pub const CPU = struct {
             }
         }
     }
-    fn codef(self: *CPU) void {
-        _ = self;
+    fn codef(self: *CPU, reg: *[16]u8, ins: *Instruct, memory: *Memory) void {
+        switch (ins.kk) {
+            // 0x07 => self.register[ins.x] = self.delay,
+            // 0x15 => self.delay = self.register[ins.x],
+            // 0x18 => self.sound = self.register[ins.x],
+            0x1E => self.index += self.register[ins.x],
+            0x29 => self.index = self.register[ins.x] * 5,
+            0x33 => {
+                var num = reg[ins.x];
+                memory.set(self.index + 2, num % 10);
+                num /= 10;
+                memory.set(self.index + 1, num % 10);
+                num /= 10;
+                memory.set(self.index, num % 10);
+            },
+            0x55 => {
+                for (0..ins.x + 1) |i|
+                    memory.set(self.index + i, self.register[i]);
+            },
+            0x65 => {
+                for (0..ins.x + 1) |i|
+                    self.register[i] = memory.get(self.index + i);
+            },
+            else => std.log.info("unknow opcode: 0x{X:0>4}", .{ins.opcode}),
+        }
     }
 };
