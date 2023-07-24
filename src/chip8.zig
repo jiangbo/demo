@@ -1,7 +1,7 @@
 const c = @cImport(@cInclude("SDL.h"));
 const std = @import("std");
 const cpu = @import("cpu.zig");
-const mem = @import("mem.zig");
+const mem = @import("memory.zig");
 const screen = @import("screen.zig");
 const keypad = @import("keypad.zig");
 
@@ -36,7 +36,7 @@ pub const Emulator = struct {
                     break :mainloop;
             }
             self.screen.update();
-            c.SDL_Delay(1000 / 60);
+            c.SDL_Delay(100);
         }
     }
 };
