@@ -33,7 +33,7 @@ pub const CPU = struct {
             0x00E0 => memory.clearScreen(),
             0x1000...0x1FFF => self.pc = ins.nnn,
             0x6000...0x6FFF => self.register[ins.x] = ins.kk,
-            0x7000...0x7FFF => self.register[ins.x] += ins.kk,
+            0x7000...0x7FFF => self.register[ins.x] +%= ins.kk,
             0xA000...0xAFFF => self.index = self.instruct.nnn,
             0xD000...0xDFFF => self.draw(memory),
             else => |v| std.log.info("unknow opcode: 0x{X:0>4}", .{v}),

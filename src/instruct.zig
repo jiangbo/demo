@@ -1,4 +1,3 @@
-const c = @cImport(@cInclude("SDL.h"));
 // const std = @import("std");
 
 pub const Instruct = struct {
