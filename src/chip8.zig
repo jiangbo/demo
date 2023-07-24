@@ -1,4 +1,3 @@
-const c = @cImport(@cInclude("SDL.h"));
 const std = @import("std");
 const cpu = @import("cpu.zig");
 const mem = @import("memory.zig");
@@ -29,14 +28,9 @@ pub const Emulator = struct {
         self.screen.init();
         defer self.screen.deinit();
 
-        mainloop: while (true) {
+        while (self.keypad.poll()) {
             self.cpu.cycle(&self.memory);
-            while (self.keypad.pollEvent()) |event| {
-                if (event.type == c.SDL_QUIT)
-                    break :mainloop;
-            }
             self.screen.update();
-            c.SDL_Delay(100);
         }
     }
 };

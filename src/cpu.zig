@@ -19,7 +19,6 @@ pub const CPU = struct {
 
     fn fetch(self: *CPU, memory: *Memory) void {
         var opcode = memory.load(self.pc);
-        std.log.info("opcode: 0x{X:0>4}", .{opcode});
         self.instruct = Instruct{ .opcode = opcode };
         self.next();
     }

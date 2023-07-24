@@ -1,11 +1,13 @@
 // const std = @import("std");
-const screen = @import("screen.zig");
+const Screen = @import("screen.zig").Screen;
+const Keypad = @import("keypad.zig").Keypad;
 
 pub const Memory = struct {
     ram: [4096]u8 = undefined,
     stack: [16]u16 = undefined,
     sp: u8 = 0,
-    screen: *screen.Screen = undefined,
+    screen: *Screen = undefined,
+    keypad: *Keypad = undefined,
 
     pub fn new(rom: []const u8, entry: u16) Memory {
         var memory = Memory{};

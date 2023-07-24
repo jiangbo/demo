@@ -24,26 +24,23 @@ pub const Screen = struct {
             @panic("sdl init failed");
 
         const center = c.SDL_WINDOWPOS_CENTERED;
-        self.window = c.SDL_CreateWindow("chip8", center, center,
-        //
-        WIDTH * self.scale, HEIGHT * self.scale, c.SDL_WINDOW_SHOWN)
-        //
+        self.window = c.SDL_CreateWindow("chip8", center, center, //
+            WIDTH * self.scale, HEIGHT * self.scale, c.SDL_WINDOW_SHOWN) //
         orelse @panic("create window failed");
 
-        self.renderer = c.SDL_CreateRenderer(self.window, -1, 0)
-        //
+        self.renderer = c.SDL_CreateRenderer(self.window, -1, 0) //
         orelse @panic("create renderer failed");
 
-        self.texture = c.SDL_CreateTexture(self.renderer,
-        //
-        c.SDL_PIXELFORMAT_RGBA8888, c.SDL_TEXTUREACCESS_STREAMING,
-        //
-        WIDTH, HEIGHT) orelse @panic("create texture failed");
+        self.texture = c.SDL_CreateTexture(self.renderer, //
+            c.SDL_PIXELFORMAT_RGBA8888, c.SDL_TEXTUREACCESS_STREAMING, //
+            WIDTH, HEIGHT) orelse @panic("create texture failed");
+
         _ = c.SDL_SetRenderTarget(self.renderer, self.texture);
         _ = c.SDL_RenderSetLogicalSize(self.renderer, WIDTH, HEIGHT);
     }
 
     pub fn update(self: *Screen) void {
+        defer c.SDL_Delay(1000 / 60);
         if (!self.needRender) return;
 
         _ = c.SDL_SetRenderDrawColor(self.renderer, 0, 0, 0, 255);
