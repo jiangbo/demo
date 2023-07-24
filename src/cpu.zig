@@ -39,6 +39,7 @@ pub const CPU = struct {
             else => |v| std.log.info("unknow opcode: 0x{X:0>4}", .{v}),
         }
     }
+
     const width: u8 = 0x80; // 每个精灵的固定宽度
     fn draw(self: *CPU, memory: *mem.Memory) void {
         self.register[0xF] = 0;
@@ -47,10 +48,10 @@ pub const CPU = struct {
         for (0..self.instruct.n) |row| {
             const sprite = memory.ram[self.index + row];
             for (0..8) |col| {
-                if (sprite & width >> @as(u3, @intCast(col)) != 0) {
-                    if (memory.setPixel(rx + col, ry + row)) {
-                        self.register[0xF] = 1;
-                    }
+                const shift = width >> @as(u3, @truncate(col));
+                if (sprite & shift == 0) continue;
+                if (memory.setPixel(rx + col, ry + row)) {
+                    self.register[0xF] = 1;
                 }
             }
         }
