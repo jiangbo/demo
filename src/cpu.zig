@@ -28,22 +28,13 @@ pub const CPU = struct {
     }
 
     fn execute(self: *CPU, memory: *mem.Memory) void {
-        switch (self.instruct.opcode) {
+        const ins = self.instruct;
+        switch (ins.opcode) {
             0x00E0 => memory.clearScreen(),
-            0x1000...0x1FFF => self.pc = self.instruct.nnn,
-            0x6000...0x6FFF => {
-                const x = self.instruct.x;
-                std.log.info("set reg[{}] to {}", .{ x, self.instruct.get00NN() });
-                self.register[x] = self.instruct.get00NN();
-            },
-            0x7000...0x7FFF => {
-                const x = self.instruct.x;
-                std.log.info("add reg[{}] to {}", .{ x, self.instruct.get00NN() });
-                self.register[x] += self.instruct.get00NN();
-            },
-            0xA000...0xAFFF => {
-                self.index = self.instruct.nnn;
-            },
+            0x1000...0x1FFF => self.pc = ins.nnn,
+            0x6000...0x6FFF => self.register[ins.x] = ins.kk,
+            0x7000...0x7FFF => self.register[ins.x] += ins.kk,
+            0xA000...0xAFFF => self.index = self.instruct.nnn,
             0xD000...0xDFFF => self.draw(memory),
             else => |v| std.log.info("unknow opcode: 0x{X:0>4}", .{v}),
         }
@@ -53,15 +44,9 @@ pub const CPU = struct {
         self.register[0xF] = 0;
         var rx = self.register[self.instruct.x];
         var ry = self.register[self.instruct.y];
-        std.log.info("x: {}, rx: {},y: {}, ry: {}", .{
-            self.instruct.x,
-            rx,
-            self.instruct.y,
-            ry,
-        });
         const bit: u8 = 0x80;
         for (0..self.instruct.opcode & 0x000F) |row| {
-            var sprite = memory.ram[self.index + row];
+            const sprite = memory.ram[self.index + row];
             for (0..8) |col| {
                 if (sprite & bit >> @as(u3, @intCast(col)) != 0) {
                     if (memory.setPixel(rx + col, ry + row)) {
