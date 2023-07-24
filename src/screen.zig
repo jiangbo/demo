@@ -5,7 +5,6 @@ const WIDTH: c_int = 64;
 const HEIGHT: c_int = 32;
 
 pub const Screen = struct {
-    age: u8 = 44,
     scale: u8,
     buffer: [WIDTH * HEIGHT]u1 = undefined,
     needRender: bool = true,
@@ -16,7 +15,6 @@ pub const Screen = struct {
     pub fn new() Screen {
         return Screen{
             .scale = 10,
-            .age = 88,
         };
     }
 

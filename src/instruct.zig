@@ -12,8 +12,8 @@ pub const Instruct = struct {
     }
 
     pub fn decode(self: *Instruct) void {
-        self.x = @as(u8, @intCast(self.opcode & 0x0F00 >> 8));
-        self.y = @as(u8, @intCast(self.opcode & 0x00F0 >> 4));
+        self.x = @as(u8, @intCast((self.opcode & 0x0F00) >> 8));
+        self.y = @as(u8, @intCast((self.opcode & 0x00F0) >> 4));
         self.nnn = self.opcode & 0x0FFF;
     }
 };
