@@ -1,5 +1,5 @@
 const c = @cImport(@cInclude("SDL.h"));
-const std = @import("std");
+// const std = @import("std");
 const cpu = @import("cpu.zig");
 const mem = @import("mem.zig");
 const screen = @import("screen.zig");

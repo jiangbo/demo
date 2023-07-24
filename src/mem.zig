@@ -1,4 +1,4 @@
-const std = @import("std");
+// const std = @import("std");
 const screen = @import("screen.zig");
 
 pub const Memory = struct {
@@ -17,7 +17,6 @@ pub const Memory = struct {
     pub fn load(self: *Memory, pc: u16) u16 {
         const high: u8 = self.ram[pc];
         return (@as(u16, high) << 8) | self.ram[pc + 1];
-        // return std.mem.readIntSliceBig(u16, self.ram[pc .. pc + 1]);
     }
 
     pub fn clearScreen(self: *Memory) void {
