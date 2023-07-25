@@ -10,7 +10,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const sdl_path = "C:\\lib\\SDL2-2.28.1\\";
+    const sdl_path = "libs\\SDL2-2.28.1\\";
     exe.addIncludePath(sdl_path ++ "include");
     exe.addLibraryPath(sdl_path ++ "lib\\x64");
     b.installBinFile(sdl_path ++ "lib\\x64\\SDL2.dll", "SDL2.dll");

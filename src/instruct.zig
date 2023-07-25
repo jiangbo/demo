@@ -3,7 +3,7 @@ pub const Instruct = struct {
     code: u4 = undefined,
     nnn: u12 = undefined,
     nn: u8 = undefined,
-    x: u4 = undefined,
+    x: u8 = undefined,
     y: u4 = undefined,
     n: u4 = undefined,
 

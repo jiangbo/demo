@@ -86,16 +86,12 @@ pub const CPU = struct {
             },
             0x5 => self.subWithFlag(reg[ins.x], reg[ins.y]),
             0x6 => {
-                // reg[ins.x] = reg[ins.y];
                 reg[0xF] = reg[ins.x] & 0x1;
-                // reg[ins.x] >>= 1;
                 reg[ins.x] = reg[ins.x] >> 1;
             },
             0x7 => self.subWithFlag(reg[ins.y], reg[ins.x]),
             0xE => {
-                // reg[ins.x] = reg[ins.y];
                 reg[0xF] = (reg[ins.x] >> 7) & 0x1;
-                // reg[ins.x] <<= 1;
                 reg[ins.x] = reg[ins.x] << 1;
             },
             else => std.log.info("unknow opcode: 0x{X:0>4}", .{ins.opcode}),
@@ -110,8 +106,6 @@ pub const CPU = struct {
 
     const width: u8 = 0x80; // 每个精灵的固定宽度
     fn draw(self: *CPU, memory: *Memory) void {
-        // std.log.info("draw...", .{});
-        // const start = std.time.milliTimestamp();
         self.register[0xF] = 0;
         var rx = self.register[self.instruct.x];
         var ry = self.register[self.instruct.y];
@@ -125,9 +119,8 @@ pub const CPU = struct {
                 }
             }
         }
-        // const end = std.time.milliTimestamp();
-        // std.log.info("draw ms: {}", .{end - start});
     }
+
     fn codef(self: *CPU, ins: *Instruct, memory: *Memory) void {
         switch (ins.nn) {
             0x07 => self.register[ins.x] = self.delay,
@@ -149,13 +142,11 @@ pub const CPU = struct {
             0x55 => {
                 for (0..ins.x + 1) |i| {
                     memory.set(self.index + i, self.register[i]);
-                    // self.index = self.index + ins.x + 1;
                 }
             },
             0x65 => {
                 for (0..ins.x + 1) |i| {
                     self.register[i] = memory.get(self.index + i);
-                    // self.index = self.index + ins.x + 1;
                 }
             },
             else => std.log.info("unknow opcode: 0x{X:0>4}", .{ins.opcode}),
