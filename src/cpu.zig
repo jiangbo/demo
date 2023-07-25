@@ -15,13 +15,15 @@ pub const CPU = struct {
         self.fetch(memory);
         self.decode();
         self.execute(memory);
+    }
+
+    pub fn tick(self: *CPU) void {
         if (self.delay > 0) self.delay -= 1;
         if (self.sound > 0) self.sound -= 1;
     }
 
     fn fetch(self: *CPU, memory: *Memory) void {
         var opcode = memory.load(self.pc);
-        // std.log.info("opcode: 0x{X:0>4}", .{opcode});
         self.instruct = Instruct{ .opcode = opcode };
         self.next();
     }
@@ -63,7 +65,6 @@ pub const CPU = struct {
             0xC => reg[ins.x] = self.prng.random().int(u8) & ins.nn,
             0xD => self.draw(memory),
             0xE => {
-                std.log.info("press.....", .{});
                 const isPress = memory.isPress(reg[ins.x]);
                 if (ins.nn == 0x9E and isPress) self.next();
                 if (ins.nn == 0xA1 and !isPress) self.next();

@@ -38,10 +38,8 @@ pub const Screen = struct {
         _ = c.SDL_RenderSetLogicalSize(self.renderer, WIDTH, HEIGHT);
     }
 
-    pub fn update(self: *Screen) void {
-        // defer c.SDL_Delay(1000 / 65);
-        // defer c.SDL_Delay(400);
-        defer c.SDL_Delay(10);
+    pub fn update(self: *Screen, fps: u32) void {
+        defer c.SDL_Delay(1000 / fps);
         if (!self.needRender) return;
 
         _ = c.SDL_SetRenderDrawColor(self.renderer, 0, 0, 0, 255);

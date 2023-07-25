@@ -5,6 +5,8 @@ const screen = @import("screen.zig");
 const keypad = @import("keypad.zig");
 
 const ENTRY = 0x200;
+const HZ = 500;
+const FPS = 60;
 
 pub const Emulator = struct {
     cpu: cpu.CPU,
@@ -30,8 +32,10 @@ pub const Emulator = struct {
         defer self.screen.deinit();
 
         while (self.keypad.poll()) {
-            self.cpu.cycle(&self.memory);
-            self.screen.update();
+            for (0..(HZ / FPS)) |_|
+                self.cpu.cycle(&self.memory);
+            self.screen.update(FPS);
+            self.cpu.tick();
         }
     }
 };
