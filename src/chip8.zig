@@ -25,6 +25,7 @@ pub const Emulator = struct {
 
     pub fn run(self: *Emulator) void {
         self.memory.screen = &self.screen;
+        self.memory.keypad = &self.keypad;
         self.screen.init();
         defer self.screen.deinit();
 

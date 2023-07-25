@@ -19,7 +19,6 @@ pub const Screen = struct {
     }
 
     pub fn init(self: *Screen) void {
-        std.log.info("init screen", .{});
         if (c.SDL_Init(c.SDL_INIT_EVERYTHING) < 0)
             @panic("sdl init failed");
 
@@ -40,7 +39,9 @@ pub const Screen = struct {
     }
 
     pub fn update(self: *Screen) void {
-        defer c.SDL_Delay(1000 / 60);
+        // defer c.SDL_Delay(1000 / 65);
+        // defer c.SDL_Delay(400);
+        defer c.SDL_Delay(10);
         if (!self.needRender) return;
 
         _ = c.SDL_SetRenderDrawColor(self.renderer, 0, 0, 0, 255);
@@ -76,7 +77,6 @@ pub const Screen = struct {
     }
 
     pub fn deinit(self: *Screen) void {
-        std.log.info("deinit screen", .{});
         c.SDL_DestroyTexture(self.texture);
         c.SDL_DestroyRenderer(self.renderer);
         c.SDL_DestroyWindow(self.window);

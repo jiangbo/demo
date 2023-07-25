@@ -1,4 +1,4 @@
-// const std = @import("std");
+const std = @import("std");
 const Screen = @import("screen.zig").Screen;
 const Keypad = @import("keypad.zig").Keypad;
 
@@ -32,6 +32,19 @@ pub const Memory = struct {
 
     pub fn set(self: *Memory, index: usize, value: u8) void {
         self.ram[index] = value;
+    }
+
+    pub fn isPress(self: *Memory, index: usize) bool {
+        // std.log.info("is press index: {any}, result: {}", .{ index, self.keypad.buffer[index] });
+        return self.keypad.buffer[index];
+    }
+
+    pub fn getPress(self: *Memory) ?u8 {
+        // std.log.info("get press: {any}", .{self.keypad.buffer});
+        for (self.keypad.buffer, 0..) |code, index| {
+            if (code) return @truncate(index);
+        }
+        return null;
     }
 
     pub fn get(self: *Memory, index: usize) u8 {

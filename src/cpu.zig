@@ -15,16 +15,23 @@ pub const CPU = struct {
         self.fetch(memory);
         self.decode();
         self.execute(memory);
+        if (self.delay > 0) self.delay -= 1;
+        if (self.sound > 0) self.sound -= 1;
     }
 
     fn fetch(self: *CPU, memory: *Memory) void {
         var opcode = memory.load(self.pc);
+        // std.log.info("opcode: 0x{X:0>4}", .{opcode});
         self.instruct = Instruct{ .opcode = opcode };
         self.next();
     }
 
     fn next(self: *CPU) void {
         self.pc += 2;
+    }
+
+    fn back(self: *CPU) void {
+        self.pc -= 2;
     }
 
     fn decode(self: *CPU) void {
@@ -44,19 +51,24 @@ pub const CPU = struct {
                 memory.push(self.pc);
                 self.pc = ins.nnn;
             },
-            0x3 => if (reg[ins.x] == ins.kk) self.next(),
-            0x4 => if (reg[ins.x] != ins.kk) self.next(),
+            0x3 => if (reg[ins.x] == ins.nn) self.next(),
+            0x4 => if (reg[ins.x] != ins.nn) self.next(),
             0x5 => if (reg[ins.x] == reg[ins.y]) self.next(),
-            0x6 => reg[ins.x] = ins.kk,
-            0x7 => reg[ins.x] +%= ins.kk,
+            0x6 => reg[ins.x] = ins.nn,
+            0x7 => reg[ins.x] +%= ins.nn,
             0x8 => self.code8(reg, ins),
             0x9 => if (reg[ins.x] != reg[ins.y]) self.next(),
             0xA => self.index = ins.nnn,
             0xB => self.pc = reg[0] + ins.nnn,
-            0xC => reg[ins.x] = self.prng.random().int(u8) & ins.kk,
+            0xC => reg[ins.x] = self.prng.random().int(u8) & ins.nn,
             0xD => self.draw(memory),
-            0xE => self.draw(memory),
-            0xF => self.codef(reg, ins, memory),
+            0xE => {
+                std.log.info("press.....", .{});
+                const isPress = memory.isPress(reg[ins.x]);
+                if (ins.nn == 0x9E and isPress) self.next();
+                if (ins.nn == 0xA1 and !isPress) self.next();
+            },
+            0xF => self.codef(ins, memory),
         }
     }
 
@@ -73,13 +85,17 @@ pub const CPU = struct {
             },
             0x5 => self.subWithFlag(reg[ins.x], reg[ins.y]),
             0x6 => {
-                reg[0xF] = reg[ins.x] & 0x01;
-                reg[ins.x] >>= 1;
+                // reg[ins.x] = reg[ins.y];
+                reg[0xF] = reg[ins.x] & 0x1;
+                // reg[ins.x] >>= 1;
+                reg[ins.x] = reg[ins.x] >> 1;
             },
             0x7 => self.subWithFlag(reg[ins.y], reg[ins.x]),
             0xE => {
-                reg[0xF] = reg[ins.x] >> 7;
-                reg[ins.x] <<= 1;
+                // reg[ins.x] = reg[ins.y];
+                reg[0xF] = (reg[ins.x] >> 7) & 0x1;
+                // reg[ins.x] <<= 1;
+                reg[ins.x] = reg[ins.x] << 1;
             },
             else => std.log.info("unknow opcode: 0x{X:0>4}", .{ins.opcode}),
         }
@@ -93,6 +109,8 @@ pub const CPU = struct {
 
     const width: u8 = 0x80; // 每个精灵的固定宽度
     fn draw(self: *CPU, memory: *Memory) void {
+        // std.log.info("draw...", .{});
+        // const start = std.time.milliTimestamp();
         self.register[0xF] = 0;
         var rx = self.register[self.instruct.x];
         var ry = self.register[self.instruct.y];
@@ -106,16 +124,21 @@ pub const CPU = struct {
                 }
             }
         }
+        // const end = std.time.milliTimestamp();
+        // std.log.info("draw ms: {}", .{end - start});
     }
-    fn codef(self: *CPU, reg: *[16]u8, ins: *Instruct, memory: *Memory) void {
-        switch (ins.kk) {
-            // 0x07 => self.register[ins.x] = self.delay,
-            // 0x15 => self.delay = self.register[ins.x],
-            // 0x18 => self.sound = self.register[ins.x],
+    fn codef(self: *CPU, ins: *Instruct, memory: *Memory) void {
+        switch (ins.nn) {
+            0x07 => self.register[ins.x] = self.delay,
+            0x0A => if (memory.getPress()) |index| {
+                self.register[ins.x] = index;
+            } else self.back(),
+            0x15 => self.delay = self.register[ins.x],
+            0x18 => self.sound = self.register[ins.x],
             0x1E => self.index += self.register[ins.x],
             0x29 => self.index = self.register[ins.x] * 5,
             0x33 => {
-                var num = reg[ins.x];
+                var num = self.register[ins.x];
                 memory.set(self.index + 2, num % 10);
                 num /= 10;
                 memory.set(self.index + 1, num % 10);
@@ -123,12 +146,16 @@ pub const CPU = struct {
                 memory.set(self.index, num % 10);
             },
             0x55 => {
-                for (0..ins.x + 1) |i|
+                for (0..ins.x + 1) |i| {
                     memory.set(self.index + i, self.register[i]);
+                    // self.index = self.index + ins.x + 1;
+                }
             },
             0x65 => {
-                for (0..ins.x + 1) |i|
+                for (0..ins.x + 1) |i| {
                     self.register[i] = memory.get(self.index + i);
+                    // self.index = self.index + ins.x + 1;
+                }
             },
             else => std.log.info("unknow opcode: 0x{X:0>4}", .{ins.opcode}),
         }
