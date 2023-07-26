@@ -1,3 +1,4 @@
+const std = @import("std");
 const c = @cImport(@cInclude("SDL.h"));
 
 const WIDTH: c_int = 64;
