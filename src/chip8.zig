@@ -1,41 +1,38 @@
-const std = @import("std");
 const cpu = @import("cpu.zig");
-const mem = @import("memory.zig");
+const memory = @import("memory.zig");
 const screen = @import("screen.zig");
 const keypad = @import("keypad.zig");
 
-const ENTRY = 0x200;
 const HZ = 500;
 const FPS = 60;
 
 pub const Emulator = struct {
     cpu: cpu.CPU,
-    memory: mem.Memory,
+    memory: memory.Memory,
     screen: screen.Screen,
     keypad: keypad.Keypad,
 
-    pub fn new(rom: []const u8) Emulator {
-        const seed = @as(u64, @intCast(std.time.timestamp()));
-        var prng = std.rand.DefaultPrng.init(seed);
+    pub fn new() Emulator {
         return Emulator{
-            .cpu = cpu.CPU{ .pc = ENTRY, .prng = prng },
-            .memory = mem.Memory.new(rom, ENTRY),
-            .screen = screen.Screen.new(),
-            .keypad = keypad.Keypad.new(),
+            .cpu = cpu.CPU{},
+            .memory = memory.Memory{},
+            .screen = screen.Screen{},
+            .keypad = keypad.Keypad{},
         };
     }
 
     pub fn run(self: *Emulator) void {
-        self.memory.screen = &self.screen;
-        self.memory.keypad = &self.keypad;
         self.screen.init();
         defer self.screen.deinit();
 
-        while (self.keypad.poll()) {
+        var index: usize = 0;
+        while (self.keypad.poll()) : (index += 1) {
             for (0..(HZ / FPS)) |_|
                 self.cpu.cycle(&self.memory);
+
+            if (index % 44 == 0) self.screen.clear();
+            _ = self.screen.setIndex(index);
             self.screen.update(FPS);
-            self.cpu.tick();
         }
     }
 };

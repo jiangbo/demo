@@ -14,7 +14,7 @@ pub fn build(b: *std.Build) void {
     exe.addIncludePath(sdl_path ++ "include");
     exe.addLibraryPath(sdl_path ++ "lib\\x64");
     b.installBinFile(sdl_path ++ "lib\\x64\\SDL2.dll", "SDL2.dll");
-    exe.linkSystemLibrary("sdl2");
+    exe.linkSystemLibrary("SDL2");
     exe.linkLibC();
     b.installArtifact(exe);
 
