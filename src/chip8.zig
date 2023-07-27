@@ -15,7 +15,7 @@ pub const Emulator = struct {
 
     pub fn new(rom: []const u8) Emulator {
         return Emulator{
-            .cpu = cpu.CPU{ .pc = ENTRY },
+            .cpu = cpu.CPU.new(ENTRY),
             .memory = memory.Memory.new(rom, ENTRY),
             .screen = screen.Screen{},
             .keypad = keypad.Keypad{},
@@ -34,6 +34,7 @@ pub const Emulator = struct {
                 self.cpu.cycle(&self.memory);
 
             self.screen.update(FPS);
+            self.cpu.tick();
         }
     }
 };

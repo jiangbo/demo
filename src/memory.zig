@@ -46,6 +46,17 @@ pub const Memory = struct {
         self.sp -= 1;
         return self.stack[self.sp];
     }
+
+    pub fn isPress(self: *Memory, index: usize) bool {
+        return self.keypad.buffer[index];
+    }
+
+    pub fn getPress(self: *Memory) ?u8 {
+        for (self.keypad.buffer, 0..) |code, index| {
+            if (code) return @truncate(index);
+        }
+        return null;
+    }
 };
 
 const fonts = [_]u8{
