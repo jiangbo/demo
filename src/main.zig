@@ -1,14 +1,14 @@
 const std = @import("std");
-const chip8 = @import("chip8.zig");
+const Header = @import("header.zig").Header;
 
 pub fn main() !void {
-    // const rom = @embedFile("roms/1-chip8-logo.ch8");
-    // const rom = @embedFile("roms/2-ibm-logo.ch8");
-    // const rom = @embedFile("roms/3-corax+.ch8");
-    // const rom = @embedFile("roms/4-flags.ch8");
-    // const rom = @embedFile("roms/5-quirks.ch8");
-    // const rom = @embedFile("roms/6-keypad.ch8");
-    const rom = @embedFile("roms/tetris.rom");
-    var emulator = chip8.Emulator.new(rom);
-    emulator.run();
+    const rom = @embedFile("roms/nestest.nes");
+    std.log.info("", .{});
+
+    var header = Header.init(rom);
+    header.decode();
+    std.log.info("is nes file: {}", .{header.is_nes});
+
+    std.log.info("program length: {}", .{header.program});
+    std.log.info("charater length: {}", .{header.charater});
 }
