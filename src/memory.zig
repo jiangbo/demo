@@ -1,79 +1,30 @@
-const Screen = @import("screen.zig").Screen;
-const Keypad = @import("keypad.zig").Keypad;
+const std = @import("std");
+const header = @import("header.zig");
+
+const START: u16 = 0x8000;
 
 pub const Memory = struct {
-    ram: [4096]u8 = undefined,
-    stack: [16]u16 = undefined,
-    sp: u8 = 0,
-    screen: *Screen = undefined,
-    keypad: *Keypad = undefined,
+    ram: [64 * 1024]u8 = undefined,
 
-    pub fn new(rom: []const u8, entry: u16) Memory {
+    pub fn new(rom: []const u8, head: *header.Header) Memory {
         var memory = Memory{};
-        @memcpy(memory.ram[0..fonts.len], &fonts);
-        @memcpy(memory.ram[entry .. entry + rom.len], rom);
+        const len: u32 = head.programLength();
+        const program = rom[0..len];
+        if (head.program == 1) {
+            @memcpy(memory.ram[START .. START + len], program);
+            @memcpy(memory.ram[START + len .. START + len + len], program);
+        } else {
+            @memcpy(memory.ram[START .. START + len], program);
+        }
         return memory;
     }
 
-    pub fn load(self: *Memory, pc: u16) u16 {
-        const high: u8 = self.ram[pc];
-        return (@as(u16, high) << 8) | self.ram[pc + 1];
+    pub fn load(self: *Memory, addr: u16) u16 {
+        const high: u8 = self.ram[addr + 1];
+        return (@as(u16, high) << 8) | self.ram[addr];
     }
 
-    pub fn get(self: *Memory, index: usize) u8 {
+    pub fn get(self: *Memory, index: u16) u8 {
         return self.ram[index];
     }
-
-    pub fn set(self: *Memory, index: usize, value: u8) void {
-        self.ram[index] = value;
-    }
-
-    pub fn clearScreen(self: *Memory) void {
-        var screen1 = self.screen;
-        screen1.clear();
-    }
-
-    pub fn setPixel(self: *Memory, x: usize, y: usize) bool {
-        return self.screen.setPixel(x, y);
-    }
-
-    pub fn push(self: *Memory, value: u16) void {
-        self.stack[self.sp] = value;
-        self.sp += 1;
-    }
-
-    pub fn pop(self: *Memory) u16 {
-        self.sp -= 1;
-        return self.stack[self.sp];
-    }
-
-    pub fn isPress(self: *Memory, index: usize) bool {
-        return self.keypad.buffer[index];
-    }
-
-    pub fn getPress(self: *Memory) ?u8 {
-        for (self.keypad.buffer, 0..) |code, index| {
-            if (code) return @truncate(index);
-        }
-        return null;
-    }
-};
-
-const fonts = [_]u8{
-    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-    0x20, 0x60, 0x20, 0x20, 0x70, // 1
-    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-    0xe0, 0x90, 0x90, 0x90, 0xE0, // D
-    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-    0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 };
