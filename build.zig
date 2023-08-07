@@ -1,8 +1,11 @@
 const std = @import("std");
+const Sdk = @import("sdl");
 
 pub fn build(b: *std.Build) void {
+    const sdk = Sdk.init(b, null);
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
     const exe = b.addExecutable(.{
         .name = "demo",
         .root_source_file = .{ .path = "src/main.zig" },
@@ -10,16 +13,18 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const sdl_path = "libs\\SDL2-2.28.1\\";
-    exe.addIncludePath(sdl_path ++ "include");
-    exe.addLibraryPath(sdl_path ++ "lib\\x64");
-    b.installBinFile(sdl_path ++ "lib\\x64\\SDL2.dll", "SDL2.dll");
-    exe.linkSystemLibrary("SDL2");
-    exe.linkLibC();
+    sdk.link(exe, .dynamic);
+    exe.addModule("sdl2", sdk.getNativeModule());
+
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
+
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 }
