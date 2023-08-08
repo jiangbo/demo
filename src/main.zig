@@ -1,39 +1,45 @@
 const std = @import("std");
-const SDL = @import("sdl2");
+const c = @cImport({
+    @cInclude("SDL.h");
+    @cInclude("SDL_image.h");
+});
+
+const WIDTH = 1280;
+const HEIGHT = 720;
 
 pub fn main() !void {
-    if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO | SDL.SDL_INIT_EVENTS | SDL.SDL_INIT_AUDIO) < 0)
-        sdlPanic();
-    defer SDL.SDL_Quit();
+    if (c.SDL_Init(c.SDL_INIT_VIDEO) < 0) sdlPanic();
+    defer c.SDL_Quit();
 
-    var window = SDL.SDL_CreateWindow(
-        "SDL2 Native Demo",
-        SDL.SDL_WINDOWPOS_CENTERED,
-        SDL.SDL_WINDOWPOS_CENTERED,
-        640,
-        480,
-        SDL.SDL_WINDOW_SHOWN,
-    ) orelse sdlPanic();
-    defer _ = SDL.SDL_DestroyWindow(window);
+    if (c.IMG_Init(c.IMG_INIT_PNG | c.IMG_INIT_JPG) < 0) sdlPanic();
+    defer c.IMG_Quit();
 
-    var renderer = SDL.SDL_CreateRenderer(window, -1, SDL.SDL_RENDERER_ACCELERATED) orelse sdlPanic();
-    defer _ = SDL.SDL_DestroyRenderer(renderer);
+    // texture = c.IMG_LoadTexture(app.renderer, filename);
+
+    const pos = c.SDL_WINDOWPOS_CENTERED;
+    var window = c.SDL_CreateWindow("射击", pos, pos, WIDTH, HEIGHT, //
+        c.SDL_WINDOW_SHOWN) orelse sdlPanic();
+    defer c.SDL_DestroyWindow(window);
+
+    _ = c.SDL_SetHint(c.SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+    var renderer = c.SDL_CreateRenderer(window, -1, c.SDL_RENDERER_ACCELERATED) orelse sdlPanic();
+    defer c.SDL_DestroyRenderer(renderer);
 
     mainLoop: while (true) {
-        var ev: SDL.SDL_Event = undefined;
-        while (SDL.SDL_PollEvent(&ev) != 0) {
-            if (ev.type == SDL.SDL_QUIT)
+        var event: c.SDL_Event = undefined;
+        while (c.SDL_PollEvent(&event) != 0) {
+            if (event.type == c.SDL_QUIT)
                 break :mainLoop;
         }
 
-        _ = SDL.SDL_SetRenderDrawColor(renderer, 0xF7, 0xA4, 0x1D, 0xFF);
-        _ = SDL.SDL_RenderClear(renderer);
+        _ = c.SDL_SetRenderDrawColor(renderer, 96, 128, 255, 255);
+        _ = c.SDL_RenderClear(renderer);
 
-        SDL.SDL_RenderPresent(renderer);
+        c.SDL_RenderPresent(renderer);
     }
 }
 
 fn sdlPanic() noreturn {
-    const str = @as(?[*:0]const u8, SDL.SDL_GetError()) orelse "unknown error";
-    @panic(std.mem.sliceTo(str, 0));
+    const str = @as(?[*:0]const u8, c.SDL_GetError());
+    @panic(std.mem.sliceTo(str orelse "unknown error", 0));
 }
