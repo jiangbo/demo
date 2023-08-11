@@ -1,4 +1,5 @@
 const std = @import("std");
+const Sdk = @import("sdl2");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -11,19 +12,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const sdl = "C:\\lib\\SDL2-2.28.1\\";
-    exe.addIncludePath(.{ .path = sdl ++ "include" });
-    exe.addLibraryPath(.{ .path = sdl ++ "lib\\x64" });
-    b.installBinFile(sdl ++ "lib\\x64\\SDL2.dll", "SDL2.dll");
-    exe.linkSystemLibrary("SDL2");
-
-    const sdl_image = "C:\\lib\\SDL2_image-2.6.3\\";
-    exe.addIncludePath(.{ .path = sdl_image ++ "include" });
-    exe.addLibraryPath(.{ .path = sdl_image ++ "lib\\x64" });
-    b.installBinFile(sdl_image ++ "lib\\x64\\SDL2_image.dll", "SDL2_image.dll");
-    exe.linkSystemLibrary("SDL2_image");
-
-    exe.linkLibC();
+    const sdk = Sdk.init(b, null);
+    sdk.link(exe, .static);
+    exe.addModule("sdl2", sdk.getNativeModule());
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);

@@ -1,7 +1,6 @@
 const std = @import("std");
 const c = @cImport({
     @cInclude("SDL.h");
-    @cInclude("SDL_image.h");
 });
 
 const WIDTH = 1280;
@@ -11,11 +10,10 @@ pub fn main() !void {
     if (c.SDL_Init(c.SDL_INIT_VIDEO) < 0) sdlPanic();
     defer c.SDL_Quit();
 
-    if (c.IMG_Init(c.IMG_INIT_PNG | c.IMG_INIT_JPG) < 0) sdlPanic();
-    defer c.IMG_Quit();
+    // if (c.IMG_Init(c.IMG_INIT_PNG | c.IMG_INIT_JPG) < 0) sdlPanic();
+    // defer c.IMG_Quit();
 
     // texture = c.IMG_LoadTexture(app.renderer, filename);
-
     const pos = c.SDL_WINDOWPOS_CENTERED;
     var window = c.SDL_CreateWindow("射击", pos, pos, WIDTH, HEIGHT, //
         c.SDL_WINDOW_SHOWN) orelse sdlPanic();
