@@ -2,11 +2,8 @@ const std = @import("std");
 const App = @import("app.zig").App;
 const c = @import("c.zig");
 
-const WIDTH = 1280;
-const HEIGHT = 720;
-
 pub fn main() !void {
-    var app = App{ .width = WIDTH, .height = HEIGHT };
+    var app = App{};
     app.init();
     defer app.deinit();
     mainLoop: while (true) {
@@ -22,8 +19,3 @@ pub fn main() !void {
         c.SDL_RenderPresent(app.renderer);
     }
 }
-
-// fn sdlPanic() noreturn {
-//     const str = @as(?[*:0]const u8, c.SDL_GetError());
-//     @panic(std.mem.sliceTo(str orelse "unknown error", 0));
-// }
