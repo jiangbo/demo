@@ -8,8 +8,8 @@ pub const App = struct {
     renderer: *c.SDL_Renderer = undefined,
 
     pub fn init(self: *App) void {
-        if (c.SDL_Init(c.SDL_INIT_VIDEO) < 0)
-            sdlPanic();
+        if (c.SDL_Init(c.SDL_INIT_VIDEO) < 0) sdlPanic();
+        if (c.TTF_Init() < 0) sdlPanic();
 
         const center = c.SDL_WINDOWPOS_CENTERED;
         self.window = c.SDL_CreateWindow("射击", center, center, //
@@ -22,6 +22,7 @@ pub const App = struct {
     pub fn deinit(self: *App) void {
         c.SDL_DestroyRenderer(self.renderer);
         c.SDL_DestroyWindow(self.window);
+        c.TTF_Quit();
         c.SDL_Quit();
     }
 };
