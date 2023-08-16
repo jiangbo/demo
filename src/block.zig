@@ -63,6 +63,7 @@ pub const Tetrimino = struct {
     facing: Facing = .North,
     value: [4][8]u8 = undefined,
     color: u32,
+    solid: bool = false,
 
     pub fn position(self: *Tetrimino) [8]u8 {
         return self.value[@intFromEnum(self.facing)];
@@ -79,18 +80,21 @@ pub const Tetrimino = struct {
         self.facing = @enumFromInt(int + 1 % len);
     }
 
-    pub fn locateIn(self: *Tetrimino, width: i32, height: i32) void {
+    pub fn locateIn(self: *Tetrimino, width: usize, height: usize) void {
         const pos = self.position();
 
         const minx = @min(@min(@min(pos[0], pos[2]), pos[4]), pos[6]);
         if (self.x + minx < 0) self.x -= self.x + minx;
 
         const maxx = @max(@max(@max(pos[0], pos[2]), pos[4]), pos[6]);
-        const x = self.x + maxx - width;
+        const x = self.x + maxx - @as(i32, @intCast(width));
         if (x >= 0) self.x -= x + 1;
 
         const maxy = @max(@max(@max(pos[1], pos[3]), pos[5]), pos[7]);
-        const y = self.y + maxy - height;
-        if (y >= 0) self.y -= y + 1;
+        const y = self.y + maxy - @as(i32, @intCast(height));
+        if (y >= 0) {
+            self.y -= y + 1;
+            self.solid = true;
+        }
     }
 };

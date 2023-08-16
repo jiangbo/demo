@@ -1,20 +1,22 @@
 const std = @import("std");
 const c = @import("c.zig");
 
+const WIDTH = 10;
+const HEIGHT = 20;
+
 pub const Screen = struct {
-    width: usize = 10,
-    height: usize = 20,
-    scale: u16 = 40,
-    border: u16 = 1,
+    width: usize = WIDTH,
+    height: usize = HEIGHT,
+    scale: u16 = 50,
+    border: u16 = 2,
+    buffer: [WIDTH][HEIGHT]u32 = undefined,
     window: *c.SDL_Window = undefined,
     renderer: *c.SDL_Renderer = undefined,
 
     pub fn init(self: *Screen) void {
-        if (c.SDL_Init(c.SDL_INIT_VIDEO) < 0) c.sdlPanic();
+        self.buffer = std.mem.zeroes([WIDTH][HEIGHT]u32);
+        if (c.SDL_Init(c.SDL_INIT_EVERYTHING) < 0) c.sdlPanic();
         if (c.TTF_Init() < 0) c.sdlPanic();
-
-        const height: c_int = @intCast(self.height);
-        _ = height;
 
         const center = c.SDL_WINDOWPOS_CENTERED;
         self.window = c.SDL_CreateWindow("俄罗斯方块", center, center, //
@@ -35,6 +37,11 @@ pub const Screen = struct {
         self.fillRect(x, y);
     }
 
+    pub fn drawSolid(self: *Screen, x: usize, y: usize, rgba: u32) void {
+        self.draw(x, y, rgba);
+        self.buffer[x][y] = rgba;
+    }
+
     pub fn drawEmpty(self: *Screen, x: usize, y: usize) void {
         _ = c.SDL_SetRenderDrawColor(self.renderer, 40, 40, 40, 0xff);
         self.fillRect(x, y);
@@ -50,9 +57,20 @@ pub const Screen = struct {
         _ = c.SDL_RenderFillRect(self.renderer, &rect);
     }
 
-    pub fn clear(self: *Screen) void {
-        _ = c.SDL_SetRenderDrawColor(self.renderer, 0, 0, 0, 255);
+    pub fn display(self: *Screen) void {
+        self.setColor(0x3b, 0x3b, 0x3b);
         _ = c.SDL_RenderClear(self.renderer);
+        for (0..WIDTH) |row| {
+            for (0..HEIGHT) |col| {
+                const color = self.buffer[row][col];
+                if (color == 0) {
+                    self.setColor(40, 40, 40);
+                    self.fillRect(row, col);
+                } else {
+                    self.draw(row, col, color);
+                }
+            }
+        }
     }
 
     pub fn present(self: *Screen, fps: u32) void {
@@ -65,5 +83,9 @@ pub const Screen = struct {
         c.SDL_DestroyWindow(self.window);
         c.TTF_Quit();
         c.SDL_Quit();
+    }
+
+    fn setColor(self: *Screen, r: u8, g: u8, b: u8) void {
+        _ = c.SDL_SetRenderDrawColor(self.renderer, r, g, b, 0xff);
     }
 };

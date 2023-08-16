@@ -3,27 +3,26 @@ const Screen = @import("screen.zig").Screen;
 const Tetrimino = @import("block.zig").Tetrimino;
 
 pub const Game = struct {
-    width: i32,
-    height: i32,
     current: Tetrimino,
     prng: std.rand.DefaultPrng,
-    pub fn new(width: usize, height: usize) Game {
+    pub fn new() Game {
         const seed = @as(u64, @intCast(std.time.timestamp()));
         var rand = std.rand.DefaultPrng.init(seed);
         return Game{
-            .width = @intCast(width),
-            .height = @intCast(height),
             .current = Tetrimino.random(&rand),
             .prng = rand,
         };
     }
 
-    // pub fn update(self: *Game) void {
-    //     _ = self;
-    // }
+    pub fn update(self: *Game, screen: *Screen) void {
+        self.move(0, 1, screen);
+    }
 
     pub fn draw(self: *Game, screen: *Screen) void {
         drawTetrimino(&self.current, screen);
+        if (self.current.solid) {
+            self.current = Tetrimino.random(&self.prng);
+        }
     }
 
     pub fn drawTetrimino(block: *Tetrimino, screen: *Screen) void {
@@ -32,19 +31,23 @@ pub const Game = struct {
         while (index < value.len) : (index += 2) {
             const x: usize = @intCast(block.x + value[index]);
             const y: usize = @intCast(block.y + value[index + 1]);
-            screen.draw(x, y, block.color);
+            if (block.solid) {
+                screen.drawSolid(x, y, block.color);
+            } else {
+                screen.draw(x, y, block.color);
+            }
         }
     }
 
-    pub fn move(self: *Game, x: i8, y: i8) void {
+    pub fn move(self: *Game, x: i8, y: i8, screen: *Screen) void {
         self.current.x = self.current.x + x;
         self.current.y = self.current.y + y;
 
-        self.current.locateIn(self.width, self.height);
+        self.current.locateIn(screen.width, screen.height);
     }
 
-    pub fn rotate(self: *Game) void {
+    pub fn rotate(self: *Game, screen: *Screen) void {
         self.current.rotate();
-        self.current.locateIn(self.width, self.height);
+        self.current.locateIn(screen.width, screen.height);
     }
 };
