@@ -6,7 +6,7 @@ pub const Facing = enum { North, East, South, West };
 const tetriminoes: [7]Tetrimino = label: {
     var arr: [7]Tetrimino = undefined;
     // I
-    arr[0] = .{ .value = .{
+    arr[0] = .{ .y = -1, .value = .{
         .{ 0, 1, 1, 1, 2, 1, 3, 1 },
         .{ 2, 0, 2, 1, 2, 2, 2, 3 },
         .{ 0, 2, 1, 2, 2, 2, 3, 2 },
@@ -58,8 +58,8 @@ const tetriminoes: [7]Tetrimino = label: {
 };
 
 pub const Tetrimino = struct {
-    x: usize = 0,
-    y: usize = 0,
+    x: i32 = 3,
+    y: i32 = 0,
     facing: Facing = .North,
     value: [4][8]u8 = undefined,
     color: u32,
@@ -68,10 +68,29 @@ pub const Tetrimino = struct {
         return self.value[@intFromEnum(self.facing)];
     }
 
-    pub fn random() Tetrimino {
-        const seed = @as(u64, @intCast(std.time.timestamp()));
-        var prng = std.rand.DefaultPrng.init(seed);
+    pub fn random(rand: *std.rand.DefaultPrng) Tetrimino {
         const len = tetriminoes.len;
-        return tetriminoes[prng.random().uintLessThan(usize, len)];
+        return tetriminoes[rand.random().uintLessThan(usize, len)];
+    }
+
+    pub fn rotate(self: *Tetrimino) void {
+        const int: u8 = @intFromEnum(self.facing);
+        const len = std.enums.values(Facing).len;
+        self.facing = @enumFromInt(int + 1 % len);
+    }
+
+    pub fn locateIn(self: *Tetrimino, width: i32, height: i32) void {
+        const pos = self.position();
+
+        const minx = @min(@min(@min(pos[0], pos[2]), pos[4]), pos[6]);
+        if (self.x + minx < 0) self.x -= self.x + minx;
+
+        const maxx = @max(@max(@max(pos[0], pos[2]), pos[4]), pos[6]);
+        const x = self.x + maxx - width;
+        if (x >= 0) self.x -= x + 1;
+
+        const maxy = @max(@max(@max(pos[1], pos[3]), pos[5]), pos[7]);
+        const y = self.y + maxy - height;
+        if (y >= 0) self.y -= y + 1;
     }
 };

@@ -55,8 +55,9 @@ pub const Screen = struct {
         _ = c.SDL_RenderClear(self.renderer);
     }
 
-    pub fn present(self: *Screen) void {
+    pub fn present(self: *Screen, fps: u32) void {
         c.SDL_RenderPresent(self.renderer);
+        c.SDL_Delay(1000 / fps);
     }
 
     pub fn deinit(self: *Screen) void {
