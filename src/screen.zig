@@ -1,26 +1,11 @@
 const std = @import("std");
 const c = @import("c.zig");
 
-pub const Color = struct {
-    r: u8,
-    g: u8,
-    b: u8,
-    a: u8,
-
-    pub fn new(rgba: u32) Color {
-        return Color{
-            .r = @truncate((rgba >> 24) & 0xff),
-            .g = @truncate((rgba >> 16) & 0xff),
-            .b = @truncate((rgba >> 8) & 0xff),
-            .a = @truncate((rgba >> 0) & 0xff),
-        };
-    }
-};
-
 pub const Screen = struct {
     width: usize = 10,
     height: usize = 20,
     scale: u16 = 40,
+    border: u16 = 1,
     window: *c.SDL_Window = undefined,
     renderer: *c.SDL_Renderer = undefined,
 
@@ -28,28 +13,45 @@ pub const Screen = struct {
         if (c.SDL_Init(c.SDL_INIT_VIDEO) < 0) c.sdlPanic();
         if (c.TTF_Init() < 0) c.sdlPanic();
 
-        const width: c_int = @intCast(self.width);
         const height: c_int = @intCast(self.height);
+        _ = height;
 
         const center = c.SDL_WINDOWPOS_CENTERED;
         self.window = c.SDL_CreateWindow("俄罗斯方块", center, center, //
-            width * self.scale, height * self.scale, //
-            c.SDL_WINDOW_SHOWN) orelse c.sdlPanic();
+            @intCast(self.width * self.scale), //
+            @intCast(self.height * self.scale), c.SDL_WINDOW_SHOWN) //
+        orelse c.sdlPanic();
 
         self.renderer = c.SDL_CreateRenderer(self.window, -1, 0) //
         orelse c.sdlPanic();
-        _ = c.SDL_RenderSetLogicalSize(self.renderer, width, height);
     }
 
     pub fn draw(self: *Screen, x: usize, y: usize, rgba: u32) void {
-        const color = Color.new(rgba);
-        _ = c.SDL_SetRenderDrawColor(self.renderer, //
-            color.r, color.g, color.b, color.a);
-        _ = c.SDL_RenderDrawPoint(self.renderer, @intCast(x), @intCast(y));
+        const r: u8 = @truncate((rgba >> 24) & 0xff);
+        const g: u8 = @truncate((rgba >> 16) & 0xff);
+        const b: u8 = @truncate((rgba >> 8) & 0xff);
+        const a: u8 = @truncate((rgba >> 0) & 0xff);
+        _ = c.SDL_SetRenderDrawColor(self.renderer, r, g, b, a);
+        self.fillRect(x, y);
+    }
+
+    pub fn drawEmpty(self: *Screen, x: usize, y: usize) void {
+        _ = c.SDL_SetRenderDrawColor(self.renderer, 40, 40, 40, 0xff);
+        self.fillRect(x, y);
+    }
+
+    fn fillRect(self: *Screen, x: usize, y: usize) void {
+        const rect = c.SDL_Rect{
+            .x = @intCast(x * self.scale + self.border),
+            .y = @intCast(y * self.scale + self.border),
+            .w = @intCast(self.scale - self.border * 2),
+            .h = @intCast(self.scale - self.border * 2),
+        };
+        _ = c.SDL_RenderFillRect(self.renderer, &rect);
     }
 
     pub fn clear(self: *Screen) void {
-        _ = c.SDL_SetRenderDrawColor(self.renderer, 96, 128, 255, 255);
+        _ = c.SDL_SetRenderDrawColor(self.renderer, 0, 0, 0, 255);
         _ = c.SDL_RenderClear(self.renderer);
     }
 
