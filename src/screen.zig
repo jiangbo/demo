@@ -22,9 +22,13 @@ pub const Screen = struct {
 
         const center = c.SDL_WINDOWPOS_CENTERED;
         self.window = c.SDL_CreateWindow("俄罗斯方块", center, center, //
-            @intCast(self.width * self.scale), //
-            @intCast(self.height * self.scale), c.SDL_WINDOW_SHOWN) //
+            700, //
+            850, c.SDL_WINDOW_SHOWN) //
         orelse c.sdlPanic();
+        // self.window = c.SDL_CreateWindow("俄罗斯方块", center, center, //
+        //     @intCast(self.width * self.scale), //
+        //     @intCast(self.height * self.scale), c.SDL_WINDOW_SHOWN) //
+        // orelse c.sdlPanic();
 
         self.renderer = c.SDL_CreateRenderer(self.window, -1, 0) //
         orelse c.sdlPanic();
@@ -78,8 +82,8 @@ pub const Screen = struct {
 
     fn fillRect(self: *Screen, x: usize, y: usize) void {
         const rect = c.SDL_Rect{
-            .x = @intCast(x * self.scale + self.border),
-            .y = @intCast(y * self.scale + self.border),
+            .x = @intCast(x * self.scale + self.border + 20),
+            .y = @intCast(y * self.scale + self.border + 20),
             .w = @intCast(self.scale - self.border * 2),
             .h = @intCast(self.scale - self.border * 2),
         };
