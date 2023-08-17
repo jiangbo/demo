@@ -19,6 +19,8 @@ pub const Screen = struct {
         self.buffer = std.mem.zeroes([WIDTH][HEIGHT]u32);
         if (c.SDL_Init(c.SDL_INIT_EVERYTHING) < 0) c.sdlPanic();
         if (c.TTF_Init() < 0) c.sdlPanic();
+        var font = c.TTF_OpenFont(null, 16);
+        std.log.info("font: {?}", .{font});
 
         const center = c.SDL_WINDOWPOS_CENTERED;
         self.window = c.SDL_CreateWindow("俄罗斯方块", center, center, //
