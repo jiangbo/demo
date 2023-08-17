@@ -14,23 +14,17 @@ pub const Screen = struct {
     buffer: [WIDTH][HEIGHT]u32 = undefined,
     window: *c.SDL_Window = undefined,
     renderer: *c.SDL_Renderer = undefined,
+    font: *c.TTF_Font = undefined,
 
     pub fn init(self: *Screen) void {
         self.buffer = std.mem.zeroes([WIDTH][HEIGHT]u32);
         if (c.SDL_Init(c.SDL_INIT_EVERYTHING) < 0) c.sdlPanic();
         if (c.TTF_Init() < 0) c.sdlPanic();
-        var font = c.TTF_OpenFont(null, 16);
-        std.log.info("font: {?}", .{font});
+        self.font = c.TTF_OpenFont("clacon.ttf", 80) orelse c.sdlPanic();
 
         const center = c.SDL_WINDOWPOS_CENTERED;
         self.window = c.SDL_CreateWindow("俄罗斯方块", center, center, //
-            700, //
-            850, c.SDL_WINDOW_SHOWN) //
-        orelse c.sdlPanic();
-        // self.window = c.SDL_CreateWindow("俄罗斯方块", center, center, //
-        //     @intCast(self.width * self.scale), //
-        //     @intCast(self.height * self.scale), c.SDL_WINDOW_SHOWN) //
-        // orelse c.sdlPanic();
+            700, 850, c.SDL_WINDOW_SHOWN) orelse c.sdlPanic();
 
         self.renderer = c.SDL_CreateRenderer(self.window, -1, 0) //
         orelse c.sdlPanic();
@@ -106,6 +100,19 @@ pub const Screen = struct {
                 }
             }
         }
+        self.drawText("Score", 480, 50);
+    }
+
+    fn drawText(self: *Screen, text: [*c]const u8, x: i32, y: i32) void {
+        var surface = c.TTF_RenderUTF8_Solid(self.font, text, //
+            .{ .r = 0xff, .g = 0xff, .b = 0xff, .a = 255 });
+        var texture = c.SDL_CreateTextureFromSurface(self.renderer, //
+            surface) orelse c.sdlPanic();
+        var r = c.SDL_Rect{ .x = x, .y = y, .w = 0, .h = 0 };
+        _ = c.SDL_QueryTexture(texture, null, null, &r.w, &r.h);
+        _ = c.SDL_RenderCopy(self.renderer, texture, null, &r);
+        c.SDL_FreeSurface(surface);
+        c.SDL_DestroyTexture(texture);
     }
 
     pub fn present(self: *Screen, fps: u32) void {

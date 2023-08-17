@@ -83,9 +83,10 @@ pub const Game = struct {
         const value = self.current.position();
         var index: usize = 0;
         while (index < value.len) : (index += 2) {
+            const col = self.current.y + value[index + 1];
+            if (col < 0) return true;
             const row: usize = @intCast(self.current.x + value[index]);
-            const col: usize = @intCast(self.current.y + value[index + 1]);
-            if (screen.hasSolid(row, col)) return true;
+            if (screen.hasSolid(row, @intCast(col))) return true;
         }
         return false;
     }
