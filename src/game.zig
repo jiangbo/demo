@@ -5,39 +5,44 @@ const Tetrimino = @import("block.zig").Tetrimino;
 pub const Game = struct {
     over: bool = false,
     current: Tetrimino,
+    next: Tetrimino,
     prng: std.rand.DefaultPrng,
+    score: usize = 100,
     pub fn new() Game {
         const seed = @as(u64, @intCast(std.time.timestamp()));
         var rand = std.rand.DefaultPrng.init(seed);
         return Game{
             .current = Tetrimino.random(&rand),
+            .next = Tetrimino.random(&rand),
             .prng = rand,
         };
     }
 
     pub fn update(self: *Game, screen: *Screen) void {
         self.moveDown(screen);
-        self.draw(screen);
+        self.drawTetrimino(screen);
     }
 
-    pub fn draw(self: *Game, screen: *Screen) void {
-        drawTetrimino(&self.current, screen);
+    pub fn drawTetrimino(self: *Game, screen: *Screen) void {
+        draw(&self.current, screen, self.current.x, self.current.y);
+        draw(&self.next, screen, 450, 600);
         if (self.current.solid) {
-            self.current = Tetrimino.random(&self.prng);
+            self.current = self.next;
+            self.next = Tetrimino.random(&self.prng);
             if (self.hasSolid(screen)) self.over = true;
         }
     }
 
-    pub fn drawTetrimino(block: *Tetrimino, screen: *Screen) void {
+    fn draw(block: *Tetrimino, screen: *Screen, x: i32, y: i32) void {
         const value = block.position();
         var index: usize = 0;
         while (index < value.len) : (index += 2) {
-            const x: usize = @intCast(block.x + value[index]);
-            const y: usize = @intCast(block.y + value[index + 1]);
+            const row: usize = @intCast(x + value[index]);
+            const col: usize = @intCast(y + value[index + 1]);
             if (block.solid) {
-                screen.drawSolid(x, y, block.color);
+                screen.drawSolid(row, col, block.color);
             } else {
-                screen.draw(x, y, block.color);
+                screen.draw(row, col, block.color);
             }
         }
     }

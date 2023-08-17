@@ -17,10 +17,9 @@ pub const Screen = struct {
     font: *c.TTF_Font = undefined,
 
     pub fn init(self: *Screen) void {
-        self.buffer = std.mem.zeroes([WIDTH][HEIGHT]u32);
         if (c.SDL_Init(c.SDL_INIT_EVERYTHING) < 0) c.sdlPanic();
         if (c.TTF_Init() < 0) c.sdlPanic();
-        self.font = c.TTF_OpenFont("clacon.ttf", 80) orelse c.sdlPanic();
+        self.font = c.TTF_OpenFont("clacon.ttf", 60) orelse c.sdlPanic();
 
         const center = c.SDL_WINDOWPOS_CENTERED;
         self.window = c.SDL_CreateWindow("俄罗斯方块", center, center, //
@@ -71,10 +70,10 @@ pub const Screen = struct {
         return y >= HEIGHT or self.buffer[x][y] != 0;
     }
 
-    pub fn drawEmpty(self: *Screen, x: usize, y: usize) void {
-        _ = c.SDL_SetRenderDrawColor(self.renderer, 40, 40, 40, 0xff);
-        self.fillRect(x, y);
-    }
+    // pub fn drawEmpty(self: *Screen, x: usize, y: usize) void {
+    //     _ = c.SDL_SetRenderDrawColor(self.renderer, 40, 40, 40, 0xff);
+    //     self.fillRect(x, y);
+    // }
 
     fn fillRect(self: *Screen, x: usize, y: usize) void {
         const rect = c.SDL_Rect{
@@ -86,7 +85,7 @@ pub const Screen = struct {
         _ = c.SDL_RenderFillRect(self.renderer, &rect);
     }
 
-    pub fn display(self: *Screen) void {
+    pub fn display(self: *Screen, score: usize) void {
         self.setColor(0x3b, 0x3b, 0x3b);
         _ = c.SDL_RenderClear(self.renderer);
         for (0..WIDTH) |row| {
@@ -100,10 +99,20 @@ pub const Screen = struct {
                 }
             }
         }
-        self.drawText("Score", 480, 50);
+        self.drawText("Score", 500, 50);
+        self.setColor(40, 40, 40);
+        var r = c.SDL_Rect{ .x = 440, .y = 120, .w = 240, .h = 100 };
+        _ = c.SDL_RenderFillRect(self.renderer, &r);
+
+        var buf: [9]u8 = undefined;
+        var text = std.fmt.bufPrintZ(&buf, "{:0>5}", .{score}) catch unreachable;
+        self.drawText(text, 500, 145);
+        self.drawText("Next", 510, 280);
+        r = c.SDL_Rect{ .x = 440, .y = 360, .w = 240, .h = 200 };
+        _ = c.SDL_RenderFillRect(self.renderer, &r);
     }
 
-    fn drawText(self: *Screen, text: [*c]const u8, x: i32, y: i32) void {
+    pub fn drawText(self: *Screen, text: [*c]const u8, x: i32, y: i32) void {
         var surface = c.TTF_RenderUTF8_Solid(self.font, text, //
             .{ .r = 0xff, .g = 0xff, .b = 0xff, .a = 255 });
         var texture = c.SDL_CreateTextureFromSurface(self.renderer, //

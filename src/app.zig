@@ -34,8 +34,10 @@ pub const Tetris = struct {
                 self.handleInput(&event);
             }
 
-            self.screen.display();
-            self.game.draw(&self.screen);
+            self.screen.display(self.game.score);
+            self.game.drawTetrimino(&self.screen);
+            if (self.game.over)
+                self.screen.drawText("GAME OVER", 460, 650);
             self.screen.present(FPS);
         }
     }
