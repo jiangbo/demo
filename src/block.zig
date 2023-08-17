@@ -81,6 +81,7 @@ pub const Tetrimino = struct {
     }
 
     pub fn locateIn(self: *Tetrimino, width: usize, height: usize) void {
+        _ = height;
         const pos = self.position();
 
         const minx = @min(@min(@min(pos[0], pos[2]), pos[4]), pos[6]);
@@ -90,11 +91,11 @@ pub const Tetrimino = struct {
         const x = self.x + maxx - @as(i32, @intCast(width));
         if (x >= 0) self.x -= x + 1;
 
-        const maxy = @max(@max(@max(pos[1], pos[3]), pos[5]), pos[7]);
-        const y = self.y + maxy - @as(i32, @intCast(height));
-        if (y >= 0) {
-            self.y -= y + 1;
-            self.solid = true;
-        }
+        // const maxy = @max(@max(@max(pos[1], pos[3]), pos[5]), pos[7]);
+        // const y = self.y + maxy - @as(i32, @intCast(height));
+        // if (y >= 0) {
+        //     self.y -= y + 1;
+        //     self.solid = true;
+        // }
     }
 };

@@ -27,6 +27,7 @@ pub const Tetris = struct {
             while (c.SDL_PollEvent(&event) != 0) {
                 if (event.type == c.SDL_QUIT)
                     break :mainLoop;
+                if (self.game.over) break;
                 if (event.type == c.SDL_USEREVENT)
                     self.game.update(&self.screen);
 
@@ -44,10 +45,10 @@ pub const Tetris = struct {
 
         const code = event.key.keysym.sym;
         switch (code) {
-            c.SDLK_LEFT => self.game.move(-1, 0, &self.screen),
-            c.SDLK_RIGHT => self.game.move(1, 0, &self.screen),
+            c.SDLK_LEFT => self.game.moveLeft(&self.screen),
+            c.SDLK_RIGHT => self.game.moveRight(&self.screen),
             c.SDLK_UP => self.game.rotate(&self.screen),
-            c.SDLK_DOWN => self.game.move(0, 1, &self.screen),
+            c.SDLK_DOWN => self.game.moveDown(&self.screen),
             c.SDLK_SPACE => self.game.rotate(&self.screen),
             else => return,
         }

@@ -5,9 +5,11 @@ const WIDTH = 10;
 const HEIGHT = 20;
 
 pub const Screen = struct {
+    line: usize = 0,
+    current_height: usize = HEIGHT,
     width: usize = WIDTH,
     height: usize = HEIGHT,
-    scale: u16 = 50,
+    scale: u16 = 40,
     border: u16 = 2,
     buffer: [WIDTH][HEIGHT]u32 = undefined,
     window: *c.SDL_Window = undefined,
@@ -40,6 +42,33 @@ pub const Screen = struct {
     pub fn drawSolid(self: *Screen, x: usize, y: usize, rgba: u32) void {
         self.draw(x, y, rgba);
         self.buffer[x][y] = rgba;
+        self.current_height = @min(self.current_height, y);
+        if (self.isRowFull(y)) {
+            self.clearRow(y);
+        }
+    }
+
+    fn isRowFull(self: *Screen, y: usize) bool {
+        for (0..WIDTH) |x| {
+            if (self.buffer[x][y] == 0) return false;
+        }
+        return true;
+    }
+
+    fn clearRow(self: *Screen, y: usize) void {
+        var col = y;
+        while (col >= self.current_height) : (col -= 1) {
+            for (0..WIDTH) |row| {
+                self.buffer[row][col] = self.buffer[row][col - 1];
+            }
+        }
+        self.line += 1;
+        self.current_height -= 1;
+    }
+
+    pub fn hasSolid(self: *Screen, x: usize, y: usize) bool {
+        if (x >= WIDTH) return false;
+        return y >= HEIGHT or self.buffer[x][y] != 0;
     }
 
     pub fn drawEmpty(self: *Screen, x: usize, y: usize) void {
