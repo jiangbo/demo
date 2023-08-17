@@ -63,7 +63,7 @@ pub const Screen = struct {
             }
         }
         self.line += 1;
-        self.current_height -= 1;
+        self.current_height += 1;
     }
 
     pub fn hasSolid(self: *Screen, x: usize, y: usize) bool {
