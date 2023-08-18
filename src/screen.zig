@@ -1,16 +1,11 @@
 const std = @import("std");
 const c = @import("c.zig");
 
-const WIDTH = 10;
-const HEIGHT = 20;
+pub const WIDTH = 10;
+pub const HEIGHT = 20;
 
 pub const Screen = struct {
-    line: usize = 0,
-    current_height: usize = HEIGHT,
-    width: usize = WIDTH,
-    height: usize = HEIGHT,
-    scale: u16 = 40,
-    border: u16 = 2,
+    line: usize = HEIGHT,
     buffer: [WIDTH][HEIGHT]u32 = undefined,
     window: *c.SDL_Window = undefined,
     renderer: *c.SDL_Renderer = undefined,
@@ -38,31 +33,25 @@ pub const Screen = struct {
         self.fillRect(x, y);
     }
 
-    pub fn drawSolid(self: *Screen, x: usize, y: usize, rgba: u32) void {
+    pub fn drawSolid(self: *Screen, x: usize, y: usize, rgba: u32) bool {
         self.draw(x, y, rgba);
         self.buffer[x][y] = rgba;
-        self.current_height = @min(self.current_height, y);
-        if (self.isRowFull(y)) {
-            self.clearRow(y);
+        self.line = @min(self.line, y);
+        for (0..WIDTH) |row| {
+            if (self.buffer[row][y] == 0) return false;
         }
+        return self.clearRow(y);
     }
 
-    fn isRowFull(self: *Screen, y: usize) bool {
-        for (0..WIDTH) |x| {
-            if (self.buffer[x][y] == 0) return false;
-        }
-        return true;
-    }
-
-    fn clearRow(self: *Screen, y: usize) void {
-        var col = y;
-        while (col >= self.current_height) : (col -= 1) {
-            for (0..WIDTH) |row| {
-                self.buffer[row][col] = self.buffer[row][col - 1];
+    fn clearRow(self: *Screen, col: usize) bool {
+        var y = col;
+        while (y >= self.line) : (y -= 1) {
+            for (0..WIDTH) |x| {
+                self.buffer[x][y] = self.buffer[x][y - 1];
             }
         }
         self.line += 1;
-        self.current_height += 1;
+        return true;
     }
 
     pub fn hasSolid(self: *Screen, x: usize, y: usize) bool {
@@ -70,17 +59,14 @@ pub const Screen = struct {
         return y >= HEIGHT or self.buffer[x][y] != 0;
     }
 
-    // pub fn drawEmpty(self: *Screen, x: usize, y: usize) void {
-    //     _ = c.SDL_SetRenderDrawColor(self.renderer, 40, 40, 40, 0xff);
-    //     self.fillRect(x, y);
-    // }
-
     fn fillRect(self: *Screen, x: usize, y: usize) void {
+        const scale = 40;
+        const border = 2;
         const rect = c.SDL_Rect{
-            .x = @intCast(x * self.scale + self.border + 20),
-            .y = @intCast(y * self.scale + self.border + 20),
-            .w = @intCast(self.scale - self.border * 2),
-            .h = @intCast(self.scale - self.border * 2),
+            .x = @intCast(x * scale + border + 20),
+            .y = @intCast(y * scale + border + 20),
+            .w = @intCast(scale - border * 2),
+            .h = @intCast(scale - border * 2),
         };
         _ = c.SDL_RenderFillRect(self.renderer, &rect);
     }
@@ -105,8 +91,8 @@ pub const Screen = struct {
         _ = c.SDL_RenderFillRect(self.renderer, &r);
 
         var buf: [9]u8 = undefined;
-        var text = std.fmt.bufPrintZ(&buf, "{:0>5}", .{score}) catch unreachable;
-        self.drawText(text, 500, 145);
+        var text = std.fmt.bufPrintZ(&buf, "{:0>7}", .{score}) catch unreachable;
+        self.drawText(text, 480, 145);
         self.drawText("Next", 510, 280);
         r = c.SDL_Rect{ .x = 440, .y = 360, .w = 240, .h = 200 };
         _ = c.SDL_RenderFillRect(self.renderer, &r);

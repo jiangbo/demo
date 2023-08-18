@@ -7,7 +7,7 @@ pub const Game = struct {
     current: Tetrimino,
     next: Tetrimino,
     prng: std.rand.DefaultPrng,
-    score: usize = 100,
+    score: usize = 0,
     pub fn new() Game {
         const seed = @as(u64, @intCast(std.time.timestamp()));
         var rand = std.rand.DefaultPrng.init(seed);
@@ -24,8 +24,8 @@ pub const Game = struct {
     }
 
     pub fn drawTetrimino(self: *Game, screen: *Screen) void {
-        draw(&self.current, screen, self.current.x, self.current.y);
-        draw(&self.next, screen, 450, 600);
+        self.draw(&self.current, screen, self.current.x, self.current.y);
+        self.draw(&self.next, screen, 12, 10);
         if (self.current.solid) {
             self.current = self.next;
             self.next = Tetrimino.random(&self.prng);
@@ -33,52 +33,65 @@ pub const Game = struct {
         }
     }
 
-    fn draw(block: *Tetrimino, screen: *Screen, x: i32, y: i32) void {
+    fn draw(self: *Game, block: *Tetrimino, screen: *Screen, x: i32, y: i32) void {
         const value = block.position();
         var index: usize = 0;
+        var completed: u8 = 0;
         while (index < value.len) : (index += 2) {
             const row: usize = @intCast(x + value[index]);
             const col: usize = @intCast(y + value[index + 1]);
             if (block.solid) {
-                screen.drawSolid(row, col, block.color);
+                if (screen.drawSolid(row, col, block.color))
+                    completed += 1;
             } else {
                 screen.draw(row, col, block.color);
             }
         }
+        self.computeScore(completed);
+    }
+
+    fn computeScore(self: *Game, completed: u8) void {
+        self.score += switch (completed) {
+            1 => 100,
+            2 => 300,
+            3 => 600,
+            4 => 1000,
+            else => 0,
+        };
     }
 
     pub fn moveLeft(self: *Game, screen: *Screen) void {
-        self.move(-1, 0, screen);
+        self.move(-1, 0);
         if (self.hasSolid(screen)) {
-            self.move(1, 0, screen);
+            self.move(1, 0);
         }
     }
 
     pub fn moveRight(self: *Game, screen: *Screen) void {
-        self.move(1, 0, screen);
+        self.move(1, 0);
         if (self.hasSolid(screen)) {
-            self.move(-1, 0, screen);
+            self.move(-1, 0);
         }
     }
 
     pub fn moveDown(self: *Game, screen: *Screen) void {
-        self.move(0, 1, screen);
+        self.move(0, 1);
         if (self.hasSolid(screen)) {
             self.current.solid = true;
-            self.move(0, -1, screen);
+            self.move(0, -1);
         }
     }
 
-    fn move(self: *Game, x: i8, y: i8, screen: *Screen) void {
+    fn move(self: *Game, x: i8, y: i8) void {
         self.current.x = self.current.x + x;
         self.current.y = self.current.y + y;
-        self.current.locateIn(screen.width, screen.height);
+        self.current.locateIn();
     }
 
     pub fn rotate(self: *Game, screen: *Screen) void {
         var temp = self.current;
         self.current.rotate();
-        self.current.locateIn(screen.width, screen.height);
+        self.current.locateIn();
         if (self.hasSolid(screen)) {
             self.current = temp;
         }

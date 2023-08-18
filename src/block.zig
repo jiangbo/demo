@@ -1,4 +1,5 @@
 const std = @import("std");
+const screen = @import("screen.zig");
 
 pub const Facing = enum { North, East, South, West };
 // pub const Kind = enum { O, I, T, L, J, S, Z };
@@ -80,22 +81,14 @@ pub const Tetrimino = struct {
         self.facing = @enumFromInt(int + 1 % len);
     }
 
-    pub fn locateIn(self: *Tetrimino, width: usize, height: usize) void {
-        _ = height;
+    pub fn locateIn(self: *Tetrimino) void {
         const pos = self.position();
 
         const minx = @min(@min(@min(pos[0], pos[2]), pos[4]), pos[6]);
         if (self.x + minx < 0) self.x -= self.x + minx;
 
         const maxx = @max(@max(@max(pos[0], pos[2]), pos[4]), pos[6]);
-        const x = self.x + maxx - @as(i32, @intCast(width));
+        const x = self.x + maxx - screen.WIDTH;
         if (x >= 0) self.x -= x + 1;
-
-        // const maxy = @max(@max(@max(pos[1], pos[3]), pos[5]), pos[7]);
-        // const y = self.y + maxy - @as(i32, @intCast(height));
-        // if (y >= 0) {
-        //     self.y -= y + 1;
-        //     self.solid = true;
-        // }
     }
 };

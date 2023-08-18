@@ -6,7 +6,6 @@ const game = @import("game.zig");
 const FPS = 60;
 
 pub const Tetris = struct {
-    speed: usize = 1,
     game: game.Game,
     screen: screen.Screen,
 
