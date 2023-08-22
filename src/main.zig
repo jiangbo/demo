@@ -1,4 +1,5 @@
 const c = @import("c.zig");
+const std = @import("std");
 const display = @import("display.zig");
 const app = @import("app.zig");
 
@@ -7,6 +8,7 @@ pub fn main() !void {
     screen.init();
     defer screen.deinit();
     var game = app.Game.new();
+    _ = c.SDL_AddTimer(500, tick, null);
 
     mainLoop: while (true) {
         var event: c.SDL_Event = undefined;
@@ -14,6 +16,7 @@ pub fn main() !void {
             if (event.type == c.SDL_QUIT)
                 break :mainLoop;
 
+            if (game.over) break;
             handleInput(&game, &screen, &event);
         }
 
@@ -35,4 +38,12 @@ fn handleInput(game: *app.Game, screen: *display.Screen, event: *c.SDL_Event) vo
         c.SDLK_SPACE => game.rotate(screen),
         else => return,
     }
+}
+
+fn tick(interval: u32, _: ?*anyopaque) callconv(.C) u32 {
+    var event: c.SDL_Event = std.mem.zeroes(c.SDL_Event);
+    event.type = c.SDL_KEYDOWN;
+    event.key.keysym.sym = c.SDLK_DOWN;
+    _ = c.SDL_PushEvent(&event);
+    return interval;
 }

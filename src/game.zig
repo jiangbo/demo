@@ -83,10 +83,14 @@ pub const Game = struct {
         }
     }
 
-    fn move(self: *Game, x: i8, y: i8) void {
+    fn move(self: *Game, screen: *const Screen, x: i8, y: i8) void {
         self.current.x = self.current.x + x;
         self.current.y = self.current.y + y;
         self.current.locateIn();
+
+        if (self.hasSolid(screen)) {
+            self.move(screen, -x, -y);
+        }
     }
 
     pub fn rotate(self: *Game, screen: *Screen) void {
