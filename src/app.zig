@@ -1,65 +1,58 @@
 const std = @import("std");
-const c = @import("c.zig");
-const screen = @import("screen.zig");
-const game = @import("game.zig");
+const Screen = @import("display.zig").Screen;
+const Tetrimino = @import("block.zig").Tetrimino;
 
-const FPS = 60;
+pub const Game = struct {
+    current: Tetrimino,
+    prng: std.rand.DefaultPrng,
 
-pub const Tetris = struct {
-    game: game.Game,
-    screen: screen.Screen,
-
-    pub fn new() Tetris {
-        return Tetris{
-            .game = game.Game.new(),
-            .screen = screen.Screen{},
+    pub fn new() Game {
+        const seed = @as(u64, @intCast(std.time.timestamp()));
+        var rand = std.rand.DefaultPrng.init(seed);
+        return Game{
+            .current = Tetrimino.random(&rand),
+            .prng = rand,
         };
     }
 
-    pub fn run(self: *Tetris) void {
-        self.screen.init();
-        defer self.screen.deinit();
-        _ = c.SDL_AddTimer(500, tick, null);
-
-        mainLoop: while (true) {
-            var event: c.SDL_Event = undefined;
-            while (c.SDL_PollEvent(&event) != 0) {
-                if (event.type == c.SDL_QUIT)
-                    break :mainLoop;
-                if (self.game.over) break;
-                if (event.type == c.SDL_USEREVENT)
-                    self.game.update(&self.screen);
-
-                self.handleInput(&event);
-            }
-
-            self.screen.display(self.game.score);
-            self.game.drawTetrimino(&self.screen);
-            if (self.game.over)
-                self.screen.drawText("GAME OVER", 460, 650);
-            self.screen.present(FPS);
-        }
+    pub fn drawCurrent(self: *Game, screen: *Screen) void {
+        draw(&self.current, screen);
     }
 
-    fn handleInput(self: *Tetris, event: *c.SDL_Event) void {
-        if (event.type != c.SDL_KEYDOWN) return;
+    pub fn moveLeft(self: *Game, screen: *Screen) void {
+        _ = screen;
+        self.move(-1, 0);
+    }
 
-        const code = event.key.keysym.sym;
-        switch (code) {
-            c.SDLK_LEFT => self.game.moveLeft(&self.screen),
-            c.SDLK_RIGHT => self.game.moveRight(&self.screen),
-            c.SDLK_UP => self.game.rotate(&self.screen),
-            c.SDLK_DOWN => self.game.moveDown(&self.screen),
-            c.SDLK_SPACE => self.game.rotate(&self.screen),
-            else => return,
-        }
+    pub fn moveRight(self: *Game, screen: *Screen) void {
+        _ = screen;
+        self.move(1, 0);
+    }
+
+    pub fn moveDown(self: *Game, screen: *Screen) void {
+        _ = screen;
+        self.move(0, 1);
+    }
+
+    fn move(self: *Game, x: i8, y: i8) void {
+        self.current.x = self.current.x + x;
+        self.current.y = self.current.y + y;
+        self.current.locateIn();
+    }
+
+    pub fn rotate(self: *Game, screen: *Screen) void {
+        _ = screen;
+        self.current.rotate();
+        self.current.locateIn();
     }
 };
 
-fn tick(interval: u32, param: ?*anyopaque) callconv(.C) u32 {
-    _ = param;
-    var event: c.SDL_Event = undefined;
-    event.type = c.SDL_USEREVENT;
-    _ = c.SDL_PushEvent(&event);
-    return interval;
+fn draw(block: *const Tetrimino, screen: *Screen) void {
+    const value = block.position();
+    var index: usize = 0;
+    while (index < value.len) : (index += 2) {
+        const row: usize = @intCast(block.x + value[index]);
+        const col: usize = @intCast(block.y + value[index + 1]);
+        screen.draw(row, col, block.color);
+    }
 }
