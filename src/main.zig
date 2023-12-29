@@ -1,5 +1,6 @@
 const app = @import("app.zig");
 const c = @import("c.zig");
+const std = @import("std");
 
 pub fn main() !void {
     var game = app.App.init();
@@ -14,6 +15,7 @@ pub fn main() !void {
     defer bullet.deinit();
 
     while (true) {
+        const start = std.time.milliTimestamp();
         _ = c.SDL_SetRenderDrawColor(game.renderer, 96, 128, 255, 255);
         _ = c.SDL_RenderClear(game.renderer);
 
@@ -46,7 +48,7 @@ pub fn main() !void {
             game.blitEntity(&bullet);
         }
 
-        game.present();
+        game.present(start);
     }
 }
 

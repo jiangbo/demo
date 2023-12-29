@@ -4,6 +4,9 @@ const std = @import("std");
 pub const SCREEN_WIDTH = 1280;
 pub const SCREEN_HEIGHT = 720;
 
+const FPS = 60;
+const FPS_DURATION = @divFloor(1000, FPS);
+
 pub const Entity = struct {
     x: i32,
     y: i32,
@@ -14,9 +17,9 @@ pub const Entity = struct {
     health: bool = false,
     texture: *c.SDL_Texture = undefined,
 
-    pub fn init(self: *Entity, game: *App, filename: [*c]const u8) void {
-        std.log.info("loading {s}", .{filename});
-        self.texture = c.IMG_LoadTexture(game.renderer, filename) orelse c.panic();
+    pub fn init(self: *Entity, game: *App, file: [*c]const u8) void {
+        std.log.info("loading {s}", .{file});
+        self.texture = c.IMG_LoadTexture(game.renderer, file) orelse c.panic();
         _ = c.SDL_QueryTexture(self.texture, null, null, &self.w, &self.h);
     }
 
@@ -48,13 +51,11 @@ pub const App = struct {
         if (c.IMG_Init(c.IMG_INIT_JPG | c.IMG_INIT_PNG) < 0) c.panic();
 
         const pos = c.SDL_WINDOWPOS_UNDEFINED;
-        const window = c.SDL_CreateWindow("射击游戏", pos, pos,
-        //
-        SCREEN_WIDTH, SCREEN_HEIGHT, 0) orelse c.panic();
+        const window = c.SDL_CreateWindow("射击游戏", pos, pos, //
+            SCREEN_WIDTH, SCREEN_HEIGHT, 0) orelse c.panic();
 
-        _ = c.SDL_SetHint(c.SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-        const renderer = c.SDL_CreateRenderer(window, -1, 0) orelse c.panic();
-        return App{ .window = window, .renderer = renderer };
+        const r = c.SDL_CreateRenderer(window, -1, 0) orelse c.panic();
+        return App{ .window = window, .renderer = r };
     }
 
     pub fn blitEntity(self: *App, entity: *Entity) void {
@@ -79,9 +80,10 @@ pub const App = struct {
         c.SDL_RenderPresent(self.renderer);
     }
 
-    pub fn present(self: *App) void {
+    pub fn present(self: *App, startTime: i64) void {
         c.SDL_RenderPresent(self.renderer);
-        c.SDL_Delay(16);
+        const delta = std.time.milliTimestamp() - startTime;
+        if (delta < FPS_DURATION) c.SDL_Delay(@intCast(FPS_DURATION - delta));
     }
 
     pub fn deinit(self: *App) void {
