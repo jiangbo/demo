@@ -13,8 +13,8 @@ pub const Entity = struct {
     dy: f32 = 0,
     health: bool = false,
     reload: i32 = 0,
+    enemy: bool = true,
     texture: *c.SDL_Texture = undefined,
-    next: ?*Entity = null,
 
     pub fn initPosition(self: *Entity, x: f32, y: f32) void {
         self.x = x;
@@ -25,6 +25,7 @@ pub const Entity = struct {
         self.dx = other.dx;
         self.health = other.health;
         self.texture = other.texture;
+        self.enemy = other.enemy;
         self.w = other.w;
         self.h = other.h;
     }

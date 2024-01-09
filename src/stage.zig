@@ -2,6 +2,7 @@ const std = @import("std");
 const obj = @import("obj.zig");
 const c = @import("c.zig");
 const draw = @import("draw.zig");
+const utils = @import("utils.zig");
 
 const EntityList = std.DoublyLinkedList(obj.Entity);
 const Stage = struct {
@@ -21,7 +22,7 @@ var enemySpawnTimer: isize = 0;
 var rand: std.rand.DefaultPrng = undefined;
 
 pub fn initStage(app: *obj.App, alloc: std.mem.Allocator) !void {
-    var player = obj.Entity{ .x = 100, .y = 100 };
+    var player = obj.Entity{ .x = 100, .y = 100, .enemy = false };
     player.initTexture(app, "gfx/player.png");
 
     var bullet = obj.Entity{
@@ -29,10 +30,11 @@ pub fn initStage(app: *obj.App, alloc: std.mem.Allocator) !void {
         .y = 100,
         .dx = PLAYER_BULLET_SPEED,
         .health = true,
+        .enemy = false,
     };
     bullet.initTexture(app, "gfx/playerBullet.png");
 
-    var enemy = obj.Entity{ .x = 100, .y = 100 };
+    var enemy = obj.Entity{ .x = 100, .y = 100, .health = true };
     enemy.initTexture(app, "gfx/enemy.png");
 
     stage = Stage{
@@ -60,14 +62,14 @@ pub fn prepareScene(app: *obj.App) void {
 
 pub fn logicStage(app: *obj.App) void {
     doPlayer(app);
-    doFighters();
+    doEnemies();
     doBullets();
     spawnEnemies();
 }
 
 pub fn drawStage(app: *obj.App) void {
     drawPlayer(app);
-    drawFighters(app);
+    drawEnemies(app);
     drawBullets(app);
 }
 
@@ -131,12 +133,13 @@ fn fireBullet() void {
     stage.player.reload = 8;
 }
 
-fn doFighters() void {
+fn doEnemies() void {
     var it = stage.enemyList.first;
     while (it) |node| : (it = node.next) {
         node.data.x += node.data.dx;
         node.data.y += node.data.dy;
-        if (node.data.x < -@as(f32, @floatFromInt(node.data.w))) {
+        if (node.data.x < -@as(f32, @floatFromInt(node.data.w)) //
+        or !node.data.health) {
             stage.enemyList.remove(node);
             stage.arena.allocator().destroy(node);
         }
@@ -148,11 +151,22 @@ fn doBullets() void {
     while (it) |node| : (it = node.next) {
         node.data.x += node.data.dx;
         node.data.y += node.data.dy;
-        if (node.data.x > obj.SCREEN_WIDTH) {
+        if (bulletHitFighter(&node.data) or node.data.x > obj.SCREEN_WIDTH) {
             stage.bulletList.remove(node);
             stage.arena.allocator().destroy(node);
         }
     }
+}
+
+fn bulletHitFighter(bullet: *obj.Entity) bool {
+    var it = stage.enemyList.first;
+    while (it) |node| : (it = node.next) {
+        if (utils.collision(bullet, &node.data)) {
+            bullet.health = false;
+            node.data.health = false;
+        }
+    }
+    return false;
 }
 
 fn spawnEnemies() void {
@@ -180,7 +194,7 @@ fn drawPlayer(app: *obj.App) void {
     draw.blitEntity(app, &stage.player);
 }
 
-fn drawFighters(app: *obj.App) void {
+fn drawEnemies(app: *obj.App) void {
     var it = stage.enemyList.first;
     while (it) |node| : (it = node.next) {
         draw.blitEntity(app, &node.data);
