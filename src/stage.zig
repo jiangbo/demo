@@ -9,12 +9,16 @@ const Stage = struct {
     player: obj.Entity,
     bullet: obj.Entity,
     bulletList: EntityList,
+    enemy: obj.Entity,
+    enemyList: EntityList,
 };
 
 const PLAYER_SPEED = 4;
 const PLAYER_BULLET_SPEED = 16;
 
 var stage: Stage = undefined;
+var enemySpawnTimer: isize = 0;
+var rand: std.rand.DefaultPrng = undefined;
 
 pub fn initStage(app: *obj.App, alloc: std.mem.Allocator) !void {
     var player = obj.Entity{ .x = 100, .y = 100 };
@@ -28,17 +32,25 @@ pub fn initStage(app: *obj.App, alloc: std.mem.Allocator) !void {
     };
     bullet.initTexture(app, "gfx/playerBullet.png");
 
+    var enemy = obj.Entity{ .x = 100, .y = 100 };
+    enemy.initTexture(app, "gfx/enemy.png");
+
     stage = Stage{
         .arena = std.heap.ArenaAllocator.init(alloc),
         .player = player,
         .bullet = bullet,
         .bulletList = EntityList{},
+        .enemy = enemy,
+        .enemyList = EntityList{},
     };
+
+    rand = std.rand.DefaultPrng.init(undefined);
 }
 
 pub fn deinitStage() void {
     stage.player.deinit();
     stage.bullet.deinit();
+    stage.enemy.deinit();
     stage.arena.deinit();
 }
 
@@ -48,11 +60,14 @@ pub fn prepareScene(app: *obj.App) void {
 
 pub fn logicStage(app: *obj.App) void {
     doPlayer(app);
+    doFighters();
     doBullets();
+    spawnEnemies();
 }
 
 pub fn drawStage(app: *obj.App) void {
     drawPlayer(app);
+    drawFighters(app);
     drawBullets(app);
 }
 
@@ -116,6 +131,18 @@ fn fireBullet() void {
     stage.player.reload = 8;
 }
 
+fn doFighters() void {
+    var it = stage.enemyList.first;
+    while (it) |node| : (it = node.next) {
+        node.data.x += node.data.dx;
+        node.data.y += node.data.dy;
+        if (node.data.x < -@as(f32, @floatFromInt(node.data.w))) {
+            stage.enemyList.remove(node);
+            stage.arena.allocator().destroy(node);
+        }
+    }
+}
+
 fn doBullets() void {
     var it = stage.bulletList.first;
     while (it) |node| : (it = node.next) {
@@ -123,12 +150,41 @@ fn doBullets() void {
         node.data.y += node.data.dy;
         if (node.data.x > obj.SCREEN_WIDTH) {
             stage.bulletList.remove(node);
+            stage.arena.allocator().destroy(node);
         }
     }
 }
 
+fn spawnEnemies() void {
+    enemySpawnTimer -= 1;
+    if (enemySpawnTimer > 0) return;
+
+    const allocator = stage.arena.allocator();
+    var enemy = allocator.create(EntityList.Node) catch |err| {
+        std.log.err("spawn enemies error: {}\n", .{err});
+        return;
+    };
+
+    enemy.data.copy(&stage.enemy);
+
+    var random = rand.random();
+    const y: f32 = @floatFromInt(random.uintLessThan(u32, obj.SCREEN_HEIGHT));
+    enemy.data.initPosition(obj.SCREEN_WIDTH, y);
+    enemy.data.dx = -@as(f32, @floatFromInt(random.intRangeAtMost(i32, 2, 5)));
+    enemySpawnTimer = random.intRangeLessThan(i32, 30, 90);
+
+    stage.enemyList.append(enemy);
+}
+
 fn drawPlayer(app: *obj.App) void {
     draw.blitEntity(app, &stage.player);
+}
+
+fn drawFighters(app: *obj.App) void {
+    var it = stage.enemyList.first;
+    while (it) |node| : (it = node.next) {
+        draw.blitEntity(app, &node.data);
+    }
 }
 
 fn drawBullets(app: *obj.App) void {

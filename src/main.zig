@@ -1,10 +1,11 @@
 const std = @import("std");
-const obj = @import("obj.zig");
 const input = @import("input.zig");
 const stage = @import("stage.zig");
 
+const App = @import("obj.zig").App;
+
 pub fn main() !void {
-    var app = obj.App.init();
+    var app = App.init();
     defer app.deinit();
 
     const allocator = std.heap.c_allocator;
@@ -14,6 +15,7 @@ pub fn main() !void {
     while (true) {
         const start = std.time.milliTimestamp();
         stage.prepareScene(&app);
+
         if (input.handleInput(&app)) break;
 
         stage.logicStage(&app);

@@ -6,7 +6,7 @@ const FPS = 60;
 const FPS_DURATION = @divFloor(1000, FPS);
 
 pub fn prepareScene(app: *obj.App) void {
-    _ = c.SDL_SetRenderDrawColor(app.renderer, 96, 128, 255, 255);
+    _ = c.SDL_SetRenderDrawColor(app.renderer, 32, 32, 32, 255);
     _ = c.SDL_RenderClear(app.renderer);
 }
 
