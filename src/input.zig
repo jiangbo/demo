@@ -17,7 +17,6 @@ pub fn handleInput(app: *App) bool {
 
 fn doKeyDown(app: *App, event: *c.SDL_KeyboardEvent) void {
     const code = event.keysym.scancode;
-    std.log.info("event key scan code down: {}", .{code});
     if (event.repeat == 0 and code < App.MAX_KEYBOARD_KEYS) {
         app.keyboard[code] = true;
     }
@@ -25,7 +24,6 @@ fn doKeyDown(app: *App, event: *c.SDL_KeyboardEvent) void {
 
 fn doKeyUp(app: *App, event: *c.SDL_KeyboardEvent) void {
     const code = event.keysym.scancode;
-    std.log.info("event key scan code up: {}", .{code});
     if (event.repeat == 0 and code < App.MAX_KEYBOARD_KEYS) {
         app.keyboard[code] = false;
     }

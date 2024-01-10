@@ -3,15 +3,16 @@ const std = @import("std");
 
 pub const SCREEN_WIDTH = 1280;
 pub const SCREEN_HEIGHT = 720;
+pub const FPS = 60;
 
 pub const Entity = struct {
-    x: f32,
-    y: f32,
-    w: i32 = 0,
-    h: i32 = 0,
+    x: f32 = 0,
+    y: f32 = 0,
+    w: f32 = 0,
+    h: f32 = 0,
     dx: f32 = 0,
     dy: f32 = 0,
-    health: bool = false,
+    health: bool = true,
     reload: i32 = 0,
     enemy: bool = true,
     texture: *c.SDL_Texture = undefined,
@@ -33,7 +34,11 @@ pub const Entity = struct {
     pub fn initTexture(self: *Entity, app: *App, file: [*c]const u8) void {
         std.log.info("loading {s}", .{file});
         self.texture = c.IMG_LoadTexture(app.renderer, file) orelse c.panic();
-        _ = c.SDL_QueryTexture(self.texture, null, null, &self.w, &self.h);
+        var w: c_int = 0;
+        var h: c_int = 0;
+        _ = c.SDL_QueryTexture(self.texture, null, null, &w, &h);
+        self.w = @floatFromInt(w);
+        self.h = @floatFromInt(h);
     }
 
     pub fn deinit(self: *Entity) void {
@@ -67,4 +72,15 @@ pub const App = struct {
         c.SDL_DestroyWindow(self.window);
         c.SDL_Quit();
     }
+};
+
+pub const EntityList = std.DoublyLinkedList(Entity);
+pub const Stage = struct {
+    arena: std.heap.ArenaAllocator,
+    player: Entity,
+    bullet: Entity,
+    bulletList: EntityList = EntityList{},
+    enemy: Entity,
+    enemyList: EntityList = EntityList{},
+    enemyBullet: Entity,
 };

@@ -2,8 +2,7 @@ const std = @import("std");
 const c = @import("c.zig");
 const obj = @import("obj.zig");
 
-const FPS = 60;
-const FPS_DURATION = @divFloor(1000, FPS);
+const FPS_DURATION = @divFloor(1000, obj.FPS);
 
 pub fn prepareScene(app: *obj.App) void {
     _ = c.SDL_SetRenderDrawColor(app.renderer, 32, 32, 32, 255);
@@ -14,8 +13,8 @@ pub fn blitEntity(app: *obj.App, entity: *obj.Entity) void {
     var dest = c.SDL_FRect{
         .x = entity.x,
         .y = entity.y,
-        .w = @floatFromInt(entity.w),
-        .h = @floatFromInt(entity.h),
+        .w = entity.w,
+        .h = entity.h,
     };
 
     _ = c.SDL_RenderCopyF(app.renderer, entity.texture, null, &dest);
