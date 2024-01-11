@@ -23,6 +23,7 @@ pub fn initStage(app: *obj.App, alloc: std.mem.Allocator) void {
     enemyBullet.initTexture(app, "gfx/alienBullet.png");
 
     stage = obj.Stage{
+        .allocator = alloc,
         .arena = std.heap.ArenaAllocator.init(alloc),
         .player = player,
         .bullet = bullet,
@@ -72,7 +73,10 @@ fn resetStage() void {
     stageResetTimer = obj.FPS * 2;
     stage.player.x = 100;
     stage.player.y = 100;
+    stage.player.health = true;
     stage.arena.deinit();
+
+    stage.arena = std.heap.ArenaAllocator.init(stage.allocator);
     stage.bulletList = obj.EntityList{};
     stage.enemyList = obj.EntityList{};
     logic.initLogic();

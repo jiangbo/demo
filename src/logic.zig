@@ -57,8 +57,8 @@ fn doPlayer(app: *obj.App, stage: *obj.Stage) void {
     if (stage.player.x < 0) stage.player.x = 0;
     if (stage.player.y < 0) stage.player.y = 0;
 
-    if (stage.player.x + stage.player.w > obj.SCREEN_WIDTH)
-        stage.player.x = obj.SCREEN_WIDTH - stage.player.w;
+    if (stage.player.x + stage.player.w > obj.SCREEN_WIDTH / 2)
+        stage.player.x = obj.SCREEN_WIDTH / 2 - stage.player.w;
     if (stage.player.y + stage.player.h > obj.SCREEN_HEIGHT)
         stage.player.y = obj.SCREEN_HEIGHT - stage.player.h;
 }
@@ -106,7 +106,7 @@ fn fireEnemyBullet(stage: *obj.Stage, enemy: *obj.Entity) void {
 
     bullet.data.dx *= ENEMY_BULLET_SPEED;
     bullet.data.dy *= ENEMY_BULLET_SPEED;
-    enemy.reload = @mod(rand.random().int(i32), obj.FPS * 2);
+    enemy.reload = @mod(rand.random().int(i32), obj.FPS * 4);
     stage.bulletList.append(bullet);
 }
 
@@ -115,8 +115,9 @@ fn doBullets(stage: *obj.Stage) void {
     while (it) |node| : (it = node.next) {
         node.data.x += node.data.dx;
         node.data.y += node.data.dy;
-        if (bulletHitFighter(&node.data, stage) //
-        or node.data.x > obj.SCREEN_WIDTH or !node.data.health) {
+        if (bulletHitFighter(&node.data, stage) or !node.data.health //
+        or node.data.x < 0 or node.data.x > obj.SCREEN_WIDTH //
+        or node.data.y < 0 or node.data.y > obj.SCREEN_HEIGHT) {
             stage.bulletList.remove(node);
             stage.arena.allocator().destroy(node);
         }
@@ -124,6 +125,8 @@ fn doBullets(stage: *obj.Stage) void {
 }
 
 fn bulletHitFighter(bullet: *obj.Entity, stage: *obj.Stage) bool {
+    if (!stage.player.health) return false;
+
     if (bullet.enemy and utils.collision(bullet, &stage.player)) {
         stage.player.health = false;
         return true;

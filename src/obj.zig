@@ -76,6 +76,7 @@ pub const App = struct {
 
 pub const EntityList = std.DoublyLinkedList(Entity);
 pub const Stage = struct {
+    allocator: std.mem.Allocator,
     arena: std.heap.ArenaAllocator,
     player: Entity,
     bullet: Entity,
