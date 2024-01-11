@@ -4,6 +4,7 @@ const std = @import("std");
 pub const SCREEN_WIDTH = 1280;
 pub const SCREEN_HEIGHT = 720;
 pub const FPS = 60;
+pub const MAX_STARS = 500;
 
 pub const Entity = struct {
     x: f32 = 0,
@@ -74,14 +75,48 @@ pub const App = struct {
     }
 };
 
+pub const Explosion = struct {
+    x: f32,
+    y: f32,
+    dx: f32,
+    dy: f32,
+    r: i32,
+    g: i32,
+    b: i32,
+    a: i32,
+};
+
+pub const Debris = struct {
+    x: f32,
+    y: f32,
+    dx: f32,
+    dy: f32,
+    rect: c.SDL_Rect,
+    texture: *c.SDL_Texture,
+    life: i32,
+};
+
+pub const Star = struct {
+    x: i32,
+    y: i32,
+    speed: i32,
+};
+
 pub const EntityList = std.DoublyLinkedList(Entity);
+pub const ExplosionList = std.DoublyLinkedList(Explosion);
 pub const Stage = struct {
     allocator: std.mem.Allocator,
     arena: std.heap.ArenaAllocator,
+    rand: std.rand.DefaultPrng,
     player: Entity,
     bullet: Entity,
     bulletList: EntityList = EntityList{},
     enemy: Entity,
     enemyList: EntityList = EntityList{},
     enemyBullet: Entity,
+    explosion: Entity,
+    explosionList: ExplosionList = ExplosionList{},
+    debrisList: EntityList = EntityList{},
+    backgroundX: i32 = 0,
+    stars: [MAX_STARS]Star = undefined,
 };

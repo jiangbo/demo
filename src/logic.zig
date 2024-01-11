@@ -7,19 +7,31 @@ const PLAYER_SPEED = 4;
 const ENEMY_BULLET_SPEED = 8;
 var enemySpawnTimer: isize = 0;
 
-var rand: std.rand.DefaultPrng = undefined;
-
 pub fn initLogic() void {
     enemySpawnTimer = 0;
-    const seed = @as(u64, @intCast(std.time.timestamp()));
-    rand = std.rand.DefaultPrng.init(seed);
 }
 
 pub fn logicStage(app: *obj.App, stage: *obj.Stage) void {
+    doBackground(stage);
+    doStars(stage);
     doPlayer(app, stage);
     doEnemies(stage);
     doBullets(stage);
     spawnEnemies(stage);
+}
+
+fn doBackground(stage: *obj.Stage) void {
+    stage.backgroundX -= 1;
+    if (stage.backgroundX < -obj.SCREEN_WIDTH) {
+        stage.backgroundX = 0;
+    }
+}
+
+fn doStars(stage: *obj.Stage) void {
+    for (&stage.stars) |*value| {
+        value.x -= value.speed;
+        if (value.x < 0) value.x = obj.SCREEN_WIDTH + value.x;
+    }
 }
 
 fn doPlayer(app: *obj.App, stage: *obj.Stage) void {
@@ -106,7 +118,7 @@ fn fireEnemyBullet(stage: *obj.Stage, enemy: *obj.Entity) void {
 
     bullet.data.dx *= ENEMY_BULLET_SPEED;
     bullet.data.dy *= ENEMY_BULLET_SPEED;
-    enemy.reload = @mod(rand.random().int(i32), obj.FPS * 4);
+    enemy.reload = @mod(stage.rand.random().int(i32), obj.FPS * 4);
     stage.bulletList.append(bullet);
 }
 
@@ -125,7 +137,7 @@ fn doBullets(stage: *obj.Stage) void {
 }
 
 fn bulletHitFighter(bullet: *obj.Entity, stage: *obj.Stage) bool {
-    if (!stage.player.health) return false;
+    if (!stage.player.health and bullet.enemy) return false;
 
     if (bullet.enemy and utils.collision(bullet, &stage.player)) {
         stage.player.health = false;
@@ -155,7 +167,7 @@ fn spawnEnemies(stage: *obj.Stage) void {
 
     enemy.data.copy(&stage.enemy);
 
-    var random = rand.random();
+    var random = stage.rand.random();
     const y: f32 = obj.SCREEN_HEIGHT - enemy.data.h;
     enemy.data.initPosition(obj.SCREEN_WIDTH, random.float(f32) * y);
     enemy.data.dx = -@as(f32, @floatFromInt(random.intRangeAtMost(i32, 2, 5)));
@@ -163,4 +175,18 @@ fn spawnEnemies(stage: *obj.Stage) void {
     enemySpawnTimer = random.intRangeLessThan(i32, 30, 90);
 
     stage.enemyList.append(enemy);
+}
+
+fn doExplosions(stage: *obj.Stage) void {
+    var it = stage.explosionList.first;
+    while (it) |node| : (it = node.next) {
+        node.data.x += node.data.dx;
+        node.data.y += node.data.dy;
+
+        node.data.a -= 1;
+        if (node.data.a <= 0) {
+            stage.explosionList.remove(node);
+            stage.arena.allocator().destroy(node);
+        }
+    }
 }

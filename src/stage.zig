@@ -22,13 +22,19 @@ pub fn initStage(app: *obj.App, alloc: std.mem.Allocator) void {
     var enemyBullet = obj.Entity{};
     enemyBullet.initTexture(app, "gfx/alienBullet.png");
 
+    var explosion = obj.Entity{};
+    explosion.initTexture(app, "gfx/explosion.png");
+
+    const seed = @as(u64, @intCast(std.time.timestamp()));
     stage = obj.Stage{
         .allocator = alloc,
         .arena = std.heap.ArenaAllocator.init(alloc),
+        .rand = std.rand.DefaultPrng.init(seed),
         .player = player,
         .bullet = bullet,
         .enemy = enemy,
         .enemyBullet = enemyBullet,
+        .explosion = explosion,
     };
 
     resetStage();
@@ -60,6 +66,8 @@ pub fn logicStage(app: *obj.App) void {
 }
 
 pub fn drawStage(app: *obj.App) void {
+    draw.drawBackground(app, stage.backgroundX);
+    draw.drawStars(app, &stage.stars);
     drawPlayer(app);
     drawEnemies(app);
     drawBullets(app);
@@ -70,7 +78,7 @@ pub fn presentScene(app: *obj.App, startTime: i64) void {
 }
 
 fn resetStage() void {
-    stageResetTimer = obj.FPS * 2;
+    stageResetTimer = obj.FPS * 3;
     stage.player.x = 100;
     stage.player.y = 100;
     stage.player.health = true;
@@ -79,7 +87,20 @@ fn resetStage() void {
     stage.arena = std.heap.ArenaAllocator.init(stage.allocator);
     stage.bulletList = obj.EntityList{};
     stage.enemyList = obj.EntityList{};
+    stage.explosionList = obj.ExplosionList{};
+    stage.debrisList = obj.EntityList{};
+
+    initStarfield();
     logic.initLogic();
+}
+
+fn initStarfield() void {
+    var random = stage.rand.random();
+    for (&stage.stars) |*value| {
+        value.x = random.intRangeLessThan(i32, 0, obj.SCREEN_WIDTH);
+        value.y = random.intRangeLessThan(i32, 0, obj.SCREEN_HEIGHT);
+        value.speed = random.intRangeAtMost(i32, 1, 8);
+    }
 }
 
 fn drawPlayer(app: *obj.App) void {
