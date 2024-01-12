@@ -39,17 +39,6 @@ pub fn blit(app: *obj.App, texture: *c.SDL_Texture, x: i32, y: i32) void {
     c.SDL_RenderPresent(app.renderer);
 }
 
-pub fn blitRect(app: *obj.App, texture: *c.SDL_Texture, src: c.SDL_Rect, x: i32, y: i32) void {
-    var dest: c.SDL_Rect = undefined;
-
-    dest.x = x;
-    dest.y = y;
-    dest.w = src.w;
-    dest.h = src.h;
-
-    c.SDL_RenderCopy(app.renderer, texture, src, &dest);
-}
-
 pub fn drawBackground(app: *obj.App, backgroundX: i32) void {
     var dest: c.SDL_Rect = undefined;
     var x: i32 = backgroundX;
@@ -69,4 +58,15 @@ pub fn drawStars(app: *obj.App, stars: []obj.Star) void {
         _ = c.SDL_SetRenderDrawColor(app.renderer, rgb, rgb, rgb, 255);
         _ = c.SDL_RenderDrawLine(app.renderer, v.x, v.y, v.x + 3, v.y);
     }
+}
+
+pub fn drawExplosion(app: *obj.App, explosion: *obj.Explosion) void {
+    var dest: c.SDL_FRect = .{
+        .x = explosion.x,
+        .y = explosion.y,
+        .w = explosion.w,
+        .h = explosion.h,
+    };
+
+    c.SDL_RenderCopyF(app.renderer, null, src, &dest);
 }

@@ -104,6 +104,7 @@ pub const Star = struct {
 
 pub const EntityList = std.DoublyLinkedList(Entity);
 pub const ExplosionList = std.DoublyLinkedList(Explosion);
+pub const DebrisList = std.DoublyLinkedList(Debris);
 pub const Stage = struct {
     allocator: std.mem.Allocator,
     arena: std.heap.ArenaAllocator,
@@ -116,7 +117,7 @@ pub const Stage = struct {
     enemyBullet: Entity,
     explosion: Entity,
     explosionList: ExplosionList = ExplosionList{},
-    debrisList: EntityList = EntityList{},
+    debrisList: DebrisList = DebrisList{},
     backgroundX: i32 = 0,
     stars: [MAX_STARS]Star = undefined,
 };

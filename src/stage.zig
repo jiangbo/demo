@@ -88,13 +88,13 @@ fn resetStage() void {
     stage.bulletList = obj.EntityList{};
     stage.enemyList = obj.EntityList{};
     stage.explosionList = obj.ExplosionList{};
-    stage.debrisList = obj.EntityList{};
+    stage.debrisList = obj.DebrisList{};
 
-    initStarfield();
+    initStars();
     logic.initLogic();
 }
 
-fn initStarfield() void {
+fn initStars() void {
     var random = stage.rand.random();
     for (&stage.stars) |*value| {
         value.x = random.intRangeLessThan(i32, 0, obj.SCREEN_WIDTH);
@@ -118,6 +118,13 @@ fn drawEnemies(app: *obj.App) void {
 
 fn drawBullets(app: *obj.App) void {
     var it = stage.bulletList.first;
+    while (it) |node| : (it = node.next) {
+        draw.blitEntity(app, &node.data);
+    }
+}
+
+fn drawDebris(app: *obj.App) void {
+    var it = stage.debrisList.first;
     while (it) |node| : (it = node.next) {
         draw.blitEntity(app, &node.data);
     }

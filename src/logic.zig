@@ -9,6 +9,7 @@ var enemySpawnTimer: isize = 0;
 
 pub fn initLogic() void {
     enemySpawnTimer = 0;
+    _ = c.SDL_ShowCursor(0);
 }
 
 pub fn logicStage(app: *obj.App, stage: *obj.Stage) void {
@@ -18,6 +19,8 @@ pub fn logicStage(app: *obj.App, stage: *obj.Stage) void {
     doEnemies(stage);
     doBullets(stage);
     spawnEnemies(stage);
+    doExplosions(stage);
+    doDebris(stage);
 }
 
 fn doBackground(stage: *obj.Stage) void {
@@ -141,6 +144,8 @@ fn bulletHitFighter(bullet: *obj.Entity, stage: *obj.Stage) bool {
 
     if (bullet.enemy and utils.collision(bullet, &stage.player)) {
         stage.player.health = false;
+        addExplosions(stage, stage.player.x, stage.player.y, 32);
+        // addDebris(e);
         return true;
     }
 
@@ -148,6 +153,7 @@ fn bulletHitFighter(bullet: *obj.Entity, stage: *obj.Stage) bool {
     while (it) |node| : (it = node.next) {
         if (node.data.enemy == bullet.enemy) continue;
         if (utils.collision(bullet, &node.data)) {
+            addExplosions(stage, node.data.x, node.data.y, 32);
             bullet.health = false;
             node.data.health = false;
         }
@@ -188,5 +194,61 @@ fn doExplosions(stage: *obj.Stage) void {
             stage.explosionList.remove(node);
             stage.arena.allocator().destroy(node);
         }
+    }
+}
+
+fn doDebris(stage: *obj.Stage) void {
+    var it = stage.debrisList.first;
+    while (it) |node| : (it = node.next) {
+        node.data.x += node.data.dx;
+        node.data.y += node.data.dy;
+        node.data.dy += 0.5;
+
+        node.data.life -= 1;
+        if (node.data.life <= 0) {
+            stage.debrisList.remove(node);
+            stage.arena.allocator().destroy(node);
+        }
+    }
+}
+
+fn addExplosions(stage: *obj.Stage, x: f32, y: f32, num: usize) void {
+    const allocator = stage.arena.allocator();
+    var random = stage.rand.random();
+    for (0..num) |_| {
+        var explosion = allocator.create(obj.ExplosionList.Node) catch |err| {
+            std.log.err("add explosions error: {}\n", .{err});
+            continue;
+        };
+
+        const rx = random.intRangeAtMost(i8, -32, 32);
+        explosion.data.x = x + @as(f32, @floatFromInt(rx));
+        const ry = random.intRangeAtMost(i8, -32, 32);
+        explosion.data.y = y + @as(f32, @floatFromInt(ry));
+
+        const dx = random.intRangeAtMost(i8, -9, 9);
+        explosion.data.dx = @as(f32, @floatFromInt(dx)) / 10;
+        const dy = random.intRangeAtMost(i8, -9, 9);
+        explosion.data.dy = @as(f32, @floatFromInt(dy)) / 10;
+
+        const color = random.intRangeAtMost(i8, 0, 3);
+        switch (color) {
+            0 => explosion.data.r = 255,
+            1 => {
+                explosion.data.r = 255;
+                explosion.data.g = 128;
+            },
+            2 => {
+                explosion.data.r = 255;
+                explosion.data.g = 255;
+            },
+            else => {
+                explosion.data.r = 255;
+                explosion.data.g = 255;
+                explosion.data.b = 255;
+            },
+        }
+
+        explosion.data.a = random.intRangeLessThan(i32, 0, obj.FPS * 3);
     }
 }
