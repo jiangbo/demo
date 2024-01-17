@@ -4,10 +4,13 @@ const obj = @import("obj.zig");
 
 const FPS_DURATION = @divFloor(1000, obj.FPS);
 var background: *c.SDL_Texture = undefined;
+var explosion: *c.SDL_Texture = undefined;
 
 pub fn prepareScene(app: *obj.App) void {
     _ = c.SDL_RenderClear(app.renderer);
     background = c.IMG_LoadTexture(app.renderer, "gfx/background.png") //
+    orelse c.panic();
+    explosion = c.IMG_LoadTexture(app.renderer, "gfx/explosion.png") //
     orelse c.panic();
 }
 
@@ -25,6 +28,7 @@ pub fn blitEntity(app: *obj.App, entity: *obj.Entity) void {
 pub fn presentScene(app: *obj.App, startTime: i64) void {
     c.SDL_RenderPresent(app.renderer);
     const delta = std.time.milliTimestamp() - startTime;
+    std.log.info("delta time ms: {}", .{delta});
     if (delta < FPS_DURATION) c.SDL_Delay(@intCast(FPS_DURATION - delta));
 }
 
@@ -36,7 +40,6 @@ pub fn blit(app: *obj.App, texture: *c.SDL_Texture, x: i32, y: i32) void {
     if (y + dest.h > obj.SCREEN_HEIGHT) dest.y = obj.SCREEN_HEIGHT - dest.h;
 
     _ = c.SDL_RenderCopy(app.renderer, texture, null, &dest);
-    c.SDL_RenderPresent(app.renderer);
 }
 
 pub fn drawBackground(app: *obj.App, backgroundX: i32) void {
@@ -60,13 +63,21 @@ pub fn drawStars(app: *obj.App, stars: []obj.Star) void {
     }
 }
 
-pub fn drawExplosion(app: *obj.App, explosion: *obj.Explosion) void {
-    var dest: c.SDL_FRect = .{
-        .x = explosion.x,
-        .y = explosion.y,
-        .w = explosion.w,
-        .h = explosion.h,
-    };
+pub fn drawExplosion(app: *obj.App, list: obj.ExplosionList) void {
+    if (list.len == 0) return;
 
-    c.SDL_RenderCopyF(app.renderer, null, src, &dest);
+    _ = c.SDL_SetRenderDrawBlendMode(app.renderer, c.SDL_BLENDMODE_ADD);
+    _ = c.SDL_SetTextureBlendMode(explosion, c.SDL_BLENDMODE_ADD);
+
+    var it = list.first;
+    while (it) |node| : (it = node.next) {
+        const data = node.data;
+        _ = c.SDL_SetTextureColorMod(explosion, data.r, data.g, data.b);
+        _ = c.SDL_SetTextureAlphaMod(explosion, data.a);
+        const x: i32 = @intFromFloat(data.x);
+        const y: i32 = @intFromFloat(data.y);
+        blit(app, explosion, x, y);
+    }
+
+    _ = c.SDL_SetRenderDrawBlendMode(app.renderer, c.SDL_BLENDMODE_NONE);
 }

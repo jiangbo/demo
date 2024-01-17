@@ -189,7 +189,7 @@ fn doExplosions(stage: *obj.Stage) void {
         node.data.x += node.data.dx;
         node.data.y += node.data.dy;
 
-        node.data.a -= 1;
+        node.data.a -%= 1;
         if (node.data.a <= 0) {
             stage.explosionList.remove(node);
             stage.arena.allocator().destroy(node);
@@ -221,9 +221,9 @@ fn addExplosions(stage: *obj.Stage, x: f32, y: f32, num: usize) void {
             continue;
         };
 
-        const rx = random.intRangeAtMost(i8, -32, 32);
+        const rx = random.intRangeAtMost(i8, -31, 31);
         explosion.data.x = x + @as(f32, @floatFromInt(rx));
-        const ry = random.intRangeAtMost(i8, -32, 32);
+        const ry = random.intRangeAtMost(i8, -31, 31);
         explosion.data.y = y + @as(f32, @floatFromInt(ry));
 
         const dx = random.intRangeAtMost(i8, -9, 9);
@@ -249,6 +249,7 @@ fn addExplosions(stage: *obj.Stage, x: f32, y: f32, num: usize) void {
             },
         }
 
-        explosion.data.a = random.intRangeLessThan(i32, 0, obj.FPS * 3);
+        explosion.data.a = random.intRangeLessThan(u8, 0, obj.FPS * 3);
+        stage.explosionList.append(explosion);
     }
 }

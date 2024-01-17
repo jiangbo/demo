@@ -80,10 +80,10 @@ pub const Explosion = struct {
     y: f32,
     dx: f32,
     dy: f32,
-    r: i32,
-    g: i32,
-    b: i32,
-    a: i32,
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
 };
 
 pub const Debris = struct {

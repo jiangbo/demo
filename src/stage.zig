@@ -71,6 +71,7 @@ pub fn drawStage(app: *obj.App) void {
     drawPlayer(app);
     drawEnemies(app);
     drawBullets(app);
+    draw.drawExplosion(app, stage.explosionList);
 }
 
 pub fn presentScene(app: *obj.App, startTime: i64) void {
