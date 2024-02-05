@@ -11,9 +11,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.linkSystemLibrary("SDL2");
-    exe.linkSystemLibrary("SDL2_image");
-    exe.linkLibC();
+    const raylib_dep = b.dependency("raylib", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(raylib_dep.artifact("raylib"));
+
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
