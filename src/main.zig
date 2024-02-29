@@ -18,8 +18,8 @@ pub fn main() !void {
         defer ray.EndDrawing();
         ray.ClearBackground(ray.RAYWHITE);
 
-        // const rec = ray.Rectangle{ .x = 600, .y = 40, .width = 120, .height = 20 };
-        // _ = ray.GuiSliderBar(rec, "StartAngle", null, 0, -450, 450);
+        const rec = ray.Rectangle{ .x = 600, .y = 40, .width = 120, .height = 20 };
+        _ = ray.GuiSliderBar(rec, "StartAngle", null, 0, -450, 450);
 
         ray.DrawFPS(10, 10);
     }
