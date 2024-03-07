@@ -6,9 +6,6 @@
             .url = "https://github.com/raysan5/raylib/archive/ed9a6d862b9e31acaa59c6ffffd1f8aa398d54d8.tar.gz",
             .hash = "12200b5a963e542a0d0d3a4b588e2410951c407c68ea44d98ae0572f3a48cb2fa516",
         },
-        .raygui = .{
-            .path = "vendor/raygui", // contains the raygui.h
-        },
     },
     .paths = .{""},
 }

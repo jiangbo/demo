@@ -14,15 +14,8 @@ pub fn build(b: *std.Build) void {
     const raylib_dep = b.dependency("raylib", .{
         .target = target,
         .optimize = optimize,
-        // .raygui = true,
     });
     exe.linkLibrary(raylib_dep.artifact("raylib"));
-
-    const raygui_dep = b.dependency("raygui", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    exe.addIncludePath(raygui_dep.path(""));
 
     b.installArtifact(exe);
 
