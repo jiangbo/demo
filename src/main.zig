@@ -1,40 +1,70 @@
 const std = @import("std");
 const ray = @import("raylib.zig");
 const map = @import("map.zig");
+const sta = @import("stage.zig");
 
-pub fn main() void {
-    ray.InitWindow(320, 240, "推箱子");
-    defer ray.CloseWindow();
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
 
-    // 初始化地图
-    var state: [map.stageLength]map.MapItem = undefined;
-    map.init(&state);
-    defer map.deinit();
-
-    const stdin = std.io.getStdIn().reader();
-
-    while (true) {
-
-        // 画出游戏地图
-        ray.BeginDrawing();
-        ray.ClearBackground(ray.WHITE);
-
-        map.draw(&state);
-
-        ray.EndDrawing();
-
-        // 检查游戏胜利条件
-        if (checkClear(&state)) break;
-
-        std.debug.print("a:left d:right w:up s:down. command?\n", .{});
-        // 获取用户输入
-        const char = inputChar(stdin);
-        // 根据输入更新游戏地图
-        update(&state, char);
+    for (1..10) |i| {
+        const stage = sta.Stage.init(allocator, i);
+        defer stage.deinit();
     }
 
-    // 游戏胜利
-    std.debug.print("Congratulation's! you win.\n", .{});
+    // const file = std.fs.cwd().openFile("data/stage/1.txt", .{}) catch |e| {
+    //     std.log.err("open file failed: {}", .{e});
+    //     return;
+    // };
+    // defer file.close();
+
+    // // Wrap the file reader in a buffered reader.
+    // // Since it's usually faster to read a bunch of bytes at once.
+    // var buf_reader = std.io.bufferedReader(file.reader());
+    // const reader = buf_reader.reader();
+
+    // var line = std.ArrayList(u8).init(allocator);
+    // defer line.deinit();
+
+    // const writer = line.writer();
+    // var line_no: usize = 1;
+    // while (reader.streamUntilDelimiter(writer, '\n', null)) : (line_no += 1) {
+    //     // Clear the line so we can reuse it.
+    //     defer line.clearRetainingCapacity();
+
+    //     std.debug.print("{d}--{s}\n", .{ line_no, line.items });
+    // } else |err| switch (err) {
+    //     error.EndOfStream => {}, // Continue on
+    //     else => return err, // Propagate error
+    // }
+
+    // ray.InitWindow(320, 240, "推箱子");
+    // defer ray.CloseWindow();
+    // ray.SetTargetFPS(60);
+    // ray.SetExitKey(ray.KEY_NULL);
+
+    // // 初始化地图
+    // var state: [map.stageLength]map.MapItem = undefined;
+    // map.init(&state);
+    // defer map.deinit();
+
+    // while (!ray.WindowShouldClose()) {
+
+    //     // 根据输入更新游戏地图
+    //     update(&state);
+
+    //     // 检查游戏胜利条件
+    //     if (checkClear(&state)) break;
+
+    //     // 画出游戏地图
+    //     ray.BeginDrawing();
+    //     defer ray.EndDrawing();
+    //     ray.ClearBackground(ray.WHITE);
+
+    //     map.draw(&state);
+    //     ray.DrawFPS(235, 10);
+    // }
 }
 
 fn checkClear(stage: []map.MapItem) bool {
@@ -46,22 +76,13 @@ fn checkClear(stage: []map.MapItem) bool {
     return true;
 }
 
-fn inputChar(reader: anytype) ?u8 {
-    var buffer: [2]u8 = undefined;
-    const input = reader.readUntilDelimiterOrEof(buffer[0..], '\n') //
-    catch null orelse return null;
-    return if (input.len != 1) null else input[0];
-}
-
-fn update(state: []map.MapItem, input: ?u8) void {
-    const char = input orelse return;
-
+fn update(state: []map.MapItem) void {
     // 操作角色移动的距离
-    const delta: isize = switch (char) {
-        'w' => -map.stageWidth,
-        's' => map.stageWidth,
-        'd' => 1,
-        'a' => -1,
+    const delta: isize = switch (ray.GetKeyPressed()) {
+        ray.KEY_W, ray.KEY_UP => -map.stageWidth,
+        ray.KEY_S, ray.KEY_DOWN => map.stageWidth,
+        ray.KEY_D, ray.KEY_RIGHT => 1,
+        ray.KEY_A, ray.KEY_LEFT => -1,
         else => return,
     };
 

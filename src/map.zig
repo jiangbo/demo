@@ -1,8 +1,8 @@
 const std = @import("std");
 const ray = @import("raylib.zig");
 
-pub const stageWidth = 8;
-pub const stageHeight = 5;
+pub const stageWidth = 7;
+pub const stageHeight = 7;
 pub const stageLength = stageHeight * stageWidth;
 const SCALE = 32; // 放大倍数
 
@@ -27,11 +27,13 @@ pub const MapItem = enum(u8) {
 
 // 定义地图
 const stageMap =
-    \\########
-    \\# .. p #
-    \\# oo   #
-    \\#      #
-    \\########
+    \\  #####
+    \\ .    #
+    \\# o o #
+    \\# op# #
+    \\#   # #
+    \\#.###.#
+    \\### ###
 ;
 
 var texture: ray.Texture2D = undefined;
@@ -58,10 +60,8 @@ pub fn draw(stage: []MapItem) void {
     for (0..stageHeight) |y| {
         for (0..stageWidth) |x| {
             const item = stage[y * stageWidth + x];
-            std.debug.print("{c}", .{item.toInt()});
             drawCell(x, y, item);
         }
-        std.debug.print("\n", .{});
     }
 }
 
