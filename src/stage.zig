@@ -24,10 +24,10 @@ pub const Stage = struct {
         const text = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
         std.log.info("stage text: \n{s}", .{text});
 
-        return try parse(allocator, text);
+        return parse(allocator, text);
     }
 
-    fn parse(allocator: std.mem.Allocator, text: []u8) !Stage {
+    fn parse(allocator: std.mem.Allocator, text: []u8) Stage {
         var stage = Stage{ .data = text, .allocator = allocator };
 
         var width: usize = 0;
@@ -37,7 +37,7 @@ pub const Stage = struct {
             if (char != '\n') continue;
 
             if (stage.height != 0 and stage.width != width) {
-                return error.StageWidthError;
+                @panic("stage width error");
             }
             stage.width = width;
             width = 0;
