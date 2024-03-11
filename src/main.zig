@@ -21,6 +21,7 @@ pub fn main() void {
 
     var title = true;
     var ostage: ?map.Stage = null;
+    defer if (ostage) |stage| stage.deinit();
 
     while (!ray.WindowShouldClose()) {
         if (title) {
