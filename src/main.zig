@@ -1,105 +1,78 @@
 const std = @import("std");
 const ray = @import("raylib.zig");
 const map = @import("map.zig");
-const sta = @import("stage.zig");
+const res = @import("res.zig");
 
-pub fn main() !void {
+const screenWidth = 320;
+const screenHeight = 240;
+
+pub fn main() void {
+    ray.InitWindow(screenWidth, screenHeight, "推箱子");
+    defer ray.CloseWindow();
+    ray.SetTargetFPS(60);
+    ray.SetExitKey(ray.KEY_NULL);
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    for (1..10) |i| {
-        const stage = sta.Stage.init(allocator, i);
-        defer stage.deinit();
-    }
+    res.init();
+    defer res.deinit();
 
-    // const file = std.fs.cwd().openFile("data/stage/1.txt", .{}) catch |e| {
-    //     std.log.err("open file failed: {}", .{e});
-    //     return;
-    // };
-    // defer file.close();
+    var title = true;
+    var ostage: ?map.Stage = null;
 
-    // // Wrap the file reader in a buffered reader.
-    // // Since it's usually faster to read a bunch of bytes at once.
-    // var buf_reader = std.io.bufferedReader(file.reader());
-    // const reader = buf_reader.reader();
+    while (!ray.WindowShouldClose()) {
+        if (title) {
+            if (ray.IsKeyPressed(ray.KEY_SPACE)) title = false;
+        } else {
+            // 根据输入更新游戏地图
+            if (ostage == null) ostage = map.Stage.init(allocator, 1);
 
-    // var line = std.ArrayList(u8).init(allocator);
-    // defer line.deinit();
-
-    // const writer = line.writer();
-    // var line_no: usize = 1;
-    // while (reader.streamUntilDelimiter(writer, '\n', null)) : (line_no += 1) {
-    //     // Clear the line so we can reuse it.
-    //     defer line.clearRetainingCapacity();
-
-    //     std.debug.print("{d}--{s}\n", .{ line_no, line.items });
-    // } else |err| switch (err) {
-    //     error.EndOfStream => {}, // Continue on
-    //     else => return err, // Propagate error
-    // }
-
-    // ray.InitWindow(320, 240, "推箱子");
-    // defer ray.CloseWindow();
-    // ray.SetTargetFPS(60);
-    // ray.SetExitKey(ray.KEY_NULL);
-
-    // // 初始化地图
-    // var state: [map.stageLength]map.MapItem = undefined;
-    // map.init(&state);
-    // defer map.deinit();
-
-    // while (!ray.WindowShouldClose()) {
-
-    //     // 根据输入更新游戏地图
-    //     update(&state);
-
-    //     // 检查游戏胜利条件
-    //     if (checkClear(&state)) break;
-
-    //     // 画出游戏地图
-    //     ray.BeginDrawing();
-    //     defer ray.EndDrawing();
-    //     ray.ClearBackground(ray.WHITE);
-
-    //     map.draw(&state);
-    //     ray.DrawFPS(235, 10);
-    // }
-}
-
-fn checkClear(stage: []map.MapItem) bool {
-    for (stage) |value| {
-        if (value == map.MapItem.BLOCK) {
-            return false;
+            if (ostage) |stage| {
+                update(@constCast(&stage));
+                // 检查游戏胜利条件
+                if (stage.hasCleared()) {
+                    title = true;
+                    stage.deinit();
+                    ostage = null;
+                }
+            }
         }
+
+        // 画出游戏地图
+        ray.BeginDrawing();
+        defer ray.EndDrawing();
+        ray.ClearBackground(ray.WHITE);
+
+        if (title)
+            ray.DrawTexture(res.title, 0, 0, ray.WHITE)
+        else if (ostage) |stage| map.draw(stage);
+        ray.DrawFPS(screenWidth - 80, 10);
     }
-    return true;
 }
 
-fn update(state: []map.MapItem) void {
+fn update(stage: *map.Stage) void {
     // 操作角色移动的距离
     const delta: isize = switch (ray.GetKeyPressed()) {
-        ray.KEY_W, ray.KEY_UP => -map.stageWidth,
-        ray.KEY_S, ray.KEY_DOWN => map.stageWidth,
+        ray.KEY_W, ray.KEY_UP => -@as(isize, @intCast(stage.width)),
+        ray.KEY_S, ray.KEY_DOWN => @as(isize, @intCast(stage.width)),
         ray.KEY_D, ray.KEY_RIGHT => 1,
         ray.KEY_A, ray.KEY_LEFT => -1,
         else => return,
     };
 
-    // 角色当前位置
-    const currentIndex = for (state, 0..) |value, index| {
-        if (value == .MAN or value == .MAN_ON_GOAL) break index;
-    } else return;
-
+    const currentIndex = stage.playerIndex();
     const index = @as(isize, @intCast(currentIndex)) + delta;
-    if (index < 0 or index > map.stageLength) return;
+    if (index < 0 or index > stage.width * stage.height) return;
 
     // 角色欲前往的目的地
     const destIndex = @as(usize, @intCast(index));
-    updatePlayer(state, currentIndex, destIndex, delta);
+    updatePlayer(stage, currentIndex, destIndex, delta);
 }
 
-fn updatePlayer(state: []map.MapItem, current: usize, dest: usize, delta: isize) void {
+fn updatePlayer(stage: *map.Stage, current: usize, dest: usize, delta: isize) void {
+    var state = stage.data;
     if (state[dest] == .SPACE or state[dest] == .GOAL) {
         // 如果是空地或者目标地，则可以移动
         state[dest] = if (state[dest] == .GOAL) .MAN_ON_GOAL else .MAN;
@@ -107,7 +80,7 @@ fn updatePlayer(state: []map.MapItem, current: usize, dest: usize, delta: isize)
     } else if (state[dest] == .BLOCK or state[dest] == .BLOCK_ON_GOAL) {
         //  如果是箱子或者目的地上的箱子，需要考虑该方向上的第二个位置
         const index = @as(isize, @intCast(dest)) + delta;
-        if (index < 0 or index > map.stageLength) return;
+        if (index < 0 or index > stage.width * stage.height) return;
 
         const next = @as(usize, @intCast(index));
         if (state[next] == .SPACE or state[next] == .GOAL) {
