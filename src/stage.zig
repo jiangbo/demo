@@ -3,7 +3,12 @@ const map = @import("map.zig");
 const file = @import("file.zig");
 const ray = @import("raylib.zig");
 
-pub const SequenceType = enum { title, stage };
+pub const SequenceType = enum { title, select, stage };
+pub const SequenceData = union(SequenceType) {
+    title: void,
+    select: void,
+    stage: usize,
+};
 const Allocator = std.mem.Allocator;
 
 pub fn init(allocator: Allocator, level: usize, box: ray.Texture2D) ?Stage {
@@ -83,7 +88,7 @@ pub const Stage = struct {
         } else 0;
     }
 
-    pub fn update(self: *Stage) ?SequenceType {
+    pub fn update(self: *Stage) ?SequenceData {
         // 操作角色移动的距离
         const delta: isize = switch (ray.GetKeyPressed()) {
             ray.KEY_W, ray.KEY_UP => -@as(isize, @intCast(self.width)),

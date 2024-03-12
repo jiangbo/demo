@@ -2,6 +2,7 @@ const std = @import("std");
 const ray = @import("raylib.zig");
 const stage = @import("stage.zig");
 const SequenceType = stage.SequenceType;
+const SequenceData = stage.SequenceData;
 
 pub const State = struct {
     current: Sequence,
@@ -17,12 +18,13 @@ pub const State = struct {
     }
 
     pub fn update(self: *State) void {
-        const sequenceType = self.current.update() orelse return;
+        const sequence = self.current.update() orelse return;
 
         const old = self.current;
-        self.current = switch (sequenceType) {
-            .title => Sequence{ .title = Title.init() },
-            .stage => .{ .stage = stage.init(self.allocator, 1, self.box) orelse return },
+        self.current = switch (sequence) {
+            .title => .{ .title = Title.init() },
+            .select => .{ .select = Select.init() },
+            .stage => |level| .{ .stage = stage.init(self.allocator, level, self.box) orelse return },
         };
         old.deinit();
     }
@@ -39,9 +41,10 @@ pub const State = struct {
 
 pub const Sequence = union(SequenceType) {
     title: Title,
+    select: Select,
     stage: stage.Stage,
 
-    fn update(self: *Sequence) ?SequenceType {
+    fn update(self: *Sequence) ?SequenceData {
         return switch (self.*) {
             inline else => |*case| case.update(),
         };
@@ -72,8 +75,8 @@ const Title = struct {
         return Title{ .texture = ray.LoadTexture("data/image/title.dds") };
     }
 
-    fn update(_: Title) ?SequenceType {
-        return if (ray.IsKeyPressed(ray.KEY_SPACE)) .stage else null;
+    fn update(_: Title) ?SequenceData {
+        return if (ray.IsKeyPressed(ray.KEY_SPACE)) .select else null;
     }
 
     fn draw(self: Title) void {
@@ -81,6 +84,31 @@ const Title = struct {
     }
 
     fn deinit(self: Title) void {
+        ray.UnloadTexture(self.texture);
+    }
+};
+
+const Select = struct {
+    texture: ray.Texture2D,
+
+    fn init() Select {
+        return Select{ .texture = ray.LoadTexture("data/image/select.dds") };
+    }
+
+    fn update(_: Select) ?SequenceData {
+        const char = ray.GetCharPressed();
+
+        return if (char >= '1' and char <= '9')
+            .{ .stage = @intCast(char - '1' + 1) }
+        else
+            null;
+    }
+
+    fn draw(self: Select) void {
+        ray.DrawTexture(self.texture, 0, 0, ray.WHITE);
+    }
+
+    fn deinit(self: Select) void {
         ray.UnloadTexture(self.texture);
     }
 };
