@@ -1,18 +1,19 @@
 const std = @import("std");
 const ray = @import("raylib.zig");
 const stage = @import("stage.zig");
+const file = @import("file.zig");
 const SequenceType = stage.SequenceType;
 const SequenceData = stage.SequenceData;
 
 pub const State = struct {
     current: Sequence,
-    box: ray.Texture2D,
+    box: file.Texture,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) State {
         return State{
             .current = Sequence{ .title = Title.init() },
-            .box = ray.LoadTexture("data/image/box.dds"),
+            .box = file.loadTexture("box.dds"),
             .allocator = allocator,
         };
     }
@@ -38,7 +39,7 @@ pub const State = struct {
 
     pub fn deinit(self: State) void {
         self.current.deinit();
-        ray.UnloadTexture(self.box);
+        self.box.unload();
     }
 };
 
@@ -72,10 +73,10 @@ pub const Sequence = union(SequenceType) {
 };
 
 const Title = struct {
-    texture: ray.Texture2D,
+    texture: file.Texture,
 
     fn init() Title {
-        return Title{ .texture = ray.LoadTexture("data/image/title.dds") };
+        return Title{ .texture = file.loadTexture("title.dds") };
     }
 
     fn update(_: Title) ?SequenceData {
@@ -83,11 +84,11 @@ const Title = struct {
     }
 
     fn draw(self: Title) void {
-        ray.DrawTexture(self.texture, 0, 0, ray.WHITE);
+        ray.DrawTexture(self.texture.texture, 0, 0, ray.WHITE);
     }
 
     fn deinit(self: Title) void {
-        ray.UnloadTexture(self.texture);
+        self.texture.unload();
     }
 };
 
