@@ -24,7 +24,10 @@ pub const State = struct {
         self.current = switch (sequence) {
             .title => .{ .title = Title.init() },
             .select => .{ .select = Select.init() },
-            .stage => |level| .{ .stage = stage.init(self.allocator, level, self.box) orelse return },
+            .stage => |level| label: {
+                const s = stage.init(self.allocator, level, self.box);
+                break :label .{ .stage = s orelse return };
+            },
         };
         old.deinit();
     }
@@ -97,7 +100,6 @@ const Select = struct {
 
     fn update(_: Select) ?SequenceData {
         const char = ray.GetCharPressed();
-
         return if (char >= '1' and char <= '9')
             .{ .stage = @intCast(char - '1' + 1) }
         else
