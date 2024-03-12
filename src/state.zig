@@ -41,13 +41,13 @@ pub const Sequence = union(SequenceType) {
     title: Title,
     stage: stage.Stage,
 
-    pub fn update(self: *Sequence) ?SequenceType {
+    fn update(self: *Sequence) ?SequenceType {
         return switch (self.*) {
             inline else => |*case| case.update(),
         };
     }
 
-    pub fn draw(self: Sequence) void {
+    fn draw(self: Sequence) void {
         ray.BeginDrawing();
         defer ray.EndDrawing();
         defer ray.DrawFPS(235, 10);
@@ -58,7 +58,7 @@ pub const Sequence = union(SequenceType) {
         }
     }
 
-    pub fn deinit(self: Sequence) void {
+    fn deinit(self: Sequence) void {
         switch (self) {
             inline else => |case| case.deinit(),
         }
@@ -68,19 +68,19 @@ pub const Sequence = union(SequenceType) {
 const Title = struct {
     texture: ray.Texture2D,
 
-    pub fn init() Title {
+    fn init() Title {
         return Title{ .texture = ray.LoadTexture("data/image/title.dds") };
     }
 
-    pub fn update(_: Title) ?SequenceType {
+    fn update(_: Title) ?SequenceType {
         return if (ray.IsKeyPressed(ray.KEY_SPACE)) .stage else null;
     }
 
-    pub fn draw(self: Title) void {
+    fn draw(self: Title) void {
         ray.DrawTexture(self.texture, 0, 0, ray.WHITE);
     }
 
-    pub fn deinit(self: Title) void {
+    fn deinit(self: Title) void {
         ray.UnloadTexture(self.texture);
     }
 };

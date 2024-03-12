@@ -68,7 +68,7 @@ pub const Stage = struct {
     allocator: std.mem.Allocator = undefined,
     box: ray.Texture2D = undefined,
 
-    pub fn hasCleared(self: Stage) bool {
+    fn hasCleared(self: Stage) bool {
         for (self.data) |value| {
             if (value == map.MapItem.BLOCK) {
                 return false;
@@ -76,7 +76,7 @@ pub const Stage = struct {
         } else return true;
     }
 
-    pub fn playerIndex(self: Stage) usize {
+    fn playerIndex(self: Stage) usize {
         // 角色当前位置
         return for (self.data, 0..) |value, index| {
             if (value == .MAN or value == .MAN_ON_GOAL) break index;
