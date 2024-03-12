@@ -1,7 +1,7 @@
 const std = @import("std");
 const ray = @import("raylib.zig");
 const map = @import("map.zig");
-const res = @import("res.zig");
+const state = @import("state.zig");
 
 const screenWidth = 320;
 const screenHeight = 240;
@@ -14,80 +14,12 @@ pub fn main() void {
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
 
-    res.init();
-    defer res.deinit();
-
-    var title = true;
-    var ostage: ?map.Stage = null;
-    defer if (ostage) |stage| stage.deinit();
+    var currentState = state.State.init(gpa.allocator());
+    defer currentState.deinit();
 
     while (!ray.WindowShouldClose()) {
-        if (title) {
-            if (ray.IsKeyPressed(ray.KEY_SPACE)) title = false;
-        } else {
-            // 根据输入更新游戏地图
-            if (ostage == null) ostage = map.Stage.init(allocator, 1);
-
-            if (ostage) |stage| {
-                update(@constCast(&stage));
-                // 检查游戏胜利条件
-                if (stage.hasCleared()) {
-                    title = true;
-                    stage.deinit();
-                    ostage = null;
-                }
-            }
-        }
-
-        // 画出游戏地图
-        ray.BeginDrawing();
-        defer ray.EndDrawing();
-        ray.ClearBackground(ray.WHITE);
-
-        if (title)
-            ray.DrawTexture(res.title, 0, 0, ray.WHITE)
-        else if (ostage) |stage| map.draw(stage);
-        ray.DrawFPS(screenWidth - 80, 10);
-    }
-}
-
-fn update(stage: *map.Stage) void {
-    // 操作角色移动的距离
-    const delta: isize = switch (ray.GetKeyPressed()) {
-        ray.KEY_W, ray.KEY_UP => -@as(isize, @intCast(stage.width)),
-        ray.KEY_S, ray.KEY_DOWN => @as(isize, @intCast(stage.width)),
-        ray.KEY_D, ray.KEY_RIGHT => 1,
-        ray.KEY_A, ray.KEY_LEFT => -1,
-        else => return,
-    };
-
-    const currentIndex = stage.playerIndex();
-    const index = @as(isize, @intCast(currentIndex)) + delta;
-    if (index < 0 or index > stage.width * stage.height) return;
-
-    // 角色欲前往的目的地
-    const destIndex = @as(usize, @intCast(index));
-    updatePlayer(stage, currentIndex, destIndex, delta);
-}
-
-fn updatePlayer(stage: *map.Stage, current: usize, dest: usize, delta: isize) void {
-    var state = stage.data;
-    if (state[dest] == .SPACE or state[dest] == .GOAL) {
-        // 如果是空地或者目标地，则可以移动
-        state[dest] = if (state[dest] == .GOAL) .MAN_ON_GOAL else .MAN;
-        state[current] = if (state[current] == .MAN_ON_GOAL) .GOAL else .SPACE;
-    } else if (state[dest] == .BLOCK or state[dest] == .BLOCK_ON_GOAL) {
-        //  如果是箱子或者目的地上的箱子，需要考虑该方向上的第二个位置
-        const index = @as(isize, @intCast(dest)) + delta;
-        if (index < 0 or index > stage.width * stage.height) return;
-
-        const next = @as(usize, @intCast(index));
-        if (state[next] == .SPACE or state[next] == .GOAL) {
-            state[next] = if (state[next] == .GOAL) .BLOCK_ON_GOAL else .BLOCK;
-            state[dest] = if (state[dest] == .BLOCK_ON_GOAL) .MAN_ON_GOAL else .MAN;
-            state[current] = if (state[current] == .MAN_ON_GOAL) .GOAL else .SPACE;
-        }
+        currentState.update();
+        currentState.draw();
     }
 }

@@ -1,7 +1,4 @@
 const std = @import("std");
-const ray = @import("raylib.zig");
-const file = @import("file.zig");
-const res = @import("res.zig");
 
 // 定义地图的类型
 pub const MapItem = enum(u8) {
@@ -24,120 +21,16 @@ pub const MapItem = enum(u8) {
     pub fn hasGoal(self: MapItem) bool {
         return self == .BLOCK_ON_GOAL or self == .MAN_ON_GOAL;
     }
-};
 
-pub fn draw(stage: Stage) void {
-    for (0..stage.height) |y| {
-        for (0..stage.width) |x| {
-            const item = stage.data[y * stage.width + x];
-            if (item != MapItem.WALL) {
-                drawCell(x, y, if (item.hasGoal()) .GOAL else .SPACE);
-            }
-            if (item != .SPACE) drawCell(x, y, item);
-        }
-    }
-}
-
-fn drawCell(x: usize, y: usize, item: MapItem) void {
-    var source = ray.Rectangle{ .width = 32, .height = 32 };
-    source.x = mapItemToIndex(item) * source.width;
-    const dest = ray.Rectangle{
-        .x = @as(f32, @floatFromInt(x)) * source.width,
-        .y = @as(f32, @floatFromInt(y)) * source.height,
-        .width = source.width,
-        .height = source.height,
-    };
-
-    ray.DrawTexturePro(res.box, source, dest, .{}, 0, ray.WHITE);
-}
-
-fn mapItemToIndex(item: MapItem) f32 {
-    return switch (item) {
-        .SPACE => 4,
-        .WALL => 1,
-        .BLOCK => 2,
-        .GOAL => 3,
-        .BLOCK_ON_GOAL => 2,
-        .MAN => 0,
-        .MAN_ON_GOAL => 0,
-    };
-}
-
-pub const Stage = struct {
-    width: usize = 0,
-    height: usize = 0,
-    data: []MapItem = undefined,
-    allocator: std.mem.Allocator = undefined,
-
-    pub fn init(allocator: std.mem.Allocator, level: usize) ?Stage {
-        return doInit(allocator, level) catch |e| {
-            std.log.err("init stage error: {}", .{e});
-            return null;
+    pub fn toImageIndex(self: MapItem) f32 {
+        return switch (self) {
+            .SPACE => 4,
+            .WALL => 1,
+            .BLOCK => 2,
+            .GOAL => 3,
+            .BLOCK_ON_GOAL => 2,
+            .MAN => 0,
+            .MAN_ON_GOAL => 0,
         };
-    }
-
-    fn doInit(allocator: std.mem.Allocator, level: usize) !?Stage {
-        var buf: [30]u8 = undefined;
-        const path = try std.fmt.bufPrint(&buf, "data/stage/{}.txt", .{level});
-
-        std.log.info("load stage: {s}", .{path});
-        const text = try file.readAll(allocator, path);
-        defer allocator.free(text);
-        std.log.info("{s} text: \n{s}", .{ path, text });
-        return parse(allocator, text);
-    }
-
-    fn parse(allocator: std.mem.Allocator, text: []const u8) !?Stage {
-        var stage = parseText(allocator, text) orelse return null;
-
-        var index: usize = 0;
-        stage.data = try allocator.alloc(MapItem, stage.width * stage.height);
-        for (text) |char| {
-            if (char == '\r' or char == '\n') continue;
-            stage.data[index] = MapItem.fromU8(char);
-            index += 1;
-        }
-        return stage;
-    }
-
-    fn parseText(allocator: std.mem.Allocator, text: []const u8) ?Stage {
-        var stage = Stage{ .allocator = allocator };
-
-        var width: usize = 0;
-        for (text) |char| {
-            if (char == '\r') continue;
-            if (char != '\n') {
-                width += 1;
-                continue;
-            }
-
-            if (stage.height != 0 and stage.width != width) {
-                std.log.err("stage width error, {} vs {}", .{ stage.width, width });
-                return null;
-            }
-            stage.width = width;
-            width = 0;
-            stage.height += 1;
-        }
-        return stage;
-    }
-
-    pub fn hasCleared(self: Stage) bool {
-        for (self.data) |value| {
-            if (value == MapItem.BLOCK) {
-                return false;
-            }
-        } else return true;
-    }
-
-    pub fn playerIndex(self: Stage) usize {
-        // 角色当前位置
-        return for (self.data, 0..) |value, index| {
-            if (value == .MAN or value == .MAN_ON_GOAL) break index;
-        } else 0;
-    }
-
-    pub fn deinit(self: Stage) void {
-        self.allocator.free(self.data);
     }
 };
