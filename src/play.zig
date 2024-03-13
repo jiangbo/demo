@@ -3,9 +3,11 @@ const map = @import("map.zig");
 const file = @import("file.zig");
 const ray = @import("raylib.zig");
 
-pub const PlayingType = enum { loading, play, title };
-
-pub fn init(m: map.Map, box: file.Texture) Play {
+pub fn init(allocator: std.mem.Allocator, level: usize, box: file.Texture) ?Play {
+    const m = map.Map.init(allocator, level) catch |err| {
+        std.log.err("init stage error: {}", .{err});
+        return null;
+    } orelse return null;
     return .{ .map = m, .box = box };
 }
 
@@ -13,7 +15,8 @@ pub const Play = struct {
     map: map.Map,
     box: file.Texture,
 
-    pub fn update(self: *Play) ?PlayingType {
+    pub fn update(self: *Play) ?@import("popup.zig").PopupType {
+        if (ray.IsKeyPressed(ray.KEY_SPACE)) return .menu;
 
         // 操作角色移动的距离
         const delta: isize = switch (ray.GetKeyPressed()) {
@@ -32,7 +35,7 @@ pub const Play = struct {
         const destIndex = @as(usize, @intCast(index));
         self.updatePlayer(currentIndex, destIndex, delta);
 
-        return if (self.map.hasCleared()) .title else null;
+        return if (self.map.hasCleared()) .clear else null;
     }
 
     fn updatePlayer(play: *Play, current: usize, dest: usize, delta: isize) void {
@@ -78,5 +81,9 @@ pub const Play = struct {
         };
 
         ray.DrawTexturePro(play.box.texture, source, dest, .{}, 0, ray.WHITE);
+    }
+
+    pub fn deinit(self: Play) void {
+        self.map.deinit();
     }
 };

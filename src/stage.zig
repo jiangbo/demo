@@ -1,7 +1,7 @@
 const std = @import("std");
-const map = @import("map.zig");
 const file = @import("file.zig");
 const ray = @import("raylib.zig");
+const pop = @import("popup.zig");
 const play = @import("play.zig");
 
 pub const SequenceType = enum { title, select, stage };
@@ -10,93 +10,47 @@ pub const SequenceData = union(SequenceType) {
     select: void,
     stage: usize,
 };
-const Allocator = std.mem.Allocator;
-const PlayingType = play.PlayingType;
+const PopupType = pop.PopupType;
+
+pub fn init(allocator: std.mem.Allocator, level: usize, box: file.Texture) ?Stage {
+    return Stage{
+        .current = play.init(allocator, level, box) orelse return null,
+        .popup = .{ .loading = pop.Loading.init() },
+    };
+}
 
 pub const Stage = struct {
-    map: map.Map,
-    box: file.Texture,
-    current: Sequence,
+    current: play.Play,
+    popup: ?pop.Popup = null,
 
     pub fn update(self: *Stage) ?SequenceData {
+        if (self.popup) |*option| {
+            const popup = option.update() orelse return null;
+            switch (popup) {
+                .title => return .title,
+                .quit => self.popup = null,
+                .clear, .menu, .loading => unreachable,
+            }
+            return null;
+        }
+
         const sequence = self.current.update() orelse return null;
-
-        const old = self.current;
-        defer old.deinit();
-
-        self.current = switch (sequence) {
-            .loading => .{ .loading = Loading.init() },
-            .play => .{ .play = play.init(self.map, self.box) },
-            .title => return .title,
-        };
+        switch (sequence) {
+            .clear => self.popup = .{ .clear = pop.Clear.init() },
+            .menu => self.popup = .{ .menu = pop.Menu.init() },
+            .title, .quit, .loading => unreachable,
+        }
 
         return null;
     }
 
     pub fn draw(self: Stage) void {
         self.current.draw();
+        if (self.popup) |popup| popup.draw();
     }
 
     pub fn deinit(self: Stage) void {
-        self.map.deinit();
+        if (self.popup) |popup| popup.deinit();
+        self.current.deinit();
     }
 };
-
-const Sequence = union(PlayingType) {
-    loading: Loading,
-    play: play.Play,
-    title: void,
-
-    fn update(self: *Sequence) ?PlayingType {
-        return switch (self.*) {
-            .title => unreachable,
-            inline else => |*case| case.update(),
-        };
-    }
-
-    fn draw(self: Sequence) void {
-        switch (self) {
-            .title => unreachable,
-            inline else => |sequence| sequence.draw(),
-        }
-    }
-
-    fn deinit(self: Sequence) void {
-        switch (self) {
-            .loading => |sequence| sequence.deinit(),
-            else => {},
-        }
-    }
-};
-
-const Loading = struct {
-    texture: file.Texture,
-    time: f64,
-
-    fn init() Loading {
-        return Loading{
-            .texture = file.loadTexture("loading.dds"),
-            .time = ray.GetTime(),
-        };
-    }
-
-    fn update(self: Loading) ?PlayingType {
-        return if ((ray.GetTime() - self.time) > 1) return .play else null;
-    }
-
-    fn draw(self: Loading) void {
-        ray.DrawTexture(self.texture.texture, 0, 0, ray.WHITE);
-    }
-
-    fn deinit(self: Loading) void {
-        self.texture.unload();
-    }
-};
-
-pub fn init(allocator: Allocator, level: usize, box: file.Texture) ?Stage {
-    const m = map.Map.init(allocator, level) catch |err| {
-        std.log.err("init stage error: {}", .{err});
-        return null;
-    } orelse return null;
-    return Stage{ .map = m, .box = box, .current = .{ .loading = Loading.init() } };
-}
