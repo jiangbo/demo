@@ -3,7 +3,7 @@ const map = @import("map.zig");
 const file = @import("file.zig");
 const ray = @import("raylib.zig");
 
-pub const PopupType = enum { loading, menu, clear, quit, title, select, reset };
+pub const PopupType = enum { loading, menu, clear, quit, title, select, reset, next };
 
 pub const Popup = union(PopupType) {
     loading: Loading,
@@ -13,17 +13,18 @@ pub const Popup = union(PopupType) {
     title: void,
     select: void,
     reset: void,
+    next: void,
 
     pub fn update(self: *Popup) ?PopupType {
         return switch (self.*) {
-            .title, .reset, .select, .quit => unreachable,
+            .title, .reset, .select, .quit, .next => unreachable,
             inline else => |*case| case.update(),
         };
     }
 
     pub fn draw(self: Popup) void {
         switch (self) {
-            .title, .select, .reset, .quit => unreachable,
+            .title, .select, .reset, .quit, .next => unreachable,
             inline else => |sequence| sequence.draw(),
         }
     }
@@ -99,7 +100,7 @@ pub const Clear = struct {
     }
 
     fn update(self: Clear) ?PopupType {
-        return if ((ray.GetTime() - self.time) > 1) return .title else null;
+        return if ((ray.GetTime() - self.time) > 1) return .next else null;
     }
 
     fn draw(self: Clear) void {

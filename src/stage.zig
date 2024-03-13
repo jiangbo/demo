@@ -32,6 +32,7 @@ pub const Stage = struct {
                 .title => return .title,
                 .select => return .select,
                 .reset => return .{ .stage = self.level },
+                .next => return .{ .stage = self.level + 1 },
                 .quit => self.popup = null,
                 .clear, .menu, .loading => unreachable,
             }
@@ -42,7 +43,7 @@ pub const Stage = struct {
         switch (sequence) {
             .clear => self.popup = .{ .clear = pop.Clear.init() },
             .menu => self.popup = .{ .menu = pop.Menu.init() },
-            .title, .select, .reset, .quit, .loading => unreachable,
+            .title, .select, .reset, .quit, .loading, .next => unreachable,
         }
 
         return null;
@@ -50,6 +51,9 @@ pub const Stage = struct {
 
     pub fn draw(self: Stage) void {
         self.current.draw();
+
+        // ray.TextFormat("", : ...)
+        // ray.DrawText(text: [*c]const u8, posX: c_int, posY: c_int, fontSize: c_int, color: Color)
         if (self.popup) |popup| popup.draw();
     }
 
