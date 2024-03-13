@@ -2,7 +2,6 @@ const std = @import("std");
 const ray = @import("raylib.zig");
 const stage = @import("stage.zig");
 const file = @import("file.zig");
-const SequenceType = stage.SequenceType;
 const SequenceData = stage.SequenceData;
 
 pub const State = struct {
@@ -43,7 +42,7 @@ pub const State = struct {
     }
 };
 
-pub const Sequence = union(SequenceType) {
+const Sequence = union(stage.SequenceType) {
     title: Title,
     select: Select,
     stage: stage.Stage,

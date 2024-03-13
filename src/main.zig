@@ -15,11 +15,11 @@ pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
-    var mainStage = state.State.init(gpa.allocator());
-    defer mainStage.deinit();
+    var mainState = state.State.init(gpa.allocator());
+    defer mainState.deinit();
 
     while (!ray.WindowShouldClose()) {
-        mainStage.update();
-        mainStage.draw();
+        mainState.update();
+        mainState.draw();
     }
 }
