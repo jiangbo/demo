@@ -14,12 +14,14 @@ const PopupType = pop.PopupType;
 
 pub fn init(allocator: std.mem.Allocator, level: usize, box: file.Texture) ?Stage {
     return Stage{
+        .level = level,
         .current = play.init(allocator, level, box) orelse return null,
         .popup = .{ .loading = pop.Loading.init() },
     };
 }
 
 pub const Stage = struct {
+    level: usize,
     current: play.Play,
     popup: ?pop.Popup = null,
 
@@ -28,6 +30,8 @@ pub const Stage = struct {
             const popup = option.update() orelse return null;
             switch (popup) {
                 .title => return .title,
+                .select => return .select,
+                .reset => return .{ .stage = self.level },
                 .quit => self.popup = null,
                 .clear, .menu, .loading => unreachable,
             }
@@ -38,7 +42,7 @@ pub const Stage = struct {
         switch (sequence) {
             .clear => self.popup = .{ .clear = pop.Clear.init() },
             .menu => self.popup = .{ .menu = pop.Menu.init() },
-            .title, .quit, .loading => unreachable,
+            .title, .select, .reset, .quit, .loading => unreachable,
         }
 
         return null;
