@@ -1,7 +1,7 @@
 const std = @import("std");
 const file = @import("file.zig");
 const ray = @import("raylib.zig");
-const pop = @import("popup.zig");
+const popup = @import("popup.zig");
 const play = @import("play.zig");
 
 pub const SequenceType = enum { title, select, stage };
@@ -10,41 +10,38 @@ pub const SequenceData = union(SequenceType) {
     select: void,
     stage: usize,
 };
-const PopupType = pop.PopupType;
 
 pub fn init(allocator: std.mem.Allocator, level: usize, box: file.Texture) ?Stage {
     return Stage{
         .level = level,
         .current = play.init(allocator, level, box) orelse return null,
-        .popup = .{ .loading = pop.Loading.init() },
+        .popup = .{ .loading = popup.Loading.init() },
     };
 }
 
 pub const Stage = struct {
     level: usize,
     current: play.Play,
-    popup: ?pop.Popup = null,
+    popup: ?popup.Popup = null,
 
     pub fn update(self: *Stage) ?SequenceData {
         if (self.popup) |*option| {
-            const popup = option.update() orelse return null;
-            switch (popup) {
+            const menu = option.update() orelse return null;
+            defer option.deinit();
+            switch (menu) {
                 .title => return .title,
                 .select => return .select,
                 .reset => return .{ .stage = self.level },
                 .next => return .{ .stage = self.level + 1 },
                 .quit => self.popup = null,
-                .clear, .menu, .loading => unreachable,
             }
-            return null;
         }
 
-        const sequence = self.current.update() orelse return null;
-        switch (sequence) {
-            .clear => self.popup = .{ .clear = pop.Clear.init() },
-            .menu => self.popup = .{ .menu = pop.Menu.init() },
-            .title, .select, .reset, .quit, .loading, .next => unreachable,
-        }
+        self.popup = switch (self.current.update() orelse return null) {
+            .clear => .{ .clear = popup.Clear.init() },
+            .menu => .{ .menu = popup.Menu.init() },
+            .loading => .{ .loading = popup.Loading.init() },
+        };
 
         return null;
     }
@@ -54,11 +51,11 @@ pub const Stage = struct {
 
         // ray.TextFormat("", : ...)
         // ray.DrawText(text: [*c]const u8, posX: c_int, posY: c_int, fontSize: c_int, color: Color)
-        if (self.popup) |popup| popup.draw();
+        if (self.popup) |option| option.draw();
     }
 
     pub fn deinit(self: Stage) void {
-        if (self.popup) |popup| popup.deinit();
+        if (self.popup) |option| option.deinit();
         self.current.deinit();
     }
 };

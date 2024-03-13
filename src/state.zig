@@ -2,7 +2,6 @@ const std = @import("std");
 const ray = @import("raylib.zig");
 const stage = @import("stage.zig");
 const file = @import("file.zig");
-const SequenceData = stage.SequenceData;
 
 pub const State = struct {
     current: Sequence,
@@ -47,7 +46,7 @@ const Sequence = union(stage.SequenceType) {
     select: Select,
     stage: stage.Stage,
 
-    fn update(self: *Sequence) ?SequenceData {
+    fn update(self: *Sequence) ?stage.SequenceData {
         return switch (self.*) {
             inline else => |*case| case.update(),
         };
@@ -78,12 +77,12 @@ const Title = struct {
         return Title{ .texture = file.loadTexture("title.dds") };
     }
 
-    fn update(_: Title) ?SequenceData {
+    fn update(_: Title) ?stage.SequenceData {
         return if (ray.IsKeyPressed(ray.KEY_SPACE)) .select else null;
     }
 
     fn draw(self: Title) void {
-        ray.DrawTexture(self.texture.texture, 0, 0, ray.WHITE);
+        self.texture.draw();
     }
 
     fn deinit(self: Title) void {
@@ -92,13 +91,13 @@ const Title = struct {
 };
 
 const Select = struct {
-    texture: ray.Texture2D,
+    texture: file.Texture,
 
     fn init() Select {
-        return Select{ .texture = ray.LoadTexture("data/image/select.dds") };
+        return Select{ .texture = file.loadTexture("select.dds") };
     }
 
-    fn update(_: Select) ?SequenceData {
+    fn update(_: Select) ?stage.SequenceData {
         const char = ray.GetCharPressed();
         return if (char >= '1' and char <= '9')
             .{ .stage = @intCast(char - '1' + 1) }
@@ -107,10 +106,10 @@ const Select = struct {
     }
 
     fn draw(self: Select) void {
-        ray.DrawTexture(self.texture, 0, 0, ray.WHITE);
+        self.texture.draw();
     }
 
     fn deinit(self: Select) void {
-        ray.UnloadTexture(self.texture);
+        self.texture.unload();
     }
 };

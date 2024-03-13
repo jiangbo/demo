@@ -21,6 +21,10 @@ fn readAll(allocator: std.mem.Allocator, name: []const u8) ![]const u8 {
 pub const Texture = struct {
     texture: ray.Texture2D,
 
+    pub fn draw(self: Texture) void {
+        ray.DrawTexture(self.texture, 0, 0, ray.WHITE);
+    }
+
     pub fn unload(self: Texture) void {
         ray.UnloadTexture(self.texture);
     }

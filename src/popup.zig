@@ -3,36 +3,29 @@ const map = @import("map.zig");
 const file = @import("file.zig");
 const ray = @import("raylib.zig");
 
-pub const PopupType = enum { loading, menu, clear, quit, title, select, reset, next };
+pub const MenuType = enum { quit, title, select, reset, next };
+pub const PopupType = enum { loading, menu, clear };
 
 pub const Popup = union(PopupType) {
     loading: Loading,
     menu: Menu,
     clear: Clear,
-    quit: void,
-    title: void,
-    select: void,
-    reset: void,
-    next: void,
 
-    pub fn update(self: *Popup) ?PopupType {
+    pub fn update(self: *Popup) ?MenuType {
         return switch (self.*) {
-            .title, .reset, .select, .quit, .next => unreachable,
             inline else => |*case| case.update(),
         };
     }
 
     pub fn draw(self: Popup) void {
         switch (self) {
-            .title, .select, .reset, .quit, .next => unreachable,
             inline else => |sequence| sequence.draw(),
         }
     }
 
     pub fn deinit(self: Popup) void {
         switch (self) {
-            .loading => |sequence| sequence.deinit(),
-            else => {},
+            inline else => |sequence| sequence.deinit(),
         }
     }
 };
@@ -48,12 +41,12 @@ pub const Loading = struct {
         };
     }
 
-    fn update(self: Loading) ?PopupType {
+    fn update(self: Loading) ?MenuType {
         return if ((ray.GetTime() - self.time) > 1) return .quit else null;
     }
 
     fn draw(self: Loading) void {
-        ray.DrawTexture(self.texture.texture, 0, 0, ray.WHITE);
+        self.texture.draw();
     }
 
     fn deinit(self: Loading) void {
@@ -68,7 +61,7 @@ pub const Menu = struct {
         return Menu{ .texture = file.loadTexture("menu.dds") };
     }
 
-    fn update(_: Menu) ?PopupType {
+    fn update(_: Menu) ?MenuType {
         const char = ray.GetCharPressed();
         return switch (char) {
             '1' => .reset,
@@ -80,7 +73,7 @@ pub const Menu = struct {
     }
 
     fn draw(self: Menu) void {
-        ray.DrawTexture(self.texture.texture, 0, 0, ray.WHITE);
+        self.texture.draw();
     }
 
     fn deinit(self: Menu) void {
@@ -99,12 +92,12 @@ pub const Clear = struct {
         };
     }
 
-    fn update(self: Clear) ?PopupType {
+    fn update(self: Clear) ?MenuType {
         return if ((ray.GetTime() - self.time) > 1) return .next else null;
     }
 
     fn draw(self: Clear) void {
-        ray.DrawTexture(self.texture.texture, 0, 0, ray.WHITE);
+        self.texture.draw();
     }
 
     fn deinit(self: Clear) void {
