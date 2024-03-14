@@ -1,9 +1,9 @@
 const std = @import("std");
+const engine = @import("engine.zig");
 const map = @import("map.zig");
-const file = @import("file.zig");
-const ray = @import("raylib.zig");
 
-pub fn init(allocator: std.mem.Allocator, level: usize, box: file.Texture) ?Play {
+const Allocator = std.mem.Allocator;
+pub fn init(allocator: Allocator, level: usize, box: engine.Texture) ?Play {
     const m = map.Map.init(allocator, level) catch |err| {
         std.log.err("init stage error: {}", .{err});
         return null;
@@ -13,17 +13,18 @@ pub fn init(allocator: std.mem.Allocator, level: usize, box: file.Texture) ?Play
 
 pub const Play = struct {
     map: map.Map,
-    box: file.Texture,
+    box: engine.Texture,
 
     pub fn update(self: *Play) ?@import("popup.zig").PopupType {
-        if (ray.IsKeyPressed(ray.KEY_SPACE)) return .menu;
+        if (engine.isPressed(engine.Key.space)) return .menu;
 
         // 操作角色移动的距离
-        const delta: isize = switch (ray.GetKeyPressed()) {
-            ray.KEY_W, ray.KEY_UP => -@as(isize, @intCast(self.map.width)),
-            ray.KEY_S, ray.KEY_DOWN => @as(isize, @intCast(self.map.width)),
-            ray.KEY_D, ray.KEY_RIGHT => 1,
-            ray.KEY_A, ray.KEY_LEFT => -1,
+        const Key = engine.Key;
+        const delta: isize = switch (engine.getPressed()) {
+            Key.w, Key.up => -@as(isize, @intCast(self.map.width)),
+            Key.s, Key.down => @as(isize, @intCast(self.map.width)),
+            Key.d, Key.right => 1,
+            Key.a, Key.left => -1,
             else => return null,
         };
 
@@ -38,23 +39,23 @@ pub const Play = struct {
         return if (self.map.hasCleared()) .clear else null;
     }
 
-    fn updatePlayer(play: *Play, current: usize, dest: usize, delta: isize) void {
+    fn updatePlayer(play: *Play, cur: usize, dest: usize, delta: isize) void {
         var state = play.map.data;
         if (state[dest] == .SPACE or state[dest] == .GOAL) {
             // 如果是空地或者目标地，则可以移动
-            state[dest] = if (state[dest] == .GOAL) .MAN_ON_GOAL else .MAN;
-            state[current] = if (state[current] == .MAN_ON_GOAL) .GOAL else .SPACE;
-        } else if (state[dest] == .BLOCK or state[dest] == .BLOCK_ON_GOAL) {
+            state[dest] = if (state[dest] == .GOAL) .MAN_GOAL else .MAN;
+            state[cur] = if (state[cur] == .MAN_GOAL) .GOAL else .SPACE;
+        } else if (state[dest] == .BLOCK or state[dest] == .BLOCK_GOAL) {
             //  如果是箱子或者目的地上的箱子，需要考虑该方向上的第二个位置
             const index = @as(isize, @intCast(dest)) + delta;
             if (index < 0 or index > play.map.size()) return;
 
             const next = @as(usize, @intCast(index));
-            if (state[next] == .SPACE or state[next] == .GOAL) {
-                state[next] = if (state[next] == .GOAL) .BLOCK_ON_GOAL else .BLOCK;
-                state[dest] = if (state[dest] == .BLOCK_ON_GOAL) .MAN_ON_GOAL else .MAN;
-                state[current] = if (state[current] == .MAN_ON_GOAL) .GOAL else .SPACE;
-            }
+            if (state[next] != .SPACE and state[next] != .GOAL) return;
+
+            state[next] = if (state[next] == .GOAL) .BLOCK_GOAL else .BLOCK;
+            state[dest] = if (state[dest] == .BLOCK_GOAL) .MAN_GOAL else .MAN;
+            state[cur] = if (state[cur] == .MAN_GOAL) .GOAL else .SPACE;
         }
     }
 
@@ -71,16 +72,10 @@ pub const Play = struct {
     }
 
     fn drawCell(play: Play, x: usize, y: usize, item: map.MapItem) void {
-        var source = ray.Rectangle{ .width = 32, .height = 32 };
+        var source = engine.Rectangle{ .width = 32, .height = 32 };
         source.x = item.toImageIndex() * source.width;
-        const dest = ray.Rectangle{
-            .x = @as(f32, @floatFromInt(x)) * source.width,
-            .y = @as(f32, @floatFromInt(y)) * source.height,
-            .width = source.width,
-            .height = source.height,
-        };
-
-        ray.DrawTexturePro(play.box.texture, source, dest, .{}, 0, ray.WHITE);
+        const position = .{ .x = x * source.width, .y = y * source.height };
+        play.box.drawRectangle(source, position);
     }
 
     pub fn deinit(self: Play) void {

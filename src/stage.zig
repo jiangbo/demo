@@ -1,17 +1,17 @@
 const std = @import("std");
-const file = @import("file.zig");
-const ray = @import("raylib.zig");
 const popup = @import("popup.zig");
 const play = @import("play.zig");
 
-pub const SequenceType = enum { title, select, stage };
+const Texture = @import("engine.zig").Texture;
+pub const SequenceType = enum { title, select, stage, none };
 pub const SequenceData = union(SequenceType) {
     title: void,
     select: void,
     stage: usize,
+    none: void,
 };
 
-pub fn init(allocator: std.mem.Allocator, level: usize, box: file.Texture) ?Stage {
+pub fn init(allocator: std.mem.Allocator, level: usize, box: Texture) ?Stage {
     return Stage{
         .level = level,
         .current = play.init(allocator, level, box) orelse return null,
@@ -48,9 +48,6 @@ pub const Stage = struct {
 
     pub fn draw(self: Stage) void {
         self.current.draw();
-
-        // ray.TextFormat("", : ...)
-        // ray.DrawText(text: [*c]const u8, posX: c_int, posY: c_int, fontSize: c_int, color: Color)
         if (self.popup) |option| option.draw();
     }
 

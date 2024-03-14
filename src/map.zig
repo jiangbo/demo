@@ -1,6 +1,5 @@
 const std = @import("std");
-const file = @import("file.zig");
-const Allocator = std.mem.Allocator;
+const file = @import("engine.zig");
 
 // 定义地图的类型
 pub const MapItem = enum(u8) {
@@ -8,9 +7,9 @@ pub const MapItem = enum(u8) {
     WALL = '#',
     GOAL = '.',
     BLOCK = 'o',
-    BLOCK_ON_GOAL = 'O',
+    BLOCK_GOAL = 'O',
     MAN = 'p',
-    MAN_ON_GOAL = 'P',
+    MAN_GOAL = 'P',
 
     pub fn fromU8(value: u8) MapItem {
         return @enumFromInt(value);
@@ -21,18 +20,18 @@ pub const MapItem = enum(u8) {
     }
 
     pub fn hasGoal(self: MapItem) bool {
-        return self == .BLOCK_ON_GOAL or self == .MAN_ON_GOAL;
+        return self == .BLOCK_GOAL or self == .MAN_GOAL;
     }
 
-    pub fn toImageIndex(self: MapItem) f32 {
+    pub fn toImageIndex(self: MapItem) usize {
         return switch (self) {
             .SPACE => 4,
             .WALL => 1,
             .BLOCK => 2,
             .GOAL => 3,
-            .BLOCK_ON_GOAL => 2,
+            .BLOCK_GOAL => 2,
             .MAN => 0,
-            .MAN_ON_GOAL => 0,
+            .MAN_GOAL => 0,
         };
     }
 };
@@ -43,7 +42,7 @@ pub const Map = struct {
     data: []MapItem = undefined,
     allocator: std.mem.Allocator = undefined,
 
-    pub fn init(allocator: Allocator, level: usize) !?Map {
+    pub fn init(allocator: std.mem.Allocator, level: usize) !?Map {
         const text = try file.readStageText(allocator, level);
         defer allocator.free(text);
 
@@ -96,7 +95,7 @@ pub const Map = struct {
 
     pub fn playerIndex(self: Map) usize {
         return for (self.data, 0..) |value, index| {
-            if (value == .MAN or value == .MAN_ON_GOAL) break index;
+            if (value == .MAN or value == .MAN_GOAL) break index;
         } else 0;
     }
 

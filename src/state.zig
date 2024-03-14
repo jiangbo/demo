@@ -1,17 +1,16 @@
 const std = @import("std");
-const ray = @import("raylib.zig");
+const engine = @import("engine.zig");
 const stage = @import("stage.zig");
-const file = @import("file.zig");
 
 pub const State = struct {
     current: Sequence,
-    box: file.Texture,
+    box: engine.Texture,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) State {
         return State{
             .current = Sequence{ .title = Title.init() },
-            .box = file.loadTexture("box.dds"),
+            .box = engine.Texture.init("box.dds"),
             .allocator = allocator,
         };
     }
@@ -23,9 +22,13 @@ pub const State = struct {
         self.current = switch (sequence) {
             .title => .{ .title = Title.init() },
             .select => .{ .select = Select.init() },
+            .none => .{ .none = None.init() },
             .stage => |level| label: {
                 const s = stage.init(self.allocator, level, self.box);
-                break :label .{ .stage = s orelse return };
+                break :label if (s) |value|
+                    .{ .stage = value }
+                else
+                    .{ .none = None.init() };
             },
         };
         old.deinit();
@@ -37,7 +40,7 @@ pub const State = struct {
 
     pub fn deinit(self: State) void {
         self.current.deinit();
-        self.box.unload();
+        self.box.deinit();
     }
 };
 
@@ -45,6 +48,7 @@ const Sequence = union(stage.SequenceType) {
     title: Title,
     select: Select,
     stage: stage.Stage,
+    none: None,
 
     fn update(self: *Sequence) ?stage.SequenceData {
         return switch (self.*) {
@@ -53,10 +57,8 @@ const Sequence = union(stage.SequenceType) {
     }
 
     fn draw(self: Sequence) void {
-        ray.BeginDrawing();
-        defer ray.EndDrawing();
-        defer ray.DrawFPS(235, 10);
-        ray.ClearBackground(ray.WHITE);
+        engine.beginDraw();
+        defer engine.endDraw();
 
         switch (self) {
             inline else => |sequence| sequence.draw(),
@@ -71,14 +73,14 @@ const Sequence = union(stage.SequenceType) {
 };
 
 const Title = struct {
-    texture: file.Texture,
+    texture: engine.Texture,
 
     fn init() Title {
-        return Title{ .texture = file.loadTexture("title.dds") };
+        return Title{ .texture = engine.Texture.init("title.dds") };
     }
 
     fn update(_: Title) ?stage.SequenceData {
-        return if (ray.IsKeyPressed(ray.KEY_SPACE)) .select else null;
+        return if (engine.isPressed(engine.Key.space)) .select else null;
     }
 
     fn draw(self: Title) void {
@@ -86,21 +88,21 @@ const Title = struct {
     }
 
     fn deinit(self: Title) void {
-        self.texture.unload();
+        self.texture.deinit();
     }
 };
 
 const Select = struct {
-    texture: file.Texture,
+    texture: engine.Texture,
 
     fn init() Select {
-        return Select{ .texture = file.loadTexture("select.dds") };
+        return Select{ .texture = engine.Texture.init("select.dds") };
     }
 
     fn update(_: Select) ?stage.SequenceData {
-        const char = ray.GetCharPressed();
+        const char = engine.getPressed();
         return if (char >= '1' and char <= '9')
-            .{ .stage = @intCast(char - '1' + 1) }
+            .{ .stage = char - '1' + 1 }
         else
             null;
     }
@@ -110,6 +112,25 @@ const Select = struct {
     }
 
     fn deinit(self: Select) void {
-        self.texture.unload();
+        self.texture.deinit();
     }
+};
+
+const None = struct {
+    text: [:0]const u8,
+
+    fn init() None {
+        return None{ .text = "STAGE LOAD ERROR" };
+    }
+
+    fn update(_: None) ?stage.SequenceData {
+        return if (engine.isPressed(engine.Key.space)) .select else null;
+    }
+
+    fn draw(self: None) void {
+        engine.clear(0x39918EFF);
+        engine.drawText(40, 100, self.text);
+    }
+
+    fn deinit(_: None) void {}
 };
