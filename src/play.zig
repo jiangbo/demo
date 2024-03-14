@@ -16,7 +16,7 @@ pub const Play = struct {
 
     pub fn update(_: *Play) ?@import("popup.zig").PopupType {
         if (engine.isPressed(engine.Key.x)) return .over;
-
+        if (engine.isPressed(engine.Key.c)) return .clear;
         return null;
     }
 

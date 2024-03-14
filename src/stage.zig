@@ -11,11 +11,8 @@ pub const SequenceData = union(SequenceType) {
 };
 
 pub fn init(allocator: std.mem.Allocator, level: usize, box: Texture) ?Stage {
-    return Stage{
-        .level = level,
-        .current = play.init(allocator, level, box) orelse return null,
-        .popup = .{ .loading = popup.Loading.init() },
-    };
+    const current = play.init(allocator, level, box) orelse return null;
+    return Stage{ .level = level, .current = current, .popup = popup.init() };
 }
 
 pub const Stage = struct {
@@ -36,13 +33,8 @@ pub const Stage = struct {
             }
         }
 
-        self.popup = switch (self.current.update() orelse return null) {
-            .clear => .{ .clear = popup.Clear.init() },
-            .menu => .{ .menu = popup.Menu.init() },
-            .loading => .{ .loading = popup.Loading.init() },
-            .over => .{ .over = popup.Over.init() },
-        };
-
+        const popupType = self.current.update() orelse return null;
+        self.popup = popup.initWithType(popupType);
         return null;
     }
 

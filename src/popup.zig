@@ -8,8 +8,8 @@ pub const PopupType = enum { loading, menu, clear, over };
 pub const Popup = union(PopupType) {
     loading: Loading,
     menu: Menu,
-    clear: Clear,
-    over: Over,
+    clear: TimePopup,
+    over: TimePopup,
 
     pub fn update(self: *Popup) ?MenuType {
         return switch (self.*) {
@@ -30,11 +30,50 @@ pub const Popup = union(PopupType) {
     }
 };
 
-pub const Loading = struct {
+pub fn init() Popup {
+    return .{ .loading = Loading.init() };
+}
+
+pub fn initWithType(popupType: PopupType) Popup {
+    return switch (popupType) {
+        .clear => .{ .clear = TimePopup.init("clear.png", .next) },
+        .menu => .{ .menu = Menu.init() },
+        .loading => .{ .loading = Loading.init() },
+        .over => .{ .over = TimePopup.init("over.png", .title) },
+    };
+}
+
+const TimePopup = struct {
+    texture: engine.Texture,
+    time: usize,
+    target: MenuType,
+
+    fn init(name: []const u8, target: MenuType) TimePopup {
+        return TimePopup{
+            .texture = engine.Texture.init(name),
+            .time = engine.time(),
+            .target = target,
+        };
+    }
+
+    fn update(self: TimePopup) ?MenuType {
+        return if (engine.time() - self.time > 2000) self.target else null;
+    }
+
+    fn draw(self: TimePopup) void {
+        self.texture.draw();
+    }
+
+    fn deinit(self: TimePopup) void {
+        self.texture.deinit();
+    }
+};
+
+const Loading = struct {
     texture: engine.Texture,
     time: usize,
 
-    pub fn init() Loading {
+    fn init() Loading {
         return Loading{
             .texture = engine.Texture.init("loading.dds"),
             .time = engine.time(),
@@ -54,10 +93,10 @@ pub const Loading = struct {
     }
 };
 
-pub const Menu = struct {
+const Menu = struct {
     texture: engine.Texture,
 
-    pub fn init() Menu {
+    fn init() Menu {
         return Menu{ .texture = engine.Texture.init("menu.dds") };
     }
 
@@ -77,51 +116,6 @@ pub const Menu = struct {
     }
 
     fn deinit(self: Menu) void {
-        self.texture.deinit();
-    }
-};
-
-pub const Over = struct {
-    texture: engine.Texture,
-    time: usize,
-
-    pub fn init() Over {
-        return Over{ .texture = engine.Texture.init("over.png"), .time = engine.time() };
-    }
-
-    fn update(self: Over) ?MenuType {
-        return if (engine.time() - self.time > 3000) .title else null;
-    }
-
-    fn draw(self: Over) void {
-        self.texture.draw();
-    }
-
-    fn deinit(self: Over) void {
-        self.texture.deinit();
-    }
-};
-
-pub const Clear = struct {
-    texture: engine.Texture,
-    time: usize,
-
-    pub fn init() Clear {
-        return Clear{
-            .texture = engine.Texture.init("clear.dds"),
-            .time = engine.time(),
-        };
-    }
-
-    fn update(self: Clear) ?MenuType {
-        return if ((engine.time() - self.time) > 1000) return .next else null;
-    }
-
-    fn draw(self: Clear) void {
-        self.texture.draw();
-    }
-
-    fn deinit(self: Clear) void {
         self.texture.deinit();
     }
 };
