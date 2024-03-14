@@ -22,13 +22,9 @@ pub const State = struct {
         self.current = switch (sequence) {
             .title => .{ .title = Title.init() },
             .select => .{ .select = Select.init() },
-            .none => .{ .none = None.init() },
             .stage => |level| label: {
                 const s = stage.init(self.allocator, level, self.box);
-                break :label if (s) |value|
-                    .{ .stage = value }
-                else
-                    .{ .none = None.init() };
+                break :label .{ .stage = s orelse return };
             },
         };
         old.deinit();
@@ -48,7 +44,6 @@ const Sequence = union(stage.SequenceType) {
     title: Title,
     select: Select,
     stage: stage.Stage,
-    none: None,
 
     fn update(self: *Sequence) ?stage.SequenceData {
         return switch (self.*) {
@@ -73,22 +68,34 @@ const Sequence = union(stage.SequenceType) {
 };
 
 const Title = struct {
-    texture: engine.Texture,
+    title: engine.Texture,
+    cursor: engine.Texture,
+    onePlayer: bool = true,
 
     fn init() Title {
-        return Title{ .texture = engine.Texture.init("title.dds") };
+        return Title{
+            .title = engine.Texture.init("title.png"),
+            .cursor = engine.Texture.init("cursor.png"),
+        };
     }
 
-    fn update(_: Title) ?stage.SequenceData {
-        return if (engine.isPressed(engine.Key.space)) .select else null;
+    fn update(self: *Title) ?stage.SequenceData {
+        if (engine.isPressed(engine.Key.w) or engine.isPressed(engine.Key.s)) {
+            self.onePlayer = !self.onePlayer;
+        }
+
+        const result = stage.SequenceData{ .stage = if (self.onePlayer) 1 else 2 };
+        return if (engine.isPressed(engine.Key.space)) result else null;
     }
 
     fn draw(self: Title) void {
-        self.texture.draw();
+        self.title.draw();
+        self.cursor.drawPositin(220, if (self.onePlayer) 395 else 433);
     }
 
     fn deinit(self: Title) void {
-        self.texture.deinit();
+        self.title.deinit();
+        self.cursor.deinit();
     }
 };
 
@@ -114,23 +121,4 @@ const Select = struct {
     fn deinit(self: Select) void {
         self.texture.deinit();
     }
-};
-
-const None = struct {
-    text: [:0]const u8,
-
-    fn init() None {
-        return None{ .text = "STAGE LOAD ERROR" };
-    }
-
-    fn update(_: None) ?stage.SequenceData {
-        return if (engine.isPressed(engine.Key.space)) .select else null;
-    }
-
-    fn draw(self: None) void {
-        engine.clear(0x39918EFF);
-        engine.drawText(40, 100, self.text);
-    }
-
-    fn deinit(_: None) void {}
 };

@@ -1,10 +1,13 @@
 const std = @import("std");
 const ray = @import("raylib.zig");
 
+var screenWidth: usize = 0;
+
 pub fn init(width: usize, height: usize, title: [:0]const u8) void {
     ray.InitWindow(@intCast(width), @intCast(height), title);
     ray.SetTargetFPS(60);
     ray.SetExitKey(ray.KEY_NULL);
+    screenWidth = width;
 }
 
 pub fn shoudContinue() bool {
@@ -17,7 +20,7 @@ pub fn beginDraw() void {
 }
 
 pub fn drawText(x: usize, y: usize, text: [:0]const u8) void {
-    ray.DrawText(text, @intCast(x), @intCast(y), 24, ray.RED);
+    ray.DrawText(text, @intCast(x), @intCast(y), 32, ray.RED);
 }
 
 pub fn clear(color: u32) void {
@@ -25,7 +28,7 @@ pub fn clear(color: u32) void {
 }
 
 pub fn endDraw() void {
-    ray.DrawFPS(235, 10);
+    ray.DrawFPS(@intCast(screenWidth - 100), 10);
     ray.EndDrawing();
 }
 
@@ -106,6 +109,10 @@ pub const Texture = struct {
 
     pub fn draw(self: Texture) void {
         ray.DrawTexture(self.texture, 0, 0, ray.WHITE);
+    }
+
+    pub fn drawPositin(self: Texture, x: usize, y: usize) void {
+        ray.DrawTextureV(self.texture, (Vector{ .x = x, .y = y }).toRay(), ray.WHITE);
     }
 
     pub fn drawRectangle(self: Texture, rec: Rectangle, pos: Vector) void {

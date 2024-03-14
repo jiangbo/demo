@@ -3,12 +3,11 @@ const popup = @import("popup.zig");
 const play = @import("play.zig");
 
 const Texture = @import("engine.zig").Texture;
-pub const SequenceType = enum { title, select, stage, none };
+pub const SequenceType = enum { title, select, stage };
 pub const SequenceData = union(SequenceType) {
     title: void,
     select: void,
     stage: usize,
-    none: void,
 };
 
 pub fn init(allocator: std.mem.Allocator, level: usize, box: Texture) ?Stage {
@@ -41,6 +40,7 @@ pub const Stage = struct {
             .clear => .{ .clear = popup.Clear.init() },
             .menu => .{ .menu = popup.Menu.init() },
             .loading => .{ .loading = popup.Loading.init() },
+            .over => .{ .over = popup.Over.init() },
         };
 
         return null;

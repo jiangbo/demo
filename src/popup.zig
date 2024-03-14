@@ -3,12 +3,13 @@ const engine = @import("engine.zig");
 const map = @import("map.zig");
 
 pub const MenuType = enum { quit, title, select, reset, next };
-pub const PopupType = enum { loading, menu, clear };
+pub const PopupType = enum { loading, menu, clear, over };
 
 pub const Popup = union(PopupType) {
     loading: Loading,
     menu: Menu,
     clear: Clear,
+    over: Over,
 
     pub fn update(self: *Popup) ?MenuType {
         return switch (self.*) {
@@ -76,6 +77,27 @@ pub const Menu = struct {
     }
 
     fn deinit(self: Menu) void {
+        self.texture.deinit();
+    }
+};
+
+pub const Over = struct {
+    texture: engine.Texture,
+    time: usize,
+
+    pub fn init() Over {
+        return Over{ .texture = engine.Texture.init("over.png"), .time = engine.time() };
+    }
+
+    fn update(self: Over) ?MenuType {
+        return if (engine.time() - self.time > 3000) .title else null;
+    }
+
+    fn draw(self: Over) void {
+        self.texture.draw();
+    }
+
+    fn deinit(self: Over) void {
         self.texture.deinit();
     }
 };
