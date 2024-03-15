@@ -32,7 +32,7 @@ pub const MapType = enum(u8) {
     bomb = 1 << 2,
     power = 1 << 3,
 
-    fn toTileMapIndex(self: MapType) usize {
+    fn toIndex(self: MapType) usize {
         return switch (self) {
             .space => 9,
             .wall => 7,
@@ -47,40 +47,46 @@ const width = 20;
 const height = 15;
 var data: [width * height]MapType = undefined;
 
-fn generateMap(info: StageData) void {
-    for (0..height) |y| {
-        for (0..width) |x| {
-            if (x == 0 or y == 0 or x == width - 1 or y == height - 1) {
-                data[x + y * width] = .wall;
-            } else if (x % 2 == 0 and y % 2 == 0) {
-                data[x + y * width] = .wall;
-            } else if (y + x < 4) {
-                //
-            } else {
-                if (engine.random(100) < info.brickRate) {
-                    data[x + y * width] = .brick;
-                } else {
-                    data[x + y * width] = .space;
-                }
-            }
-        }
-    }
-}
-
 pub const WorldMap = struct {
     width: usize = width,
     height: usize = height,
-    data: []MapType = undefined,
+    data: []MapType,
 
-    pub fn init(_: std.mem.Allocator, _: usize) ?WorldMap {
-        generateMap(stageData[0]);
-        return .{};
+    pub fn init(_: std.mem.Allocator, level: usize) ?WorldMap {
+        const map = WorldMap{ .data = &data };
+        return map.generateMap(stageData[level]);
     }
 
-    pub fn draw(_: WorldMap) void {
+    fn generateMap(self: WorldMap, info: StageData) WorldMap {
         for (0..height) |y| {
             for (0..width) |x| {
-                const index = data[x + y * width].toTileMapIndex();
+                if (isFixWall(x, y))
+                    self.data[x + y * width] = .wall
+                else if (isFixSpace(x, y)) continue else {
+                    if (engine.random(100) < info.brickRate) {
+                        self.data[x + y * width] = .brick;
+                    }
+                }
+            }
+        }
+        return self;
+    }
+
+    fn isFixWall(x: usize, y: usize) bool {
+        if (x == 0 or y == 0) return true;
+        if (x == width - 1 or y == height - 1) return true;
+        if (x % 2 == 0 and y % 2 == 0) return true;
+        return false;
+    }
+
+    fn isFixSpace(x: usize, y: usize) bool {
+        return y + x < 4;
+    }
+
+    pub fn draw(self: WorldMap) void {
+        for (0..self.height) |y| {
+            for (0..self.width) |x| {
+                const index = data[x + y * self.width].toIndex();
                 tileMap.drawI(index, x, y);
             }
         }
