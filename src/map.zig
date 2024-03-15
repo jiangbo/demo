@@ -38,12 +38,8 @@ const width = 19;
 const height = 15;
 var data: [width * height]MapTypeSet = undefined;
 
-fn toIndex(set: MapTypeSet) usize {
-    return @intFromEnum(if (set.contains(.wall)) MapType.wall //
-    // else if (set.contains(.brick)) MapType.brick //
-    else if (set.contains(.bomb)) MapType.bomb //
-    else if (set.contains(.power)) MapType.power //
-    else MapType.space);
+pub fn drawEnum(mapType: MapType, x: usize, y: usize) void {
+    tileMap.drawI(@intFromEnum(mapType), x, y);
 }
 
 pub const WorldMap = struct {
@@ -102,8 +98,14 @@ pub const WorldMap = struct {
     pub fn draw(self: WorldMap) void {
         for (0..self.height) |y| {
             for (0..self.width) |x| {
-                const index = toIndex(data[x + y * self.width]);
-                tileMap.drawI(index, x, y);
+                const value = data[x + y * self.width];
+                if (value.contains(.wall)) drawEnum(.wall, x, y) //
+                else if (value.contains(.brick)) drawEnum(.brick, x, y) //
+                else {
+                    drawEnum(.space, x, y);
+                    if (value.contains(.power)) drawEnum(.power, x, y) //
+                    else if (value.contains(.bomb)) drawEnum(.bomb, x, y);
+                }
             }
         }
     }
