@@ -13,7 +13,7 @@ pub const SequenceData = union(SequenceType) {
 pub fn init(allocator: std.mem.Allocator, level: usize) ?Stage {
     const worldMap = map.WorldMap.init(allocator, level);
     const p = play.Gameplay{ .map = worldMap orelse return null };
-    return Stage{ .level = level, .popup = popup.init(), .gameplay = p };
+    return Stage{ .level = level, .gameplay = p };
 }
 
 pub const Stage = struct {

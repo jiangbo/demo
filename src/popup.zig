@@ -3,10 +3,9 @@ const engine = @import("engine.zig");
 const map = @import("map.zig");
 
 pub const MenuType = enum { quit, title, select, reset, next };
-pub const PopupType = enum { loading, menu, clear, over };
+pub const PopupType = enum { menu, clear, over };
 
 pub const Popup = union(PopupType) {
-    loading: Loading,
     menu: Menu,
     clear: TimePopup,
     over: TimePopup,
@@ -30,15 +29,10 @@ pub const Popup = union(PopupType) {
     }
 };
 
-pub fn init() Popup {
-    return .{ .loading = Loading.init() };
-}
-
 pub fn initWithType(popupType: PopupType) Popup {
     return switch (popupType) {
         .clear => .{ .clear = TimePopup.init("clear.png", .next) },
         .menu => .{ .menu = Menu.init() },
-        .loading => .{ .loading = Loading.init() },
         .over => .{ .over = TimePopup.init("over.png", .title) },
     };
 }
@@ -66,30 +60,6 @@ const TimePopup = struct {
 
     fn deinit(self: TimePopup) void {
         self.image.deinit();
-    }
-};
-
-const Loading = struct {
-    texture: engine.Image,
-    time: usize,
-
-    fn init() Loading {
-        return Loading{
-            .texture = engine.Image.init("loading.dds"),
-            .time = engine.time(),
-        };
-    }
-
-    fn update(self: Loading) ?MenuType {
-        return if (engine.time() - self.time > 1000) return .quit else null;
-    }
-
-    fn draw(self: Loading) void {
-        self.texture.draw();
-    }
-
-    fn deinit(self: Loading) void {
-        self.texture.deinit();
     }
 };
 
