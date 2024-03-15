@@ -46,8 +46,10 @@ pub fn isPressed(key: usize) bool {
     return ray.IsKeyPressed(@intCast(key));
 }
 
-pub fn random(min: u16, max: u16) usize {
-    return @intCast(ray.GetRandomValue(min, max));
+pub fn random(min: usize, max: usize) usize {
+    const minc: c_int = @intCast(min);
+    const maxc: c_int = @intCast(max);
+    return @intCast(ray.GetRandomValue(minc, maxc));
 }
 
 pub const Texture = struct {

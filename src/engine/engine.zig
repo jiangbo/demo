@@ -29,11 +29,11 @@ pub fn time() usize {
     return backend.time();
 }
 
-pub fn random(value: u16) usize {
+pub fn random(value: usize) usize {
     return randomX(0, value);
 }
 
-pub fn randomX(min: u16, max: u16) usize {
+pub fn randomX(min: usize, max: usize) usize {
     return backend.random(min, max);
 }
 

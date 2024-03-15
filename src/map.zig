@@ -26,49 +26,53 @@ const stageData = [_]StageData{
 
 // 定义地图的类型
 pub const MapType = enum(u8) {
-    space = 0,
-    wall = 1 << 0,
-    brick = 1 << 1,
-    bomb = 1 << 2,
-    power = 1 << 3,
-
-    fn toIndex(self: MapType) usize {
-        return switch (self) {
-            .space => 9,
-            .wall => 7,
-            .brick => 8,
-            .bomb => 10,
-            .power => 11,
-        };
-    }
+    space = 9,
+    wall = 7,
+    brick = 8,
+    bomb = 2,
+    power = 3,
 };
+const MapTypeSet = std.enums.EnumSet(MapType);
 
-const width = 20;
+const width = 19;
 const height = 15;
-var data: [width * height]MapType = undefined;
+var data: [width * height]MapTypeSet = undefined;
+
+fn toIndex(set: MapTypeSet) usize {
+    return @intFromEnum(if (set.contains(.wall)) MapType.wall //
+    // else if (set.contains(.brick)) MapType.brick //
+    else if (set.contains(.bomb)) MapType.bomb //
+    else if (set.contains(.power)) MapType.power //
+    else MapType.space);
+}
 
 pub const WorldMap = struct {
     width: usize = width,
     height: usize = height,
-    data: []MapType,
+    data: []MapTypeSet,
 
-    pub fn init(_: std.mem.Allocator, level: usize) ?WorldMap {
+    pub fn init(_: std.mem.Allocator, _: usize) ?WorldMap {
         const map = WorldMap{ .data = &data };
-        return map.generateMap(stageData[level]);
+        return map.generateMap(stageData[0]);
     }
 
     fn generateMap(self: WorldMap, info: StageData) WorldMap {
-        for (0..height) |y| {
-            for (0..width) |x| {
-                if (isFixWall(x, y))
-                    self.data[x + y * width] = .wall
-                else if (isFixSpace(x, y)) continue else {
-                    if (engine.random(100) < info.brickRate) {
-                        self.data[x + y * width] = .brick;
-                    }
-                }
+        var bricks: [data.len]usize = undefined;
+        var brickNumber: usize = 0;
+        for (0..self.height) |y| {
+            for (0..self.width) |x| {
+                self.data[x + y * width] = if (isFixWall(x, y))
+                    MapTypeSet.initOne(.wall)
+                else if (isFixSpace(x, y))
+                    MapTypeSet.initOne(.space)
+                else if (engine.random(100) < info.brickRate) label: {
+                    bricks[brickNumber] = x << 16 | y;
+                    brickNumber += 1;
+                    break :label MapTypeSet.initOne(.brick);
+                } else MapTypeSet.initOne(.space);
             }
         }
+        generateItem(self, bricks[0..brickNumber], info);
         return self;
     }
 
@@ -83,10 +87,22 @@ pub const WorldMap = struct {
         return y + x < 4;
     }
 
+    fn generateItem(self: WorldMap, bricks: []usize, info: StageData) void {
+        for (0..info.bomb + info.power) |i| {
+            const swapped = engine.randomX(i, bricks.len);
+            const tmp = bricks[i];
+            bricks[i] = bricks[swapped];
+            bricks[swapped] = tmp;
+            const x = bricks[i] >> 16 & 0xFFFF;
+            const item: MapType = if (i < info.power) .power else .bomb;
+            self.data[x + (bricks[i] & 0xFFFF) * self.width].insert(item);
+        }
+    }
+
     pub fn draw(self: WorldMap) void {
         for (0..self.height) |y| {
             for (0..self.width) |x| {
-                const index = data[x + y * self.width].toIndex();
+                const index = toIndex(data[x + y * self.width]);
                 tileMap.drawI(index, x, y);
             }
         }
