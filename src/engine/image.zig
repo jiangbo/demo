@@ -1,65 +1,51 @@
 const std = @import("std");
-const ray = @import("../raylib.zig");
+const Texture = @import("backend.zig").Texture;
 
-const maxPathLength = 30;
+pub const Image = struct {
+    texture: Texture,
 
-// pub const Image = struct {};
+    pub fn init(name: []const u8) Image {
+        return Image{ .texture = loadTexture(name) };
+    }
 
-pub const Vector = struct {
-    x: usize = 0,
-    y: usize = 0,
+    pub fn draw(self: Image) void {
+        self.texture.draw();
+    }
 
-    fn toRay(self: Vector) ray.Vector2 {
-        return ray.Vector2{
-            .x = @floatFromInt(self.x),
-            .y = @floatFromInt(self.y),
-        };
+    pub fn drawXY(self: Image, x: usize, y: usize) void {
+        self.texture.drawXY(x, y);
+    }
+
+    pub fn deinit(self: Image) void {
+        self.texture.deinit();
     }
 };
 
-pub const Rectangle = struct {
-    x: usize = 0,
-    y: usize = 0,
-    width: usize = 0,
-    height: usize = 0,
+pub const Tilemap = struct {
+    texture: Texture,
+    unit: usize,
 
-    fn toRay(self: Rectangle) ray.Rectangle {
-        return ray.Rectangle{
-            .x = @floatFromInt(self.x),
-            .y = @floatFromInt(self.y),
-            .width = @floatFromInt(self.width),
-            .height = @floatFromInt(self.height),
-        };
+    pub fn init(name: []const u8, unit: usize) Tilemap {
+        return .{ .texture = loadTexture(name), .unit = unit };
+    }
+
+    pub fn draw(self: Tilemap) void {
+        self.texture.draw();
+    }
+
+    pub fn deinit(self: Tilemap) void {
+        self.texture.deinit();
     }
 };
 
-pub const Texture = struct {
-    texture: ray.Texture2D,
+const maxPathLength = 100;
 
-    pub fn init(name: []const u8) Texture {
-        var buf: [maxPathLength]u8 = undefined;
-        const format = "data/image/{s}";
-        const path = std.fmt.bufPrintZ(&buf, format, .{name}) catch |e| {
-            std.log.err("load image error: {}", .{e});
-            return Texture{ .texture = ray.Texture2D{} };
-        };
-
-        return Texture{ .texture = ray.LoadTexture(path) };
-    }
-
-    pub fn draw(self: Texture) void {
-        ray.DrawTexture(self.texture, 0, 0, ray.WHITE);
-    }
-
-    pub fn drawPositin(self: Texture, x: usize, y: usize) void {
-        ray.DrawTextureV(self.texture, (Vector{ .x = x, .y = y }).toRay(), ray.WHITE);
-    }
-
-    pub fn drawRectangle(self: Texture, rec: Rectangle, pos: Vector) void {
-        ray.DrawTextureRec(self.texture, rec.toRay(), pos.toRay(), ray.WHITE);
-    }
-
-    pub fn deinit(self: Texture) void {
-        ray.UnloadTexture(self.texture);
-    }
-};
+fn loadTexture(name: []const u8) Texture {
+    var buf: [maxPathLength]u8 = undefined;
+    const format = "data/image/{s}";
+    const path = std.fmt.bufPrintZ(&buf, format, .{name}) catch |e| {
+        std.log.err("load texture error: {}", .{e});
+        return Texture.empty();
+    };
+    return Texture.init(path);
+}

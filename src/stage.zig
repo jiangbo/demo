@@ -1,8 +1,8 @@
 const std = @import("std");
 const popup = @import("popup.zig");
 const play = @import("play.zig");
+const map = @import("map.zig");
 
-const Texture = @import("engine.zig").Texture;
 pub const SequenceType = enum { title, select, stage };
 pub const SequenceData = union(SequenceType) {
     title: void,
@@ -10,14 +10,15 @@ pub const SequenceData = union(SequenceType) {
     stage: usize,
 };
 
-pub fn init(allocator: std.mem.Allocator, level: usize, box: Texture) ?Stage {
-    const current = play.init(allocator, level, box) orelse return null;
-    return Stage{ .level = level, .current = current, .popup = popup.init() };
+pub fn init(allocator: std.mem.Allocator, level: usize) ?Stage {
+    const worldMap = map.WorldMap.init(allocator, level);
+    const p = play.Gameplay{ .map = worldMap orelse return null };
+    return Stage{ .level = level, .popup = popup.init(), .gameplay = p };
 }
 
 pub const Stage = struct {
     level: usize,
-    current: play.Play,
+    gameplay: play.Gameplay,
     popup: ?popup.Popup = null,
 
     pub fn update(self: *Stage) ?SequenceData {
@@ -33,18 +34,18 @@ pub const Stage = struct {
             }
         }
 
-        const popupType = self.current.update() orelse return null;
+        const popupType = self.gameplay.update() orelse return null;
         self.popup = popup.initWithType(popupType);
         return null;
     }
 
     pub fn draw(self: Stage) void {
-        self.current.draw();
+        self.gameplay.draw();
         if (self.popup) |option| option.draw();
     }
 
     pub fn deinit(self: Stage) void {
         if (self.popup) |option| option.deinit();
-        self.current.deinit();
+        self.gameplay.deinit();
     }
 };

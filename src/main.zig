@@ -1,5 +1,6 @@
 const std = @import("std");
 const engine = @import("engine.zig");
+const map = @import("map.zig");
 const state = @import("state.zig");
 
 pub fn main() void {
@@ -8,7 +9,9 @@ pub fn main() void {
 
     engine.init(640, 480, "炸弹人");
     defer engine.deinit();
-    engine.withAllocator(gpa.allocator());
+
+    map.init();
+    defer map.deinit();
 
     var mainState = state.State.init(gpa.allocator());
     defer mainState.deinit();

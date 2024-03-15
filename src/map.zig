@@ -1,7 +1,15 @@
 const std = @import("std");
-const file = @import("engine.zig");
+const engine = @import("engine.zig");
 
 // 定义地图的类型
+
+pub const MapType = enum(u8) {
+    wall = 1 << 0,
+    brick = 1 << 1,
+    bomb = 1 << 2,
+    power = 1 << 3,
+};
+
 pub const MapItem = enum(u8) {
     SPACE = ' ',
     WALL = '#',
@@ -36,14 +44,31 @@ pub const MapItem = enum(u8) {
     }
 };
 
-pub const Map = struct {
+var tilemap: engine.Tilemap = undefined;
+
+pub fn init() void {
+    tilemap = engine.Tilemap.init("map.png", 32);
+}
+
+pub fn deinit() void {
+    tilemap.deinit();
+}
+
+pub const WorldMap = struct {
     width: usize = 0,
     height: usize = 0,
     data: []MapItem = undefined,
     allocator: std.mem.Allocator = undefined,
 
-    pub fn init(allocator: std.mem.Allocator, level: usize) !?Map {
-        const text = try file.readStageText(allocator, level);
+    pub fn init(allocator: std.mem.Allocator, level: usize) ?WorldMap {
+        return doInit(allocator, level) catch |err| {
+            std.log.err("init stage error: {}", .{err});
+            return null;
+        };
+    }
+
+    fn doInit(allocator: std.mem.Allocator, level: usize) !?WorldMap {
+        const text = try engine.readStageText(allocator, level);
         defer allocator.free(text);
 
         var map = parseText(text) orelse return null;
@@ -59,8 +84,12 @@ pub const Map = struct {
         return map;
     }
 
-    fn parseText(text: []const u8) ?Map {
-        var map = Map{};
+    pub fn draw(_: WorldMap) void {
+        tilemap.draw();
+    }
+
+    fn parseText(text: []const u8) ?WorldMap {
+        var map = WorldMap{};
 
         var width: usize = 0;
         for (text) |char| {
@@ -81,11 +110,11 @@ pub const Map = struct {
         return map;
     }
 
-    pub fn size(self: Map) usize {
+    pub fn size(self: WorldMap) usize {
         return self.width * self.height;
     }
 
-    pub fn hasCleared(self: Map) bool {
+    pub fn hasCleared(self: WorldMap) bool {
         for (self.data) |value| {
             if (value == MapItem.BLOCK) {
                 return false;
@@ -93,13 +122,13 @@ pub const Map = struct {
         } else return true;
     }
 
-    pub fn playerIndex(self: Map) usize {
+    pub fn playerIndex(self: WorldMap) usize {
         return for (self.data, 0..) |value, index| {
             if (value == .MAN or value == .MAN_GOAL) break index;
         } else 0;
     }
 
-    pub fn deinit(self: Map) void {
+    pub fn deinit(self: WorldMap) void {
         self.allocator.free(self.data);
     }
 };

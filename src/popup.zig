@@ -44,13 +44,13 @@ pub fn initWithType(popupType: PopupType) Popup {
 }
 
 const TimePopup = struct {
-    texture: engine.Texture,
+    image: engine.Image,
     time: usize,
     target: MenuType,
 
     fn init(name: []const u8, target: MenuType) TimePopup {
         return TimePopup{
-            .texture = engine.Texture.init(name),
+            .image = engine.Image.init(name),
             .time = engine.time(),
             .target = target,
         };
@@ -61,21 +61,21 @@ const TimePopup = struct {
     }
 
     fn draw(self: TimePopup) void {
-        self.texture.draw();
+        self.image.draw();
     }
 
     fn deinit(self: TimePopup) void {
-        self.texture.deinit();
+        self.image.deinit();
     }
 };
 
 const Loading = struct {
-    texture: engine.Texture,
+    texture: engine.Image,
     time: usize,
 
     fn init() Loading {
         return Loading{
-            .texture = engine.Texture.init("loading.dds"),
+            .texture = engine.Image.init("loading.dds"),
             .time = engine.time(),
         };
     }
@@ -94,10 +94,10 @@ const Loading = struct {
 };
 
 const Menu = struct {
-    texture: engine.Texture,
+    texture: engine.Image,
 
     fn init() Menu {
-        return Menu{ .texture = engine.Texture.init("menu.dds") };
+        return Menu{ .texture = engine.Image.init("menu.dds") };
     }
 
     fn update(_: Menu) ?MenuType {

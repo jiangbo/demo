@@ -4,13 +4,11 @@ const stage = @import("stage.zig");
 
 pub const State = struct {
     current: Sequence,
-    box: engine.Texture,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) State {
         return State{
             .current = Sequence{ .title = Title.init() },
-            .box = engine.Texture.init("box.dds"),
             .allocator = allocator,
         };
     }
@@ -23,7 +21,7 @@ pub const State = struct {
             .title => .{ .title = Title.init() },
             .select => .{ .select = Select.init() },
             .stage => |level| label: {
-                const s = stage.init(self.allocator, level, self.box);
+                const s = stage.init(self.allocator, level);
                 break :label .{ .stage = s orelse return };
             },
         };
@@ -36,7 +34,6 @@ pub const State = struct {
 
     pub fn deinit(self: State) void {
         self.current.deinit();
-        self.box.deinit();
     }
 };
 
@@ -68,14 +65,14 @@ const Sequence = union(stage.SequenceType) {
 };
 
 const Title = struct {
-    title: engine.Texture,
-    cursor: engine.Texture,
+    title: engine.Image,
+    cursor: engine.Image,
     onePlayer: bool = true,
 
     fn init() Title {
         return Title{
-            .title = engine.Texture.init("title.png"),
-            .cursor = engine.Texture.init("cursor.png"),
+            .title = engine.Image.init("title.png"),
+            .cursor = engine.Image.init("cursor.png"),
         };
     }
 
@@ -90,7 +87,7 @@ const Title = struct {
 
     fn draw(self: Title) void {
         self.title.draw();
-        self.cursor.drawPositin(220, if (self.onePlayer) 395 else 433);
+        self.cursor.drawXY(220, if (self.onePlayer) 395 else 433);
     }
 
     fn deinit(self: Title) void {
@@ -100,10 +97,10 @@ const Title = struct {
 };
 
 const Select = struct {
-    texture: engine.Texture,
+    texture: engine.Image,
 
     fn init() Select {
-        return Select{ .texture = engine.Texture.init("select.dds") };
+        return Select{ .texture = engine.Image.init("select.dds") };
     }
 
     fn update(_: Select) ?stage.SequenceData {
