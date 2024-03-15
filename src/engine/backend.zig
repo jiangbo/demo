@@ -2,6 +2,9 @@ const ray = @cImport({
     @cInclude("raylib.h");
 });
 const std = @import("std");
+const basic = @import("basic.zig");
+const Rectangle = basic.Rectangle;
+const Vector = basic.Vector;
 
 var screenWidth: usize = 0;
 
@@ -43,15 +46,21 @@ pub fn isPressed(key: usize) bool {
     return ray.IsKeyPressed(@intCast(key));
 }
 
+pub fn random(min: u16, max: u16) usize {
+    return @intCast(ray.GetRandomValue(min, max));
+}
+
 pub const Texture = struct {
+    width: usize,
     texture: ray.Texture2D,
 
     pub fn init(path: [:0]const u8) Texture {
-        return Texture{ .texture = ray.LoadTexture(path) };
+        const texture = ray.LoadTexture(path);
+        return .{ .texture = texture, .width = @intCast(texture.width) };
     }
 
     pub fn empty() Texture {
-        return Texture{ .texture = ray.Texture2D{} };
+        return Texture{ .texture = ray.Texture2D{}, .width = 0 };
     }
 
     pub fn draw(self: Texture) void {
@@ -61,6 +70,17 @@ pub const Texture = struct {
     pub fn drawXY(self: Texture, x: usize, y: usize) void {
         const vec = .{ .x = usizeToF32(x), .y = usizeToF32(y) };
         ray.DrawTextureV(self.texture, vec, ray.WHITE);
+    }
+
+    pub fn drawRec(self: Texture, rec: Rectangle, pos: Vector) void {
+        const rectangle = ray.Rectangle{
+            .x = usizeToF32(rec.x),
+            .y = usizeToF32(rec.y),
+            .width = usizeToF32(rec.width),
+            .height = usizeToF32(rec.height),
+        };
+        const vec = .{ .x = usizeToF32(pos.x), .y = usizeToF32(pos.y) };
+        ray.DrawTextureRec(self.texture, rectangle, vec, ray.WHITE);
     }
 
     pub fn deinit(self: Texture) void {

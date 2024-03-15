@@ -1,4 +1,5 @@
 const std = @import("std");
+const basic = @import("basic.zig");
 const Texture = @import("backend.zig").Texture;
 
 pub const Image = struct {
@@ -21,19 +22,28 @@ pub const Image = struct {
     }
 };
 
-pub const Tilemap = struct {
+pub const TileMap = struct {
     texture: Texture,
     unit: usize,
 
-    pub fn init(name: []const u8, unit: usize) Tilemap {
+    pub fn init(name: []const u8, unit: usize) TileMap {
         return .{ .texture = loadTexture(name), .unit = unit };
     }
 
-    pub fn draw(self: Tilemap) void {
+    pub fn draw(self: TileMap) void {
         self.texture.draw();
     }
 
-    pub fn deinit(self: Tilemap) void {
+    pub fn drawI(self: TileMap, index: usize, x: usize, y: usize) void {
+        const rx = index * self.unit % self.texture.width;
+        const ry = index / (self.texture.width / self.unit) * self.unit;
+        const rec = basic.Rectangle.init(rx, ry, self.unit, self.unit);
+
+        const vec = .{ .x = x * self.unit, .y = y * self.unit };
+        self.texture.drawRec(rec, vec);
+    }
+
+    pub fn deinit(self: TileMap) void {
         self.texture.deinit();
     }
 };

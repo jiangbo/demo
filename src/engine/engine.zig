@@ -29,6 +29,14 @@ pub fn time() usize {
     return backend.time();
 }
 
+pub fn random(value: u16) usize {
+    return randomX(0, value);
+}
+
+pub fn randomX(min: u16, max: u16) usize {
+    return backend.random(min, max);
+}
+
 pub fn shoudContinue() bool {
     return backend.shoudContinue();
 }
