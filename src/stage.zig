@@ -10,8 +10,8 @@ pub const SequenceData = union(SequenceType) {
     stage: usize,
 };
 
-pub fn init(allocator: std.mem.Allocator, level: usize) ?Stage {
-    const worldMap = map.WorldMap.init(allocator, level);
+pub fn init(level: usize) ?Stage {
+    const worldMap = map.WorldMap.init(level);
     const p = play.Gameplay{ .map = worldMap orelse return null };
     return Stage{ .level = level, .gameplay = p };
 }

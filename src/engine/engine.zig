@@ -1,7 +1,10 @@
 const std = @import("std");
 const backend = @import("backend.zig");
 
-pub fn init(width: usize, height: usize, title: [:0]const u8) void {
+const Alloc = std.mem.Allocator;
+pub var allocator: std.mem.Allocator = undefined;
+pub fn init(a: Alloc, width: usize, height: usize, title: [:0]const u8) void {
+    allocator = a;
     backend.init(width, height, title);
 }
 
@@ -30,10 +33,10 @@ pub fn time() usize {
 }
 
 pub fn random(value: usize) usize {
-    return randomX(0, value);
+    return randomW(0, value);
 }
 
-pub fn randomX(min: usize, max: usize) usize {
+pub fn randomW(min: usize, max: usize) usize {
     return backend.random(min, max);
 }
 

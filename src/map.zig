@@ -11,14 +11,14 @@ pub fn deinit() void {
     tileMap.deinit();
 }
 
-const StageData = struct {
+const StageConfig = struct {
     enemy: usize,
     brickRate: usize,
     power: usize,
     bomb: usize,
 };
 
-const stageData = [_]StageData{
+const stageConfig = [_]StageConfig{
     .{ .enemy = 2, .brickRate = 90, .power = 4, .bomb = 6 },
     .{ .enemy = 3, .brickRate = 80, .power = 1, .bomb = 0 },
     .{ .enemy = 6, .brickRate = 30, .power = 0, .bomb = 1 },
@@ -42,34 +42,59 @@ pub fn drawEnum(mapType: MapType, x: usize, y: usize) void {
     tileMap.drawI(@intFromEnum(mapType), x, y);
 }
 
+const RoleType = enum(u8) { player1 = 1, player2 = 2, enemy = 6 };
+
+const Role = struct {
+    x: usize,
+    y: usize,
+    type: RoleType = .enemy,
+};
+
 pub const WorldMap = struct {
     width: usize = width,
     height: usize = height,
     data: []MapTypeSet,
+    roles: []Role,
 
-    pub fn init(_: std.mem.Allocator, _: usize) ?WorldMap {
-        const map = WorldMap{ .data = &data };
-        return map.generateMap(stageData[0]);
+    pub fn init(_: usize) ?WorldMap {
+        const number = stageConfig[0].enemy + 1;
+        const roles = engine.allocator.alloc(Role, number) catch |e| {
+            std.log.info("create role error: {}", .{e});
+            return null;
+        };
+
+        roles[0] = .{ .x = 1, .y = 1, .type = .player1 };
+
+        const map = WorldMap{ .data = &data, .roles = roles };
+        map.generateMap(stageConfig[0]);
+        return map;
     }
 
-    fn generateMap(self: WorldMap, info: StageData) WorldMap {
+    fn generateMap(self: WorldMap, config: StageConfig) void {
         var bricks: [data.len]usize = undefined;
         var brickNumber: usize = 0;
+        var floors: [data.len]usize = undefined;
+        var floorNumber: usize = 0;
+
         for (0..self.height) |y| {
             for (0..self.width) |x| {
                 self.data[x + y * width] = if (isFixWall(x, y))
                     MapTypeSet.initOne(.wall)
                 else if (isFixSpace(x, y))
                     MapTypeSet.initOne(.space)
-                else if (engine.random(100) < info.brickRate) label: {
+                else if (engine.random(100) < config.brickRate) label: {
                     bricks[brickNumber] = x << 16 | y;
                     brickNumber += 1;
                     break :label MapTypeSet.initOne(.brick);
-                } else MapTypeSet.initOne(.space);
+                } else label: {
+                    floors[floorNumber] = x << 16 | y;
+                    floorNumber += 1;
+                    break :label MapTypeSet.initOne(.space);
+                };
             }
         }
-        generateItem(self, bricks[0..brickNumber], info);
-        return self;
+        generateItem(self, bricks[0..brickNumber], config);
+        generateRole(self, floors[0..floorNumber], config);
     }
 
     fn isFixWall(x: usize, y: usize) bool {
@@ -83,15 +108,28 @@ pub const WorldMap = struct {
         return y + x < 4;
     }
 
-    fn generateItem(self: WorldMap, bricks: []usize, info: StageData) void {
-        for (0..info.bomb + info.power) |i| {
-            const swapped = engine.randomX(i, bricks.len);
+    fn generateItem(self: WorldMap, bricks: []usize, cfg: StageConfig) void {
+        for (0..cfg.bomb + cfg.power) |i| {
+            const swapped = engine.randomW(i, bricks.len);
             const tmp = bricks[i];
             bricks[i] = bricks[swapped];
             bricks[swapped] = tmp;
             const x = bricks[i] >> 16 & 0xFFFF;
-            const item: MapType = if (i < info.power) .power else .bomb;
+            const item: MapType = if (i < cfg.power) .power else .bomb;
             self.data[x + (bricks[i] & 0xFFFF) * self.width].insert(item);
+        }
+    }
+
+    fn generateRole(self: WorldMap, floors: []usize, cfg: StageConfig) void {
+        for (0..cfg.enemy) |i| {
+            const swapped = engine.randomW(i, floors.len);
+            const tmp = floors[i];
+            floors[i] = floors[swapped];
+            floors[swapped] = tmp;
+            self.roles[1 + i] = .{
+                .x = floors[i] >> 16 & 0xFFFF,
+                .y = floors[i] & 0xFFFF,
+            };
         }
     }
 
@@ -108,13 +146,17 @@ pub const WorldMap = struct {
                 }
             }
         }
+
+        for (self.roles) |value| {
+            tileMap.drawI(@intFromEnum(value.type), value.x, value.y);
+        }
     }
 
     pub fn size(self: WorldMap) usize {
         return self.width * self.height;
     }
 
-    pub fn deinit(_: WorldMap) void {
-        // self.allocator.free(self.data);
+    pub fn deinit(self: WorldMap) void {
+        engine.allocator.free(self.roles);
     }
 };

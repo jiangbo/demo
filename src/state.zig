@@ -4,13 +4,9 @@ const stage = @import("stage.zig");
 
 pub const State = struct {
     current: Sequence,
-    allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator) State {
-        return State{
-            .current = Sequence{ .title = Title.init() },
-            .allocator = allocator,
-        };
+    pub fn init() State {
+        return State{ .current = Sequence{ .title = Title.init() } };
     }
 
     pub fn update(self: *State) void {
@@ -20,10 +16,7 @@ pub const State = struct {
         self.current = switch (sequence) {
             .title => .{ .title = Title.init() },
             .select => .{ .select = Select.init() },
-            .stage => |level| label: {
-                const s = stage.init(self.allocator, level);
-                break :label .{ .stage = s orelse return };
-            },
+            .stage => |level| .{ .stage = stage.init(level) orelse return },
         };
         old.deinit();
     }

@@ -12,4 +12,11 @@ pub const Rectangle = struct {
     pub fn init(x: usize, y: usize, width: usize, height: usize) Rectangle {
         return .{ .x = x, .y = y, .width = width, .height = height };
     }
+
+    pub fn center(self: Rectangle) Vector {
+        return Vector{
+            .x = (self.x + self.width) / 2,
+            .y = (self.y + self.height) / 2,
+        };
+    }
 };

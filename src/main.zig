@@ -7,13 +7,13 @@ pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
-    engine.init(640, 480, "炸弹人");
+    engine.init(gpa.allocator(), 640, 480, "炸弹人");
     defer engine.deinit();
 
     map.init();
     defer map.deinit();
 
-    var mainState = state.State.init(gpa.allocator());
+    var mainState = state.State.init();
     defer mainState.deinit();
 
     while (engine.shoudContinue()) {
