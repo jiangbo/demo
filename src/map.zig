@@ -44,7 +44,7 @@ pub fn drawEnum(mapType: MapType, x: usize, y: usize) void {
 
 const RoleType = enum(u8) { player1 = 1, player2 = 2, enemy = 6 };
 
-const Role = struct {
+pub const Role = struct {
     x: usize,
     y: usize,
     type: RoleType = .enemy,
@@ -63,7 +63,11 @@ pub const WorldMap = struct {
             return null;
         };
 
-        roles[0] = .{ .x = 1, .y = 1, .type = .player1 };
+        roles[0] = .{
+            .x = 1 * tileMap.unit,
+            .y = 1 * tileMap.unit,
+            .type = .player1,
+        };
 
         const map = WorldMap{ .data = &data, .roles = roles };
         map.generateMap(stageConfig[0]);
@@ -127,10 +131,14 @@ pub const WorldMap = struct {
             floors[i] = floors[swapped];
             floors[swapped] = tmp;
             self.roles[1 + i] = .{
-                .x = floors[i] >> 16 & 0xFFFF,
-                .y = floors[i] & 0xFFFF,
+                .x = (floors[i] >> 16 & 0xFFFF) * tileMap.unit,
+                .y = (floors[i] & 0xFFFF) * tileMap.unit,
             };
         }
+    }
+
+    pub fn player1(self: WorldMap) *Role {
+        return &self.roles[0];
     }
 
     pub fn draw(self: WorldMap) void {
@@ -147,8 +155,8 @@ pub const WorldMap = struct {
             }
         }
 
-        for (self.roles) |value| {
-            tileMap.drawI(@intFromEnum(value.type), value.x, value.y);
+        for (self.roles) |v| {
+            tileMap.drawXY(v.x, v.y, @intFromEnum(v.type));
         }
     }
 

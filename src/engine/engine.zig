@@ -28,8 +28,16 @@ pub fn isPressed(key: usize) bool {
     return backend.isPressed(key);
 }
 
+pub fn isDown(key: usize) bool {
+    return backend.isDown(key);
+}
+
 pub fn time() usize {
     return backend.time();
+}
+
+pub fn frameTime() usize {
+    return backend.frameTime();
 }
 
 pub fn random(value: usize) usize {

@@ -35,12 +35,18 @@ pub const TileMap = struct {
     }
 
     pub fn drawI(self: TileMap, index: usize, x: usize, y: usize) void {
+        const vec = .{ .x = x * self.unit, .y = y * self.unit };
+        self.texture.drawRec(self.getRec(index), vec);
+    }
+
+    pub fn drawXY(self: TileMap, x: usize, y: usize, index: usize) void {
+        self.texture.drawRec(self.getRec(index), .{ .x = x, .y = y });
+    }
+
+    fn getRec(self: TileMap, index: usize) basic.Rectangle {
         const rx = index * self.unit % self.texture.width;
         const ry = index / (self.texture.width / self.unit) * self.unit;
-        const rec = basic.Rectangle.init(rx, ry, self.unit, self.unit);
-
-        const vec = .{ .x = x * self.unit, .y = y * self.unit };
-        self.texture.drawRec(rec, vec);
+        return basic.Rectangle.init(rx, ry, self.unit, self.unit);
     }
 
     pub fn deinit(self: TileMap) void {

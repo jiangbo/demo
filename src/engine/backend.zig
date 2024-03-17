@@ -38,12 +38,20 @@ pub fn time() usize {
     return @intFromFloat(ray.GetTime() * 1000);
 }
 
+pub fn frameTime() usize {
+    return @intFromFloat(ray.GetFrameTime() * 1000);
+}
+
 pub fn getPressed() usize {
     return @intCast(ray.GetKeyPressed());
 }
 
 pub fn isPressed(key: usize) bool {
     return ray.IsKeyPressed(@intCast(key));
+}
+
+pub fn isDown(key: usize) bool {
+    return ray.IsKeyDown(@intCast(key));
 }
 
 pub fn random(min: usize, max: usize) usize {
