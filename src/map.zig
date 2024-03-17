@@ -50,6 +50,8 @@ pub const Role = struct {
     type: RoleType = .enemy,
 };
 
+const speedUnit = 1000;
+
 pub const WorldMap = struct {
     width: usize = width,
     height: usize = height,
@@ -64,8 +66,8 @@ pub const WorldMap = struct {
         };
 
         roles[0] = .{
-            .x = 1 * tileMap.unit,
-            .y = 1 * tileMap.unit,
+            .x = 1 * tileMap.unit * speedUnit,
+            .y = 1 * tileMap.unit * speedUnit,
             .type = .player1,
         };
 
@@ -131,8 +133,8 @@ pub const WorldMap = struct {
             floors[i] = floors[swapped];
             floors[swapped] = tmp;
             self.roles[1 + i] = .{
-                .x = (floors[i] >> 16 & 0xFFFF) * tileMap.unit,
-                .y = (floors[i] & 0xFFFF) * tileMap.unit,
+                .x = (floors[i] >> 16 & 0xFFFF) * tileMap.unit * speedUnit,
+                .y = (floors[i] & 0xFFFF) * tileMap.unit * speedUnit,
             };
         }
     }
@@ -155,8 +157,9 @@ pub const WorldMap = struct {
             }
         }
 
-        for (self.roles) |v| {
-            tileMap.drawXY(v.x, v.y, @intFromEnum(v.type));
+        for (self.roles) |value| {
+            const x = value.x / speedUnit;
+            tileMap.drawXY(x, value.y / speedUnit, @intFromEnum(value.type));
         }
     }
 
