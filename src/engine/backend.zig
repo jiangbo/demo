@@ -60,6 +60,10 @@ pub fn random(min: usize, max: usize) usize {
     return @intCast(ray.GetRandomValue(minc, maxc - 1));
 }
 
+pub fn isCollision(rec1: basic.Rectangle, rec2: basic.Rectangle) bool {
+    return ray.CheckCollisionRecs(toRayRec(rec1), toRayRec(rec2));
+}
+
 pub const Texture = struct {
     width: usize,
     texture: ray.Texture2D,
@@ -83,21 +87,24 @@ pub const Texture = struct {
     }
 
     pub fn drawRec(self: Texture, rec: Rectangle, pos: Vector) void {
-        const rectangle = ray.Rectangle{
-            .x = usizeToF32(rec.x),
-            .y = usizeToF32(rec.y),
-            .width = usizeToF32(rec.width),
-            .height = usizeToF32(rec.height),
-        };
         const vec = .{ .x = usizeToF32(pos.x), .y = usizeToF32(pos.y) };
-        ray.DrawTextureRec(self.texture, rectangle, vec, ray.WHITE);
+        ray.DrawTextureRec(self.texture, toRayRec(rec), vec, ray.WHITE);
     }
 
     pub fn deinit(self: Texture) void {
         ray.UnloadTexture(self.texture);
     }
-
-    fn usizeToF32(value: usize) f32 {
-        return @floatFromInt(value);
-    }
 };
+
+fn toRayRec(rec: basic.Rectangle) ray.Rectangle {
+    return ray.Rectangle{
+        .x = usizeToF32(rec.x),
+        .y = usizeToF32(rec.y),
+        .width = usizeToF32(rec.width),
+        .height = usizeToF32(rec.height),
+    };
+}
+
+fn usizeToF32(value: usize) f32 {
+    return @floatFromInt(value);
+}

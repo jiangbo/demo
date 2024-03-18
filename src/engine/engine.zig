@@ -1,5 +1,6 @@
 const std = @import("std");
 const backend = @import("backend.zig");
+const basic = @import("basic.zig");
 
 const Alloc = std.mem.Allocator;
 pub var allocator: std.mem.Allocator = undefined;
@@ -30,6 +31,10 @@ pub fn isPressed(key: usize) bool {
 
 pub fn isDown(key: usize) bool {
     return backend.isDown(key);
+}
+
+pub fn isCollision(rec1: basic.Rectangle, rec2: basic.Rectangle) bool {
+    return backend.isCollision(rec1, rec2);
 }
 
 pub fn time() usize {

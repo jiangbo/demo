@@ -48,6 +48,22 @@ pub const Role = struct {
     x: usize,
     y: usize,
     type: RoleType = .enemy,
+
+    pub fn getCell(self: Role) engine.Vector {
+        return .{
+            .x = (self.x / speedUnit + (tileMap.unit / 2)) / tileMap.unit,
+            .y = (self.y / speedUnit + (tileMap.unit / 2)) / tileMap.unit,
+        };
+    }
+
+    fn toCollisionRec(self: Role) engine.Rectangle {
+        return engine.Rectangle{
+            .x = self.x / speedUnit + 5,
+            .y = self.y / speedUnit + 5,
+            .width = tileMap.unit - 10,
+            .height = tileMap.unit - 7,
+        };
+    }
 };
 
 const speedUnit = 1000;
@@ -141,6 +157,31 @@ pub const WorldMap = struct {
 
     pub fn player1(self: WorldMap) *Role {
         return &self.roles[0];
+    }
+
+    pub fn isCollisionX(self: WorldMap, x: usize, y: usize, role: Role) bool {
+        for (0..3) |i| {
+            if (self.isCollision(x, y + i -| 1, role)) return true;
+        } else return false;
+    }
+
+    pub fn isCollisionY(self: WorldMap, x: usize, y: usize, role: Role) bool {
+        for (0..3) |i| {
+            if (self.isCollision(x + i - 1, y, role)) return true;
+        } else return false;
+    }
+
+    pub fn isCollision(self: WorldMap, x: usize, y: usize, role: Role) bool {
+        const cell = self.data[x + y * width];
+        if (!cell.contains(.wall) and !cell.contains(.brick)) return false;
+
+        const rec = engine.Rectangle{
+            .x = x * tileMap.unit,
+            .y = y * tileMap.unit,
+            .width = tileMap.unit,
+            .height = tileMap.unit,
+        };
+        return engine.isCollision(rec, role.toCollisionRec());
     }
 
     pub fn draw(self: WorldMap) void {
