@@ -29,7 +29,7 @@ pub const MapType = enum(u8) {
     space = 9,
     wall = 7,
     brick = 8,
-    bomb = 2,
+    bomb = 10,
     power = 3,
 };
 const MapTypeSet = std.enums.EnumSet(MapType);
@@ -182,6 +182,13 @@ pub const WorldMap = struct {
             .height = tileMap.unit,
         };
         return engine.isCollision(rec, role.toCollisionRec());
+    }
+
+    pub fn setBomb(self: *WorldMap, role: Role) void {
+        const pos = role.getCell();
+        const cell = &self.data[pos.x + pos.y * width];
+        if (!cell.contains(.wall) and !cell.contains(.brick))
+            cell.insert(.bomb);
     }
 
     pub fn draw(self: WorldMap) void {
