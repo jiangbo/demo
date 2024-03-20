@@ -44,7 +44,7 @@ pub const Stage = struct {
         if (self.popup) |option| option.draw();
     }
 
-    pub fn deinit(self: Stage) void {
+    pub fn deinit(self: *Stage) void {
         if (self.popup) |option| option.deinit();
         self.gameplay.deinit();
     }

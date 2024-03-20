@@ -8,16 +8,19 @@ pub const Gameplay = struct {
     map: map.WorldMap,
 
     pub fn update(self: *Gameplay) ?@import("popup.zig").PopupType {
+        self.map.update();
         if (engine.isPressed(engine.Key.x)) return .over;
         if (engine.isPressed(engine.Key.c)) return .clear;
 
         self.controlPlayer();
+
         return null;
     }
 
     fn controlPlayer(self: *Gameplay) void {
         const speed = engine.frameTime() * roleSpeed;
         var p1 = self.map.player1().*;
+
         if (engine.isDown(engine.Key.a)) {
             p1.x -|= speed;
             const cell = p1.getCell();
@@ -47,7 +50,7 @@ pub const Gameplay = struct {
         }
 
         if (engine.isPressed(engine.Key.space)) {
-            self.map.setBomb(self.map.player1().*);
+            self.map.setBomb(self.map.player1());
         }
     }
 
@@ -55,7 +58,7 @@ pub const Gameplay = struct {
         self.map.draw();
     }
 
-    pub fn deinit(self: Gameplay) void {
+    pub fn deinit(self: *Gameplay) void {
         self.map.deinit();
     }
 };

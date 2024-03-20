@@ -12,7 +12,7 @@ pub const State = struct {
     pub fn update(self: *State) void {
         const sequence = self.current.update() orelse return;
 
-        const old = self.current;
+        var old = self.current;
         self.current = switch (sequence) {
             .title => .{ .title = Title.init() },
             .select => .{ .select = Select.init() },
@@ -25,7 +25,7 @@ pub const State = struct {
         self.current.draw();
     }
 
-    pub fn deinit(self: State) void {
+    pub fn deinit(self: *State) void {
         self.current.deinit();
     }
 };
@@ -50,9 +50,9 @@ const Sequence = union(stage.SequenceType) {
         }
     }
 
-    fn deinit(self: Sequence) void {
-        switch (self) {
-            inline else => |case| case.deinit(),
+    fn deinit(self: *Sequence) void {
+        switch (self.*) {
+            inline else => |*case| case.deinit(),
         }
     }
 };
