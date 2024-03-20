@@ -11,6 +11,11 @@ pub const Gameplay = struct {
         if (engine.isPressed(engine.Key.x)) return .over;
         if (engine.isPressed(engine.Key.c)) return .clear;
 
+        self.controlPlayer();
+        return null;
+    }
+
+    fn controlPlayer(self: Gameplay) void {
         const speed = engine.frameTime() * roleSpeed;
         var p1 = self.map.player1().*;
         if (engine.isDown(engine.Key.a)) {
@@ -40,8 +45,6 @@ pub const Gameplay = struct {
             if (!self.map.isCollisionY(cell.x, cell.y + 1, p1))
                 self.map.player1().*.y = p1.y;
         }
-
-        return null;
     }
 
     pub fn draw(self: Gameplay) void {
