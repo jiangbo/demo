@@ -201,6 +201,23 @@ pub const WorldMap = struct {
                     self.explosion(value, index);
                 }
             }
+            if (value.contains(.explosion)) {
+                if (time > value.time + 700) {
+                    value.remove(.explosion);
+                }
+            }
+
+            if (value.contains(.fireX)) {
+                if (time > value.time + 700) {
+                    value.remove(.fireX);
+                }
+            }
+
+            if (value.contains(.fireY)) {
+                if (time > value.time + 700) {
+                    value.remove(.fireY);
+                }
+            }
         }
         // const time = engine.time();
         // if (self.player1().bomb) |bomb| {
