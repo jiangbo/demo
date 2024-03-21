@@ -19,4 +19,13 @@ pub const Rectangle = struct {
             .y = (self.y + self.height) / 2,
         };
     }
+
+    pub fn scale(self: Rectangle, factor: usize) Rectangle {
+        return Rectangle{
+            .x = self.x * factor,
+            .y = self.y * factor,
+            .width = 1,
+            .height = 1,
+        };
+    }
 };

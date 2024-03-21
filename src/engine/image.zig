@@ -22,34 +22,34 @@ pub const Image = struct {
     }
 };
 
-pub const TileMap = struct {
+pub const Tilemap = struct {
     texture: Texture,
     unit: usize,
 
-    pub fn init(name: []const u8, unit: usize) TileMap {
+    pub fn init(name: []const u8, unit: usize) Tilemap {
         return .{ .texture = loadTexture(name), .unit = unit };
     }
 
-    pub fn draw(self: TileMap) void {
+    pub fn draw(self: Tilemap) void {
         self.texture.draw();
     }
 
-    pub fn drawI(self: TileMap, index: usize, x: usize, y: usize) void {
+    pub fn drawI(self: Tilemap, index: usize, x: usize, y: usize) void {
         const vec = .{ .x = x * self.unit, .y = y * self.unit };
         self.texture.drawRec(self.getRec(index), vec);
     }
 
-    pub fn drawXY(self: TileMap, x: usize, y: usize, index: usize) void {
+    pub fn drawXY(self: Tilemap, x: usize, y: usize, index: usize) void {
         self.texture.drawRec(self.getRec(index), .{ .x = x, .y = y });
     }
 
-    fn getRec(self: TileMap, index: usize) basic.Rectangle {
+    fn getRec(self: Tilemap, index: usize) basic.Rectangle {
         const rx = index * self.unit % self.texture.width;
         const ry = index / (self.texture.width / self.unit) * self.unit;
         return basic.Rectangle.init(rx, ry, self.unit, self.unit);
     }
 
-    pub fn deinit(self: TileMap) void {
+    pub fn deinit(self: Tilemap) void {
         self.texture.deinit();
     }
 };

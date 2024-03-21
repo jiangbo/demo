@@ -5,7 +5,7 @@ const map = @import("map.zig");
 const roleSpeed = 100;
 
 pub const Gameplay = struct {
-    map: map.WorldMap,
+    map: map.World,
 
     pub fn update(self: *Gameplay) ?@import("popup.zig").PopupType {
         self.map.update();

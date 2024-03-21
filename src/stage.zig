@@ -11,8 +11,8 @@ pub const SequenceData = union(SequenceType) {
 };
 
 pub fn init(level: usize) ?Stage {
-    const worldMap = map.WorldMap.init(level);
-    const p = play.Gameplay{ .map = worldMap orelse return null };
+    const world = map.World.init(level);
+    const p = play.Gameplay{ .map = world orelse return null };
     return Stage{ .level = level, .gameplay = p };
 }
 
