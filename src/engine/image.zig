@@ -34,12 +34,12 @@ pub const Tilemap = struct {
         self.texture.draw();
     }
 
-    pub fn drawI(self: Tilemap, index: usize, x: usize, y: usize) void {
+    pub fn drawTile(self: Tilemap, index: usize, x: usize, y: usize) void {
         const vec = .{ .x = x * self.unit, .y = y * self.unit };
         self.texture.drawRec(self.getRec(index), vec);
     }
 
-    pub fn drawXY(self: Tilemap, x: usize, y: usize, index: usize) void {
+    pub fn drawXY(self: Tilemap, index: usize, x: usize, y: usize) void {
         self.texture.drawRec(self.getRec(index), .{ .x = x, .y = y });
     }
 

@@ -24,8 +24,8 @@ pub const Rectangle = struct {
         return Rectangle{
             .x = self.x * factor,
             .y = self.y * factor,
-            .width = 1,
-            .height = 1,
+            .width = self.width * factor,
+            .height = self.height * factor,
         };
     }
 };

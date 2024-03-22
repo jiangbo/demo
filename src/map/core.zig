@@ -11,7 +11,7 @@ pub fn deinit() void {
     tilemap.deinit();
 }
 
-pub const BackMapType = enum(u8) {
+pub const MapType = enum(u8) {
     space = 9,
     wall = 7,
     brick = 8,
@@ -21,6 +21,9 @@ pub const BackMapType = enum(u8) {
     fireX = 4,
     fireY = 5,
     explosion = 11,
+    player1 = 1,
+    player2 = 0,
+    enemy = 6,
 };
 
 pub const StageConfig = struct {
@@ -29,8 +32,6 @@ pub const StageConfig = struct {
     power: usize,
     bomb: usize,
 };
-
-pub const ForeMapType = enum(u8) {};
 
 const width = 19;
 const height = 15;
@@ -44,8 +45,12 @@ pub fn getHeight() usize {
     return height;
 }
 
+pub fn getSize() usize {
+    return getWidth() * getHeight();
+}
+
 pub fn getMapData() []MapUnit {
-    return data;
+    return &data;
 }
 
 pub fn getMapUnit() usize {
@@ -63,44 +68,50 @@ pub fn isFixSpace(x: usize, y: usize) bool {
     return y + x < 4;
 }
 
-pub fn drawEnum(mapType: BackMapType, x: usize, y: usize) void {
-    tilemap.drawI(@intFromEnum(mapType), x, y);
+fn drawTile(mapType: MapType, x: usize, y: usize) void {
+    tilemap.drawTile(@intFromEnum(mapType), x, y);
 }
 
-const ForeMapTypes = std.enums.EnumSet(ForeMapType);
-const MapUnit = struct {
-    backTypes: std.enums.EnumSet(BackMapType),
-    foreTypes: ForeMapTypes = ForeMapTypes.initEmpty(),
+pub fn drawXY(mapType: MapType, x: usize, y: usize) void {
+    tilemap.drawXY(@intFromEnum(mapType), x, y);
+}
+
+const MapTypes = std.enums.EnumSet(MapType);
+pub const MapUnit = struct {
+    mapTypes: MapTypes,
     time: usize = std.math.maxInt(usize),
 
-    fn init(back: BackMapType) MapUnit {
-        return .{ .set = std.enums.EnumSet(BackMapType).initOne(back) };
+    pub fn init(mapType: MapType) MapUnit {
+        return .{ .mapTypes = MapTypes.initOne(mapType) };
     }
 
-    pub fn contains(self: MapUnit, back: BackMapType) bool {
-        return self.set.contains(back);
+    pub fn contains(self: MapUnit, mapType: MapType) bool {
+        return self.mapTypes.contains(mapType);
     }
 
-    fn remove(self: *MapUnit, back: BackMapType) void {
-        self.set.remove(back);
+    pub fn remove(self: *MapUnit, mapType: MapType) void {
+        self.mapTypes.remove(mapType);
     }
 
-    fn insert(self: *MapUnit, mapType: BackMapType) void {
-        self.set.insert(mapType);
+    pub fn insert(self: *MapUnit, mapType: MapType) void {
+        self.mapTypes.insert(mapType);
     }
 
-    fn insertTime(self: *MapUnit, mapType: BackMapType, time: usize) void {
+    pub fn insertTimedType(self: *MapUnit, mapType: MapType, time: usize) void {
         self.insert(mapType);
         self.time = time;
     }
 
     pub fn draw(self: MapUnit, x: usize, y: usize) void {
-        if (self.contains(.wall)) drawEnum(.wall, x, y) //
-        else if (self.contains(.brick)) drawEnum(.brick, x, y) //
-        else {
-            drawEnum(.space, x, y);
-            if (self.contains(.power)) drawEnum(.power, x, y) //
-            else if (self.contains(.bomb)) drawEnum(.bomb, x, y);
-        }
+        if (self.contains(.wall)) return drawTile(.wall, x, y);
+        if (self.contains(.brick)) return drawTile(.brick, x, y);
+
+        drawTile(.space, x, y);
+        if (self.contains(.power)) drawTile(.power, x, y);
+        if (self.contains(.item)) drawTile(.item, x, y);
+        if (self.contains(.bomb)) drawTile(.bomb, x, y);
+        if (self.contains(.explosion)) drawTile(.explosion, x, y);
+        if (self.contains(.fireX)) drawTile(.fireX, x, y);
+        if (self.contains(.fireY)) drawTile(.fireY, x, y);
     }
 };

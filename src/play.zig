@@ -2,56 +2,33 @@ const std = @import("std");
 const engine = @import("engine.zig");
 const map = @import("map.zig");
 
-const roleSpeed = 100;
+const playerSpeed = 100;
 
 pub const Gameplay = struct {
-    map: map.World,
+    map: map.Map,
+
+    pub fn init(level: usize) ?Gameplay {
+        const m = map.Map.init(level) orelse return null;
+        return Gameplay{ .map = m };
+    }
 
     pub fn update(self: *Gameplay) ?@import("popup.zig").PopupType {
         self.map.update();
         if (engine.isPressed(engine.Key.x)) return .over;
         if (engine.isPressed(engine.Key.c)) return .clear;
 
-        self.controlPlayer();
+        const speed = engine.frameTime() * playerSpeed;
 
-        return null;
-    }
-
-    fn controlPlayer(self: *Gameplay) void {
-        const speed = engine.frameTime() * roleSpeed;
-        var p1 = self.map.player1().*;
-
-        if (engine.isDown(engine.Key.a)) {
-            p1.x -|= speed;
-            const cell = p1.getCell();
-            if (!self.map.isCollisionX(cell.x -| 1, cell.y, p1))
-                self.map.player1().*.x = p1.x;
-        }
-
-        if (engine.isDown(engine.Key.d)) {
-            p1.x += speed;
-            const cell = p1.getCell();
-            if (!self.map.isCollisionX(cell.x + 1, cell.y, p1))
-                self.map.player1().*.x = p1.x;
-        }
-
-        p1 = self.map.player1().*;
-        if (engine.isDown(engine.Key.w)) {
-            p1.y -|= speed;
-            const cell = p1.getCell();
-            if (!self.map.isCollisionY(cell.x, cell.y -| 1, p1))
-                self.map.player1().*.y = p1.y;
-        }
-        if (engine.isDown(engine.Key.s)) {
-            p1.y += speed;
-            const cell = p1.getCell();
-            if (!self.map.isCollisionY(cell.x, cell.y + 1, p1))
-                self.map.player1().*.y = p1.y;
-        }
+        if (engine.isDown(engine.Key.a)) self.map.control(speed, .west);
+        if (engine.isDown(engine.Key.d)) self.map.control(speed, .east);
+        if (engine.isDown(engine.Key.w)) self.map.control(speed, .north);
+        if (engine.isDown(engine.Key.s)) self.map.control(speed, .south);
 
         if (engine.isPressed(engine.Key.space)) {
             self.map.setBomb(self.map.player1());
         }
+
+        return null;
     }
 
     pub fn draw(self: Gameplay) void {

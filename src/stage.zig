@@ -1,7 +1,6 @@
 const std = @import("std");
 const popup = @import("popup.zig");
 const play = @import("play.zig");
-const map = @import("map.zig");
 
 pub const SequenceType = enum { title, select, stage };
 pub const SequenceData = union(SequenceType) {
@@ -11,9 +10,8 @@ pub const SequenceData = union(SequenceType) {
 };
 
 pub fn init(level: usize) ?Stage {
-    const world = map.World.init(level);
-    const p = play.Gameplay{ .map = world orelse return null };
-    return Stage{ .level = level, .gameplay = p };
+    const gameplay = play.Gameplay.init(level) orelse return null;
+    return Stage{ .level = level, .gameplay = gameplay };
 }
 
 pub const Stage = struct {
