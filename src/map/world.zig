@@ -119,7 +119,10 @@ pub const World = struct {
         for (1..self.player1().maxBombLength + 1) |i| {
             const mapUnit = &self.data[idx -| i];
             if (mapUnit.contains(.wall)) return;
-            if (mapUnit.contains(.brick)) mapUnit.remove(.brick);
+            if (mapUnit.contains(.brick)) {
+                mapUnit.remove(.brick);
+                return;
+            }
             mapUnit.insertTimedType(.fireX, time);
         }
     }
@@ -128,7 +131,10 @@ pub const World = struct {
         for (1..self.player1().maxBombLength + 1) |i| {
             const mapUnit = &self.data[idx + i];
             if (mapUnit.contains(.wall)) return;
-            if (mapUnit.contains(.brick)) mapUnit.remove(.brick);
+            if (mapUnit.contains(.brick)) {
+                mapUnit.remove(.brick);
+                return;
+            }
             mapUnit.insertTimedType(.fireX, time);
         }
     }
@@ -137,7 +143,10 @@ pub const World = struct {
         for (1..self.player1().maxBombLength + 1) |i| {
             const mapUnit = &self.data[idx -| (self.width * i)];
             if (mapUnit.contains(.wall)) return;
-            if (mapUnit.contains(.brick)) mapUnit.remove(.brick);
+            if (mapUnit.contains(.brick)) {
+                mapUnit.remove(.brick);
+                return;
+            }
             mapUnit.insertTimedType(.fireY, time);
         }
     }
@@ -146,7 +155,10 @@ pub const World = struct {
         for (1..self.player1().maxBombLength + 1) |i| {
             const mapUnit = &self.data[idx + (self.width * i)];
             if (mapUnit.contains(.wall)) return;
-            if (mapUnit.contains(.brick)) mapUnit.remove(.brick);
+            if (mapUnit.contains(.brick)) {
+                mapUnit.remove(.brick);
+                return;
+            }
             mapUnit.insertTimedType(.fireY, time);
         }
     }

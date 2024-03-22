@@ -24,7 +24,7 @@ pub const Map = struct {
 
     pub fn init(level: usize) ?Map {
         _ = level;
-        var initWorld = world.World.init(stageConfig[2]) orelse return null;
+        var initWorld = world.World.init(stageConfig[0]) orelse return null;
         initWorld.players[0] = Player.genPlayer(1, 1);
         return Map{ .world = initWorld };
     }
