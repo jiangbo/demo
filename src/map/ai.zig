@@ -4,8 +4,9 @@ const World = @import("world.zig").World;
 const Player = @import("player.zig").Player;
 
 var thread: std.Thread = undefined;
-var running: bool = true;
+var running: bool = false;
 pub fn init(world: World) void {
+    running = true;
     thread = std.Thread.spawn(.{}, control, .{world}) catch unreachable;
 }
 
