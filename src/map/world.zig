@@ -179,7 +179,8 @@ pub const World = struct {
 
     pub fn isCollision(self: World, x: usize, y: usize, rect: engine.Rectangle) bool {
         const cell = self.index(x, y);
-        if (!cell.contains(.wall) and !cell.contains(.brick)) return false;
+        if (!cell.contains(.wall) and !cell.contains(.brick) //
+        and !cell.contains(.bomb)) return false;
 
         const rec = engine.Rectangle{ .x = x, .y = y, .width = 1, .height = 1 };
         return engine.isCollision(rec.scale(self.unit), rect);
