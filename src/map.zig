@@ -4,7 +4,6 @@ const core = @import("map/core.zig");
 const world = @import("map/world.zig");
 
 const Player = @import("map/player.zig").Player;
-pub const Direction = @import("map/player.zig").Direction;
 
 pub fn init() void {
     core.init();
@@ -17,30 +16,41 @@ pub fn deinit() void {
 const stageConfig = [_]core.StageConfig{
     .{ .enemy = 2, .brickRate = 90, .power = 4, .bomb = 6 },
     .{ .enemy = 3, .brickRate = 80, .power = 1, .bomb = 0 },
-    .{ .enemy = 6, .brickRate = 30, .power = 0, .bomb = 1 },
+    .{ .enemy = 6, .brickRate = 30, .power = 1, .bomb = 1 },
 };
-
-var maxBombNumber: usize = 1;
 
 pub const Map = struct {
     world: world.World,
 
     pub fn init(level: usize) ?Map {
         _ = level;
-        var initWorld = world.World.init(stageConfig[0]) orelse return null;
+        var initWorld = world.World.init(stageConfig[2]) orelse return null;
         initWorld.players[0] = Player.genPlayer(1, 1);
         return Map{ .world = initWorld };
     }
 
     pub fn update(self: *Map) void {
+        const pos = self.player1().getCell();
+        const mapUnit = self.world.indexRef(pos.x, pos.y);
+
+        if (mapUnit.contains(.item)) {
+            mapUnit.remove(.item);
+            self.player1().maxBombNumber += 1;
+        }
+
+        if (mapUnit.contains(.power)) {
+            self.player1().maxBombLength += 1;
+            mapUnit.remove(.power);
+        }
+
         self.world.update();
     }
 
     pub fn player1(self: Map) *Player {
-        return &self.world.players[0];
+        return self.world.player1();
     }
 
-    pub fn control(self: Map, speed: usize, direction: Direction) void {
+    pub fn control(self: Map, speed: usize, direction: core.Direction) void {
         if (direction == .west) {
             var p1 = self.world.players[0];
             p1.x -|= speed;
@@ -85,12 +95,13 @@ pub const Map = struct {
     }
 
     pub fn setBomb(self: *Map, player: *Player) void {
-        if (player.bombNumber >= maxBombNumber) return;
+        if (player.bombNumber >= player.maxBombNumber) return;
 
         const pos = player.getCell();
         const cell = self.world.indexRef(pos.x, pos.y);
         if (!cell.contains(.wall) and !cell.contains(.brick)) {
             cell.insertTimedType(.bomb, engine.time());
+            player.bombNumber += 1;
         }
     }
 

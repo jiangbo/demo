@@ -11,6 +11,8 @@ pub fn deinit() void {
     tilemap.deinit();
 }
 
+pub const Direction = enum { north, south, west, east };
+
 pub const MapType = enum(u8) {
     space = 9,
     wall = 7,

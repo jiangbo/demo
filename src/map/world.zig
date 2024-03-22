@@ -78,6 +78,7 @@ pub const World = struct {
             if (value.contains(.bomb)) {
                 if (time > value.time + 3000) {
                     self.explosion(value, idx);
+                    self.player1().bombNumber -|= 1;
                 }
             }
             if (value.contains(.explosion)) {
@@ -103,22 +104,51 @@ pub const World = struct {
     fn explosion(self: *World, mapUnit: *core.MapUnit, idx: usize) void {
         const time = engine.time();
         mapUnit.remove(.bomb);
-
         mapUnit.insertTimedType(.explosion, time);
         // 左
-        doExplosion(&self.data[idx -| 1], .fireX, time);
+        self.explosionLeft(time, idx);
         // 右
-        doExplosion(&self.data[idx + 1], .fireX, time);
+        self.explosionRight(time, idx);
         // 上
-        doExplosion(&self.data[idx - self.width], .fireY, time);
+        self.explosionUp(time, idx);
         // 下
-        doExplosion(&self.data[idx + self.width], .fireY, time);
+        self.explosionDown(time, idx);
     }
 
-    fn doExplosion(mapUnit: *core.MapUnit, mapType: core.MapType, time: usize) void {
-        if (mapUnit.contains(.wall)) return;
-        if (mapUnit.contains(.brick)) mapUnit.remove(.brick);
-        mapUnit.insertTimedType(mapType, time);
+    fn explosionLeft(self: *World, time: usize, idx: usize) void {
+        for (1..self.player1().maxBombLength + 1) |i| {
+            const mapUnit = &self.data[idx -| i];
+            if (mapUnit.contains(.wall)) return;
+            if (mapUnit.contains(.brick)) mapUnit.remove(.brick);
+            mapUnit.insertTimedType(.fireX, time);
+        }
+    }
+
+    fn explosionRight(self: *World, time: usize, idx: usize) void {
+        for (1..self.player1().maxBombLength + 1) |i| {
+            const mapUnit = &self.data[idx + i];
+            if (mapUnit.contains(.wall)) return;
+            if (mapUnit.contains(.brick)) mapUnit.remove(.brick);
+            mapUnit.insertTimedType(.fireX, time);
+        }
+    }
+
+    fn explosionUp(self: *World, time: usize, idx: usize) void {
+        for (1..self.player1().maxBombLength + 1) |i| {
+            const mapUnit = &self.data[idx -| (self.width * i)];
+            if (mapUnit.contains(.wall)) return;
+            if (mapUnit.contains(.brick)) mapUnit.remove(.brick);
+            mapUnit.insertTimedType(.fireY, time);
+        }
+    }
+
+    fn explosionDown(self: *World, time: usize, idx: usize) void {
+        for (1..self.player1().maxBombLength + 1) |i| {
+            const mapUnit = &self.data[idx + (self.width * i)];
+            if (mapUnit.contains(.wall)) return;
+            if (mapUnit.contains(.brick)) mapUnit.remove(.brick);
+            mapUnit.insertTimedType(.fireY, time);
+        }
     }
 
     pub fn isCollision(self: World, x: usize, y: usize, rect: engine.Rectangle) bool {
@@ -139,7 +169,11 @@ pub const World = struct {
         for (self.players) |value| value.draw();
     }
 
-    fn index(self: World, x: usize, y: usize) core.MapUnit {
+    pub fn player1(self: World) *Player {
+        return &self.players[0];
+    }
+
+    pub fn index(self: World, x: usize, y: usize) core.MapUnit {
         return self.data[x + y * self.width];
     }
 

@@ -2,13 +2,14 @@ const std = @import("std");
 const engine = @import("../engine.zig");
 const core = @import("core.zig");
 
-pub const Direction = enum { north, south, west, east };
 const speedUnit = 1000;
 
 pub const Player = struct {
     x: usize,
     y: usize,
     bombNumber: usize = 0,
+    maxBombNumber: usize = 1,
+    maxBombLength: usize = 1,
     type: core.MapType,
 
     pub fn genEnemy(x: usize, y: usize) Player {
