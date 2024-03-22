@@ -14,7 +14,7 @@ pub const Gameplay = struct {
 
     pub fn update(self: *Gameplay) ?@import("popup.zig").PopupType {
         self.map.update();
-        if (engine.isPressed(engine.Key.x)) return .over;
+        if (!self.map.player1().alive) return .over;
         if (engine.isPressed(engine.Key.c)) return .clear;
 
         const speed = engine.frameTime() * playerSpeed;

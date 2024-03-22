@@ -11,6 +11,7 @@ pub const Player = struct {
     maxBombNumber: usize = 1,
     maxBombLength: usize = 1,
     direction: ?core.Direction,
+    alive: bool = true,
     type: core.MapType,
 
     pub fn genEnemy(x: usize, y: usize) Player {

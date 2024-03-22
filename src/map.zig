@@ -32,8 +32,8 @@ pub const Map = struct {
     }
 
     pub fn update(self: *Map) void {
-        const pos = self.player1().getCell();
-        const mapUnit = self.world.indexRef(pos.x, pos.y);
+        const playerPos = self.player1().getCell();
+        const mapUnit = self.world.indexRef(playerPos.x, playerPos.y);
 
         if (mapUnit.contains(.item)) {
             mapUnit.remove(.item);
@@ -43,6 +43,16 @@ pub const Map = struct {
         if (mapUnit.contains(.power)) {
             self.player1().maxBombLength += 1;
             mapUnit.remove(.power);
+        }
+
+        for (self.world.players) |*p| {
+            if (!p.alive) continue;
+            const enemyPos = p.getCell();
+            const unit = self.world.index(enemyPos.x, enemyPos.y);
+            if (unit.hasExplosion()) p.alive = false;
+
+            if (p.type != .enemy) continue;
+            if (enemyPos.isSame(playerPos)) self.player1().alive = false;
         }
 
         self.world.update();

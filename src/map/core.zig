@@ -91,6 +91,11 @@ pub const MapUnit = struct {
         return self.mapTypes.contains(mapType);
     }
 
+    pub fn hasExplosion(self: MapUnit) bool {
+        return self.contains(.explosion) //
+        or self.contains(.fireX) or self.contains(.fireY);
+    }
+
     pub fn remove(self: *MapUnit, mapType: MapType) void {
         self.mapTypes.remove(mapType);
     }

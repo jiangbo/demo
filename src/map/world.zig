@@ -192,7 +192,7 @@ pub const World = struct {
             }
         }
 
-        for (self.players) |value| value.draw();
+        for (self.players) |value| if (value.alive) value.draw();
     }
 
     pub fn player1(self: World) *Player {

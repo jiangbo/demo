@@ -1,6 +1,10 @@
 pub const Vector = struct {
     x: usize = 0,
     y: usize = 0,
+
+    pub fn isSame(self: Vector, other: Vector) bool {
+        return self.x == other.x and self.y == other.y;
+    }
 };
 
 pub const Rectangle = struct {

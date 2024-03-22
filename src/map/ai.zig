@@ -14,7 +14,8 @@ const enemySpeed = 500;
 fn control(world: World) void {
     while (running) {
         for (world.players) |*enemy| {
-            if (enemy.type == .enemy) controlEnemy(world, enemy);
+            if (enemy.type == .enemy and enemy.alive)
+                controlEnemy(world, enemy);
         }
         std.time.sleep(std.time.ns_per_ms * 10);
     }
