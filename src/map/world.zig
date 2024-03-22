@@ -163,6 +163,20 @@ pub const World = struct {
         }
     }
 
+    pub fn isCollisionX(self: World, player: Player, x: usize, y: usize) bool {
+        const rect = player.toCollisionRec();
+        for (0..3) |i| {
+            if (self.isCollision(x, y + i -| 1, rect)) return true;
+        } else return false;
+    }
+
+    pub fn isCollisionY(self: World, player: Player, x: usize, y: usize) bool {
+        const rect = player.toCollisionRec();
+        for (0..3) |i| {
+            if (self.isCollision(x + i -| 1, y, rect)) return true;
+        } else return false;
+    }
+
     pub fn isCollision(self: World, x: usize, y: usize, rect: engine.Rectangle) bool {
         const cell = self.index(x, y);
         if (!cell.contains(.wall) and !cell.contains(.brick)) return false;

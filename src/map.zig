@@ -2,6 +2,7 @@ const std = @import("std");
 const engine = @import("engine.zig");
 const core = @import("map/core.zig");
 const world = @import("map/world.zig");
+const ai = @import("map/ai.zig");
 
 const Player = @import("map/player.zig").Player;
 
@@ -26,6 +27,7 @@ pub const Map = struct {
         _ = level;
         var initWorld = world.World.init(stageConfig[0]) orelse return null;
         initWorld.players[0] = Player.genPlayer(1, 1);
+        defer ai.init(initWorld);
         return Map{ .world = initWorld };
     }
 
@@ -54,44 +56,34 @@ pub const Map = struct {
         if (direction == .west) {
             var p1 = self.world.players[0];
             p1.x -|= speed;
-            if (!self.isCollisionX(p1, p1.getCell().x -| 1, p1.getCell().y))
+            const cell = p1.getCell();
+            if (!self.world.isCollisionX(p1, cell.x -| 1, cell.y))
                 self.world.players[0].x -|= speed;
         }
 
         if (direction == .east) {
             var p1 = self.world.players[0];
             p1.x += speed;
-            if (!self.isCollisionX(p1, p1.getCell().x + 1, p1.getCell().y))
+            const cell = p1.getCell();
+            if (!self.world.isCollisionX(p1, cell.x + 1, cell.y))
                 self.world.players[0].x +|= speed;
         }
 
         if (direction == .north) {
             var p1 = self.world.players[0];
             p1.y -|= speed;
-            if (!self.isCollisionY(p1, p1.getCell().x, p1.getCell().y -| 1))
+            const cell = p1.getCell();
+            if (!self.world.isCollisionY(p1, cell.x, cell.y -| 1))
                 self.world.players[0].y -|= speed;
         }
 
         if (direction == .south) {
             var p1 = self.world.players[0];
             p1.y += speed;
-            if (!self.isCollisionY(p1, p1.getCell().x, p1.getCell().y + 1))
+            const cell = p1.getCell();
+            if (!self.world.isCollisionY(p1, cell.x, cell.y + 1))
                 self.world.players[0].y += speed;
         }
-    }
-
-    fn isCollisionX(self: Map, player: Player, x: usize, y: usize) bool {
-        const rect = player.toCollisionRec();
-        for (0..3) |i| {
-            if (self.world.isCollision(x, y + i -| 1, rect)) return true;
-        } else return false;
-    }
-
-    fn isCollisionY(self: Map, player: Player, x: usize, y: usize) bool {
-        const rect = player.toCollisionRec();
-        for (0..3) |i| {
-            if (self.world.isCollision(x + i -| 1, y, rect)) return true;
-        } else return false;
     }
 
     pub fn setBomb(self: *Map, player: *Player) void {
@@ -110,6 +102,7 @@ pub const Map = struct {
     }
 
     pub fn deinit(self: *Map) void {
+        ai.deinit();
         self.world.deinit();
     }
 };

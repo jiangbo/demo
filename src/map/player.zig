@@ -10,21 +10,24 @@ pub const Player = struct {
     bombNumber: usize = 0,
     maxBombNumber: usize = 1,
     maxBombLength: usize = 1,
+    direction: ?core.Direction,
     type: core.MapType,
 
     pub fn genEnemy(x: usize, y: usize) Player {
-        return init(x, y, .enemy);
+        const rand = engine.random(4);
+        return init(x, y, .enemy, @enumFromInt(rand));
     }
 
     pub fn genPlayer(x: usize, y: usize) Player {
-        return init(x, y, .player1);
+        return init(x, y, .player1, null);
     }
 
-    fn init(x: usize, y: usize, t: core.MapType) Player {
+    fn init(x: usize, y: usize, t: core.MapType, d: ?core.Direction) Player {
         return Player{
             .x = x * core.getMapUnit() * speedUnit,
             .y = y * core.getMapUnit() * speedUnit,
             .type = t,
+            .direction = d,
         };
     }
 
