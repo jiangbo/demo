@@ -15,7 +15,8 @@ pub fn deinit() void {
 }
 
 const stageConfig = [_]core.StageConfig{
-    .{ .enemy = 2, .brickRate = 90, .power = 54, .bomb = 6 },
+    .{ .enemy = 0, .brickRate = 1, .power = 0, .bomb = 0 },
+    // .{ .enemy = 2, .brickRate = 90, .power = 4, .bomb = 6 },
     .{ .enemy = 3, .brickRate = 80, .power = 1, .bomb = 0 },
     .{ .enemy = 6, .brickRate = 30, .power = 1, .bomb = 1 },
 };
@@ -23,6 +24,7 @@ const stageConfig = [_]core.StageConfig{
 pub const Map = struct {
     world: world.World,
     twoPlayer: bool,
+
     pub fn init(twoPlayer: bool, level: usize) ?Map {
         const wd = world.World.init(twoPlayer, stageConfig[level]);
         var initWorld = wd orelse return null;
@@ -31,13 +33,13 @@ pub const Map = struct {
             const w, const h = .{ initWorld.width - 2, initWorld.height - 2 };
             initWorld.players[1] = Player.genPlayer(w, h, .player2);
         }
-        defer ai.init(initWorld);
         return Map{ .world = initWorld, .twoPlayer = twoPlayer };
     }
 
     pub fn update(self: *Map) void {
+        ai.control(self.world);
         self.getItem(self.player1());
-        self.getItem(self.player2());
+        if (self.twoPlayer) self.getItem(self.player2());
 
         for (self.world.players) |*p| {
             if (!p.alive) continue;
@@ -48,7 +50,7 @@ pub const Map = struct {
             if (p.type != .enemy) continue;
             if (enemyPos.isSame(self.player1().getCell()))
                 self.player1().alive = false;
-            if (enemyPos.isSame(self.player2().getCell()))
+            if (self.twoPlayer and enemyPos.isSame(self.player2().getCell()))
                 self.player2().alive = false;
         }
 
@@ -79,7 +81,9 @@ pub const Map = struct {
     }
 
     pub fn alive(self: Map) bool {
-        return self.player1().alive or self.player2().alive;
+        if (self.player1().alive) return true;
+        if (self.twoPlayer and self.player2().alive) return true;
+        return false;
     }
 
     pub fn control(self: Map, player: *Player, speed: usize, direction: core.Direction) void {
@@ -128,12 +132,17 @@ pub const Map = struct {
         }
     }
 
+    pub fn hasClear(self: Map) bool {
+        for (self.world.data) |value| {
+            if (value.contains(.brick)) return false;
+        } else return true;
+    }
+
     pub fn draw(self: Map) void {
         self.world.draw();
     }
 
     pub fn deinit(self: *Map) void {
-        ai.deinit();
         self.world.deinit();
     }
 };

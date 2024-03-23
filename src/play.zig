@@ -16,11 +16,11 @@ pub const Gameplay = struct {
     pub fn update(self: *Gameplay) ?@import("popup.zig").PopupType {
         self.map.update();
         if (!self.map.alive()) return .over;
-        if (engine.isPressed(engine.Key.c)) return .clear;
+        if (self.map.hasClear()) return .clear;
 
         const speed = engine.frameTime() * playerSpeed;
         if (self.map.player1().alive) self.controlPlayer1(speed);
-        if (self.map.player2().alive) self.controlPlayer2(speed);
+        if (self.mode and self.map.player2().alive) self.controlPlayer2(speed);
 
         return null;
     }

@@ -27,7 +27,7 @@ fn genMap(world: *World, twoPlayer: bool, config: core.StageConfig) void {
         }
     }
     genItem(world, bricks[0..brickNumber], config);
-    genEnemy(world, floors[0..floorNumber], config);
+    genEnemy(world, twoPlayer, floors[0..floorNumber], config.enemy);
 }
 
 fn genItem(self: *World, bricks: []usize, cfg: core.StageConfig) void {
@@ -42,14 +42,15 @@ fn genItem(self: *World, bricks: []usize, cfg: core.StageConfig) void {
     }
 }
 
-fn genEnemy(world: *World, floors: []usize, cfg: core.StageConfig) void {
-    for (0..cfg.enemy) |i| {
+fn genEnemy(world: *World, two: bool, floors: []usize, enemy: usize) void {
+    const index: usize = if (two) 2 else 1;
+    for (0..enemy) |i| {
         const swapped = engine.randomW(i, floors.len);
         const tmp = floors[i];
         floors[i] = floors[swapped];
         floors[swapped] = tmp;
         const x = floors[i] >> 16 & 0xFFFF;
-        world.players[1 + i] = Player.genEnemy(x, floors[i] & 0xFFFF);
+        world.players[index + i] = Player.genEnemy(x, floors[i] & 0xFFFF);
     }
 }
 
@@ -61,6 +62,7 @@ pub const World = struct {
     unit: usize,
     data: []core.MapUnit = core.getMapData(),
     players: []Player,
+    running: bool = true,
 
     pub fn init(twoPlayer: bool, config: core.StageConfig) ?World {
         const number = config.enemy + @as(usize, if (twoPlayer) 2 else 1);

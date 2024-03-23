@@ -3,22 +3,12 @@ const engine = @import("../engine.zig");
 const World = @import("world.zig").World;
 const Player = @import("player.zig").Player;
 
-var thread: std.Thread = undefined;
-var running: bool = false;
-pub fn init(world: World) void {
-    running = true;
-    thread = std.Thread.spawn(.{}, control, .{world}) catch unreachable;
-}
-
 const enemySpeed = 500;
 
-fn control(world: World) void {
-    while (running) {
-        for (world.players) |*enemy| {
-            if (enemy.type == .enemy and enemy.alive)
-                controlEnemy(world, enemy);
-        }
-        std.time.sleep(std.time.ns_per_ms * 10);
+pub fn control(world: World) void {
+    for (world.players) |*enemy| {
+        if (enemy.type == .enemy and enemy.alive)
+            controlEnemy(world, enemy);
     }
 }
 
@@ -64,9 +54,4 @@ fn controlEnemy(world: World, enemy: *Player) void {
             enemy.x += enemySpeed;
         }
     }
-}
-
-pub fn deinit() void {
-    running = false;
-    thread.join();
 }
