@@ -10,13 +10,17 @@ pub fn main() void {
     engine.init(gpa.allocator(), 640, 480, "炸弹人");
     defer engine.deinit();
 
+    const sound = engine.Sound.init("data/sound/charara.wav");
+    defer sound.deinit();
+    sound.play();
+
     map.init();
     defer map.deinit();
 
     var mainState = state.State.init();
     defer mainState.deinit();
 
-    while (engine.shoudContinue()) {
+    while (engine.shouldContinue()) {
         mainState.update();
         mainState.draw();
     }

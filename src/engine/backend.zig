@@ -13,14 +13,16 @@ pub fn init(width: usize, height: usize, title: [:0]const u8) void {
     ray.SetTargetFPS(60);
     ray.SetExitKey(ray.KEY_NULL);
     screenWidth = width;
+    ray.InitAudioDevice();
     return;
 }
 
 pub fn deinit() void {
+    ray.CloseAudioDevice();
     ray.CloseWindow();
 }
 
-pub fn shoudContinue() bool {
+pub fn shouldContinue() bool {
     return !ray.WindowShouldClose();
 }
 
@@ -108,3 +110,19 @@ fn toRayRec(rec: basic.Rectangle) ray.Rectangle {
 fn usizeToF32(value: usize) f32 {
     return @floatFromInt(value);
 }
+
+pub const Sound = struct {
+    sound: ray.Sound,
+
+    pub fn init(path: [:0]const u8) Sound {
+        return .{ .sound = ray.LoadSound(path) };
+    }
+
+    pub fn play(self: Sound) void {
+        ray.PlaySound(self.sound);
+    }
+
+    pub fn deinit(self: Sound) void {
+        ray.UnloadSound(self.sound);
+    }
+};

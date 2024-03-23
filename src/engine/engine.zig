@@ -2,6 +2,7 @@ const std = @import("std");
 const backend = @import("backend.zig");
 const basic = @import("basic.zig");
 
+pub const Sound = backend.Sound;
 const Alloc = std.mem.Allocator;
 pub var allocator: std.mem.Allocator = undefined;
 pub fn init(a: Alloc, width: usize, height: usize, title: [:0]const u8) void {
@@ -53,6 +54,6 @@ pub fn randomW(min: usize, max: usize) usize {
     return backend.random(min, max);
 }
 
-pub fn shoudContinue() bool {
-    return backend.shoudContinue();
+pub fn shouldContinue() bool {
+    return backend.shouldContinue();
 }
