@@ -27,7 +27,7 @@ fn genMap(world: *World, config: core.StageConfig) void {
         }
     }
     genItem(world, bricks[0..brickNumber], config);
-    genPlayer(world, floors[0..floorNumber], config);
+    genEnemy(world, floors[0..floorNumber], config);
 }
 
 fn genItem(self: *World, bricks: []usize, cfg: core.StageConfig) void {
@@ -42,7 +42,7 @@ fn genItem(self: *World, bricks: []usize, cfg: core.StageConfig) void {
     }
 }
 
-fn genPlayer(world: *World, floors: []usize, cfg: core.StageConfig) void {
+fn genEnemy(world: *World, floors: []usize, cfg: core.StageConfig) void {
     for (0..cfg.enemy) |i| {
         const swapped = engine.randomW(i, floors.len);
         const tmp = floors[i];
@@ -52,6 +52,8 @@ fn genPlayer(world: *World, floors: []usize, cfg: core.StageConfig) void {
         world.players[1 + i] = Player.genEnemy(x, floors[i] & 0xFFFF);
     }
 }
+
+const bombDelayTime = 3000;
 
 pub const World = struct {
     width: usize = core.getWidth(),
@@ -76,7 +78,7 @@ pub const World = struct {
         const time = engine.time();
         for (self.data, 0..) |*value, idx| {
             if (value.contains(.bomb)) {
-                if (time > value.time + 3000) {
+                if (time > value.time + bombDelayTime) {
                     self.explosion(value, idx);
                     self.player1().bombNumber -|= 1;
                 }
@@ -118,23 +120,28 @@ pub const World = struct {
     fn explosionLeft(self: *World, time: usize, idx: usize) void {
         for (1..self.player1().maxBombLength + 1) |i| {
             const mapUnit = &self.data[idx -| i];
-            if (mapUnit.contains(.wall)) return;
-            if (mapUnit.contains(.brick)) {
-                mapUnit.remove(.brick);
-                return;
-            }
+            if (explosionMap(mapUnit) orelse return) continue;
             mapUnit.insertTimedType(.fireX, time);
         }
+    }
+
+    fn explosionMap(mapUnit: *core.MapUnit) ?bool {
+        if (mapUnit.contains(.wall)) return null;
+        if (mapUnit.contains(.brick)) {
+            mapUnit.remove(.brick);
+            return null;
+        }
+        if (mapUnit.contains(.bomb)) {
+            mapUnit.time -|= bombDelayTime;
+            return true;
+        }
+        return false;
     }
 
     fn explosionRight(self: *World, time: usize, idx: usize) void {
         for (1..self.player1().maxBombLength + 1) |i| {
             const mapUnit = &self.data[idx + i];
-            if (mapUnit.contains(.wall)) return;
-            if (mapUnit.contains(.brick)) {
-                mapUnit.remove(.brick);
-                return;
-            }
+            if (explosionMap(mapUnit) orelse return) continue;
             mapUnit.insertTimedType(.fireX, time);
         }
     }
@@ -142,11 +149,7 @@ pub const World = struct {
     fn explosionUp(self: *World, time: usize, idx: usize) void {
         for (1..self.player1().maxBombLength + 1) |i| {
             const mapUnit = &self.data[idx -| (self.width * i)];
-            if (mapUnit.contains(.wall)) return;
-            if (mapUnit.contains(.brick)) {
-                mapUnit.remove(.brick);
-                return;
-            }
+            if (explosionMap(mapUnit) orelse return) continue;
             mapUnit.insertTimedType(.fireY, time);
         }
     }
@@ -154,11 +157,7 @@ pub const World = struct {
     fn explosionDown(self: *World, time: usize, idx: usize) void {
         for (1..self.player1().maxBombLength + 1) |i| {
             const mapUnit = &self.data[idx + (self.width * i)];
-            if (mapUnit.contains(.wall)) return;
-            if (mapUnit.contains(.brick)) {
-                mapUnit.remove(.brick);
-                return;
-            }
+            if (explosionMap(mapUnit) orelse return) continue;
             mapUnit.insertTimedType(.fireY, time);
         }
     }
