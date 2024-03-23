@@ -3,11 +3,12 @@ const engine = @import("engine.zig");
 const map = @import("map.zig");
 
 pub const MenuType = enum { quit, title, reset, next };
-pub const PopupType = enum { clear, over };
+pub const PopupType = enum { clear, over, ending };
 
 pub const Popup = union(PopupType) {
     clear: TimePopup,
     over: TimePopup,
+    ending: TimePopup,
 
     pub fn update(self: *Popup) ?MenuType {
         return switch (self.*) {
@@ -32,6 +33,7 @@ pub fn initWithType(popupType: PopupType) Popup {
     return switch (popupType) {
         .clear => .{ .clear = TimePopup.init("clear.png", .next) },
         .over => .{ .over = TimePopup.init("over.png", .title) },
+        .ending => .{ .ending = TimePopup.init("ending.png", .title) },
     };
 }
 

@@ -14,6 +14,7 @@ pub fn init(mode: bool, level: usize) ?Stage {
     return Stage{ .level = level, .gameplay = gameplay };
 }
 
+const maxLevel = 1;
 pub const Stage = struct {
     level: usize,
     gameplay: play.Gameplay,
@@ -32,7 +33,12 @@ pub const Stage = struct {
         }
 
         const popupType = self.gameplay.update() orelse return null;
-        self.popup = popup.initWithType(popupType);
+
+        if (popupType == .clear and self.level + 1 == maxLevel)
+            self.popup = popup.initWithType(.ending)
+        else
+            self.popup = popup.initWithType(popupType);
+
         return null;
     }
 
