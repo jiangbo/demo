@@ -66,8 +66,10 @@ pub fn isFixWall(x: usize, y: usize) bool {
     return false;
 }
 
-pub fn isFixSpace(x: usize, y: usize) bool {
-    return y + x < 4;
+pub fn isFixSpace(x: usize, y: usize, twoPlayer: bool) bool {
+    if (x + y < 4) return true;
+    if (twoPlayer and x + y > width + height - 6) return true;
+    return false;
 }
 
 fn drawTile(mapType: MapType, x: usize, y: usize) void {

@@ -2,15 +2,15 @@ const std = @import("std");
 const popup = @import("popup.zig");
 const play = @import("play.zig");
 
-pub const SequenceType = enum { title, select, stage };
+pub const SequenceType = enum { title, mode, stage };
 pub const SequenceData = union(SequenceType) {
     title: void,
-    select: void,
+    mode: bool,
     stage: usize,
 };
 
-pub fn init(level: usize) ?Stage {
-    const gameplay = play.Gameplay.init(level) orelse return null;
+pub fn init(mode: bool, level: usize) ?Stage {
+    const gameplay = play.Gameplay.init(mode, level) orelse return null;
     return Stage{ .level = level, .gameplay = gameplay };
 }
 
@@ -25,7 +25,6 @@ pub const Stage = struct {
             defer option.deinit();
             switch (menu) {
                 .title => return .title,
-                .select => return .select,
                 .reset => return .{ .stage = self.level },
                 .next => return .{ .stage = self.level + 1 },
                 .quit => self.popup = null,

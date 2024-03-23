@@ -4,6 +4,7 @@ const stage = @import("stage.zig");
 
 pub const State = struct {
     current: Sequence,
+    mode: bool = false,
 
     pub fn init() State {
         return State{ .current = Sequence{ .title = Title.init() } };
@@ -15,8 +16,14 @@ pub const State = struct {
         var old = self.current;
         self.current = switch (sequence) {
             .title => .{ .title = Title.init() },
-            .select => .{ .select = Select.init() },
-            .stage => |level| .{ .stage = stage.init(level) orelse return },
+            .mode => |mode| label: {
+                self.mode = mode;
+                break :label .{ .mode = Mode{} };
+            },
+            .stage => |level| label: {
+                const s = stage.init(self.mode, level);
+                break :label .{ .stage = s orelse return };
+            },
         };
         old.deinit();
     }
@@ -32,7 +39,7 @@ pub const State = struct {
 
 const Sequence = union(stage.SequenceType) {
     title: Title,
-    select: Select,
+    mode: Mode,
     stage: stage.Stage,
 
     fn update(self: *Sequence) ?stage.SequenceData {
@@ -60,7 +67,7 @@ const Sequence = union(stage.SequenceType) {
 const Title = struct {
     title: engine.Image,
     cursor: engine.Image,
-    onePlayer: bool = true,
+    towPlayer: bool = false,
 
     fn init() Title {
         return Title{
@@ -71,16 +78,16 @@ const Title = struct {
 
     fn update(self: *Title) ?stage.SequenceData {
         if (engine.isPressed(engine.Key.w) or engine.isPressed(engine.Key.s)) {
-            self.onePlayer = !self.onePlayer;
+            self.towPlayer = !self.towPlayer;
         }
 
-        const result = stage.SequenceData{ .stage = if (self.onePlayer) 1 else 2 };
+        const result = stage.SequenceData{ .mode = self.towPlayer };
         return if (engine.isPressed(engine.Key.space)) result else null;
     }
 
     fn draw(self: Title) void {
         self.title.draw();
-        self.cursor.drawXY(220, if (self.onePlayer) 395 else 433);
+        self.cursor.drawXY(220, if (self.towPlayer) 433 else 395);
     }
 
     fn deinit(self: Title) void {
@@ -89,26 +96,12 @@ const Title = struct {
     }
 };
 
-const Select = struct {
-    texture: engine.Image,
-
-    fn init() Select {
-        return Select{ .texture = engine.Image.init("select.dds") };
+const Mode = struct {
+    fn update(_: Mode) ?stage.SequenceData {
+        return .{ .stage = 0 };
     }
 
-    fn update(_: Select) ?stage.SequenceData {
-        const char = engine.getPressed();
-        return if (char >= '1' and char <= '9')
-            .{ .stage = char - '1' + 1 }
-        else
-            null;
-    }
+    fn draw(_: Mode) void {}
 
-    fn draw(self: Select) void {
-        self.texture.draw();
-    }
-
-    fn deinit(self: Select) void {
-        self.texture.deinit();
-    }
+    fn deinit(_: Mode) void {}
 };

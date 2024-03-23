@@ -19,8 +19,8 @@ pub const Player = struct {
         return init(x, y, .enemy, @enumFromInt(rand));
     }
 
-    pub fn genPlayer(x: usize, y: usize) Player {
-        return init(x, y, .player1, null);
+    pub fn genPlayer(x: usize, y: usize, t: core.MapType) Player {
+        return init(x, y, t, null);
     }
 
     fn init(x: usize, y: usize, t: core.MapType, d: ?core.Direction) Player {

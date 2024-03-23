@@ -3,7 +3,7 @@ const engine = @import("../engine.zig");
 const core = @import("core.zig");
 const Player = @import("player.zig").Player;
 
-fn genMap(world: *World, config: core.StageConfig) void {
+fn genMap(world: *World, twoPlayer: bool, config: core.StageConfig) void {
     var bricks: [core.getSize()]usize = undefined;
     var brickNumber: usize = 0;
     var floors: [core.getSize()]usize = undefined;
@@ -13,7 +13,7 @@ fn genMap(world: *World, config: core.StageConfig) void {
         for (0..world.width) |x| {
             world.data[x + y * world.width] = if (core.isFixWall(x, y))
                 core.MapUnit.init(.wall)
-            else if (core.isFixSpace(x, y))
+            else if (core.isFixSpace(x, y, twoPlayer))
                 core.MapUnit.init(.space)
             else if (engine.random(100) < config.brickRate) label: {
                 bricks[brickNumber] = x << 16 | y;
@@ -62,15 +62,15 @@ pub const World = struct {
     data: []core.MapUnit = core.getMapData(),
     players: []Player,
 
-    pub fn init(config: core.StageConfig) ?World {
-        const number = config.enemy + 1;
+    pub fn init(twoPlayer: bool, config: core.StageConfig) ?World {
+        const number = config.enemy + @as(usize, if (twoPlayer) 2 else 1);
         const players = engine.allocator.alloc(Player, number) catch |e| {
             std.log.info("create players error: {}", .{e});
             return null;
         };
 
         var map = World{ .unit = core.getMapUnit(), .players = players };
-        genMap(&map, config);
+        genMap(&map, twoPlayer, config);
         return map;
     }
 
@@ -79,8 +79,13 @@ pub const World = struct {
         for (self.data, 0..) |*value, idx| {
             if (value.contains(.bomb)) {
                 if (time > value.time + bombDelayTime) {
-                    self.explosion(value, idx);
-                    self.player1().bombNumber -|= 1;
+                    var p = if (value.contains(.player1))
+                        self.player1()
+                    else
+                        self.player2();
+                    self.explosion(value, p.*, idx);
+                    p.bombNumber -|= 1;
+                    value.remove(p.type);
                 }
             }
             if (value.contains(.explosion)) {
@@ -103,22 +108,22 @@ pub const World = struct {
         }
     }
 
-    fn explosion(self: *World, mapUnit: *core.MapUnit, idx: usize) void {
+    fn explosion(self: *World, mapUnit: *core.MapUnit, player: Player, idx: usize) void {
         const time = engine.time();
         mapUnit.remove(.bomb);
         mapUnit.insertTimedType(.explosion, time);
         // 左
-        self.explosionLeft(time, idx);
+        self.explosionLeft(time, player, idx);
         // 右
-        self.explosionRight(time, idx);
+        self.explosionRight(time, player, idx);
         // 上
-        self.explosionUp(time, idx);
+        self.explosionUp(time, player, idx);
         // 下
-        self.explosionDown(time, idx);
+        self.explosionDown(time, player, idx);
     }
 
-    fn explosionLeft(self: *World, time: usize, idx: usize) void {
-        for (1..self.player1().maxBombLength + 1) |i| {
+    fn explosionLeft(self: *World, time: usize, player: Player, idx: usize) void {
+        for (1..player.maxBombLength + 1) |i| {
             const mapUnit = &self.data[idx -| i];
             if (explosionMap(mapUnit) orelse return) continue;
             mapUnit.insertTimedType(.fireX, time);
@@ -138,24 +143,24 @@ pub const World = struct {
         return false;
     }
 
-    fn explosionRight(self: *World, time: usize, idx: usize) void {
-        for (1..self.player1().maxBombLength + 1) |i| {
+    fn explosionRight(self: *World, time: usize, player: Player, idx: usize) void {
+        for (1..player.maxBombLength + 1) |i| {
             const mapUnit = &self.data[idx + i];
             if (explosionMap(mapUnit) orelse return) continue;
             mapUnit.insertTimedType(.fireX, time);
         }
     }
 
-    fn explosionUp(self: *World, time: usize, idx: usize) void {
-        for (1..self.player1().maxBombLength + 1) |i| {
+    fn explosionUp(self: *World, time: usize, player: Player, idx: usize) void {
+        for (1..player.maxBombLength + 1) |i| {
             const mapUnit = &self.data[idx -| (self.width * i)];
             if (explosionMap(mapUnit) orelse return) continue;
             mapUnit.insertTimedType(.fireY, time);
         }
     }
 
-    fn explosionDown(self: *World, time: usize, idx: usize) void {
-        for (1..self.player1().maxBombLength + 1) |i| {
+    fn explosionDown(self: *World, time: usize, player: Player, idx: usize) void {
+        for (1..player.maxBombLength + 1) |i| {
             const mapUnit = &self.data[idx + (self.width * i)];
             if (explosionMap(mapUnit) orelse return) continue;
             mapUnit.insertTimedType(.fireY, time);
@@ -197,6 +202,10 @@ pub const World = struct {
 
     pub fn player1(self: World) *Player {
         return &self.players[0];
+    }
+
+    pub fn player2(self: World) *Player {
+        return &self.players[1];
     }
 
     pub fn index(self: World, x: usize, y: usize) core.MapUnit {

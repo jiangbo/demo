@@ -2,11 +2,10 @@ const std = @import("std");
 const engine = @import("engine.zig");
 const map = @import("map.zig");
 
-pub const MenuType = enum { quit, title, select, reset, next };
-pub const PopupType = enum { menu, clear, over };
+pub const MenuType = enum { quit, title, reset, next };
+pub const PopupType = enum { clear, over };
 
 pub const Popup = union(PopupType) {
-    menu: Menu,
     clear: TimePopup,
     over: TimePopup,
 
@@ -32,7 +31,6 @@ pub const Popup = union(PopupType) {
 pub fn initWithType(popupType: PopupType) Popup {
     return switch (popupType) {
         .clear => .{ .clear = TimePopup.init("clear.png", .next) },
-        .menu => .{ .menu = Menu.init() },
         .over => .{ .over = TimePopup.init("over.png", .title) },
     };
 }
@@ -60,32 +58,5 @@ const TimePopup = struct {
 
     fn deinit(self: TimePopup) void {
         self.image.deinit();
-    }
-};
-
-const Menu = struct {
-    texture: engine.Image,
-
-    fn init() Menu {
-        return Menu{ .texture = engine.Image.init("menu.dds") };
-    }
-
-    fn update(_: Menu) ?MenuType {
-        const char = engine.getPressed();
-        return switch (char) {
-            '1' => .reset,
-            '2' => .select,
-            '3' => .title,
-            '4' => .quit,
-            else => null,
-        };
-    }
-
-    fn draw(self: Menu) void {
-        self.texture.draw();
-    }
-
-    fn deinit(self: Menu) void {
-        self.texture.deinit();
     }
 };
