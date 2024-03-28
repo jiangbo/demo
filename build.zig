@@ -11,12 +11,6 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const raylib_dep = b.dependency("raylib", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    exe.linkLibrary(raylib_dep.artifact("raylib"));
-
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
