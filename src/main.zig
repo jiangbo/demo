@@ -1,6 +1,7 @@
 const std = @import("std");
+const SliceReader = @import("reader.zig").SliceReader;
+const Rules = @import("rule.zig").Rules;
 
-const rule = @embedFile("cartoon.rule");
 const rpg = @embedFile("cartoon.rpg")[24..];
 
 pub fn main() !void {
@@ -8,16 +9,12 @@ pub fn main() !void {
     defer _ = gpa.deinit();
 
     const allocator = gpa.allocator();
+    const ruleFile = @embedFile("cartoon.rule");
+    const rules = try Rules.init(gpa.allocator(), ruleFile);
+    defer rules.deinit();
 
-    var reader = SliceReader.init(rule);
-    const rules = try allocator.alloc(Rule, reader.read(u16));
-    defer allocator.free(rules);
-    for (rules) |*value| {
-        value.* = .{ .a = reader.read(u32), .b = reader.read(u16) };
-    }
-
-    reader = SliceReader.init(rpg);
-    for (rules, 0..) |value, ruleIndex| {
+    var reader = SliceReader.init(rpg);
+    for (rules.rules, 0..) |value, ruleIndex| {
         std.log.info("rule: {any}", .{value});
         const typeNumber = reader.read(u8);
         std.log.info("type number: {}", .{typeNumber});
@@ -93,34 +90,3 @@ fn genPng(slices: [][]const u8, ruleIndex: usize) !void {
     _ = try writer.write(&pngEnd);
     try bufferWriter.flush();
 }
-
-// fn writeToFile()
-
-const Rule = struct {
-    a: u32,
-    b: u16,
-};
-
-const SliceReader = struct {
-    bytes: []const u8,
-    index: usize,
-
-    pub fn init(bytes: []const u8) SliceReader {
-        return .{ .bytes = bytes, .index = 0 };
-    }
-
-    pub fn read(self: *SliceReader, comptime T: type) T {
-        const size = @sizeOf(T);
-
-        const slice = self.bytes[self.index .. self.index + size];
-        const value: *align(1) const T = @ptrCast(slice);
-
-        self.index += size;
-        return std.mem.bigToNative(T, value.*);
-    }
-
-    pub fn readSlice(self: *SliceReader, size: usize) []const u8 {
-        defer self.index += size;
-        return self.bytes[self.index .. self.index + size];
-    }
-};
