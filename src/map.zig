@@ -15,8 +15,8 @@ pub fn deinit() void {
 }
 
 const stageConfig = [_]core.StageConfig{
-    .{ .enemy = 0, .brickRate = 1, .power = 0, .bomb = 0 },
-    // .{ .enemy = 2, .brickRate = 90, .power = 4, .bomb = 6 },
+    // .{ .enemy = 0, .brickRate = 1, .power = 0, .bomb = 0 },
+    .{ .enemy = 2, .brickRate = 90, .power = 4, .bomb = 6 },
     .{ .enemy = 3, .brickRate = 80, .power = 1, .bomb = 0 },
     .{ .enemy = 6, .brickRate = 30, .power = 1, .bomb = 1 },
 };
