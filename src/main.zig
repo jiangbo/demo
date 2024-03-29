@@ -17,7 +17,7 @@ pub fn main() !void {
     }
 
     reader = SliceReader.init(rpg);
-    for (rules) |value| {
+    for (rules, 0..) |value, ruleIndex| {
         std.log.info("rule: {any}", .{value});
         const typeNumber = reader.read(u8);
         std.log.info("type number: {}", .{typeNumber});
@@ -31,18 +31,35 @@ pub fn main() !void {
             const size = reader.read(u32);
             slice[i] = reader.readSlice(size);
         }
-        print2dSlice(slice);
+        // print2dSlice(slice);
 
         if (typeNumber == 0) {
-            try genPng(slice);
-        } else {}
+            try genPng(slice, ruleIndex);
+        } else {
+            std.log.info("type number not zero", .{});
+            var r = SliceReader.init(slice[0]);
+            const l = r.read(u8);
+            std.log.info("byte: {}", .{r.read(u8)});
+            std.log.info("x: {}", .{r.read(u16)});
+            std.log.info("y: {}", .{r.read(u16)});
+            std.log.info("width: {}", .{r.read(u16)});
+            std.log.info("height: {}", .{r.read(u16)});
 
-        break;
+            // const nonZero = try allocator.alloc([]u8, l);
+            for (0..l) |index| {
+                const b2 = r.read(i8);
+                std.log.info("index: {}, b2: {}", .{ index, b2 });
+                // if (b2 > 0) {
+                //     nonZero[index] =
+                // }
+            }
+        }
     }
 }
 
 fn print2dSlice(slices: [][]const u8) void {
     for (slices) |slice| {
+        std.debug.print("length: {}  | ", .{slice.len});
         for (slice) |value| {
             std.debug.print("{} ", .{value});
         }
@@ -55,27 +72,21 @@ const pngEnd = [_]u8{ 0, 0, 0, 0, 73, 69, 78, 68, 0b10101110, 66, 96, 0b10000010
 
 const headerType = [_][]const u8{ "sBIT", "IHDR", "PLTE", "tRNS", "IDAT" };
 
-fn genPng(slices: [][]const u8) !void {
-    var reader = SliceReader.init(slices[1]);
-
-    const width = reader.read(u32);
-    const height = reader.read(u32);
-    std.log.info("width: {}, height: {}", .{ width, height });
-    var file = try std.fs.cwd().createFile("test.png", .{});
+fn genPng(slices: [][]const u8, ruleIndex: usize) !void {
+    var buf: [10]u8 = undefined;
+    const name = try std.fmt.bufPrint(&buf, "test{}.png", .{ruleIndex});
+    var file = try std.fs.cwd().createFile(name, .{});
     defer file.close();
     var bufferWriter = std.io.bufferedWriter(file.writer());
     const writer = bufferWriter.writer();
-
     _ = try writer.write(&pngHeader);
 
     if (slices[0].len <= 4) {
         for (1..slices.len) |i| {
             const length: u32 = @intCast(slices[i].len - 4);
-            _ = try writer.writeInt(u32, length, .little);
+            _ = try writer.writeInt(u32, length, .big);
             _ = try writer.write(headerType[if (i > 4) 4 else i]);
             _ = try writer.write(slices[i]);
-
-            return;
         }
     }
 
