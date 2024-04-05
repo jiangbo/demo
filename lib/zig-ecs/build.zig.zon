@@ -1,0 +1,5 @@
+.{
+    .name = "zecs",
+    .version = "0.0.0",
+    .paths = .{""},
+}

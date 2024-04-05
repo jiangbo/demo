@@ -17,6 +17,12 @@ pub fn build(b: *std.Build) void {
     });
     exe.linkLibrary(raylib_dep.artifact("raylib"));
 
+    const ecs = b.dependency("zecs", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.root_module.addImport("ecs", ecs.module("zig-ecs"));
+
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);

@@ -1,24 +1,28 @@
 const std = @import("std");
 const ray = @import("raylib.zig");
-const map = @import("map.zig");
+const game = @import("game.zig");
+const ecs = @import("ecs");
+
+pub const Velocity = struct { x: f32, y: f32 };
+pub const Position = struct { x: f32, y: f32 };
 
 pub fn main() !void {
-    const width = map.DISPLAY_WIDTH * map.SIZE;
-    const height = map.DISPLAY_HEIGHT * map.SIZE;
+    const width = game.DISPLAY_WIDTH * game.SIZE;
+    const height = game.DISPLAY_HEIGHT * game.SIZE;
     ray.InitWindow(width, height, "Dungeon crawl");
     defer ray.CloseWindow();
 
-    var mapImage = map.MapBuilder.init();
-    defer mapImage.map.tilemap.deinit();
+    var mapBuilder = game.MapBuilder.init();
+    defer mapBuilder.map.tilemap.deinit();
 
     while (!ray.WindowShouldClose()) {
-        mapImage.update();
+        mapBuilder.update();
 
         // 画出游戏地图
         ray.BeginDrawing();
         defer ray.EndDrawing();
         ray.ClearBackground(ray.WHITE);
 
-        mapImage.render();
+        mapBuilder.render();
     }
 }
