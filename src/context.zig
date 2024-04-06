@@ -4,7 +4,6 @@ const ecs = @import("ecs");
 pub const Context = struct {
     allocator: std.mem.Allocator,
     registry: ecs.Registry,
-    running: bool = true,
     config: Config = Config{},
 
     pub fn init(allocator: std.mem.Allocator) Context {

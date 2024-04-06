@@ -11,10 +11,7 @@ pub fn main() !void {
     defer context.deinit();
 
     var world = World.init(context);
-
-    while (!ray.WindowShouldClose()) {
-        world.run();
-    }
+    world.run();
 
     // var mapBuilder = game.MapBuilder.init();
     // defer mapBuilder.map.tilemap.deinit();
