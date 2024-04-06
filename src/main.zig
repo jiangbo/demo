@@ -1,9 +1,8 @@
 const std = @import("std");
 const Context = @import("context.zig").Context;
 const World = @import("world.zig").World;
-const ray = @import("raylib.zig");
 
-pub fn main() !void {
+pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
