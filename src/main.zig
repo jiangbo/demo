@@ -1,28 +1,26 @@
 const std = @import("std");
+const Context = @import("context.zig").Context;
+const World = @import("world.zig").World;
 const ray = @import("raylib.zig");
-const game = @import("game.zig");
-const ecs = @import("ecs");
-
-pub const Velocity = struct { x: f32, y: f32 };
-pub const Position = struct { x: f32, y: f32 };
 
 pub fn main() !void {
-    const width = game.DISPLAY_WIDTH * game.SIZE;
-    const height = game.DISPLAY_HEIGHT * game.SIZE;
-    ray.InitWindow(width, height, "Dungeon crawl");
-    defer ray.CloseWindow();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
 
-    var mapBuilder = game.MapBuilder.init();
-    defer mapBuilder.map.tilemap.deinit();
+    var context = Context.init(gpa.allocator());
+    defer context.deinit();
+
+    var world = World.init(context);
 
     while (!ray.WindowShouldClose()) {
-        mapBuilder.update();
-
-        // 画出游戏地图
-        ray.BeginDrawing();
-        defer ray.EndDrawing();
-        ray.ClearBackground(ray.WHITE);
-
-        mapBuilder.render();
+        world.run();
     }
+
+    // var mapBuilder = game.MapBuilder.init();
+    // defer mapBuilder.map.tilemap.deinit();
+
+    // while (!ray.WindowShouldClose()) {
+    //     mapBuilder.update();
+    //     mapBuilder.render();
+    // }
 }
