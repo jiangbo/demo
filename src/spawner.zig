@@ -9,5 +9,7 @@ pub fn spawn(context: *Context) void {
 }
 
 pub fn deinit(context: *Context) void {
+    var map = context.registry.singletons().get(game.Map);
+    map.tilemap.deinit();
     context.registry.singletons().deinit();
 }
