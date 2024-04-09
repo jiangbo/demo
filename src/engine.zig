@@ -33,6 +33,7 @@ pub fn clearBackground() void {
 
 pub fn createWindow(width: usize, height: usize, title: [:0]const u8) void {
     ray.InitWindow(@intCast(width), @intCast(height), title);
+    ray.SetTargetFPS(60);
 }
 
 pub fn closeWindow() void {
@@ -48,6 +49,10 @@ pub fn getScreenSize() Vec {
         .x = @intCast(ray.GetScreenWidth()),
         .y = @intCast(ray.GetScreenHeight()),
     };
+}
+
+pub fn drawFPS(x: usize, y: usize) void {
+    ray.DrawFPS(@intCast(x), @intCast(y));
 }
 
 pub fn randomValue(min: usize, max: usize) usize {

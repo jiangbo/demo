@@ -28,6 +28,8 @@ fn renderSystem(ctx: *engine.Context) void {
         const y = position.y -| camera.y;
         sprite.sheet.drawTile(sprite.index, x, y);
     }
+
+    engine.drawFPS(10, 10);
 }
 
 pub fn runUpdateSystems(context: *engine.Context) void {
