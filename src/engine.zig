@@ -61,6 +61,13 @@ pub fn randomValue(min: usize, max: usize) usize {
     return @intCast(ray.GetRandomValue(minc, maxc - 1));
 }
 
+pub fn move(vec: *Vec) void {
+    if (ray.IsKeyPressed(ray.KEY_A)) vec.x -|= 1;
+    if (ray.IsKeyPressed(ray.KEY_S)) vec.y += 1;
+    if (ray.IsKeyPressed(ray.KEY_D)) vec.x += 1;
+    if (ray.IsKeyPressed(ray.KEY_W)) vec.y -|= 1;
+}
+
 pub const Vec = struct {
     x: usize = 0,
     y: usize = 0,
@@ -74,6 +81,10 @@ pub const Vec = struct {
 
     pub fn scale(self: Vec, value: usize) Vec {
         return Vec{ .x = self.x * value, .y = self.y * value };
+    }
+
+    pub fn add(self: Vec, value: Vec) Vec {
+        return Vec{ .x = self.x + value.x, .y = self.y + value.y };
     }
 };
 

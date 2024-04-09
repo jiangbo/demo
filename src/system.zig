@@ -3,7 +3,7 @@ const engine = @import("engine.zig");
 const component = @import("component.zig");
 const resource = @import("resource.zig");
 
-fn renderSystem(ctx: *engine.Context) void {
+fn render(ctx: *engine.Context) void {
     engine.beginDrawing();
     defer engine.endDrawing();
     engine.clearBackground();
@@ -32,6 +32,26 @@ fn renderSystem(ctx: *engine.Context) void {
     engine.drawFPS(10, 10);
 }
 
+fn playerMove(ctx: *engine.Context) void {
+    const map = ctx.registry.singletons().get(resource.Map);
+    const camera = ctx.registry.singletons().get(resource.Camera);
+
+    const components = .{ component.Position, component.Player };
+    var view = ctx.registry.view(components, .{});
+    var iter = view.entityIterator();
+    while (iter.next()) |entity| {
+        const position = view.get(component.Position, entity);
+        var newPos = position.*.toVec();
+        engine.move(&newPos);
+
+        if (map.canEnter(newPos)) {
+            position.* = component.Position.fromVec(newPos);
+            camera.* = resource.Camera.init(newPos.x, newPos.y);
+        }
+    }
+}
+
 pub fn runUpdateSystems(context: *engine.Context) void {
-    renderSystem(context);
+    playerMove(context);
+    render(context);
 }

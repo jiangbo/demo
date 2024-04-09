@@ -10,6 +10,10 @@ pub const Position = struct {
     pub fn fromVec(vec: engine.Vec) Position {
         return Position{ .x = vec.x, .y = vec.y };
     }
+
+    pub fn toVec(self: Position) engine.Vec {
+        return engine.Vec{ .x = self.x, .y = self.y };
+    }
 };
 
 pub const Sprite = struct {

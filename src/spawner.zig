@@ -21,9 +21,10 @@ pub fn spawn(ctx: *engine.Context) void {
 
 fn spawnPlayer(ctx: *engine.Context, map: resource.Map) void {
     const player = ctx.registry.create();
-    const center = map.rooms[0].center();
-    ctx.registry.add(player, component.Position.fromVec(center));
+    const center = component.Position.fromVec(map.rooms[0].center());
+    ctx.registry.add(player, center);
     const index = @intFromEnum(resource.TileType.player);
     const sprite = component.Sprite{ .sheet = map.sheet, .index = index };
     ctx.registry.add(player, sprite);
+    ctx.registry.add(player, component.Player{});
 }

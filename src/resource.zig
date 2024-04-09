@@ -90,8 +90,13 @@ pub const Map = struct {
         self.tiles[indexUsize(x, y)] = tile;
     }
 
-    pub fn indexTile(self: *Map, x: usize, y: usize) TileType {
+    pub fn indexTile(self: Map, x: usize, y: usize) TileType {
         return self.tiles[indexUsize(x, y)];
+    }
+
+    pub fn canEnter(self: Map, player: engine.Vec) bool {
+        return player.x < WIDTH and player.y < HEIGHT //
+        and self.indexTile(player.x, player.y) == .floor;
     }
 };
 
