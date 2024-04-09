@@ -3,12 +3,11 @@ const ecs = @import("ecs");
 
 pub const Context = struct {
     allocator: std.mem.Allocator,
-    registry: ecs.Registry,
+    registry: *ecs.Registry,
     config: Config = Config{},
 
-    pub fn init(allocator: std.mem.Allocator) Context {
-        const registry = ecs.Registry.init(allocator);
-        return Context{ .allocator = allocator, .registry = registry };
+    pub fn init(allocator: std.mem.Allocator, reg: *ecs.Registry) Context {
+        return Context{ .allocator = allocator, .registry = reg };
     }
     pub fn deinit(self: *Context) void {
         self.registry.deinit();

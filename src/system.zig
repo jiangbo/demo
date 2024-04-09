@@ -1,19 +1,20 @@
 const std = @import("std");
 const Context = @import("context.zig").Context;
 const ray = @import("raylib.zig");
+const component = @import("component.zig");
 
-const RenderSystem = struct {};
-
-fn renderSystem() void {
+fn renderSystem(context: *Context) void {
     // 画出游戏地图
     ray.BeginDrawing();
     defer ray.EndDrawing();
     ray.ClearBackground(ray.WHITE);
-}
 
-fn inputSystem(context: *Context) void {
-    const flag = ray.WindowShouldClose();
-    context.running = !flag;
+    var iter = context.registry.basicView(component.Image).iterator();
+    while (iter.next()) |image| {
+        const x: c_int = @intCast(image.x);
+        const y: c_int = @intCast(image.y);
+        ray.DrawTexture(image.texture, x, y, ray.WHITE);
+    }
 }
 
 fn initSystem(context: Context) void {
@@ -30,8 +31,12 @@ pub fn runSetupSystems(context: Context) void {
     initSystem(context);
 }
 
-pub fn runUpdateSystems(_: *Context) void {
-    renderSystem();
+pub fn runUpdateSystems(context: *Context) void {
+    renderSystem(context);
+}
+
+pub fn runRenderSystems(_: Context) void {
+    // renderSystem(context);
 }
 
 pub fn runDestroySystems(_: Context) void {

@@ -1,4 +1,5 @@
 const std = @import("std");
+const ecs = @import("ecs");
 const Context = @import("context.zig").Context;
 const World = @import("world.zig").World;
 
@@ -6,7 +7,8 @@ pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
-    var context = Context.init(gpa.allocator());
+    var registry = ecs.Registry.init(gpa.allocator());
+    var context = Context.init(gpa.allocator(), &registry);
     defer context.deinit();
 
     var world = World.init(context);
