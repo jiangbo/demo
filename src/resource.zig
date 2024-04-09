@@ -102,12 +102,12 @@ pub const Camera = struct {
     height: usize,
 
     pub fn init(x: usize, y: usize) Camera {
-        const screenSize = engine.getScreenSize();
+        // const screenSize = engine.getScreenSize();
         return .{
-            .x = x -| (screenSize.x / 2),
-            .y = y -| (screenSize.y / 2),
-            .width = screenSize.x,
-            .height = screenSize.y,
+            .x = x -| (40 / 2),
+            .y = y -| (25 / 2),
+            .width = 40,
+            .height = 25,
         };
     }
 };
