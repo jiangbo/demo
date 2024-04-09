@@ -1,19 +1,25 @@
 const std = @import("std");
-const ray = @import("raylib.zig");
-const Context = @import("context.zig").Context;
 const component = @import("component.zig");
 const asset = @import("asset.zig");
-const game = @import("game.zig");
+const resource = @import("resource.zig");
+const engine = @import("engine.zig");
 
-pub fn spawn(ctx: *Context) void {
-    // const builder = game.MapBuilder.init();
-    // context.registry.singletons().add(builder.map);
-    const imageEntity = ctx.registry.create();
-    const image = component.Image{ .texture = asset.dungeon };
-    ctx.registry.add(imageEntity, image);
+pub fn spawn(ctx: *engine.Context) void {
+    const map = resource.Map.init(asset.dungeon);
+    ctx.registry.singletons().add(map);
+
+    spawnPlayer(ctx, map);
+
+    const center = map.rooms[0].center();
+    const camera = resource.Camera.init(center.x, center.y);
+    ctx.registry.singletons().add(camera);
 }
 
-pub fn deinit(_: *Context) void {
-    // var map = context.registry.singletons().get(game.Map);
-    // map.tilemap.deinit();
+fn spawnPlayer(ctx: *engine.Context, map: resource.Map) void {
+    const player = ctx.registry.create();
+    const center = map.rooms[0].center();
+    ctx.registry.add(player, component.Position.fromVec(center));
+    const index = @intFromEnum(resource.TileType.player);
+    const sprite = component.Sprite{ .sheet = map.sheet, .index = index };
+    ctx.registry.add(player, sprite);
 }

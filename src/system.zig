@@ -1,44 +1,35 @@
 const std = @import("std");
-const Context = @import("context.zig").Context;
-const ray = @import("raylib.zig");
+const engine = @import("engine.zig");
 const component = @import("component.zig");
+const resource = @import("resource.zig");
 
-fn renderSystem(context: *Context) void {
-    // 画出游戏地图
-    ray.BeginDrawing();
-    defer ray.EndDrawing();
-    ray.ClearBackground(ray.WHITE);
+fn renderSystem(ctx: *engine.Context) void {
+    engine.beginDrawing();
+    defer engine.endDrawing();
+    engine.clearBackground();
 
-    var iter = context.registry.basicView(component.Image).iterator();
-    while (iter.next()) |image| {
-        const x: c_int = @intCast(image.x);
-        const y: c_int = @intCast(image.y);
-        ray.DrawTexture(image.texture, x, y, ray.WHITE);
+    const map = ctx.registry.singletons().get(resource.Map);
+    const camera = ctx.registry.singletons().get(resource.Camera);
+
+    for (0..camera.height) |y| {
+        for (0..camera.width) |x| {
+            const tile = map.indexTile(x + camera.x, y + camera.y);
+            map.sheet.drawTile(@intFromEnum(tile), x, y);
+        }
+    }
+
+    const components = .{ component.Position, component.Sprite };
+    var view = ctx.registry.view(components, .{});
+    var iter = view.entityIterator();
+    while (iter.next()) |entity| {
+        const position = view.getConst(component.Position, entity);
+        const sprite = view.getConst(component.Sprite, entity);
+        const x = position.x -| camera.x;
+        const y = position.y -| camera.y;
+        sprite.sheet.drawTile(sprite.index, x, y);
     }
 }
 
-fn initSystem(context: Context) void {
-    const width: c_int = @intCast(context.config.width);
-    const height: c_int = @intCast(context.config.height);
-    ray.InitWindow(width, height, context.config.title);
-}
-
-pub fn shouldContinue() bool {
-    return !ray.WindowShouldClose();
-}
-
-pub fn runSetupSystems(context: Context) void {
-    initSystem(context);
-}
-
-pub fn runUpdateSystems(context: *Context) void {
+pub fn runUpdateSystems(context: *engine.Context) void {
     renderSystem(context);
-}
-
-pub fn runRenderSystems(_: Context) void {
-    // renderSystem(context);
-}
-
-pub fn runDestroySystems(_: Context) void {
-    ray.CloseWindow();
 }
