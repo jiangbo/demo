@@ -3,6 +3,9 @@ const engine = @import("engine.zig");
 const component = @import("component.zig");
 const resource = @import("resource.zig");
 
+const Position = component.Position;
+const Sprite = component.Sprite;
+
 fn render(ctx: *engine.Context) void {
     engine.beginDrawing();
     defer engine.endDrawing();
@@ -24,9 +27,11 @@ fn render(ctx: *engine.Context) void {
     while (iter.next()) |entity| {
         const position = view.getConst(component.Position, entity);
         const sprite = view.getConst(component.Sprite, entity);
-        const x = position.x -| camera.x;
-        const y = position.y -| camera.y;
-        sprite.sheet.drawTile(sprite.index, x, y);
+        if (camera.isVisible(position.toVec())) {
+            const x = position.x -| camera.x;
+            const y = position.y -| camera.y;
+            sprite.sheet.drawTile(sprite.index, x, y);
+        }
     }
 
     engine.drawFPS(10, 10);

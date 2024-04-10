@@ -5,18 +5,15 @@ const resource = @import("resource.zig");
 const engine = @import("engine.zig");
 
 pub fn spawn(ctx: *engine.Context) void {
-    var start = std.time.Timer.start() catch unreachable;
-
     const map = resource.Map.init(asset.dungeon);
     ctx.registry.singletons().add(map);
 
     spawnPlayer(ctx, map);
+    spawnEnemies(ctx, map);
 
     const center = map.rooms[0].center();
     const camera = resource.Camera.init(center.x, center.y);
     ctx.registry.singletons().add(camera);
-
-    std.log.info("Spawning took {}ms", .{start.read() / std.time.ns_per_ms});
 }
 
 fn spawnPlayer(ctx: *engine.Context, map: resource.Map) void {
@@ -27,4 +24,22 @@ fn spawnPlayer(ctx: *engine.Context, map: resource.Map) void {
     const sprite = component.Sprite{ .sheet = map.sheet, .index = index };
     ctx.registry.add(player, sprite);
     ctx.registry.add(player, component.Player{});
+}
+
+fn spawnEnemies(ctx: *engine.Context, map: resource.Map) void {
+    for (map.rooms[1..]) |room| {
+        const enemy = ctx.registry.create();
+        const center = component.Position.fromVec(room.center());
+        ctx.registry.add(enemy, center);
+        const index = @intFromEnum(switch (engine.randomValue(0, 4)) {
+            0 => resource.TileType.ettin,
+            1 => resource.TileType.ogre,
+            2 => resource.TileType.orc,
+            else => resource.TileType.goblin,
+        });
+
+        const sprite = component.Sprite{ .sheet = map.sheet, .index = index };
+        ctx.registry.add(enemy, sprite);
+        ctx.registry.add(enemy, component.Enemy{});
+    }
 }

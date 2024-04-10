@@ -2,6 +2,7 @@ const std = @import("std");
 const engine = @import("engine.zig");
 
 pub const Player = struct {};
+pub const Enemy = struct {};
 
 pub const Position = struct {
     x: usize,

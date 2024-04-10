@@ -5,6 +5,10 @@ pub const TileType = enum(u8) {
     wall = 35,
     floor = 46,
     player = 64,
+    ettin = 69,
+    ogre = 79,
+    goblin = 103,
+    orc = 111,
 };
 
 pub const Map = struct {
@@ -114,5 +118,10 @@ pub const Camera = struct {
             .width = 40,
             .height = 25,
         };
+    }
+
+    pub fn isVisible(self: Camera, vec: engine.Vec) bool {
+        return vec.x >= self.x and vec.y >= self.y and //
+            vec.x < self.x + self.width and vec.y < self.y + self.height;
     }
 };
