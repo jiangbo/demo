@@ -15,6 +15,10 @@ pub const Position = struct {
     pub fn toVec(self: Position) engine.Vec {
         return engine.Vec{ .x = self.x, .y = self.y };
     }
+
+    pub fn equals(self: Position, other: Position) bool {
+        return self.x == other.x and self.y == other.y;
+    }
 };
 
 pub const Sprite = struct {

@@ -56,7 +56,28 @@ fn playerMove(ctx: *engine.Context) void {
     }
 }
 
+fn collision(ctx: *engine.Context) void {
+    const player = .{ component.Position, component.Player };
+    var view = ctx.registry.view(player, .{});
+    var iter = view.entityIterator();
+    var playerPos: component.Position = undefined;
+    while (iter.next()) |entity| {
+        playerPos = view.getConst(component.Position, entity);
+    }
+
+    const enemy = .{ component.Position, component.Enemy };
+    view = ctx.registry.view(enemy, .{});
+    iter = view.entityIterator();
+    while (iter.next()) |entity| {
+        const position = view.getConst(component.Position, entity);
+        if (playerPos.equals(position)) {
+            ctx.registry.destroy(entity);
+        }
+    }
+}
+
 pub fn runUpdateSystems(context: *engine.Context) void {
     playerMove(context);
+    collision(context);
     render(context);
 }
