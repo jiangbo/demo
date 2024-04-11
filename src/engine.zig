@@ -55,6 +55,10 @@ pub fn drawFPS(x: usize, y: usize) void {
     ray.DrawFPS(@intCast(x), @intCast(y));
 }
 
+pub fn drawText(x: usize, y: usize, text: [:0]const u8, size: usize) void {
+    ray.DrawText(text, @intCast(x), @intCast(y), @intCast(size), ray.WHITE);
+}
+
 pub fn randomValue(min: usize, max: usize) usize {
     const minc: c_int = @intCast(min);
     const maxc: c_int = @intCast(max);

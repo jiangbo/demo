@@ -31,7 +31,45 @@ fn render(ctx: *engine.Context) void {
         }
     }
 
+    renderNameAndHealty(ctx);
+    renderHealth(ctx);
+
     engine.drawFPS(10, 10);
+}
+
+fn renderNameAndHealty(ctx: *engine.Context) void {
+    const camera = ctx.registry.singletons().get(resource.Camera);
+    const coms = .{ component.Position, component.Name, component.Health };
+    var view = ctx.registry.view(coms, .{});
+    var iter = view.entityIterator();
+    var buffer: [50]u8 = undefined;
+    while (iter.next()) |entity| {
+        const position = view.getConst(component.Position, entity);
+        const name = view.getConst(component.Name, entity);
+        const health = view.getConst(component.Health, entity);
+        const text = std.fmt.bufPrintZ(&buffer, "{s}: {}/{}", //
+            .{ name.value, health.current, health.max }) catch unreachable;
+
+        if (camera.isVisible(position.vec)) {
+            const x = (position.vec.x -| camera.x) * 32 -| 18;
+            const y = (position.vec.y -| camera.y) * 32 -| 20;
+            engine.drawText(x, y, text, 15);
+        }
+    }
+}
+
+fn renderHealth(ctx: *engine.Context) void {
+    const components = .{ component.Player, component.Health };
+    var view = ctx.registry.view(components, .{});
+    var iter = view.entityIterator();
+    while (iter.next()) |entity| {
+        const health = view.getConst(component.Health, entity);
+        var buffer: [50]u8 = undefined;
+        const text = std.fmt.bufPrintZ(&buffer, "Health: {}/{}", //
+            .{ health.current, health.max }) catch unreachable;
+        engine.drawText(500, 10, text, 28);
+    }
+    engine.drawText(350, 40, "Explore the Dungeon. A/S/D/W to move.", 28);
 }
 
 fn enemyMove(ctx: *engine.Context) void {
@@ -66,7 +104,7 @@ fn playerMove(ctx: *engine.Context) bool {
     var iter = view.entityIterator();
     while (iter.next()) |entity| {
         const position = view.get(component.Position, entity);
-        var newPos = position.*.vec;
+        var newPos = position.vec;
         engine.move(&newPos);
 
         if (map.canEnter(newPos) and !newPos.equal(position.vec)) {
