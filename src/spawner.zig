@@ -18,7 +18,7 @@ pub fn spawn(ctx: *engine.Context) void {
 
 fn spawnPlayer(ctx: *engine.Context, map: resource.Map) void {
     const player = ctx.registry.create();
-    const center = component.Position.fromVec(map.rooms[0].center());
+    const center = component.Position{ .vec = map.rooms[0].center() };
     ctx.registry.add(player, center);
     const index = @intFromEnum(resource.TileType.player);
     const sprite = component.Sprite{ .sheet = map.sheet, .index = index };
@@ -29,7 +29,7 @@ fn spawnPlayer(ctx: *engine.Context, map: resource.Map) void {
 fn spawnEnemies(ctx: *engine.Context, map: resource.Map) void {
     for (map.rooms[1..]) |room| {
         const enemy = ctx.registry.create();
-        const center = component.Position.fromVec(room.center());
+        const center = component.Position{ .vec = room.center() };
         ctx.registry.add(enemy, center);
         const index = @intFromEnum(switch (engine.randomValue(0, 4)) {
             0 => resource.TileType.ettin,

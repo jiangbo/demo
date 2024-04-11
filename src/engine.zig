@@ -86,6 +86,10 @@ pub const Vec = struct {
     pub fn add(self: Vec, value: Vec) Vec {
         return Vec{ .x = self.x + value.x, .y = self.y + value.y };
     }
+
+    pub fn equal(self: Vec, value: Vec) bool {
+        return self.x == value.x and self.y == value.y;
+    }
 };
 
 pub const Rect = struct {

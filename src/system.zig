@@ -3,9 +3,6 @@ const engine = @import("engine.zig");
 const component = @import("component.zig");
 const resource = @import("resource.zig");
 
-const Position = component.Position;
-const Sprite = component.Sprite;
-
 fn render(ctx: *engine.Context) void {
     engine.beginDrawing();
     defer engine.endDrawing();
@@ -27,9 +24,9 @@ fn render(ctx: *engine.Context) void {
     while (iter.next()) |entity| {
         const position = view.getConst(component.Position, entity);
         const sprite = view.getConst(component.Sprite, entity);
-        if (camera.isVisible(position.toVec())) {
-            const x = position.x -| camera.x;
-            const y = position.y -| camera.y;
+        if (camera.isVisible(position.vec)) {
+            const x = position.vec.x -| camera.x;
+            const y = position.vec.y -| camera.y;
             sprite.sheet.drawTile(sprite.index, x, y);
         }
     }
@@ -37,7 +34,30 @@ fn render(ctx: *engine.Context) void {
     engine.drawFPS(10, 10);
 }
 
-fn playerMove(ctx: *engine.Context) void {
+fn enemyMove(ctx: *engine.Context) void {
+    const map = ctx.registry.singletons().get(resource.Map);
+
+    const components = .{ component.Position, component.Enemy };
+    var view = ctx.registry.view(components, .{});
+    var iter = view.entityIterator();
+    while (iter.next()) |entity| {
+        const position = view.get(component.Position, entity);
+        var newPos = position.*.vec;
+        switch (engine.randomValue(0, 4)) {
+            0 => newPos.y -|= 1,
+            1 => newPos.y += 1,
+            2 => newPos.x -|= 1,
+            3 => newPos.x += 1,
+            else => unreachable,
+        }
+
+        if (map.canEnter(newPos)) {
+            position.vec = newPos;
+        }
+    }
+}
+
+fn playerMove(ctx: *engine.Context) bool {
     const map = ctx.registry.singletons().get(resource.Map);
     const camera = ctx.registry.singletons().get(resource.Camera);
 
@@ -46,14 +66,16 @@ fn playerMove(ctx: *engine.Context) void {
     var iter = view.entityIterator();
     while (iter.next()) |entity| {
         const position = view.get(component.Position, entity);
-        var newPos = position.*.toVec();
+        var newPos = position.*.vec;
         engine.move(&newPos);
 
-        if (map.canEnter(newPos)) {
-            position.* = component.Position.fromVec(newPos);
+        if (map.canEnter(newPos) and !newPos.equal(position.vec)) {
+            position.* = component.Position{ .vec = newPos };
             camera.* = resource.Camera.init(newPos.x, newPos.y);
+            return true;
         }
     }
+    return false;
 }
 
 fn collision(ctx: *engine.Context) void {
@@ -70,14 +92,16 @@ fn collision(ctx: *engine.Context) void {
     iter = view.entityIterator();
     while (iter.next()) |entity| {
         const position = view.getConst(component.Position, entity);
-        if (playerPos.equals(position)) {
+        if (playerPos.vec.equal(position.vec)) {
             ctx.registry.destroy(entity);
         }
     }
 }
 
 pub fn runUpdateSystems(context: *engine.Context) void {
-    playerMove(context);
+    if (playerMove(context)) {
+        enemyMove(context);
+    }
     collision(context);
     render(context);
 }
