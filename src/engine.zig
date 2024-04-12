@@ -31,9 +31,14 @@ pub fn clearBackground() void {
     ray.ClearBackground(ray.WHITE);
 }
 
+var fontFileData: [*c]const u8 = undefined;
+
 pub fn createWindow(width: usize, height: usize, title: [:0]const u8) void {
     ray.InitWindow(@intCast(width), @intCast(height), title);
     ray.SetTargetFPS(60);
+    var fileSize: c_int = 0;
+    fontFileData = ray.LoadFileData("assets/test.ttf", &fileSize);
+    // font = ray.LoadFont("assets/AlimamaDongFangDaKai-Regular.ttf");
 }
 
 pub fn closeWindow() void {
@@ -56,7 +61,12 @@ pub fn drawFPS(x: usize, y: usize) void {
 }
 
 pub fn drawText(x: usize, y: usize, text: [:0]const u8, size: usize) void {
-    ray.DrawText(text, @intCast(x), @intCast(y), @intCast(size), ray.WHITE);
+    var codepointsCount: c_int = 0;
+    const codepoints = ray.LoadCodepoints(text, &codepointsCount);
+    // 读取仅码点表中各字符的字体
+    const font = ray.LoadFontFromMemory(".ttf", fontFileData, @intCast(size), 32, codepoints, codepointsCount);
+    const pos = ray.Vector2{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
+    ray.DrawTextEx(font, text, pos, @floatFromInt(size), 0, ray.WHITE);
 }
 
 pub fn randomValue(min: usize, max: usize) usize {
