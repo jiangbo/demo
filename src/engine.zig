@@ -61,12 +61,7 @@ pub fn drawFPS(x: usize, y: usize) void {
 }
 
 pub fn drawText(x: usize, y: usize, text: [:0]const u8, size: usize) void {
-    var codepointsCount: c_int = 0;
-    const codepoints = ray.LoadCodepoints(text, &codepointsCount);
-    // 读取仅码点表中各字符的字体
-    const font = ray.LoadFontFromMemory(".ttf", fontFileData, @intCast(size), 32, codepoints, codepointsCount);
-    const pos = ray.Vector2{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
-    ray.DrawTextEx(font, text, pos, @floatFromInt(size), 0, ray.WHITE);
+    ray.DrawText(text, @intCast(x), @intCast(y), @intCast(size), ray.WHITE);
 }
 
 pub fn randomValue(min: usize, max: usize) usize {

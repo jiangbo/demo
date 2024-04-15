@@ -69,7 +69,7 @@ fn renderHealth(ctx: *engine.Context) void {
             .{ health.current, health.max }) catch unreachable;
         engine.drawText(500, 10, text, 28);
     }
-    engine.drawText(350, 40, "探索地宫. 使用 A/S/D/W 移动。", 28);
+    engine.drawText(350, 40, "Explore the Dungeon. A/S/D/W to move.", 28);
 }
 
 fn enemyMove(ctx: *engine.Context) void {
