@@ -2,6 +2,7 @@ const std = @import("std");
 const engine = @import("engine.zig");
 
 pub const TileType = enum(u8) {
+    other = 0,
     wall = 35,
     floor = 46,
     player = 64,

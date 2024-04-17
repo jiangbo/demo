@@ -3,7 +3,7 @@ const engine = @import("engine.zig");
 const component = @import("component.zig");
 const resource = @import("resource.zig");
 
-pub const StateEnum = enum { running, over, win };
+pub const StateEnum = enum { running, over, win, reset };
 
 fn render(ctx: *engine.Context) void {
     engine.beginDrawing();
@@ -175,7 +175,7 @@ fn combat(ctx: *engine.Context) void {
         health.current -|= 1;
         if (health.current == 0) {
             if (ctx.registry.has(component.Player, attack.victim)) {
-                ctx.registry.singletons().add(StateEnum.over);
+                ctx.registry.singletons().get(StateEnum).* = .over;
             } else ctx.registry.destroy(attack.victim);
         }
         ctx.registry.destroy(entity);
@@ -183,9 +183,16 @@ fn combat(ctx: *engine.Context) void {
 }
 
 pub fn runUpdateSystems(context: *engine.Context) void {
-    if (playerMove(context)) {
-        enemyMove(context);
+    const state = context.registry.singletons().get(StateEnum);
+    if (state.* == .over) {
+        if (engine.isPressedSpace()) state.* = .reset;
     }
-    combat(context);
+
+    if (state.* == .running) {
+        if (playerMove(context)) {
+            enemyMove(context);
+        }
+        combat(context);
+    }
     render(context);
 }

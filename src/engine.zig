@@ -71,6 +71,10 @@ pub fn randomValue(min: usize, max: usize) usize {
     return @intCast(ray.GetRandomValue(minc, maxc - 1));
 }
 
+pub fn isPressedSpace() bool {
+    return ray.IsKeyPressed(ray.KEY_SPACE);
+}
+
 pub fn move(vec: *Vec) bool {
     if (ray.IsKeyPressed(ray.KEY_SPACE)) return false;
     if (ray.IsKeyPressed(ray.KEY_A)) vec.x -|= 1;

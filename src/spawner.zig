@@ -6,14 +6,14 @@ const engine = @import("engine.zig");
 
 pub fn spawn(ctx: *engine.Context) void {
     const map = resource.Map.init(asset.dungeon);
-    ctx.registry.singletons().add(map);
+    ctx.registry.singletons().getOrAdd(resource.Map).* = map;
 
     spawnPlayer(ctx, map);
     spawnEnemies(ctx, map);
 
     const center = map.rooms[0].center();
     const camera = resource.Camera.init(center.x, center.y);
-    ctx.registry.singletons().add(camera);
+    ctx.registry.singletons().getOrAdd(resource.Camera).* = camera;
 }
 
 fn spawnPlayer(ctx: *engine.Context, map: resource.Map) void {
