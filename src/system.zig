@@ -75,18 +75,29 @@ fn renderHealth(ctx: *engine.Context) void {
 fn enemyMove(ctx: *engine.Context) void {
     const map = ctx.registry.singletons().get(resource.Map);
 
+    var playerView = ctx.registry.view(.{ component.Position, component.Player }, .{});
+    var playerIter = playerView.entityIterator();
+    const playerEntity = playerIter.next().?;
+    const playerPos = playerView.getConst(component.Position, playerEntity);
+
     const components = .{ component.Position, component.Enemy };
     var view = ctx.registry.view(components, .{});
     var iter = view.entityIterator();
     while (iter.next()) |entity| {
         const position = view.get(component.Position, entity);
-        var newPos = position.*.vec;
+        var newPos = position.vec;
         switch (engine.randomValue(0, 4)) {
             0 => newPos.y -|= 1,
             1 => newPos.y += 1,
             2 => newPos.x -|= 1,
             3 => newPos.x += 1,
             else => unreachable,
+        }
+
+        if (newPos.equal(playerPos.vec)) {
+            const attack = component.Attack{ .attacker = entity, .victim = playerEntity };
+            ctx.registry.add(ctx.registry.create(), attack);
+            return;
         }
 
         if (map.canEnter(newPos)) {
@@ -102,37 +113,48 @@ fn playerMove(ctx: *engine.Context) bool {
     const components = .{ component.Position, component.Player };
     var view = ctx.registry.view(components, .{});
     var iter = view.entityIterator();
-    while (iter.next()) |entity| {
-        const position = view.get(component.Position, entity);
-        var newPos = position.vec;
-        engine.move(&newPos);
+    const player = iter.next().?;
+    const position = view.get(component.Position, player);
+    var newPos = position.vec;
 
-        if (map.canEnter(newPos) and !newPos.equal(position.vec)) {
-            position.* = component.Position{ .vec = newPos };
-            camera.* = resource.Camera.init(newPos.x, newPos.y);
+    var playerHealth = ctx.registry.get(component.Health, player);
+    if (!engine.move(&newPos)) {
+        playerHealth.current = @min(playerHealth.max, playerHealth.current + 1);
+        return true;
+    }
+
+    const enemys = .{ component.Position, component.Enemy };
+    var enemyView = ctx.registry.view(enemys, .{});
+    var enemyIter = enemyView.entityIterator();
+    while (enemyIter.next()) |enemy| {
+        const enemyPos = enemyView.getConst(component.Position, enemy);
+        if (newPos.equal(enemyPos.vec)) {
+            const attackEntity = ctx.registry.create();
+            const attack = component.Attack{ .attacker = player, .victim = enemy };
+            ctx.registry.add(attackEntity, attack);
             return true;
         }
+    }
+
+    if (map.canEnter(newPos) and !newPos.equal(position.vec)) {
+        position.* = component.Position{ .vec = newPos };
+        camera.* = resource.Camera.init(newPos.x, newPos.y);
+        return true;
     }
     return false;
 }
 
-fn collision(ctx: *engine.Context) void {
-    const player = .{ component.Position, component.Player };
-    var view = ctx.registry.view(player, .{});
+fn combat(ctx: *engine.Context) void {
+    var view = ctx.registry.view(.{component.Attack}, .{});
     var iter = view.entityIterator();
-    var playerPos: component.Position = undefined;
     while (iter.next()) |entity| {
-        playerPos = view.getConst(component.Position, entity);
-    }
-
-    const enemy = .{ component.Position, component.Enemy };
-    view = ctx.registry.view(enemy, .{});
-    iter = view.entityIterator();
-    while (iter.next()) |entity| {
-        const position = view.getConst(component.Position, entity);
-        if (playerPos.vec.equal(position.vec)) {
-            ctx.registry.destroy(entity);
+        const attack = view.getConst(entity);
+        const health = ctx.registry.get(component.Health, attack.victim);
+        health.current -|= 1;
+        if (health.current == 0) {
+            ctx.registry.destroy(attack.victim);
         }
+        ctx.registry.destroy(entity);
     }
 }
 
@@ -140,6 +162,6 @@ pub fn runUpdateSystems(context: *engine.Context) void {
     if (playerMove(context)) {
         enemyMove(context);
     }
-    collision(context);
+    combat(context);
     render(context);
 }

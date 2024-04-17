@@ -5,6 +5,7 @@ const ray = @cImport({
 });
 
 pub const Registry = ecs.Registry;
+pub const Entity = ecs.Entity;
 
 pub const Context = struct {
     allocator: std.mem.Allocator,
@@ -70,11 +71,13 @@ pub fn randomValue(min: usize, max: usize) usize {
     return @intCast(ray.GetRandomValue(minc, maxc - 1));
 }
 
-pub fn move(vec: *Vec) void {
+pub fn move(vec: *Vec) bool {
+    if (ray.IsKeyPressed(ray.KEY_SPACE)) return false;
     if (ray.IsKeyPressed(ray.KEY_A)) vec.x -|= 1;
     if (ray.IsKeyPressed(ray.KEY_S)) vec.y += 1;
     if (ray.IsKeyPressed(ray.KEY_D)) vec.x += 1;
     if (ray.IsKeyPressed(ray.KEY_W)) vec.y -|= 1;
+    return true;
 }
 
 pub const Vec = struct {

@@ -8,6 +8,8 @@ pub const Position = struct { vec: engine.Vec = engine.Vec{} };
 pub const Health = struct { current: i32, max: i32 };
 pub const Name = struct { value: []const u8 };
 
+pub const Attack = struct { attacker: engine.Entity, victim: engine.Entity };
+
 pub const Sprite = struct {
     sheet: engine.SpriteSheet,
     index: usize = 0,
