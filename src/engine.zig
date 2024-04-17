@@ -32,14 +32,9 @@ pub fn clearBackground() void {
     ray.ClearBackground(ray.WHITE);
 }
 
-var fontFileData: [*c]const u8 = undefined;
-
 pub fn createWindow(width: usize, height: usize, title: [:0]const u8) void {
     ray.InitWindow(@intCast(width), @intCast(height), title);
     ray.SetTargetFPS(60);
-    var fileSize: c_int = 0;
-    fontFileData = ray.LoadFileData("assets/test.ttf", &fileSize);
-    // font = ray.LoadFont("assets/AlimamaDongFangDaKai-Regular.ttf");
 }
 
 pub fn closeWindow() void {

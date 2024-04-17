@@ -183,12 +183,7 @@ fn combat(ctx: *engine.Context) void {
 }
 
 pub fn runUpdateSystems(context: *engine.Context) void {
-    const state = context.registry.singletons().get(StateEnum);
-    if (state.* == .over) {
-        if (engine.isPressedSpace()) state.* = .reset;
-    }
-
-    if (state.* == .running) {
+    if (context.registry.singletons().getConst(StateEnum) == .running) {
         if (playerMove(context)) {
             enemyMove(context);
         }

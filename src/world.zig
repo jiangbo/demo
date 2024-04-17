@@ -20,14 +20,20 @@ pub const World = struct {
         var singletons = self.context.registry.singletons();
         singletons.add(system.StateEnum.reset);
         while (engine.shouldContinue()) {
-            if (singletons.getConst(system.StateEnum) == .reset) {
+            const state = singletons.get(system.StateEnum);
+            if (state.* == .reset) {
                 var entities = self.context.registry.entities();
                 while (entities.next()) |entity| {
                     self.context.registry.removeAll(entity);
                 }
                 spawner.spawn(&self.context);
-                singletons.get(system.StateEnum).* = .running;
+                state.* = .running;
             }
+
+            if (state.* == .over) {
+                if (engine.isPressedSpace()) state.* = .reset;
+            }
+
             system.runUpdateSystems(&self.context);
         }
     }
