@@ -85,6 +85,21 @@ fn enemyMove(ctx: *engine.Context) void {
     var iter = view.entityIterator();
     while (iter.next()) |entity| {
         const position = view.get(component.Position, entity);
+
+        if (position.vec.x == playerPos.vec.x) {
+            if (position.vec.y + 1 == playerPos.vec.y or position.vec.y == playerPos.vec.y + 1) {
+                const attack = component.Attack{ .attacker = entity, .victim = playerEntity };
+                ctx.registry.add(ctx.registry.create(), attack);
+                continue;
+            }
+        } else if (position.vec.y == playerPos.vec.y) {
+            if (position.vec.x + 1 == playerPos.vec.x or position.vec.x == playerPos.vec.x + 1) {
+                const attack = component.Attack{ .attacker = entity, .victim = playerEntity };
+                ctx.registry.add(ctx.registry.create(), attack);
+                continue;
+            }
+        }
+
         var newPos = position.vec;
         switch (engine.randomValue(0, 4)) {
             0 => newPos.y -|= 1,
@@ -92,12 +107,6 @@ fn enemyMove(ctx: *engine.Context) void {
             2 => newPos.x -|= 1,
             3 => newPos.x += 1,
             else => unreachable,
-        }
-
-        if (newPos.equal(playerPos.vec)) {
-            const attack = component.Attack{ .attacker = entity, .victim = playerEntity };
-            ctx.registry.add(ctx.registry.create(), attack);
-            return;
         }
 
         if (map.canEnter(newPos)) {
