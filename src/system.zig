@@ -182,12 +182,12 @@ fn combat(ctx: *engine.Context) void {
     }
 }
 
-pub fn runUpdateSystems(context: *engine.Context) void {
-    if (context.registry.singletons().getConst(StateEnum) == .running) {
-        if (playerMove(context)) {
-            enemyMove(context);
+pub fn runUpdateSystems(ctx: *engine.Context) void {
+    if (ctx.registry.singletons().getConst(StateEnum) == .running) {
+        if (playerMove(ctx)) {
+            enemyMove(ctx);
         }
-        combat(context);
+        combat(ctx);
     }
-    render(context);
+    render(ctx);
 }
