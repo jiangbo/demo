@@ -17,9 +17,16 @@ pub const World = struct {
         asset.init();
         defer asset.deinit();
 
-        spawner.spawn(&self.context);
-
         while (engine.shouldContinue()) {
+            var singletons = self.context.registry.singletons();
+            if (!singletons.has(system.StateEnum)) {
+                var entities = self.context.registry.entities();
+                while (entities.next()) |entity| {
+                    self.context.registry.removeAll(entity);
+                }
+                spawner.spawn(&self.context);
+                singletons.add(system.StateEnum.running);
+            }
             system.runUpdateSystems(&self.context);
         }
     }

@@ -3,6 +3,8 @@ const engine = @import("engine.zig");
 const component = @import("component.zig");
 const resource = @import("resource.zig");
 
+pub const StateEnum = enum { running, over, win };
+
 fn render(ctx: *engine.Context) void {
     engine.beginDrawing();
     defer engine.endDrawing();
@@ -33,6 +35,17 @@ fn render(ctx: *engine.Context) void {
 
     renderNameAndHealty(ctx);
     renderHealth(ctx);
+
+    if (ctx.registry.singletons().getConst(StateEnum) == .over) {
+        engine.drawText(50, 50, "Your quest has ended.", 25);
+        //         ctx.print_color_centered(2, RED, BLACK, "Your quest has ended."); ❷
+        // ctx.print_color_centered(4, WHITE, BLACK,
+        // "Slain by a monster, your hero's journey has come to a \
+        // premature end.");
+        // ctx.print_color_centered(5, WHITE, BLACK,
+        // "The Amulet of Yala remains unclaimed, and your home town \
+        // is not saved.");
+    }
 
     engine.drawFPS(10, 10);
 }
@@ -161,7 +174,9 @@ fn combat(ctx: *engine.Context) void {
         const health = ctx.registry.get(component.Health, attack.victim);
         health.current -|= 1;
         if (health.current == 0) {
-            ctx.registry.destroy(attack.victim);
+            if (ctx.registry.has(component.Player, attack.victim)) {
+                ctx.registry.singletons().add(StateEnum.over);
+            } else ctx.registry.destroy(attack.victim);
         }
         ctx.registry.destroy(entity);
     }

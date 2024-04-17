@@ -5,7 +5,7 @@ pub const Player = struct {};
 pub const Enemy = struct {};
 
 pub const Position = struct { vec: engine.Vec = engine.Vec{} };
-pub const Health = struct { current: i32, max: i32 };
+pub const Health = struct { current: u32, max: u32 };
 pub const Name = struct { value: []const u8 };
 
 pub const Attack = struct { attacker: engine.Entity, victim: engine.Entity };

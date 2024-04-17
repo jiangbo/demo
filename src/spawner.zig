@@ -24,7 +24,7 @@ fn spawnPlayer(ctx: *engine.Context, map: resource.Map) void {
     const sprite = component.Sprite{ .sheet = map.sheet, .index = index };
     ctx.registry.add(player, sprite);
     ctx.registry.add(player, component.Player{});
-    ctx.registry.add(player, component.Health{ .current = 20, .max = 20 });
+    ctx.registry.add(player, component.Health{ .current = 1, .max = 20 });
 }
 
 fn spawnEnemies(ctx: *engine.Context, map: resource.Map) void {
