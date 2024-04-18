@@ -1,6 +1,6 @@
 const std = @import("std");
 const engine = @import("engine.zig");
-const World = @import("world.zig").World;
+const world = @import("world.zig");
 
 pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -10,6 +10,5 @@ pub fn main() void {
     var context = engine.Context.init(gpa.allocator(), &registry);
     defer context.deinit();
 
-    var world = World.init(context);
-    world.run();
+    world.run(&context);
 }
