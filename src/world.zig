@@ -10,13 +10,12 @@ pub fn run(ctx: *engine.Context) void {
     asset.init();
     defer asset.deinit();
 
-    var singletons = ctx.registry.singletons();
-    singletons.add(system.StateEnum.reset);
+    ctx.registry.singletons().add(system.StateEnum.reset);
     while (engine.shouldContinue()) {
-        const state = singletons.get(system.StateEnum);
+        const state = ctx.registry.singletons().get(system.StateEnum);
         if (state.* == .reset) {
             var entities = ctx.registry.entities();
-            while (entities.next()) |entity| ctx.registry.removeAll(entity);
+            while (entities.next()) |e| ctx.registry.removeAll(e);
             spawner.spawn(ctx);
             state.* = .running;
         }
