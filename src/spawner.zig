@@ -10,6 +10,7 @@ pub fn spawn(ctx: *engine.Context) void {
 
     spawnPlayer(ctx, map);
     spawnEnemies(ctx, map);
+    spawnAmulet(ctx, map);
 
     const center = map.rooms[0].center();
     const camera = resource.Camera.init(center.x, center.y);
@@ -24,7 +25,7 @@ fn spawnPlayer(ctx: *engine.Context, map: resource.Map) void {
     const sprite = component.Sprite{ .sheet = map.sheet, .index = index };
     ctx.registry.add(player, sprite);
     ctx.registry.add(player, component.Player{});
-    ctx.registry.add(player, component.Health{ .current = 1, .max = 20 });
+    ctx.registry.add(player, component.Health{ .current = 20, .max = 20 });
 }
 
 fn spawnEnemies(ctx: *engine.Context, map: resource.Map) void {
@@ -55,4 +56,16 @@ fn spawnEnemies(ctx: *engine.Context, map: resource.Map) void {
         ctx.registry.add(enemy, component.Enemy{});
         ctx.registry.add(enemy, component.Name{ .value = @tagName(enemyType) });
     }
+}
+
+fn spawnAmulet(ctx: *engine.Context, map: resource.Map) void {
+    const amulet = ctx.registry.create();
+    const lastCenter = map.rooms[map.rooms.len - 1].center();
+    ctx.registry.add(amulet, component.Position{ .vec = lastCenter });
+    const index = @intFromEnum(resource.TileType.amulet);
+    const sprite = component.Sprite{ .sheet = map.sheet, .index = index };
+    ctx.registry.add(amulet, sprite);
+    ctx.registry.add(amulet, component.Name{ .value = @tagName(.amulet) });
+    ctx.registry.add(amulet, component.Item{});
+    ctx.registry.add(amulet, component.Amulet{});
 }

@@ -10,6 +10,7 @@ pub const TileType = enum(u8) {
     ogre = 79,
     goblin = 103,
     orc = 111,
+    amulet = 124,
 };
 
 pub const Map = struct {

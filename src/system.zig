@@ -35,12 +35,19 @@ fn render(ctx: *engine.Context) void {
     }
 
     renderNameAndHealty(ctx);
-    renderHealth(ctx);
+    renderPlayerHealth(ctx);
+    renderItem(ctx);
 
-    if (ctx.registry.singletons().getConst(StateEnum) == .over) {
+    const state = ctx.registry.singletons().getConst(StateEnum);
+    if (state == .over) {
         engine.drawText(400, 200, "Your quest has ended.", 40);
-        engine.drawText(460, 300, "Slain by a monster", 28);
-        engine.drawText(270, 350, "your hero's journey has come to a premature end.", 28);
+    }
+
+    if (state == .win) {
+        engine.drawText(440, 200, "You have won!", 40);
+    }
+
+    if (state == .win or state == .over) {
         deltaTime += engine.frameTime();
         if (deltaTime > 1000) deltaTime = 0 else if (deltaTime > 500) {
             engine.drawText(430, 450, "Press Enter to play again.", 28);
@@ -74,7 +81,7 @@ fn renderNameAndHealty(ctx: *engine.Context) void {
     }
 }
 
-fn renderHealth(ctx: *engine.Context) void {
+fn renderPlayerHealth(ctx: *engine.Context) void {
     const components = .{ component.Player, component.Health };
     var view = ctx.registry.view(components, .{});
     var iter = view.entityIterator();
@@ -86,6 +93,22 @@ fn renderHealth(ctx: *engine.Context) void {
         engine.drawText(500, 10, text, 28);
     }
     engine.drawText(350, 40, "Explore the Dungeon. A/S/D/W to move.", 28);
+}
+
+fn renderItem(ctx: *engine.Context) void {
+    const camera = ctx.registry.singletons().get(resource.Camera);
+    const components = .{ component.Position, component.Item, component.Name };
+    var view = ctx.registry.view(components, .{});
+    var iter = view.entityIterator();
+    while (iter.next()) |entity| {
+        const position = view.getConst(component.Position, entity);
+        const name = view.getConst(component.Name, entity);
+        if (camera.isVisible(position.vec)) {
+            const x = (position.vec.x -| camera.x) * 32;
+            const y = (position.vec.y -| camera.y) * 32 -| 20;
+            engine.drawText(x, y, name.value, 15);
+        }
+    }
 }
 
 fn enemyMove(ctx: *engine.Context) void {
@@ -131,6 +154,14 @@ fn enemyMove(ctx: *engine.Context) void {
     }
 }
 
+fn getPlayerPosition(ctx: *engine.Context) component.Position {
+    const components = .{ component.Position, component.Player };
+    var playerView = ctx.registry.view(components, .{});
+    var playerIter = playerView.entityIterator();
+    const playerEntity = playerIter.next().?;
+    return playerView.getConst(component.Position, playerEntity);
+}
+
 fn playerMove(ctx: *engine.Context) bool {
     const map = ctx.registry.singletons().get(resource.Map);
     const camera = ctx.registry.singletons().get(resource.Camera);
@@ -140,7 +171,7 @@ fn playerMove(ctx: *engine.Context) bool {
     var iter = view.entityIterator();
     const player = iter.next().?;
     const position = view.get(component.Position, player);
-    var newPos = position.vec;
+    var newPos = getPlayerPosition(ctx).vec;
 
     var playerHealth = ctx.registry.get(component.Health, player);
     if (!engine.move(&newPos)) {
@@ -185,10 +216,28 @@ fn combat(ctx: *engine.Context) void {
     }
 }
 
+fn getItem(ctx: *engine.Context) void {
+    const playerPosition = getPlayerPosition(ctx);
+
+    const components = .{ component.Position, component.Item };
+    var view = ctx.registry.view(components, .{});
+    var iter = view.entityIterator();
+    while (iter.next()) |entity| {
+        const position = view.getConst(component.Position, entity);
+        if (position.vec.equal(playerPosition.vec)) {
+            if (ctx.registry.has(component.Amulet, entity)) {
+                ctx.registry.singletons().get(StateEnum).* = .win;
+            }
+            ctx.registry.destroy(entity);
+        }
+    }
+}
+
 pub fn runUpdateSystems(ctx: *engine.Context) void {
     if (ctx.registry.singletons().getConst(StateEnum) == .running) {
         if (playerMove(ctx)) {
             enemyMove(ctx);
+            getItem(ctx);
         }
         combat(ctx);
     }
