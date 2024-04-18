@@ -20,7 +20,8 @@ pub fn run(ctx: *engine.Context) void {
             state.* = .running;
         }
 
-        if (state.* == .over and engine.isPressedSpace()) state.* = .reset;
+        if (state.* == .over and engine.isPressedSpace())
+            state.* = .reset;
 
         system.runUpdateSystems(ctx);
     }
