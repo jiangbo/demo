@@ -4,6 +4,7 @@ const component = @import("component.zig");
 const resource = @import("resource.zig");
 
 pub const StateEnum = enum { running, over, win, reset };
+pub var deltaTime: usize = 0;
 
 fn render(ctx: *engine.Context) void {
     engine.beginDrawing();
@@ -37,14 +38,16 @@ fn render(ctx: *engine.Context) void {
     renderHealth(ctx);
 
     if (ctx.registry.singletons().getConst(StateEnum) == .over) {
-        engine.drawText(50, 50, "Your quest has ended.", 25);
-        //         ctx.print_color_centered(2, RED, BLACK, "Your quest has ended."); ❷
-        // ctx.print_color_centered(4, WHITE, BLACK,
-        // "Slain by a monster, your hero's journey has come to a \
-        // premature end.");
-        // ctx.print_color_centered(5, WHITE, BLACK,
-        // "The Amulet of Yala remains unclaimed, and your home town \
-        // is not saved.");
+        engine.drawText(400, 200, "Your quest has ended.", 40);
+        engine.drawText(460, 300, "Slain by a monster", 28);
+        engine.drawText(270, 350, "your hero's journey has come to a premature end.", 28);
+        deltaTime += engine.frameTime();
+        if (deltaTime > 1000) deltaTime = 0 else if (deltaTime > 500) {
+            engine.drawText(430, 450, "Press Enter to play again.", 28);
+        }
+        if (engine.isPressedEnter()) {
+            ctx.registry.singletons().get(StateEnum).* = .reset;
+        }
     }
 
     engine.drawFPS(10, 10);

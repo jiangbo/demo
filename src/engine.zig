@@ -37,6 +37,10 @@ pub fn createWindow(width: usize, height: usize, title: [:0]const u8) void {
     ray.SetTargetFPS(60);
 }
 
+pub fn frameTime() usize {
+    return @intFromFloat(ray.GetFrameTime() * 1000);
+}
+
 pub fn closeWindow() void {
     ray.CloseWindow();
 }
@@ -68,6 +72,10 @@ pub fn randomValue(min: usize, max: usize) usize {
 
 pub fn isPressedSpace() bool {
     return ray.IsKeyPressed(ray.KEY_SPACE);
+}
+
+pub fn isPressedEnter() bool {
+    return ray.IsKeyPressed(ray.KEY_ENTER);
 }
 
 pub fn move(vec: *Vec) bool {
