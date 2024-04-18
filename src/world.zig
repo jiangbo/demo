@@ -16,14 +16,13 @@ pub fn run(ctx: *engine.Context) void {
         const state = singletons.get(system.StateEnum);
         if (state.* == .reset) {
             var entities = ctx.registry.entities();
-            while (entities.next()) |entity| {
-                ctx.registry.removeAll(entity);
-            }
+            while (entities.next()) |entity| ctx.registry.removeAll(entity);
             spawner.spawn(ctx);
             state.* = .running;
         }
 
         if (state.* == .over and engine.isPressedSpace()) state.* = .reset;
+
         system.runUpdateSystems(ctx);
     }
 }
