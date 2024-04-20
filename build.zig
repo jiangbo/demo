@@ -11,26 +11,18 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const raylib_dep = b.dependency("raylib", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    exe.linkLibrary(raylib_dep.artifact("raylib"));
+    const glfw_dep = b.dependency("mach-glfw", .{ .target = target, .optimize = optimize });
+    exe.root_module.addImport("mach-glfw", glfw_dep.module("mach-glfw"));
 
-    const ecs = b.dependency("zecs", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    exe.root_module.addImport("ecs", ecs.module("zig-ecs"));
-
+    const options = .{ .api = .gl, .version = .@"3.3", .profile = .core };
+    const gl_bindings = @import("zigglgen").generateBindingsModule(b, options);
+    exe.root_module.addImport("gl", gl_bindings);
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
 
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+    if (b.args) |args| run_cmd.addArgs(args);
 
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
