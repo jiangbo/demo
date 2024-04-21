@@ -1,42 +1,27 @@
 const std = @import("std");
 const glfw = @import("mach-glfw");
 const gl = @import("gl");
+const shader = @import("shader.zig");
 
 fn logGlfwError(code: glfw.ErrorCode, description: [:0]const u8) void {
     std.log.err("{}: {s}\n", .{ code, description });
 }
 
 fn glfwPanic() noreturn {
-    errorPanic(glfw.getErrorString());
-}
-
-fn errorPanic(message: ?[]const u8) noreturn {
-    @panic(message orelse "unknown error");
+    @panic(glfw.getErrorString() orelse "unknown error");
 }
 
 var glProcs: gl.ProcTable = undefined;
-const vertices = [_]f32{ -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5 };
-const indices = [_]u32{ 0, 1, 2, 2, 3, 0 };
+const vertices = [_]f32{ -0.5, -0.5, 0.5, -0.5, 0, 0.5 };
+const colors = [_]f32{
+    1.0, 0.0, 0.0, //
+    0.0, 1.0, 0.0,
+    0.0, 0.0, 1.0,
+};
+const indices = [_]u32{ 0, 1, 2 };
 
-const vertexShaderSource: [:0]const u8 =
-    \\#version 330 core
-    \\layout (location = 0) in vec4 aPos;
-    \\
-    \\void main()
-    \\{
-    \\    gl_Position = aPos;
-    \\}
-;
-
-const fragmentShaderSource: [:0]const u8 =
-    \\#version 330 core
-    \\out vec4 FragColor;
-    \\
-    \\void main()
-    \\{
-    \\    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-    \\}
-;
+const vertexSource: [:0]const u8 = @embedFile("vertex.glsl");
+const fragmentSource: [:0]const u8 = @embedFile("fragment.glsl");
 
 pub fn main() void {
     const window = initWindow();
@@ -51,15 +36,20 @@ pub fn main() void {
     gl.makeProcTableCurrent(&glProcs);
     defer gl.makeProcTableCurrent(null);
 
-    const program = createShaderProgram();
+    const program = shader.init(vertexSource, fragmentSource);
     defer gl.DeleteProgram(program);
 
     // VBO 顶点缓冲对象
-    var vbo: c_uint = undefined;
-    gl.GenBuffers(1, (&vbo)[0..1]);
-    defer gl.DeleteBuffers(1, (&vbo)[0..1]);
-    gl.BindBuffer(gl.ARRAY_BUFFER, vbo);
+    var vbos: [2]c_uint = undefined;
+    gl.GenBuffers(vbos.len, &vbos);
+    defer gl.DeleteBuffers(vbos.len, &vbos);
+
+    // 位置
+    gl.BindBuffer(gl.ARRAY_BUFFER, vbos[0]);
     gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(vertices)), &vertices, gl.STATIC_DRAW);
+    // 颜色
+    gl.BindBuffer(gl.ARRAY_BUFFER, vbos[1]);
+    gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(colors)), &colors, gl.STATIC_DRAW);
 
     // EBO 索引缓冲对象
     var ebo: c_uint = undefined;
@@ -72,9 +62,14 @@ pub fn main() void {
     var vao: c_uint = undefined;
     gl.GenVertexArrays(1, (&vao)[0..1]);
     gl.BindVertexArray(vao);
-    gl.BindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.BindBuffer(gl.ARRAY_BUFFER, vbos[0]);
     gl.EnableVertexAttribArray(0);
     gl.VertexAttribPointer(0, 2, gl.FLOAT, gl.FALSE, 2 * @sizeOf(f32), 0);
+
+    gl.BindBuffer(gl.ARRAY_BUFFER, vbos[1]);
+    gl.EnableVertexAttribArray(1);
+    gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 3 * @sizeOf(f32), 0);
+
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
 
     gl.UseProgram(program);
@@ -84,7 +79,7 @@ pub fn main() void {
         gl.ClearColor(0.2, 0.3, 0.3, 1.0);
         gl.Clear(gl.COLOR_BUFFER_BIT);
 
-        gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0);
+        gl.DrawElements(gl.TRIANGLES, 3, gl.UNSIGNED_INT, 0);
 
         window.swapBuffers();
     }
@@ -100,49 +95,6 @@ fn initWindow() glfw.Window {
         .context_version_minor = gl.info.version_minor,
         .opengl_profile = .opengl_core_profile,
     }) orelse glfwPanic();
-}
-
-fn createShaderProgram() c_uint {
-    var success: c_int = undefined;
-    var logBuffer: [512:0]u8 = undefined;
-    // 顶点着色器
-    const vertexShader = gl.CreateShader(gl.VERTEX_SHADER);
-    if (vertexShader == 0) errorPanic("create vertex shader failed");
-    defer gl.DeleteShader(vertexShader);
-    gl.ShaderSource(vertexShader, 1, (&vertexShaderSource.ptr)[0..1], null);
-    gl.CompileShader(vertexShader);
-    gl.GetShaderiv(vertexShader, gl.COMPILE_STATUS, &success);
-    if (success == gl.FALSE) {
-        gl.GetShaderInfoLog(vertexShader, logBuffer.len, null, &logBuffer);
-        errorPanic(std.mem.sliceTo(&logBuffer, 0));
-    }
-
-    // 片段着色器
-    const fragmentShader = gl.CreateShader(gl.FRAGMENT_SHADER);
-    if (fragmentShader == 0) errorPanic("create fragment shader failed");
-    defer gl.DeleteShader(fragmentShader);
-    gl.ShaderSource(fragmentShader, 1, (&fragmentShaderSource.ptr)[0..1], null);
-    gl.CompileShader(fragmentShader);
-    gl.GetShaderiv(fragmentShader, gl.COMPILE_STATUS, &success);
-    if (success == gl.FALSE) {
-        gl.GetShaderInfoLog(fragmentShader, logBuffer.len, null, &logBuffer);
-        errorPanic(std.mem.sliceTo(&logBuffer, 0));
-    }
-
-    // 着色器程序
-    const program = gl.CreateProgram();
-    if (program == 0) errorPanic("create program failed");
-    errdefer gl.DeleteProgram(program);
-
-    gl.AttachShader(program, vertexShader);
-    gl.AttachShader(program, fragmentShader);
-    gl.LinkProgram(program);
-    gl.GetProgramiv(program, gl.LINK_STATUS, &success);
-    if (success == gl.FALSE) {
-        gl.GetProgramInfoLog(program, logBuffer.len, null, &logBuffer);
-        errorPanic(std.mem.sliceTo(&logBuffer, 0));
-    }
-    return program;
 }
 
 fn deinit(window: glfw.Window) void {
