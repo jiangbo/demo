@@ -12,11 +12,10 @@ fn glfwPanic() noreturn {
 }
 
 var glProcs: gl.ProcTable = undefined;
-const vertices = [_]f32{ -0.5, -0.5, 0.5, -0.5, 0, 0.5 };
-const colors = [_]f32{
-    1.0, 0.0, 0.0, //
-    0.0, 1.0, 0.0,
-    0.0, 0.0, 1.0,
+const vertices = [_]f32{
+    -0.5, -0.5, 1.0, 0.0, 0.0, //
+    0.5,  -0.5, 0.0, 1.0, 0.0,
+    0,    0.5,  0.0, 0.0, 1.0,
 };
 const indices = [_]u32{ 0, 1, 2 };
 
@@ -40,16 +39,11 @@ pub fn main() void {
     defer gl.DeleteProgram(program);
 
     // VBO 顶点缓冲对象
-    var vbos: [2]c_uint = undefined;
+    var vbos: [1]c_uint = undefined;
     gl.GenBuffers(vbos.len, &vbos);
     defer gl.DeleteBuffers(vbos.len, &vbos);
-
-    // 位置
     gl.BindBuffer(gl.ARRAY_BUFFER, vbos[0]);
     gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(vertices)), &vertices, gl.STATIC_DRAW);
-    // 颜色
-    gl.BindBuffer(gl.ARRAY_BUFFER, vbos[1]);
-    gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(colors)), &colors, gl.STATIC_DRAW);
 
     // EBO 索引缓冲对象
     var ebo: c_uint = undefined;
@@ -64,21 +58,22 @@ pub fn main() void {
     gl.BindVertexArray(vao);
     gl.BindBuffer(gl.ARRAY_BUFFER, vbos[0]);
     gl.EnableVertexAttribArray(0);
-    gl.VertexAttribPointer(0, 2, gl.FLOAT, gl.FALSE, 2 * @sizeOf(f32), 0);
-
-    gl.BindBuffer(gl.ARRAY_BUFFER, vbos[1]);
+    gl.VertexAttribPointer(0, 2, gl.FLOAT, gl.FALSE, 5 * @sizeOf(f32), 0);
     gl.EnableVertexAttribArray(1);
-    gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 3 * @sizeOf(f32), 0);
+    gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 5 * @sizeOf(f32), 2 * @sizeOf(f32));
 
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
 
     gl.UseProgram(program);
+    const timeLocation = gl.GetUniformLocation(program, "time");
 
     while (!window.shouldClose()) {
         glfw.pollEvents();
         gl.ClearColor(0.2, 0.3, 0.3, 1.0);
         gl.Clear(gl.COLOR_BUFFER_BIT);
 
+        const time: f32 = @floatCast(glfw.getTime());
+        gl.Uniform1f(timeLocation, time);
         gl.DrawElements(gl.TRIANGLES, 3, gl.UNSIGNED_INT, 0);
 
         window.swapBuffers();
