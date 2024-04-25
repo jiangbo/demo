@@ -17,6 +17,11 @@ pub fn build(b: *std.Build) void {
     const options = .{ .api = .gl, .version = .@"3.3", .profile = .core };
     const gl_bindings = @import("zigglgen").generateBindingsModule(b, options);
     exe.root_module.addImport("gl", gl_bindings);
+
+    const zstbi = b.dependency("zstbi", .{ .target = target, .optimize = optimize });
+    exe.root_module.addImport("zstbi", zstbi.module("root"));
+    exe.linkLibrary(zstbi.artifact("zstbi"));
+
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);

@@ -10,6 +10,9 @@
             .url = "https://github.com/castholm/zigglgen/releases/download/v0.2.1/zigglgen.tar.gz",
             .hash = "122059d1ff6787eedb40771eabb0f04d04fe299bd1bae7b216c4a9d894719c2a148a",
         },
+        .zstbi = .{
+            .path = "lib/zstbi",
+        },
     },
     .paths = .{""},
 }

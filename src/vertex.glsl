@@ -1,10 +1,8 @@
 #version 330 core
-layout (location = 0) in vec4 aPos;
-layout (location = 1) in vec3 aColor;
-uniform float time;
-out vec4 Color;
+
+layout(location = 0) in vec3 vertexPosition; // 顶点位置
+
 void main()
 {
-    Color = vec4(aColor, 1.0);
-    gl_Position = aPos;
+    gl_Position = vec4(vertexPosition, 1.0); // 设置顶点位置
 }

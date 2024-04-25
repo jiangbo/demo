@@ -2,6 +2,7 @@ const std = @import("std");
 const glfw = @import("mach-glfw");
 const gl = @import("gl");
 const shader = @import("shader.zig");
+const zstbi = @import("zstbi");
 
 fn logGlfwError(code: glfw.ErrorCode, description: [:0]const u8) void {
     std.log.err("{}: {s}\n", .{ code, description });
@@ -12,19 +13,22 @@ fn glfwPanic() noreturn {
 }
 
 var glProcs: gl.ProcTable = undefined;
-const vertices = [_]f32{
-    -0.5, -0.5, 1.0, 0.0, 0.0, //
-    0.5,  -0.5, 0.0, 1.0, 0.0,
-    0,    0.5,  0.0, 0.0, 1.0,
-};
+const vertices = [_]f32{ -0.5, -0.5, 0.5, -0.5, 0, 0.5 };
 const indices = [_]u32{ 0, 1, 2 };
 
 const vertexSource: [:0]const u8 = @embedFile("vertex.glsl");
 const fragmentSource: [:0]const u8 = @embedFile("fragment.glsl");
 
-pub fn main() void {
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+
     const window = initWindow();
     defer deinit(window);
+
+    zstbi.init(gpa.allocator());
+    defer zstbi.deinit();
+    zstbi.setFlipVerticallyOnLoad(true);
 
     glfw.makeContextCurrent(window);
     defer glfw.makeContextCurrent(null);
@@ -58,22 +62,31 @@ pub fn main() void {
     gl.BindVertexArray(vao);
     gl.BindBuffer(gl.ARRAY_BUFFER, vbos[0]);
     gl.EnableVertexAttribArray(0);
-    gl.VertexAttribPointer(0, 2, gl.FLOAT, gl.FALSE, 5 * @sizeOf(f32), 0);
-    gl.EnableVertexAttribArray(1);
-    gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 5 * @sizeOf(f32), 2 * @sizeOf(f32));
-
+    gl.VertexAttribPointer(0, 2, gl.FLOAT, gl.FALSE, 2 * @sizeOf(f32), 0);
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
 
     gl.UseProgram(program);
-    const timeLocation = gl.GetUniformLocation(program, "time");
+
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+    var image = try zstbi.Image.loadFromFile("assets/wall.jpg", 0);
+    var texture: c_uint = undefined;
+    gl.GenTextures(1, (&texture)[0..1]);
+    gl.BindTexture(gl.TEXTURE_2D, texture);
+    const w: c_int = @intCast(image.width);
+    const h: c_int = @intCast(image.height);
+    gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, w, h, 0, gl.RGB, gl.UNSIGNED_BYTE, image.data.ptr);
+    gl.GenerateMipmap(gl.TEXTURE_2D);
+    image.deinit();
 
     while (!window.shouldClose()) {
         glfw.pollEvents();
         gl.ClearColor(0.2, 0.3, 0.3, 1.0);
         gl.Clear(gl.COLOR_BUFFER_BIT);
 
-        const time: f32 = @floatCast(glfw.getTime());
-        gl.Uniform1f(timeLocation, time);
         gl.DrawElements(gl.TRIANGLES, 3, gl.UNSIGNED_INT, 0);
 
         window.swapBuffers();
