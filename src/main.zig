@@ -164,7 +164,8 @@ pub fn main() !void {
         gl.BindVertexArray(vao);
         for (cubePositions, 0..) |cube, i| {
             const index: f64 = @floatFromInt(i);
-            const angle: f32 = @floatCast(zlm.toRadians(20 * index));
+            const angle: f32 = @floatCast(if (i % 3 == 0) glfw.getTime() //
+            else zlm.toRadians(20 * index * glfw.getTime()));
             const rotate = zlm.Mat4.createAngleAxis(zlm.Vec3.new(1, 0.3, 0.5), angle);
             const model = rotate.mul(zlm.Mat4.createTranslation(cube));
             gl.UniformMatrix4fv(modelPosition, 1, gl.FALSE, &model.fields[0][0]);
