@@ -3,6 +3,7 @@ const glfw = @import("mach-glfw");
 const gl = @import("gl");
 const shader = @import("shader.zig");
 const zstbi = @import("zstbi");
+const zlm = @import("zlm");
 
 fn logGlfwError(code: glfw.ErrorCode, description: [:0]const u8) void {
     std.log.err("{}: {s}\n", .{ code, description });
@@ -13,8 +14,62 @@ fn glfwPanic() noreturn {
 }
 
 var glProcs: gl.ProcTable = undefined;
-const vertices = [_]f32{ -0.5, -0.5, 0.5, -0.5, 0, 0.5 };
-const indices = [_]u32{ 0, 1, 2 };
+const vertices = [_]f32{
+    -0.5, -0.5, -0.5, 0.0, 0.0, //
+    0.5,  -0.5, -0.5, 1.0, 0.0,
+    0.5,  0.5,  -0.5, 1.0, 1.0,
+    0.5,  0.5,  -0.5, 1.0, 1.0,
+    -0.5, 0.5,  -0.5, 0.0, 1.0,
+    -0.5, -0.5, -0.5, 0.0, 0.0,
+
+    -0.5, -0.5, 0.5,  0.0, 0.0,
+    0.5,  -0.5, 0.5,  1.0, 0.0,
+    0.5,  0.5,  0.5,  1.0, 1.0,
+    0.5,  0.5,  0.5,  1.0, 1.0,
+    -0.5, 0.5,  0.5,  0.0, 1.0,
+    -0.5, -0.5, 0.5,  0.0, 0.0,
+
+    -0.5, 0.5,  0.5,  1.0, 0.0,
+    -0.5, 0.5,  -0.5, 1.0, 1.0,
+    -0.5, -0.5, -0.5, 0.0, 1.0,
+    -0.5, -0.5, -0.5, 0.0, 1.0,
+    -0.5, -0.5, 0.5,  0.0, 0.0,
+    -0.5, 0.5,  0.5,  1.0, 0.0,
+
+    0.5,  0.5,  0.5,  1.0, 0.0,
+    0.5,  0.5,  -0.5, 1.0, 1.0,
+    0.5,  -0.5, -0.5, 0.0, 1.0,
+    0.5,  -0.5, -0.5, 0.0, 1.0,
+    0.5,  -0.5, 0.5,  0.0, 0.0,
+    0.5,  0.5,  0.5,  1.0, 0.0,
+
+    -0.5, -0.5, -0.5, 0.0, 1.0,
+    0.5,  -0.5, -0.5, 1.0, 1.0,
+    0.5,  -0.5, 0.5,  1.0, 0.0,
+    0.5,  -0.5, 0.5,  1.0, 0.0,
+    -0.5, -0.5, 0.5,  0.0, 0.0,
+    -0.5, -0.5, -0.5, 0.0, 1.0,
+
+    -0.5, 0.5,  -0.5, 0.0, 1.0,
+    0.5,  0.5,  -0.5, 1.0, 1.0,
+    0.5,  0.5,  0.5,  1.0, 0.0,
+    0.5,  0.5,  0.5,  1.0, 0.0,
+    -0.5, 0.5,  0.5,  0.0, 0.0,
+    -0.5, 0.5,  -0.5, 0.0, 1.0,
+};
+
+const cubePositions = [_]zlm.Vec3{
+    zlm.Vec3.new(0.0, 0.0, 0.0), //
+    zlm.Vec3.new(2.0, 5.0, -15.0),
+    zlm.Vec3.new(-1.5, -2.2, -2.5),
+    zlm.Vec3.new(-3.8, -2.0, -12.3),
+    zlm.Vec3.new(2.4, -0.4, -3.5),
+    zlm.Vec3.new(-1.7, 3.0, -7.5),
+    zlm.Vec3.new(1.3, -2.0, -2.5),
+    zlm.Vec3.new(1.5, 2.0, -2.5),
+    zlm.Vec3.new(1.5, 0.2, -1.5),
+    zlm.Vec3.new(-1.3, 1.0, -1.5),
+};
 
 const vertexSource: [:0]const u8 = @embedFile("vertex.glsl");
 const fragmentSource: [:0]const u8 = @embedFile("fragment.glsl");
@@ -38,6 +93,7 @@ pub fn main() !void {
 
     gl.makeProcTableCurrent(&glProcs);
     defer gl.makeProcTableCurrent(null);
+    gl.Enable(gl.DEPTH_TEST);
 
     const program = shader.init(vertexSource, fragmentSource);
     defer gl.DeleteProgram(program);
@@ -49,45 +105,72 @@ pub fn main() !void {
     gl.BindBuffer(gl.ARRAY_BUFFER, vbos[0]);
     gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(vertices)), &vertices, gl.STATIC_DRAW);
 
-    // EBO 索引缓冲对象
-    var ebo: c_uint = undefined;
-    gl.GenBuffers(1, (&ebo)[0..1]);
-    defer gl.DeleteBuffers(1, (&ebo)[0..1]);
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
-    gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, @sizeOf(@TypeOf(indices)), &indices, gl.STATIC_DRAW);
-
     // VAO 顶点数组对象
     var vao: c_uint = undefined;
     gl.GenVertexArrays(1, (&vao)[0..1]);
     gl.BindVertexArray(vao);
     gl.BindBuffer(gl.ARRAY_BUFFER, vbos[0]);
     gl.EnableVertexAttribArray(0);
-    gl.VertexAttribPointer(0, 2, gl.FLOAT, gl.FALSE, 2 * @sizeOf(f32), 0);
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * @sizeOf(f32), 0);
+
+    gl.EnableVertexAttribArray(1);
+    gl.VertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, 5 * @sizeOf(f32), 3 * @sizeOf(f32));
 
     gl.UseProgram(program);
 
-    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-    var image = try zstbi.Image.loadFromFile("assets/wall.jpg", 0);
-    var texture: c_uint = undefined;
-    gl.GenTextures(1, (&texture)[0..1]);
-    gl.BindTexture(gl.TEXTURE_2D, texture);
-    const w: c_int = @intCast(image.width);
-    const h: c_int = @intCast(image.height);
+    var textures: [2]c_uint = undefined;
+    gl.GenTextures(textures.len, &textures);
+    defer gl.DeleteTextures(textures.len, &textures);
+
+    gl.ActiveTexture(gl.TEXTURE0);
+    gl.BindTexture(gl.TEXTURE_2D, textures[0]);
+    var image = try zstbi.Image.loadFromFile("assets/container.jpg", 0);
+    var w: c_int = @intCast(image.width);
+    var h: c_int = @intCast(image.height);
     gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, w, h, 0, gl.RGB, gl.UNSIGNED_BYTE, image.data.ptr);
     gl.GenerateMipmap(gl.TEXTURE_2D);
     image.deinit();
+    gl.Uniform1i(gl.GetUniformLocation(program, "texture1"), 0);
+
+    gl.ActiveTexture(gl.TEXTURE1);
+    gl.BindTexture(gl.TEXTURE_2D, textures[1]);
+    image = try zstbi.Image.loadFromFile("assets/awesomeface.png", 0);
+    w, h = .{ @intCast(image.width), @intCast(image.height) };
+    gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, image.data.ptr);
+    gl.GenerateMipmap(gl.TEXTURE_2D);
+    image.deinit();
+    gl.Uniform1i(gl.GetUniformLocation(program, "texture2"), 1);
+
+    const modelPosition = gl.GetUniformLocation(program, "model");
+    const viewPosition = gl.GetUniformLocation(program, "view");
+    const projectionPosition = gl.GetUniformLocation(program, "projection");
+
+    const view = zlm.Mat4.createTranslationXYZ(0, 0, -3);
+    gl.UniformMatrix4fv(viewPosition, 1, gl.FALSE, &view.fields[0][0]);
+
+    const projection = zlm.Mat4.createPerspective(zlm.toRadians(45.0), 640 / 480, 0.1, 100);
+    gl.UniformMatrix4fv(projectionPosition, 1, gl.FALSE, &projection.fields[0][0]);
 
     while (!window.shouldClose()) {
         glfw.pollEvents();
         gl.ClearColor(0.2, 0.3, 0.3, 1.0);
-        gl.Clear(gl.COLOR_BUFFER_BIT);
+        gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        gl.DrawElements(gl.TRIANGLES, 3, gl.UNSIGNED_INT, 0);
+        gl.BindVertexArray(vao);
+        for (cubePositions, 0..) |cube, i| {
+            const index: f64 = @floatFromInt(i);
+            const angle: f32 = @floatCast(zlm.toRadians(20 * index));
+            const rotate = zlm.Mat4.createAngleAxis(zlm.Vec3.new(1, 0.3, 0.5), angle);
+            const model = rotate.mul(zlm.Mat4.createTranslation(cube));
+            gl.UniformMatrix4fv(modelPosition, 1, gl.FALSE, &model.fields[0][0]);
+
+            gl.DrawArrays(gl.TRIANGLES, 0, 36);
+        }
 
         window.swapBuffers();
     }

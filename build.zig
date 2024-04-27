@@ -14,6 +14,9 @@ pub fn build(b: *std.Build) void {
     const glfw_dep = b.dependency("mach-glfw", .{ .target = target, .optimize = optimize });
     exe.root_module.addImport("mach-glfw", glfw_dep.module("mach-glfw"));
 
+    const zlm = b.dependency("zlm", .{});
+    exe.root_module.addImport("zlm", zlm.module("zlm"));
+
     const options = .{ .api = .gl, .version = .@"3.3", .profile = .core };
     const gl_bindings = @import("zigglgen").generateBindingsModule(b, options);
     exe.root_module.addImport("gl", gl_bindings);
