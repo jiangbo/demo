@@ -1,23 +1,23 @@
 const std = @import("std");
 const gl = @import("gl");
 
-// const GameStateEnum = enum { menu, running, win };
+const GameStateEnum = enum { menu, running, win };
 
-// const GraphicWindow = struct {
-//     state: GameStateEnum,
-//     keys: [1024]bool,
-//     width: usize,
-//     height: usize,
-//     fn init(width: usize, height: usize) void {
-//         _ = width;
-//         _ = height;
-//     }
+const GraphicWindow = struct {
+    state: GameStateEnum,
+    keys: [1024]bool,
+    width: usize,
+    height: usize,
+    fn init(width: usize, height: usize) void {
+        _ = width;
+        _ = height;
+    }
 
-//     fn processInput() void {}
-//     fn update() void {}
-//     fn render() void {}
-//     fn deinit() void {}
-// };
+    fn processInput() void {}
+    fn update() void {}
+    fn render() void {}
+    fn deinit() void {}
+};
 
 fn errorPanic(message: ?[]const u8) noreturn {
     @panic(message orelse "unknown error");

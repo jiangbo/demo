@@ -16,12 +16,14 @@ fn glfwPanic() noreturn {
 
 var glProcs: gl.ProcTable = undefined;
 const vertices = [_]f32{
-    -0.5, -0.5, 0.0, 0.0, //
-    0.5,  -0.5, 1.0, 0.0,
-    0.5,  0.5,  1.0, 1.0,
-    0.5,  0.5,  1.0, 1.0,
-    -0.5, 0.5,  0.0, 1.0,
-    -0.5, -0.5, 0.0, 0.0,
+    // pos      // tex
+    0.0, 1.0, 0.0, 1.0,
+    1.0, 0.0, 1.0, 0.0,
+    0.0, 0.0, 0.0, 0.0,
+
+    0.0, 1.0, 0.0, 1.0,
+    1.0, 1.0, 1.0, 1.0,
+    1.0, 0.0, 1.0, 0.0,
 };
 
 pub fn main() !void {
@@ -33,6 +35,7 @@ pub fn main() !void {
 
     zstbi.init(gpa.allocator());
     defer zstbi.deinit();
+    zstbi.setFlipVerticallyOnLoad(true);
 
     glfw.makeContextCurrent(window);
     defer glfw.makeContextCurrent(null);
@@ -42,8 +45,7 @@ pub fn main() !void {
 
     gl.makeProcTableCurrent(&glProcs);
     defer gl.makeProcTableCurrent(null);
-    // gl.Enable(gl.CULL_FACE);
-    // gl.Enable(gl.BLEND);
+    gl.Enable(gl.DEPTH_TEST);
 
     resource.init(gpa.allocator());
     defer resource.deinit();
@@ -61,10 +63,7 @@ pub fn main() !void {
     gl.BindVertexArray(vao);
     gl.BindBuffer(gl.ARRAY_BUFFER, vbos[0]);
     gl.EnableVertexAttribArray(0);
-    gl.VertexAttribPointer(0, 2, gl.FLOAT, gl.FALSE, 4 * @sizeOf(f32), 0);
-
-    gl.EnableVertexAttribArray(1);
-    gl.VertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, 4 * @sizeOf(f32), 2 * @sizeOf(f32));
+    gl.VertexAttribPointer(0, 4, gl.FLOAT, gl.FALSE, 4 * @sizeOf(f32), 0);
 
     const vs: [:0]const u8 = @embedFile("vertex.glsl");
     const fs: [:0]const u8 = @embedFile("fragment.glsl");
@@ -73,22 +72,29 @@ pub fn main() !void {
     shader.use();
 
     gl.ActiveTexture(gl.TEXTURE0);
-    const face = "awesomeface.png";
-    var texture = try resource.loadTexture(face, "assets/" ++ face, true);
-    defer texture.deinit();
-    texture.bind();
-    shader.setUniform1i("image", 0);
+    const name = "container.jpg";
+    var texture1 = try resource.loadTexture(name, "assets/" ++ name, false);
+    defer texture1.deinit();
+    texture1.bind();
+    shader.setUniform1i("texture1", 0);
 
-    const projection = zlm.Mat4.createOrthogonal(-1, 1, 1, -1, 1, -1);
+    gl.ActiveTexture(gl.TEXTURE1);
+    const face = "awesomeface.png";
+    var texture2 = try resource.loadTexture(face, "assets/" ++ face, true);
+    defer texture2.deinit();
+    texture2.bind();
+    shader.setUniform1i("texture2", 1);
+
+    const projection = zlm.Mat4.createOrthogonal(0, 800, 600, 0, -1, 1);
     shader.setUniformMatrix4fv("projection", &projection.fields[0][0]);
-    const model = zlm.Mat4.identity;
-    shader.setUniformMatrix4fv("model", &model.fields[0][0]);
 
     while (!window.shouldClose()) {
         glfw.pollEvents();
-        gl.ClearColor(0, 0, 0, 1.0);
-        gl.Clear(gl.COLOR_BUFFER_BIT);
+        gl.ClearColor(0.2, 0.3, 0.3, 1.0);
+        gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+        const model = zlm.Mat4.identity;
+        shader.setUniformMatrix4fv("model", &model.fields[0][0]);
         gl.DrawArrays(gl.TRIANGLES, 0, 6);
 
         window.swapBuffers();
@@ -100,7 +106,7 @@ fn initWindow() glfw.Window {
 
     if (!glfw.init(.{})) glfwPanic();
 
-    return glfw.Window.create(640, 480, "学习 OpenGL", null, null, .{
+    return glfw.Window.create(800, 600, "学习 OpenGL", null, null, .{
         .context_version_major = gl.info.version_major,
         .context_version_minor = gl.info.version_minor,
         .opengl_profile = .opengl_core_profile,
