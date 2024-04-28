@@ -1,5 +1,6 @@
 const std = @import("std");
 const gl = @import("gl");
+const zlm = @import("zlm");
 
 const GameStateEnum = enum { menu, running, win };
 
@@ -50,6 +51,10 @@ pub const Shader = struct {
 
     pub fn setUniformMatrix4fv(self: Shader, name: cstr, value: [*c]const f32) void {
         gl.UniformMatrix4fv(self.getUniformLocation(name), 1, gl.FALSE, value);
+    }
+
+    pub fn setVector3f(self: Shader, name: cstr, v: zlm.Vec3) void {
+        gl.Uniform3f(self.getUniformLocation(name), v.x, v.y, v.z);
     }
 
     pub fn deinit(self: Shader) void {
@@ -130,7 +135,7 @@ pub const Texture = struct {
         gl.BindTexture(gl.TEXTURE_2D, 0);
     }
 
-    pub fn bind(self: *Texture) void {
+    pub fn bind(self: Texture) void {
         gl.BindTexture(gl.TEXTURE_2D, self.id);
     }
 

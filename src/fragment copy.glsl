@@ -2,8 +2,9 @@
 in vec2 uv;
 out vec4 color;
 uniform sampler2D image;
+uniform vec3 spriteColor;
 
 void main()
 {
-    color = texture(image, uv);
+    color = vec4(spriteColor, 1.0) * texture(image, uv);
 }
