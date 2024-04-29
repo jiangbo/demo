@@ -21,7 +21,7 @@ pub const Game = struct {
         // // configure shaders
         // glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(this->Width),
         //     static_cast<float>(this->Height), 0.0f, -1.0f, 1.0f);
-        const projection = zlm.Mat4.createOrthogonal(0, 1, 1, 0, -1, 1);
+        const projection = zlm.Mat4.createOrthogonal(0, 8, 6, 0, -1, 1);
         shader.setUniformMatrix4fv("projection", &projection.fields[0][0]);
         shader.setUniform1i("image", 0);
 
@@ -44,8 +44,8 @@ pub const Game = struct {
         _ = self;
         const options = renderer.DrawSpriteOptions{
             .texture = resource.getTexture("awesomeface.png"),
-            .position = zlm.Vec2.new(200, 200),
-            .size = zlm.Vec2.new(300, 400),
+            .position = zlm.Vec2.new(2, 2),
+            .size = zlm.Vec2.new(3, 4),
             .rotate = 45,
             .color = zlm.Vec3.new(0, 1, 0),
         };
