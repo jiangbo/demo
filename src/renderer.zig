@@ -20,20 +20,18 @@ pub const SpriteRenderer = struct {
     pub fn draw(self: SpriteRenderer, options: DrawSpriteOptions) void {
         self.shader.use();
 
-        var x, var y = .{ options.position.x, options.position.y };
-        var model = zlm.Mat4.createTranslationXYZ(x, y, 0);
+        var model = zlm.Mat4.createScale(options.size.x, options.size.y, 1);
 
+        const x, const y = .{ -0.5 * options.size.x, -0.5 * options.size.y };
+        model = model.mul(zlm.Mat4.createTranslationXYZ(x, y, 0));
+        const angle = zlm.toRadians(options.rotate);
+        model = model.mul(zlm.Mat4.createAngleAxis(zlm.Vec3.new(0, 0, 1), angle));
         x, y = .{ 0.5 * options.size.x, 0.5 * options.size.y };
         model = model.mul(zlm.Mat4.createTranslationXYZ(x, y, 0));
 
-        const angle = zlm.toRadians(20.0);
-        model = model.mul(zlm.Mat4.createAngleAxis(zlm.Vec3.new(0, 0, 1), angle));
-
-        x, y = .{ -0.5 * options.size.x, -0.5 * options.size.y };
+        x, y = .{ options.position.x, options.position.y };
         model = model.mul(zlm.Mat4.createTranslationXYZ(x, y, 0));
 
-        model = model.mul(zlm.Mat4.createScale(options.size.x, options.size.y, 1));
-        // const model = zlm.Mat4.identity;
         self.shader.setUniformMatrix4fv("model", &model.fields[0][0]);
 
         self.shader.setVector3f("spriteColor", options.color);
