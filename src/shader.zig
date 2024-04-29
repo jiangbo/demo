@@ -2,24 +2,6 @@ const std = @import("std");
 const gl = @import("gl");
 const zlm = @import("zlm");
 
-const GameStateEnum = enum { menu, running, win };
-
-const GraphicWindow = struct {
-    state: GameStateEnum,
-    keys: [1024]bool,
-    width: usize,
-    height: usize,
-    fn init(width: usize, height: usize) void {
-        _ = width;
-        _ = height;
-    }
-
-    fn processInput() void {}
-    fn update() void {}
-    fn render() void {}
-    fn deinit() void {}
-};
-
 fn errorPanic(message: ?[]const u8) noreturn {
     @panic(message orelse "unknown error");
 }
@@ -36,6 +18,7 @@ pub const Shader = struct {
     }
 
     pub fn getUniformLocation(self: Shader, name: cstr) c_int {
+        self.use();
         const location = gl.GetUniformLocation(self.program, name.ptr);
         if (location == -1) errorPanic("uniform not found");
         return location;
@@ -107,39 +90,5 @@ pub const Shader = struct {
             gl.GetShaderInfoLog(object, logBuffer.len, null, &logBuffer);
             errorPanic(std.mem.sliceTo(&logBuffer, 0));
         }
-    }
-};
-
-pub const Texture = struct {
-    id: c_uint = 0,
-    data: []const u8,
-    width: c_int = 0,
-    height: c_int = 0,
-
-    pub fn init(data: []const u8) Texture {
-        var texture = Texture{ .data = data };
-        gl.GenTextures(1, (&texture.id)[0..1]);
-        return texture;
-    }
-
-    pub fn generate(self: *Texture, internalformat: c_int, imageFormat: c_uint) void {
-        gl.BindTexture(gl.TEXTURE_2D, self.id);
-        gl.TexImage2D(gl.TEXTURE_2D, 0, internalformat, self.width, self.height, //
-            0, imageFormat, gl.UNSIGNED_BYTE, self.data.ptr);
-
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        // unbind texture
-        gl.BindTexture(gl.TEXTURE_2D, 0);
-    }
-
-    pub fn bind(self: Texture) void {
-        gl.BindTexture(gl.TEXTURE_2D, self.id);
-    }
-
-    pub fn deinit(self: *Texture) void {
-        gl.DeleteTextures(1, (&self.id)[0..1]);
     }
 };
