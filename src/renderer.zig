@@ -4,40 +4,33 @@ const zlm = @import("zlm");
 
 const Texture2D = @import("texture.zig").Texture2D;
 const Shader = @import("shader.zig").Shader;
-
-pub const DrawSpriteOptions = struct {
-    texture: Texture2D,
-    position: zlm.Vec2 = zlm.Vec2.zero,
-    size: zlm.Vec2 = zlm.Vec2.new(10, 10),
-    rotate: f32 = 0,
-    color: zlm.Vec3 = zlm.Vec3.one,
-};
+const Sprite = @import("sprite.zig").Sprite;
 
 pub const SpriteRenderer = struct {
     shader: Shader,
     vao: c_uint = 0,
 
-    pub fn draw(self: SpriteRenderer, options: DrawSpriteOptions) void {
+    pub fn draw(self: SpriteRenderer, sprite: Sprite) void {
         self.shader.use();
 
-        var model = zlm.Mat4.createScale(options.size.x, options.size.y, 1);
+        var model = zlm.Mat4.createScale(sprite.size.x, sprite.size.y, 1);
 
-        const x, const y = .{ -0.5 * options.size.x, -0.5 * options.size.y };
+        const x, const y = .{ -0.5 * sprite.size.x, -0.5 * sprite.size.y };
         model = model.mul(zlm.Mat4.createTranslationXYZ(x, y, 0));
-        const angle = zlm.toRadians(options.rotate);
+        const angle = zlm.toRadians(sprite.rotate);
         model = model.mul(zlm.Mat4.createAngleAxis(zlm.Vec3.new(0, 0, 1), angle));
-        x, y = .{ 0.5 * options.size.x, 0.5 * options.size.y };
+        x, y = .{ 0.5 * sprite.size.x, 0.5 * sprite.size.y };
         model = model.mul(zlm.Mat4.createTranslationXYZ(x, y, 0));
 
-        x, y = .{ options.position.x, options.position.y };
+        x, y = .{ sprite.position.x, sprite.position.y };
         model = model.mul(zlm.Mat4.createTranslationXYZ(x, y, 0));
 
         self.shader.setUniformMatrix4fv("model", &model.fields[0][0]);
 
-        self.shader.setVector3f("spriteColor", options.color);
+        self.shader.setVector3f("spriteColor", sprite.color);
 
         gl.ActiveTexture(gl.TEXTURE0);
-        options.texture.bind();
+        sprite.texture.bind();
 
         gl.BindVertexArray(self.vao);
         gl.DrawArrays(gl.TRIANGLES, 0, 6);

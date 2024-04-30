@@ -14,7 +14,7 @@ fn glfwPanic() noreturn {
     @panic(glfw.getErrorString() orelse "unknown error");
 }
 
-var breakout: Game = Game{};
+var breakout: Game = Game{ .width = 800, .height = 600 };
 var glProcs: gl.ProcTable = undefined;
 
 pub fn main() !void {
@@ -44,12 +44,8 @@ pub fn main() !void {
     gl.Enable(gl.BLEND);
     gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-    zstbi.init(gpa.allocator());
-    defer zstbi.deinit();
-    resource.init(gpa.allocator());
-    defer resource.deinit();
-
-    try breakout.init();
+    try breakout.init(gpa.allocator());
+    defer breakout.deinit();
     var lastFrame: f64 = 0.0;
 
     while (!window.shouldClose()) {
