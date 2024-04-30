@@ -4,9 +4,6 @@ const Texture2D = @import("texture.zig").Texture2D;
 const Shader = @import("shader.zig").Shader;
 
 pub const Texture2DEnum = enum { face, block, solid_block, background, paddle };
-// pub const Texture2DUnion = union([]const u8) {
-//     face: "assets/awesomeface.png",
-// };
 pub const ShaderEnum = enum { shader };
 
 var textures: std.EnumMap(Texture2DEnum, Texture2D) = undefined;

@@ -16,7 +16,7 @@ pub const Game = struct {
     keys: [1024]bool = [_]bool{false} ** 1024,
     spriteRenderer: SpriteRenderer = undefined,
     levels: [4]GameLevel = undefined,
-    level: usize = 2,
+    level: usize = 0,
     player: Sprite = undefined,
 
     pub fn init(self: *Game, allocator: std.mem.Allocator) !void {
@@ -151,6 +151,7 @@ const GameLevel = struct {
             }
 
             const color = switch (unit) {
+                0 => continue,
                 2 => zlm.Vec3.new(0.2, 0.6, 1.0),
                 3 => zlm.Vec3.new(0.0, 0.7, 0.0),
                 4 => zlm.Vec3.new(0.8, 0.8, 0.4),
