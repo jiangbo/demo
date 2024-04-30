@@ -8,6 +8,7 @@ const Sprite = @import("sprite.zig").Sprite;
 
 const Allocator = std.mem.Allocator;
 const GameState = enum { active, menu, win };
+const playerSpeed: f32 = 500;
 pub const Game = struct {
     state: GameState = .active,
     width: f32,
@@ -16,6 +17,7 @@ pub const Game = struct {
     spriteRenderer: SpriteRenderer = undefined,
     levels: [4]GameLevel = undefined,
     level: usize = 2,
+    player: Sprite = undefined,
 
     pub fn init(self: *Game, allocator: std.mem.Allocator) !void {
         resource.init(allocator);
@@ -35,20 +37,39 @@ pub const Game = struct {
         _ = try resource.loadTexture(.block, "assets/block.png");
         _ = try resource.loadTexture(.solid_block, "assets/block_solid.png");
         _ = try resource.loadTexture(.background, "assets/background.jpg");
+        _ = try resource.loadTexture(.paddle, "assets/paddle.png");
 
-        self.levels[0] = GameLevel{ .width = self.width, .height = self.height / 2 };
+        self.levels[0] = .{ .width = self.width, .height = self.height / 2 };
         try self.levels[0].init(allocator, "assets/lv1.json");
-        self.levels[1] = GameLevel{ .width = self.width, .height = self.height / 2 };
+        self.levels[1] = .{ .width = self.width, .height = self.height / 2 };
         try self.levels[1].init(allocator, "assets/lv2.json");
-        self.levels[2] = GameLevel{ .width = self.width, .height = self.height / 2 };
+        self.levels[2] = .{ .width = self.width, .height = self.height / 2 };
         try self.levels[2].init(allocator, "assets/lv3.json");
-        self.levels[3] = GameLevel{ .width = self.width, .height = self.height / 2 };
+        self.levels[3] = .{ .width = self.width, .height = self.height / 2 };
         try self.levels[3].init(allocator, "assets/lv4.json");
+
+        self.player = Sprite{
+            .texture = resource.getTexture(.paddle),
+            .position = zlm.Vec2.new(self.width / 2 - 50, self.height - 20),
+            .size = zlm.Vec2.new(100, 20),
+        };
     }
     // game loop
-    pub fn processInput(self: Game, deltaTime: f64) void {
-        _ = deltaTime;
-        _ = self;
+    pub fn processInput(self: *Game, deltaTime: f64) void {
+        if (self.state != .active) return;
+
+        const speed = playerSpeed * @as(f32, @floatCast(deltaTime));
+
+        if (self.keys[@as(usize, @intCast(glfw.Key.a.getScancode()))]) {
+            self.player.position.x -= speed;
+            if (self.player.position.x < 0) self.player.position.x = 0;
+        }
+
+        if (self.keys[@as(usize, @intCast(glfw.Key.d.getScancode()))]) {
+            self.player.position.x += speed;
+            const maxX = self.width - self.player.size.x;
+            if (self.player.position.x > maxX) self.player.position.x = maxX;
+        }
     }
     pub fn update(self: Game, deltaTime: f64) void {
         _ = self;
@@ -64,6 +85,7 @@ pub const Game = struct {
             });
 
             self.levels[self.level].draw(self.spriteRenderer);
+            self.spriteRenderer.draw(self.player);
         }
     }
 
