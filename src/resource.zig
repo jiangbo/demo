@@ -1,6 +1,5 @@
 const std = @import("std");
 const zstbi = @import("zstbi");
-const gl = @import("gl");
 const Texture2D = @import("texture.zig").Texture2D;
 const Shader = @import("shader.zig").Shader;
 

@@ -10,12 +10,12 @@ const Allocator = std.mem.Allocator;
 const GameState = enum { active, menu, win };
 pub const Game = struct {
     state: GameState = .active,
-    width: f32 = 0,
-    height: f32 = 0,
+    width: f32,
+    height: f32,
     keys: [1024]bool = [_]bool{false} ** 1024,
     spriteRenderer: SpriteRenderer = undefined,
     levels: [4]GameLevel = undefined,
-    level: usize = 1,
+    level: usize = 2,
 
     pub fn init(self: *Game, allocator: std.mem.Allocator) !void {
         resource.init(allocator);
@@ -36,19 +36,14 @@ pub const Game = struct {
         _ = try resource.loadTexture(.solid_block, "assets/block_solid.png");
         _ = try resource.loadTexture(.background, "assets/background.jpg");
 
-        //  GameLevel one; one.Load("levels/one.lvl", this->Width, this->Height * 0.5);
-        //     GameLevel two; two.Load("levels/two.lvl", this->Width, this->Height * 0.5);
-        //     GameLevel three; three.Load("levels/three.lvl", this->Width, this->Height * 0.5);
-        //     GameLevel four; four.Load("levels/four.lvl", this->Width, this->Height * 0.5);
-
-        self.levels[0] = GameLevel{ .width = self.width, .height = self.height };
+        self.levels[0] = GameLevel{ .width = self.width, .height = self.height / 2 };
         try self.levels[0].init(allocator, "assets/lv1.json");
-        // self.levels[1] = GameLevel{ .width = self.width, .height = self.height };
-        // try self.levels[1].init(allocator, "assets/lv2.json");
-        // self.levels[2] = GameLevel{ .width = self.width, .height = self.height };
-        // try self.levels[2].init(allocator, "assets/lv3.json");
-        // self.levels[3] = GameLevel{ .width = self.width, .height = self.height };
-        // try self.levels[3].init(allocator, "assets/lv4.json");
+        self.levels[1] = GameLevel{ .width = self.width, .height = self.height / 2 };
+        try self.levels[1].init(allocator, "assets/lv2.json");
+        self.levels[2] = GameLevel{ .width = self.width, .height = self.height / 2 };
+        try self.levels[2].init(allocator, "assets/lv3.json");
+        self.levels[3] = GameLevel{ .width = self.width, .height = self.height / 2 };
+        try self.levels[3].init(allocator, "assets/lv4.json");
     }
     // game loop
     pub fn processInput(self: Game, deltaTime: f64) void {
@@ -62,23 +57,13 @@ pub const Game = struct {
 
     pub fn render(self: Game) void {
         if (self.state == .active) {
-            const options = Sprite{
-                .texture = resource.getTexture(.face),
-                .position = zlm.Vec2.new(200, 200),
-                .size = zlm.Vec2.new(300, 400),
-                .rotate = 45,
-                .color = zlm.Vec3.new(0, 1, 0),
-            };
+            const background = resource.getTexture(.background);
+            self.spriteRenderer.draw(Sprite{
+                .texture = background,
+                .size = zlm.Vec2.new(self.width, self.height),
+            });
 
-            self.spriteRenderer.draw(options);
-
-            // const background = resource.getTexture(.face);
-            // self.spriteRenderer.draw(Sprite{
-            //     .texture = background,
-            //     .size = zlm.Vec2.new(self.width, self.height),
-            // });
-
-            // self.levels[self.level].draw(self.spriteRenderer);
+            self.levels[self.level].draw(self.spriteRenderer);
         }
     }
 
@@ -134,12 +119,13 @@ const GameLevel = struct {
             const x: f32 = @floatFromInt(index % level.width);
             const y: f32 = @floatFromInt(index / level.width);
             if (unit == 1) {
-                return try self.bricks.append(Sprite{
+                try self.bricks.append(Sprite{
                     .position = zlm.Vec2.new(x * unitWidth, y * unitHeight),
                     .size = zlm.Vec2.new(unitWidth, unitHeight),
                     .texture = resource.getTexture(.solid_block),
                     .solid = true,
                 });
+                continue;
             }
 
             const color = switch (unit) {

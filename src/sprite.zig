@@ -8,7 +8,7 @@ pub const Sprite = struct {
     position: zlm.Vec2 = zlm.Vec2.zero,
     size: zlm.Vec2 = zlm.Vec2.new(10, 10),
     rotate: f32 = 0,
-    color: zlm.Vec3 = zlm.Vec3.zero,
+    color: zlm.Vec3 = zlm.Vec3.one,
     solid: bool = true,
     destroyed: bool = false,
 };

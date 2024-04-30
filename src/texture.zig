@@ -9,7 +9,8 @@ pub const Texture2D = struct {
     filterMin: c_int = gl.LINEAR,
     filterMax: c_int = gl.LINEAR,
 
-    pub fn generate(self: Texture2D, width: u32, height: u32, data: []const u8) void {
+    pub fn generate(self: *Texture2D, width: u32, height: u32, data: []const u8) void {
+        gl.GenTextures(1, (&self.id)[0..1]);
         gl.BindTexture(gl.TEXTURE_2D, self.id);
 
         const w: c_int = @intCast(width);
