@@ -46,10 +46,10 @@ pub fn main() !void {
 
     try breakout.init(gpa.allocator());
     defer breakout.deinit();
-    var lastFrame: f64 = 0.0;
+    var lastFrame: f32 = 0.0;
 
     while (!window.shouldClose()) {
-        const currentFrame = glfw.getTime();
+        const currentFrame = @as(f32, @floatCast(glfw.getTime()));
         defer lastFrame = currentFrame;
         const deltaTime = currentFrame - lastFrame;
 

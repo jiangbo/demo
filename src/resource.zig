@@ -27,8 +27,8 @@ pub fn getShader(name: ShaderEnum) Shader {
     return shaders.get(name).?;
 }
 
-pub fn loadTexture(name: Texture2DEnum, file: cstr) !Texture2D {
-    var image = try zstbi.Image.loadFromFile(file, 4);
+fn loadTexture(name: Texture2DEnum, file: cstr) Texture2D {
+    var image = zstbi.Image.loadFromFile(file, 4) catch unreachable;
     defer image.deinit();
 
     var texture = Texture2D{};
@@ -39,7 +39,13 @@ pub fn loadTexture(name: Texture2DEnum, file: cstr) !Texture2D {
 }
 
 pub fn getTexture(name: Texture2DEnum) Texture2D {
-    return textures.get(name).?;
+    return textures.get(name) orelse loadTexture(name, switch (name) {
+        .face => "assets/awesomeface.png",
+        .block => "assets/block.png",
+        .solid_block => "assets/block_solid.png",
+        .background => "assets/background.jpg",
+        .paddle => "assets/paddle.png",
+    });
 }
 
 pub fn deinit() void {

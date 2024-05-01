@@ -4,11 +4,12 @@ const glfw = @import("mach-glfw");
 const gl = @import("gl");
 const resource = @import("resource.zig");
 const SpriteRenderer = @import("renderer.zig").SpriteRenderer;
-const Sprite = @import("sprite.zig").Sprite;
+const sprite = @import("sprite.zig");
 
 const Allocator = std.mem.Allocator;
 const GameState = enum { active, menu, win };
 const playerSpeed: f32 = 500;
+const ballRadius: f32 = 12.5;
 pub const Game = struct {
     state: GameState = .active,
     width: f32,
@@ -17,7 +18,8 @@ pub const Game = struct {
     spriteRenderer: SpriteRenderer = undefined,
     levels: [4]GameLevel = undefined,
     level: usize = 0,
-    player: Sprite = undefined,
+    player: sprite.Sprite = undefined,
+    ball: sprite.Ball = undefined,
 
     pub fn init(self: *Game, allocator: std.mem.Allocator) !void {
         resource.init(allocator);
@@ -33,60 +35,70 @@ pub const Game = struct {
         self.spriteRenderer = SpriteRenderer{ .shader = shader };
         self.spriteRenderer.initRenderData();
 
-        _ = try resource.loadTexture(.face, "assets/awesomeface.png");
-        _ = try resource.loadTexture(.block, "assets/block.png");
-        _ = try resource.loadTexture(.solid_block, "assets/block_solid.png");
-        _ = try resource.loadTexture(.background, "assets/background.jpg");
-        _ = try resource.loadTexture(.paddle, "assets/paddle.png");
+        var buffer: [30]u8 = undefined;
+        for (&self.levels, 1..) |*value, i| {
+            value.* = .{ .width = self.width, .height = self.height / 2 };
+            const path = std.fmt.bufPrint(&buffer, "assets/lv{}.json", .{i});
+            try value.init(allocator, try path);
+        }
 
-        self.levels[0] = .{ .width = self.width, .height = self.height / 2 };
-        try self.levels[0].init(allocator, "assets/lv1.json");
-        self.levels[1] = .{ .width = self.width, .height = self.height / 2 };
-        try self.levels[1].init(allocator, "assets/lv2.json");
-        self.levels[2] = .{ .width = self.width, .height = self.height / 2 };
-        try self.levels[2].init(allocator, "assets/lv3.json");
-        self.levels[3] = .{ .width = self.width, .height = self.height / 2 };
-        try self.levels[3].init(allocator, "assets/lv4.json");
-
-        self.player = Sprite{
+        self.player = sprite.Sprite{
             .texture = resource.getTexture(.paddle),
             .position = zlm.Vec2.new(self.width / 2 - 50, self.height - 20),
             .size = zlm.Vec2.new(100, 20),
         };
+
+        self.ball = sprite.Ball{ .sprite = sprite.Sprite{
+            .size = zlm.Vec2.new(ballRadius * 2, ballRadius * 2),
+            .texture = resource.getTexture(.face),
+        }, .radius = ballRadius };
+        self.ball.sprite.position = self.ballPositionWithPlayer();
     }
-    // game loop
-    pub fn processInput(self: *Game, deltaTime: f64) void {
+
+    fn ballPositionWithPlayer(self: Game) zlm.Vec2 {
+        if (!self.ball.stuck) return self.ball.sprite.position;
+        const x = self.player.size.x / 2 - ballRadius;
+        return self.player.position.add(zlm.Vec2.new(x, -ballRadius * 2));
+    }
+
+    pub fn processInput(self: *Game, deltaTime: f32) void {
         if (self.state != .active) return;
 
-        const speed = playerSpeed * @as(f32, @floatCast(deltaTime));
+        const distance = playerSpeed * deltaTime;
 
         if (self.keys[@as(usize, @intCast(glfw.Key.a.getScancode()))]) {
-            self.player.position.x -= speed;
+            self.player.position.x -= distance;
             if (self.player.position.x < 0) self.player.position.x = 0;
+            self.ball.sprite.position = self.ballPositionWithPlayer();
         }
 
         if (self.keys[@as(usize, @intCast(glfw.Key.d.getScancode()))]) {
-            self.player.position.x += speed;
+            self.player.position.x += distance;
             const maxX = self.width - self.player.size.x;
             if (self.player.position.x > maxX) self.player.position.x = maxX;
+            self.ball.sprite.position = self.ballPositionWithPlayer();
+        }
+
+        if (self.keys[@as(usize, @intCast(glfw.Key.space.getScancode()))]) {
+            self.ball.stuck = false;
         }
     }
-    pub fn update(self: Game, deltaTime: f64) void {
-        _ = self;
-        _ = deltaTime;
+
+    pub fn update(self: *Game, deltaTime: f32) void {
+        _ = self.ball.move(deltaTime, self.width);
     }
 
     pub fn render(self: Game) void {
-        if (self.state == .active) {
-            const background = resource.getTexture(.background);
-            self.spriteRenderer.draw(Sprite{
-                .texture = background,
-                .size = zlm.Vec2.new(self.width, self.height),
-            });
+        if (self.state != .active) return;
+        const background = resource.getTexture(.background);
+        self.spriteRenderer.draw(sprite.Sprite{
+            .texture = background,
+            .size = zlm.Vec2.new(self.width, self.height),
+        });
 
-            self.levels[self.level].draw(self.spriteRenderer);
-            self.spriteRenderer.draw(self.player);
-        }
+        self.levels[self.level].draw(self.spriteRenderer);
+        self.spriteRenderer.draw(self.player);
+        self.spriteRenderer.draw(self.ball.sprite);
     }
 
     pub fn deinit(self: Game) void {
@@ -96,7 +108,7 @@ pub const Game = struct {
 };
 
 const GameLevel = struct {
-    bricks: std.ArrayList(Sprite) = undefined,
+    bricks: std.ArrayList(sprite.Sprite) = undefined,
     width: f32 = 0,
     height: f32 = 0,
 
@@ -132,7 +144,7 @@ const GameLevel = struct {
 
     fn parse(self: *GameLevel, allocator: std.mem.Allocator, level: FileLevel) !void {
         const size = level.width * level.height;
-        self.bricks = try std.ArrayList(Sprite).initCapacity(allocator, size);
+        self.bricks = try std.ArrayList(sprite.Sprite).initCapacity(allocator, size);
 
         const unitWidth = self.width / @as(f32, @floatFromInt(level.width));
         const unitHeight = self.height / @as(f32, @floatFromInt(level.height));
@@ -141,7 +153,7 @@ const GameLevel = struct {
             const x: f32 = @floatFromInt(index % level.width);
             const y: f32 = @floatFromInt(index / level.width);
             if (unit == 1) {
-                try self.bricks.append(Sprite{
+                try self.bricks.append(sprite.Sprite{
                     .position = zlm.Vec2.new(x * unitWidth, y * unitHeight),
                     .size = zlm.Vec2.new(unitWidth, unitHeight),
                     .texture = resource.getTexture(.solid_block),
@@ -159,13 +171,12 @@ const GameLevel = struct {
                 else => zlm.Vec3.new(1.0, 1.0, 1.0),
             };
 
-            const sprite = Sprite{
+            try self.bricks.append(sprite.Sprite{
                 .position = zlm.Vec2.new(x * unitWidth, y * unitHeight),
                 .size = zlm.Vec2.new(unitWidth, unitHeight),
                 .texture = resource.getTexture(.block),
                 .color = color,
-            };
-            try self.bricks.append(sprite);
+            });
         }
     }
 };
