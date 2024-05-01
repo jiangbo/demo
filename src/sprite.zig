@@ -52,4 +52,17 @@ pub const Ball = struct {
 
         return self.sprite.position;
     }
+
+    pub fn checkCollision(self: Ball, s2: Sprite) bool {
+        const center = self.sprite.position.add(zlm.Vec2.all(self.radius));
+
+        const aabbHalf = s2.size.scale(0.5);
+        const aabbCenter = s2.position.add(aabbHalf);
+
+        var difference = center.sub(aabbCenter);
+        const clamped = difference.componentClamp(aabbHalf.neg(), aabbHalf);
+        const closest = aabbCenter.add(clamped);
+        difference = closest.sub(center);
+        return difference.length() < self.radius;
+    }
 };

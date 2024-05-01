@@ -64,7 +64,7 @@ pub const Game = struct {
     fn doCollisions(self: *Game) void {
         for (self.levels[self.level].bricks.items) |*box| {
             if (box.destroyed or box.solid) continue;
-            if (box.checkCollision(self.ball.sprite)) box.destroyed = true;
+            if (self.ball.checkCollision(box.*)) box.destroyed = true;
         }
     }
 
