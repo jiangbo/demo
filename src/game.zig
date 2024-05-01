@@ -61,6 +61,13 @@ pub const Game = struct {
         return self.player.position.add(zlm.Vec2.new(x, -ballRadius * 2));
     }
 
+    fn doCollisions(self: *Game) void {
+        for (self.levels[self.level].bricks.items) |*box| {
+            if (box.destroyed or box.solid) continue;
+            if (box.checkCollision(self.ball.sprite)) box.destroyed = true;
+        }
+    }
+
     pub fn processInput(self: *Game, deltaTime: f32) void {
         if (self.state != .active) return;
 
@@ -86,6 +93,8 @@ pub const Game = struct {
 
     pub fn update(self: *Game, deltaTime: f32) void {
         _ = self.ball.move(deltaTime, self.width);
+
+        self.doCollisions();
     }
 
     pub fn render(self: Game) void {
@@ -114,7 +123,7 @@ const GameLevel = struct {
 
     fn draw(self: GameLevel, renderer: SpriteRenderer) void {
         for (self.bricks.items) |brick| {
-            renderer.draw(brick);
+            if (!brick.destroyed) renderer.draw(brick);
         }
     }
 

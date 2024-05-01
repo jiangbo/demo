@@ -9,8 +9,18 @@ pub const Sprite = struct {
     size: zlm.Vec2 = zlm.Vec2.new(10, 10),
     rotate: f32 = 0,
     color: zlm.Vec3 = zlm.Vec3.one,
-    solid: bool = true,
+    solid: bool = false,
     destroyed: bool = false,
+
+    pub fn checkCollision(s1: Sprite, s2: Sprite) bool {
+        const collisionX = s1.position.x + s1.size.x >= s2.position.x //
+        and s2.position.x + s2.size.x >= s1.position.x;
+
+        const collisionY = s1.position.y + s1.size.y >= s2.position.y //
+        and s2.position.y + s2.size.y >= s1.position.y;
+
+        return collisionX and collisionY;
+    }
 };
 
 pub const Ball = struct {
