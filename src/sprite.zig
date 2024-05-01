@@ -1,7 +1,6 @@
 const std = @import("std");
 const zlm = @import("zlm");
 const Texture2D = @import("texture.zig").Texture2D;
-// const SpriteRenderer = @import("renderer.zig").SpriteRenderer;
 
 pub const Sprite = struct {
     texture: Texture2D,
@@ -27,7 +26,7 @@ pub const Ball = struct {
     sprite: Sprite,
     radius: f32,
     stuck: bool = true,
-    velocity: zlm.Vec2 = zlm.Vec2.new(100, -350),
+    velocity: zlm.Vec2,
 
     pub fn move(self: *Ball, deltaTime: f32, width: f32) zlm.Vec2 {
         if (self.stuck) return self.sprite.position;
@@ -53,7 +52,7 @@ pub const Ball = struct {
         return self.sprite.position;
     }
 
-    pub fn checkCollision(self: Ball, s2: Sprite) bool {
+    pub fn checkCollision(self: Ball, s2: Sprite) Collision {
         const center = self.sprite.position.add(zlm.Vec2.all(self.radius));
 
         const aabbHalf = s2.size.scale(0.5);
@@ -63,6 +62,37 @@ pub const Ball = struct {
         const clamped = difference.componentClamp(aabbHalf.neg(), aabbHalf);
         const closest = aabbCenter.add(clamped);
         difference = closest.sub(center);
-        return difference.length() < self.radius;
+        if (difference.length() > self.radius) return Collision{};
+
+        return Collision.collisioned(difference);
+    }
+};
+
+pub const Collision = struct {
+    collisioned: bool = false,
+    direction: enum { up, right, down, left } = .up,
+    vector: zlm.Vec2 = zlm.Vec2.zero,
+
+    fn collisioned(target: zlm.Vec2) Collision {
+        const compass = [_]zlm.Vec2{
+            zlm.Vec2.new(0.0, 1.0),
+            zlm.Vec2.new(1.0, 0.0),
+            zlm.Vec2.new(0.0, -1.0),
+            zlm.Vec2.new(-1.0, 0.0),
+        };
+        var max: f32 = 0.0;
+        var bestMatch: usize = 0;
+        for (compass, 0..) |value, i| {
+            const dot = target.normalize().dot(value);
+            if (dot > max) {
+                max = dot;
+                bestMatch = i;
+            }
+        }
+        return Collision{
+            .collisioned = true,
+            .direction = @enumFromInt(bestMatch),
+            .vector = compass[bestMatch],
+        };
     }
 };
