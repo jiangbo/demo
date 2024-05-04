@@ -3,8 +3,8 @@ const zstbi = @import("zstbi");
 const Texture2D = @import("texture.zig").Texture2D;
 const Shader = @import("shader.zig").Shader;
 
-pub const Texture2DEnum = enum { face, block, solid_block, background, paddle };
-pub const ShaderEnum = enum { shader };
+pub const Texture2DEnum = enum { face, block, solid_block, background, paddle, particle };
+pub const ShaderEnum = enum { shader, particle };
 
 var textures: std.EnumMap(Texture2DEnum, Texture2D) = undefined;
 var shaders: std.EnumMap(ShaderEnum, Shader) = undefined;
@@ -17,14 +17,25 @@ pub fn init(allocator: std.mem.Allocator) void {
 }
 
 const cstr = [:0]const u8;
-pub fn loadShader(name: ShaderEnum, vs: cstr, fs: cstr) Shader {
+fn loadShader(name: ShaderEnum, vs: cstr, fs: cstr) Shader {
     const shader = Shader.init(vs, fs);
     shaders.put(name, shader);
     return shader;
 }
 
 pub fn getShader(name: ShaderEnum) Shader {
-    return shaders.get(name).?;
+    return shaders.get(name) orelse switch (name) {
+        .shader => {
+            const vertex = @embedFile("shader/vertex.glsl");
+            const fragment = @embedFile("shader/fragment.glsl");
+            return loadShader(name, vertex, fragment);
+        },
+        .particle => {
+            const vertex = @embedFile("shader/particle.vs");
+            const fragment = @embedFile("shader/particle.frag");
+            return loadShader(name, vertex, fragment);
+        },
+    };
 }
 
 fn loadTexture(name: Texture2DEnum, file: cstr) Texture2D {
@@ -45,6 +56,7 @@ pub fn getTexture(name: Texture2DEnum) Texture2D {
         .solid_block => "assets/block_solid.png",
         .background => "assets/background.jpg",
         .paddle => "assets/paddle.png",
+        .particle => "assets/particle.png",
     });
 }
 

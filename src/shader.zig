@@ -40,6 +40,14 @@ pub const Shader = struct {
         gl.Uniform3f(self.getUniformLocation(name), v.x, v.y, v.z);
     }
 
+    pub fn setVector2f(self: Shader, name: cstr, v: zlm.Vec2) void {
+        gl.Uniform2f(self.getUniformLocation(name), v.x, v.y);
+    }
+
+    pub fn setVector4f(self: Shader, name: cstr, v: zlm.Vec4) void {
+        gl.Uniform4f(self.getUniformLocation(name), v.x, v.y, v.z, v.w);
+    }
+
     pub fn deinit(self: Shader) void {
         gl.DeleteProgram(self.program);
     }

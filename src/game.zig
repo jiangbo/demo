@@ -3,7 +3,7 @@ const zlm = @import("zlm");
 const glfw = @import("mach-glfw");
 const gl = @import("gl");
 const resource = @import("resource.zig");
-const SpriteRenderer = @import("renderer.zig").SpriteRenderer;
+const renderer = @import("renderer.zig");
 const sprite = @import("sprite.zig");
 
 const Allocator = std.mem.Allocator;
@@ -11,31 +11,40 @@ const GameState = enum { active, menu, win };
 const playerSpeed: f32 = 500;
 const ballRadius: f32 = 12.5;
 const ballVelocity: zlm.Vec2 = zlm.Vec2.new(100, -350);
+var lastUsedParticle: usize = 0;
 
 pub const Game = struct {
     state: GameState = .active,
     width: f32,
     height: f32,
     keys: [1024]bool = [_]bool{false} ** 1024,
-    spriteRenderer: SpriteRenderer = undefined,
+    spriteRenderer: renderer.SpriteRenderer = undefined,
+    particleRenderer: renderer.ParticleRenderer = undefined,
     levels: [4]GameLevel = undefined,
     level: usize = 0,
     player: sprite.Sprite = undefined,
     ball: sprite.Ball = undefined,
+    particles: [500]sprite.Particle = undefined,
 
     pub fn init(self: *Game, allocator: std.mem.Allocator) !void {
         resource.init(allocator);
 
-        const vs: [:0]const u8 = @embedFile("shader/vertex.glsl");
-        const fs: [:0]const u8 = @embedFile("shader/fragment.glsl");
-        const shader = resource.loadShader(.shader, vs, fs);
-
+        const shader = resource.getShader(.shader);
         const projection = zlm.Mat4.createOrthogonal(0, self.width, self.height, 0, -1, 1);
         shader.setUniformMatrix4fv("projection", &projection.fields[0][0]);
         shader.setUniform1i("image", 0);
 
-        self.spriteRenderer = SpriteRenderer{ .shader = shader };
+        self.spriteRenderer = renderer.SpriteRenderer{ .shader = shader };
         self.spriteRenderer.initRenderData();
+
+        const particle = resource.getShader(.particle);
+        particle.setUniformMatrix4fv("projection", &projection.fields[0][0]);
+        shader.setUniform1i("image", 0);
+
+        self.particleRenderer = renderer.ParticleRenderer{ .shader = particle };
+        self.particleRenderer.initRenderData();
+
+        for (&self.particles) |*value| value.*.texture = resource.getTexture(.particle);
 
         var buffer: [30]u8 = undefined;
         for (&self.levels, 1..) |*value, i| {
@@ -62,12 +71,12 @@ pub const Game = struct {
             if (!box.solid) box.destroyed = true;
 
             if (collision.direction == .left or collision.direction == .right) {
-                self.ball.velocity.x = -self.ball.velocity.x;
+                self.ball.sprite.velocity.x = -self.ball.sprite.velocity.x;
                 var delta = self.ball.radius - @abs(collision.vector.x);
                 delta = if (collision.direction == .left) -delta else delta;
                 self.ball.sprite.position.x += delta;
             } else {
-                self.ball.velocity.y = -self.ball.velocity.y;
+                self.ball.sprite.velocity.y = -self.ball.sprite.velocity.y;
                 var delta = self.ball.radius - @abs(collision.vector.y);
                 delta = if (collision.direction == .up) -delta else delta;
                 self.ball.sprite.position.y += delta;
@@ -77,14 +86,15 @@ pub const Game = struct {
         const collision = self.ball.checkCollision(self.player);
         if (!collision.collisioned) return;
 
+        const ballSprite = &self.ball.sprite;
         const center = self.player.position.x + self.player.size.x / 2;
-        const distance = (self.ball.sprite.position.x + self.ball.radius) - center;
+        const distance = (ballSprite.position.x + self.ball.radius) - center;
         const percentage = distance / (self.player.size.x / 2);
 
-        const old = self.ball.velocity;
-        self.ball.velocity.x = ballVelocity.x * percentage * 2;
-        self.ball.velocity.y = -@abs(self.ball.velocity.y);
-        self.ball.velocity = self.ball.velocity.normalize().scale(old.length());
+        const old = self.ball.sprite.velocity;
+        ballSprite.velocity.x = ballVelocity.x * percentage * 2;
+        ballSprite.velocity.y = -@abs(ballSprite.velocity.y);
+        ballSprite.velocity = ballSprite.velocity.normalize().scale(old.length());
     }
 
     pub fn processInput(self: *Game, deltaTime: f32) void {
@@ -119,6 +129,21 @@ pub const Game = struct {
             self.levels[self.level].reset();
             self.resetPlayer();
         }
+
+        for (0..2) |_| {
+            const unusedParticle = self.firstUnusedParticle();
+            const offset = zlm.Vec2.all(self.ball.radius / 2.0);
+            self.particles[unusedParticle].respawn(self.ball.sprite, offset);
+        }
+
+        for (&self.particles) |*particle| {
+            particle.life -= deltaTime;
+            if (particle.life <= 0) continue;
+
+            const velocity = particle.velocity.scale(deltaTime);
+            particle.position = particle.position.sub(velocity);
+            particle.color.w -= deltaTime * 2.5;
+        }
     }
 
     pub fn render(self: Game) void {
@@ -131,6 +156,7 @@ pub const Game = struct {
 
         self.levels[self.level].draw(self.spriteRenderer);
         self.spriteRenderer.draw(self.player);
+        self.particleRenderer.draw(&self.particles);
         self.spriteRenderer.draw(self.ball.sprite);
     }
 
@@ -140,16 +166,38 @@ pub const Game = struct {
             .position = zlm.Vec2.new(self.width / 2 - 50, self.height - 20),
             .size = zlm.Vec2.new(100, 20),
         };
-        self.ball = sprite.Ball{ .sprite = sprite.Sprite{
+        self.ball = sprite.Ball{ .radius = ballRadius, .sprite = sprite.Sprite{
             .size = zlm.Vec2.new(ballRadius * 2, ballRadius * 2),
             .texture = resource.getTexture(.face),
-        }, .velocity = ballVelocity, .radius = ballRadius };
+            .velocity = ballVelocity,
+        } };
         self.ball.sprite.position = self.ballPositionWithPlayer();
     }
 
     pub fn deinit(self: Game) void {
         for (self.levels) |level| level.deinit();
         resource.deinit();
+    }
+
+    fn firstUnusedParticle(self: Game) usize {
+        // search from last used particle, this will usually return almost instantly
+        for (lastUsedParticle..self.particles.len) |index| {
+            if (self.particles[index].life <= 0) {
+                lastUsedParticle = index;
+                return index;
+            }
+        }
+
+        // otherwise, do a linear search
+        for (0..lastUsedParticle) |index| {
+            if (self.particles[index].life <= 0) {
+                lastUsedParticle = index;
+                return index;
+            }
+        }
+        // override first particle if all others are alive
+        lastUsedParticle = 0;
+        return 0;
     }
 };
 
@@ -159,9 +207,9 @@ const GameLevel = struct {
     height: f32 = 0,
     copy: std.ArrayList(sprite.Sprite) = undefined,
 
-    fn draw(self: GameLevel, renderer: SpriteRenderer) void {
+    fn draw(self: GameLevel, render: renderer.SpriteRenderer) void {
         for (self.bricks.items) |brick| {
-            if (!brick.destroyed) renderer.draw(brick);
+            if (!brick.destroyed) render.draw(brick);
         }
     }
 
@@ -233,8 +281,4 @@ const GameLevel = struct {
     }
 };
 
-const FileLevel = struct {
-    level: []const u8,
-    width: usize,
-    height: usize,
-};
+const FileLevel = struct { level: []const u8, width: usize, height: usize };
