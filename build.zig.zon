@@ -2,20 +2,9 @@
     .name = "demo",
     .version = "0.0.0",
     .dependencies = .{
-        .@"mach-glfw" = .{
-            .url = "https://pkg.machengine.org/mach-glfw/1a9a03399058fd83f7fbb597f3f8304007ff6a3c.tar.gz",
-            .hash = "1220b4d58ec6cf53abfd8d7547d39afb9bffa41822d4d58f52625230466e51cc93bb",
-        },
-        .zigglgen = .{
-            .url = "https://github.com/castholm/zigglgen/releases/download/v0.2.1/zigglgen.tar.gz",
-            .hash = "122059d1ff6787eedb40771eabb0f04d04fe299bd1bae7b216c4a9d894719c2a148a",
-        },
-        .zstbi = .{
-            .path = "lib/zstbi",
-        },
-        .zlm = .{
-            .url = "https://github.com/ziglibs/zlm/archive/833031bfdbfd24526e4115a59459f9c360d7b824.tar.gz",
-            .hash = "12205dbec9f917a3ab61ca65900dce7a04c9ec4348d0e2241a9c246b9c2d131d061b",
+        .mach = .{
+            .url = "https://github.com/hexops/mach/archive/26b2351d4b04122d51c140b2d35325c02ccb0a5a.tar.gz",
+            .hash = "12200a56e95eb1de56f744ec86e9ab961f85f2eb27ad8d56456b2a620862ffc9035a",
         },
     },
     .paths = .{""},
