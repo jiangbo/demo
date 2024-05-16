@@ -1,11 +1,12 @@
 const std = @import("std");
-
 const mach = @import("mach");
+const mesh = @import("mesh.zig");
 
 pub const App = @This();
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 renderPipeline: *mach.gpu.RenderPipeline = undefined,
+vertexBuffer: *mach.gpu.Buffer = undefined,
 
 pub fn init(app: *App) !void {
     try mach.core.init(.{});
@@ -15,16 +16,50 @@ pub fn init(app: *App) !void {
 
     // const device = mach.core.device;
 
-    app.renderPipeline = createRenderPipeline();
+    app.renderPipeline = createRenderPipeline(app);
 }
 
-fn createRenderPipeline() *mach.gpu.RenderPipeline {
+fn createRenderPipeline(app: *App) *mach.gpu.RenderPipeline {
     const device = mach.core.device;
 
+    const vertexData = [_]f32{
+        0.5,  0.5,  1.0, 0.0, 0.0, //
+        0.5,  -0.5, 0.0, 1.0, 0.0,
+        -0.5, -0.5, 0.0, 0.0, 1.0,
+        -0.5, -0.5, 0.0, 0.0, 1.0,
+        -0.5, 0.5,  0.0, 1.0, 0.0,
+        0.5,  0.5,  1.0, 0.0, 0.0,
+    };
+
     // 编译 shader
-    const source = @embedFile("shader/shader.wgsl");
+    const source = @embedFile("shader.wgsl");
     const module = device.createShaderModuleWGSL("shader.wgsl", source);
     defer module.release();
+
+    // 创建顶点缓冲区
+    app.vertexBuffer = device.createBuffer(&.{
+        .label = "vertex",
+        .usage = .{ .copy_dst = true, .vertex = true },
+        .size = @sizeOf(f32) * vertexData.len,
+    });
+
+    // 将 CPU 内存中的数据复制到 GPU 内存中
+    mach.core.queue.writeBuffer(app.vertexBuffer, 0, &vertexData);
+
+    // const offset = @offsetOf(mesh.Vertex, "col");
+    const vertexLayout = mach.gpu.VertexBufferLayout.init(.{
+        .array_stride = @sizeOf(f32) * 5,
+        .attributes = &.{
+            .{ .format = .float32x2, .offset = 0, .shader_location = 0 },
+            .{ .format = .float32x3, .offset = @sizeOf(f32) * 2, .shader_location = 1 },
+        },
+    });
+
+    const vertex = mach.gpu.VertexState.init(.{
+        .module = module,
+        .entry_point = "vs_main",
+        .buffers = &.{vertexLayout},
+    });
 
     // 片段着色器状态
     const fragment = mach.gpu.FragmentState.init(.{
@@ -36,7 +71,7 @@ fn createRenderPipeline() *mach.gpu.RenderPipeline {
     // 创建渲染管线
     const descriptor = mach.gpu.RenderPipeline.Descriptor{
         .fragment = &fragment,
-        .vertex = .{ .module = module, .entry_point = "vs_main" },
+        .vertex = vertex,
     };
     return device.createRenderPipeline(&descriptor);
 }
@@ -71,7 +106,8 @@ pub fn update(app: *App) !bool {
 
     // 设置渲染管线
     pass.setPipeline(app.renderPipeline);
-    pass.draw(3, 1, 0, 0);
+    pass.setVertexBuffer(0, app.vertexBuffer, 0, app.vertexBuffer.getSize());
+    pass.draw(6, 2, 0, 0);
     pass.end();
     pass.release();
 
