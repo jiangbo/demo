@@ -3,32 +3,51 @@ const mach = @import("mach");
 const mesh = @import("mesh.zig");
 
 pub const App = @This();
+const Model = struct {
+    offset: [2]f32,
+};
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 renderPipeline: *mach.gpu.RenderPipeline = undefined,
 vertexBuffer: *mach.gpu.Buffer = undefined,
+bindGroup: *mach.gpu.BindGroup = undefined,
 
 pub fn init(app: *App) !void {
-    try mach.core.init(.{});
+    try mach.core.init(.{ .size = .{ .width = 600, .height = 480 } });
     // 设置帧率
     mach.core.setFrameRateLimit(30);
     mach.core.setInputFrequency(30);
+    const device = mach.core.device;
 
-    // const device = mach.core.device;
+    const modelBuffer = device.createBuffer(&.{
+        .usage = .{ .copy_dst = true, .uniform = true },
+        .size = @sizeOf(Model),
+    });
+    const modelData = Model{ .offset = .{ 0.5, 0.5 } };
+    device.getQueue().writeBuffer(modelBuffer, 0, &modelData.offset);
 
     app.renderPipeline = createRenderPipeline(app);
+    const Entry = mach.gpu.BindGroup.Entry;
+    app.bindGroup = device.createBindGroup(
+        &mach.gpu.BindGroup.Descriptor.init(.{
+            .layout = app.renderPipeline.getBindGroupLayout(0),
+            .entries = &.{
+                Entry.buffer(0, modelBuffer, 0, @sizeOf(Model)),
+            },
+        }),
+    );
 }
 
 fn createRenderPipeline(app: *App) *mach.gpu.RenderPipeline {
     const device = mach.core.device;
 
     const vertexData = [_]f32{
-        0.5,  0.5,  1.0, 0.0, 0.0, //
-        0.5,  -0.5, 0.0, 1.0, 0.0,
-        -0.5, -0.5, 0.0, 0.0, 1.0,
-        -0.5, -0.5, 0.0, 0.0, 1.0,
-        -0.5, 0.5,  0.0, 1.0, 0.0,
-        0.5,  0.5,  1.0, 0.0, 0.0,
+        0.4,  0.4,  1.0, 0.0, 0.0, //
+        0.4,  -0.4, 0.0, 1.0, 0.0,
+        -0.4, -0.4, 0.0, 0.0, 1.0,
+        -0.4, -0.4, 0.0, 0.0, 1.0,
+        -0.4, 0.4,  0.0, 1.0, 0.0,
+        0.4,  0.4,  1.0, 0.0, 0.0,
     };
 
     // 编译 shader
@@ -46,7 +65,6 @@ fn createRenderPipeline(app: *App) *mach.gpu.RenderPipeline {
     // 将 CPU 内存中的数据复制到 GPU 内存中
     mach.core.queue.writeBuffer(app.vertexBuffer, 0, &vertexData);
 
-    // const offset = @offsetOf(mesh.Vertex, "col");
     const vertexLayout = mach.gpu.VertexBufferLayout.init(.{
         .array_stride = @sizeOf(f32) * 5,
         .attributes = &.{
@@ -103,10 +121,11 @@ pub fn update(app: *App) !bool {
     const encoder = mach.core.device.createCommandEncoder(null);
     defer encoder.release();
     const pass = encoder.beginRenderPass(&renderPass);
-
     // 设置渲染管线
     pass.setPipeline(app.renderPipeline);
     pass.setVertexBuffer(0, app.vertexBuffer, 0, app.vertexBuffer.getSize());
+    pass.setBindGroup(0, app.bindGroup, &.{});
+
     pass.draw(6, 2, 0, 0);
     pass.end();
     pass.release();
