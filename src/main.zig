@@ -1,11 +1,8 @@
 const std = @import("std");
 const mach = @import("mach");
-const mesh = @import("mesh.zig");
+const render = @import("render.zig");
 
 pub const App = @This();
-const Model = struct {
-    offset: [2]f32,
-};
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 renderPipeline: *mach.gpu.RenderPipeline = undefined,
@@ -13,89 +10,49 @@ vertexBuffer: *mach.gpu.Buffer = undefined,
 bindGroup: *mach.gpu.BindGroup = undefined,
 
 pub fn init(app: *App) !void {
-    try mach.core.init(.{ .size = .{ .width = 600, .height = 480 } });
+    try mach.core.init(.{
+        .title = "学习 WebGPU",
+        .size = .{ .width = 600, .height = 480 },
+    });
     // 设置帧率
     mach.core.setFrameRateLimit(30);
     mach.core.setInputFrequency(30);
     const device = mach.core.device;
 
+    const vec3 = mach.math.Vec2.init(0.4, 0.4);
+    // const angle = mach.math.degreesToRadians(f32, 0);
+    const model = mach.math.Mat3x3.translate(vec3);
+    std.log.info("model: {}", .{model});
+    // model = model.mul(&mach.math.Mat4x4.rotateZ(angle));
+    // vec3 = mach.math.Vec3.init(2, 1, 1);
+    // model = model.mul(&mach.math.Mat4x4.scale(vec3));
+
+    const byteSize = @sizeOf(@TypeOf(model));
     const modelBuffer = device.createBuffer(&.{
         .usage = .{ .copy_dst = true, .uniform = true },
-        .size = @sizeOf(Model),
+        .size = byteSize,
     });
-    const modelData = Model{ .offset = .{ 0.5, 0.5 } };
-    device.getQueue().writeBuffer(modelBuffer, 0, &modelData.offset);
+    device.getQueue().writeBuffer(modelBuffer, 0, (&model)[0..1]);
 
-    app.renderPipeline = createRenderPipeline(app);
+    const renderContext = render.createRenderPipeline();
+    app.renderPipeline = renderContext.pipeline;
+    app.vertexBuffer = renderContext.vertexBuffer;
+
     const Entry = mach.gpu.BindGroup.Entry;
     app.bindGroup = device.createBindGroup(
         &mach.gpu.BindGroup.Descriptor.init(.{
             .layout = app.renderPipeline.getBindGroupLayout(0),
             .entries = &.{
-                Entry.buffer(0, modelBuffer, 0, @sizeOf(Model)),
+                Entry.buffer(0, modelBuffer, 0, byteSize),
             },
         }),
     );
 }
 
-fn createRenderPipeline(app: *App) *mach.gpu.RenderPipeline {
-    const device = mach.core.device;
-
-    const vertexData = [_]f32{
-        0.4,  0.4,  1.0, 0.0, 0.0, //
-        0.4,  -0.4, 0.0, 1.0, 0.0,
-        -0.4, -0.4, 0.0, 0.0, 1.0,
-        -0.4, -0.4, 0.0, 0.0, 1.0,
-        -0.4, 0.4,  0.0, 1.0, 0.0,
-        0.4,  0.4,  1.0, 0.0, 0.0,
-    };
-
-    // 编译 shader
-    const source = @embedFile("shader.wgsl");
-    const module = device.createShaderModuleWGSL("shader.wgsl", source);
-    defer module.release();
-
-    // 创建顶点缓冲区
-    app.vertexBuffer = device.createBuffer(&.{
-        .label = "vertex",
-        .usage = .{ .copy_dst = true, .vertex = true },
-        .size = @sizeOf(f32) * vertexData.len,
-    });
-
-    // 将 CPU 内存中的数据复制到 GPU 内存中
-    mach.core.queue.writeBuffer(app.vertexBuffer, 0, &vertexData);
-
-    const vertexLayout = mach.gpu.VertexBufferLayout.init(.{
-        .array_stride = @sizeOf(f32) * 5,
-        .attributes = &.{
-            .{ .format = .float32x2, .offset = 0, .shader_location = 0 },
-            .{ .format = .float32x3, .offset = @sizeOf(f32) * 2, .shader_location = 1 },
-        },
-    });
-
-    const vertex = mach.gpu.VertexState.init(.{
-        .module = module,
-        .entry_point = "vs_main",
-        .buffers = &.{vertexLayout},
-    });
-
-    // 片段着色器状态
-    const fragment = mach.gpu.FragmentState.init(.{
-        .module = module,
-        .entry_point = "fs_main",
-        .targets = &.{.{ .format = mach.core.descriptor.format }},
-    });
-
-    // 创建渲染管线
-    const descriptor = mach.gpu.RenderPipeline.Descriptor{
-        .fragment = &fragment,
-        .vertex = vertex,
-    };
-    return device.createRenderPipeline(&descriptor);
-}
-
 pub fn deinit(app: *App) void {
-    _ = app;
+    app.vertexBuffer.release();
+    app.bindGroup.release();
+    app.renderPipeline.release();
     mach.core.deinit();
     _ = gpa.deinit();
 }
@@ -126,7 +83,7 @@ pub fn update(app: *App) !bool {
     pass.setVertexBuffer(0, app.vertexBuffer, 0, app.vertexBuffer.getSize());
     pass.setBindGroup(0, app.bindGroup, &.{});
 
-    pass.draw(6, 2, 0, 0);
+    pass.draw(3, 1, 0, 0);
     pass.end();
     pass.release();
 

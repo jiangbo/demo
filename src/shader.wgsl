@@ -1,9 +1,4 @@
-struct Model {
-    // 平移
-    offset: vec2f,
-};
-
-@binding(0) @group(0) var<uniform> model: Model;
+@binding(0) @group(0) var<uniform> model: mat3x3f;
 
 struct VertexInput {
     @location(0) position: vec4f,
@@ -18,10 +13,10 @@ struct VertexOutput {
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
-    let x = in.position.x + model.offset.x;
-    // 翻转 y 轴
-    let y = in.position.y - model.offset.y;
-    out.position = vec4f(x, y, in.position.z, in.position.w);
+
+    let pos = (model * vec3(in.position.xy, 1));
+    // 翻转 Y 轴，来适合屏幕坐标系
+    out.position = vec4f(pos.x, -pos.y, pos.z, in.position.w);
     out.color = in.color;
     return out;
 }
