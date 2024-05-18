@@ -2,7 +2,6 @@
 
 struct VertexInput {
     @location(0) position: vec4f,
-    @location(1) color: vec4f,
 };
 
 struct VertexOutput {
@@ -14,10 +13,9 @@ struct VertexOutput {
 fn vs_main(in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
 
-    let pos = (model * vec3(in.position.xy, 1));
-    // 翻转 Y 轴，来适合屏幕坐标系
-    out.position = vec4f(pos.x, -pos.y, pos.z, in.position.w);
-    out.color = in.color;
+    let xy = (model * vec3f(in.position.xy, 1)).xy;
+    out.position = vec4f(xy, 0.0, 1.0);
+    out.color = vec4f(0, 1, 0, 1);
     return out;
 }
 

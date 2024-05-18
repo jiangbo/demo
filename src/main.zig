@@ -1,47 +1,56 @@
 const std = @import("std");
 const mach = @import("mach");
 const render = @import("render.zig");
+const mat = @import("mat.zig");
 
 pub const App = @This();
+const width = 640;
+const height = 480;
+const depth = 400;
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-renderPipeline: *mach.gpu.RenderPipeline = undefined,
-vertexBuffer: *mach.gpu.Buffer = undefined,
+renderContext: render.RenderContext = undefined,
 bindGroup: *mach.gpu.BindGroup = undefined,
 
 pub fn init(app: *App) !void {
     try mach.core.init(.{
         .title = "学习 WebGPU",
-        .size = .{ .width = 600, .height = 480 },
+        .size = .{ .width = width, .height = height },
     });
     // 设置帧率
     mach.core.setFrameRateLimit(30);
     mach.core.setInputFrequency(30);
     const device = mach.core.device;
 
-    const vec3 = mach.math.Vec2.init(0.4, 0.4);
-    // const angle = mach.math.degreesToRadians(f32, 0);
-    const model = mach.math.Mat3x3.translate(vec3);
-    std.log.info("model: {}", .{model});
-    // model = model.mul(&mach.math.Mat4x4.rotateZ(angle));
-    // vec3 = mach.math.Vec3.init(2, 1, 1);
-    // model = model.mul(&mach.math.Mat4x4.scale(vec3));
-
-    const byteSize = @sizeOf(@TypeOf(model));
+    const byteSize = 48;
     const modelBuffer = device.createBuffer(&.{
         .usage = .{ .copy_dst = true, .uniform = true },
         .size = byteSize,
     });
-    device.getQueue().writeBuffer(modelBuffer, 0, (&model)[0..1]);
 
-    const renderContext = render.createRenderPipeline();
-    app.renderPipeline = renderContext.pipeline;
-    app.vertexBuffer = renderContext.vertexBuffer;
+    const projection = [_]f32{
+        2.0 / @as(f32, width), 0,                       0, 0,
+        0,                     -2.0 / @as(f32, height), 0, 0,
+        -1,                    1,                       1, 0,
+    };
+
+    const angle: f32 = 0 * std.math.pi / 180.0;
+    const offset = mat.offset(200, 100);
+    const rotate = mat.rotate(angle);
+    const scale = mat.scale(2, 2);
+
+    var model = mat.mul(projection, offset);
+    model = mat.mul(model, rotate);
+    model = mat.mul(model, scale);
+
+    device.getQueue().writeBuffer(modelBuffer, 0, &model);
+
+    app.renderContext = render.createRenderPipeline();
 
     const Entry = mach.gpu.BindGroup.Entry;
     app.bindGroup = device.createBindGroup(
         &mach.gpu.BindGroup.Descriptor.init(.{
-            .layout = app.renderPipeline.getBindGroupLayout(0),
+            .layout = app.renderContext.pipeline.getBindGroupLayout(0),
             .entries = &.{
                 Entry.buffer(0, modelBuffer, 0, byteSize),
             },
@@ -50,9 +59,7 @@ pub fn init(app: *App) !void {
 }
 
 pub fn deinit(app: *App) void {
-    app.vertexBuffer.release();
-    app.bindGroup.release();
-    app.renderPipeline.release();
+    app.renderContext.release();
     mach.core.deinit();
     _ = gpa.deinit();
 }
@@ -79,11 +86,15 @@ pub fn update(app: *App) !bool {
     defer encoder.release();
     const pass = encoder.beginRenderPass(&renderPass);
     // 设置渲染管线
-    pass.setPipeline(app.renderPipeline);
-    pass.setVertexBuffer(0, app.vertexBuffer, 0, app.vertexBuffer.getSize());
+    pass.setPipeline(app.renderContext.pipeline);
+    const vertexBuffer = app.renderContext.vertexBuffer;
+    pass.setVertexBuffer(0, vertexBuffer, 0, vertexBuffer.getSize());
+
+    const size = @sizeOf(@TypeOf(render.indexData));
+    pass.setIndexBuffer(app.renderContext.indexBuffer, .uint32, 0, size);
     pass.setBindGroup(0, app.bindGroup, &.{});
 
-    pass.draw(3, 1, 0, 0);
+    pass.drawIndexed(render.indexData.len, 1, 0, 0, 0);
     pass.end();
     pass.release();
 

@@ -3,38 +3,72 @@ const mach = @import("mach");
 
 pub const RenderContext = struct {
     vertexBuffer: *mach.gpu.Buffer,
+    indexBuffer: *mach.gpu.Buffer,
     pipeline: *mach.gpu.RenderPipeline,
+
+    pub fn release(self: *RenderContext) void {
+        self.vertexBuffer.release();
+        self.indexBuffer.release();
+        self.pipeline.release();
+    }
+};
+
+pub const vertexData = [_]f32{
+    // left column
+    0,   0,
+    30,  0,
+    0,   150,
+    30,  150,
+
+    // top rung
+    30,  0,
+    100, 0,
+    30,  30,
+    100, 30,
+
+    // middle rung
+    30,  60,
+    70,  60,
+    30,  90,
+    70,  90,
+};
+
+pub const indexData = [_]u32{
+    0, 1, 2, 2, 1, 3, // left column
+    4, 5, 6, 6, 5, 7, // top run
+    8, 9, 10, 10, 9, 11, // middle run
 };
 
 pub fn createRenderPipeline() RenderContext {
     const device = mach.core.device;
-
-    const vertexData = [_]f32{
-        0.0,  0.4,  1.0, 0.0, 0.0, //
-        0.4,  -0.4, 0.0, 1.0, 0.0,
-        -0.4, -0.4, 0.0, 0.0, 1.0,
-    };
 
     // 编译 shader
     const source = @embedFile("shader.wgsl");
     const module = device.createShaderModuleWGSL("shader.wgsl", source);
     defer module.release();
 
-    // 创建顶点缓冲区
+    // 顶点缓冲区
     const vertexBuffer = device.createBuffer(&.{
         .label = "vertex",
         .usage = .{ .copy_dst = true, .vertex = true },
-        .size = @sizeOf(f32) * vertexData.len,
+        .size = @sizeOf(@TypeOf(vertexData)),
+    });
+
+    // 索引缓冲区
+    const indexBuffer = device.createBuffer(&.{
+        .label = "index",
+        .size = @sizeOf(@TypeOf(indexData)),
+        .usage = .{ .index = true, .copy_dst = true },
     });
 
     // 将 CPU 内存中的数据复制到 GPU 内存中
     mach.core.queue.writeBuffer(vertexBuffer, 0, &vertexData);
+    mach.core.queue.writeBuffer(indexBuffer, 0, &indexData);
 
     const vertexLayout = mach.gpu.VertexBufferLayout.init(.{
-        .array_stride = @sizeOf(f32) * 5,
+        .array_stride = @sizeOf(f32) * 2,
         .attributes = &.{
             .{ .format = .float32x2, .offset = 0, .shader_location = 0 },
-            .{ .format = .float32x3, .offset = @sizeOf(f32) * 2, .shader_location = 1 },
         },
     });
 
@@ -57,5 +91,9 @@ pub fn createRenderPipeline() RenderContext {
         .vertex = vertex,
     };
     const pipeline = device.createRenderPipeline(&descriptor);
-    return .{ .vertexBuffer = vertexBuffer, .pipeline = pipeline };
+    return .{
+        .vertexBuffer = vertexBuffer,
+        .indexBuffer = indexBuffer,
+        .pipeline = pipeline,
+    };
 }
