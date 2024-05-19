@@ -24,15 +24,14 @@ pub fn init(app: *App) !void {
     mach.core.setInputFrequency(30);
     const device = mach.core.device;
 
-    const x = 2.0 / @as(f32, width);
-    const y = -2.0 / @as(f32, height);
-    const z = 0.5 / @as(f32, depth);
-    app.projection = mach.math.Mat4x4.init(
-        &mach.math.Mat4x4.RowVec.init(x, 0, 0, -1),
-        &mach.math.Mat4x4.RowVec.init(0, y, 0, 1),
-        &mach.math.Mat4x4.RowVec.init(0, 0, z, 0.5),
-        &mach.math.Mat4x4.RowVec.init(0, 0, 0, 1),
-    );
+    app.projection = mach.math.Mat4x4.projection2D(.{
+        .left = 0,
+        .right = width,
+        .bottom = height,
+        .top = 0,
+        .near = depth,
+        .far = -depth,
+    });
 
     const byteSize = @sizeOf(@TypeOf(app.projection));
     app.modelBuffer = device.createBuffer(&.{
@@ -76,6 +75,13 @@ pub fn update(app: *App) !bool {
             .load_op = .clear,
             .store_op = .store,
         }},
+        .depth_stencil_attachment = &.{
+            .view = app.renderContext.depthView,
+            .depth_clear_value = 1.0,
+            .depth_load_op = .clear,
+            .depth_store_op = .store,
+            .stencil_read_only = .true,
+        },
     });
 
     // 命令编码器
@@ -100,11 +106,9 @@ pub fn update(app: *App) !bool {
     const vertexBuffer = app.renderContext.vertexBuffer;
     pass.setVertexBuffer(0, vertexBuffer, 0, vertexBuffer.getSize());
 
-    const size = @sizeOf(@TypeOf(render.indexData));
-    pass.setIndexBuffer(app.renderContext.indexBuffer, .uint32, 0, size);
     pass.setBindGroup(0, app.bindGroup, &.{});
 
-    pass.drawIndexed(render.indexData.len, 1, 0, 0, 0);
+    pass.draw(app.renderContext.vertexCount, 1, 0, 0);
     pass.end();
     pass.release();
 

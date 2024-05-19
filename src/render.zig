@@ -3,17 +3,17 @@ const mach = @import("mach");
 
 pub const RenderContext = struct {
     vertexBuffer: *mach.gpu.Buffer,
-    indexBuffer: *mach.gpu.Buffer,
+    vertexCount: u32,
+    depthView: *mach.gpu.TextureView,
     pipeline: *mach.gpu.RenderPipeline,
 
     pub fn release(self: *RenderContext) void {
         self.vertexBuffer.release();
-        self.indexBuffer.release();
         self.pipeline.release();
     }
 };
 
-pub const vertexData = [_]f32{
+pub const positions = [_]f32{
     // left column
     0,   0,   0,
     30,  0,   0,
@@ -51,30 +51,63 @@ pub const vertexData = [_]f32{
     70,  90,  30,
 };
 
-pub const indexData = [_]u32{
+pub const indices = [_]u32{
     // front
     0, 1, 2, 2, 1, 3, // left column
     4, 5, 6, 6, 5, 7, // top run
     8, 9, 10, 10, 9, 11, // middle run
 
     // back
-    12, 13, 14, 14, 13, 15, // left column back
-    16, 17, 18, 18, 17, 19, // top run back
-    20, 21, 22, 22, 21, 23, // middle run back
-    0, 5, 12, 12, 5, 17, // top
-    5, 7, 17, 17, 7, 19, // top rung right
+    12, 14, 13, 14, 15, 13, // left column back
+    16, 18, 17, 18, 19, 17, // top run back
+    20, 22, 21, 22, 23, 21, // middle run back
+    0, 12, 5, 12, 17, 5, // top
+    5, 17, 7, 17, 19, 7, // top rung right
     6, 7, 18, 18, 7, 19, // top rung bottom
-    6, 8, 18, 18, 8, 20, // between top and middle rung
-    8, 9, 20, 20, 9, 21, // middle rung top
-    9, 11, 21, 21, 11, 23, // middle rung right
+    6, 18, 8, 18, 20, 8, // between top and middle rung
+    8, 20, 9, 20, 21, 9, // middle rung top
+    9, 21, 11, 21, 23, 11, // middle rung right
     10, 11, 22, 22, 11, 23, // middle rung bottom
-    10, 3, 22, 22, 3, 15, // stem right
+    10, 22, 3, 22, 15, 3, // stem right
     2, 3, 14, 14, 3, 15, // bottom
     0, 2, 12, 12, 2, 14, // left
 };
 
+const quadColors = [_]u8{
+    200, 70, 120, // left column front
+    200, 70, 120, // top rung front
+    200, 70, 120, // middle rung front
+    80, 70, 200, // left column back
+    80, 70, 200, // top rung back
+    80, 70, 200, // middle rung back
+    70, 200, 210, // top
+    160, 160, 220, // top rung right
+    90, 130, 110, // top rung bottom
+    200, 200, 70, // between top and middle rung
+    210, 100, 70, // middle rung top
+    210, 160, 70, // middle rung right
+    70, 180, 210, // middle rung bottom
+    100, 70, 210, // stem right
+    76, 210, 100, // bottom
+    140, 210, 80, // left
+};
+
+var vertexData: [indices.len * 4]f32 = undefined;
+var colorData: [*]u8 = @as([*]u8, @ptrCast(&vertexData));
+
 pub fn createRenderPipeline() RenderContext {
     const device = mach.core.device;
+
+    for (0..indices.len) |i| {
+        const positionNdx = indices[i] * 3;
+        const position = positions[positionNdx .. positionNdx + 3];
+        @memcpy(vertexData[i * 4 ..][0..3], position);
+
+        const quadNdx = (i / 6 | 0) * 3;
+        const color = quadColors[quadNdx .. quadNdx + 3];
+        @memcpy(colorData[i * 16 + 12 ..][0..3], color);
+        colorData[i * 16 + 15] = 255; // set A
+    }
 
     // 编译 shader
     const source = @embedFile("shader.wgsl");
@@ -88,21 +121,14 @@ pub fn createRenderPipeline() RenderContext {
         .size = @sizeOf(@TypeOf(vertexData)),
     });
 
-    // 索引缓冲区
-    const indexBuffer = device.createBuffer(&.{
-        .label = "index",
-        .size = @sizeOf(@TypeOf(indexData)),
-        .usage = .{ .index = true, .copy_dst = true },
-    });
-
     // 将 CPU 内存中的数据复制到 GPU 内存中
     mach.core.queue.writeBuffer(vertexBuffer, 0, &vertexData);
-    mach.core.queue.writeBuffer(indexBuffer, 0, &indexData);
 
     const vertexLayout = mach.gpu.VertexBufferLayout.init(.{
-        .array_stride = @sizeOf(f32) * 3,
+        .array_stride = @sizeOf(f32) * 4,
         .attributes = &.{
-            .{ .format = .float32x3, .offset = 0, .shader_location = 0 },
+            .{ .shader_location = 0, .offset = 0, .format = .float32x3 }, // position
+            .{ .shader_location = 1, .offset = 12, .format = .unorm8x4 }, // color
         },
     });
 
@@ -123,11 +149,35 @@ pub fn createRenderPipeline() RenderContext {
     const descriptor = mach.gpu.RenderPipeline.Descriptor{
         .fragment = &fragment,
         .vertex = vertex,
+        .primitive = .{ .cull_mode = .front },
+        .depth_stencil = &.{
+            .depth_write_enabled = .true,
+            .depth_compare = .less,
+            .format = .depth24_plus,
+        },
     };
-    const pipeline = device.createRenderPipeline(&descriptor);
+
+    const depthTextureDescriptor = mach.gpu.Texture.Descriptor.init(.{
+        .format = .depth24_plus,
+        .size = .{ .width = 640, .height = 480 },
+        .usage = .{ .render_attachment = true },
+        .view_formats = &.{.depth24_plus},
+    });
+    const depthTexture = device.createTexture(&depthTextureDescriptor);
+    defer depthTexture.release();
+
+    const depthDescriptor = mach.gpu.TextureView.Descriptor{
+        .aspect = .depth_only,
+        .array_layer_count = 1,
+        .mip_level_count = 1,
+        .dimension = .dimension_2d,
+        .format = .depth24_plus,
+    };
+
     return .{
         .vertexBuffer = vertexBuffer,
-        .indexBuffer = indexBuffer,
-        .pipeline = pipeline,
+        .vertexCount = indices.len,
+        .depthView = depthTexture.createView(&depthDescriptor),
+        .pipeline = device.createRenderPipeline(&descriptor),
     };
 }
