@@ -1,4 +1,4 @@
-@binding(0) @group(0) var<uniform> model: mat3x3f;
+@binding(0) @group(0) var<uniform> model: mat4x4f;
 
 struct VertexInput {
     @location(0) position: vec4f,
@@ -13,8 +13,7 @@ struct VertexOutput {
 fn vs_main(in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
 
-    let xy = (model * vec3f(in.position.xy, 1)).xy;
-    out.position = vec4f(xy, 0.0, 1.0);
+    out.position = model * in.position;
     out.color = vec4f(0, 1, 0, 1);
     return out;
 }

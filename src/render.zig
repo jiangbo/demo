@@ -15,22 +15,22 @@ pub const RenderContext = struct {
 
 pub const vertexData = [_]f32{
     // left column
-    0,   0,
-    30,  0,
-    0,   150,
-    30,  150,
+    0,   0,   0,
+    30,  0,   0,
+    0,   150, 0,
+    30,  150, 0,
 
     // top rung
-    30,  0,
-    100, 0,
-    30,  30,
-    100, 30,
+    30,  0,   0,
+    100, 0,   0,
+    30,  30,  0,
+    100, 30,  0,
 
     // middle rung
-    30,  60,
-    70,  60,
-    30,  90,
-    70,  90,
+    30,  60,  0,
+    70,  60,  0,
+    30,  90,  0,
+    70,  90,  0,
 };
 
 pub const indexData = [_]u32{
@@ -66,9 +66,9 @@ pub fn createRenderPipeline() RenderContext {
     mach.core.queue.writeBuffer(indexBuffer, 0, &indexData);
 
     const vertexLayout = mach.gpu.VertexBufferLayout.init(.{
-        .array_stride = @sizeOf(f32) * 2,
+        .array_stride = @sizeOf(f32) * 3,
         .attributes = &.{
-            .{ .format = .float32x2, .offset = 0, .shader_location = 0 },
+            .{ .format = .float32x3, .offset = 0, .shader_location = 0 },
         },
     });
 
