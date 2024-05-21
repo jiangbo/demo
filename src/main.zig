@@ -1,17 +1,15 @@
 const std = @import("std");
 const mach = @import("mach");
 const render = @import("render.zig");
+const zlm = @import("zlm");
 
 pub const App = @This();
 const width = 640;
 const height = 480;
-const depth = 400;
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 renderContext: render.RenderContext = undefined,
 bindGroup: *mach.gpu.BindGroup = undefined,
-projection: mach.math.Mat4x4 = undefined,
-modelBuffer: *mach.gpu.Buffer = undefined,
 timer: mach.Timer = undefined,
 
 pub fn init(app: *App) !void {
@@ -22,35 +20,8 @@ pub fn init(app: *App) !void {
     // 设置帧率
     mach.core.setFrameRateLimit(30);
     mach.core.setInputFrequency(30);
-    const device = mach.core.device;
-
-    app.projection = mach.math.Mat4x4.projection2D(.{
-        .left = 0,
-        .right = width,
-        .bottom = height,
-        .top = 0,
-        .near = depth,
-        .far = -depth,
-    });
-
-    const byteSize = @sizeOf(@TypeOf(app.projection));
-    app.modelBuffer = device.createBuffer(&.{
-        .usage = .{ .copy_dst = true, .uniform = true },
-        .size = byteSize,
-    });
 
     app.renderContext = render.createRenderPipeline();
-
-    const Entry = mach.gpu.BindGroup.Entry;
-    app.bindGroup = device.createBindGroup(
-        &mach.gpu.BindGroup.Descriptor.init(.{
-            .layout = app.renderContext.pipeline.getBindGroupLayout(0),
-            .entries = &.{
-                Entry.buffer(0, app.modelBuffer, 0, byteSize),
-            },
-        }),
-    );
-
     app.timer = try mach.Timer.start();
 }
 
@@ -65,12 +36,12 @@ pub fn update(app: *App) !bool {
     var iterator = mach.core.pollEvents();
     while (iterator.next()) |event| if (event == .close) return true;
 
-    const view = mach.core.swap_chain.getCurrentTextureView().?;
-    defer view.release();
+    const texutureView = mach.core.swap_chain.getCurrentTextureView().?;
+    defer texutureView.release();
 
     const renderPass = mach.gpu.RenderPassDescriptor.init(.{
         .color_attachments = &.{.{
-            .view = view,
+            .view = texutureView,
             .clear_value = std.mem.zeroes(mach.gpu.Color),
             .load_op = .clear,
             .store_op = .store,
@@ -89,26 +60,44 @@ pub fn update(app: *App) !bool {
     defer encoder.release();
     const pass = encoder.beginRenderPass(&renderPass);
 
-    const angle: f32 = mach.math.degreesToRadians(f32, app.timer.read() * 20);
-    var vec = mach.math.Vec3.init(300, 200, 0);
-    var model = app.projection.mul(&mach.math.Mat4x4.translate(vec));
+    const fov: f32 = zlm.toRadians(100.0);
+    const w = @as(f32, @floatFromInt(width));
+    const aspect = w / @as(f32, @floatFromInt(height));
+    const projection = zlm.Mat4.createPerspective(fov, aspect, 1, 2000);
 
-    model = model.mul(&mach.math.Mat4x4.rotateX(angle));
-    model = model.mul(&mach.math.Mat4x4.rotateY(angle));
-    model = model.mul(&mach.math.Mat4x4.rotateZ(angle));
+    const radius: f32 = 200;
+    var angle: f32 = zlm.toRadians(app.timer.read() * 20);
+    var view = zlm.Mat4.createAngleAxis(zlm.Vec3.unitY, angle);
 
-    vec = mach.math.Vec3.init(1, 1, 1);
-    model = model.mul(&mach.math.Mat4x4.scale(vec));
-    mach.core.queue.writeBuffer(app.modelBuffer, 0, (&model)[0..1]);
+    var vec = zlm.Vec3.new(radius * @sin(angle), 0, radius * 1.5);
+    // const fields = zlm.Mat4.createTranslation(vec).mul(view).fields;
+    // const eye = zlm.Vec3.new(fields[3][1], fields[3][2], fields[3][3]);
+    const center = zlm.Vec3.new(radius, 0, 0);
+    view = zlm.Mat4.createLookAt(vec, center, zlm.Vec3.unitY);
+
+    const vp = view.mul(projection);
 
     // 设置渲染管线
     pass.setPipeline(app.renderContext.pipeline);
     const vertexBuffer = app.renderContext.vertexBuffer;
     pass.setVertexBuffer(0, vertexBuffer, 0, vertexBuffer.getSize());
 
-    pass.setBindGroup(0, app.bindGroup, &.{});
+    const uniforms = app.renderContext.uniforms;
+    for (uniforms, 0..) |value, i| {
+        const index = @as(f32, @floatFromInt(i));
+        angle = index / uniforms.len * std.math.pi * 2;
+        const x = @cos(angle) * radius;
+        const z = @sin(angle) * radius;
 
-    pass.draw(app.renderContext.vertexCount, 1, 0, 0);
+        vec = zlm.Vec3.new(x, 0, z);
+        const mvp = zlm.Mat4.createTranslation(vec).mul(vp);
+
+        mach.core.queue.writeBuffer(value.buffer, 0, &mvp.fields);
+
+        pass.setBindGroup(0, value.bindGroup, &.{});
+        pass.draw(app.renderContext.vertexCount, 1, 0, 0);
+    }
+
     pass.end();
     pass.release();
 

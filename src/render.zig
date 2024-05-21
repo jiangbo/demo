@@ -1,76 +1,86 @@
 const std = @import("std");
 const mach = @import("mach");
+const zlm = @import("zlm");
 
 pub const RenderContext = struct {
     vertexBuffer: *mach.gpu.Buffer,
     vertexCount: u32,
     depthView: *mach.gpu.TextureView,
     pipeline: *mach.gpu.RenderPipeline,
+    uniforms: [objectNumber]Uniforms,
 
     pub fn release(self: *RenderContext) void {
         self.vertexBuffer.release();
+        for (&self.uniforms) |*value| value.release();
         self.pipeline.release();
+    }
+};
+
+pub const Uniforms = struct {
+    buffer: *mach.gpu.Buffer,
+    bindGroup: *mach.gpu.BindGroup,
+
+    pub fn release(self: *Uniforms) void {
+        self.buffer.release();
+        self.bindGroup.release();
     }
 };
 
 pub const positions = [_]f32{
     // left column
-    0,   0,   0,
-    30,  0,   0,
-    0,   150, 0,
-    30,  150, 0,
+    -50, 75,  15,
+    -20, 75,  15,
+    -50, -75, 15,
+    -20, -75, 15,
 
     // top rung
-    30,  0,   0,
-    100, 0,   0,
-    30,  30,  0,
-    100, 30,  0,
+    -20, 75,  15,
+    50,  75,  15,
+    -20, 45,  15,
+    50,  45,  15,
 
     // middle rung
-    30,  60,  0,
-    70,  60,  0,
-    30,  90,  0,
-    70,  90,  0,
+    -20, 15,  15,
+    20,  15,  15,
+    -20, -15, 15,
+    20,  -15, 15,
 
     // left column back
-    0,   0,   30,
-    30,  0,   30,
-    0,   150, 30,
-    30,  150, 30,
+    -50, 75,  -15,
+    -20, 75,  -15,
+    -50, -75, -15,
+    -20, -75, -15,
 
     // top rung back
-    30,  0,   30,
-    100, 0,   30,
-    30,  30,  30,
-    100, 30,  30,
+    -20, 75,  -15,
+    50,  75,  -15,
+    -20, 45,  -15,
+    50,  45,  -15,
 
     // middle rung back
-    30,  60,  30,
-    70,  60,  30,
-    30,  90,  30,
-    70,  90,  30,
+    -20, 15,  -15,
+    20,  15,  -15,
+    -20, -15, -15,
+    20,  -15, -15,
 };
 
 pub const indices = [_]u32{
-    // front
-    0, 1, 2, 2, 1, 3, // left column
-    4, 5, 6, 6, 5, 7, // top run
-    8, 9, 10, 10, 9, 11, // middle run
-
-    // back
-    12, 14, 13, 14, 15, 13, // left column back
-    16, 18, 17, 18, 19, 17, // top run back
-    20, 22, 21, 22, 23, 21, // middle run back
-    0, 12, 5, 12, 17, 5, // top
-    5, 17, 7, 17, 19, 7, // top rung right
-    6, 7, 18, 18, 7, 19, // top rung bottom
-    6, 18, 8, 18, 20, 8, // between top and middle rung
-    8, 20, 9, 20, 21, 9, // middle rung top
-    9, 21, 11, 21, 23, 11, // middle rung right
-    10, 11, 22, 22, 11, 23, // middle rung bottom
-    10, 22, 3, 22, 15, 3, // stem right
-    2, 3, 14, 14, 3, 15, // bottom
-    0, 2, 12, 12, 2, 14, // left
+    0, 2, 1, 2, 3, 1, // left column
+    4, 6, 5, 6, 7, 5, // top run
+    8, 10, 9, 10, 11, 9, // middle run
+    12, 13, 14, 14, 13, 15, // left column back
+    16, 17, 18, 18, 17, 19, // top run back
+    20, 21, 22, 22, 21, 23, // middle run back
+    0, 5, 12, 12, 5, 17, // top
+    5, 7, 17, 17, 7, 19, // top rung right
+    6, 18, 7, 18, 19, 7, // top rung bottom
+    6, 8, 18, 18, 8, 20, // between top and middle rung
+    8, 9, 20, 20, 9, 21, // middle rung top
+    9, 11, 21, 21, 11, 23, // middle rung right
+    10, 22, 11, 22, 23, 11, // middle rung bottom
+    10, 3, 22, 22, 3, 15, // stem right
+    2, 14, 3, 14, 15, 3, // bottom
+    0, 12, 2, 12, 14, 2, // left
 };
 
 const quadColors = [_]u8{
@@ -94,6 +104,8 @@ const quadColors = [_]u8{
 
 var vertexData: [indices.len * 4]f32 = undefined;
 var colorData: [*]u8 = @as([*]u8, @ptrCast(&vertexData));
+
+const objectNumber = 5;
 
 pub fn createRenderPipeline() RenderContext {
     const device = mach.core.device;
@@ -149,7 +161,7 @@ pub fn createRenderPipeline() RenderContext {
     const descriptor = mach.gpu.RenderPipeline.Descriptor{
         .fragment = &fragment,
         .vertex = vertex,
-        .primitive = .{ .cull_mode = .front },
+        .primitive = .{ .cull_mode = .back },
         .depth_stencil = &.{
             .depth_write_enabled = .true,
             .depth_compare = .less,
@@ -173,11 +185,37 @@ pub fn createRenderPipeline() RenderContext {
         .dimension = .dimension_2d,
         .format = .depth24_plus,
     };
+    const pipeline = device.createRenderPipeline(&descriptor);
+    var objectInfos: [objectNumber]Uniforms = undefined;
+    for (0..objectNumber) |i| {
+        // matrix
+        const uniformBufferSize = 16 * 4;
+        const uniformBuffer = device.createBuffer(&.{
+            .label = "uniforms",
+            .size = uniformBufferSize,
+            .usage = .{ .uniform = true, .copy_dst = true },
+        });
+        const Entry = mach.gpu.BindGroup.Entry;
+        const bindGroup = device.createBindGroup(
+            &mach.gpu.BindGroup.Descriptor.init(.{
+                .label = "bind group for object",
+                .layout = pipeline.getBindGroupLayout(0),
+                .entries = &.{
+                    Entry.buffer(0, uniformBuffer, 0, uniformBufferSize),
+                },
+            }),
+        );
+        objectInfos[i] = .{
+            .bindGroup = bindGroup,
+            .buffer = uniformBuffer,
+        };
+    }
 
     return .{
         .vertexBuffer = vertexBuffer,
         .vertexCount = indices.len,
         .depthView = depthTexture.createView(&depthDescriptor),
-        .pipeline = device.createRenderPipeline(&descriptor),
+        .pipeline = pipeline,
+        .uniforms = objectInfos,
     };
 }

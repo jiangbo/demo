@@ -10,12 +10,17 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
         .core = true,
     });
+
+    const zlm_dep = b.dependency("zlm", .{});
+
     const app = try mach.CoreApp.init(b, mach_dep.builder, .{
         .name = "demo",
         .src = "src/main.zig",
         .target = target,
         .optimize = optimize,
-        .deps = &[_]std.Build.Module.Import{},
+        .deps = &.{
+            .{ .name = "zlm", .module = zlm_dep.module("zlm") },
+        },
     });
 
     if (b.args) |args| app.run.addArgs(args);
