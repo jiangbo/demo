@@ -69,9 +69,7 @@ pub fn update(app: *App) !bool {
     var angle: f32 = zlm.toRadians(app.timer.read() * 20);
     var view = zlm.Mat4.createAngleAxis(zlm.Vec3.unitY, angle);
 
-    var vec = zlm.Vec3.new(radius * @sin(angle), 0, radius * 1.5);
-    // const fields = zlm.Mat4.createTranslation(vec).mul(view).fields;
-    // const eye = zlm.Vec3.new(fields[3][1], fields[3][2], fields[3][3]);
+    var vec = zlm.Vec3.new(0, 0, radius * 1.5).transformDirection(view);
     const center = zlm.Vec3.new(radius, 0, 0);
     view = zlm.Mat4.createLookAt(vec, center, zlm.Vec3.unitY);
 
