@@ -27,93 +27,24 @@ pub fn init(app: *App) !void {
     // 设置帧率
     mach.core.setFrameRateLimit(30);
     mach.core.setInputFrequency(30);
+    const device = mach.core.device;
 
     app.renderContext = render.createRenderPipeline();
-
     app.timer = try mach.Timer.start();
 
-    const shader_module = core.device.createShaderModuleWGSL("shader.wgsl", @embedFile("shader.wgsl"));
-
-    const vertex_attributes = [_]gpu.VertexAttribute{
-        .{ .format = .float32x4, .offset = @offsetOf(Vertex, "pos"), .shader_location = 0 },
-        .{ .format = .float32x2, .offset = @offsetOf(Vertex, "uv"), .shader_location = 1 },
-    };
-    const vertex_buffer_layout = gpu.VertexBufferLayout.init(.{
-        .array_stride = @sizeOf(Vertex),
-        .step_mode = .vertex,
-        .attributes = &vertex_attributes,
-    });
-
-    const blend = gpu.BlendState{};
-    const color_target = gpu.ColorTargetState{
-        .format = core.descriptor.format,
-        .blend = &blend,
-        .write_mask = gpu.ColorWriteMaskFlags.all,
-    };
-    const fragment = gpu.FragmentState.init(.{
-        .module = shader_module,
-        .entry_point = "frag_main",
-        .targets = &.{color_target},
-    });
-
-    const bgle = gpu.BindGroupLayout.Entry.buffer(0, .{ .vertex = true }, .uniform, true, 0);
-    const bgl = core.device.createBindGroupLayout(
-        &gpu.BindGroupLayout.Descriptor.init(.{
-            .entries = &.{bgle},
-        }),
-    );
-
-    const bind_group_layouts = [_]*gpu.BindGroupLayout{bgl};
-    const pipeline_layout = core.device.createPipelineLayout(&gpu.PipelineLayout.Descriptor.init(.{
-        .bind_group_layouts = &bind_group_layouts,
-    }));
-
-    const pipeline_descriptor = gpu.RenderPipeline.Descriptor{
-        .fragment = &fragment,
-        .layout = pipeline_layout,
-        .vertex = gpu.VertexState.init(.{
-            .module = shader_module,
-            .entry_point = "vertex_main",
-            .buffers = &.{vertex_buffer_layout},
-        }),
-        .primitive = .{
-            .cull_mode = .back,
-        },
-    };
-
-    const vertex_buffer = core.device.createBuffer(&.{
-        .usage = .{ .vertex = true },
-        .size = @sizeOf(Vertex) * vertices.len,
-        .mapped_at_creation = .true,
-    });
-    const vertex_mapped = vertex_buffer.getMappedRange(Vertex, 0, vertices.len);
-    @memcpy(vertex_mapped.?, vertices[0..]);
-    vertex_buffer.unmap();
-
-    const uniform_buffer = core.device.createBuffer(&.{
+    app.timerBuffer = device.createBuffer(&.{
         .usage = .{ .copy_dst = true, .uniform = true },
         .size = @sizeOf(UniformBufferObject),
-        .mapped_at_creation = .false,
     });
-    const bind_group = core.device.createBindGroup(
-        &gpu.BindGroup.Descriptor.init(.{
-            .layout = bgl,
+
+    const bind_group = device.createBindGroup(
+        &mach.gpu.BindGroup.Descriptor.init(.{
+            .layout = app.renderContex.pipeline.getBindGroupLayout(0),
             .entries = &.{
                 gpu.BindGroup.Entry.buffer(0, uniform_buffer, 0, @sizeOf(UniformBufferObject)),
             },
         }),
     );
-
-    app.title_timer = try core.Timer.start();
-    app.timer = try core.Timer.start();
-    app.pipeline = core.device.createRenderPipeline(&pipeline_descriptor);
-    app.vertex_buffer = vertex_buffer;
-    app.uniform_buffer = uniform_buffer;
-    app.bind_group = bind_group;
-
-    shader_module.release();
-    pipeline_layout.release();
-    bgl.release();
 }
 
 pub fn deinit(app: *App) void {
