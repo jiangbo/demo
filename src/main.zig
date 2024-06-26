@@ -1,15 +1,9 @@
-const mach = @import("mach");
-
-// The global list of Mach modules registered for use in our application.
-pub const modules = .{
-    mach.Core,
-    @import("App.zig"),
-};
+const std = @import("std");
+const win32 = @import("win32");
+const ui = win32.ui.windows_and_messaging;
 
 pub fn main() !void {
-    // Initialize mach.Core
-    try mach.core.initModule();
-
-    // Main loop
-    while (try mach.core.tick()) {}
+    const caption = win32.zig.L("游戏编程");
+    const message = win32.zig.L("Windows 游戏编程大师技巧");
+    _ = ui.MessageBoxW(null, message, caption, ui.MB_OK);
 }
