@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "mmsystem.h": "c",
+        "windows.h": "c"
+    }
+}
