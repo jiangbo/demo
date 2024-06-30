@@ -1,8 +1,7 @@
 const std = @import("std");
 const win32 = @import("win32");
-const winmm = @import("winmm.zig");
 const ui = win32.ui.windows_and_messaging;
-const gdi = win32.graphics.gdi;
+const draw = win32.graphics.direct_draw;
 
 const H = std.os.windows.HINSTANCE;
 const WINAPI = std.os.windows.WINAPI;
@@ -11,8 +10,11 @@ pub const UNICODE: bool = true;
 const name = win32.zig.L("游戏编程大师");
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 480;
-var hinstance: H = undefined;
+
+var instance: H = undefined;
 var hander: win32.foundation.HWND = undefined;
+var rand: std.Random = undefined;
+var draw7: *draw.IDirectDraw7 = undefined;
 
 pub fn mainWindowCallback(
     window: win32.foundation.HWND,
@@ -24,14 +26,8 @@ pub fn mainWindowCallback(
         ui.WM_CREATE => {
             std.log.info("WM_CREATE", .{});
         },
-        ui.WM_PAINT => {
-            var paint: gdi.PAINTSTRUCT = undefined;
-            _ = gdi.BeginPaint(window, &paint);
-            _ = gdi.EndPaint(window, &paint);
-        },
         ui.WM_DESTROY => {
             std.log.info("WM_DESTROY", .{});
-            _ = winmm.PlaySoundW(null, hinstance, winmm.SND_PURGE);
             ui.PostQuitMessage(0);
         },
         else => return ui.DefWindowProc(window, message, wParam, lParam),
@@ -42,44 +38,32 @@ pub fn mainWindowCallback(
 pub fn wWinMain(h: H, _: ?H, _: [*:0]u16, _: u32) callconv(WINAPI) i32 {
     std.log.info("wWinMain", .{});
     var windowClass = std.mem.zeroes(ui.WNDCLASSEX);
+    const s = .{ .DBLCLKS = 1, .OWNDC = 1, .HREDRAW = 1, .VREDRAW = 1 };
+
+    const gdi = win32.graphics.gdi;
     windowClass.cbSize = @sizeOf(ui.WNDCLASSEX);
+    windowClass.style = s;
     windowClass.lpszClassName = name;
     windowClass.lpfnWndProc = mainWindowCallback;
     windowClass.hInstance = h;
-
-    windowClass.hIcon = ui.LoadIcon(h, win32.zig.L("ICON_T3DX"));
-    windowClass.hCursor = ui.LoadCursor(h, win32.zig.L("CURSOR_CROSSHAIR"));
-    windowClass.hIconSm = ui.LoadIcon(h, win32.zig.L("ICON_T3DX"));
-    windowClass.lpszMenuName = win32.zig.L("SoundMenu");
+    windowClass.hbrBackground = gdi.GetStockObject(gdi.BLACK_BRUSH);
 
     if (ui.RegisterClassEx(&windowClass) == 0) win32Panic();
 
     var style = ui.WS_OVERLAPPEDWINDOW;
     style.VISIBLE = 1;
-    const window = ui.CreateWindowEx(
-        ui.WS_EX_LEFT,
-        name,
-        name,
-        style,
-        ui.CW_USEDEFAULT,
-        ui.CW_USEDEFAULT,
-        @intCast(WIDTH),
-        @intCast(HEIGHT),
-        null,
-        null,
-        h,
-        null,
-    );
+    const window = ui.CreateWindowEx(ui.WS_EX_LEFT, name, name, style, //
+        ui.CW_USEDEFAULT, ui.CW_USEDEFAULT, //
+        @intCast(WIDTH), @intCast(HEIGHT), //
+        null, null, h, null);
 
-    hinstance = h;
+    instance = h;
     hander = window orelse win32Panic();
-
-    const time: u64 = @intCast(std.time.milliTimestamp());
-    var rand = std.rand.DefaultPrng.init(time);
-    const hdc = gdi.GetDC(window).?;
-    defer _ = gdi.ReleaseDC(window, hdc);
-
     var message: ui.MSG = undefined;
+
+    gameInit();
+    defer gameShutdown();
+
     while (true) {
         if (ui.PeekMessage(&message, null, 0, 0, ui.PM_REMOVE) > 0) {
             if (message.message == ui.WM_QUIT) break;
@@ -87,34 +71,47 @@ pub fn wWinMain(h: H, _: ?H, _: [*:0]u16, _: u32) callconv(WINAPI) i32 {
             _ = ui.DispatchMessage(&message);
         }
 
-        const color = Color{
-            .r = rand.random().int(u8),
-            .g = rand.random().int(u8),
-            .b = rand.random().int(u8),
-        };
-
-        _ = gdi.SetTextColor(hdc, @bitCast(color));
-        _ = gdi.SetBkColor(hdc, @bitCast(std.mem.zeroes(Color)));
-        _ = gdi.SetBkMode(hdc, gdi.TRANSPARENT);
-
-        const x: i32 = rand.random().intRangeLessThan(i32, 0, WIDTH);
-        const y: i32 = rand.random().intRangeLessThan(i32, 0, HEIGHT);
-        _ = gdi.TextOut(hdc, x, y, name, name.len);
-
-        std.time.sleep(100 * std.time.ns_per_ms);
+        gameUpdate();
     }
 
     std.log.info("wWinMain end", .{});
     return 0;
 }
+const failed = win32.zig.FAILED;
+fn gameInit() void {
+    std.log.info("gameInit", .{});
 
-fn win32Panic() noreturn {
-    @panic(@tagName(win32.foundation.GetLastError()));
+    if (failed(draw.DirectDrawCreateEx(null, @ptrCast(&draw7), //
+        draw.IID_IDirectDraw7, null))) win32Panic();
+
+    // const style = draw.DDSCL_FULLSCREEN | draw.DDSCL_ALLOWMODEX |
+    //     draw.DDSCL_EXCLUSIVE | draw.DDSCL_ALLOWREBOOT;
+
+    const style = draw.DDSCL_NORMAL;
+
+    if (failed(draw7.IDirectDraw7_SetCooperativeLevel( //
+        hander, style))) win32Panic();
+
+    if (failed(draw7.IDirectDraw7_SetDisplayMode( //
+        WIDTH, HEIGHT, 8, 0, 0))) win32Panic();
 }
 
-const Color = extern struct {
-    r: u8 = 0,
-    g: u8 = 0,
-    b: u8 = 0,
-    a: u8 = 0,
-};
+fn gameUpdate() void { // get the time
+    const system = win32.system.system_information;
+    const start = system.GetTickCount64();
+
+    // lock to 30 fps
+    const ms = 33 -| (system.GetTickCount64() - start);
+    std.time.sleep(ms * std.time.ns_per_ms);
+}
+
+fn gameShutdown() void {
+    std.log.info("gameShutdown", .{});
+    _ = draw7.IUnknown_Release();
+}
+
+fn win32Panic() noreturn {
+    const err = win32.foundation.GetLastError();
+    std.log.err("win32 painc code {}", .{@intFromEnum(err)});
+    @panic(@tagName(err));
+}

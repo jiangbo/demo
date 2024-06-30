@@ -12,11 +12,6 @@ pub fn build(b: *std.Build) !void {
     });
 
     // exe.subsystem = .Windows;
-    exe.addWin32ResourceFile(.{
-        .file = b.path("assets/windows.rc"),
-        .flags = &.{"/c65001"},
-    });
-    exe.linkSystemLibrary("winmm");
     b.installArtifact(exe);
 
     const win32 = b.dependency("zigwin32", .{});
