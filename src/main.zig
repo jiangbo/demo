@@ -8,8 +8,8 @@ const WINAPI = std.os.windows.WINAPI;
 
 pub const UNICODE: bool = true;
 const name = win32.zig.L("游戏编程大师");
-const WIDTH: u32 = 640;
-const HEIGHT: u32 = 480;
+const WIDTH: u32 = 1920;
+const HEIGHT: u32 = 1080;
 
 var instance: H = undefined;
 var hander: win32.foundation.HWND = undefined;
@@ -92,8 +92,12 @@ fn gameInit() void {
     if (failed(draw7.IDirectDraw7_SetCooperativeLevel( //
         hander, style))) win32Panic();
 
-    if (failed(draw7.IDirectDraw7_SetDisplayMode( //
-        WIDTH, HEIGHT, 8, 0, 0))) win32Panic();
+    const hr = draw7.IDirectDraw7_SetDisplayMode( //
+        WIDTH, HEIGHT, 8, 0, 0);
+    if (failed(hr)) {
+        std.log.err("hr={x}\n", .{hr});
+        // win32Panic();
+    }
 }
 
 fn gameUpdate() void { // get the time
