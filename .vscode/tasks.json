@@ -3,7 +3,7 @@
     "tasks": [
         {
             "label": "build",
-            "command": "zig build",
+            "command": "zig build -Dtarget=x86-windows",
             "type": "shell",
         }
     ]
