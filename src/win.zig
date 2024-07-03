@@ -11,6 +11,7 @@ pub const HEIGHT: u32 = 1080;
 pub var instance: std.os.windows.HINSTANCE = undefined;
 pub var hander: win32.foundation.HWND = undefined;
 pub var rand: std.Random = undefined;
+pub var windowClosed: bool = false;
 
 pub fn mainWindowCallback(
     window: win32.foundation.HWND,
@@ -24,6 +25,7 @@ pub fn mainWindowCallback(
         },
         ui.WM_DESTROY => {
             std.log.info("WM_DESTROY", .{});
+            windowClosed = true;
             ui.PostQuitMessage(0);
         },
         else => return ui.DefWindowProc(window, message, wParam, lParam),
