@@ -5,8 +5,8 @@ const ui = win32.ui.windows_and_messaging;
 const gdi = win32.graphics.gdi;
 const WINAPI = std.os.windows.WINAPI;
 
-pub const WIDTH: u32 = 2560;
-pub const HEIGHT: u32 = 1080;
+pub const WIDTH: u32 = 640;
+pub const HEIGHT: u32 = 480;
 
 pub var instance: std.os.windows.HINSTANCE = undefined;
 pub var hander: win32.foundation.HWND = undefined;
@@ -35,8 +35,10 @@ pub fn mainWindowCallback(
 
 const name = win32.zig.L("游戏编程大师");
 
-pub fn createWindow(h: std.os.windows.HINSTANCE) void {
+pub fn createWindow() void {
     std.log.info("wWinMain", .{});
+
+    const h = win32.system.library_loader.GetModuleHandle(null).?;
     var windowClass = std.mem.zeroes(ui.WNDCLASSEX);
     const s = .{ .DBLCLKS = 1, .OWNDC = 1, .HREDRAW = 1, .VREDRAW = 1 };
 
@@ -53,6 +55,14 @@ pub fn createWindow(h: std.os.windows.HINSTANCE) void {
     style.VISIBLE = 1;
     const window = ui.CreateWindowEx(ui.WS_EX_LEFT, name, name, style, 0, 0, //
         @intCast(WIDTH), @intCast(HEIGHT), null, null, h, null);
+
+    var rect = std.mem.zeroInit(win32.foundation.RECT, //
+        .{ .right = WIDTH, .bottom = HEIGHT });
+    _ = ui.AdjustWindowRectEx(&rect, style, 1, ui.WS_EX_LEFT);
+
+    const width = rect.right - rect.left;
+    const height = rect.bottom - rect.top;
+    _ = ui.MoveWindow(window, 0, 0, width, height, 1);
 
     instance = h;
     hander = window orelse win32Panic();
