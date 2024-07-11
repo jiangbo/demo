@@ -62,7 +62,7 @@ pub fn createWindow() void {
 
     const width = rect.right - rect.left;
     const height = rect.bottom - rect.top;
-    _ = ui.MoveWindow(window, 0, 0, width, height, 1);
+    _ = ui.MoveWindow(window, 200, 200, width, height, 1);
 
     instance = h;
     hander = window orelse win32Panic();
