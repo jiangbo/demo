@@ -33,7 +33,7 @@ pub fn mainWindowCallback(
     return 0;
 }
 
-const name = win32.zig.L("游戏编程大师");
+const name = win32.zig.L("Direct3D 中的 2D 编程");
 
 pub fn createWindow() void {
     std.log.info("wWinMain", .{});

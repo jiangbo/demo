@@ -4,7 +4,17 @@
         {
             "label": "build",
             "command": "zig build",
+            "type": "shell"
+        },
+        {
+            "label": "run",
+            "command": "zig build run",
             "type": "shell",
+            "problemMatcher": [],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
         }
     ]
 }
