@@ -131,6 +131,13 @@ fn gameUpdate() void {
         }
     }
 
+    if (zigwin.point) |point| {
+        std.log.debug("mouse click: {},{}", .{ point.x, point.y });
+        const y = @min(9, point.y / cellHeight);
+        makeMove(point.x / cellWidth, y);
+        zigwin.point = null;
+    }
+
     r = device.IDirect3DDevice9_Present(null, null, null, null);
     if (failed(r)) win32Panic();
 

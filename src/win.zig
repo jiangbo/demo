@@ -13,6 +13,9 @@ pub var hander: win32.foundation.HWND = undefined;
 pub var rand: std.Random = undefined;
 pub var windowClosed: bool = false;
 
+pub const Point = struct { x: u32, y: u32 };
+pub var point: ?Point = null;
+
 pub fn mainWindowCallback(
     window: win32.foundation.HWND,
     message: u32,
@@ -23,6 +26,12 @@ pub fn mainWindowCallback(
         ui.WM_CREATE => {
             std.log.info("WM_CREATE", .{});
         },
+        ui.WM_LBUTTONDOWN => {
+            const x: u32 = @intCast(lParam & 0xffff);
+            const y: u32 = @intCast((lParam >> 16) & 0xffff);
+            point = Point{ .x = x, .y = y };
+        },
+
         ui.WM_DESTROY => {
             std.log.info("WM_DESTROY", .{});
             windowClosed = true;
@@ -52,17 +61,15 @@ pub fn createWindow() void {
     if (ui.RegisterClassEx(&windowClass) == 0) win32Panic();
 
     var style = ui.WS_OVERLAPPEDWINDOW;
-    style.VISIBLE = 1;
-    const window = ui.CreateWindowEx(ui.WS_EX_LEFT, name, name, style, 0, 0, //
-        @intCast(WIDTH), @intCast(HEIGHT), null, null, h, null);
-
     var rect = std.mem.zeroInit(win32.foundation.RECT, //
         .{ .right = WIDTH, .bottom = HEIGHT });
     _ = ui.AdjustWindowRectEx(&rect, style, 1, ui.WS_EX_LEFT);
-
     const width = rect.right - rect.left;
     const height = rect.bottom - rect.top;
-    _ = ui.MoveWindow(window, 200, 200, width, height, 1);
+
+    style.VISIBLE = 1;
+    const window = ui.CreateWindowEx(ui.WS_EX_LEFT, name, name, style, //
+        200, 200, width, height, null, null, h, null);
 
     instance = h;
     hander = window orelse win32Panic();
