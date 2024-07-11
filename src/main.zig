@@ -122,10 +122,11 @@ fn gameUpdate() void {
     // clear the cells
     for (0..map.len) |x| {
         for (0..map.len) |y| {
-            const color: u32 = if (map[x][y].light) 0xffffff00 else 0xff0000ff;
+            const item = map[x][y];
+            const color: u32 = if (item.light) 0xffffff00 else 0xff0000ff;
 
             // clear the viewport
-            r = device.IDirect3DDevice9_Clear(1, &map[x][y].rect, flags, color, 0, 0);
+            r = device.IDirect3DDevice9_Clear(1, &item.rect, flags, color, 0, 0);
             if (failed(r)) win32Panic();
         }
     }
