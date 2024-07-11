@@ -10,6 +10,16 @@ var allocator: std.mem.Allocator = undefined;
 var d9: *d3d9.IDirect3D9 = undefined;
 var device: *d3d9.IDirect3DDevice9 = undefined;
 
+var map: [10][10]Cell = undefined;
+
+const cellWidth: u32 = zigwin.WIDTH / map.len;
+const cellHeight: u32 = zigwin.HEIGHT / map.len;
+
+const Cell = struct {
+    rect: d3d9.D3DRECT,
+    light: bool,
+};
+
 pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -80,6 +90,22 @@ fn gameInit() void {
     r = d9.IDirect3D9_CreateDevice(adapter, .HAL, zigwin.hander, //
         d3d9.D3DCREATE_HARDWARE_VERTEXPROCESSING, &params, @ptrCast(&device));
     if (failed(r)) win32Panic();
+
+    for (0..map.len) |x| {
+        for (0..map.len) |y| {
+            map[x][y].rect.x1 = @intCast(cellWidth * x + 1);
+            map[x][y].rect.y1 = @intCast(cellHeight * y + 1);
+            map[x][y].rect.x2 = map[x][y].rect.x1 + cellWidth - 2;
+            map[x][y].rect.y2 = map[x][y].rect.y1 + cellHeight - 2;
+            map[x][y].light = false;
+        }
+    }
+
+    for (0..10) |_| {
+        const x = zigwin.rand.uintLessThan(usize, map.len);
+        const y = zigwin.rand.uintLessThan(usize, map.len);
+        makeMove(x, y);
+    }
 }
 
 fn gameUpdate() void {
@@ -92,6 +118,17 @@ fn gameUpdate() void {
     const flags = win32.system.system_services.D3DCLEAR_TARGET;
     var r = device.IDirect3DDevice9_Clear(0, null, flags, 0xff808080, 0, 0);
     if (failed(r)) win32Panic();
+
+    // clear the cells
+    for (0..map.len) |x| {
+        for (0..map.len) |y| {
+            const color: u32 = if (map[x][y].light) 0xffffff00 else 0xff0000ff;
+
+            // clear the viewport
+            r = device.IDirect3DDevice9_Clear(1, &map[x][y].rect, flags, color, 0, 0);
+            if (failed(r)) win32Panic();
+        }
+    }
 
     r = device.IDirect3DDevice9_Present(null, null, null, null);
     if (failed(r)) win32Panic();
@@ -107,4 +144,21 @@ fn gameShutdown() void {
 
 fn win32Panic() noreturn {
     zigwin.win32Panic();
+}
+
+fn makeMove(x: usize, y: usize) void {
+    // toggle center cell
+    map[x][y].light = !map[x][y].light;
+
+    // toggle cell to left
+    if (x > 0) map[x - 1][y].light = !map[x - 1][y].light;
+
+    // toggle cell to right
+    if (x < map.len - 1) map[x + 1][y].light = !map[x + 1][y].light;
+
+    // toggle cell above
+    if (y > 0) map[x][y - 1].light = !map[x][y - 1].light;
+
+    // toggle cell below
+    if (y < map.len - 1) map[x][y + 1].light = !map[x][y + 1].light;
 }
