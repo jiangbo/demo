@@ -15,6 +15,7 @@ pub var windowClosed: bool = false;
 
 pub const Point = struct { x: u32, y: u32 };
 pub var point: ?Point = null;
+pub var key: ?usize = null;
 
 pub fn mainWindowCallback(
     window: win32.foundation.HWND,
@@ -32,6 +33,7 @@ pub fn mainWindowCallback(
             point = Point{ .x = x, .y = y };
         },
 
+        ui.WM_KEYDOWN => key = wParam,
         ui.WM_DESTROY => {
             std.log.info("WM_DESTROY", .{});
             windowClosed = true;
@@ -49,7 +51,7 @@ pub fn createWindow() void {
 
     const h = win32.system.library_loader.GetModuleHandle(null).?;
     var windowClass = std.mem.zeroes(ui.WNDCLASSEX);
-    const s = .{ .DBLCLKS = 1, .OWNDC = 1, .HREDRAW = 1, .VREDRAW = 1 };
+    const s = .{ .HREDRAW = 1, .VREDRAW = 1 };
 
     windowClass.cbSize = @sizeOf(ui.WNDCLASSEX);
     windowClass.style = s;
@@ -63,7 +65,7 @@ pub fn createWindow() void {
     var style = ui.WS_OVERLAPPEDWINDOW;
     var rect = std.mem.zeroInit(win32.foundation.RECT, //
         .{ .right = WIDTH, .bottom = HEIGHT });
-    _ = ui.AdjustWindowRectEx(&rect, style, 1, ui.WS_EX_LEFT);
+    _ = ui.AdjustWindowRectEx(&rect, style, 0, ui.WS_EX_LEFT);
     const width = rect.right - rect.left;
     const height = rect.bottom - rect.top;
 
@@ -96,6 +98,6 @@ pub fn update(gameUpdate: fn () void) void {
 
 pub fn win32Panic() noreturn {
     const err = win32.foundation.GetLastError();
-    std.log.err("win32 painc code {}", .{@intFromEnum(err)});
+    std.log.err("win32 panic code {}", .{@intFromEnum(err)});
     @panic(@tagName(err));
 }

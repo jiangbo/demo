@@ -1,62 +1,74 @@
 const std = @import("std");
-const mach = @import("mach");
-const mesh = @import("mesh.zig");
+const win32 = @import("win32");
+const d3d9 = win32.graphics.direct3d9;
 
-pub const RenderContext = struct {
-    vertexBuffer: *mach.gpu.Buffer,
-    pipeline: *mach.gpu.RenderPipeline,
+pub var device: *d3d9.IDirect3DDevice9 = undefined;
+pub var mode: d3d9.D3DDISPLAYMODE = undefined;
 
-    pub fn release(self: *RenderContext) void {
-        self.pipeline.release();
+const HWND = win32.foundation.HWND;
+const failed = win32.zig.FAILED;
+pub fn init(width: u32, height: u32, h: HWND) void {
+    const d9 = d3d9.Direct3DCreate9(d3d9.D3D_SDK_VERSION).?;
+
+    const count = d9.IDirect3D9_GetAdapterCount();
+    std.log.debug("adapter count: {d}", .{count});
+
+    var identifier: d3d9.D3DADAPTER_IDENTIFIER9 = undefined;
+
+    for (0..count) |adapter| {
+        const i: u32 = @intCast(adapter);
+        const r = d9.IDirect3D9_GetAdapterIdentifier(i, 0, &identifier);
+        if (failed(r)) win32Panic();
+
+        std.log.debug("adapter Driver: {s}", .{identifier.Driver});
+        std.log.debug("adapter name: {s}", .{identifier.Description});
     }
-};
 
-pub fn createRenderPipeline() RenderContext {
-    const device = mach.core.device;
+    const adapter = d3d9.D3DADAPTER_DEFAULT;
+    var hr = d9.IDirect3D9_GetAdapterDisplayMode(adapter, &mode);
+    if (failed(hr)) win32Panic();
 
-    // 编译 shader
-    const source = @embedFile("shader.wgsl");
-    const module = device.createShaderModuleWGSL("shader.wgsl", source);
-    defer module.release();
+    var params: d3d9.D3DPRESENT_PARAMETERS = undefined;
 
-    // 顶点着色器状态
-    const vertex = mach.gpu.VertexState.init(.{
-        .module = module,
-        .entry_point = "vs_main",
-        .buffers = &.{mach.gpu.VertexBufferLayout.init(.{
-            // 分组，两个 f32 为一组传给顶点着色器
-            .array_stride = @sizeOf(mesh.Vertex),
-            .attributes = &.{
-                // 格式和偏移，还有位置
-                .{ .shader_location = 0, .format = .float32x4, .offset = 0 },
-            },
-        })},
-    });
+    //back buffer information
+    params.BackBufferWidth = width;
+    params.BackBufferHeight = height;
+    params.BackBufferFormat = mode.Format;
+    params.BackBufferCount = 1; //make one back buffer
 
-    // 片段着色器状态
-    const fragment = mach.gpu.FragmentState.init(.{
-        .module = module,
-        .entry_point = "fs_main",
-        .targets = &.{.{ .format = mach.core.descriptor.format }},
-    });
+    //multisampling
+    params.MultiSampleType = .NONE;
+    params.MultiSampleQuality = 0;
 
-    // 创建渲染管线
-    const descriptor = mach.gpu.RenderPipeline.Descriptor{
-        .fragment = &fragment,
-        .vertex = vertex,
-    };
+    //swap effect
+    params.SwapEffect = .COPY; //we want to copy from back buffer to screen
+    params.Windowed = win32.zig.TRUE; //windowed mode
 
-    const pipeline = device.createRenderPipeline(&descriptor);
+    //destination window
+    params.hDeviceWindow = h;
 
-    const vertexBuffer = device.createBuffer(&.{
-        .usage = .{ .vertex = true, .copy_dst = true },
-        .size = @sizeOf(mesh.Vertex) * mesh.vertices.len,
-        .mapped_at_creation = .true,
-    });
-    mach.core.queue.writeBuffer(vertexBuffer, 0, mesh.vertices);
+    //depth buffer information
+    params.EnableAutoDepthStencil = win32.zig.FALSE;
+    params.AutoDepthStencilFormat = .UNKNOWN;
 
-    return RenderContext{
-        .vertexBuffer = vertexBuffer,
-        .pipeline = pipeline,
-    };
+    //flags
+    params.Flags = 0;
+
+    //refresh rate and presentation interval
+    params.FullScreen_RefreshRateInHz = d3d9.D3DPRESENT_RATE_DEFAULT;
+    params.PresentationInterval = d3d9.D3DPRESENT_INTERVAL_DEFAULT;
+
+    //attempt to create a HAL device
+    hr = d9.IDirect3D9_CreateDevice(adapter, .HAL, h, //
+        d3d9.D3DCREATE_HARDWARE_VERTEXPROCESSING, &params, @ptrCast(&device));
+    if (failed(hr)) win32Panic();
+
+    hr = device.IDirect3DDevice9_SetRenderState(.LIGHTING, 0);
+    if (failed(hr)) win32Panic();
+}
+
+fn win32Panic() noreturn {
+    const err = win32.foundation.GetLastError();
+    std.log.err("win32 painc code {}", .{@intFromEnum(err)});
+    @panic(@tagName(err));
 }
