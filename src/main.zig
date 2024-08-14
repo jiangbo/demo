@@ -1,172 +1,187 @@
 const std = @import("std");
 const win32 = @import("win32");
-const zigwin = @import("win.zig");
+const d3d = @import("d3d.zig");
+const d3dx9 = @import("d3dx9.zig");
 
 const d3d9 = win32.graphics.direct3d9;
-
-pub const UNICODE: bool = true;
-
-var allocator: std.mem.Allocator = undefined;
-var d9: *d3d9.IDirect3D9 = undefined;
-var device: *d3d9.IDirect3DDevice9 = undefined;
-
-var map: [10][10]Cell = undefined;
-
-const cellWidth: u32 = zigwin.WIDTH / map.len;
-const cellHeight: u32 = zigwin.HEIGHT / map.len;
-
-const Cell = struct {
-    rect: d3d9.D3DRECT,
-    light: bool,
-};
-
-pub fn main() void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    allocator = gpa.allocator();
-    zigwin.createWindow();
-
-    gameInit();
-    zigwin.update(gameUpdate);
-    gameShutdown();
-}
-
+const ui = win32.ui.windows_and_messaging;
 const failed = win32.zig.FAILED;
-fn gameInit() void {
-    std.log.info("gameInit", .{});
 
-    d9 = d3d9.Direct3DCreate9(d3d9.D3D_SDK_VERSION).?;
+// Globals
+// var allocator: std.mem.Allocator = undefined;
+pub const UNICODE: bool = true;
+var device: *d3d9.IDirect3DDevice9 = undefined;
+var texture: *d3d9.IDirect3DTexture9 = undefined;
+const True = win32.zig.TRUE;
 
-    const count = d9.IDirect3D9_GetAdapterCount();
-    std.log.debug("adapter count: {d}", .{count});
+// var teapot: *d3dx9.ID3DXMesh = undefined;
+var teapotMaterial: d3d9.D3DMATERIAL9 = undefined;
 
-    var identifier: d3d9.D3DADAPTER_IDENTIFIER9 = undefined;
+var bgMaterial: d3d9.D3DMATERIAL9 = d3d.Material.white;
 
-    for (0..count) |adapter| {
-        const i: u32 = @intCast(adapter);
-        const r = d9.IDirect3D9_GetAdapterIdentifier(i, 0, &identifier);
-        if (failed(r)) win32Panic();
+// 三角形的顶点缓存
+var buffer: *d3d9.IDirect3DVertexBuffer9 = undefined;
+const Vertex = extern struct {
+    x: f32 = 0,
+    y: f32 = 0,
+    z: f32 = 0,
+    nx: f32 = 0,
+    ny: f32 = 0,
+    nz: f32 = 0,
+    u: f32 = 0,
+    v: f32 = 0,
+};
+const fvf = win32.system.system_services.D3DFVF_XYZ | //
+    win32.system.system_services.D3DFVF_NORMAL | //
+    win32.system.system_services.D3DFVF_TEX1;
 
-        std.log.debug("adapter Driver: {s}", .{identifier.Driver});
-        std.log.debug("adapter name: {s}", .{identifier.Description});
-    }
+// Framework Functions
+fn setup() bool {
+    teapotMaterial = d3d.Material.red;
+    teapotMaterial.Diffuse.a = 0.5;
 
-    const adapter = d3d9.D3DADAPTER_DEFAULT;
-    var mode: d3d9.D3DDISPLAYMODE = undefined;
-    var r = d9.IDirect3D9_GetAdapterDisplayMode(adapter, &mode);
-    if (failed(r)) win32Panic();
+    // _ = d3dx9.D3DXCreateTeapot(device, &teapot, null);
 
-    var params: d3d9.D3DPRESENT_PARAMETERS = undefined;
+    const usage = d3d9.D3DUSAGE_WRITEONLY;
+    // 创建顶点缓存
+    _ = device.IDirect3DDevice9_CreateVertexBuffer(6 * @sizeOf(Vertex), //
+        usage, fvf, .MANAGED, @ptrCast(&buffer), null);
 
-    //back buffer information
-    params.BackBufferWidth = zigwin.WIDTH;
-    params.BackBufferHeight = zigwin.HEIGHT;
-    params.BackBufferFormat = mode.Format;
-    params.BackBufferCount = 1; //make one back buffer
+    // 填充顶点数据
+    var data: [*]Vertex = undefined;
+    _ = buffer.IDirect3DVertexBuffer9_Lock(0, 0, @ptrCast(&data), 0);
 
-    //multisampling
-    params.MultiSampleType = .NONE;
-    params.MultiSampleQuality = 0;
+    data[0] = .{ .x = -10, .y = -10, .z = 5, .nz = -1, .v = 1 };
+    data[1] = .{ .x = -10, .y = 10, .z = 5, .nz = -1 };
+    data[2] = .{ .x = 10, .y = 10, .z = 5, .nz = -1, .u = 1 };
 
-    //swap effect
-    params.SwapEffect = .COPY; //we want to copy from back buffer to screen
-    params.Windowed = win32.zig.TRUE; //windowed mode
+    data[3] = .{ .x = -10, .y = -10, .z = 5, .nz = -1, .v = 1 };
+    data[4] = .{ .x = 10, .y = 10, .z = 5, .nz = -1, .u = 1 };
+    data[5] = .{ .x = 10, .y = -10, .z = 5, .nz = -1, .u = 1, .v = 1 };
 
-    //destination window
-    params.hDeviceWindow = zigwin.hander;
+    _ = buffer.IDirect3DVertexBuffer9_Unlock();
 
-    //depth buffer information
-    params.EnableAutoDepthStencil = win32.zig.FALSE;
-    params.AutoDepthStencilFormat = .UNKNOWN;
+    // 设置方向光
+    var light = std.mem.zeroes(d3d9.D3DLIGHT9);
+    light.Type = d3d9.D3DLIGHT_DIRECTIONAL;
+    light.Ambient = .{ .r = 0.6, .g = 0.6, .b = 0.6, .a = 1 };
+    light.Diffuse = .{ .r = 1.0, .g = 1.0, .b = 1.0, .a = 1 };
+    light.Specular = .{ .r = 0.2, .g = 0.2, .b = 0.2, .a = 1 };
+    light.Direction = .{ .x = 0.707, .y = 0, .z = 0.707 };
+    _ = device.IDirect3DDevice9_SetLight(0, &light);
+    _ = device.IDirect3DDevice9_LightEnable(0, True);
 
-    //flags
-    params.Flags = 0;
+    // 打开镜面光
+    _ = device.IDirect3DDevice9_SetRenderState(.NORMALIZENORMALS, True);
+    _ = device.IDirect3DDevice9_SetRenderState(.SPECULARENABLE, True);
 
-    //refresh rate and presentation interval
-    params.FullScreen_RefreshRateInHz = d3d9.D3DPRESENT_RATE_DEFAULT;
-    params.PresentationInterval = d3d9.D3DPRESENT_INTERVAL_DEFAULT;
+    // 创建纹理和过滤器
+    const name = win32.zig.L("crate.jpg");
+    _ = d3dx9.D3DXCreateTextureFromFileW(device, name, &texture);
 
-    //attempt to create a HAL device
-    r = d9.IDirect3D9_CreateDevice(adapter, .HAL, zigwin.hander, //
-        d3d9.D3DCREATE_HARDWARE_VERTEXPROCESSING, &params, @ptrCast(&device));
-    if (failed(r)) win32Panic();
+    var state: u32 = @intFromEnum(d3d9.D3DTEXF_LINEAR);
+    _ = device.IDirect3DDevice9_SetSamplerState(0, .MAGFILTER, state);
+    _ = device.IDirect3DDevice9_SetSamplerState(0, .MINFILTER, state);
+    state = @intFromEnum(d3d9.D3DTEXF_POINT);
+    _ = device.IDirect3DDevice9_SetSamplerState(0, .MIPFILTER, state);
 
-    for (0..map.len) |x| {
-        for (0..map.len) |y| {
-            map[x][y].rect.x1 = @intCast(cellWidth * x + 1);
-            map[x][y].rect.y1 = @intCast(cellHeight * y + 1);
-            map[x][y].rect.x2 = map[x][y].rect.x1 + cellWidth - 2;
-            map[x][y].rect.y2 = map[x][y].rect.y1 + cellHeight - 2;
-            map[x][y].light = false;
-        }
-    }
+    // 设置透明混合
+    // use alpha in material's diffuse component for alpha
+    _ = device.IDirect3DDevice9_SetTextureStageState(0, .ALPHAARG1, 0);
+    state = @intFromEnum(d3d9.D3DTOP_SELECTARG1);
+    _ = device.IDirect3DDevice9_SetTextureStageState(0, .ALPHAOP, state);
 
-    for (0..10) |_| {
-        const x = zigwin.rand.uintLessThan(usize, map.len);
-        const y = zigwin.rand.uintLessThan(usize, map.len);
-        makeMove(x, y);
-    }
+    // set blending factors so that alpha component determines transparency
+    state = @intFromEnum(d3d9.D3DBLEND_SRCALPHA);
+    _ = device.IDirect3DDevice9_SetRenderState(.SRCBLEND, state);
+    state = @intFromEnum(d3d9.D3DBLEND_INVSRCALPHA);
+    _ = device.IDirect3DDevice9_SetRenderState(.DESTBLEND, state);
+
+    // 设置视图矩阵
+    const position = .{ .z = -3 };
+    var view: win32.graphics.direct3d.D3DMATRIX = undefined;
+    _ = d3dx9.D3DXMatrixLookAtLH(&view, &position, &.{}, &.{ .y = 1.0 });
+    _ = device.IDirect3DDevice9_SetTransform(d3d9.D3DTS_VIEW, &view);
+
+    // 设置投影矩阵
+    var p: win32.graphics.direct3d.D3DMATRIX = undefined;
+    const w = @as(f32, @floatFromInt(WIDTH));
+    const h = @as(f32, @floatFromInt(HEIGHT));
+    const fov = 0.5 * std.math.pi;
+    _ = d3dx9.D3DXMatrixPerspectiveFovLH(&p, fov, w / h, 1.0, 1000.0);
+    _ = device.IDirect3DDevice9_SetTransform(.PROJECTION, &p);
+
+    return true;
 }
 
-fn gameUpdate() void {
-    if (zigwin.windowClosed) return;
-
-    // get the time
-    const system = win32.system.system_information;
-    const start = system.GetTickCount64();
-
-    const flags = win32.system.system_services.D3DCLEAR_TARGET;
-    var r = device.IDirect3DDevice9_Clear(0, null, flags, 0xff808080, 0, 0);
-    if (failed(r)) win32Panic();
-
-    // clear the cells
-    for (0..map.len) |x| {
-        for (0..map.len) |y| {
-            const item = map[x][y];
-            const color: u32 = if (item.light) 0xffffff00 else 0xff0000ff;
-
-            // clear the viewport
-            r = device.IDirect3DDevice9_Clear(1, &item.rect, flags, color, 0, 0);
-            if (failed(r)) win32Panic();
-        }
-    }
-
-    if (zigwin.point) |point| {
-        std.log.debug("mouse click: {},{}", .{ point.x, point.y });
-        const y = @min(9, point.y / cellHeight);
-        makeMove(point.x / cellWidth, y);
-        zigwin.point = null;
-    }
-
-    r = device.IDirect3DDevice9_Present(null, null, null, null);
-    if (failed(r)) win32Panic();
-
-    const ms = 33 -| (system.GetTickCount64() - start);
-    std.time.sleep(ms * std.time.ns_per_ms);
+fn cleanup() void {
+    _ = buffer.IUnknown_Release();
 }
 
-fn gameShutdown() void {
-    std.log.info("gameShutdown", .{});
-    _ = d9.IUnknown_Release();
+pub fn win32Panic() noreturn {
+    d3d.win32Panic();
 }
 
-fn win32Panic() noreturn {
-    zigwin.win32Panic();
+var y: f32 = 0.0;
+fn display(_: f32) bool {
+    const keyboard = win32.ui.input.keyboard_and_mouse;
+    // increase/decrease alpha via keyboard input
+    if (keyboard.GetAsyncKeyState('A') != 0)
+        teapotMaterial.Diffuse.a += 0.01;
+    if (keyboard.GetAsyncKeyState('S') != 0)
+        teapotMaterial.Diffuse.a -= 0.01;
+
+    // force alpha to [0, 1] interval
+    if (teapotMaterial.Diffuse.a > 1.0) teapotMaterial.Diffuse.a = 1.0;
+    if (teapotMaterial.Diffuse.a < 0.0) teapotMaterial.Diffuse.a = 0.0;
+
+    const flags = win32.system.system_services.D3DCLEAR_TARGET |
+        win32.system.system_services.D3DCLEAR_ZBUFFER;
+
+    _ = device.IDirect3DDevice9_Clear(0, null, flags, 0xffff00ff, 1, 0);
+    _ = device.IDirect3DDevice9_BeginScene();
+
+    // Draw the background
+    const unit: [16]f32 = .{
+        1, 0, 0, 0, 0, 1, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 1,
+    };
+    var world: win32.graphics.direct3d.D3DMATRIX = undefined;
+    world.Anonymous.m = unit;
+    _ = device.IDirect3DDevice9_SetTransform(.WORLD, &world);
+    _ = device.IDirect3DDevice9_SetFVF(fvf);
+    _ = device.IDirect3DDevice9_SetStreamSource(0, buffer, 0, @sizeOf(Vertex));
+    _ = device.IDirect3DDevice9_SetMaterial(&bgMaterial);
+    _ = device.IDirect3DDevice9_SetTexture(0, @ptrCast(&texture));
+    _ = device.IDirect3DDevice9_DrawPrimitive(.TRIANGLELIST, 0, 2);
+
+    // Draw the teapot
+    // _ = device.IDirect3DDevice9_SetRenderState(.ALPHABLENDENABLE, True);
+
+    // _ = d3dx9.D3DXMatrixScaling(&world, 1.5, 1.5, 1.5);
+    // _ = device.IDirect3DDevice9_SetTransform(.WORLD, &world);
+    // _ = device.IDirect3DDevice9_SetMaterial(&teapotMaterial);
+    // _ = device.IDirect3DDevice9_SetTexture(0, null);
+    // _ = teapot.ID3DXBaseMesh_DrawSubset(0);
+
+    // _ = device.IDirect3DDevice9_SetRenderState(.ALPHABLENDENABLE, 0);
+
+    _ = device.IDirect3DDevice9_EndScene();
+    _ = device.IDirect3DDevice9_Present(null, null, null, null);
+    return true;
 }
 
-fn makeMove(x: usize, y: usize) void {
-    // toggle center cell
-    map[x][y].light = !map[x][y].light;
+const WIDTH: i32 = 640;
+const HEIGHT: i32 = 480;
 
-    // toggle cell to left
-    if (x > 0) map[x - 1][y].light = !map[x - 1][y].light;
+// main
+pub fn main() void {
+    device = d3d.initD3D(WIDTH, HEIGHT);
 
-    // toggle cell to right
-    if (x < map.len - 1) map[x + 1][y].light = !map[x + 1][y].light;
+    if (!setup()) @panic("Setup() - FAILED");
 
-    // toggle cell above
-    if (y > 0) map[x][y - 1].light = !map[x][y - 1].light;
+    d3d.enterMsgLoop(display);
 
-    // toggle cell below
-    if (y < map.len - 1) map[x][y + 1].light = !map[x][y + 1].light;
+    cleanup();
+    _ = device.IUnknown_Release();
 }
