@@ -14,7 +14,7 @@ var device: *d3d9.IDirect3DDevice9 = undefined;
 var texture: *d3d9.IDirect3DTexture9 = undefined;
 const True = win32.zig.TRUE;
 
-// var teapot: *d3dx9.ID3DXMesh = undefined;
+var teapot: *d3dx9.ID3DXMesh = undefined;
 var teapotMaterial: d3d9.D3DMATERIAL9 = undefined;
 
 var bgMaterial: d3d9.D3DMATERIAL9 = d3d.Material.white;
@@ -40,7 +40,7 @@ fn setup() bool {
     teapotMaterial = d3d.Material.red;
     teapotMaterial.Diffuse.a = 0.5;
 
-    // _ = d3dx9.D3DXCreateTeapot(device, &teapot, null);
+    _ = d3dx9.D3DXCreateTeapot(device, &teapot, null);
 
     const usage = d3d9.D3DUSAGE_WRITEONLY;
     // 创建顶点缓存
@@ -152,19 +152,19 @@ fn display(_: f32) bool {
     _ = device.IDirect3DDevice9_SetFVF(fvf);
     _ = device.IDirect3DDevice9_SetStreamSource(0, buffer, 0, @sizeOf(Vertex));
     _ = device.IDirect3DDevice9_SetMaterial(&bgMaterial);
-    _ = device.IDirect3DDevice9_SetTexture(0, @ptrCast(&texture));
+    _ = device.IDirect3DDevice9_SetTexture(0, @ptrCast(texture));
     _ = device.IDirect3DDevice9_DrawPrimitive(.TRIANGLELIST, 0, 2);
 
     // Draw the teapot
-    // _ = device.IDirect3DDevice9_SetRenderState(.ALPHABLENDENABLE, True);
+    _ = device.IDirect3DDevice9_SetRenderState(.ALPHABLENDENABLE, True);
 
-    // _ = d3dx9.D3DXMatrixScaling(&world, 1.5, 1.5, 1.5);
-    // _ = device.IDirect3DDevice9_SetTransform(.WORLD, &world);
-    // _ = device.IDirect3DDevice9_SetMaterial(&teapotMaterial);
-    // _ = device.IDirect3DDevice9_SetTexture(0, null);
-    // _ = teapot.ID3DXBaseMesh_DrawSubset(0);
+    _ = d3dx9.D3DXMatrixScaling(&world, 1.5, 1.5, 1.5);
+    _ = device.IDirect3DDevice9_SetTransform(.WORLD, &world);
+    _ = device.IDirect3DDevice9_SetMaterial(&teapotMaterial);
+    _ = device.IDirect3DDevice9_SetTexture(0, null);
+    _ = teapot.ID3DXBaseMesh_DrawSubset(0);
 
-    // _ = device.IDirect3DDevice9_SetRenderState(.ALPHABLENDENABLE, 0);
+    _ = device.IDirect3DDevice9_SetRenderState(.ALPHABLENDENABLE, 0);
 
     _ = device.IDirect3DDevice9_EndScene();
     _ = device.IDirect3DDevice9_Present(null, null, null, null);
