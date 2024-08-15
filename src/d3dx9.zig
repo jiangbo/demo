@@ -54,6 +54,17 @@ pub extern fn D3DXMatrixScaling(
     z: f32,
 ) *win32.graphics.direct3d.D3DMATRIX;
 
+pub extern fn D3DXMatrixReflect(
+    matrix: *win32.graphics.direct3d.D3DMATRIX,
+    plane: *const Vec4,
+) *win32.graphics.direct3d.D3DMATRIX;
+
+pub extern fn D3DXMatrixShadow(
+    matrix: *win32.graphics.direct3d.D3DMATRIX,
+    light: *const Vec4,
+    plane: *const Vec4,
+) *win32.graphics.direct3d.D3DMATRIX;
+
 pub extern fn D3DXCreateTextureFromFileW(
     device: *d3d9.IDirect3DDevice9,
     name: LPCTSTR,

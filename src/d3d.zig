@@ -124,9 +124,12 @@ pub const Material = struct {
     pub const WHITE = .{ .r = 1, .g = 1, .b = 1, .a = 1.0 };
     pub const BLACK = .{ .r = 0, .g = 0, .b = 0, .a = 1.0 };
     pub const RED = .{ .r = 1, .g = 0, .b = 0, .a = 1.0 };
+    pub const YELLOW = .{ .r = 1, .g = 1, .b = 0, .a = 1.0 };
 
     pub const white = init(WHITE, WHITE, WHITE, BLACK, 2.0);
+    pub const black = init(BLACK, BLACK, BLACK, BLACK, 2.0);
     pub const red = init(RED, RED, RED, BLACK, 2.0);
+    pub const yellow = init(YELLOW, YELLOW, YELLOW, BLACK, 2.0);
 
     const CV = d3d9.D3DCOLORVALUE;
     fn init(a: CV, d: CV, s: CV, e: CV, p: f32) d3d9.D3DMATERIAL9 {
