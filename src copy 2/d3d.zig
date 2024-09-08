@@ -7,6 +7,8 @@ const d3d9 = win32.graphics.direct3d9;
 const WINAPI = std.os.windows.WINAPI;
 const failed = win32.zig.FAILED;
 
+pub var point: ?isize = null;
+
 pub fn mainWindowCallback(
     window: win32.foundation.HWND,
     message: u32,
@@ -21,6 +23,7 @@ pub fn mainWindowCallback(
             std.log.info("WM_DESTROY", .{});
             ui.PostQuitMessage(0);
         },
+        ui.WM_LBUTTONDOWN => point = lParam,
         else => return ui.DefWindowProc(window, message, wParam, lParam),
     }
     return 0;
@@ -103,8 +106,7 @@ pub fn initD3D(width: i32, height: i32) *d3d9.IDirect3DDevice9 {
 var lastTime: u64 = 0;
 
 pub fn enterMsgLoop(display: fn (f32) bool) void {
-    const system = win32.system.system_information;
-    lastTime = system.GetTickCount64();
+    var timer = std.time.Timer.start() catch unreachable;
     var message: ui.MSG = std.mem.zeroes(ui.MSG);
     while (true) {
         if (ui.PeekMessage(&message, null, 0, 0, ui.PM_REMOVE) > 0) {
@@ -112,10 +114,8 @@ pub fn enterMsgLoop(display: fn (f32) bool) void {
             _ = ui.TranslateMessage(&message);
             _ = ui.DispatchMessage(&message);
         } else {
-            const curTime = system.GetTickCount64();
-            const delta = (curTime - lastTime);
-            lastTime = curTime;
-            _ = display(@floatFromInt(delta));
+            const delta: f32 = @floatFromInt(timer.lap());
+            _ = display(delta / std.time.ns_per_s);
         }
     }
 }
