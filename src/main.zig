@@ -9,5 +9,5 @@ pub const UNICODE: bool = true;
 pub fn main() !void {
     std.log.debug("hello world", .{});
 
-    d3d.initDirectX(640, 480);
+    d3d.initDirectX(800, 600);
 }

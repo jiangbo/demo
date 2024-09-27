@@ -1,5 +1,6 @@
 const std = @import("std");
 const win32 = @import("win32");
+const d3dx9 = @import("d3dx9.zig");
 
 const d3d9 = win32.graphics.direct3d9;
 const ui = win32.ui.windows_and_messaging;
@@ -41,7 +42,55 @@ pub fn initDirectX(width: i32, height: i32) void {
     const window = ui.CreateWindowEx(ui.WS_EX_LEFT, className, name, //
         style, 200, 200, width, height, null, null, h, null).?;
 
-    _ = window;
+    var d9 = d3d9.Direct3DCreate9(d3d9.D3D_SDK_VERSION).?;
+    defer _ = d9.IUnknown_Release();
+
+    const adapter = d3d9.D3DADAPTER_DEFAULT;
+    var mode: d3d9.D3DDISPLAYMODE = undefined;
+    win32Check(d9.IDirect3D9_GetAdapterDisplayMode(adapter, &mode));
+
+    var params = std.mem.zeroes(d3d9.D3DPRESENT_PARAMETERS);
+
+    // 后备缓冲区信息
+    params.BackBufferWidth = @intCast(width);
+    params.BackBufferHeight = @intCast(height);
+    params.BackBufferFormat = mode.Format;
+    params.BackBufferCount = 1; // 使用一个后备缓冲
+
+    // 交换效果
+    params.SwapEffect = .DISCARD;
+    params.Windowed = win32.zig.TRUE; // 窗口模式
+
+    // 渲染的目的窗口
+    params.hDeviceWindow = window;
+
+    // 创建设备
+    var device: *d3d9.IDirect3DDevice9 = undefined;
+    win32Check(d9.IDirect3D9_CreateDevice(adapter, .HAL, window, //
+        d3d9.D3DCREATE_HARDWARE_VERTEXPROCESSING, &params, @ptrCast(&device)));
+    defer _ = device.IUnknown_Release();
+
+    // 创建源表面
+    var surface: *d3d9.IDirect3DSurface9 = undefined;
+    win32Check(device.IDirect3DDevice9_CreateOffscreenPlainSurface(params.BackBufferWidth, //
+        params.BackBufferHeight, mode.Format, .SYSTEMMEM, @ptrCast(&surface), null));
+    defer _ = surface.IUnknown_Release();
+
+    // 加载图片到源表面
+    const fileName = win32.zig.L("dashangu.jpg");
+    const filter = std.math.maxInt(u32);
+    win32Check(d3dx9.D3DXLoadSurfaceFromFileW(surface, null, null, fileName, null, filter, 0, 0));
+
+    // 获取后备缓冲
+    var back: *d3d9.IDirect3DSurface9 = undefined;
+    win32Check(device.IDirect3DDevice9_GetBackBuffer(0, 0, .MONO, @ptrCast(&back)));
+    defer _ = back.IUnknown_Release();
+
+    // const flags = win32.system.system_services.D3DCLEAR_TARGET;
+    // win32Check(device.IDirect3DDevice9_Clear(0, null, flags, 0x00ff00ff, 0, 0));
+    // 将源表面绘制到后备缓冲
+    win32Check(device.IDirect3DDevice9_UpdateSurface(surface, null, back, null));
+    win32Check(device.IDirect3DDevice9_Present(null, null, null, null));
 
     var message: ui.MSG = std.mem.zeroes(ui.MSG);
     while (true) {
