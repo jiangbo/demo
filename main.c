@@ -25,7 +25,8 @@ const int CELLROWS = 10;
 const int CELLWIDTH = SCREENWIDTH / CELLCOLUMNS;
 // cell height
 const int CELLHEIGHT = SCREENHEIGHT / CELLROWS;
-
+D3DX_DEFAULT
+SND_FILENAME
 // globals
 // instance handle
 HINSTANCE g_hInstance = NULL;

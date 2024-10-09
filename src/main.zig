@@ -1,13 +1,40 @@
 const std = @import("std");
 const win32 = @import("win32");
 const d3d = @import("d3d.zig");
+const d3dx9 = @import("d3dx9.zig");
 
 const d3d9 = win32.graphics.direct3d9;
+const ui = win32.ui.windows_and_messaging;
+const win32Check = d3d.win32Check;
 
 pub const UNICODE: bool = true;
 
-pub fn main() !void {
-    std.log.debug("hello world", .{});
+const Vertex = extern struct {
+    x: f32 = 0,
+    y: f32 = 0,
+    z: f32 = 0,
+    rhw: f32 = 1,
+    u: f32 = 0,
+    v: f32 = 0,
+};
 
-    d3d.initDirectX(800, 600);
+const WIDTH = 800;
+const HEIGHT = 600;
+
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+
+    const device = d3d.initDirectX(800, 600);
+    d3d.initDirectSound(gpa.allocator());
+
+    _ = device;
+    var message: ui.MSG = std.mem.zeroes(ui.MSG);
+    while (true) {
+        if (ui.PeekMessage(&message, null, 0, 0, ui.PM_REMOVE) > 0) {
+            if (message.message == ui.WM_QUIT) break;
+            _ = ui.TranslateMessage(&message);
+            _ = ui.DispatchMessage(&message);
+        }
+    }
 }

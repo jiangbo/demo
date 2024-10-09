@@ -1,12 +1,12 @@
 const std = @import("std");
 const win32 = @import("win32");
-const d3dx9 = @import("d3dx9.zig");
+const Wave = @import("wave.zig").Wave;
 
 const d3d9 = win32.graphics.direct3d9;
 const ui = win32.ui.windows_and_messaging;
 
 pub fn windowCallback(
-    window: win32.foundation.HWND,
+    w: win32.foundation.HWND,
     message: u32,
     wParam: win32.foundation.WPARAM,
     lParam: win32.foundation.LPARAM,
@@ -19,12 +19,17 @@ pub fn windowCallback(
             std.log.info("WM_DESTROY", .{});
             ui.PostQuitMessage(0);
         },
-        else => return ui.DefWindowProc(window, message, wParam, lParam),
+        ui.WM_KEYDOWN => {
+            if (wParam == ' ') {
+                win32Check(soundBuffer.IDirectSoundBuffer_Play(0, 0, sound.DSBPLAY_LOOPING));
+            }
+        },
+        else => return ui.DefWindowProc(w, message, wParam, lParam),
     }
     return 0;
 }
 
-pub fn initDirectX(width: i32, height: i32) void {
+pub fn initDirectX(width: i32, height: i32) *d3d9.IDirect3DDevice9 {
     const h = win32.system.library_loader.GetModuleHandle(null).?;
     var windowClass = std.mem.zeroes(ui.WNDCLASSEX);
 
@@ -39,7 +44,7 @@ pub fn initDirectX(width: i32, height: i32) void {
     var style = ui.WS_OVERLAPPEDWINDOW;
     style.VISIBLE = 1;
     const name = win32.zig.L("2D 游戏开发");
-    const window = ui.CreateWindowEx(ui.WS_EX_LEFT, className, name, //
+    window = ui.CreateWindowEx(ui.WS_EX_LEFT, className, name, //
         style, 200, 200, width, height, null, null, h, null).?;
 
     var d9 = d3d9.Direct3DCreate9(d3d9.D3D_SDK_VERSION).?;
@@ -68,38 +73,42 @@ pub fn initDirectX(width: i32, height: i32) void {
     var device: *d3d9.IDirect3DDevice9 = undefined;
     win32Check(d9.IDirect3D9_CreateDevice(adapter, .HAL, window, //
         d3d9.D3DCREATE_HARDWARE_VERTEXPROCESSING, &params, @ptrCast(&device)));
-    defer _ = device.IUnknown_Release();
 
-    // 创建源表面
-    var surface: *d3d9.IDirect3DSurface9 = undefined;
-    win32Check(device.IDirect3DDevice9_CreateOffscreenPlainSurface(params.BackBufferWidth, //
-        params.BackBufferHeight, mode.Format, .SYSTEMMEM, @ptrCast(&surface), null));
-    defer _ = surface.IUnknown_Release();
+    return device;
+}
 
-    // 加载图片到源表面
-    const fileName = win32.zig.L("dashangu.jpg");
-    const filter = std.math.maxInt(u32);
-    win32Check(d3dx9.D3DXLoadSurfaceFromFileW(surface, null, null, fileName, null, filter, 0, 0));
+var window: win32.foundation.HWND = undefined;
+var soundBuffer: *sound.IDirectSoundBuffer8 = undefined;
+const sound = win32.media.audio.direct_sound;
 
-    // 获取后备缓冲
-    var back: *d3d9.IDirect3DSurface9 = undefined;
-    win32Check(device.IDirect3DDevice9_GetBackBuffer(0, 0, .MONO, @ptrCast(&back)));
-    defer _ = back.IUnknown_Release();
+pub fn initDirectSound(allocator: std.mem.Allocator) void {
 
-    // const flags = win32.system.system_services.D3DCLEAR_TARGET;
-    // win32Check(device.IDirect3DDevice9_Clear(0, null, flags, 0x00ff00ff, 0, 0));
-    // 将源表面绘制到后备缓冲
-    win32Check(device.IDirect3DDevice9_UpdateSurface(surface, null, back, null));
-    win32Check(device.IDirect3DDevice9_Present(null, null, null, null));
+    // 初始化 DirectSound
+    var sound8: *sound.IDirectSound8 = undefined;
+    win32Check(sound.DirectSoundCreate8(null, @ptrCast(&sound8), null));
+    win32Check(sound8.IDirectSound_SetCooperativeLevel(window, sound.DSSCL_NORMAL));
 
-    var message: ui.MSG = std.mem.zeroes(ui.MSG);
-    while (true) {
-        if (ui.PeekMessage(&message, null, 0, 0, ui.PM_REMOVE) > 0) {
-            if (message.message == ui.WM_QUIT) break;
-            _ = ui.TranslateMessage(&message);
-            _ = ui.DispatchMessage(&message);
-        }
-    }
+    // 初始化 wave 文件
+    var wave = Wave.init(allocator, win32.zig.L("MonsterHit.wav"));
+    defer wave.deinit();
+
+    // 设置缓冲区格式
+    var soundDesc = std.mem.zeroes(sound.DSBUFFERDESC);
+    soundDesc.dwSize = @sizeOf(sound.DSBUFFERDESC);
+    soundDesc.dwBufferBytes = @intCast(wave.data.len);
+    soundDesc.lpwfxFormat = &wave.format;
+
+    // 创建缓冲区
+    win32Check(sound8.IDirectSound_CreateSoundBuffer(&soundDesc, //
+        @ptrCast(&soundBuffer), null));
+
+    // 将声音数据复制到缓冲区
+    var ptr1: [*]i8, var ptr2: [*]i8 = .{ undefined, undefined };
+    var len1: u32, var len2: u32 = .{ undefined, undefined };
+    win32Check(soundBuffer.IDirectSoundBuffer_Lock(0, @intCast(wave.data.len), //
+        @ptrCast(&ptr1), &len1, @ptrCast(&ptr2), &len2, sound.DSBLOCK_FROMWRITECURSOR));
+    @memcpy(ptr1, wave.data);
+    win32Check(soundBuffer.IDirectSoundBuffer_Unlock(ptr1, len1, ptr2, len2));
 }
 
 pub fn win32Check(result: win32.foundation.HRESULT) void {
