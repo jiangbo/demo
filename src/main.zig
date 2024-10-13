@@ -1,34 +1,26 @@
 const std = @import("std");
 const win32 = @import("win32");
-const d3d = @import("d3d.zig");
+const engine = @import("engine.zig");
 const d3dx9 = @import("d3dx9.zig");
 
 const d3d9 = win32.graphics.direct3d9;
 const ui = win32.ui.windows_and_messaging;
-const win32Check = d3d.win32Check;
+const win32Check = engine.win32Check;
 
 pub const UNICODE: bool = true;
 
-const Vertex = extern struct {
-    x: f32 = 0,
-    y: f32 = 0,
-    z: f32 = 0,
-    rhw: f32 = 1,
-    u: f32 = 0,
-    v: f32 = 0,
-};
-
-const WIDTH = 800;
-const HEIGHT = 600;
+const WIDTH = 640;
+const HEIGHT = 480;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
-    const device = d3d.initDirectX(800, 600);
-    d3d.initDirectSound(gpa.allocator());
+    const bookEngine = engine.BookEngine.init(WIDTH, HEIGHT);
 
-    _ = device;
+    const direct3D = engine.Direct3D.init(WIDTH, HEIGHT, bookEngine.hwnd);
+    defer direct3D.deinit();
+
     var message: ui.MSG = std.mem.zeroes(ui.MSG);
     while (true) {
         if (ui.PeekMessage(&message, null, 0, 0, ui.PM_REMOVE) > 0) {
