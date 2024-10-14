@@ -1,6 +1,5 @@
 const std = @import("std");
-
-const DIR = "maps";
+const object = @import("object.zig");
 
 const MAX_BUFFER = 255;
 
@@ -23,37 +22,27 @@ pub fn readPeopleFile(name: []const u8) void {
     var file = std.fs.cwd().openFile(path, .{}) catch unreachable;
     defer file.close();
     var buf_reader = std.io.bufferedReader(file.reader());
-    var reader = buf_reader.reader();
+    const reader = buf_reader.reader();
 
-    const readBytes = reader.readUntilDelimiter(&buffer, '\n') catch unreachable;
-    const trimBytes = std.mem.trimRight(u8, readBytes, "\r");
-    const count = std.fmt.parseInt(u8, trimBytes, 10) catch unreachable;
+    const count = readInt(u8, reader, &buffer);
     std.log.info("read {d} people", .{count});
 
-    // std::ifstream m_peopleFile(m_peopleFileName, std::ios::binary);
-    // // Get the number of people in the file.
-    // GetStringFromFile(m_peopleFile, buf);
-    // m_People.SetPersonCount(atoi(buf));
-    // for (int person=0; person<m_People.GetPersonCount(); ++person)
-    // {
-    // // Get the person’s name.
-    // GetStringFromFile(m_peopleFile, buf);
-    // m_People.GetPerson(person)->SetName(buf);
-    // // Get the person’s location.
-    // GetStringFromFile(m_peopleFile, buf);
-    // m_People.GetPerson(person)->SetSector(atoi(buf));
-    // // Get the person’s move capability.
-    // GetStringFromFile(m_peopleFile, buf);
-    // if (buf[1] == 'F')
-    // m_People.GetPerson(person)->SetCanMove(FALSE);
-    // else
-    // m_People.GetPerson(person)->SetCanMove(TRUE);
-    // // Get the person’s tile number.
-    // GetStringFromFile(m_peopleFile, buf);
-    // m_People.GetPerson(person)->SetTile(atoi(buf));
-    // }
-    // m_peopleFile.close();
-
+    object.persons.resize(count) catch unreachable;
+    for (object.persons.slice()) |*person| {
+        person.name.appendSlice(readLine(reader, &buffer)) catch unreachable;
+        person.sector = readInt(u32, reader, &buffer);
+        person.canMove = readLine(reader, &buffer)[1] == 'F';
+        person.tile = readInt(u32, reader, &buffer);
+    }
 }
 // pub fn readContainerFile(fileName) void {}
 // pub fn readDoorFile(fileName) void {}
+
+fn readLine(reader: anytype, buffer: []u8) []const u8 {
+    const readBytes = reader.readUntilDelimiter(buffer, '\n');
+    return std.mem.trimRight(u8, readBytes catch unreachable, "\r");
+}
+
+fn readInt(T: type, reader: anytype, buffer: []u8) T {
+    return std.fmt.parseInt(T, readLine(reader, buffer), 10) catch unreachable;
+}
