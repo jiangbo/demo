@@ -9,17 +9,13 @@ const win32Check = engine.win32Check;
 
 pub const UNICODE: bool = true;
 
-const WIDTH = 640;
-const HEIGHT = 480;
-
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
-    const bookEngine = engine.BookEngine.init(WIDTH, HEIGHT);
-
-    const direct3D = engine.Direct3D.init(WIDTH, HEIGHT, bookEngine.hwnd);
-    defer direct3D.deinit();
+    const name = "maps/TrainingGrounds.map";
+    const bookEngine = engine.BookEngine.init(name, .firstTown, 1485);
+    defer bookEngine.deinit();
 
     var message: ui.MSG = std.mem.zeroes(ui.MSG);
     while (true) {

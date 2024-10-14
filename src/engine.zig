@@ -1,5 +1,6 @@
 const std = @import("std");
 const win32 = @import("win32");
+const file = @import("engine/file.zig");
 
 const d3d9 = win32.graphics.direct3d9;
 const ui = win32.ui.windows_and_messaging;
@@ -23,10 +24,35 @@ pub fn windowCallback(
     return 0;
 }
 
+const WIDTH = 640;
+const HEIGHT = 480;
+
+const LocationType = enum {
+    firstTown,
+    firstTownHouse01Room01,
+    firstTownHouse01Room02,
+    firstTownHouse02Room02,
+    firstTownHouse02Room01,
+    firstTownInnRoom01,
+    firstTownInnRoom02,
+    firstTownInnRoom03,
+    firstTownInnRoom04,
+    firstTownInnRoom05,
+    firstTownInnRoom06,
+    firstTownInnRoom07,
+    firstTownArmorer,
+    firstTownPotions,
+};
+
 pub const BookEngine = struct {
     hwnd: win32.foundation.HWND,
+    direct3D: Direct3D,
+    firstMap: []const u8,
+    firstMapType: LocationType,
+    startSector: u32,
+    sectors: [1764]u8 = undefined,
 
-    pub fn init(width: i32, height: i32) BookEngine {
+    pub fn init(mapName: []const u8, mapType: LocationType, sector: u32) BookEngine {
         const h = win32.system.library_loader.GetModuleHandle(null).?;
         var windowClass = std.mem.zeroes(ui.WNDCLASSEX);
 
@@ -42,13 +68,34 @@ pub const BookEngine = struct {
         style.VISIBLE = 1;
         const name = win32.zig.L("2D 游戏开发");
         const window = ui.CreateWindowEx(ui.WS_EX_LEFT, className, name, //
-            style, 200, 200, width, height, null, null, h, null).?;
+            style, 200, 200, WIDTH, HEIGHT, null, null, h, null).?;
 
         const time: u64 = @intCast(std.time.milliTimestamp());
         var prng = std.rand.DefaultPrng.init(time);
         rand = prng.random();
 
-        return BookEngine{ .hwnd = window };
+        var bookEngine = BookEngine{
+            .hwnd = window,
+            .direct3D = Direct3D.init(window),
+            .firstMap = mapName,
+            .firstMapType = mapType,
+            .startSector = sector,
+        };
+        bookEngine.openMapFiles();
+
+        return bookEngine;
+    }
+
+    pub fn deinit(self: BookEngine) void {
+        self.direct3D.deinit();
+        _ = ui.DestroyWindow(self.hwnd);
+    }
+
+    fn openMapFiles(self: *BookEngine) void {
+        _ = file.readMapFile(self.firstMap, &self.sectors);
+        file.readPeopleFile(self.firstMap);
+        // file.readContainerFile(self.firstMap);
+        // file.readDoorFile(self.firstMap);
     }
 
     pub fn processGame() void {}
@@ -65,7 +112,7 @@ pub const Direct3D = struct {
     device: *d3d9.IDirect3DDevice9,
     backBuffer: *d3d9.IDirect3DSurface9,
 
-    pub fn init(width: i32, height: i32, hwnd: win32.foundation.HWND) Direct3D {
+    pub fn init(hwnd: win32.foundation.HWND) Direct3D {
         var d3d = d3d9.Direct3DCreate9(d3d9.D3D_SDK_VERSION).?;
 
         const adapter = d3d9.D3DADAPTER_DEFAULT;
@@ -75,8 +122,8 @@ pub const Direct3D = struct {
         var params = std.mem.zeroes(d3d9.D3DPRESENT_PARAMETERS);
 
         // 后备缓冲区信息
-        params.BackBufferWidth = @intCast(width);
-        params.BackBufferHeight = @intCast(height);
+        params.BackBufferWidth = @intCast(WIDTH);
+        params.BackBufferHeight = @intCast(HEIGHT);
         params.BackBufferFormat = mode.Format;
         params.BackBufferCount = 1; // 使用一个后备缓冲
 
