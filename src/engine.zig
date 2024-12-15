@@ -1,9 +1,11 @@
 const std = @import("std");
 const win32 = @import("win32");
 const file = @import("engine/file.zig");
+const constants = @import("engine/constants.zig");
 
 const d3d9 = win32.graphics.direct3d9;
 const ui = win32.ui.windows_and_messaging;
+const LocationEnum = constants.LocationEnum;
 
 pub fn windowCallback(
     w: win32.foundation.HWND,
@@ -27,32 +29,15 @@ pub fn windowCallback(
 const WIDTH = 640;
 const HEIGHT = 480;
 
-const LocationType = enum {
-    firstTown,
-    firstTownHouse01Room01,
-    firstTownHouse01Room02,
-    firstTownHouse02Room02,
-    firstTownHouse02Room01,
-    firstTownInnRoom01,
-    firstTownInnRoom02,
-    firstTownInnRoom03,
-    firstTownInnRoom04,
-    firstTownInnRoom05,
-    firstTownInnRoom06,
-    firstTownInnRoom07,
-    firstTownArmorer,
-    firstTownPotions,
-};
-
 pub const BookEngine = struct {
     hwnd: win32.foundation.HWND,
     direct3D: Direct3D,
     firstMap: []const u8,
-    firstMapType: LocationType,
+    firstMapType: LocationEnum,
     startSector: u32,
     sectors: [1764]u8 = undefined,
 
-    pub fn init(mapName: []const u8, mapType: LocationType, sector: u32) BookEngine {
+    pub fn init(mapName: []const u8, mapType: LocationEnum, sector: u32) BookEngine {
         const h = win32.system.library_loader.GetModuleHandle(null).?;
         var windowClass = std.mem.zeroes(ui.WNDCLASSEX);
 

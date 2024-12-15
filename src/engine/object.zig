@@ -1,4 +1,12 @@
 const std = @import("std");
+const constants = @import("constants.zig");
+
+pub const Map = struct {
+    type: u8,
+    data: []u8,
+};
+
+pub var map: Map = undefined;
 
 pub const Container = struct {
     gold: u32 = 0,
@@ -10,7 +18,9 @@ pub const Container = struct {
     sector: u32 = 0,
     tile: u32 = 0,
 };
-pub var containers = std.BoundedArray(Container, 100).init(0);
+
+const Containers = std.BoundedArray(Container, constants.MAX_CONTAINERS);
+pub var containers = Containers.init(0) catch unreachable;
 
 pub const Door = struct {
     secret: bool = false,
@@ -18,7 +28,9 @@ pub const Door = struct {
     sector: u32 = 0,
     tile: u32 = 0,
 };
-pub var doors = std.BoundedArray(Door, 100).init(0) catch unreachable;
+
+const Doors = std.BoundedArray(Door, constants.MAX_DOORS);
+pub var doors = Doors.init(0) catch unreachable;
 
 pub const Person = struct {
     name: std.BoundedArray(u8, 50),
@@ -26,7 +38,9 @@ pub const Person = struct {
     sector: u32 = 0,
     tile: u32 = 0,
 };
-pub var persons = std.BoundedArray(Person, 100).init(0) catch unreachable;
+
+const Persons = std.BoundedArray(Person, constants.MAX_PEOPLE);
+pub var persons = Persons.init(0) catch unreachable;
 
 pub const Player = struct {
     sector: u32 = 0,
@@ -39,6 +53,7 @@ pub const Player = struct {
     potions: u32 = 0,
     experience: u32 = 0,
 };
+
 pub var player: Player = .{
     .gold = 25,
     .hitPoints = 10,
