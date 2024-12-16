@@ -3,15 +3,15 @@ const constants = @import("constants.zig");
 
 pub const Map = struct {
     type: u8,
-    width: u8,
-    height: u8,
-    tileWidth: u8,
-    tileHeight: u8,
+    width: u32,
+    height: u32,
+    tileWidth: u16,
+    tileHeight: u16,
     image: []const u8,
     data: []u8,
 
     pub fn indexTile(self: Map, x: usize, y: usize) u8 {
-        return self.data[y * self.width + x];
+        return self.data[y * self.width + x] - 1;
     }
 };
 

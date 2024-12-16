@@ -91,24 +91,26 @@ pub const BookEngine = struct {
             for (0..self.map.value.width) |x| {
                 const tile = self.map.value.indexTile(x, y);
 
-                const tileX = tile % self.map.value.tileWidth;
-                const tileY = tile / self.map.value.tileWidth;
+                const tileX: i32 = tile % self.map.value.tileWidth;
+                const tileY: i32 = tile / self.map.value.tileWidth;
+
                 const src = win32.foundation.RECT{
-                    .left = tileX * 32,
-                    .top = tileY * 32,
-                    .right = (tileX + 1) * 32,
-                    .bottom = (tileY + 1) * 32,
+                    .left = tileX * constants.TILE_SIZE,
+                    .top = tileY * constants.TILE_SIZE,
+                    .right = (tileX + 1) * constants.TILE_SIZE,
+                    .bottom = (tileY + 1) * constants.TILE_SIZE,
                 };
 
                 const ix: i32, const iy: i32 = .{ @intCast(x), @intCast(y) };
                 const dst = win32.foundation.POINT{
-                    .x = ix * 32 + constants.OFFSET_X,
-                    .y = iy * 32 + constants.OFFSET_Y,
+                    .x = ix * constants.TILE_SIZE + constants.OFFSET_X,
+                    .y = iy * constants.TILE_SIZE + constants.OFFSET_Y,
                 };
 
                 self.direct3D.placeTile(self.tileSurface, &src, &dst);
             }
         }
+
         win32Check(self.direct3D.device.Present(null, null, null, null));
     }
 
@@ -177,8 +179,10 @@ pub const Direct3D = struct {
     fn createSurfaceFromFile(self: *Direct3D, map: *objects.Map) *d3d9.IDirect3DSurface9 {
         // 创建源表面
         var surface: *d3d9.IDirect3DSurface9 = undefined;
-        win32Check(self.device.CreateOffscreenPlainSurface(map.width, //
-            map.height, .X8R8G8B8, .SYSTEMMEM, @ptrCast(&surface), null));
+        const width = map.tileWidth * constants.TILE_SIZE;
+        const height = map.tileHeight * constants.TILE_SIZE;
+        win32Check(self.device.CreateOffscreenPlainSurface(width, height, //
+            .X8R8G8B8, .SYSTEMMEM, @ptrCast(&surface), null));
 
         var buffer: [255]u16 = undefined;
 
