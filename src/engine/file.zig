@@ -3,18 +3,16 @@ const objects = @import("objects.zig");
 
 const MAX_BUFFER = 255;
 
-pub fn readMapFile(name: []const u8, buffer: []u8) u8 {
-    var file = std.fs.cwd().openFile(name, .{}) catch unreachable;
-    defer file.close();
+pub fn readMapFile(allocator: std.mem.Allocator, name: []const u8) objects.JsonMap {
+    const data = std.fs.cwd().readFileAlloc(allocator, name, std.math.maxInt(u32)) //
+    catch unreachable;
+    defer allocator.free(data);
 
-    var buf_reader = std.io.bufferedReader(file.reader());
-    var reader = buf_reader.reader();
-    const mapType = reader.readByte() catch unreachable;
-    const size = reader.readAll(buffer) catch unreachable;
-    std.log.info("read {s} with type {d} and size {d}", .{ name, mapType, size });
-
-    return mapType;
+    return std.json.parseFromSlice(objects.Map, allocator, data, .{
+        .allocate = .alloc_always,
+    }) catch unreachable;
 }
+
 pub fn readPeopleFile(name: []const u8) void {
     var buffer: [MAX_BUFFER]u8 = undefined;
     const path = std.fmt.bufPrint(&buffer, "{s}.peo", .{name}) catch unreachable;

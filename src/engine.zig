@@ -33,9 +33,10 @@ const HEIGHT = 480;
 pub const BookEngine = struct {
     hwnd: win32.foundation.HWND,
     direct3D: Direct3D,
-    map: objects.Map = undefined,
+    allocator: std.mem.Allocator,
+    map: objects.JsonMap = undefined,
 
-    pub fn init() BookEngine {
+    pub fn init(allocator: std.mem.Allocator) BookEngine {
         const h = win32.system.library_loader.GetModuleHandle(null).?;
         var windowClass = std.mem.zeroes(ui.WNDCLASSEX);
 
@@ -54,20 +55,28 @@ pub const BookEngine = struct {
             style, 200, 200, WIDTH, HEIGHT, null, null, h, null).?;
 
         const time: u64 = @intCast(std.time.milliTimestamp());
-        var prng = std.rand.DefaultPrng.init(time);
+        var prng = std.Random.DefaultPrng.init(time);
         rand = prng.random();
 
-        return .{ .hwnd = window, .direct3D = Direct3D.init(window) };
+        return BookEngine{
+            .hwnd = window,
+            .direct3D = Direct3D.init(window),
+            .allocator = allocator,
+        };
     }
 
     pub fn deinit(self: BookEngine) void {
         self.direct3D.deinit();
         _ = ui.DestroyWindow(self.hwnd);
+        self.map.deinit();
     }
 
-    fn openMapFiles(self: *BookEngine) void {
-        _ = file.readMapFile(self.firstMap, &self.sectors);
-        file.readPeopleFile(self.firstMap);
+    pub fn openMapFiles(self: *BookEngine, name: []const u8) void {
+        self.map = file.readMapFile(self.allocator, name);
+
+        std.log.info("map: {any}", .{self.map});
+        // _ = file.readMapFile(self.firstMap, &self.sectors);
+        // file.readPeopleFile(self.firstMap);
         // file.readContainerFile(self.firstMap);
         // file.readDoorFile(self.firstMap);
     }

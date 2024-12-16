@@ -6,6 +6,8 @@ pub const Map = struct {
     data: []u8,
 };
 
+pub const JsonMap = std.json.Parsed(Map);
+
 pub const Container = struct {
     gold: u32 = 0,
     keys: u32 = 0,

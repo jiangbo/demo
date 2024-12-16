@@ -13,8 +13,10 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
-    const bookEngine = engine.BookEngine.init();
+    var bookEngine = engine.BookEngine.init(gpa.allocator());
     defer bookEngine.deinit();
+
+    bookEngine.openMapFiles("maps/FirstTown.json");
 
     var message: ui.MSG = std.mem.zeroes(ui.MSG);
     while (true) {
