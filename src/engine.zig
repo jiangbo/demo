@@ -100,7 +100,7 @@ pub const Direct3D = struct {
 
         const adapter = d3d9.D3DADAPTER_DEFAULT;
         var mode: d3d9.D3DDISPLAYMODE = undefined;
-        win32Check(d3d.IDirect3D9_GetAdapterDisplayMode(adapter, &mode));
+        win32Check(d3d.GetAdapterDisplayMode(adapter, &mode));
 
         var params = std.mem.zeroes(d3d9.D3DPRESENT_PARAMETERS);
 
@@ -119,12 +119,12 @@ pub const Direct3D = struct {
 
         // 创建设备
         var device: *d3d9.IDirect3DDevice9 = undefined;
-        win32Check(d3d.IDirect3D9_CreateDevice(adapter, .HAL, hwnd, //
+        win32Check(d3d.CreateDevice(adapter, .HAL, hwnd, //
             d3d9.D3DCREATE_HARDWARE_VERTEXPROCESSING, &params, @ptrCast(&device)));
 
         // 获取后备缓冲
         var back: *d3d9.IDirect3DSurface9 = undefined;
-        win32Check(device.IDirect3DDevice9_GetBackBuffer(0, 0, .MONO, @ptrCast(&back)));
+        win32Check(device.GetBackBuffer(0, 0, .MONO, @ptrCast(&back)));
 
         return Direct3D{
             .hwnd = hwnd,
@@ -135,9 +135,9 @@ pub const Direct3D = struct {
     }
 
     pub fn deinit(self: Direct3D) void {
-        _ = self.backBuffer.IUnknown_Release();
-        _ = self.device.IUnknown_Release();
-        _ = self.d3d.IUnknown_Release();
+        _ = self.backBuffer.IUnknown.Release();
+        _ = self.device.IUnknown.Release();
+        _ = self.d3d.IUnknown.Release();
     }
 };
 
