@@ -2,6 +2,7 @@ const std = @import("std");
 const win32 = @import("win32");
 const file = @import("engine/file.zig");
 const constants = @import("engine/constants.zig");
+const objects = @import("engine/objects.zig");
 
 const d3d9 = win32.graphics.direct3d9;
 const ui = win32.ui.windows_and_messaging;
@@ -32,12 +33,9 @@ const HEIGHT = 480;
 pub const BookEngine = struct {
     hwnd: win32.foundation.HWND,
     direct3D: Direct3D,
-    firstMap: []const u8,
-    firstMapType: LocationEnum,
-    startSector: u32,
-    sectors: [1764]u8 = undefined,
+    map: objects.Map = undefined,
 
-    pub fn init(mapName: []const u8, mapType: LocationEnum, sector: u32) BookEngine {
+    pub fn init() BookEngine {
         const h = win32.system.library_loader.GetModuleHandle(null).?;
         var windowClass = std.mem.zeroes(ui.WNDCLASSEX);
 
@@ -59,16 +57,7 @@ pub const BookEngine = struct {
         var prng = std.rand.DefaultPrng.init(time);
         rand = prng.random();
 
-        var bookEngine = BookEngine{
-            .hwnd = window,
-            .direct3D = Direct3D.init(window),
-            .firstMap = mapName,
-            .firstMapType = mapType,
-            .startSector = sector,
-        };
-        bookEngine.openMapFiles();
-
-        return bookEngine;
+        return .{ .hwnd = window, .direct3D = Direct3D.init(window) };
     }
 
     pub fn deinit(self: BookEngine) void {

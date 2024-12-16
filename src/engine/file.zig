@@ -1,5 +1,5 @@
 const std = @import("std");
-const object = @import("object.zig");
+const objects = @import("objects.zig");
 
 const MAX_BUFFER = 255;
 
@@ -27,8 +27,8 @@ pub fn readPeopleFile(name: []const u8) void {
     const count = readInt(u8, reader, &buffer);
     std.log.info("read {d} people", .{count});
 
-    object.persons.resize(count) catch unreachable;
-    for (object.persons.slice()) |*person| {
+    objects.persons.resize(count) catch unreachable;
+    for (objects.persons.slice()) |*person| {
         person.name.appendSlice(readLine(reader, &buffer)) catch unreachable;
         person.sector = readInt(u32, reader, &buffer);
         person.canMove = readLine(reader, &buffer)[1] == 'F';

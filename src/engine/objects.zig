@@ -6,8 +6,6 @@ pub const Map = struct {
     data: []u8,
 };
 
-pub var map: Map = undefined;
-
 pub const Container = struct {
     gold: u32 = 0,
     keys: u32 = 0,
