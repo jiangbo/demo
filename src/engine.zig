@@ -1,5 +1,6 @@
 const std = @import("std");
 const win32 = @import("win32");
+const d3dx9 = @import("d3dx9.zig");
 const file = @import("engine/file.zig");
 const constants = @import("engine/constants.zig");
 const objects = @import("engine/objects.zig");
@@ -35,6 +36,7 @@ pub const BookEngine = struct {
     direct3D: Direct3D,
     allocator: std.mem.Allocator,
     map: objects.JsonMap = undefined,
+    tileSurface: *d3d9.IDirect3DSurface9 = undefined,
 
     pub fn init(allocator: std.mem.Allocator) BookEngine {
         const h = win32.system.library_loader.GetModuleHandle(null).?;
@@ -69,16 +71,45 @@ pub const BookEngine = struct {
         self.direct3D.deinit();
         _ = ui.DestroyWindow(self.hwnd);
         self.map.deinit();
+        _ = self.tileSurface.IUnknown.Release();
     }
 
     pub fn openMapFiles(self: *BookEngine, name: []const u8) void {
         self.map = file.readMapFile(self.allocator, name);
-
-        std.log.info("map: {any}", .{self.map});
+        self.tileSurface = self.direct3D.createSurfaceFromFile(&self.map.value);
         // _ = file.readMapFile(self.firstMap, &self.sectors);
         // file.readPeopleFile(self.firstMap);
         // file.readContainerFile(self.firstMap);
         // file.readDoorFile(self.firstMap);
+    }
+
+    pub fn paintBackground(self: *BookEngine) void {
+        const flags = win32.system.system_services.D3DCLEAR_TARGET;
+        win32Check(self.direct3D.device.Clear(0, null, flags, 0x00FF00FF, 0, 0));
+
+        for (0..self.map.value.height) |y| {
+            for (0..self.map.value.width) |x| {
+                const tile = self.map.value.indexTile(x, y);
+
+                const tileX = tile % self.map.value.tileWidth;
+                const tileY = tile / self.map.value.tileWidth;
+                const src = win32.foundation.RECT{
+                    .left = tileX * 32,
+                    .top = tileY * 32,
+                    .right = (tileX + 1) * 32,
+                    .bottom = (tileY + 1) * 32,
+                };
+
+                const ix: i32, const iy: i32 = .{ @intCast(x), @intCast(y) };
+                const dst = win32.foundation.POINT{
+                    .x = ix * 32 + constants.OFFSET_X,
+                    .y = iy * 32 + constants.OFFSET_Y,
+                };
+
+                self.direct3D.placeTile(self.tileSurface, &src, &dst);
+            }
+        }
+        win32Check(self.direct3D.device.Present(null, null, null, null));
     }
 
     pub fn processGame() void {}
@@ -132,6 +163,32 @@ pub const Direct3D = struct {
             .device = device,
             .backBuffer = back,
         };
+    }
+
+    fn placeTile(
+        self: *Direct3D,
+        tileSurface: *d3d9.IDirect3DSurface9,
+        src: *const win32.foundation.RECT,
+        dst: *const win32.foundation.POINT,
+    ) void {
+        win32Check(self.device.UpdateSurface(tileSurface, src, self.backBuffer, dst));
+    }
+
+    fn createSurfaceFromFile(self: *Direct3D, map: *objects.Map) *d3d9.IDirect3DSurface9 {
+        // 创建源表面
+        var surface: *d3d9.IDirect3DSurface9 = undefined;
+        win32Check(self.device.CreateOffscreenPlainSurface(map.width, //
+            map.height, .X8R8G8B8, .SYSTEMMEM, @ptrCast(&surface), null));
+
+        var buffer: [255]u16 = undefined;
+
+        const index = std.unicode.utf8ToUtf16Le(&buffer, map.image) catch unreachable;
+        buffer[index] = 0;
+        // 加载图片到源表面
+        const filter = std.math.maxInt(u32);
+        win32Check(d3dx9.D3DXLoadSurfaceFromFileW(surface, null, null, //
+            buffer[0..index :0], null, filter, 0, 0));
+        return surface;
     }
 
     pub fn deinit(self: Direct3D) void {

@@ -17,6 +17,7 @@ pub fn main() !void {
     defer bookEngine.deinit();
 
     bookEngine.openMapFiles("maps/FirstTown.json");
+    bookEngine.paintBackground();
 
     var message: ui.MSG = std.mem.zeroes(ui.MSG);
     while (true) {

@@ -3,6 +3,11 @@ pub const MAX_PERSON: usize = 100;
 pub const MAX_CONTAINERS: usize = 100;
 pub const MAX_DOORS: usize = 100;
 
+pub const COLUMNSINTILEFILE: usize = 2;
+pub const TILESIZE: usize = 32;
+pub const OFFSET_X: i32 = 220;
+pub const OFFSET_Y: i32 = 120;
+
 pub const LocationEnum = enum {
     firstTown,
     firstTownHouse01Room01,

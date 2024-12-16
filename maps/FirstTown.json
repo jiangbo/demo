@@ -1,5 +1,10 @@
 {
     "type": 1,
+    "width": 19,
+    "height": 13,
+    "tileWidth": 8,
+    "tileHeight": 8,
+    "image": "assets/Town01Ext.BMP",
     "data": [
         5,
         5,
