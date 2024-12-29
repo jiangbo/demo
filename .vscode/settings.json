@@ -1,6 +1,11 @@
 {
     "files.associations": {
         "mmsystem.h": "c",
-        "windows.h": "c"
+        "windows.h": "c",
+        "d3dx9.h": "c",
+        "d3dx9anim.h": "c",
+        "d3dx9shape.h": "c",
+        "d3d9.h": "c",
+        "d3dx9mesh.h": "c"
     }
 }
