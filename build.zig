@@ -19,8 +19,8 @@ pub fn build(b: *std.Build) !void {
 
     const dir = "C:/software/Microsoft DirectX SDK (June 2010)/";
     // exe.addIncludePath(.{ .cwd_relative = dir ++ "Include" });
-    exe.addObjectFile(.{ .cwd_relative = dir ++ "lib/x64/d3dx9.lib" });
-    exe.addObjectFile(.{ .cwd_relative = dir ++ "lib/x64/d3dx9d.lib" });
+    exe.addObjectFile(.{ .cwd_relative = dir ++ "lib/x64/d3dx10.lib" });
+    exe.addObjectFile(.{ .cwd_relative = dir ++ "lib/x64/d3dx10d.lib" });
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
