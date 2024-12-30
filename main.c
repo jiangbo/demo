@@ -13,5 +13,4 @@
 #include <d3dx9.h> // include direct3d utility library
 
 D3DXCreateSprite(null, null);
-
-D3DXSPRITE_ALPHABLEND
+D3DXMatrixIdentity(null);
