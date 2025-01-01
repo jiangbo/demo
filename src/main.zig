@@ -1,8 +1,11 @@
 const std = @import("std");
-const win32 = @import("win32");
+const System = @import("System.zig");
 
 pub const UNICODE: bool = true;
 
 pub fn main() !void {
-    std.log.info("", .{});
+    var system = System.initialize();
+    defer system.shutdown();
+
+    system.run();
 }
