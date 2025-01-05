@@ -11,7 +11,7 @@ input: Input,
 graphics: Graphics,
 
 pub fn initialize() @This() {
-    const window = initializeWindows(800, 600);
+    const window = initializeWindows(Graphics.WIDTH, Graphics.HEIGHT);
 
     return .{
         .window = window,

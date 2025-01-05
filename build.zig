@@ -17,11 +17,12 @@ pub fn build(b: *std.Build) !void {
     const win32 = b.dependency("zigwin32", .{});
     exe.root_module.addImport("win32", win32.module("zigwin32"));
 
-    const dir = "C:/software/Microsoft DirectX SDK (June 2010)/";
+    // const dir = "C:/software/Microsoft DirectX SDK (June 2010)/";
     // exe.addIncludePath(.{ .cwd_relative = dir ++ "Include" });
-    exe.addObjectFile(.{ .cwd_relative = dir ++ "lib/x64/d3dx10.lib" });
-    exe.addObjectFile(.{ .cwd_relative = dir ++ "lib/x64/d3dx10d.lib" });
-    exe.addObjectFile(.{ .cwd_relative = dir ++ "lib/x64/dxgi.lib" });
+    // exe.addObjectFile(.{ .cwd_relative = dir ++ "Lib/x64/d3d10.lib" });
+    // exe.addObjectFile(.{ .cwd_relative = dir ++ "Lib/x64/d3dx10.lib" });
+    // exe.addObjectFile(.{ .cwd_relative = dir ++ "Lib/x64/d3dx10d.lib" });
+    // exe.addObjectFile(.{ .cwd_relative = dir ++ "Lib/x64/dxgi.lib" });
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
