@@ -30,12 +30,12 @@ pub fn frame(self: *@This()) bool {
 }
 
 pub fn render(self: *@This()) bool {
-    self.direct3D.beginScene(1, 0, 1, 1);
+    self.direct3D.beginScene(0, 0, 0, 1);
 
-    self.model.render(self.direct3D.device);
-    self.shader.render(self.direct3D.device);
+    self.model.render(self.direct3D.deviceContext);
+    self.shader.render(self.direct3D.deviceContext);
 
-    self.direct3D.device.Draw(3, 0);
+    self.direct3D.deviceContext.Draw(3, 0);
 
     self.direct3D.endScene();
     return true;

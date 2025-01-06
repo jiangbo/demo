@@ -52,7 +52,7 @@ fn initializeWindows(width: u16, height: u16) ?win32.foundation.HWND {
     const handle = win32.system.library_loader.GetModuleHandle(null).?;
 
     var windowClass = std.mem.zeroes(ui.WNDCLASSEX);
-    const className = win32.zig.L("DirectX10");
+    const className = win32.zig.L("DirectX11");
     windowClass.cbSize = @sizeOf(ui.WNDCLASSEX);
     windowClass.style = .{ .HREDRAW = 1, .VREDRAW = 1, .OWNDC = 1 };
     windowClass.lpszClassName = className;
@@ -63,7 +63,7 @@ fn initializeWindows(width: u16, height: u16) ?win32.foundation.HWND {
 
     const posX = @divTrunc(ui.GetSystemMetrics(.CXSCREEN) - width, 2);
     const posY = @divTrunc(ui.GetSystemMetrics(.CYSCREEN) - height, 2);
-    const name = win32.zig.L("DirectX10 学习");
+    const name = win32.zig.L("DirectX11 学习");
     const window = ui.CreateWindowEx(ui.WS_EX_APPWINDOW, className, name, //
         ui.WS_OVERLAPPEDWINDOW, posX, posY, width, height, null, null, handle, null);
     _ = ui.ShowWindow(window, ui.SW_SHOW);

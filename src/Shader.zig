@@ -1,47 +1,53 @@
 const std = @import("std");
 const win32 = @import("win32");
 
-const d10 = win32.graphics.direct3d10;
+const d11 = win32.graphics.direct3d11;
 
-vertexShader: *d10.ID3D10VertexShader,
-vertexLayout: *d10.ID3D10InputLayout,
-pixelShader: *d10.ID3D10PixelShader,
+vertexShader: *d11.ID3D11VertexShader = undefined,
+vertexLayout: *d11.ID3D11InputLayout = undefined,
+pixelShader: *d11.ID3D11PixelShader = undefined,
 
-pub fn initialize(device: *d10.ID3D10Device) @This() {
-    const vertex = compileShader(win32.zig.L("vs.hlsl"), "vs_4_0");
+pub fn initialize(device: *d11.ID3D11Device) @This() {
+    var self: @This() = .{};
+
+    const vertex = compileShader(win32.zig.L("vs.hlsl"), "vs_5_0");
     defer _ = vertex.IUnknown.Release();
 
-    var vs: ?*d10.ID3D10VertexShader = null;
     var byteCode: [*]u8 = @ptrCast(vertex.GetBufferPointer());
     var size = vertex.GetBufferSize();
-    win32Check(device.CreateVertexShader(byteCode, size, &vs));
+    win32Check(device.CreateVertexShader(byteCode, size, null, &self.vertexShader));
 
-    var desc = std.mem.zeroes(d10.D3D10_INPUT_ELEMENT_DESC);
-    desc.SemanticName = "POSITION";
-    desc.SemanticIndex = 0;
-    desc.Format = .R32G32_FLOAT;
-    desc.InputSlotClass = .VERTEX_DATA;
-    var layout: ?*d10.ID3D10InputLayout = null;
+    var position = std.mem.zeroes(d11.D3D11_INPUT_ELEMENT_DESC);
+    position.SemanticName = "POSITION";
+    position.SemanticIndex = 0;
+    position.Format = .R32G32_FLOAT;
+    position.InputSlotClass = .VERTEX_DATA;
 
-    const array = [_]d10.D3D10_INPUT_ELEMENT_DESC{desc};
-    win32Check(device.CreateInputLayout(&array, array.len, byteCode, size, &layout));
+    var color = std.mem.zeroes(d11.D3D11_INPUT_ELEMENT_DESC);
+    color.SemanticName = "COLOR";
+    color.SemanticIndex = 0;
+    color.Format = .R32G32B32_FLOAT;
+    color.AlignedByteOffset = d11.D3D11_APPEND_ALIGNED_ELEMENT;
+    color.InputSlotClass = .VERTEX_DATA;
 
-    const pixel = compileShader(win32.zig.L("ps.hlsl"), "ps_4_0");
+    const array = [_]d11.D3D11_INPUT_ELEMENT_DESC{ position, color };
+    win32Check(device.CreateInputLayout(&array, array.len, byteCode, size, &self.vertexLayout));
+
+    const pixel = compileShader(win32.zig.L("ps.hlsl"), "ps_5_0");
     defer _ = pixel.IUnknown.Release();
 
-    var ps: ?*d10.ID3D10PixelShader = null;
     byteCode = @ptrCast(pixel.GetBufferPointer());
     size = pixel.GetBufferSize();
-    win32Check(device.CreatePixelShader(byteCode, size, &ps));
+    win32Check(device.CreatePixelShader(byteCode, size, null, &self.pixelShader));
 
-    return .{ .vertexShader = vs.?, .vertexLayout = layout.?, .pixelShader = ps.? };
+    return self;
 }
 
-pub fn render(self: *@This(), device: *d10.ID3D10Device) void {
-    device.IASetInputLayout(self.vertexLayout);
-    device.IASetPrimitiveTopology(._PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    device.VSSetShader(self.vertexShader);
-    device.PSSetShader(self.pixelShader);
+pub fn render(self: *@This(), deviceContext: *d11.ID3D11DeviceContext) void {
+    deviceContext.IASetInputLayout(self.vertexLayout);
+    deviceContext.IASetPrimitiveTopology(._PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    deviceContext.VSSetShader(self.vertexShader, null, 0);
+    deviceContext.PSSetShader(self.pixelShader, null, 0);
 }
 
 pub fn shutdown(self: *@This()) void {

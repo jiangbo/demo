@@ -1,30 +1,34 @@
 const std = @import("std");
 const win32 = @import("win32");
 
-const d10 = win32.graphics.direct3d10;
+const d11 = win32.graphics.direct3d11;
 
-vertexBuffer: *d10.ID3D10Buffer = undefined,
+vertexBuffer: *d11.ID3D11Buffer = undefined,
 
-pub fn initialize(device: *d10.ID3D10Device) @This() {
-    const vertices = [_]f32{ -0.5, -0.5, 0.0, 0.5, 0.5, -0.5 };
+pub fn initialize(device: *d11.ID3D11Device) @This() {
+    const vertices = [_]f32{
+        -0.5, -0.5, 1, 0, 0,
+        0,    0.5,  0, 1, 0,
+        0.5,  -0.5, 0, 0, 1,
+    };
 
-    var bufferDesc = std.mem.zeroes(d10.D3D10_BUFFER_DESC);
+    var bufferDesc = std.mem.zeroes(d11.D3D11_BUFFER_DESC);
     bufferDesc.ByteWidth = @sizeOf(@TypeOf(vertices));
-    bufferDesc.BindFlags = @intFromEnum(d10.D3D10_BIND_VERTEX_BUFFER);
+    bufferDesc.BindFlags = d11.D3D11_BIND_VERTEX_BUFFER;
 
-    var initData = std.mem.zeroes(d10.D3D10_SUBRESOURCE_DATA);
+    var initData = std.mem.zeroes(d11.D3D11_SUBRESOURCE_DATA);
     initData.pSysMem = &vertices;
 
-    var vertexBuffer: *d10.ID3D10Buffer = undefined;
+    var vertexBuffer: *d11.ID3D11Buffer = undefined;
     win32Check(device.CreateBuffer(&bufferDesc, &initData, @ptrCast(&vertexBuffer)));
 
     return .{ .vertexBuffer = vertexBuffer };
 }
 
-pub fn render(self: *@This(), device: *d10.ID3D10Device) void {
-    const strides = [_]u32{@sizeOf(f32) * 2};
-    var buffers = [_]?*d10.ID3D10Buffer{self.vertexBuffer};
-    device.IASetVertexBuffers(0, 1, &buffers, &strides, &.{0});
+pub fn render(self: *@This(), deviceContext: *d11.ID3D11DeviceContext) void {
+    const strides = [_]u32{@sizeOf(f32) * 5};
+    var buffers = [_]?*d11.ID3D11Buffer{self.vertexBuffer};
+    deviceContext.IASetVertexBuffers(0, 1, &buffers, &strides, &.{0});
 }
 
 pub fn shutdown(self: *@This()) void {
