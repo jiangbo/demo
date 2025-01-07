@@ -69,7 +69,7 @@ pub fn beginScene(self: *@This(), red: f32, green: f32, blue: f32, alpha: f32) v
 }
 
 pub fn render(self: *@This()) void {
-    self.deviceContext.Draw(6, 0);
+    self.deviceContext.Draw(3, 0);
 }
 
 pub fn endScene(self: *@This()) void {
