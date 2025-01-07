@@ -34,8 +34,7 @@ pub fn render(self: *@This()) bool {
 
     self.model.render(self.direct3D.deviceContext);
     self.shader.render(self.direct3D.deviceContext);
-
-    self.direct3D.deviceContext.Draw(3, 0);
+    self.direct3D.render();
 
     self.direct3D.endScene();
     return true;

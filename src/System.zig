@@ -61,11 +61,22 @@ fn initializeWindows(width: u16, height: u16) ?win32.foundation.HWND {
 
     win32Check(ui.RegisterClassEx(&windowClass));
 
+    // 计算位置
     const posX = @divTrunc(ui.GetSystemMetrics(.CXSCREEN) - width, 2);
     const posY = @divTrunc(ui.GetSystemMetrics(.CYSCREEN) - height, 2);
+    var rect: win32.foundation.RECT = .{
+        .left = posX,
+        .top = posY,
+        .right = posX + width,
+        .bottom = posY + height,
+    };
+    const style = ui.WS_OVERLAPPEDWINDOW;
+    win32Check(ui.AdjustWindowRect(&rect, style, win32.zig.FALSE));
+
+    //  根据计算的位置创建窗口
     const name = win32.zig.L("DirectX11 学习");
-    const window = ui.CreateWindowEx(ui.WS_EX_APPWINDOW, className, name, //
-        ui.WS_OVERLAPPEDWINDOW, posX, posY, width, height, null, null, handle, null);
+    const window = ui.CreateWindowEx(.{}, className, name, style, rect.left, rect.top, //
+        rect.right - rect.left, rect.bottom - rect.top, null, null, handle, null);
     _ = ui.ShowWindow(window, ui.SW_SHOW);
     return window;
 }

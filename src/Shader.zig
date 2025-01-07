@@ -20,7 +20,7 @@ pub fn initialize(device: *d11.ID3D11Device) @This() {
     var position = std.mem.zeroes(d11.D3D11_INPUT_ELEMENT_DESC);
     position.SemanticName = "POSITION";
     position.SemanticIndex = 0;
-    position.Format = .R32G32_FLOAT;
+    position.Format = .R32G32B32_FLOAT;
     position.InputSlotClass = .VERTEX_DATA;
 
     var color = std.mem.zeroes(d11.D3D11_INPUT_ELEMENT_DESC);

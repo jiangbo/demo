@@ -7,9 +7,15 @@ vertexBuffer: *d11.ID3D11Buffer = undefined,
 
 pub fn initialize(device: *d11.ID3D11Device) @This() {
     const vertices = [_]f32{
-        -0.5, -0.5, 1, 0, 0,
-        0,    0.5,  0, 1, 0,
-        0.5,  -0.5, 0, 0, 1,
+        -0.4, -0.4, 0.4, 0, 1, 0,
+        0,    0.4,  0.4, 0, 1, 0,
+        0.4,  -0.4, 0.4, 0, 1, 0,
+        // -0.4, -0.4, 0.9, 0, 1, 0,
+        // 0,    0.4,  0.9, 0, 1, 0,
+        // 0.4,  -0.4, 0.9, 0, 1, 0,
+        -0.8, -0.8, 0.8, 1, 0, 0,
+        0,    0.8,  0.8, 1, 0, 0,
+        0.8,  -0.8, 0.8, 1, 0, 0,
     };
 
     var bufferDesc = std.mem.zeroes(d11.D3D11_BUFFER_DESC);
@@ -26,7 +32,7 @@ pub fn initialize(device: *d11.ID3D11Device) @This() {
 }
 
 pub fn render(self: *@This(), deviceContext: *d11.ID3D11DeviceContext) void {
-    const strides = [_]u32{@sizeOf(f32) * 5};
+    const strides = [_]u32{@sizeOf(f32) * 6};
     var buffers = [_]?*d11.ID3D11Buffer{self.vertexBuffer};
     deviceContext.IASetVertexBuffers(0, 1, &buffers, &strides, &.{0});
 }
