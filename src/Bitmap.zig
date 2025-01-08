@@ -3,7 +3,7 @@ const win32 = @import("win32");
 
 fileHeader: win32.graphics.gdi.BITMAPFILEHEADER,
 infoHeader: win32.graphics.gdi.BITMAPINFOHEADER,
-colors: []u32,
+buffer: []u8,
 
 const bitmapId: u16 = 0x4D42;
 
@@ -44,40 +44,14 @@ pub fn init(fileName: [:0]const u8) !@This() {
 
     // allocate the memory for the image
     len = bitmap.infoHeader.biSizeImage;
-    const buffer = try std.heap.page_allocator.alloc(u8, len);
-    defer std.heap.page_allocator.free(buffer);
+    bitmap.buffer = try std.heap.page_allocator.alloc(u8, len);
+    _ = windows._lread(fileHandle, bitmap.buffer.ptr, len);
 
-    _ = windows._lread(fileHandle, buffer.ptr, len);
-
-    bitmap.colors = try std.heap.page_allocator.alloc(u32, len / 3);
-    for (bitmap.colors, 0..) |*color, i| {
-        color.* = @as(u24, @intCast(buffer[3 * i + 2])) << 16 //
-        | @as(u24, @intCast(buffer[3 * i + 1])) << 8 | buffer[3 * i];
-    }
-
-    // flip the bitmap
-    flipBitmap(bitmap.colors, @intCast(bitmap.infoHeader.biHeight));
     return bitmap;
 }
 
-fn flipBitmap(image: []u32, height: usize) void {
-    // this function is used to flip bottom-up .BMP images
-
-    // allocate the temporary buffer
-    const buffer = std.heap.page_allocator.dupe(u32, image) catch unreachable;
-    defer std.heap.page_allocator.free(buffer);
-
-    // flip vertically
-    const width = image.len / height;
-    for (0..height) |index| {
-        const source = buffer[index * width ..][0..width];
-        const dest = image[(height - index - 1) * width ..][0..width];
-        @memcpy(dest, source);
-    }
-}
-
 pub fn deinit(self: *@This()) void {
-    std.heap.page_allocator.free(self.colors);
+    std.heap.page_allocator.free(self.buffer);
 }
 
 fn win32Panic() void {

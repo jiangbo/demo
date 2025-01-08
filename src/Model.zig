@@ -18,12 +18,12 @@ pub fn initialize(device: *d11.ID3D11Device) @This() {
 
 fn initVertexBuffer(self: *@This(), device: *d11.ID3D11Device) void {
     const vertices = [_]f32{
-        // -0.7, -0.7, 0, 1, 0, 0,
-        // 0,    0.7,  0, 0, 1, 0,
-        // 0.7,  -0.7, 0, 0, 0, 1,
-        -0.7, -0.7, 0, 0,   1,
-        0,    0.7,  0, 0.5, 0,
-        0.7,  -0.7, 0, 1,   1,
+        -0.7, -0.7, 0, 0, 0,
+        -0.7, 0.7,  0, 0, 1,
+        0.7,  0.7,  0, 1, 1,
+        0.7,  0.7,  0, 1, 1,
+        0.7,  -0.7, 0, 1, 0,
+        -0.7, -0.7, 0, 0, 0,
     };
 
     var bufferDesc = std.mem.zeroes(d11.D3D11_BUFFER_DESC);
@@ -37,7 +37,7 @@ fn initVertexBuffer(self: *@This(), device: *d11.ID3D11Device) void {
 }
 
 fn initTexture(self: *@This(), device: *d11.ID3D11Device) void {
-    var bitmap = Bitmap.init("assets/player24.bmp") catch unreachable;
+    var bitmap = Bitmap.init("assets/player32.bmp") catch unreachable;
     defer bitmap.deinit();
 
     var textureDesc = std.mem.zeroes(d11.D3D11_TEXTURE2D_DESC);
@@ -45,14 +45,13 @@ fn initTexture(self: *@This(), device: *d11.ID3D11Device) void {
     textureDesc.Height = @intCast(bitmap.infoHeader.biHeight);
     textureDesc.MipLevels = 1;
     textureDesc.ArraySize = 1;
-    textureDesc.Format = .R8G8B8A8_UNORM;
+    textureDesc.Format = .B8G8R8X8_UNORM;
     textureDesc.SampleDesc.Count = 1;
     textureDesc.Usage = .DEFAULT;
     textureDesc.BindFlags = d11.D3D11_BIND_SHADER_RESOURCE;
 
     var initialData = std.mem.zeroes(d11.D3D11_SUBRESOURCE_DATA);
-    const data: [*]u8 = @ptrCast(bitmap.colors.ptr);
-    initialData.pSysMem = data;
+    initialData.pSysMem = @ptrCast(bitmap.buffer.ptr);
     initialData.SysMemPitch = textureDesc.Width * 4;
 
     var texture: *d11.ID3D11Texture2D = undefined;
@@ -71,6 +70,8 @@ pub fn render(self: *@This(), deviceContext: *d11.ID3D11DeviceContext) void {
     var buffers = [_]?*d11.ID3D11Buffer{self.vertexBuffer};
     deviceContext.IASetVertexBuffers(0, 1, &buffers, &strides, &.{0});
     deviceContext.PSSetShaderResources(0, 1, @ptrCast(&self.textureView));
+
+    deviceContext.Draw(6, 0);
 }
 
 pub fn shutdown(self: *@This()) void {

@@ -8,7 +8,6 @@ device: *d11.ID3D11Device = undefined,
 deviceContext: *d11.ID3D11DeviceContext = undefined,
 swapChain: *dxgi.IDXGISwapChain = undefined,
 targetView: *d11.ID3D11RenderTargetView = undefined,
-depthView: *d11.ID3D11DepthStencilView = undefined,
 
 pub fn initialize(self: *@This(), w: u16, h: u16, window: ?win32.foundation.HWND) void {
     var desc = std.mem.zeroes(dxgi.DXGI_SWAP_CHAIN_DESC);
@@ -38,38 +37,18 @@ pub fn initialize(self: *@This(), w: u16, h: u16, window: ?win32.foundation.HWND
     var viewPort = std.mem.zeroes(d11.D3D11_VIEWPORT);
     viewPort.Width = @floatFromInt(w);
     viewPort.Height = @floatFromInt(h);
-    viewPort.MaxDepth = 1;
     self.deviceContext.RSSetViewports(1, @ptrCast(&viewPort));
 
-    // 创建深度模板缓存
-    var textureDesc = std.mem.zeroes(d11.D3D11_TEXTURE2D_DESC);
-    textureDesc.Width = w; // 视口的宽度
-    textureDesc.Height = h; // 视口的高度
-    textureDesc.MipLevels = 1;
-    textureDesc.ArraySize = 1;
-    textureDesc.Format = .D24_UNORM_S8_UINT;
-    textureDesc.SampleDesc.Count = 1;
-    textureDesc.BindFlags = d11.D3D11_BIND_DEPTH_STENCIL;
-
-    var buffer: *d11.ID3D11Texture2D = undefined;
-    win32Check(self.device.CreateTexture2D(&textureDesc, null, &buffer));
-    defer _ = buffer.IUnknown.Release();
-
-    // 创建深度模板视图
-    win32Check(self.device.CreateDepthStencilView(&buffer.ID3D11Resource, null, &self.depthView));
-    // 绑定深度模板视图
-    self.deviceContext.OMSetRenderTargets(1, @ptrCast(&self.targetView), self.depthView);
+    self.deviceContext.OMSetRenderTargets(1, @ptrCast(&self.targetView), null);
 }
 
 pub fn beginScene(self: *@This(), red: f32, green: f32, blue: f32, alpha: f32) void {
     const color = [_]f32{ red, green, blue, alpha };
     self.deviceContext.ClearRenderTargetView(self.targetView, @ptrCast(&color));
-    const flag = @intFromEnum(d11.D3D11_CLEAR_DEPTH);
-    self.deviceContext.ClearDepthStencilView(self.depthView, flag, 1.0, 0);
 }
 
 pub fn render(self: *@This()) void {
-    self.deviceContext.Draw(3, 0);
+    _ = self;
 }
 
 pub fn endScene(self: *@This()) void {
@@ -77,7 +56,6 @@ pub fn endScene(self: *@This()) void {
 }
 
 pub fn shutdown(self: *@This()) void {
-    _ = self.depthView.IUnknown.Release();
     _ = self.targetView.IUnknown.Release();
     _ = self.swapChain.IUnknown.Release();
     _ = self.device.IUnknown.Release();

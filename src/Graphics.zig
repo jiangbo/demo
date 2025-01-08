@@ -6,9 +6,6 @@ const Shader = @import("Shader.zig");
 
 pub const WIDTH: u16 = 800;
 pub const HEIGHT: u16 = 600;
-pub const VSYNC_ENABLED: bool = true;
-pub const SCREEN_DEPTH: f32 = 1000.0;
-pub const SCREEN_NEAR: f32 = 0.1;
 
 direct3D: Direct3D,
 model: Model,
