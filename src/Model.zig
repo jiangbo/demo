@@ -4,36 +4,75 @@ const Bitmap = @import("Bitmap.zig");
 
 const d11 = win32.graphics.direct3d11;
 
-vertexBuffer: *d11.ID3D11Buffer = undefined,
+fn VertexBuffer(T: type) type {
+    return struct {
+        data: *d11.ID3D11Buffer,
+        stride: u32,
+
+        pub fn init(device: *d11.ID3D11Device, data: []T) @This() {
+            var self: @This() = undefined;
+            self.stride = @sizeOf(T);
+
+            var bufferDesc = std.mem.zeroes(d11.D3D11_BUFFER_DESC);
+            bufferDesc.ByteWidth = self.stride * @as(u32, @intCast(data.len));
+            bufferDesc.BindFlags = d11.D3D11_BIND_VERTEX_BUFFER;
+
+            var initData = std.mem.zeroes(d11.D3D11_SUBRESOURCE_DATA);
+            initData.pSysMem = data.ptr;
+
+            win32Check(device.CreateBuffer(&bufferDesc, &initData, &self.data));
+            return self;
+        }
+
+        pub fn deinit(self: *@This()) void {
+            _ = self.data.IUnknown.Release();
+        }
+    };
+}
+
+const Vertex = extern struct {
+    x: f32 = 0,
+    y: f32 = 0,
+    z: f32 = 0,
+    u: f32 = 0,
+    v: f32 = 0,
+};
+
+vertexBuffer: VertexBuffer(Vertex) = undefined,
+indexBuffer: *d11.ID3D11Buffer = undefined,
 textureView: *d11.ID3D11ShaderResourceView = undefined,
 
 pub fn initialize(device: *d11.ID3D11Device) @This() {
     var self: @This() = undefined;
 
     self.initVertexBuffer(device);
+    self.initIndexBuffer(device);
     self.initTexture(device);
-
     return self;
 }
 
 fn initVertexBuffer(self: *@This(), device: *d11.ID3D11Device) void {
-    const vertices = [_]f32{
-        -0.7, -0.7, 0, 0, 0,
-        -0.7, 0.7,  0, 0, 1,
-        0.7,  0.7,  0, 1, 1,
-        0.7,  0.7,  0, 1, 1,
-        0.7,  -0.7, 0, 1, 0,
-        -0.7, -0.7, 0, 0, 0,
+    var vertices = [_]Vertex{
+        .{ .x = -0.7, .y = -0.7 },
+        .{ .x = -0.7, .y = 0.7, .v = 1 },
+        .{ .x = 0.7, .y = 0.7, .u = 1, .v = 1 },
+        .{ .x = 0.7, .y = -0.7, .u = 1 },
     };
 
+    self.vertexBuffer = VertexBuffer(Vertex).init(device, &vertices);
+}
+
+fn initIndexBuffer(self: *@This(), device: *d11.ID3D11Device) void {
+    const indices = [_]u16{ 0, 1, 2, 2, 3, 0 };
+
     var bufferDesc = std.mem.zeroes(d11.D3D11_BUFFER_DESC);
-    bufferDesc.ByteWidth = @sizeOf(@TypeOf(vertices));
-    bufferDesc.BindFlags = d11.D3D11_BIND_VERTEX_BUFFER;
+    bufferDesc.ByteWidth = @sizeOf(@TypeOf(indices));
+    bufferDesc.BindFlags = d11.D3D11_BIND_INDEX_BUFFER;
 
     var initData = std.mem.zeroes(d11.D3D11_SUBRESOURCE_DATA);
-    initData.pSysMem = &vertices;
+    initData.pSysMem = &indices;
 
-    win32Check(device.CreateBuffer(&bufferDesc, &initData, &self.vertexBuffer));
+    win32Check(device.CreateBuffer(&bufferDesc, &initData, &self.indexBuffer));
 }
 
 fn initTexture(self: *@This(), device: *d11.ID3D11Device) void {
@@ -66,16 +105,18 @@ fn initTexture(self: *@This(), device: *d11.ID3D11Device) void {
 }
 
 pub fn render(self: *@This(), deviceContext: *d11.ID3D11DeviceContext) void {
-    const strides = [_]u32{@sizeOf(f32) * 5};
-    var buffers = [_]?*d11.ID3D11Buffer{self.vertexBuffer};
+    const strides = [_]u32{self.vertexBuffer.stride};
+    var buffers = [_]?*d11.ID3D11Buffer{self.vertexBuffer.data};
     deviceContext.IASetVertexBuffers(0, 1, &buffers, &strides, &.{0});
+    deviceContext.IASetIndexBuffer(self.indexBuffer, .R16_UINT, 0);
     deviceContext.PSSetShaderResources(0, 1, @ptrCast(&self.textureView));
-
-    deviceContext.Draw(6, 0);
+    deviceContext.DrawIndexed(6, 0, 0);
 }
 
 pub fn shutdown(self: *@This()) void {
-    _ = self.vertexBuffer.IUnknown.Release();
+    _ = self.vertexBuffer.deinit();
+    _ = self.indexBuffer.IUnknown.Release();
+    _ = self.textureView.IUnknown.Release();
 }
 
 fn win32Check(result: win32.foundation.HRESULT) void {
