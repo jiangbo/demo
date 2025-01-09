@@ -74,7 +74,6 @@ fn IndexBuffer(T: type) type {
 
 vertexBuffer: VertexBuffer(Vertex) = undefined,
 indexBuffer: IndexBuffer(u16) = undefined,
-matrixBuffer: *d11.ID3D11Buffer = undefined,
 textureView: *d11.ID3D11ShaderResourceView = undefined,
 
 pub fn initialize(device: *d11.ID3D11Device) @This() {
@@ -90,12 +89,6 @@ pub fn initialize(device: *d11.ID3D11Device) @This() {
 
     const indices = [_]u16{ 0, 1, 2, 2, 3, 0 };
     self.indexBuffer = IndexBuffer(u16).init(device, &indices);
-
-    var bufferDesc = std.mem.zeroes(d11.D3D11_BUFFER_DESC);
-    bufferDesc.ByteWidth = @sizeOf(zm.Mat);
-    bufferDesc.BindFlags = d11.D3D11_BIND_CONSTANT_BUFFER;
-
-    win32Check(device.CreateBuffer(&bufferDesc, null, &self.matrixBuffer));
 
     self.initTexture(device);
     return self;
@@ -137,16 +130,6 @@ pub fn render(self: *@This(), deviceContext: *d11.ID3D11DeviceContext) void {
 
     deviceContext.IASetIndexBuffer(self.indexBuffer.data, self.indexBuffer.format, 0);
 
-    // 平移变换
-    const matrix: zm.Mat = zm.transpose(zm.translation(0.2, 0.2, 0));
-    // // 旋转变换
-    // const matrix: zm.Mat = zm.transpose(zm.rotationZ(std.math.pi));
-    // // 缩放变换
-    // const matrix: zm.Mat = zm.transpose(zm.scaling(0.5, 0.5, 1));
-
-    deviceContext.UpdateSubresource(@ptrCast(self.matrixBuffer), 0, null, &matrix, 0, 0);
-    deviceContext.VSSetConstantBuffers(0, 1, @ptrCast(&self.matrixBuffer));
-
     deviceContext.PSSetShaderResources(0, 1, @ptrCast(&self.textureView));
     deviceContext.DrawIndexed(self.indexBuffer.count, 0, 0);
 }
@@ -154,7 +137,6 @@ pub fn render(self: *@This(), deviceContext: *d11.ID3D11DeviceContext) void {
 pub fn shutdown(self: *@This()) void {
     _ = self.vertexBuffer.deinit();
     _ = self.indexBuffer.deinit();
-    _ = self.matrixBuffer.IUnknown.Release();
     _ = self.textureView.IUnknown.Release();
 }
 

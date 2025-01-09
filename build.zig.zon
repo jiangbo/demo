@@ -7,7 +7,7 @@
             .hash = "1220adcf9ec0447c6a170ed069ed9d52c999b3dcae3557b3647878bf65ee59a2f5d0",
         },
         .zmath = .{
-            .url = "git+https://github.com/zig-gamedev/zmath",
+            .url = "git+https://github.com/zig-gamedev/zmath#24cdd20f9da09bd1ce7b552907eeaba9bafea59d",
             .hash = "1220081d55b58b968d953db1afc2fb01b2f5733929144e69522461ce25fa6450d84e",
         },
     },
