@@ -16,6 +16,9 @@ pub fn build(b: *std.Build) !void {
     const win32 = b.dependency("zigwin32", .{});
     exe.root_module.addImport("win32", win32.module("zigwin32"));
 
+    const zmath = b.dependency("zmath", .{});
+    exe.root_module.addImport("zm", zmath.module("root"));
+
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
