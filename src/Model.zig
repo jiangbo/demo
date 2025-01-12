@@ -1,7 +1,5 @@
 const std = @import("std");
 const win32 = @import("win32");
-const Bitmap = @import("Bitmap.zig");
-const zm = @import("zm");
 
 const d11 = win32.graphics.direct3d11;
 
@@ -34,7 +32,7 @@ fn VertexBuffer(T: type) type {
 const Vertex = extern struct {
     x: f32 = 0,
     y: f32 = 0,
-    z: f32 = 0,
+    z: f32 = 0.5,
     u: f32 = 0,
     v: f32 = 0,
 };
@@ -74,53 +72,30 @@ fn IndexBuffer(T: type) type {
 
 vertexBuffer: VertexBuffer(Vertex) = undefined,
 indexBuffer: IndexBuffer(u16) = undefined,
-textureView: *d11.ID3D11ShaderResourceView = undefined,
 
 pub fn initialize(device: *d11.ID3D11Device) @This() {
     var self: @This() = undefined;
 
     const vertices = [_]Vertex{
-        .{ .x = -0.7, .y = -0.7 },
-        .{ .x = -0.7, .y = 0.7, .v = 1 },
-        .{ .x = 0.7, .y = 0.7, .u = 1, .v = 1 },
-        .{ .x = 0.7, .y = -0.7, .u = 1 },
+        .{ .x = -0.5, .y = -0.5, .u = 0, .v = 0 },
+        .{ .x = -0.5, .y = 0.5, .u = 0, .v = 1 },
+        .{ .x = 0.5, .y = 0.5, .u = 1, .v = 1 },
+        .{ .x = 0.5, .y = -0.5, .u = 1, .v = 0 },
     };
+
+    // const vertices = [_]Vertex{
+    //     .{ .x = 0, .y = 0, .u = 0, .v = 0 },
+    //     .{ .x = 0, .y = 1, .u = 0, .v = 1 },
+    //     .{ .x = 1, .y = 1, .u = 1, .v = 1 },
+    //     .{ .x = 1, .y = 0, .u = 1, .v = 0 },
+    // };
+
     self.vertexBuffer = VertexBuffer(Vertex).init(device, &vertices);
 
     const indices = [_]u16{ 0, 1, 2, 2, 3, 0 };
     self.indexBuffer = IndexBuffer(u16).init(device, &indices);
 
-    self.initTexture(device);
     return self;
-}
-
-fn initTexture(self: *@This(), device: *d11.ID3D11Device) void {
-    var bitmap = Bitmap.init("assets/player32.bmp") catch unreachable;
-    defer bitmap.deinit();
-
-    var textureDesc = std.mem.zeroes(d11.D3D11_TEXTURE2D_DESC);
-    textureDesc.Width = @intCast(bitmap.infoHeader.biWidth);
-    textureDesc.Height = @intCast(bitmap.infoHeader.biHeight);
-    textureDesc.MipLevels = 1;
-    textureDesc.ArraySize = 1;
-    textureDesc.Format = .B8G8R8X8_UNORM;
-    textureDesc.SampleDesc.Count = 1;
-    textureDesc.Usage = .DEFAULT;
-    textureDesc.BindFlags = d11.D3D11_BIND_SHADER_RESOURCE;
-
-    var initialData = std.mem.zeroes(d11.D3D11_SUBRESOURCE_DATA);
-    initialData.pSysMem = @ptrCast(bitmap.buffer.ptr);
-    initialData.SysMemPitch = textureDesc.Width * 4;
-
-    var texture: *d11.ID3D11Texture2D = undefined;
-    win32Check(device.CreateTexture2D(&textureDesc, &initialData, &texture));
-
-    var srvDesc = std.mem.zeroes(d11.D3D11_SHADER_RESOURCE_VIEW_DESC);
-    srvDesc.Format = textureDesc.Format;
-    srvDesc.ViewDimension = ._SRV_DIMENSION_TEXTURE2D;
-    srvDesc.Anonymous.Texture2D.MipLevels = 1;
-
-    win32Check(device.CreateShaderResourceView(@ptrCast(texture), &srvDesc, &self.textureView));
 }
 
 pub fn render(self: *@This(), deviceContext: *d11.ID3D11DeviceContext) void {
@@ -130,14 +105,12 @@ pub fn render(self: *@This(), deviceContext: *d11.ID3D11DeviceContext) void {
 
     deviceContext.IASetIndexBuffer(self.indexBuffer.data, self.indexBuffer.format, 0);
 
-    deviceContext.PSSetShaderResources(0, 1, @ptrCast(&self.textureView));
     deviceContext.DrawIndexed(self.indexBuffer.count, 0, 0);
 }
 
 pub fn shutdown(self: *@This()) void {
     _ = self.vertexBuffer.deinit();
     _ = self.indexBuffer.deinit();
-    _ = self.textureView.IUnknown.Release();
 }
 
 fn win32Check(result: win32.foundation.HRESULT) void {
