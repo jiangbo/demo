@@ -2,13 +2,9 @@
     .name = "demo",
     .version = "0.0.0",
     .dependencies = .{
-        .zigwin32 = .{
-            .url = "git+https://github.com/marlersoft/zigwin32",
-            .hash = "1220adcf9ec0447c6a170ed069ed9d52c999b3dcae3557b3647878bf65ee59a2f5d0",
-        },
-        .zmath = .{
-            .url = "git+https://github.com/zig-gamedev/zmath#24cdd20f9da09bd1ce7b552907eeaba9bafea59d",
-            .hash = "1220081d55b58b968d953db1afc2fb01b2f5733929144e69522461ce25fa6450d84e",
+        .mach = .{
+            .url = "git+https://github.com/hexops/mach#eb12b0f476884c3bf736b5ffd4921daa87a85740",
+            .hash = "1220231fef48a5efb975600a02c991887e70837b1289e049ccae440be9c1d4165071",
         },
     },
 

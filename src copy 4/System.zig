@@ -52,7 +52,7 @@ fn initializeWindows(width: u16, height: u16) ?win32.foundation.HWND {
     const handle = win32.system.library_loader.GetModuleHandle(null).?;
 
     var windowClass = std.mem.zeroes(ui.WNDCLASSEX);
-    const className = win32.zig.L("DirectX11");
+    const className = win32.zig.L("DirectX12");
     windowClass.cbSize = @sizeOf(ui.WNDCLASSEX);
     windowClass.style = .{ .HREDRAW = 1, .VREDRAW = 1, .OWNDC = 1 };
     windowClass.lpszClassName = className;
@@ -74,7 +74,7 @@ fn initializeWindows(width: u16, height: u16) ?win32.foundation.HWND {
     win32Check(ui.AdjustWindowRect(&rect, style, win32.zig.FALSE));
 
     //  根据计算的位置创建窗口
-    const name = win32.zig.L("DirectX11 学习");
+    const name = win32.zig.L("DirectX12 学习");
     const window = ui.CreateWindowEx(.{}, className, name, style, rect.left, rect.top, //
         rect.right - rect.left, rect.bottom - rect.top, null, null, handle, null);
     _ = ui.ShowWindow(window, ui.SW_SHOW);

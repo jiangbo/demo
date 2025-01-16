@@ -33,13 +33,12 @@ pub fn frame(self: *@This()) bool {
 }
 
 pub fn render(self: *@This()) bool {
-    self.direct3D.beginScene(0, 0, 0, 1);
+    self.direct3D.beginScene(1, 0, 1, 1);
 
     // // self.shader.render(self.direct3D.deviceContext);
     // // self.model.render(self.direct3D.deviceContext);
     // // self.texture.draw(self.direct3D.deviceContext);
     // // self.camera.render(self.direct3D.deviceContext, self.texture.model);
-    self.direct3D.render();
 
     self.direct3D.endScene();
     return true;

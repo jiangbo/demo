@@ -13,11 +13,21 @@ pub fn build(b: *std.Build) !void {
 
     b.installArtifact(exe);
 
-    const win32 = b.dependency("zigwin32", .{});
-    exe.root_module.addImport("win32", win32.module("zigwin32"));
+    const mach = b.dependency("mach", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.root_module.addImport("mach", mach.module("mach"));
 
-    const zmath = b.dependency("zmath", .{});
-    exe.root_module.addImport("zm", zmath.module("root"));
+    const exe_check = b.addExecutable(.{
+        .name = "demo",
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const check = b.step("check", "Check if compiles");
+    check.dependOn(&exe_check.step);
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
