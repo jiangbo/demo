@@ -1,22 +1,53 @@
-const std = @import("std");
-const mach = @import("mach");
+//------------------------------------------------------------------------------
+//  clear.zig
+//
+//  Just clear the framebuffer with an animated color.
+//------------------------------------------------------------------------------
+const sokol = @import("sokol");
+const slog = sokol.log;
+const sg = sokol.gfx;
+const sapp = sokol.app;
+const sglue = sokol.glue;
+const print = @import("std").debug.print;
 
-// The set of Mach modules our application may use.
-const Modules = mach.Modules(.{
-    mach.Core,
-    @import("App.zig"),
-});
+const state = struct {
+    var pass_action: sg.PassAction = .{};
+};
 
-// TODO: move this to a mach "entrypoint" zig module which handles nuances like WASM requires.
-pub fn main() !void {
-    const allocator = std.heap.c_allocator;
+export fn init() void {
+    sg.setup(.{
+        .environment = sglue.environment(),
+        .logger = .{ .func = slog.func },
+    });
+    state.pass_action.colors[0] = .{
+        .load_action = .CLEAR,
+        .clear_value = .{ .r = 1, .g = 1, .b = 0, .a = 1 },
+    };
+    print("Backend: {}\n", .{sg.queryBackend()});
+}
 
-    // The set of Mach modules our application may use.
-    var mods: Modules = undefined;
-    try mods.init(allocator);
-    // TODO: enable mods.deinit(allocator); for allocator leak detection
-    // defer mods.deinit(allocator);
+export fn frame() void {
+    const g = state.pass_action.colors[0].clear_value.g + 0.01;
+    state.pass_action.colors[0].clear_value.g = if (g > 1.0) 0.0 else g;
+    sg.beginPass(.{ .action = state.pass_action, .swapchain = sglue.swapchain() });
+    sg.endPass();
+    sg.commit();
+}
 
-    const app = mods.get(.app);
-    app.run(.main);
+export fn cleanup() void {
+    sg.shutdown();
+}
+
+pub fn main() void {
+    sapp.run(.{
+        .init_cb = init,
+        .frame_cb = frame,
+        .cleanup_cb = cleanup,
+        .width = 640,
+        .height = 480,
+        .icon = .{ .sokol_default = true },
+        .window_title = "clear.zig",
+        .logger = .{ .func = slog.func },
+        .win32_console_attach = true,
+    });
 }

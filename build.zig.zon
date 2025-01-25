@@ -2,9 +2,9 @@
     .name = "demo",
     .version = "0.0.0",
     .dependencies = .{
-        .mach = .{
-            .url = "git+https://github.com/hexops/mach#eb12b0f476884c3bf736b5ffd4921daa87a85740",
-            .hash = "1220231fef48a5efb975600a02c991887e70837b1289e049ccae440be9c1d4165071",
+        .sokol = .{
+            .url = "git+https://github.com/floooh/sokol-zig.git#9a02a991ce8374f1664ca3fbf8483d2d7ded84d2",
+            .hash = "12205fe90783eed8f7ab3423f83cd84094c53f93fa6c342021203301061d6df1f412",
         },
     },
 

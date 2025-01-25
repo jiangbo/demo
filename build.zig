@@ -13,11 +13,11 @@ pub fn build(b: *std.Build) !void {
 
     b.installArtifact(exe);
 
-    const mach = b.dependency("mach", .{
+    const sokol = b.dependency("sokol", .{
         .target = target,
         .optimize = optimize,
     });
-    exe.root_module.addImport("mach", mach.module("mach"));
+    exe.root_module.addImport("sokol", sokol.module("sokol"));
 
     const exe_check = b.addExecutable(.{
         .name = "demo",
