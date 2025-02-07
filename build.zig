@@ -11,6 +11,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    exe.subsystem = .Windows;
     b.installArtifact(exe);
 
     const sokol = b.dependency("sokol", .{
@@ -19,15 +20,15 @@ pub fn build(b: *std.Build) !void {
     });
     exe.root_module.addImport("sokol", sokol.module("sokol"));
 
-    const exe_check = b.addExecutable(.{
-        .name = "demo",
-        .root_source_file = b.path("src/main.zig"),
+    const zstbi = b.dependency("zstbi", .{});
+    exe.root_module.addImport("stbi", zstbi.module("root"));
+    exe.linkLibrary(zstbi.artifact("zstbi"));
+
+    const zmath = b.dependency("zmath", .{
         .target = target,
         .optimize = optimize,
     });
-
-    const check = b.step("check", "Check if compiles");
-    check.dependOn(&exe_check.step);
+    exe.root_module.addImport("zmath", zmath.module("root"));
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
