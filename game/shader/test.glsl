@@ -1,4 +1,11 @@
+#pragma sokol @header const zm = @import("zmath")
+#pragma sokol @ctype mat4 zm.Mat
+
 @vs vs
+layout(binding=0) uniform vs_params {
+    mat4 view;
+};
+
 in vec4 position;
 in vec4 color0;
 in vec2 texcoord0;
@@ -7,7 +14,7 @@ out vec4 color;
 out vec2 uv;
 
 void main() {
-    gl_Position = position;
+    gl_Position = view * position;
     color = color0;
     uv = texcoord0;
 }

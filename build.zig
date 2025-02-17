@@ -30,13 +30,13 @@ pub fn build(b: *std.Build) !void {
     });
     exe.root_module.addImport("zmath", zmath.module("root"));
 
-    // const sdl_dep = b.dependency("sdl", .{
-    //     .target = target,
-    //     .optimize = optimize,
-    //     .preferred_link_mode = .static,
-    // });
-    // const sdl_lib = sdl_dep.artifact("SDL3");
-    // exe.linkLibrary(sdl_lib);
+    const sdl_dep = b.dependency("sdl", .{
+        .target = target,
+        .optimize = optimize,
+        .preferred_link_mode = .static,
+    });
+    const sdl_lib = sdl_dep.artifact("SDL3");
+    exe.linkLibrary(sdl_lib);
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
