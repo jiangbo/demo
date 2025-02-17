@@ -14,6 +14,10 @@
             .url = "git+https://github.com/zig-gamedev/zmath#f40bb8a935b4878c707c3fccfd5c234cfcb43bf2",
             .hash = "1220c1ab7d1e49106f59c6adb4004befdb95525a72056364a663757aaa1365aae64a",
         },
+        .sdl = .{
+            .url = "git+https://github.com/castholm/SDL.git#2bb5f57ea8b8c43eabe514f7bbd3361365ba2ff3",
+            .hash = "1220f653f5b656888b522bf5be06fc3062278767cfa7764e5d00eb559056d65b616f",
+        },
     },
 
     .paths = .{""},
