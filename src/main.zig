@@ -3,12 +3,12 @@ const sk = @import("sokol");
 const stbi = @import("stbi");
 const zm = @import("zmath");
 
-const vec3 = @import("math.zig").Vec3;
-const mat4 = @import("math.zig").Mat4;
-
 const shd = @import("shader/test.glsl.zig");
 
-const clearColor: sk.gfx.Color = .{ .r = 1, .b = 1, .a = 1 };
+const max_particles: usize = 512 * 1024;
+const num_particles_emitted_per_frame: usize = 10;
+
+const clearColor: sk.gfx.Color = .{ .r = 0, .g = 0.1, .b = 0.2, .a = 1 };
 var info: sk.gfx.PassAction = undefined;
 var pipeline: sk.gfx.Pipeline = undefined;
 var bind: sk.gfx.Bindings = undefined;
@@ -24,146 +24,142 @@ export fn init() void {
     // 背景清除颜色
     info.colors[0] = .{ .load_action = .CLEAR, .clear_value = clearColor };
 
-    // 顶点数据
-    bind.storage_buffers[shd.SBUF_ssbo] = sk.gfx.makeBuffer(.{
+    const r = 0.05;
+    bind.storage_buffers[shd.SBUF_vertices] = sk.gfx.makeBuffer(.{
         .type = .STORAGEBUFFER,
-        .data = sk.gfx.asRange(&[_]shd.SbVertex{
-            .{ .pos = .{ -1.0, -1.0, -1.0 }, .idx = 0, .uv = .{ 0.0, 0.0 } },
-            .{ .pos = .{ 1.0, -1.0, -1.0 }, .idx = 0, .uv = .{ 1.0, 0.0 } },
-            .{ .pos = .{ 1.0, 1.0, -1.0 }, .idx = 0, .uv = .{ 1.0, 1.0 } },
-            .{ .pos = .{ -1.0, 1.0, -1.0 }, .idx = 0, .uv = .{ 0.0, 1.0 } },
-
-            .{ .pos = .{ -1.0, -1.0, 1.0 }, .idx = 1, .uv = .{ 0.0, 0.0 } },
-            .{ .pos = .{ 1.0, -1.0, 1.0 }, .idx = 1, .uv = .{ 1.0, 0.0 } },
-            .{ .pos = .{ 1.0, 1.0, 1.0 }, .idx = 1, .uv = .{ 1.0, 1.0 } },
-            .{ .pos = .{ -1.0, 1.0, 1.0 }, .idx = 1, .uv = .{ 0.0, 1.0 } },
-
-            .{ .pos = .{ -1.0, -1.0, -1.0 }, .idx = 2, .uv = .{ 0.0, 0.0 } },
-            .{ .pos = .{ -1.0, 1.0, -1.0 }, .idx = 2, .uv = .{ 1.0, 0.0 } },
-            .{ .pos = .{ -1.0, 1.0, 1.0 }, .idx = 2, .uv = .{ 1.0, 1.0 } },
-            .{ .pos = .{ -1.0, -1.0, 1.0 }, .idx = 2, .uv = .{ 0.0, 1.0 } },
-
-            .{ .pos = .{ 1.0, -1.0, -1.0 }, .idx = 3, .uv = .{ 0.0, 0.0 } },
-            .{ .pos = .{ 1.0, 1.0, -1.0 }, .idx = 3, .uv = .{ 1.0, 0.0 } },
-            .{ .pos = .{ 1.0, 1.0, 1.0 }, .idx = 3, .uv = .{ 1.0, 1.0 } },
-            .{ .pos = .{ 1.0, -1.0, 1.0 }, .idx = 3, .uv = .{ 0.0, 1.0 } },
-
-            .{ .pos = .{ -1.0, -1.0, -1.0 }, .idx = 4, .uv = .{ 0.0, 0.0 } },
-            .{ .pos = .{ -1.0, -1.0, 1.0 }, .idx = 4, .uv = .{ 1.0, 0.0 } },
-            .{ .pos = .{ 1.0, -1.0, 1.0 }, .idx = 4, .uv = .{ 1.0, 1.0 } },
-            .{ .pos = .{ 1.0, -1.0, -1.0 }, .idx = 4, .uv = .{ 0.0, 1.0 } },
-
-            .{ .pos = .{ -1.0, 1.0, -1.0 }, .idx = 5, .uv = .{ 0.0, 0.0 } },
-            .{ .pos = .{ -1.0, 1.0, 1.0 }, .idx = 5, .uv = .{ 1.0, 0.0 } },
-            .{ .pos = .{ 1.0, 1.0, 1.0 }, .idx = 5, .uv = .{ 1.0, 1.0 } },
-            .{ .pos = .{ 1.0, 1.0, -1.0 }, .idx = 5, .uv = .{ 0.0, 1.0 } },
+        .data = sk.gfx.asRange(&[_]f32{
+            0.0, -r,  0.0, 1, 1.0, 0.0, 0.0, 1.0,
+            r,   0.0, r,   1, 0.0, 1.0, 0.0, 1.0,
+            r,   0.0, -r,  1, 0.0, 0.0, 1.0, 1.0,
+            -r,  0.0, -r,  1, 1.0, 1.0, 0.0, 1.0,
+            -r,  0.0, r,   1, 0.0, 1.0, 1.0, 1.0,
+            0.0, r,   0.0, 1, 1.0, 0.0, 1.0, 1.0,
         }),
     });
 
-    // 索引数据
     bind.index_buffer = sk.gfx.makeBuffer(.{
         .type = .INDEXBUFFER,
         .data = sk.gfx.asRange(&[_]u16{
-            0,  1,  2,  0,  2,  3,
-            6,  5,  4,  7,  6,  4,
-            8,  9,  10, 8,  10, 11,
-            14, 13, 12, 15, 14, 12,
-            16, 17, 18, 16, 18, 19,
-            22, 21, 20, 23, 22, 20,
+            0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 1,
+            5, 1, 2, 5, 2, 3, 5, 3, 4, 5, 4, 1,
         }),
     });
 
-    // 颜色索引
-    bind.storage_buffers[shd.SBUF_colors] = sk.gfx.makeBuffer(.{
+    bind.storage_buffers[shd.SBUF_instances] = sk.gfx.makeBuffer(.{
         .type = .STORAGEBUFFER,
-        .data = sk.gfx.asRange(&[_]shd.SbColor{
-            .{ .color = .{ 1.0, 0.0, 0.0, 1.0 } },
-            .{ .color = .{ 0.0, 1.0, 0.0, 1.0 } },
-            .{ .color = .{ 0.0, 0.0, 1.0, 1.0 } },
-            .{ .color = .{ 0.5, 0.0, 1.0, 1.0 } },
-            .{ .color = .{ 0.0, 0.5, 1.0, 1.0 } },
-            .{ .color = .{ 1.0, 0.5, 0.0, 1.0 } },
-        }),
-    });
-
-    const pixels: [4][4]u8 = .{
-        .{ 0xFF, 0xCC, 0x88, 0x44 },
-        .{ 0xCC, 0x88, 0x44, 0xFF },
-        .{ 0x88, 0x44, 0xFF, 0xCC },
-        .{ 0x44, 0xFF, 0xCC, 0x88 },
-    };
-
-    bind.images[shd.IMG_tex] = sk.gfx.makeImage(.{
-        .width = 4,
-        .height = 4,
-        .pixel_format = .R8,
-        .data = init: {
-            var data = sk.gfx.ImageData{};
-            data.subimage[0][0] = sk.gfx.asRange(&pixels);
-            break :init data;
-        },
-    });
-
-    // ...and a matching sampler
-    bind.samplers[shd.SMP_smp] = sk.gfx.makeSampler(.{
-        .min_filter = .NEAREST,
-        .mag_filter = .NEAREST,
+        .usage = .STREAM,
+        .size = max_particles * @sizeOf(shd.SbInstance),
     });
 
     pipeline = sk.gfx.makePipeline(.{
         .shader = sk.gfx.makeShader(shd.testShaderDesc(sk.gfx.queryBackend())),
         .index_type = .UINT16,
+        .cull_mode = .BACK,
         .depth = .{
             .compare = .LESS_EQUAL,
             .write_enabled = true,
         },
-        .cull_mode = .BACK,
     });
 }
 
-const width = 800;
-const height = 600;
+const width = 640;
+const height = 480;
 
 var rx: f32 = 0;
 var ry: f32 = 0;
-const view: zm.Mat = zm.lookAtRh(
-    zm.f32x4(0, 1.5, 6, 1.0), // eye position
-    zm.f32x4(0.0, 0.0, 0.0, 1.0), // focus point
-    zm.f32x4(0.0, 1.0, 0.0, 0.0), // up direction
+var params: shd.VsParams = undefined;
+var cur_num_particles: u32 = 0;
+var instance: [max_particles]shd.SbInstance = undefined;
+var vel: [max_particles]zm.Vec = undefined;
+const view = zm.lookAtRh(
+    zm.f32x4(0, 1.5, 12, 1.0),
+    zm.f32x4(0, 0, 0, 1),
+    zm.f32x4(0, 1, 0, 0),
 );
 
 export fn frame() void {
-    const dt: f32 = @floatCast(sk.app.frameDuration() * 60);
-    rx += 1.0 * dt;
-    ry += 2.0 * dt;
-    const params = computeParams();
+    const frame_time: f32 = @floatCast(sk.app.frameDuration());
 
+    for (0..num_particles_emitted_per_frame) |_| {
+        if (cur_num_particles < max_particles) {
+            instance[cur_num_particles].pos = zm.f32x4s(0);
+            vel[cur_num_particles] = zm.f32x4(
+                rand(-0.5, 0.5),
+                rand(2.0, 2.5),
+                rand(-0.5, 0.5),
+                1,
+            );
+            cur_num_particles += 1;
+        } else {
+            break;
+        }
+    }
+
+    // update particle positions
+    for (0..max_particles) |i| {
+        vel[i][1] -= 1.0 * frame_time;
+        instance[i].pos[0] += vel[i][0] * frame_time;
+        instance[i].pos[1] += vel[i][1] * frame_time;
+        instance[i].pos[2] += vel[i][2] * frame_time;
+
+        if (instance[i].pos[1] < -2.0) {
+            instance[i].pos[1] = -1.8;
+            vel[i][1] = -vel[i][1];
+            vel[i][0] *= 0.8;
+            vel[i][1] *= 0.8;
+            vel[i][2] *= 0.8;
+        }
+    }
+
+    // update instance data
+    sk.gfx.updateBuffer(
+        bind.storage_buffers[shd.SBUF_instances],
+        sk.gfx.asRange(instance[0..cur_num_particles]),
+    );
+
+    // compute vertex shader parameters (the mvp matrix)
+    ry += 1.0;
+    const vs_params = computeParams(1.0, ry);
+
+    // and finally draw...
     sk.gfx.beginPass(.{ .action = info, .swapchain = sk.glue.swapchain() });
-
     sk.gfx.applyPipeline(pipeline);
     sk.gfx.applyBindings(bind);
-
-    sk.gfx.applyUniforms(shd.UB_vs_params, sk.gfx.asRange(&params));
-    sk.gfx.draw(0, 36, 1);
-
+    sk.gfx.applyUniforms(shd.UB_vs_params, sk.gfx.asRange(&vs_params));
+    sk.gfx.draw(0, 24, cur_num_particles);
     sk.gfx.endPass();
     sk.gfx.commit();
 }
 
-fn computeParams() shd.VsParams {
-    const rxm = zm.rotationX(std.math.degreesToRadians(rx));
-    const rym = zm.rotationY(std.math.degreesToRadians(ry));
+fn computeParams(r1: f32, r2: f32) shd.VsParams {
+    const rxm = zm.rotationX(std.math.degreesToRadians(r1));
+    const rym = zm.rotationY(std.math.degreesToRadians(r2));
     const model = zm.mul(rym, rxm);
 
     const aspect = sk.app.widthf() / sk.app.heightf();
-    const radians = std.math.degreesToRadians(60.0);
-    const proj = zm.perspectiveFovRh(radians, aspect, 0.01, 10.0);
+    const proj = zm.perspectiveFovRh(std.math.degreesToRadians(45), aspect, 0.01, 50);
 
-    return shd.VsParams{ .vp = zm.mul(zm.mul(model, view), proj) };
+    return shd.VsParams{ .mvp = zm.mul(zm.mul(model, view), proj) };
 }
 
 export fn cleanup() void {
     sk.gfx.shutdown();
+}
+
+fn rand(min_val: f32, max_val: f32) f32 {
+    return (@as(f32, @floatFromInt(xorshift32() & 0xFFFF)) / 0x10000) * (max_val - min_val) + min_val;
+}
+
+fn xorshift32() u32 {
+    const static = struct {
+        var x: u32 = 0x12345678;
+    };
+    var x = static.x;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    static.x = x;
+    return x;
 }
 
 pub fn main() void {
@@ -173,7 +169,9 @@ pub fn main() void {
         .window_title = "学习 sokol",
         .logger = .{ .func = sk.log.func },
         .win32_console_attach = true,
+        .sample_count = 4,
         .init_cb = init,
+        .high_dpi = false,
         .frame_cb = frame,
         .cleanup_cb = cleanup,
     });
