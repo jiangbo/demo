@@ -2,6 +2,7 @@ const std = @import("std");
 const sk = @import("sokol");
 const stbi = @import("stbi");
 const zm = @import("zmath");
+const gfx = @import("graphics.zig");
 
 const shd = @import("shader/test.glsl.zig");
 
@@ -9,6 +10,9 @@ const clearColor: sk.gfx.Color = .{ .r = 1, .b = 1, .a = 1 };
 var info: sk.gfx.PassAction = undefined;
 var pipeline: sk.gfx.Pipeline = undefined;
 var bind: sk.gfx.Bindings = undefined;
+
+var imageWidth: f32 = 0;
+var imageHeight: f32 = 0;
 
 export fn init() void {
     sk.gfx.setup(.{
@@ -19,39 +23,12 @@ export fn init() void {
 
     var image = stbi.Image.loadFromFile("assets/player.bmp", 4) catch unreachable;
     defer image.deinit();
-    const x: f32, const y: f32 = .{ 0, 0 };
-    const w: f32 = @floatFromInt(image.width);
-    const h: f32 = @floatFromInt(image.height);
+    imageWidth = @floatFromInt(image.width);
+    imageHeight = @floatFromInt(image.height);
 
     bind.vertex_buffers[0] = sk.gfx.makeBuffer(.{
-        .data = sk.gfx.asRange(&[_]f32{
-            // 顶点和颜色
-            x,     y + h, 0, 1.0, 1.0, 1.0, 0, 1,
-            x + w, y + h, 0, 1.0, 1.0, 1.0, 1, 1,
-            x + w, y,     0, 1.0, 1.0, 1.0, 1, 0,
-            x,     y,     0, 1.0, 1.0, 1.0, 0, 0,
-        }),
+        .data = sk.gfx.asRange(&vertex),
     });
-
-    bind.vertex_buffers[0] = sk.gfx.makeBuffer(.{
-        .data = sk.gfx.asRange(&[_]f32{
-            // 顶点和颜色
-            -150, 150,  0, 1.0, 1.0, 1.0, 0, 0,
-            150,  150,  0, 1.0, 1.0, 1.0, 1, 0,
-            150,  -150, 0, 1.0, 1.0, 1.0, 1, 1,
-            -150, -150, 0, 1.0, 1.0, 1.0, 0, 1,
-        }),
-    });
-
-    // bind.vertex_buffers[0] = sk.gfx.makeBuffer(.{
-    //     .data = sk.gfx.asRange(&[_]f32{
-    //         // 顶点和颜色
-    //         0,   300, 0, 1.0, 1.0, 1.0, 0, 0,
-    //         300, 300, 0, 1.0, 1.0, 1.0, 1, 0,
-    //         300, 0,   0, 1.0, 1.0, 1.0, 1, 1,
-    //         0,   0,   0, 1.0, 1.0, 1.0, 0, 1,
-    //     }),
-    // });
 
     bind.index_buffer = sk.gfx.makeBuffer(.{
         .type = .INDEXBUFFER,
@@ -90,25 +67,42 @@ export fn init() void {
             .write_enabled = true,
         },
     });
+
+    const camera = gfx.Camera.init(width, height);
+    params = shd.VsParams{ .vp = camera.vp() };
 }
 
-const view = zm.lookAtLh(
-    zm.f32x4(0, 0, -1, 0), // 眼睛所在位置
-    zm.f32x4(0.0, 0.0, 0.0, 0), // 眼睛看向的位置
-    zm.f32x4(0.0, 1.0, 0.0, 0), // 头顶方向
-);
+var vertex: [8 * 4]f32 = undefined;
+
+fn fillVertex(x: f32, y: f32, w: f32, h: f32) void {
+    vertex = .{
+        // 顶点和颜色
+        x,     y + h, 0.5, 1.0, 1.0, 1.0, 0, 1,
+        x + w, y + h, 0.5, 1.0, 1.0, 1.0, 1, 1,
+        x + w, y,     0.5, 1.0, 1.0, 1.0, 1, 0,
+        x,     y,     0.5, 1.0, 1.0, 1.0, 0, 0,
+    };
+}
+
+var params: shd.VsParams = undefined;
 
 export fn frame() void {
     sk.gfx.beginPass(.{ .action = info, .swapchain = sk.glue.swapchain() });
 
     sk.gfx.applyPipeline(pipeline);
-    sk.gfx.applyBindings(bind);
-
-    // const vp = zm.mul(view, zm.orthographicLh(width, height, 0, 1));
-    const vp = zm.mul(view, zm.orthographicOffCenterLh(0, width, 0, height, 0, 1));
-    const params = shd.VsParams{ .view = zm.transpose(vp) };
     sk.gfx.applyUniforms(shd.UB_vs_params, sk.gfx.asRange(&params));
-    sk.gfx.draw(0, 6, 1);
+
+    for (0..5000) |_| {
+        const x = rand.float(f32) * width;
+        const y = rand.float(f32) * height;
+        fillVertex(x, y, imageWidth, imageHeight);
+        sk.gfx.destroyBuffer(bind.vertex_buffers[0]);
+        bind.vertex_buffers[0] = sk.gfx.makeBuffer(.{
+            .data = sk.gfx.asRange(&vertex),
+        });
+        sk.gfx.applyBindings(bind);
+        sk.gfx.draw(0, 6, 1);
+    }
 
     sk.gfx.endPass();
     sk.gfx.commit();
@@ -118,8 +112,9 @@ export fn cleanup() void {
     sk.gfx.shutdown();
 }
 
-const width = 800;
-const height = 600;
+const width = 640;
+const height = 480;
+var rand: std.Random = undefined;
 
 pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -127,12 +122,15 @@ pub fn main() void {
     stbi.init(gpa.allocator());
     defer stbi.deinit();
 
+    var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
+    rand = prng.random();
     sk.app.run(.{
         .width = width,
         .height = height,
         .window_title = "学习 sokol",
         .logger = .{ .func = sk.log.func },
         .win32_console_attach = true,
+        .swap_interval = 0,
         .init_cb = init,
         .frame_cb = frame,
         .cleanup_cb = cleanup,
