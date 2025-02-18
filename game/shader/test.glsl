@@ -10,9 +10,9 @@ layout(binding=0) uniform vs_params {
 struct BatchInstance
 {
     vec4 position;
-    float rotation;
     float width;
     float height;
+    float rotation;
     float padding;
     vec4 texcoord;
     vec4 color;
@@ -36,7 +36,8 @@ const vec2 vertexPos[4] = {
 void main() {
 
     uint spriteIndex = gl_VertexIndex / 6;
-    uint vert = triangleIndices[gl_VertexIndex % 6];
+    uint vertexIndex = gl_VertexIndex % 6;
+    uint vert = triangleIndices[vertexIndex];
     BatchInstance sprite = dataBuffer[spriteIndex];
 
     vec4 uvwh = sprite.texcoord;
@@ -51,7 +52,7 @@ void main() {
     float s = sin(sprite.rotation);
 
     vec2 coord = vertexPos[vert];
-//     coord *= sprite.scale;
+    coord *= vec2(sprite.width, sprite.height);
     mat2 rotation = mat2(c, s, -s, c);
     coord = coord * rotation;
 

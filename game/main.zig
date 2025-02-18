@@ -13,7 +13,7 @@ var bind: sk.gfx.Bindings = undefined;
 
 var imageWidth: f32 = 0;
 var imageHeight: f32 = 0;
-const NUMBER = 5000;
+const NUMBER = 10000;
 
 export fn init() void {
     sk.gfx.setup(.{
@@ -89,6 +89,12 @@ export fn frame() void {
         const y = rand.float(f32) * height;
         fillVertex(i, x, y, imageWidth, imageHeight);
     }
+
+    sk.gfx.destroyBuffer(bind.storage_buffers[0]);
+    bind.storage_buffers[0] = sk.gfx.makeBuffer(.{
+        .type = .STORAGEBUFFER,
+        .data = sk.gfx.asRange(storageBuffer),
+    });
 
     sk.gfx.applyBindings(bind);
     sk.gfx.draw(0, 6 * NUMBER, 1);
