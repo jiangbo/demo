@@ -13,6 +13,7 @@ var bind: sk.gfx.Bindings = undefined;
 
 var imageWidth: f32 = 0;
 var imageHeight: f32 = 0;
+const NUMBER = 5000;
 
 export fn init() void {
     sk.gfx.setup(.{
@@ -25,15 +26,6 @@ export fn init() void {
     defer image.deinit();
     imageWidth = @floatFromInt(image.width);
     imageHeight = @floatFromInt(image.height);
-
-    bind.vertex_buffers[0] = sk.gfx.makeBuffer(.{
-        .data = sk.gfx.asRange(&vertex),
-    });
-
-    bind.index_buffer = sk.gfx.makeBuffer(.{
-        .type = .INDEXBUFFER,
-        .data = sk.gfx.asRange(&[_]u16{ 0, 1, 2, 0, 2, 3 }),
-    });
 
     bind.images[shd.IMG_tex] = sk.gfx.allocImage();
     sk.gfx.initImage(bind.images[shd.IMG_tex], .{
@@ -54,33 +46,33 @@ export fn init() void {
 
     pipeline = sk.gfx.makePipeline(.{
         .shader = sk.gfx.makeShader(shd.testShaderDesc(sk.gfx.queryBackend())),
-        .layout = init: {
-            var l = sk.gfx.VertexLayoutState{};
-            l.attrs[shd.ATTR_test_position].format = .FLOAT3;
-            l.attrs[shd.ATTR_test_color0].format = .FLOAT3;
-            l.attrs[shd.ATTR_test_texcoord0].format = .FLOAT2;
-            break :init l;
-        },
-        .index_type = .UINT16,
         .depth = .{
             .compare = .LESS_EQUAL,
             .write_enabled = true,
         },
     });
 
+    storageBuffer = allocator.alloc(shd.Batchinstance, NUMBER) catch unreachable;
+    bind.storage_buffers[0] = sk.gfx.makeBuffer(.{
+        .type = .STORAGEBUFFER,
+        .data = sk.gfx.asRange(storageBuffer),
+    });
+
     const camera = gfx.Camera.init(width, height);
     params = shd.VsParams{ .vp = camera.vp() };
 }
 
-var vertex: [8 * 4]f32 = undefined;
+var storageBuffer: []shd.Batchinstance = undefined;
 
-fn fillVertex(x: f32, y: f32, w: f32, h: f32) void {
-    vertex = .{
-        // 顶点和颜色
-        x,     y + h, 0.5, 1.0, 1.0, 1.0, 0, 1,
-        x + w, y + h, 0.5, 1.0, 1.0, 1.0, 1, 1,
-        x + w, y,     0.5, 1.0, 1.0, 1.0, 1, 0,
-        x,     y,     0.5, 1.0, 1.0, 1.0, 0, 0,
+fn fillVertex(idx: usize, x: f32, y: f32, w: f32, h: f32) void {
+    storageBuffer[idx] = .{
+        .position = .{ x, y, 0.5, 1.0 },
+        .rotation = 0.0,
+        .width = w,
+        .height = h,
+        .padding = 0.0,
+        .texcoord = .{ 0.0, 0.0, 1.0, 1.0 },
+        .color = .{ 1.0, 1.0, 1.0, 1.0 },
     };
 }
 
@@ -92,17 +84,14 @@ export fn frame() void {
     sk.gfx.applyPipeline(pipeline);
     sk.gfx.applyUniforms(shd.UB_vs_params, sk.gfx.asRange(&params));
 
-    for (0..5000) |_| {
+    for (0..NUMBER) |i| {
         const x = rand.float(f32) * width;
         const y = rand.float(f32) * height;
-        fillVertex(x, y, imageWidth, imageHeight);
-        sk.gfx.destroyBuffer(bind.vertex_buffers[0]);
-        bind.vertex_buffers[0] = sk.gfx.makeBuffer(.{
-            .data = sk.gfx.asRange(&vertex),
-        });
-        sk.gfx.applyBindings(bind);
-        sk.gfx.draw(0, 6, 1);
+        fillVertex(i, x, y, imageWidth, imageHeight);
     }
+
+    sk.gfx.applyBindings(bind);
+    sk.gfx.draw(0, 6 * NUMBER, 1);
 
     sk.gfx.endPass();
     sk.gfx.commit();
@@ -110,15 +99,18 @@ export fn frame() void {
 
 export fn cleanup() void {
     sk.gfx.shutdown();
+    allocator.free(storageBuffer);
 }
 
 const width = 640;
 const height = 480;
 var rand: std.Random = undefined;
+var allocator: std.mem.Allocator = undefined;
 
 pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
+    allocator = gpa.allocator();
     stbi.init(gpa.allocator());
     defer stbi.deinit();
 
@@ -130,7 +122,6 @@ pub fn main() void {
         .window_title = "学习 sokol",
         .logger = .{ .func = sk.log.func },
         .win32_console_attach = true,
-        .swap_interval = 0,
         .init_cb = init,
         .frame_cb = frame,
         .cleanup_cb = cleanup,
