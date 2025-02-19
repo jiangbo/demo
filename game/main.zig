@@ -1,37 +1,28 @@
 const std = @import("std");
-const sk = @import("sokol");
 const stbi = @import("stbi");
-const zm = @import("zmath");
 const gfx = @import("graphics.zig");
-
-const shd = @import("shader/test.glsl.zig");
+const cache = @import("cache.zig");
 
 var bind: gfx.BindGroup = .{};
 
 var imageWidth: f32 = 0;
 var imageHeight: f32 = 0;
-const NUMBER = 10000;
+const NUMBER = 1;
 
-export fn init() void {
-    sk.gfx.setup(.{
-        .environment = sk.glue.environment(),
-        .logger = .{ .func = sk.log.func },
-    });
+fn init() void {
+    cache.init(allocator);
 
-    var image = stbi.Image.loadFromFile("assets/player.bmp", 4) catch unreachable;
-    defer image.deinit();
-    imageWidth = @floatFromInt(image.width);
-    imageHeight = @floatFromInt(image.height);
+    const texture = cache.TextureCache.get("assets/player.bmp");
+    bind.bindTexture(texture.?);
 
-    bind.bindImage(image.width, image.height, image.data);
-    storageBuffer = allocator.alloc(shd.Batchinstance, NUMBER) catch unreachable;
+    storageBuffer = allocator.alloc(gfx.BatchInstance, NUMBER) catch unreachable;
     bind.bindStorageBuffer(0, storageBuffer);
 
     const camera = gfx.Camera.init(width, height);
-    params = shd.VsParams{ .vp = camera.vp() };
+    bind.bindUniformBuffer(gfx.UniformParams{ .vp = camera.vp() });
 }
 
-var storageBuffer: []shd.Batchinstance = undefined;
+var storageBuffer: []gfx.BatchInstance = undefined;
 
 fn fillVertex(idx: usize, x: f32, y: f32, w: f32, h: f32) void {
     storageBuffer[idx] = .{
@@ -45,33 +36,30 @@ fn fillVertex(idx: usize, x: f32, y: f32, w: f32, h: f32) void {
     };
 }
 
-var params: shd.VsParams = undefined;
-
-export fn frame() void {
-    var encoder = gfx.CommandEncoder{};
-    defer encoder.finish();
-
-    var renderPass = encoder.beginRenderPass(.{ .r = 1, .b = 1, .a = 1 });
+fn frame() void {
+    var renderPass = gfx.RenderPass.begin(.{ .r = 1, .b = 1, .a = 1 });
     defer renderPass.end();
 
-    renderPass.setPipeline(gfx.RenderPipeline.getTexturePipeline());
-    sk.gfx.applyUniforms(shd.UB_vs_params, sk.gfx.asRange(&params));
-
     for (0..NUMBER) |i| {
-        const x = rand.float(f32) * width;
-        const y = rand.float(f32) * height;
+        const x = rand.float(f32) * width * 0;
+        const y = rand.float(f32) * height * 0;
         fillVertex(i, x, y, imageWidth, imageHeight);
     }
 
     bind.updateStorageBuffer(0, storageBuffer);
+    renderPass.setPipeline(gfx.RenderPipeline.getTexturePipeline());
     renderPass.setBindGroup(0, bind);
 
     renderPass.draw(6 * NUMBER);
 }
 
-export fn cleanup() void {
-    sk.gfx.shutdown();
+fn event(evt: ?*const gfx.Event) void {
+    _ = evt;
+}
+
+fn deinit() void {
     allocator.free(storageBuffer);
+    cache.deinit();
 }
 
 const width = 640;
@@ -83,19 +71,16 @@ pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     allocator = gpa.allocator();
-    stbi.init(gpa.allocator());
-    defer stbi.deinit();
 
     var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
     rand = prng.random();
-    sk.app.run(.{
+    gfx.run(.{
         .width = width,
         .height = height,
-        .window_title = "学习 sokol",
-        .logger = .{ .func = sk.log.func },
-        .win32_console_attach = true,
-        .init_cb = init,
-        .frame_cb = frame,
-        .cleanup_cb = cleanup,
+        .title = "学习 sokol",
+        .init = init,
+        .event = event,
+        .frame = frame,
+        .deinit = deinit,
     });
 }

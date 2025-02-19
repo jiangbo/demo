@@ -24,26 +24,43 @@ pub const Camera = struct {
     }
 };
 
+pub const BatchInstance = shd.Batchinstance;
+pub const UniformParams = shd.VsParams;
+pub const Image = sk.gfx.Image;
+pub const Texture = struct {
+    x: f32 = 0,
+    y: f32 = 0,
+    width: u32,
+    height: u32,
+    value: sk.gfx.Image,
+
+    pub fn init(width: u32, height: u32, data: []u8) Texture {
+        const image = sk.gfx.allocImage();
+
+        sk.gfx.initImage(image, .{
+            .width = @as(i32, @intCast(width)),
+            .height = @as(i32, @intCast(height)),
+            .pixel_format = .RGBA8,
+            .data = init: {
+                var imageData = sk.gfx.ImageData{};
+                imageData.subimage[0][0] = sk.gfx.asRange(data);
+                break :init imageData;
+            },
+        });
+
+        return .{ .width = width, .height = height, .value = image };
+    }
+};
+
 pub const Color = sk.gfx.Color;
 pub const Buffer = sk.gfx.Buffer;
 
 pub const BindGroup = struct {
     value: sk.gfx.Bindings = .{},
+    uniform: shd.VsParams = undefined,
 
-    pub fn bindImage(self: *BindGroup, width: u32, height: u32, data: []u8) void {
-        self.value.images[shd.IMG_tex] = sk.gfx.allocImage();
-
-        sk.gfx.initImage(self.value.images[shd.IMG_tex], .{
-            .width = @as(i32, @intCast(width)),
-            .height = @as(i32, @intCast(height)),
-            .pixel_format = .RGBA8,
-            .data = init: {
-                var image = sk.gfx.ImageData{};
-                image.subimage[0][0] = sk.gfx.asRange(data);
-                break :init image;
-            },
-        });
-
+    pub fn bindTexture(self: *BindGroup, texture: Texture) void {
+        self.value.images[shd.IMG_tex] = texture.value;
         self.value.samplers[shd.SMP_smp] = sk.gfx.makeSampler(.{
             .min_filter = .LINEAR,
             .mag_filter = .LINEAR,
@@ -64,24 +81,22 @@ pub const BindGroup = struct {
             .data = sk.gfx.asRange(storageBuffer),
         });
     }
+
+    pub fn bindUniformBuffer(self: *BindGroup, uniform: UniformParams) void {
+        self.uniform = uniform;
+    }
 };
 
-pub const CommandEncoder = struct {
-    pub fn beginRenderPass(self: *CommandEncoder, color: Color) RenderPass {
-        _ = self;
+pub const CommandEncoder = struct {};
+
+pub const RenderPass = struct {
+    pub fn begin(color: Color) RenderPass {
         var action = sk.gfx.PassAction{};
         action.colors[0] = .{ .clear_value = color };
         sk.gfx.beginPass(.{ .action = action, .swapchain = sk.glue.swapchain() });
         return RenderPass{};
     }
 
-    pub fn finish(self: *CommandEncoder) void {
-        _ = self;
-        sk.gfx.commit();
-    }
-};
-
-pub const RenderPass = struct {
     pub fn setPipeline(self: *RenderPass, pipeline: RenderPipeline) void {
         _ = self;
         sk.gfx.applyPipeline(pipeline.value);
@@ -91,6 +106,7 @@ pub const RenderPass = struct {
         _ = self;
         _ = index;
         sk.gfx.applyBindings(group.value);
+        sk.gfx.applyUniforms(shd.UB_vs_params, sk.gfx.asRange(&group.uniform));
     }
 
     pub fn draw(self: *RenderPass, number: u32) void {
@@ -101,6 +117,7 @@ pub const RenderPass = struct {
     pub fn end(self: *RenderPass) void {
         _ = self;
         sk.gfx.endPass();
+        sk.gfx.commit();
     }
 };
 
@@ -122,3 +139,52 @@ pub const RenderPipeline = struct {
         return texturePipeline.?;
     }
 };
+
+pub const Event = sk.app.Event;
+pub const RunInfo = struct {
+    width: u16,
+    height: u16,
+    title: [:0]const u8,
+    init: *const fn () void,
+    frame: *const fn () void,
+    event: *const fn (?*const Event) void,
+    deinit: *const fn () void,
+};
+
+var runInfo: RunInfo = undefined;
+pub fn run(info: RunInfo) void {
+    runInfo = info;
+    sk.app.run(.{
+        .width = info.width,
+        .height = info.height,
+        .window_title = info.title,
+        .logger = .{ .func = sk.log.func },
+        .win32_console_attach = true,
+        .high_dpi = true,
+        .init_cb = init,
+        .event_cb = event,
+        .frame_cb = frame,
+        .cleanup_cb = cleanup,
+    });
+}
+
+export fn init() void {
+    sk.gfx.setup(.{
+        .environment = sk.glue.environment(),
+        .logger = .{ .func = sk.log.func },
+    });
+    runInfo.init();
+}
+
+export fn event(evt: ?*const Event) void {
+    runInfo.event(evt);
+}
+
+export fn frame() void {
+    runInfo.frame();
+}
+
+export fn cleanup() void {
+    sk.gfx.shutdown();
+    runInfo.deinit();
+}
