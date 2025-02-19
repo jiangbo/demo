@@ -6,10 +6,7 @@ const gfx = @import("graphics.zig");
 
 const shd = @import("shader/test.glsl.zig");
 
-const clearColor: sk.gfx.Color = .{ .r = 1, .b = 1, .a = 1 };
-var info: sk.gfx.PassAction = undefined;
-var pipeline: sk.gfx.Pipeline = undefined;
-var bind: sk.gfx.Bindings = undefined;
+var bind: gfx.BindGroup = .{};
 
 var imageWidth: f32 = 0;
 var imageHeight: f32 = 0;
@@ -20,43 +17,15 @@ export fn init() void {
         .environment = sk.glue.environment(),
         .logger = .{ .func = sk.log.func },
     });
-    info.colors[0] = .{ .load_action = .CLEAR, .clear_value = clearColor };
 
     var image = stbi.Image.loadFromFile("assets/player.bmp", 4) catch unreachable;
     defer image.deinit();
     imageWidth = @floatFromInt(image.width);
     imageHeight = @floatFromInt(image.height);
 
-    bind.images[shd.IMG_tex] = sk.gfx.allocImage();
-    sk.gfx.initImage(bind.images[shd.IMG_tex], .{
-        .width = @intCast(image.width),
-        .height = @intCast(image.height),
-        .pixel_format = .RGBA8,
-        .data = init: {
-            var data = sk.gfx.ImageData{};
-            data.subimage[0][0] = sk.gfx.asRange(image.data);
-            break :init data;
-        },
-    });
-
-    bind.samplers[shd.SMP_smp] = sk.gfx.makeSampler(.{
-        .min_filter = .LINEAR,
-        .mag_filter = .LINEAR,
-    });
-
-    pipeline = sk.gfx.makePipeline(.{
-        .shader = sk.gfx.makeShader(shd.testShaderDesc(sk.gfx.queryBackend())),
-        .depth = .{
-            .compare = .LESS_EQUAL,
-            .write_enabled = true,
-        },
-    });
-
+    bind.bindImage(image.width, image.height, image.data);
     storageBuffer = allocator.alloc(shd.Batchinstance, NUMBER) catch unreachable;
-    bind.storage_buffers[0] = sk.gfx.makeBuffer(.{
-        .type = .STORAGEBUFFER,
-        .data = sk.gfx.asRange(storageBuffer),
-    });
+    bind.bindStorageBuffer(0, storageBuffer);
 
     const camera = gfx.Camera.init(width, height);
     params = shd.VsParams{ .vp = camera.vp() };
@@ -79,9 +48,13 @@ fn fillVertex(idx: usize, x: f32, y: f32, w: f32, h: f32) void {
 var params: shd.VsParams = undefined;
 
 export fn frame() void {
-    sk.gfx.beginPass(.{ .action = info, .swapchain = sk.glue.swapchain() });
+    var encoder = gfx.CommandEncoder{};
+    defer encoder.finish();
 
-    sk.gfx.applyPipeline(pipeline);
+    var renderPass = encoder.beginRenderPass(.{ .r = 1, .b = 1, .a = 1 });
+    defer renderPass.end();
+
+    renderPass.setPipeline(gfx.RenderPipeline.getTexturePipeline());
     sk.gfx.applyUniforms(shd.UB_vs_params, sk.gfx.asRange(&params));
 
     for (0..NUMBER) |i| {
@@ -90,17 +63,10 @@ export fn frame() void {
         fillVertex(i, x, y, imageWidth, imageHeight);
     }
 
-    sk.gfx.destroyBuffer(bind.storage_buffers[0]);
-    bind.storage_buffers[0] = sk.gfx.makeBuffer(.{
-        .type = .STORAGEBUFFER,
-        .data = sk.gfx.asRange(storageBuffer),
-    });
+    bind.updateStorageBuffer(0, storageBuffer);
+    renderPass.setBindGroup(0, bind);
 
-    sk.gfx.applyBindings(bind);
-    sk.gfx.draw(0, 6 * NUMBER, 1);
-
-    sk.gfx.endPass();
-    sk.gfx.commit();
+    renderPass.draw(6 * NUMBER);
 }
 
 export fn cleanup() void {
