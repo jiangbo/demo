@@ -30,8 +30,8 @@ pub const Image = sk.gfx.Image;
 pub const Texture = struct {
     x: f32 = 0,
     y: f32 = 0,
-    width: u32,
-    height: u32,
+    width: f32,
+    height: f32,
     value: sk.gfx.Image,
 
     pub fn init(width: u32, height: u32, data: []u8) Texture {
@@ -48,7 +48,11 @@ pub const Texture = struct {
             },
         });
 
-        return .{ .width = width, .height = height, .value = image };
+        return .{
+            .width = @floatFromInt(width),
+            .height = @floatFromInt(height),
+            .value = image,
+        };
     }
 };
 
@@ -105,8 +109,8 @@ pub const RenderPass = struct {
     pub fn setBindGroup(self: *RenderPass, index: u32, group: BindGroup) void {
         _ = self;
         _ = index;
-        sk.gfx.applyBindings(group.value);
         sk.gfx.applyUniforms(shd.UB_vs_params, sk.gfx.asRange(&group.uniform));
+        sk.gfx.applyBindings(group.value);
     }
 
     pub fn draw(self: *RenderPass, number: u32) void {

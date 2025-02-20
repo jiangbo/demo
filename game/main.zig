@@ -1,19 +1,16 @@
 const std = @import("std");
-const stbi = @import("stbi");
 const gfx = @import("graphics.zig");
 const cache = @import("cache.zig");
 
 var bind: gfx.BindGroup = .{};
 
-var imageWidth: f32 = 0;
-var imageHeight: f32 = 0;
 const NUMBER = 1;
 
 fn init() void {
     cache.init(allocator);
 
-    const texture = cache.TextureCache.get("assets/player.bmp");
-    bind.bindTexture(texture.?);
+    const texture = cache.TextureCache.get("assets/player.bmp").?;
+    bind.bindTexture(texture);
 
     storageBuffer = allocator.alloc(gfx.BatchInstance, NUMBER) catch unreachable;
     bind.bindStorageBuffer(0, storageBuffer);
@@ -40,10 +37,11 @@ fn frame() void {
     var renderPass = gfx.RenderPass.begin(.{ .r = 1, .b = 1, .a = 1 });
     defer renderPass.end();
 
+    const texture = cache.TextureCache.get("assets/player.bmp").?;
     for (0..NUMBER) |i| {
         const x = rand.float(f32) * width * 0;
         const y = rand.float(f32) * height * 0;
-        fillVertex(i, x, y, imageWidth, imageHeight);
+        fillVertex(i, x, y, texture.width, texture.height);
     }
 
     bind.updateStorageBuffer(0, storageBuffer);

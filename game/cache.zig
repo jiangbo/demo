@@ -1,7 +1,7 @@
 const std = @import("std");
 const gfx = @import("graphics.zig");
 
-var allocator: ?std.mem.Allocator = null;
+var allocator: std.mem.Allocator = undefined;
 
 pub fn init(alloc: std.mem.Allocator) void {
     allocator = alloc;
@@ -19,8 +19,8 @@ pub const TextureCache = struct {
     var cache: Cache = undefined;
 
     pub fn init() void {
-        cache = Cache.init(allocator.?);
-        stbi.init(allocator.?);
+        cache = Cache.init(allocator);
+        stbi.init(allocator);
     }
 
     pub fn get(path: [:0]const u8) ?gfx.Texture {
@@ -30,6 +30,7 @@ pub const TextureCache = struct {
         };
         if (entry.found_existing) return entry.value_ptr.*;
 
+        std.log.info("loading texture from: {s}", .{path});
         var image = stbi.Image.loadFromFile(path, 4) catch |e| {
             std.log.err("loading image error: {}", .{e});
             return null;
