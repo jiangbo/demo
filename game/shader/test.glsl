@@ -35,10 +35,9 @@ const vec2 vertexPos[4] = {
 
 void main() {
 
-    uint spriteIndex = gl_VertexIndex / 6;
-    uint vertexIndex = gl_VertexIndex % 6;
-    uint vert = triangleIndices[vertexIndex];
-    BatchInstance sprite = dataBuffer[spriteIndex];
+    const uint VertexIndex = uint(gl_VertexIndex);
+    uint vert = triangleIndices[VertexIndex % 6];
+    BatchInstance sprite = dataBuffer[VertexIndex / 6];
 
     vec4 uvwh = sprite.texcoord;
     vec2 texcoord[4] = {
@@ -53,7 +52,7 @@ void main() {
 
     vec2 coord = vertexPos[vert];
     coord *= vec2(sprite.width, sprite.height);
-    mat2 rotation = mat2(c, s, -s, c);
+    mat2 rotation = mat2(c, -s, s, c);
     coord = coord * rotation;
 
     vec3 coordWithDepth = vec3(coord + sprite.position.xy, sprite.position.z);
