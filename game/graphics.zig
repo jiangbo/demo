@@ -2,6 +2,8 @@ const std = @import("std");
 const zm = @import("zmath");
 const sk = @import("sokol");
 
+const context = @import("context.zig");
+
 const shd = @import("shader/test.glsl.zig");
 
 pub const Camera = struct {
@@ -65,25 +67,15 @@ pub const BindGroup = struct {
 
     pub fn bindTexture(self: *BindGroup, texture: Texture) void {
         self.value.images[shd.IMG_tex] = texture.value;
-        self.value.samplers[shd.SMP_smp] = sk.gfx.makeSampler(.{
-            .min_filter = .LINEAR,
-            .mag_filter = .LINEAR,
-        });
     }
 
-    pub fn bindStorageBuffer(self: *BindGroup, index: u32, storageBuffer: anytype) void {
-        self.value.storage_buffers[index] = sk.gfx.makeBuffer(.{
-            .type = .STORAGEBUFFER,
-            .data = sk.gfx.asRange(storageBuffer),
-        });
+    pub fn bindStorageBuffer(self: *BindGroup, index: u32, buffer: Buffer) void {
+        self.value.storage_buffers[index] = buffer;
     }
 
-    pub fn updateStorageBuffer(self: *BindGroup, index: u32, storageBuffer: anytype) void {
-        sk.gfx.destroyBuffer(self.value.storage_buffers[index]);
-        self.value.storage_buffers[index] = sk.gfx.makeBuffer(.{
-            .type = .STORAGEBUFFER,
-            .data = sk.gfx.asRange(storageBuffer),
-        });
+    pub fn updateStorageBuffer(self: *BindGroup, index: u32, buffer: anytype) void {
+        const range = sk.gfx.asRange(buffer);
+        sk.gfx.updateBuffer(self.value.storage_buffers[index], range);
     }
 
     pub fn bindUniformBuffer(self: *BindGroup, uniform: UniformParams) void {
@@ -106,9 +98,8 @@ pub const RenderPass = struct {
         sk.gfx.applyPipeline(pipeline.value);
     }
 
-    pub fn setBindGroup(self: *RenderPass, index: u32, group: BindGroup) void {
+    pub fn setBindGroup(self: *RenderPass, group: BindGroup) void {
         _ = self;
-        _ = index;
         sk.gfx.applyUniforms(shd.UB_vs_params, sk.gfx.asRange(&group.uniform));
         sk.gfx.applyBindings(group.value);
     }
@@ -122,6 +113,97 @@ pub const RenderPass = struct {
         _ = self;
         sk.gfx.endPass();
         sk.gfx.commit();
+    }
+};
+
+pub const Sampler = struct {
+    value: sk.gfx.Sampler,
+
+    pub fn liner() Sampler {
+        const sampler = sk.gfx.makeSampler(.{
+            .min_filter = .LINEAR,
+            .mag_filter = .LINEAR,
+        });
+        return .{ .value = sampler };
+    }
+
+    pub fn nearest() Sampler {
+        const sampler = sk.gfx.makeSampler(.{
+            .min_filter = .NEAREST,
+            .mag_filter = .NEAREST,
+        });
+        return .{ .value = sampler };
+    }
+};
+
+const Allocator = std.mem.Allocator;
+
+pub const BatchBuffer = struct {
+    const size: usize = 100;
+
+    cpu: std.ArrayListUnmanaged(BatchInstance),
+    gpu: Buffer,
+
+    pub fn init(alloc: Allocator) Allocator.Error!BatchBuffer {
+        return .{
+            .cpu = try std.ArrayListUnmanaged(BatchInstance).initCapacity(alloc, size),
+            .gpu = sk.gfx.makeBuffer(.{
+                .type = .STORAGEBUFFER,
+                .usage = .DYNAMIC,
+                .size = size * @sizeOf(BatchInstance),
+            }),
+        };
+    }
+
+    pub fn deinit(self: *BatchBuffer, alloc: Allocator) void {
+        self.cpu.deinit(alloc);
+    }
+};
+
+pub const TextureBatch = struct {
+    bind: BindGroup,
+    texture: Texture,
+    pipeline: RenderPipeline,
+    renderPass: RenderPass,
+    buffer: BatchBuffer,
+
+    pub fn begin(tex: Texture) TextureBatch {
+        var textureBatch = TextureBatch{
+            .bind = .{},
+            .pipeline = RenderPipeline.getTexturePipeline(),
+            .texture = tex,
+            .renderPass = RenderPass.begin(context.clearColor),
+            .buffer = context.batchBuffer,
+        };
+
+        textureBatch.bind.bindUniformBuffer(UniformParams{ .vp = context.camera.vp() });
+        textureBatch.bind.bindStorageBuffer(0, textureBatch.buffer.gpu);
+        textureBatch.bind.bindTexture(tex);
+
+        const sampler = context.textureSampler.value;
+        textureBatch.bind.value.samplers[shd.SMP_smp] = sampler;
+
+        return textureBatch;
+    }
+
+    pub fn draw(self: *TextureBatch, x: f32, y: f32) void {
+        self.buffer.cpu.appendAssumeCapacity(.{
+            .position = .{ x, y, 0.5, 1.0 },
+            .rotation = 0.0,
+            .width = self.texture.width,
+            .height = self.texture.height,
+            .padding = 0.0,
+            .texcoord = .{ 0.0, 0.0, 1.0, 1.0 },
+            .color = .{ 1.0, 1.0, 1.0, 1.0 },
+        });
+    }
+
+    pub fn end(self: *TextureBatch) void {
+        self.renderPass.setPipeline(self.pipeline);
+        self.bind.updateStorageBuffer(0, self.buffer.cpu.items);
+        self.renderPass.setBindGroup(self.bind);
+        self.renderPass.draw(6 * @as(u32, @intCast(self.buffer.cpu.items.len)));
+        self.renderPass.end();
     }
 };
 
@@ -146,9 +228,6 @@ pub const RenderPipeline = struct {
 
 pub const Event = sk.app.Event;
 pub const RunInfo = struct {
-    width: u16,
-    height: u16,
-    title: [:0]const u8,
     init: *const fn () void,
     frame: *const fn () void,
     event: *const fn (?*const Event) void,
@@ -159,9 +238,9 @@ var runInfo: RunInfo = undefined;
 pub fn run(info: RunInfo) void {
     runInfo = info;
     sk.app.run(.{
-        .width = info.width,
-        .height = info.height,
-        .window_title = info.title,
+        .width = @as(i32, @intFromFloat(context.width)),
+        .height = @as(i32, @intFromFloat(context.height)),
+        .window_title = context.title,
         .logger = .{ .func = sk.log.func },
         .win32_console_attach = true,
         .high_dpi = true,

@@ -1,54 +1,27 @@
 const std = @import("std");
 const gfx = @import("graphics.zig");
 const cache = @import("cache.zig");
-
-var bind: gfx.BindGroup = .{};
-
-const NUMBER = 1;
+const context = @import("context.zig");
 
 fn init() void {
+    const allocator = context.allocator;
     cache.init(allocator);
 
-    const texture = cache.TextureCache.get("assets/player.bmp").?;
-    bind.bindTexture(texture);
+    context.camera = gfx.Camera.init(context.width, context.height);
+    _ = cache.TextureCache.get("assets/player.bmp").?;
+    context.textureSampler = gfx.Sampler.liner();
 
-    storageBuffer = allocator.alloc(gfx.BatchInstance, NUMBER) catch unreachable;
-    bind.bindStorageBuffer(0, storageBuffer);
-
-    const camera = gfx.Camera.init(width, height);
-    bind.bindUniformBuffer(gfx.UniformParams{ .vp = camera.vp() });
-}
-
-var storageBuffer: []gfx.BatchInstance = undefined;
-
-fn fillVertex(idx: usize, x: f32, y: f32, w: f32, h: f32) void {
-    storageBuffer[idx] = .{
-        .position = .{ x, y, 0.5, 1.0 },
-        .rotation = 0.0,
-        .width = w,
-        .height = h,
-        .padding = 0.0,
-        .texcoord = .{ 0.0, 0.0, 1.0, 1.0 },
-        .color = .{ 1.0, 1.0, 1.0, 1.0 },
-    };
+    context.batchBuffer = gfx.BatchBuffer.init(allocator) catch unreachable;
 }
 
 fn frame() void {
-    var renderPass = gfx.RenderPass.begin(.{ .r = 1, .b = 1, .a = 1 });
-    defer renderPass.end();
-
     const texture = cache.TextureCache.get("assets/player.bmp").?;
-    for (0..NUMBER) |i| {
-        const x = rand.float(f32) * width * 0;
-        const y = rand.float(f32) * height * 0;
-        fillVertex(i, x, y, texture.width, texture.height);
-    }
 
-    bind.updateStorageBuffer(0, storageBuffer);
-    renderPass.setPipeline(gfx.RenderPipeline.getTexturePipeline());
-    renderPass.setBindGroup(0, bind);
+    var batch = gfx.TextureBatch.begin(texture);
+    defer batch.end();
 
-    renderPass.draw(6 * NUMBER);
+    batch.draw(0, 0);
+    batch.draw(200, 200);
 }
 
 fn event(evt: ?*const gfx.Event) void {
@@ -56,29 +29,19 @@ fn event(evt: ?*const gfx.Event) void {
 }
 
 fn deinit() void {
-    allocator.free(storageBuffer);
     cache.deinit();
+    context.batchBuffer.deinit(context.allocator);
 }
-
-const width = 640;
-const height = 480;
-var rand: std.Random = undefined;
-var allocator: std.mem.Allocator = undefined;
 
 pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
-    allocator = gpa.allocator();
+    context.allocator = gpa.allocator();
+
+    context.width = 640;
+    context.height = 480;
 
     var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
-    rand = prng.random();
-    gfx.run(.{
-        .width = width,
-        .height = height,
-        .title = "学习 sokol",
-        .init = init,
-        .event = event,
-        .frame = frame,
-        .deinit = deinit,
-    });
+    context.rand = prng.random();
+    gfx.run(.{ .init = init, .event = event, .frame = frame, .deinit = deinit });
 }
