@@ -23,7 +23,7 @@ pub const TextureCache = struct {
         stbi.init(allocator);
     }
 
-    pub fn get(path: [:0]const u8) ?gfx.Texture {
+    pub fn load(path: [:0]const u8) ?gfx.Texture {
         const entry = cache.getOrPut(path) catch |e| {
             std.log.err("texture cache allocate error: {}", .{e});
             return null;

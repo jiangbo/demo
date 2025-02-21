@@ -2,29 +2,28 @@ const std = @import("std");
 const gfx = @import("graphics.zig");
 const cache = @import("cache.zig");
 const context = @import("context.zig");
+const window = @import("window.zig");
 
 fn init() void {
     const allocator = context.allocator;
     cache.init(allocator);
 
     context.camera = gfx.Camera.init(context.width, context.height);
-    _ = cache.TextureCache.get("assets/player.bmp").?;
     context.textureSampler = gfx.Sampler.liner();
 
     context.batchBuffer = gfx.BatchBuffer.init(allocator) catch unreachable;
 }
 
 fn frame() void {
-    const texture = cache.TextureCache.get("assets/player.bmp").?;
+    const texture = cache.TextureCache.load("assets/img/background.png").?;
 
     var batch = gfx.TextureBatch.begin(texture);
     defer batch.end();
 
     batch.draw(0, 0);
-    batch.draw(200, 200);
 }
 
-fn event(evt: ?*const gfx.Event) void {
+fn event(evt: ?*const window.Event) void {
     _ = evt;
 }
 
@@ -38,10 +37,10 @@ pub fn main() void {
     defer _ = gpa.deinit();
     context.allocator = gpa.allocator();
 
-    context.width = 640;
-    context.height = 480;
+    context.width = 1280;
+    context.height = 720;
 
     var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
     context.rand = prng.random();
-    gfx.run(.{ .init = init, .event = event, .frame = frame, .deinit = deinit });
+    window.run(.{ .init = init, .event = event, .frame = frame, .deinit = deinit });
 }
