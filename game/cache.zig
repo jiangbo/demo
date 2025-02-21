@@ -40,11 +40,16 @@ pub const TextureCache = struct {
 
         const texture = gfx.Texture.init(image.width, image.height, image.data);
         entry.value_ptr.* = texture;
+        entry.key_ptr.* = allocator.dupe(u8, path) catch unreachable;
         return texture;
     }
 
     pub fn deinit() void {
         stbi.deinit();
+        var keyIter = cache.keyIterator();
+        while (keyIter.next()) |key| {
+            std.testing.allocator.free(key.*);
+        }
         cache.deinit();
     }
 };

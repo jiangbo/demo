@@ -76,7 +76,12 @@ pub const BindGroup = struct {
     }
 };
 
-pub const CommandEncoder = struct {};
+pub const CommandEncoder = struct {
+    pub fn submit(self: *CommandEncoder) void {
+        _ = self;
+        sk.gfx.commit();
+    }
+};
 
 pub const RenderPass = struct {
     pub fn begin(color: Color) RenderPass {
@@ -105,7 +110,6 @@ pub const RenderPass = struct {
     pub fn end(self: *RenderPass) void {
         _ = self;
         sk.gfx.endPass();
-        sk.gfx.commit();
     }
 };
 
