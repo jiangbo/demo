@@ -3,8 +3,8 @@
     .version = "0.0.0",
     .dependencies = .{
         .sokol = .{
-            .url = "git+https://github.com/floooh/sokol-zig.git#9a02a991ce8374f1664ca3fbf8483d2d7ded84d2",
-            .hash = "12205fe90783eed8f7ab3423f83cd84094c53f93fa6c342021203301061d6df1f412",
+            .url = "git+https://github.com/floooh/sokol-zig.git#a292c3cea079c3c9de8a6b1c2fd79ddae472e088",
+            .hash = "1220072a0988c8ce53680094a04a6513cce6854d8f838a2a17d34bf9176da73023a2",
         },
         .zstbi = .{
             .url = "git+https://github.com/zig-gamedev/zstbi#bcbd249f3f57fb84d6d76f1bc621c7bd3bfaa4a2",

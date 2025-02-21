@@ -53,7 +53,11 @@ fn frame() void {
     var single = gfx.TextureSingle.begin(renderPass);
 
     single.draw(0, 0, background);
-    single.draw(100, 100, playerLeft[playerAnimationIndex]);
+    single.draw(500, 500, playerLeft[playerAnimationIndex]);
+
+    // var batch = gfx.TextureBatch.begin(renderPass, playerLeft[playerAnimationIndex]);
+    // batch.draw(0, 0);
+    // batch.end();
 }
 
 fn event(evt: ?*const window.Event) void {

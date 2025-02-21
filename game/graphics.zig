@@ -190,6 +190,15 @@ pub const TextureBatch = struct {
 
         pipeline = pipeline orelse RenderPipeline{ .value = sk.gfx.makePipeline(.{
             .shader = sk.gfx.makeShader(batch.batchShaderDesc(sk.gfx.queryBackend())),
+            .colors = init: {
+                var c: [4]sk.gfx.ColorTargetState = @splat(.{});
+                c[0] = .{ .blend = .{
+                    .enabled = true,
+                    .src_factor_rgb = .SRC_ALPHA,
+                    .dst_factor_rgb = .ONE_MINUS_SRC_ALPHA,
+                } };
+                break :init c;
+            },
             .depth = .{
                 .compare = .LESS_EQUAL,
                 .write_enabled = true,
@@ -235,10 +244,10 @@ pub const TextureSingle = struct {
         vertexBuffer = vertexBuffer orelse sk.gfx.makeBuffer(.{
             .data = sk.gfx.asRange(&[_]f32{
                 // 顶点和颜色
-                0, 1, 0.5, 1.0, 1.0, 1.0, 0, 1,
-                1, 1, 0.5, 1.0, 1.0, 1.0, 1, 1,
-                1, 0, 0.5, 1.0, 1.0, 1.0, 1, 0,
-                0, 0, 0.5, 1.0, 1.0, 1.0, 0, 0,
+                0, 1, 0.5, 1.0, 1.0, 1.0, 1, 0, 1,
+                1, 1, 0.5, 1.0, 1.0, 1.0, 1, 1, 1,
+                1, 0, 0.5, 1.0, 1.0, 1.0, 1, 1, 0,
+                0, 0, 0.5, 1.0, 1.0, 1.0, 1, 0, 0,
             }),
         });
         self.bind.bindVertexBuffer(0, vertexBuffer.?);
@@ -251,21 +260,34 @@ pub const TextureSingle = struct {
 
         self.bind.bindSampler(single.SMP_smp, context.textureSampler);
 
-        pipeline = pipeline orelse RenderPipeline{ .value = sk.gfx.makePipeline(.{
-            .shader = sk.gfx.makeShader(single.singleShaderDesc(sk.gfx.queryBackend())),
-            .layout = init: {
-                var l = sk.gfx.VertexLayoutState{};
-                l.attrs[single.ATTR_single_position].format = .FLOAT3;
-                l.attrs[single.ATTR_single_color0].format = .FLOAT3;
-                l.attrs[single.ATTR_single_texcoord0].format = .FLOAT2;
-                break :init l;
-            },
-            .index_type = .UINT16,
-            .depth = .{
-                .compare = .LESS_EQUAL,
-                .write_enabled = true,
-            },
-        }) };
+        pipeline = pipeline orelse RenderPipeline{
+            .value = sk.gfx.makePipeline(.{
+                .shader = sk.gfx.makeShader(single.singleShaderDesc(sk.gfx.queryBackend())),
+                .layout = init: {
+                    var l = sk.gfx.VertexLayoutState{};
+                    l.attrs[single.ATTR_single_position].format = .FLOAT3;
+                    l.attrs[single.ATTR_single_color0].format = .FLOAT4;
+                    l.attrs[single.ATTR_single_texcoord0].format = .FLOAT2;
+                    break :init l;
+                },
+                .colors = init: {
+                    var c: [4]sk.gfx.ColorTargetState = @splat(.{});
+                    c[0] = .{
+                        .blend = .{
+                            .enabled = true,
+                            .src_factor_rgb = .SRC_ALPHA,
+                            .dst_factor_rgb = .ONE_MINUS_SRC_ALPHA,
+                        },
+                    };
+                    break :init c;
+                },
+                .index_type = .UINT16,
+                .depth = .{
+                    .compare = .LESS_EQUAL,
+                    .write_enabled = true,
+                },
+            }),
+        };
 
         return self;
     }
