@@ -47,9 +47,7 @@ pub const TextureCache = struct {
     pub fn deinit() void {
         stbi.deinit();
         var keyIter = cache.keyIterator();
-        while (keyIter.next()) |key| {
-            std.testing.allocator.free(key.*);
-        }
+        while (keyIter.next()) |key| allocator.free(key.*);
         cache.deinit();
     }
 };

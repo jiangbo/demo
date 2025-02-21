@@ -77,4 +77,4 @@ void main() {
 }
 @end
 
-@program test vs fs
+@program batch vs fs

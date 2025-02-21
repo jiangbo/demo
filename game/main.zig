@@ -10,8 +10,6 @@ var background: gfx.Texture = undefined;
 var playerLeft: [playerAnimationNumber]gfx.Texture = undefined;
 var playerRight: [playerAnimationNumber]gfx.Texture = undefined;
 
-const stbi = @import("stbi");
-
 fn init() void {
     const allocator = context.allocator;
     cache.init(allocator);
@@ -40,13 +38,22 @@ fn loadTexture(buffer: []u8, direction: []const u8, index: usize) ?gfx.Texture {
     return cache.TextureCache.load(path catch unreachable).?;
 }
 
-fn frame() void {
-    var encoder = gfx.CommandEncoder{};
-    defer encoder.submit();
+var frameCounter: usize = 0;
+var playerAnimationIndex: usize = 0;
 
-    var batch = gfx.TextureBatch.begin(background);
-    batch.draw(0, 0);
-    batch.end();
+fn frame() void {
+    frameCounter += 1;
+    if (frameCounter % 5 == 0) playerAnimationIndex += 1;
+
+    playerAnimationIndex %= playerAnimationNumber;
+
+    var renderPass = gfx.CommandEncoder.beginRenderPass(context.clearColor);
+    defer renderPass.submit();
+
+    var single = gfx.TextureSingle.begin(renderPass);
+
+    single.draw(0, 0, background);
+    single.draw(100, 100, playerLeft[playerAnimationIndex]);
 }
 
 fn event(evt: ?*const window.Event) void {

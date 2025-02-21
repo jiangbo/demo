@@ -3,8 +3,7 @@ const zm = @import("zmath");
 const sk = @import("sokol");
 
 const context = @import("context.zig");
-
-const shd = @import("shader/test.glsl.zig");
+const batch = @import("shader/batch.glsl.zig");
 
 pub const Camera = struct {
     proj: zm.Mat,
@@ -19,8 +18,8 @@ pub const Camera = struct {
     }
 };
 
-pub const BatchInstance = shd.Batchinstance;
-pub const UniformParams = shd.VsParams;
+pub const BatchInstance = batch.Batchinstance;
+pub const UniformParams = batch.VsParams;
 pub const Image = sk.gfx.Image;
 pub const Texture = struct {
     x: f32 = 0,
@@ -56,10 +55,22 @@ pub const Buffer = sk.gfx.Buffer;
 
 pub const BindGroup = struct {
     value: sk.gfx.Bindings = .{},
-    uniform: shd.VsParams = undefined,
+    uniform: batch.VsParams = undefined,
 
-    pub fn bindTexture(self: *BindGroup, texture: Texture) void {
-        self.value.images[shd.IMG_tex] = texture.value;
+    pub fn bindIndexBuffer(self: *BindGroup, buffer: Buffer) void {
+        self.value.index_buffer = buffer;
+    }
+
+    pub fn bindVertexBuffer(self: *BindGroup, index: u32, buffer: Buffer) void {
+        self.value.vertex_buffers[index] = buffer;
+    }
+
+    pub fn bindTexture(self: *BindGroup, index: u32, texture: Texture) void {
+        self.value.images[index] = texture.value;
+    }
+
+    pub fn bindSampler(self: *BindGroup, index: u32, sampler: Sampler) void {
+        self.value.samplers[index] = sampler.value;
     }
 
     pub fn bindStorageBuffer(self: *BindGroup, index: u32, buffer: Buffer) void {
@@ -77,9 +88,8 @@ pub const BindGroup = struct {
 };
 
 pub const CommandEncoder = struct {
-    pub fn submit(self: *CommandEncoder) void {
-        _ = self;
-        sk.gfx.commit();
+    pub fn beginRenderPass(color: Color) RenderPass {
+        return RenderPass.begin(color);
     }
 };
 
@@ -98,7 +108,7 @@ pub const RenderPass = struct {
 
     pub fn setBindGroup(self: *RenderPass, group: BindGroup) void {
         _ = self;
-        sk.gfx.applyUniforms(shd.UB_vs_params, sk.gfx.asRange(&group.uniform));
+        sk.gfx.applyUniforms(batch.UB_vs_params, sk.gfx.asRange(&group.uniform));
         sk.gfx.applyBindings(group.value);
     }
 
@@ -107,9 +117,10 @@ pub const RenderPass = struct {
         sk.gfx.draw(0, number, 1);
     }
 
-    pub fn end(self: *RenderPass) void {
+    pub fn submit(self: *RenderPass) void {
         _ = self;
         sk.gfx.endPass();
+        sk.gfx.commit();
     }
 };
 
@@ -158,27 +169,33 @@ pub const BatchBuffer = struct {
 };
 
 pub const TextureBatch = struct {
-    bind: BindGroup,
+    bind: BindGroup = .{},
     texture: Texture,
-    pipeline: RenderPipeline,
     renderPass: RenderPass,
     buffer: BatchBuffer,
 
-    pub fn begin(tex: Texture) TextureBatch {
+    var pipeline: ?RenderPipeline = null;
+
+    pub fn begin(renderPass: RenderPass, texture: Texture) TextureBatch {
         var textureBatch = TextureBatch{
-            .bind = .{},
-            .pipeline = RenderPipeline.getTexturePipeline(),
-            .texture = tex,
-            .renderPass = RenderPass.begin(context.clearColor),
+            .texture = texture,
+            .renderPass = renderPass,
             .buffer = context.batchBuffer,
         };
 
         textureBatch.bind.bindUniformBuffer(UniformParams{ .vp = context.camera.vp() });
         textureBatch.bind.bindStorageBuffer(0, textureBatch.buffer.gpu);
-        textureBatch.bind.bindTexture(tex);
+        textureBatch.bind.bindTexture(batch.IMG_tex, texture);
+        textureBatch.bind.bindSampler(batch.SMP_smp, context.textureSampler);
 
-        const sampler = context.textureSampler.value;
-        textureBatch.bind.value.samplers[shd.SMP_smp] = sampler;
+        pipeline = pipeline orelse RenderPipeline{ .value = sk.gfx.makePipeline(.{
+            .shader = sk.gfx.makeShader(batch.batchShaderDesc(sk.gfx.queryBackend())),
+            .depth = .{
+                .compare = .LESS_EQUAL,
+                .write_enabled = true,
+            },
+            .cull_mode = .BACK,
+        }) };
 
         return textureBatch;
     }
@@ -196,30 +213,82 @@ pub const TextureBatch = struct {
     }
 
     pub fn end(self: *TextureBatch) void {
-        self.renderPass.setPipeline(self.pipeline);
+        self.renderPass.setPipeline(pipeline.?);
         self.bind.updateStorageBuffer(0, self.buffer.cpu.items);
         self.renderPass.setBindGroup(self.bind);
         self.renderPass.draw(6 * @as(u32, @intCast(self.buffer.cpu.items.len)));
-        self.renderPass.end();
+    }
+};
+
+pub const TextureSingle = struct {
+    bind: BindGroup,
+    renderPass: RenderPass,
+
+    const single = @import("shader/single.glsl.zig");
+    var vertexBuffer: ?Buffer = null;
+    var indexBuffer: ?Buffer = null;
+    var pipeline: ?RenderPipeline = null;
+
+    pub fn begin(renderPass: RenderPass) TextureSingle {
+        var self = TextureSingle{ .bind = .{}, .renderPass = renderPass };
+
+        vertexBuffer = vertexBuffer orelse sk.gfx.makeBuffer(.{
+            .data = sk.gfx.asRange(&[_]f32{
+                // 顶点和颜色
+                0, 1, 0.5, 1.0, 1.0, 1.0, 0, 1,
+                1, 1, 0.5, 1.0, 1.0, 1.0, 1, 1,
+                1, 0, 0.5, 1.0, 1.0, 1.0, 1, 0,
+                0, 0, 0.5, 1.0, 1.0, 1.0, 0, 0,
+            }),
+        });
+        self.bind.bindVertexBuffer(0, vertexBuffer.?);
+
+        indexBuffer = indexBuffer orelse sk.gfx.makeBuffer(.{
+            .type = .INDEXBUFFER,
+            .data = sk.gfx.asRange(&[_]u16{ 0, 1, 2, 0, 2, 3 }),
+        });
+        self.bind.bindIndexBuffer(indexBuffer.?);
+
+        self.bind.bindSampler(single.SMP_smp, context.textureSampler);
+
+        pipeline = pipeline orelse RenderPipeline{ .value = sk.gfx.makePipeline(.{
+            .shader = sk.gfx.makeShader(single.singleShaderDesc(sk.gfx.queryBackend())),
+            .layout = init: {
+                var l = sk.gfx.VertexLayoutState{};
+                l.attrs[single.ATTR_single_position].format = .FLOAT3;
+                l.attrs[single.ATTR_single_color0].format = .FLOAT3;
+                l.attrs[single.ATTR_single_texcoord0].format = .FLOAT2;
+                break :init l;
+            },
+            .index_type = .UINT16,
+            .depth = .{
+                .compare = .LESS_EQUAL,
+                .write_enabled = true,
+            },
+        }) };
+
+        return self;
+    }
+
+    pub fn draw(self: *TextureSingle, x: f32, y: f32, tex: Texture) void {
+        const w = tex.width;
+        const h = tex.height;
+        const model = zm.mul(zm.scaling(w, h, 1), zm.translation(x, y, 0));
+        const params = UniformParams{ .vp = zm.mul(model, context.camera.vp()) };
+        self.bind.bindUniformBuffer(params);
+
+        self.renderPass.setPipeline(pipeline.?);
+        self.bind.bindTexture(single.IMG_tex, tex);
+        self.renderPass.setBindGroup(self.bind);
+        sk.gfx.draw(0, 6, 1);
+    }
+
+    pub fn end(self: *TextureSingle) void {
+        _ = self;
+        sk.gfx.endPass();
     }
 };
 
 pub const RenderPipeline = struct {
     value: sk.gfx.Pipeline,
-    pub var texturePipeline: ?RenderPipeline = null;
-
-    pub fn getTexturePipeline() RenderPipeline {
-        if (texturePipeline) |p| return p;
-
-        const pip = sk.gfx.makePipeline(.{
-            .shader = sk.gfx.makeShader(shd.testShaderDesc(sk.gfx.queryBackend())),
-            .depth = .{
-                .compare = .LESS_EQUAL,
-                .write_enabled = true,
-            },
-            .cull_mode = .BACK,
-        });
-        texturePipeline = RenderPipeline{ .value = pip };
-        return texturePipeline.?;
-    }
 };
