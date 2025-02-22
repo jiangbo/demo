@@ -14,6 +14,7 @@ pub const FrameAnimation = struct {
     pub fn load(comptime pathFmt: []const u8, count: u32, interval: f32) ?FrameAnimation {
         if (count <= 0 or count > maxFrame) {
             std.log.warn("frame count must be (0, {}], actual: {}", .{ maxFrame, count });
+            return null;
         }
 
         var self = FrameAnimation{ .interval = interval, .count = count };
@@ -32,12 +33,15 @@ pub const FrameAnimation = struct {
         return self;
     }
 
-    pub fn currentOrNext(self: *FrameAnimation, delta: f32) gfx.Texture {
+    pub fn play(self: *FrameAnimation, delta: f32) void {
         self.timer += delta;
         if (self.timer >= self.interval) {
             self.current = (self.current + 1) % self.count;
             self.timer = 0;
         }
+    }
+
+    pub fn currentTexture(self: FrameAnimation) gfx.Texture {
         return self.frames[self.current];
     }
 };

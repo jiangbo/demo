@@ -5,11 +5,9 @@ const context = @import("context.zig");
 const window = @import("window.zig");
 const animation = @import("animation.zig");
 
-const playerAnimationNumber = 6;
+const Player = @import("player.zig").Player;
 
 var background: gfx.Texture = undefined;
-var playerLeft: animation.FrameAnimation = undefined;
-var playerRight: animation.FrameAnimation = undefined;
 
 fn init() void {
     const allocator = context.allocator;
@@ -24,23 +22,66 @@ fn init() void {
     background = cache.TextureCache.load("assets/img/background.png").?;
 
     // 加载角色
-    const leftFmt: []const u8 = "assets/img/player_left_{}.png";
-    playerLeft = animation.FrameAnimation.load(leftFmt, 6, 50).?;
+    player = Player.init();
 
-    const rightFmt = "assets/img/player_right_{}.png";
-    playerRight = animation.FrameAnimation.load(rightFmt, 6, 50).?;
+    // 加载敌人
+    enemy = Enemy.init();
 }
 
-const Vector2 = struct { x: f32 = 0, y: f32 = 0 };
+const Enemy = struct {
+    x: f32 = 400,
+    y: f32 = 400,
+    leftAnimation: animation.FrameAnimation,
+    rightAnimation: animation.FrameAnimation,
+    shadow: gfx.Texture,
+    faceLeft: bool = true,
 
-var playerPosition: Vector2 = .{ .x = 500, .y = 500 }; // 角色初始位置
-const playerSpeed: f32 = 3; // 角色移动速度
+    pub fn init() Enemy {
+        const leftFmt: []const u8 = "assets/img/enemy_left_{}.png";
+        const left = animation.FrameAnimation.load(leftFmt, 6, 50).?;
+
+        const rightFmt = "assets/img/enemy_right_{}.png";
+        const right = animation.FrameAnimation.load(rightFmt, 6, 50).?;
+
+        return .{
+            .leftAnimation = left,
+            .rightAnimation = right,
+            .shadow = cache.TextureCache.load("assets/img/shadow_enemy.png").?,
+        };
+    }
+
+    pub fn update(self: *Enemy, delta: f32) void {
+        if (self.faceLeft)
+            self.leftAnimation.play(delta)
+        else
+            self.rightAnimation.play(delta);
+    }
+
+    pub fn currentTexture(self: Enemy) gfx.Texture {
+        if (self.faceLeft) {
+            return self.leftAnimation.currentTexture();
+        } else {
+            return self.rightAnimation.currentTexture();
+        }
+    }
+
+    pub fn shadowX(self: Enemy) f32 {
+        const w = self.currentTexture().width - self.shadow.width;
+        return self.x + w / 2;
+    }
+
+    pub fn shadowY(self: Enemy) f32 {
+        return self.y + self.currentTexture().height - 25;
+    }
+};
+
+var player: Player = undefined;
+var enemy: Enemy = undefined;
 
 fn frame() void {
-    if (moveUp) playerPosition.y -= playerSpeed;
-    if (moveDown) playerPosition.y += playerSpeed;
-    if (moveLeft) playerPosition.x -= playerSpeed;
-    if (moveRight) playerPosition.x += playerSpeed;
+    const delta = window.deltaMillisecond();
+    player.update(delta);
+    enemy.update(delta);
 
     var renderPass = gfx.CommandEncoder.beginRenderPass(context.clearColor);
     defer renderPass.submit();
@@ -49,33 +90,15 @@ fn frame() void {
 
     single.draw(0, 0, background);
 
-    const delta = window.deltaMillisecond();
-    single.draw(playerPosition.x, playerPosition.y, playerRight.currentOrNext(delta));
+    single.draw(enemy.shadowX(), enemy.shadowY(), enemy.shadow);
+    single.draw(enemy.x, enemy.y, enemy.currentTexture());
 
-    // var batch = gfx.TextureBatch.begin(renderPass, playerLeft[playerAnimationIndex]);
-    // batch.draw(0, 0);
-    // batch.end();
+    single.draw(player.shadowX(), player.shadowY(), player.shadow);
+    single.draw(player.x, player.y, player.currentTexture());
 }
 
-var moveUp: bool = false;
-var moveDown: bool = false;
-var moveLeft: bool = false;
-var moveRight: bool = false;
-
 fn event(evt: ?*const window.Event) void {
-    if (evt) |e| if (e.type == .KEY_DOWN) switch (e.key_code) {
-        .W => moveUp = true,
-        .S => moveDown = true,
-        .A => moveLeft = true,
-        .D => moveRight = true,
-        else => {},
-    } else if (e.type == .KEY_UP) switch (e.key_code) {
-        .W => moveUp = false,
-        .S => moveDown = false,
-        .A => moveLeft = false,
-        .D => moveRight = false,
-        else => {},
-    };
+    if (evt) |e| player.processEvent(e);
 }
 
 fn deinit() void {
