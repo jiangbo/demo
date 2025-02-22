@@ -11,6 +11,10 @@ pub const RunInfo = struct {
     deinit: *const fn () void,
 };
 
+pub fn deltaMillisecond() f32 {
+    return @floatCast(sk.app.frameDuration() * 1000);
+}
+
 var runInfo: RunInfo = undefined;
 pub fn run(info: RunInfo) void {
     runInfo = info;
