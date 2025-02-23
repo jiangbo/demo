@@ -11,8 +11,10 @@ pub const RunInfo = struct {
     deinit: *const fn () void,
 };
 
+var timer: std.time.Timer = undefined;
+var deltaTime: f32 = 0;
 pub fn deltaMillisecond() f32 {
-    return @floatCast(sk.app.frameDuration() * 1000);
+    return deltaTime;
 }
 
 var runInfo: RunInfo = undefined;
@@ -36,6 +38,7 @@ export fn init() void {
         .environment = sk.glue.environment(),
         .logger = .{ .func = sk.log.func },
     });
+    timer = std.time.Timer.start() catch unreachable;
     runInfo.init();
 }
 
@@ -44,6 +47,8 @@ export fn event(evt: ?*const Event) void {
 }
 
 export fn frame() void {
+    const nano: f32 = @floatFromInt(timer.lap());
+    deltaTime = nano / std.time.ns_per_ms;
     runInfo.frame();
 }
 

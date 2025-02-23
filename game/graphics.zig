@@ -77,8 +77,8 @@ pub const BindGroup = struct {
         self.value.storage_buffers[index] = buffer;
     }
 
-    pub fn updateStorageBuffer(self: *BindGroup, index: u32, buffer: anytype) void {
-        const range = sk.gfx.asRange(buffer);
+    pub fn updateStorageBuffer(self: *BindGroup, index: u32, data: anytype) void {
+        const range = sk.gfx.asRange(data);
         sk.gfx.updateBuffer(self.value.storage_buffers[index], range);
     }
 
@@ -234,23 +234,11 @@ pub const TextureSingle = struct {
     renderPass: RenderPass,
 
     const single = @import("shader/single.glsl.zig");
-    var vertexBuffer: ?Buffer = null;
     var indexBuffer: ?Buffer = null;
     var pipeline: ?RenderPipeline = null;
 
     pub fn begin(renderPass: RenderPass) TextureSingle {
         var self = TextureSingle{ .bind = .{}, .renderPass = renderPass };
-
-        vertexBuffer = vertexBuffer orelse sk.gfx.makeBuffer(.{
-            .data = sk.gfx.asRange(&[_]f32{
-                // 顶点和颜色
-                0, 1, 0.5, 1.0, 1.0, 1.0, 1, 0, 1,
-                1, 1, 0.5, 1.0, 1.0, 1.0, 1, 1, 1,
-                1, 0, 0.5, 1.0, 1.0, 1.0, 1, 1, 0,
-                0, 0, 0.5, 1.0, 1.0, 1.0, 1, 0, 0,
-            }),
-        });
-        self.bind.bindVertexBuffer(0, vertexBuffer.?);
 
         indexBuffer = indexBuffer orelse sk.gfx.makeBuffer(.{
             .type = .INDEXBUFFER,
@@ -266,7 +254,7 @@ pub const TextureSingle = struct {
                 .layout = init: {
                     var l = sk.gfx.VertexLayoutState{};
                     l.attrs[single.ATTR_single_position].format = .FLOAT3;
-                    l.attrs[single.ATTR_single_color0].format = .FLOAT4;
+                    l.attrs[single.ATTR_single_color0].format = .FLOAT3;
                     l.attrs[single.ATTR_single_texcoord0].format = .FLOAT2;
                     break :init l;
                 },
@@ -293,16 +281,25 @@ pub const TextureSingle = struct {
     }
 
     pub fn draw(self: *TextureSingle, x: f32, y: f32, tex: Texture) void {
-        const w = tex.width;
-        const h = tex.height;
-        const model = zm.mul(zm.scaling(w, h, 1), zm.translation(x, y, 0));
-        const params = UniformParams{ .vp = zm.mul(model, context.camera.vp()) };
+        const vertexBuffer = sk.gfx.makeBuffer(.{
+            .data = sk.gfx.asRange(&[_]f32{
+                // 顶点和颜色
+                x,             y + tex.height, 0.5, 1.0, 1.0, 1.0, 0, 1,
+                x + tex.width, y + tex.height, 0.5, 1.0, 1.0, 1.0, 1, 1,
+                x + tex.width, y,              0.5, 1.0, 1.0, 1.0, 1, 0,
+                x,             y,              0.5, 1.0, 1.0, 1.0, 0, 0,
+            }),
+        });
+
+        const params = UniformParams{ .vp = context.camera.vp() };
         self.bind.bindUniformBuffer(params);
+        self.bind.bindVertexBuffer(0, vertexBuffer);
 
         self.renderPass.setPipeline(pipeline.?);
         self.bind.bindTexture(single.IMG_tex, tex);
         self.renderPass.setBindGroup(self.bind);
         sk.gfx.draw(0, 6, 1);
+        sk.gfx.destroyBuffer(vertexBuffer);
     }
 
     pub fn end(self: *TextureSingle) void {

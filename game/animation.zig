@@ -2,25 +2,18 @@ const std = @import("std");
 const gfx = @import("graphics.zig");
 const cache = @import("cache.zig");
 
-pub const FrameAnimation = struct {
+pub const FixedSizeFrameAnimation = struct {
     interval: f32,
-    frames: [maxFrame]gfx.Texture = undefined,
-    count: u32,
     current: u32 = 0,
     timer: f32 = 0,
+    frames: [maxFrame]gfx.Texture,
 
-    const maxFrame = 10;
+    const maxFrame = 6;
 
-    pub fn load(comptime pathFmt: []const u8, count: u32, interval: f32) ?FrameAnimation {
-        if (count <= 0 or count > maxFrame) {
-            std.log.warn("frame count must be (0, {}], actual: {}", .{ maxFrame, count });
-            return null;
-        }
-
-        var self = FrameAnimation{ .interval = interval, .count = count };
-
+    pub fn load(comptime pathFmt: []const u8, interval: f32) ?@This() {
+        var self = @This(){ .frames = undefined, .interval = interval };
         var buffer: [64]u8 = undefined;
-        for (0..count) |index| {
+        for (0..maxFrame) |index| {
             const path = std.fmt.bufPrintZ(&buffer, pathFmt, .{index}) catch |e| {
                 std.log.warn("frame animation path error: {}", .{e});
                 return null;
@@ -33,15 +26,20 @@ pub const FrameAnimation = struct {
         return self;
     }
 
-    pub fn play(self: *FrameAnimation, delta: f32) void {
+    pub fn play(self: *@This(), delta: f32) void {
         self.timer += delta;
         if (self.timer >= self.interval) {
-            self.current = (self.current + 1) % self.count;
+            self.current = (self.current + 1) % @as(u32, @intCast(self.frames.len));
             self.timer = 0;
         }
     }
 
-    pub fn currentTexture(self: FrameAnimation) gfx.Texture {
+    pub fn currentTexture(self: @This()) gfx.Texture {
         return self.frames[self.current];
     }
+};
+
+pub const FrameAnimation = struct {
+    left: FixedSizeFrameAnimation,
+    right: FixedSizeFrameAnimation,
 };

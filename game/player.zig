@@ -10,8 +10,7 @@ pub const Player = struct {
     y: f32 = 500,
     speed: f32 = 0.4,
     faceLeft: bool = true,
-    leftAnimation: animation.FrameAnimation,
-    rightAnimation: animation.FrameAnimation,
+    animation: animation.FrameAnimation,
     shadow: gfx.Texture,
     moveUp: bool = false,
     moveDown: bool = false,
@@ -20,14 +19,13 @@ pub const Player = struct {
 
     pub fn init() Player {
         const leftFmt: []const u8 = "assets/img/player_left_{}.png";
-        const left = animation.FrameAnimation.load(leftFmt, 6, 50).?;
+        const left = animation.FixedSizeFrameAnimation.load(leftFmt, 50).?;
 
         const rightFmt = "assets/img/player_right_{}.png";
-        const right = animation.FrameAnimation.load(rightFmt, 6, 50).?;
+        const right = animation.FixedSizeFrameAnimation.load(rightFmt, 50).?;
 
         return .{
-            .leftAnimation = left,
-            .rightAnimation = right,
+            .animation = .{ .left = left, .right = right },
             .shadow = cache.TextureCache.load("assets/img/shadow_player.png").?,
         };
     }
@@ -66,25 +64,24 @@ pub const Player = struct {
         if (self.moveRight) self.faceLeft = false;
 
         if (self.faceLeft)
-            self.leftAnimation.play(delta)
+            self.animation.left.play(delta)
         else
-            self.rightAnimation.play(delta);
+            self.animation.right.play(delta);
     }
 
     pub fn currentTexture(self: Player) gfx.Texture {
-        if (self.faceLeft) {
-            return self.leftAnimation.currentTexture();
-        } else {
-            return self.rightAnimation.currentTexture();
-        }
+        return if (self.faceLeft)
+            self.animation.left.currentTexture()
+        else
+            self.animation.right.currentTexture();
     }
 
-    pub fn shadowX(self: Player) f32 {
+    pub fn shadowX(self: *Player) f32 {
         const w = self.currentTexture().width - self.shadow.width;
         return self.x + w / 2;
     }
 
-    pub fn shadowY(self: Player) f32 {
+    pub fn shadowY(self: *Player) f32 {
         return self.y + self.currentTexture().height - 8;
     }
 };

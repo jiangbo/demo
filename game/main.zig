@@ -31,46 +31,43 @@ fn init() void {
 const Enemy = struct {
     x: f32 = 400,
     y: f32 = 400,
-    leftAnimation: animation.FrameAnimation,
-    rightAnimation: animation.FrameAnimation,
+    animation: animation.FrameAnimation,
     shadow: gfx.Texture,
     faceLeft: bool = true,
 
     pub fn init() Enemy {
         const leftFmt: []const u8 = "assets/img/enemy_left_{}.png";
-        const left = animation.FrameAnimation.load(leftFmt, 6, 50).?;
+        const left = animation.FixedSizeFrameAnimation.load(leftFmt, 50).?;
 
         const rightFmt = "assets/img/enemy_right_{}.png";
-        const right = animation.FrameAnimation.load(rightFmt, 6, 50).?;
+        const right = animation.FixedSizeFrameAnimation.load(rightFmt, 50).?;
 
-        return .{
-            .leftAnimation = left,
-            .rightAnimation = right,
+        return Enemy{
+            .animation = .{ .left = left, .right = right },
             .shadow = cache.TextureCache.load("assets/img/shadow_enemy.png").?,
         };
     }
 
     pub fn update(self: *Enemy, delta: f32) void {
         if (self.faceLeft)
-            self.leftAnimation.play(delta)
+            self.animation.left.play(delta)
         else
-            self.rightAnimation.play(delta);
+            self.animation.right.play(delta);
     }
 
     pub fn currentTexture(self: Enemy) gfx.Texture {
-        if (self.faceLeft) {
-            return self.leftAnimation.currentTexture();
-        } else {
-            return self.rightAnimation.currentTexture();
-        }
+        return if (self.faceLeft)
+            self.animation.left.currentTexture()
+        else
+            self.animation.right.currentTexture();
     }
 
-    pub fn shadowX(self: Enemy) f32 {
-        const w = self.currentTexture().width - self.shadow.width;
-        return self.x + w / 2;
+    pub fn shadowX(self: *Enemy) f32 {
+        const width = self.currentTexture().width - self.shadow.width;
+        return self.x + width / 2;
     }
 
-    pub fn shadowY(self: Enemy) f32 {
+    pub fn shadowY(self: *Enemy) f32 {
         return self.y + self.currentTexture().height - 25;
     }
 };
