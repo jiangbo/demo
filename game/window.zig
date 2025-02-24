@@ -13,8 +13,17 @@ pub const RunInfo = struct {
 
 var timer: std.time.Timer = undefined;
 var deltaTime: f32 = 0;
+var totalTime: f32 = 0;
 pub fn deltaMillisecond() f32 {
     return deltaTime;
+}
+
+pub fn totalMillisecond() f32 {
+    return @floatFromInt(sk.app.frameCount());
+}
+
+pub fn exit() void {
+    sk.app.quit();
 }
 
 var runInfo: RunInfo = undefined;
@@ -49,6 +58,7 @@ export fn event(evt: ?*const Event) void {
 export fn frame() void {
     const nano: f32 = @floatFromInt(timer.lap());
     deltaTime = nano / std.time.ns_per_ms;
+    totalTime += deltaTime;
     runInfo.frame();
 }
 

@@ -4,6 +4,16 @@ const animation = @import("animation.zig");
 const cache = @import("cache.zig");
 const context = @import("context.zig");
 const window = @import("window.zig");
+const math = @import("math.zig");
+
+pub const Bullet = struct {
+    x: f32 = 0,
+    y: f32 = 0,
+    texture: gfx.Texture,
+
+    pub const radialSpeed: f32 = 0.025;
+    pub const tangentSpeed: f32 = 0.025;
+};
 
 pub const Player = struct {
     x: f32 = 500,
@@ -17,6 +27,8 @@ pub const Player = struct {
     moveLeft: bool = false,
     moveRight: bool = false,
 
+    bullets: [3]Bullet = undefined,
+
     pub fn init() Player {
         const leftFmt: []const u8 = "assets/img/player_left_{}.png";
         const left = animation.FixedSizeFrameAnimation.load(leftFmt, 50).?;
@@ -24,10 +36,17 @@ pub const Player = struct {
         const rightFmt = "assets/img/player_right_{}.png";
         const right = animation.FixedSizeFrameAnimation.load(rightFmt, 50).?;
 
-        return .{
+        var self = Player{
             .animation = .{ .left = left, .right = right },
             .shadow = cache.TextureCache.load("assets/img/shadow_player.png").?,
         };
+
+        const tex = cache.TextureCache.load("assets/img/bullet.png").?;
+        for (&self.bullets) |*bullet| {
+            bullet.* = Bullet{ .x = -tex.width, .y = -tex.height, .texture = tex };
+        }
+
+        return self;
     }
 
     pub fn processEvent(self: *Player, event: *const window.Event) void {
@@ -47,7 +66,7 @@ pub const Player = struct {
     }
 
     pub fn update(self: *Player, delta: f32) void {
-        var vector2: Vector2 = .{};
+        var vector2: math.Vector2 = .{};
         if (self.moveUp) vector2.y -= 1;
         if (self.moveDown) vector2.y += 1;
         if (self.moveLeft) vector2.x -= 1;
@@ -67,6 +86,26 @@ pub const Player = struct {
             self.animation.left.play(delta)
         else
             self.animation.right.play(delta);
+
+        self.updateBullets();
+    }
+
+    fn updateBullets(self: *Player) void {
+        const len: f32 = @floatFromInt(self.bullets.len);
+        const radianInterval = 2 * std.math.pi / len;
+
+        const total = window.totalMillisecond();
+        const radius = 100 + 25 * @sin(total * Bullet.radialSpeed);
+
+        const playerCenterX = self.x + self.currentTexture().width / 2;
+        const playerCenterY = self.y + self.currentTexture().height / 2;
+
+        for (0..self.bullets.len) |i| {
+            const pos = radianInterval * @as(f32, @floatFromInt(i));
+            const radian = pos + total * Bullet.tangentSpeed;
+            self.bullets[i].x = playerCenterX + radius * @sin(radian);
+            self.bullets[i].y = playerCenterY + radius * @cos(radian);
+        }
     }
 
     pub fn currentTexture(self: Player) gfx.Texture {
@@ -83,16 +122,5 @@ pub const Player = struct {
 
     pub fn shadowY(self: *Player) f32 {
         return self.y + self.currentTexture().height - 8;
-    }
-};
-
-const Vector2 = struct {
-    x: f32 = 0,
-    y: f32 = 0,
-
-    pub fn normalize(self: Vector2) Vector2 {
-        if (self.x == 0 and self.y == 0) return .{};
-        const length = std.math.sqrt(self.x * self.x + self.y * self.y);
-        return .{ .x = self.x / length, .y = self.y / length };
     }
 };
