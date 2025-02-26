@@ -7,6 +7,7 @@ const animation = @import("animation.zig");
 
 const math = @import("math.zig");
 const Player = @import("player.zig").Player;
+const Enemy = @import("player.zig").Enemy;
 
 var background: gfx.Texture = undefined;
 
@@ -54,60 +55,6 @@ fn initEnemyPosition(enemy: *Enemy) void {
     }
 }
 
-const Enemy = struct {
-    x: f32 = 0,
-    y: f32 = 0,
-    animation: animation.FrameAnimation,
-    shadow: gfx.Texture,
-    faceLeft: bool = true,
-    speed: f32 = 0.1,
-
-    pub fn init() Enemy {
-        const leftFmt: []const u8 = "assets/img/enemy_left_{}.png";
-        const left = animation.FixedSizeFrameAnimation.load(leftFmt, 50).?;
-
-        const rightFmt = "assets/img/enemy_right_{}.png";
-        const right = animation.FixedSizeFrameAnimation.load(rightFmt, 50).?;
-
-        return Enemy{
-            .animation = .{ .left = left, .right = right },
-            .shadow = cache.TextureCache.load("assets/img/shadow_enemy.png").?,
-        };
-    }
-
-    pub fn update(self: *Enemy, delta: f32) void {
-        const playerPos = math.Vector2{ .x = player.x, .y = player.y };
-        const enemyPos = math.Vector2{ .x = self.x, .y = self.y };
-        const normalized = playerPos.sub(enemyPos).normalize();
-
-        self.x += normalized.x * delta * self.speed;
-        self.y += normalized.y * delta * self.speed;
-
-        self.faceLeft = normalized.x < 0;
-
-        if (self.faceLeft)
-            self.animation.left.play(delta)
-        else
-            self.animation.right.play(delta);
-    }
-
-    pub fn currentTexture(self: Enemy) gfx.Texture {
-        return if (self.faceLeft)
-            self.animation.left.currentTexture()
-        else
-            self.animation.right.currentTexture();
-    }
-
-    pub fn shadowX(self: Enemy) f32 {
-        const width = self.currentTexture().width - self.shadow.width;
-        return self.x + width / 2;
-    }
-
-    pub fn shadowY(self: Enemy) f32 {
-        return self.y + self.currentTexture().height - 25;
-    }
-};
-
 var player: Player = undefined;
 var enemies: std.ArrayList(Enemy) = undefined;
 
@@ -128,12 +75,13 @@ fn frame() void {
     player.update(delta);
     tryGenerateEnemy();
     for (enemies.items) |*enemy| {
-        enemy.update(delta);
+        enemy.update(delta, player);
     }
 
     // 碰撞检测
     checkBulletEnemyCollision();
     checkPlayerEnemyCollision();
+    window.displayText(100, 100, "score===============================================================");
 
     var renderPass = gfx.CommandEncoder.beginRenderPass(context.clearColor);
     defer renderPass.submit();
@@ -171,6 +119,7 @@ fn checkBulletEnemyCollision() void {
             };
             if (enemyRectangle.contains(bulletCenterX, bulletCenterY)) {
                 _ = enemies.swapRemove(index);
+                player.score += 1;
             }
         }
     }

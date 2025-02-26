@@ -1,178 +1,102 @@
-const std = @import("std");
-const sk = @import("sokol");
-const stbi = @import("stbi");
-const zm = @import("zmath");
+//------------------------------------------------------------------------------
+//  debugtext.zig
+//
+//  Basic test and demo for the sokol.debugtext module
+//------------------------------------------------------------------------------
+const sokol = @import("sokol");
+const slog = sokol.log;
+const sg = sokol.gfx;
+const sapp = sokol.app;
+const sglue = sokol.glue;
+const sdtx = sokol.debugtext;
 
-const shd = @import("shader/test.glsl.zig");
+// font indices
+const KC853 = 0;
+const KC854 = 1;
+const Z1013 = 2;
+const CPC = 3;
+const C64 = 4;
+const ORIC = 5;
 
-const max_particles: usize = 512 * 1024;
-const num_particles_emitted_per_frame: usize = 10;
-
-const clearColor: sk.gfx.Color = .{ .r = 0, .g = 0.1, .b = 0.2, .a = 1 };
-var info: sk.gfx.PassAction = undefined;
-var pipeline: sk.gfx.Pipeline = undefined;
-var bind: sk.gfx.Bindings = undefined;
+var pass_action: sg.PassAction = .{};
 
 export fn init() void {
-
-    // 设置初始化环境
-    sk.gfx.setup(.{
-        .environment = sk.glue.environment(),
-        .logger = .{ .func = sk.log.func },
+    sg.setup(.{
+        .environment = sglue.environment(),
+        .logger = .{ .func = slog.func },
     });
 
-    // 背景清除颜色
-    info.colors[0] = .{ .load_action = .CLEAR, .clear_value = clearColor };
-
-    const r = 0.05;
-    bind.storage_buffers[shd.SBUF_vertices] = sk.gfx.makeBuffer(.{
-        .type = .STORAGEBUFFER,
-        .data = sk.gfx.asRange(&[_]f32{
-            0.0, -r,  0.0, 1, 1.0, 0.0, 0.0, 1.0,
-            r,   0.0, r,   1, 0.0, 1.0, 0.0, 1.0,
-            r,   0.0, -r,  1, 0.0, 0.0, 1.0, 1.0,
-            -r,  0.0, -r,  1, 1.0, 1.0, 0.0, 1.0,
-            -r,  0.0, r,   1, 0.0, 1.0, 1.0, 1.0,
-            0.0, r,   0.0, 1, 1.0, 0.0, 1.0, 1.0,
-        }),
-    });
-
-    bind.index_buffer = sk.gfx.makeBuffer(.{
-        .type = .INDEXBUFFER,
-        .data = sk.gfx.asRange(&[_]u16{
-            0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 1,
-            5, 1, 2, 5, 2, 3, 5, 3, 4, 5, 4, 1,
-        }),
-    });
-
-    bind.storage_buffers[shd.SBUF_instances] = sk.gfx.makeBuffer(.{
-        .type = .STORAGEBUFFER,
-        .usage = .STREAM,
-        .size = max_particles * @sizeOf(shd.SbInstance),
-    });
-
-    pipeline = sk.gfx.makePipeline(.{
-        .shader = sk.gfx.makeShader(shd.testShaderDesc(sk.gfx.queryBackend())),
-        .index_type = .UINT16,
-        .cull_mode = .BACK,
-        .depth = .{
-            .compare = .LESS_EQUAL,
-            .write_enabled = true,
+    // setup sokol-debugtext with all builtin fonts
+    sdtx.setup(.{
+        .fonts = init: {
+            var f: [8]sdtx.FontDesc = @splat(.{});
+            f[KC853] = sdtx.fontKc853();
+            f[KC854] = sdtx.fontKc854();
+            f[Z1013] = sdtx.fontZ1013();
+            f[CPC] = sdtx.fontCpc();
+            f[C64] = sdtx.fontC64();
+            f[ORIC] = sdtx.fontOric();
+            break :init f;
         },
+        .logger = .{ .func = slog.func },
     });
+
+    pass_action.colors[0] = .{
+        .load_action = .CLEAR,
+        .clear_value = .{ .r = 0, .g = 0.125, .b = 0.25, .a = 1 },
+    };
 }
 
-const width = 640;
-const height = 480;
-
-var rx: f32 = 0;
-var ry: f32 = 0;
-var params: shd.VsParams = undefined;
-var cur_num_particles: u32 = 0;
-var instance: [max_particles]shd.SbInstance = undefined;
-var vel: [max_particles]zm.Vec = undefined;
-const view = zm.lookAtRh(
-    zm.f32x4(0, 1.5, 12, 1.0),
-    zm.f32x4(0, 0, 0, 1),
-    zm.f32x4(0, 1, 0, 0),
-);
+// print all characters in a font
+fn printFont(font_index: u32, title: [:0]const u8, r: u8, g: u8, b: u8) void {
+    sdtx.font(font_index);
+    sdtx.color3b(r, g, b);
+    sdtx.puts(title);
+    for (32..256) |c| {
+        sdtx.putc(@intCast(c));
+        if (((c + 1) & 63) == 0) {
+            sdtx.crlf();
+        }
+    }
+    sdtx.crlf();
+}
 
 export fn frame() void {
-    const frame_time: f32 = @floatCast(sk.app.frameDuration());
+    // set virtual canvas size to half display size so that
+    // glyphs are 16x16 display pixels
+    sdtx.canvas(sapp.widthf() * 0.5, sapp.heightf() * 0.5);
+    sdtx.origin(0.0, 2.0);
+    sdtx.home();
 
-    for (0..num_particles_emitted_per_frame) |_| {
-        if (cur_num_particles < max_particles) {
-            instance[cur_num_particles].pos = zm.f32x4s(0);
-            vel[cur_num_particles] = zm.f32x4(
-                rand(-0.5, 0.5),
-                rand(2.0, 2.5),
-                rand(-0.5, 0.5),
-                1,
-            );
-            cur_num_particles += 1;
-        } else {
-            break;
-        }
-    }
+    // draw all font characters
+    printFont(KC853, "KC85/3:\n", 0xf4, 0x43, 0x36);
+    printFont(KC854, "KC85/4:\n", 0x21, 0x96, 0xf3);
+    printFont(Z1013, "Z1013:\n", 0x4c, 0xaf, 0x50);
+    printFont(CPC, "Amstrad CPC:\n", 0xff, 0xeb, 0x3b);
+    printFont(C64, "C64:\n", 0x79, 0x86, 0xcb);
+    printFont(ORIC, "Oric Atmos:\n", 0xff, 0x98, 0x00);
 
-    // update particle positions
-    for (0..max_particles) |i| {
-        vel[i][1] -= 1.0 * frame_time;
-        instance[i].pos[0] += vel[i][0] * frame_time;
-        instance[i].pos[1] += vel[i][1] * frame_time;
-        instance[i].pos[2] += vel[i][2] * frame_time;
-
-        if (instance[i].pos[1] < -2.0) {
-            instance[i].pos[1] = -1.8;
-            vel[i][1] = -vel[i][1];
-            vel[i][0] *= 0.8;
-            vel[i][1] *= 0.8;
-            vel[i][2] *= 0.8;
-        }
-    }
-
-    // update instance data
-    sk.gfx.updateBuffer(
-        bind.storage_buffers[shd.SBUF_instances],
-        sk.gfx.asRange(instance[0..cur_num_particles]),
-    );
-
-    // compute vertex shader parameters (the mvp matrix)
-    ry += 1.0;
-    const vs_params = computeParams(1.0, ry);
-
-    // and finally draw...
-    sk.gfx.beginPass(.{ .action = info, .swapchain = sk.glue.swapchain() });
-    sk.gfx.applyPipeline(pipeline);
-    sk.gfx.applyBindings(bind);
-    sk.gfx.applyUniforms(shd.UB_vs_params, sk.gfx.asRange(&vs_params));
-    sk.gfx.draw(0, 24, cur_num_particles);
-    sk.gfx.endPass();
-    sk.gfx.commit();
-}
-
-fn computeParams(r1: f32, r2: f32) shd.VsParams {
-    const rxm = zm.rotationX(std.math.degreesToRadians(r1));
-    const rym = zm.rotationY(std.math.degreesToRadians(r2));
-    const model = zm.mul(rym, rxm);
-
-    const aspect = sk.app.widthf() / sk.app.heightf();
-    const proj = zm.perspectiveFovRh(std.math.degreesToRadians(45), aspect, 0.01, 50);
-
-    return shd.VsParams{ .mvp = zm.mul(zm.mul(model, view), proj) };
+    // do the actual rendering
+    sg.beginPass(.{ .action = pass_action, .swapchain = sglue.swapchain() });
+    sdtx.draw();
+    sg.endPass();
+    sg.commit();
 }
 
 export fn cleanup() void {
-    sk.gfx.shutdown();
-}
-
-fn rand(min_val: f32, max_val: f32) f32 {
-    return (@as(f32, @floatFromInt(xorshift32() & 0xFFFF)) / 0x10000) * (max_val - min_val) + min_val;
-}
-
-fn xorshift32() u32 {
-    const static = struct {
-        var x: u32 = 0x12345678;
-    };
-    var x = static.x;
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 5;
-    static.x = x;
-    return x;
+    sdtx.shutdown();
+    sg.shutdown();
 }
 
 pub fn main() void {
-    sk.app.run(.{
-        .width = width,
-        .height = height,
-        .window_title = "学习 sokol",
-        .logger = .{ .func = sk.log.func },
-        .win32_console_attach = true,
-        .sample_count = 4,
+    sapp.run(.{
         .init_cb = init,
-        .high_dpi = false,
         .frame_cb = frame,
         .cleanup_cb = cleanup,
+        .width = 1024,
+        .height = 600,
+        .icon = .{ .sokol_default = true },
+        .window_title = "debugtext.zig",
+        .logger = .{ .func = slog.func },
     });
 }

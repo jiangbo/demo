@@ -26,6 +26,20 @@ pub fn exit() void {
     sk.app.quit();
 }
 
+pub fn displayText(x: f32, y: f32, text: [:0]const u8) void {
+
+    // set virtual canvas size to half display size so that
+    // glyphs are 16x16 display pixels
+    sk.debugtext.canvas(sk.app.widthf() * 0.5, sk.app.heightf() * 0.5);
+    sk.debugtext.origin(x, y);
+    sk.debugtext.home();
+
+    sk.debugtext.font(0);
+    sk.debugtext.color3b(0xf4, 0x43, 0x36);
+    sk.debugtext.puts(text);
+    sk.debugtext.crlf();
+}
+
 var runInfo: RunInfo = undefined;
 pub fn run(info: RunInfo) void {
     runInfo = info;
@@ -47,6 +61,21 @@ export fn init() void {
         .environment = sk.glue.environment(),
         .logger = .{ .func = sk.log.func },
     });
+
+    sk.debugtext.setup(.{
+        .fonts = init: {
+            var f: [8]sk.debugtext.FontDesc = @splat(.{});
+            f[0] = sk.debugtext.fontKc853();
+            f[1] = sk.debugtext.fontKc854();
+            f[2] = sk.debugtext.fontZ1013();
+            f[3] = sk.debugtext.fontCpc();
+            f[4] = sk.debugtext.fontC64();
+            f[5] = sk.debugtext.fontOric();
+            break :init f;
+        },
+        .logger = .{ .func = sk.log.func },
+    });
+
     timer = std.time.Timer.start() catch unreachable;
     runInfo.init();
 }
