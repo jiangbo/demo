@@ -70,6 +70,7 @@ fn tryGenerateEnemy() void {
     }
 }
 
+var scoreBuffer: [64:0]u8 = undefined;
 fn frame() void {
     const delta = window.deltaMillisecond();
     player.update(delta);
@@ -81,14 +82,18 @@ fn frame() void {
     // 碰撞检测
     checkBulletEnemyCollision();
     checkPlayerEnemyCollision();
-    window.displayText(100, 100, "score===============================================================");
 
     var renderPass = gfx.CommandEncoder.beginRenderPass(context.clearColor);
     defer renderPass.submit();
 
+    defer {
+        const score = std.fmt.bufPrintZ(&scoreBuffer, "score: {d}", .{player.score});
+        window.displayText(1, 2, score catch unreachable);
+    }
+
     var single = gfx.TextureSingle.begin(renderPass);
 
-    single.draw(0, 0, background);
+    single.draw(0, 2.0, background);
 
     // 敌人
     for (enemies.items) |enemy| {

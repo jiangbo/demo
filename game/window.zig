@@ -19,7 +19,7 @@ pub fn deltaMillisecond() f32 {
 }
 
 pub fn totalMillisecond() f32 {
-    return @floatFromInt(sk.app.frameCount());
+    return totalTime;
 }
 
 pub fn exit() void {
@@ -27,17 +27,14 @@ pub fn exit() void {
 }
 
 pub fn displayText(x: f32, y: f32, text: [:0]const u8) void {
-
-    // set virtual canvas size to half display size so that
-    // glyphs are 16x16 display pixels
-    sk.debugtext.canvas(sk.app.widthf() * 0.5, sk.app.heightf() * 0.5);
+    sk.debugtext.canvas(sk.app.widthf() * 0.4, sk.app.heightf() * 0.4);
     sk.debugtext.origin(x, y);
     sk.debugtext.home();
 
     sk.debugtext.font(0);
     sk.debugtext.color3b(0xf4, 0x43, 0x36);
     sk.debugtext.puts(text);
-    sk.debugtext.crlf();
+    sk.debugtext.draw();
 }
 
 var runInfo: RunInfo = undefined;

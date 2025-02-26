@@ -11,8 +11,8 @@ pub const Bullet = struct {
     y: f32 = 0,
     texture: gfx.Texture,
 
-    pub const radialSpeed: f32 = 0.045;
-    pub const tangentSpeed: f32 = 0.055;
+    pub const radialSpeed: f32 = 0.0045;
+    pub const tangentSpeed: f32 = 0.0055;
 };
 
 pub const Player = struct {
