@@ -30,6 +30,12 @@ pub fn build(b: *std.Build) !void {
     });
     exe.root_module.addImport("zmath", zmath.module("root"));
 
+    const minimp3 = b.dependency("minimp3", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.root_module.addImport("mp3", minimp3.module("decoder"));
+
     // const sdl_dep = b.dependency("sdl", .{
     //     .target = target,
     //     .optimize = optimize,

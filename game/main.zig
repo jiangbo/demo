@@ -15,6 +15,15 @@ fn init() void {
     const allocator = context.allocator;
     cache.init(allocator);
 
+    const path = "assets/mus/bgm.mp3";
+    const file = std.fs.cwd().openFile(path, .{}) catch unreachable;
+    defer file.close();
+
+    var decoder = mp3.init();
+    const reader = file.reader();
+    const nextFrame = decoder.nextFrame(reader) catch unreachable;
+    std.log.info("frame: {any}", .{nextFrame.?});
+
     context.camera = gfx.Camera.init(context.width, context.height);
     context.textureSampler = gfx.Sampler.liner();
 
@@ -159,7 +168,16 @@ fn deinit() void {
     cache.deinit();
 }
 
-pub fn main() void {
+fn loadFile(allocator: std.mem.Allocator, path: [:0]const u8) ![]u8 {
+    const file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
+
+    return file.readToEndAlloc(allocator, std.math.maxInt(u32));
+}
+
+const mp3 = @import("mp3");
+
+pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     context.allocator = gpa.allocator();

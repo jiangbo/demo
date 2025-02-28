@@ -18,6 +18,10 @@
             .url = "git+https://github.com/castholm/SDL.git#2bb5f57ea8b8c43eabe514f7bbd3361365ba2ff3",
             .hash = "1220f653f5b656888b522bf5be06fc3062278767cfa7764e5d00eb559056d65b616f",
         },
+        .minimp3 = .{
+            .url = "git+https://github.com/hosackm/minimp3#393350f9f37432d1469db5e9546b2a2f6587f41c",
+            .hash = "1220d60b71edfd7389f396d1629552d975e569cb4be1d6e8609da95fb0ccca7ea199",
+        },
     },
 
     .paths = .{""},
