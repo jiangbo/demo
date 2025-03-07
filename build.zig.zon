@@ -22,6 +22,10 @@
             .url = "git+https://github.com/hosackm/minimp3#393350f9f37432d1469db5e9546b2a2f6587f41c",
             .hash = "1220d60b71edfd7389f396d1629552d975e569cb4be1d6e8609da95fb0ccca7ea199",
         },
+        .zaudio = .{
+            .url = "git+https://github.com/zig-gamedev/zaudio#a67604fdb79fb7e0b34fe074f8ffc22d268b3fb3",
+            .hash = "122029d6de1bebccfc3ab2816d6f163bb394a0f03861a74857b336c58ce6c5308662",
+        },
     },
 
     .paths = .{""},

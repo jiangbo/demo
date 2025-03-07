@@ -6,7 +6,7 @@ pub fn build(b: *std.Build) !void {
 
     const exe = b.addExecutable(.{
         .name = "demo",
-        .root_source_file = b.path("game/main.zig"),
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -30,11 +30,19 @@ pub fn build(b: *std.Build) !void {
     });
     exe.root_module.addImport("zmath", zmath.module("root"));
 
+    const zaudio = b.dependency("zaudio", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const minimp3 = b.dependency("minimp3", .{
         .target = target,
         .optimize = optimize,
     });
     exe.root_module.addImport("mp3", minimp3.module("decoder"));
+
+    exe.root_module.addImport("zaudio", zaudio.module("root"));
+    exe.linkLibrary(zaudio.artifact("miniaudio"));
 
     // const sdl_dep = b.dependency("sdl", .{
     //     .target = target,
