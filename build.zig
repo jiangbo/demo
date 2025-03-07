@@ -35,12 +35,6 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    const minimp3 = b.dependency("minimp3", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    exe.root_module.addImport("mp3", minimp3.module("decoder"));
-
     exe.root_module.addImport("zaudio", zaudio.module("root"));
     exe.linkLibrary(zaudio.artifact("miniaudio"));
 
