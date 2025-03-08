@@ -78,3 +78,35 @@ pub fn BoundedTextureAtlas(max: u8) type {
         }
     };
 }
+
+pub fn BoundedFrameAnimation(max: u8) type {
+    return struct {
+        interval: f32 = 100,
+        timer: f32 = 0,
+        index: usize = 0,
+        loop: bool = true,
+        flip: bool = false,
+        atlas: BoundedTextureAtlas(max),
+
+        pub fn init(comptime pathFmt: []const u8) @This() {
+            return .{ .atlas = .init(pathFmt) };
+        }
+
+        pub fn update(self: *@This(), delta: f32) void {
+            self.timer += delta;
+
+            if (self.timer >= self.interval) {
+                self.timer = 0;
+                self.index += 1;
+
+                if (self.index >= self.atlas.textures.len) {
+                    self.index = if (self.loop) 0 else self.atlas.textures.len - 1;
+                }
+            }
+        }
+
+        pub fn play(self: @This(), x: f32, y: f32) void {
+            drawFlipX(x, y, self.atlas.textures[self.index], self.flip);
+        }
+    };
+}

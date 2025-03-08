@@ -109,15 +109,12 @@ pub const MenuScene = struct {
 };
 
 pub const GameScene = struct {
-    idleAtlas: gfx.BoundedTextureAtlas(9),
-    current: usize = 0,
-    timer: f32 = 0,
-    left: bool = false,
+    animation: gfx.BoundedFrameAnimation(9),
 
     pub fn init() GameScene {
         std.log.info("game scene init", .{});
         return .{
-            .idleAtlas = .init("assets/peashooter_idle_{}.png"),
+            .animation = .init("assets/peashooter_idle_{}.png"),
         };
     }
 
@@ -133,23 +130,19 @@ pub const GameScene = struct {
 
     pub fn event(self: *GameScene, ev: *const window.Event) void {
         if (ev.type == .KEY_UP) switch (ev.key_code) {
-            .A => self.left = true,
-            .D => self.left = false,
+            .A => self.animation.flip = true,
+            .D => self.animation.flip = false,
             .SPACE => changeCurrentScene(.menu),
             else => {},
         };
     }
 
     pub fn update(self: *GameScene) void {
-        self.timer += window.deltaMillisecond();
-        if (self.timer > 100) {
-            self.timer = 0;
-            self.current = (self.current + 1) % self.idleAtlas.textures.len;
-        }
+        self.animation.update(window.deltaMillisecond());
     }
 
     pub fn render(self: *GameScene) void {
-        gfx.drawFlipX(300, 300, self.idleAtlas.textures[self.current], self.left);
+        self.animation.play(300, 300);
         window.displayText(2, 2, "game scene");
     }
 };
