@@ -1,5 +1,6 @@
 const std = @import("std");
 const window = @import("window.zig");
+const gfx = @import("graphics.zig");
 
 pub var currentScene: Scene = undefined;
 
@@ -47,8 +48,8 @@ pub const Scene = union(SceneType) {
 pub fn init() void {
     std.log.info("scene init", .{});
 
-    menuScene = MenuScene{};
-    gameScene = GameScene{};
+    menuScene = MenuScene.init();
+    gameScene = GameScene.init();
     selectorScene = SelectorScene{};
     currentScene = Scene{ .menu = &menuScene };
 
@@ -70,6 +71,16 @@ pub fn deinit() void {
 }
 
 pub const MenuScene = struct {
+    background: gfx.Texture,
+
+    pub fn init() MenuScene {
+        std.log.info("menu scene init", .{});
+
+        return .{
+            .background = gfx.loadTexture("assets/menu_background.png").?,
+        };
+    }
+
     pub fn enter(self: *MenuScene) void {
         std.log.info("menu scene enter", .{});
         _ = self;
@@ -94,13 +105,21 @@ pub const MenuScene = struct {
     }
 
     pub fn render(self: *MenuScene) void {
-        _ = self;
-
+        gfx.draw(0, 0, self.background);
         window.displayText(2, 2, "menu scene");
     }
 };
 
 pub const GameScene = struct {
+    idleAtlas: gfx.BoundedTextureAtlas(9),
+
+    pub fn init() GameScene {
+        std.log.info("game scene init", .{});
+        return .{
+            .idleAtlas = .init("assets/peashooter_idle_{}.png"),
+        };
+    }
+
     pub fn enter(self: *GameScene) void {
         std.log.info("game scene enter", .{});
         _ = self;
@@ -123,8 +142,7 @@ pub const GameScene = struct {
     }
 
     pub fn render(self: *GameScene) void {
-        _ = self;
-
+        gfx.draw(300, 300, self.idleAtlas.textures[0]);
         window.displayText(2, 2, "game scene");
     }
 };
