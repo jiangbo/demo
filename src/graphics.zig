@@ -38,14 +38,27 @@ pub fn beginDraw() void {
 }
 
 pub fn draw(x: f32, y: f32, tex: Texture) void {
-    renderer.draw(.{ .vp = camera.vp() }, x, y, tex);
+    renderer.draw(.{
+        .uniform = .{ .vp = camera.vp() },
+        .x = x,
+        .y = y,
+        .texture = tex,
+    });
+}
+
+pub fn drawFlipX(x: f32, y: f32, tex: Texture, flipX: bool) void {
+    renderer.draw(.{
+        .uniform = .{ .vp = camera.vp() },
+        .x = x,
+        .y = y,
+        .texture = tex,
+        .flipX = flipX,
+    });
 }
 
 pub fn endDraw() void {
     passEncoder.submit();
 }
-
-pub const TextureAtlas = BoundedTextureAtlas(9);
 
 pub fn BoundedTextureAtlas(max: u8) type {
     return struct {
@@ -54,11 +67,11 @@ pub fn BoundedTextureAtlas(max: u8) type {
         pub fn init(comptime pathFmt: []const u8) @This() {
             var self = @This(){ .textures = undefined };
             var buffer: [128]u8 = undefined;
-            for (1..max + 1) |index| {
-                const path = std.fmt.bufPrintZ(&buffer, pathFmt, .{index});
+            for (0..max) |index| {
+                const path = std.fmt.bufPrintZ(&buffer, pathFmt, .{index + 1});
 
                 const texture = cache.TextureCache.load(path catch unreachable);
-                self.textures[index - 1] = texture.?;
+                self.textures[index] = texture.?;
             }
 
             return self;

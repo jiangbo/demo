@@ -92,8 +92,6 @@ pub const MenuScene = struct {
     }
 
     pub fn event(self: *MenuScene, ev: *const window.Event) void {
-        std.log.info("menu scene event", .{});
-
         if (ev.type == .KEY_UP) changeCurrentScene(.game);
 
         _ = self;
@@ -112,6 +110,9 @@ pub const MenuScene = struct {
 
 pub const GameScene = struct {
     idleAtlas: gfx.BoundedTextureAtlas(9),
+    current: usize = 0,
+    timer: f32 = 0,
+    left: bool = false,
 
     pub fn init() GameScene {
         std.log.info("game scene init", .{});
@@ -131,18 +132,24 @@ pub const GameScene = struct {
     }
 
     pub fn event(self: *GameScene, ev: *const window.Event) void {
-        std.log.info("game scene event", .{});
-        _ = self;
-        if (ev.type == .KEY_UP) changeCurrentScene(.menu);
+        if (ev.type == .KEY_UP) switch (ev.key_code) {
+            .A => self.left = true,
+            .D => self.left = false,
+            .SPACE => changeCurrentScene(.menu),
+            else => {},
+        };
     }
 
     pub fn update(self: *GameScene) void {
-        std.log.info("game scene update", .{});
-        _ = self;
+        self.timer += window.deltaMillisecond();
+        if (self.timer > 100) {
+            self.timer = 0;
+            self.current = (self.current + 1) % self.idleAtlas.textures.len;
+        }
     }
 
     pub fn render(self: *GameScene) void {
-        gfx.draw(300, 300, self.idleAtlas.textures[0]);
+        gfx.drawFlipX(300, 300, self.idleAtlas.textures[self.current], self.left);
         window.displayText(2, 2, "game scene");
     }
 };

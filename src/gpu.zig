@@ -148,22 +148,36 @@ pub const Renderer = struct {
         return self;
     }
 
-    pub fn draw(self: *Renderer, uniform: UniformParams, x: f32, y: f32, tex: Texture) void {
+    pub const DrawOptions = struct {
+        uniform: UniformParams,
+        x: f32 = 0,
+        y: f32 = 0,
+        texture: Texture,
+        flipX: bool = false,
+    };
+
+    pub fn draw(self: *Renderer, options: DrawOptions) void {
+        const w = options.texture.width;
+        const h = options.texture.height;
+
+        const texU0: f32 = if (options.flipX) 1 else 0;
+        const texU1: f32 = if (options.flipX) 0 else 1;
+
         const vertexBuffer = sk.gfx.makeBuffer(.{
             .data = sk.gfx.asRange(&[_]f32{
                 // 顶点和颜色
-                x,             y + tex.height, 0.5, 1.0, 1.0, 1.0, 0, 1,
-                x + tex.width, y + tex.height, 0.5, 1.0, 1.0, 1.0, 1, 1,
-                x + tex.width, y,              0.5, 1.0, 1.0, 1.0, 1, 0,
-                x,             y,              0.5, 1.0, 1.0, 1.0, 0, 0,
+                options.x,     options.y + h, 0.5, 1.0, 1.0, 1.0, texU0, 1,
+                options.x + w, options.y + h, 0.5, 1.0, 1.0, 1.0, texU1, 1,
+                options.x + w, options.y,     0.5, 1.0, 1.0, 1.0, texU1, 0,
+                options.x,     options.y,     0.5, 1.0, 1.0, 1.0, texU0, 0,
             }),
         });
 
         self.bind.bindVertexBuffer(0, vertexBuffer);
-        self.bind.bindUniformBuffer(uniform);
+        self.bind.bindUniformBuffer(options.uniform);
 
         self.renderPass.setPipeline(pipeline.?);
-        self.bind.bindTexture(render.IMG_tex, tex);
+        self.bind.bindTexture(render.IMG_tex, options.texture);
         self.renderPass.setBindGroup(self.bind);
         sk.gfx.draw(0, 6, 1);
         sk.gfx.destroyBuffer(vertexBuffer);
