@@ -7,7 +7,7 @@ pub const CallbackInfo = struct {
     init: ?*const fn () void = null,
     update: ?*const fn () void = null,
     render: ?*const fn () void = null,
-    event: ?*const fn (?*const Event) void = null,
+    event: ?*const fn (*const Event) void = null,
     deinit: ?*const fn () void = null,
 };
 
@@ -23,6 +23,17 @@ pub fn deltaMillisecond() f32 {
 
 pub fn totalMillisecond() f32 {
     return totalTime;
+}
+
+pub fn displayText(x: f32, y: f32, text: [:0]const u8) void {
+    sk.debugtext.canvas(sk.app.widthf() * 0.4, sk.app.heightf() * 0.4);
+    sk.debugtext.origin(x, y);
+    sk.debugtext.home();
+
+    sk.debugtext.font(0);
+    sk.debugtext.color3b(0xff, 0xff, 0xff);
+    sk.debugtext.puts(text);
+    sk.debugtext.draw();
 }
 
 pub fn exit() void {
@@ -51,12 +62,21 @@ export fn init() void {
         .logger = .{ .func = sk.log.func },
     });
 
+    sk.debugtext.setup(.{
+        .fonts = init: {
+            var f: [8]sk.debugtext.FontDesc = @splat(.{});
+            f[0] = sk.debugtext.fontKc854();
+            break :init f;
+        },
+        .logger = .{ .func = sk.log.func },
+    });
+
     timer = std.time.Timer.start() catch unreachable;
     callback.init.?();
 }
 
 export fn event(evt: ?*const Event) void {
-    callback.event.?(evt);
+    if (evt) |e| callback.event.?(e);
 }
 
 export fn frame() void {
