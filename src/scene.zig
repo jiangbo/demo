@@ -7,10 +7,16 @@ const GameScene = @import("scene/GameScene.zig");
 const SelectorScene = @import("scene/SelectorScene.zig");
 
 pub var currentScene: Scene = undefined;
+pub var camera: Camera = .{};
 
 var menuScene: MenuScene = undefined;
 var gameScene: GameScene = undefined;
 var selectorScene: SelectorScene = undefined;
+
+pub const Camera = struct {
+    x: f32 = 0,
+    y: f32 = 0,
+};
 
 pub const SceneType = enum { menu, game, selector };
 pub const Scene = union(SceneType) {

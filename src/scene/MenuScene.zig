@@ -2,7 +2,7 @@ const std = @import("std");
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 
-const changeCurrentScene = @import("../scene.zig").changeCurrentScene;
+const scene = @import("../scene.zig");
 const MenuScene = @This();
 
 background: gfx.Texture,
@@ -26,7 +26,7 @@ pub fn exit(self: *MenuScene) void {
 }
 
 pub fn event(self: *MenuScene, ev: *const window.Event) void {
-    if (ev.type == .KEY_UP) changeCurrentScene(.game);
+    if (ev.type == .KEY_UP) scene.changeCurrentScene(.game);
 
     _ = self;
 }
