@@ -2,6 +2,10 @@ const std = @import("std");
 const window = @import("window.zig");
 const gfx = @import("graphics.zig");
 
+const MenuScene = @import("scene/MenuScene.zig");
+const GameScene = @import("scene/GameScene.zig");
+const SelectorScene = @import("scene/SelectorScene.zig");
+
 pub var currentScene: Scene = undefined;
 
 var menuScene: MenuScene = undefined;
@@ -50,13 +54,13 @@ pub fn init() void {
 
     menuScene = MenuScene.init();
     gameScene = GameScene.init();
-    selectorScene = SelectorScene{};
+    selectorScene = SelectorScene.init();
     currentScene = Scene{ .menu = &menuScene };
 
     currentScene.enter();
 }
 
-fn changeCurrentScene(sceneType: SceneType) void {
+pub fn changeCurrentScene(sceneType: SceneType) void {
     currentScene.exit();
     currentScene = switch (sceneType) {
         .menu => Scene{ .menu = &menuScene },
@@ -69,108 +73,3 @@ fn changeCurrentScene(sceneType: SceneType) void {
 pub fn deinit() void {
     std.log.info("scene deinit", .{});
 }
-
-pub const MenuScene = struct {
-    background: gfx.Texture,
-
-    pub fn init() MenuScene {
-        std.log.info("menu scene init", .{});
-
-        return .{
-            .background = gfx.loadTexture("assets/menu_background.png").?,
-        };
-    }
-
-    pub fn enter(self: *MenuScene) void {
-        std.log.info("menu scene enter", .{});
-        _ = self;
-    }
-
-    pub fn exit(self: *MenuScene) void {
-        std.log.info("menu scene exit", .{});
-        _ = self;
-    }
-
-    pub fn event(self: *MenuScene, ev: *const window.Event) void {
-        if (ev.type == .KEY_UP) changeCurrentScene(.game);
-
-        _ = self;
-    }
-
-    pub fn update(self: *MenuScene) void {
-        std.log.info("menu scene update", .{});
-        _ = self;
-    }
-
-    pub fn render(self: *MenuScene) void {
-        gfx.draw(0, 0, self.background);
-        window.displayText(2, 2, "menu scene");
-    }
-};
-
-pub const GameScene = struct {
-    animation: gfx.BoundedFrameAnimation(9),
-
-    pub fn init() GameScene {
-        std.log.info("game scene init", .{});
-        return .{
-            .animation = .init("assets/peashooter_idle_{}.png"),
-        };
-    }
-
-    pub fn enter(self: *GameScene) void {
-        std.log.info("game scene enter", .{});
-        _ = self;
-    }
-
-    pub fn exit(self: *GameScene) void {
-        std.log.info("game scene exit", .{});
-        _ = self;
-    }
-
-    pub fn event(self: *GameScene, ev: *const window.Event) void {
-        if (ev.type == .KEY_UP) switch (ev.key_code) {
-            .A => self.animation.flip = true,
-            .D => self.animation.flip = false,
-            .SPACE => changeCurrentScene(.menu),
-            else => {},
-        };
-    }
-
-    pub fn update(self: *GameScene) void {
-        self.animation.update(window.deltaMillisecond());
-    }
-
-    pub fn render(self: *GameScene) void {
-        self.animation.play(300, 300);
-        window.displayText(2, 2, "game scene");
-    }
-};
-
-pub const SelectorScene = struct {
-    pub fn enter(self: *SelectorScene) void {
-        std.log.info("selector scene enter", .{});
-        _ = self;
-    }
-
-    pub fn exit(self: *SelectorScene) void {
-        std.log.info("selector scene exit", .{});
-        _ = self;
-    }
-
-    pub fn event(self: *SelectorScene, ev: *const window.Event) void {
-        std.log.info("selector scene event", .{});
-        _ = self;
-        _ = ev;
-    }
-
-    pub fn update(self: *SelectorScene) void {
-        std.log.info("selector scene update", .{});
-        _ = self;
-    }
-
-    pub fn render(self: *SelectorScene) void {
-        std.log.info("selector scene render", .{});
-        _ = self;
-    }
-};
