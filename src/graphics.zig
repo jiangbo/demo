@@ -47,12 +47,22 @@ pub fn draw(x: f32, y: f32, tex: Texture) void {
 }
 
 pub fn drawFlipX(x: f32, y: f32, tex: Texture, flipX: bool) void {
+    drawOptions(x, y, tex, .{ .flipX = flipX });
+}
+
+pub const DrawOptions = struct {
+    flipX: bool = false,
+    sourceRect: ?gpu.Rectangle = null,
+};
+
+pub fn drawOptions(x: f32, y: f32, texture: Texture, options: DrawOptions) void {
     renderer.draw(.{
         .uniform = .{ .vp = camera.vp() },
         .x = x,
         .y = y,
-        .texture = tex,
-        .flipX = flipX,
+        .texture = texture,
+        .flipX = options.flipX,
+        .sourceRect = options.sourceRect,
     });
 }
 
@@ -85,7 +95,6 @@ pub fn BoundedFrameAnimation(max: u8) type {
         timer: f32 = 0,
         index: usize = 0,
         loop: bool = true,
-        flip: bool = false,
         atlas: BoundedTextureAtlas(max),
         callback: ?*const fn () void = null,
 
@@ -109,7 +118,11 @@ pub fn BoundedFrameAnimation(max: u8) type {
         }
 
         pub fn play(self: @This(), x: f32, y: f32) void {
-            drawFlipX(x, y, self.atlas.textures[self.index], self.flip);
+            self.playFlipX(x, y, false);
+        }
+
+        pub fn playFlipX(self: @This(), x: f32, y: f32, flipX: bool) void {
+            drawFlipX(x, y, self.atlas.textures[self.index], flipX);
         }
     };
 }

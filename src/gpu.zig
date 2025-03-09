@@ -98,7 +98,12 @@ pub const RenderPassEncoder = struct {
 };
 
 const UniformParams = render.VsParams;
-
+pub const Rectangle = struct {
+    x: f32 = 0,
+    y: f32 = 0,
+    width: f32 = 0,
+    height: f32 = 0,
+};
 pub const Renderer = struct {
     bind: BindGroup,
     renderPass: RenderPassEncoder,
@@ -154,14 +159,28 @@ pub const Renderer = struct {
         y: f32 = 0,
         texture: Texture,
         flipX: bool = false,
+        sourceRect: ?Rectangle = null,
     };
 
     pub fn draw(self: *Renderer, options: DrawOptions) void {
-        const w = options.texture.width;
-        const h = options.texture.height;
+        var w = options.texture.width;
+        var h = options.texture.height;
 
-        const texU0: f32 = if (options.flipX) 1 else 0;
-        const texU1: f32 = if (options.flipX) 0 else 1;
+        var texU0: f32, var texU1: f32 = .{ 0, 1 };
+        var texV0: f32, var texV1: f32 = .{ 0, 1 };
+        if (options.sourceRect) |rect| {
+            texU0 = rect.x / options.texture.width;
+            texU1 = (rect.x + rect.width) / options.texture.width;
+            texV0 = rect.y / options.texture.height;
+            texV1 = (rect.y + rect.height) / options.texture.height;
+            w = rect.width;
+            h = rect.height;
+        }
+
+        if (options.flipX) {
+            texU0 = 1 - texU0;
+            texU1 = 1 - texU1;
+        }
 
         const vertexBuffer = sk.gfx.makeBuffer(.{
             .data = sk.gfx.asRange(&[_]f32{

@@ -11,9 +11,14 @@ pub var currentScene: Scene = undefined;
 pub var camera: Camera = .{};
 pub var audioEngine: *audio.Engine = undefined;
 
+pub var player1: PlayerType = .peaShooter;
+pub var player2: PlayerType = .sunFlower;
+
 var menuScene: MenuScene = undefined;
 var gameScene: GameScene = undefined;
 var selectorScene: SelectorScene = undefined;
+
+pub const PlayerType = enum { peaShooter, sunFlower };
 
 pub const Camera = struct {
     x: f32 = 0,
@@ -64,7 +69,8 @@ pub fn init() void {
     menuScene = MenuScene.init();
     gameScene = GameScene.init();
     selectorScene = SelectorScene.init();
-    currentScene = Scene{ .menu = &menuScene };
+    currentScene = Scene{ .selector = &selectorScene };
+    // currentScene = Scene{ .menu = &menuScene };
 
     currentScene.enter();
 }

@@ -47,7 +47,6 @@ pub fn event(self: *MenuScene, ev: *const window.Event) void {
 }
 
 pub fn update(self: *MenuScene) void {
-    std.log.info("menu scene update", .{});
     _ = self;
 }
 
