@@ -1,6 +1,7 @@
 const std = @import("std");
 const window = @import("window.zig");
 const gfx = @import("graphics.zig");
+const audio = @import("zaudio");
 
 const MenuScene = @import("scene/MenuScene.zig");
 const GameScene = @import("scene/GameScene.zig");
@@ -8,6 +9,7 @@ const SelectorScene = @import("scene/SelectorScene.zig");
 
 pub var currentScene: Scene = undefined;
 pub var camera: Camera = .{};
+pub var audioEngine: *audio.Engine = undefined;
 
 var menuScene: MenuScene = undefined;
 var gameScene: GameScene = undefined;
@@ -58,6 +60,7 @@ pub const Scene = union(SceneType) {
 pub fn init() void {
     std.log.info("scene init", .{});
 
+    audioEngine = audio.Engine.create(null) catch unreachable;
     menuScene = MenuScene.init();
     gameScene = GameScene.init();
     selectorScene = SelectorScene.init();
@@ -78,4 +81,7 @@ pub fn changeCurrentScene(sceneType: SceneType) void {
 
 pub fn deinit() void {
     std.log.info("scene deinit", .{});
+    currentScene.exit();
+    menuScene.deinit();
+    audioEngine.destroy();
 }

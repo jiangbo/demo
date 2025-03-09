@@ -60,6 +60,7 @@ pub fn event(self: *GameScene, ev: *const window.Event) void {
     if (ev.type == .KEY_UP) switch (ev.key_code) {
         .A => self.animation.flip = true,
         .D => self.animation.flip = false,
+        .Q => scene.changeCurrentScene(.menu),
         .SPACE => self.shakeCamera.restart(),
         else => {},
     };

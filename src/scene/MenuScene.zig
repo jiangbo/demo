@@ -1,4 +1,6 @@
 const std = @import("std");
+const audio = @import("zaudio");
+
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 
@@ -6,29 +8,42 @@ const scene = @import("../scene.zig");
 const MenuScene = @This();
 
 background: gfx.Texture,
+bgm: *audio.Sound,
+confirm: *audio.Sound,
 
 pub fn init() MenuScene {
     std.log.info("menu scene init", .{});
 
-    return .{
-        .background = gfx.loadTexture("assets/menu_background.png").?,
-    };
+    var self: MenuScene = undefined;
+    self.bgm = scene.audioEngine.createSoundFromFile(
+        "assets/bgm_menu.mp3",
+        .{ .flags = .{ .stream = true, .looping = true } },
+    ) catch unreachable;
+
+    self.confirm = scene.audioEngine.createSoundFromFile(
+        "assets/ui_confirm.wav",
+        .{},
+    ) catch unreachable;
+
+    self.background = gfx.loadTexture("assets/menu_background.png").?;
+    return self;
 }
 
 pub fn enter(self: *MenuScene) void {
     std.log.info("menu scene enter", .{});
-    _ = self;
+    self.bgm.start() catch unreachable;
 }
 
 pub fn exit(self: *MenuScene) void {
     std.log.info("menu scene exit", .{});
-    _ = self;
+    self.bgm.stop() catch unreachable;
 }
 
 pub fn event(self: *MenuScene, ev: *const window.Event) void {
-    if (ev.type == .KEY_UP) scene.changeCurrentScene(.game);
-
-    _ = self;
+    if (ev.type == .KEY_UP) {
+        self.confirm.start() catch unreachable;
+        scene.changeCurrentScene(.selector);
+    }
 }
 
 pub fn update(self: *MenuScene) void {
@@ -38,5 +53,11 @@ pub fn update(self: *MenuScene) void {
 
 pub fn render(self: *MenuScene) void {
     gfx.draw(0, 0, self.background);
-    window.displayText(2, 2, "menu scene");
+}
+
+pub fn deinit(self: *MenuScene) void {
+    std.log.info("menu scene deinit", .{});
+
+    self.bgm.destroy();
+    self.confirm.destroy();
 }

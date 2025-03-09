@@ -4,9 +4,11 @@ const gfx = @import("graphics.zig");
 const window = @import("window.zig");
 const scene = @import("scene.zig");
 const cache = @import("cache.zig");
+const audio = @import("zaudio");
 
 pub fn init() void {
     cache.init(allocator);
+    audio.init(allocator);
     gfx.init(window.width, window.height);
     scene.init();
 }
@@ -29,6 +31,7 @@ pub fn render() void {
 pub fn deinit() void {
     scene.deinit();
     cache.deinit();
+    audio.deinit();
 }
 
 var allocator: std.mem.Allocator = undefined;
