@@ -89,5 +89,6 @@ pub fn deinit() void {
     std.log.info("scene deinit", .{});
     currentScene.exit();
     menuScene.deinit();
+    selectorScene.deinit();
     audioEngine.destroy();
 }

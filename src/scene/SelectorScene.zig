@@ -1,6 +1,7 @@
 const std = @import("std");
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
+const audio = @import("zaudio");
 
 const scene = @import("../scene.zig");
 const SelectorScene = @This();
@@ -22,11 +23,20 @@ imageGrave: gfx.Texture,
 
 image1PButtonIdle: gfx.Texture,
 image2PButtonIdle: gfx.Texture,
+image1PButtonDown: gfx.Texture,
+image2PButtonDown: gfx.Texture,
 
 animationPeaShooterIdle: gfx.BoundedFrameAnimation(9),
 animationSunFlowerIdle: gfx.BoundedFrameAnimation(8),
 
+soundUISwitch: *audio.Sound = undefined,
+
 backgroundOffsetX: f32 = 0,
+
+button1PLeftDown: bool = false,
+button1PRightDown: bool = false,
+button2PLeftDown: bool = false,
+button2PRightDown: bool = false,
 
 pub fn init() SelectorScene {
     std.log.info("selector scene init", .{});
@@ -46,9 +56,16 @@ pub fn init() SelectorScene {
 
     self.image1PButtonIdle = gfx.loadTexture("assets/1P_selector_btn_idle.png").?;
     self.image2PButtonIdle = gfx.loadTexture("assets/2P_selector_btn_idle.png").?;
+    self.image1PButtonDown = gfx.loadTexture("assets/1P_selector_btn_down.png").?;
+    self.image2PButtonDown = gfx.loadTexture("assets/2P_selector_btn_down.png").?;
 
     self.animationPeaShooterIdle = .init("assets/peashooter_idle_{}.png");
     self.animationSunFlowerIdle = .init("assets/sunflower_idle_{}.png");
+
+    self.soundUISwitch = scene.audioEngine.createSoundFromFile(
+        "assets/ui_switch.wav",
+        .{},
+    ) catch unreachable;
 
     return self;
 }
@@ -64,8 +81,38 @@ pub fn exit(self: *SelectorScene) void {
 }
 
 pub fn event(self: *SelectorScene, ev: *const window.Event) void {
-    _ = self;
-    _ = ev;
+    if (ev.type == .KEY_DOWN) switch (ev.key_code) {
+        .A => self.button1PLeftDown = true,
+        .D => self.button1PRightDown = true,
+        .LEFT => self.button2PLeftDown = true,
+        .RIGHT => self.button2PRightDown = true,
+        else => {},
+    } else if (ev.type == .KEY_UP) switch (ev.key_code) {
+        .A => {
+            self.button1PLeftDown = false;
+            self.changePlayerType(&scene.player1);
+        },
+        .D => {
+            self.button1PRightDown = false;
+            self.changePlayerType(&scene.player1);
+        },
+        .LEFT => {
+            self.button2PLeftDown = false;
+            self.changePlayerType(&scene.player2);
+        },
+        .RIGHT => {
+            self.button2PRightDown = false;
+            self.changePlayerType(&scene.player2);
+        },
+        else => {},
+    };
+}
+
+fn changePlayerType(self: *SelectorScene, player: *scene.PlayerType) void {
+    player.* = if (player.* == .peaShooter) .sunFlower else .peaShooter;
+    if (self.soundUISwitch.isPlaying())
+        self.soundUISwitch.stop() catch unreachable;
+    self.soundUISwitch.start() catch unreachable;
 }
 
 pub fn update(self: *SelectorScene) void {
@@ -81,28 +128,11 @@ pub fn render(self: *SelectorScene) void {
 
     self.renderStatic();
 
-    var x = (window.width / 2 - self.imageGrave.width) / 2 - offsetX;
-    const y = self.image1P.height + 70;
+    self.renderButton();
 
-    var buttonX = x - self.image1PButtonIdle.width;
-    const buttonY = y + (self.imageGrave.height - self.image1PButtonIdle.height) / 2;
-    gfx.drawFlipX(buttonX, buttonY, self.image1PButtonIdle, true);
+    self.renderPlayerAnimation();
 
-    buttonX = x + self.imageGrave.width;
-    gfx.draw(buttonX, buttonY, self.image1PButtonIdle);
-
-    x = window.width / 2 + (window.width / 2 - self.imageGrave.width) / 2 + offsetX;
-    buttonX = x - self.image2PButtonIdle.width;
-    gfx.drawFlipX(buttonX, buttonY, self.image2PButtonIdle, true);
-
-    buttonX = x + self.imageGrave.width;
-    gfx.draw(buttonX, buttonY, self.image2PButtonIdle);
-
-    var w = window.width / 2 - self.animationPeaShooterIdle.atlas.textures[0].width;
-    self.animationPlay(scene.player1, w / 2 - offsetX, y + 80, false);
-
-    w = window.width / 2 - self.animationSunFlowerIdle.atlas.textures[0].width;
-    self.animationPlay(scene.player2, window.width / 2 + w / 2 + offsetX, y + 80, true);
+    self.renderPlayerName();
 }
 
 fn renderBackground(self: *SelectorScene) void {
@@ -162,9 +192,58 @@ fn renderStatic(self: *SelectorScene) void {
     gfx.drawFlipX(window.width / 2 + w / 2 + offsetX, posGraveY, self.imageGrave, true);
 }
 
+fn renderButton(self: *SelectorScene) void {
+    var x = (window.width / 2 - self.imageGrave.width) / 2 - offsetX;
+    const y = self.image1P.height + 70;
+
+    var buttonX = x - self.image1PButtonIdle.width;
+    const buttonY = y + (self.imageGrave.height - self.image1PButtonIdle.height) / 2;
+
+    var down, var idle = .{ self.image1PButtonDown, self.image1PButtonIdle };
+    var texture = if (self.button1PLeftDown) down else idle;
+    gfx.drawFlipX(buttonX, buttonY, texture, true);
+
+    texture = if (self.button1PRightDown) down else idle;
+    buttonX = x + self.imageGrave.width;
+    gfx.draw(buttonX, buttonY, texture);
+
+    x = window.width / 2 + (window.width / 2 - self.imageGrave.width) / 2 + offsetX;
+    buttonX = x - self.image2PButtonIdle.width;
+    down, idle = .{ self.image2PButtonDown, self.image2PButtonIdle };
+    texture = if (self.button2PLeftDown) down else idle;
+    gfx.drawFlipX(buttonX, buttonY, texture, true);
+
+    buttonX = x + self.imageGrave.width;
+    texture = if (self.button2PRightDown) down else idle;
+    gfx.draw(buttonX, buttonY, texture);
+}
+
+fn renderPlayerAnimation(self: *SelectorScene) void {
+    const y = self.image1P.height + 70;
+    var w = window.width / 2 - self.animationPeaShooterIdle.atlas.textures[0].width;
+    self.animationPlay(scene.player1, w / 2 - offsetX, y + 80, false);
+
+    w = window.width / 2 - self.animationSunFlowerIdle.atlas.textures[0].width;
+    self.animationPlay(scene.player2, window.width / 2 + w / 2 + offsetX, y + 80, true);
+}
+
+fn renderPlayerName(_: *SelectorScene) void {
+    var name = if (scene.player1 == .peaShooter) "Pea" else "Sun";
+    window.displayText(11, 19, name);
+
+    name = if (scene.player2 == .peaShooter) "Pea" else "Sun";
+    window.displayText(49, 19, name);
+    window.endDisplayText();
+}
+
 fn animationPlay(self: *SelectorScene, player: scene.PlayerType, x: f32, y: f32, flip: bool) void {
     switch (player) {
         .sunFlower => self.animationSunFlowerIdle.playFlipX(x, y, flip),
         .peaShooter => self.animationPeaShooterIdle.playFlipX(x, y, flip),
     }
+}
+
+pub fn deinit(self: *SelectorScene) void {
+    std.log.info("selector scene deinit", .{});
+    self.soundUISwitch.destroy();
 }

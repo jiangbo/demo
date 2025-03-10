@@ -33,6 +33,9 @@ pub fn displayText(x: f32, y: f32, text: [:0]const u8) void {
     sk.debugtext.font(0);
     sk.debugtext.color3b(0xff, 0xff, 0xff);
     sk.debugtext.puts(text);
+}
+
+pub fn endDisplayText() void {
     sk.debugtext.draw();
 }
 
