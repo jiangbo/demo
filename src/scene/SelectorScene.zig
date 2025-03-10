@@ -30,6 +30,7 @@ animationPeaShooterIdle: gfx.BoundedFrameAnimation(9),
 animationSunFlowerIdle: gfx.BoundedFrameAnimation(8),
 
 soundUISwitch: *audio.Sound = undefined,
+soundUIConfirm: *audio.Sound = undefined,
 
 backgroundOffsetX: f32 = 0,
 
@@ -64,6 +65,10 @@ pub fn init() SelectorScene {
 
     self.soundUISwitch = scene.audioEngine.createSoundFromFile(
         "assets/ui_switch.wav",
+        .{},
+    ) catch unreachable;
+    self.soundUIConfirm = scene.audioEngine.createSoundFromFile(
+        "assets/ui_confirm.wav",
         .{},
     ) catch unreachable;
 
@@ -104,14 +109,16 @@ pub fn event(self: *SelectorScene, ev: *const window.Event) void {
             self.button2PRightDown = false;
             self.changePlayerType(&scene.player2);
         },
+        .ENTER => {
+            scene.changeCurrentScene(.game);
+            self.soundUIConfirm.start() catch unreachable;
+        },
         else => {},
     };
 }
 
 fn changePlayerType(self: *SelectorScene, player: *scene.PlayerType) void {
     player.* = if (player.* == .peaShooter) .sunFlower else .peaShooter;
-    if (self.soundUISwitch.isPlaying())
-        self.soundUISwitch.stop() catch unreachable;
     self.soundUISwitch.start() catch unreachable;
 }
 
@@ -246,4 +253,5 @@ fn animationPlay(self: *SelectorScene, player: scene.PlayerType, x: f32, y: f32,
 pub fn deinit(self: *SelectorScene) void {
     std.log.info("selector scene deinit", .{});
     self.soundUISwitch.destroy();
+    self.soundUIConfirm.destroy();
 }
