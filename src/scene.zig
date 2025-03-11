@@ -11,8 +11,8 @@ pub var currentScene: Scene = undefined;
 pub var camera: Camera = .{};
 pub var audioEngine: *audio.Engine = undefined;
 
-pub var player1: PlayerType = .peaShooter;
-pub var player2: PlayerType = .sunFlower;
+pub var playerType1: PlayerType = .peaShooter;
+pub var playerType2: PlayerType = .sunFlower;
 
 var menuScene: MenuScene = undefined;
 var gameScene: GameScene = undefined;

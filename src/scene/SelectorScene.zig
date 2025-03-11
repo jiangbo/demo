@@ -95,19 +95,19 @@ pub fn event(self: *SelectorScene, ev: *const window.Event) void {
     } else if (ev.type == .KEY_UP) switch (ev.key_code) {
         .A => {
             self.button1PLeftDown = false;
-            self.changePlayerType(&scene.player1);
+            self.changePlayerType(&scene.playerType1);
         },
         .D => {
             self.button1PRightDown = false;
-            self.changePlayerType(&scene.player1);
+            self.changePlayerType(&scene.playerType1);
         },
         .LEFT => {
             self.button2PLeftDown = false;
-            self.changePlayerType(&scene.player2);
+            self.changePlayerType(&scene.playerType2);
         },
         .RIGHT => {
             self.button2PRightDown = false;
-            self.changePlayerType(&scene.player2);
+            self.changePlayerType(&scene.playerType2);
         },
         .ENTER => {
             scene.changeCurrentScene(.game);
@@ -146,7 +146,7 @@ fn renderBackground(self: *SelectorScene) void {
     gfx.draw(0, 0, self.background);
 
     const width = self.peaShooterBackground.width;
-    var texture = if (scene.player2 == .peaShooter)
+    var texture = if (scene.playerType2 == .peaShooter)
         self.peaShooterBackground
     else
         self.sunFlowerBackground;
@@ -157,7 +157,7 @@ fn renderBackground(self: *SelectorScene) void {
         .height = self.peaShooterBackground.height,
     } });
 
-    texture = if (scene.player1 == .peaShooter)
+    texture = if (scene.playerType1 == .peaShooter)
         self.peaShooterBackground
     else
         self.sunFlowerBackground;
@@ -228,17 +228,17 @@ fn renderButton(self: *SelectorScene) void {
 fn renderPlayerAnimation(self: *SelectorScene) void {
     const y = self.image1P.height + 70;
     var w = window.width / 2 - self.animationPeaShooterIdle.atlas.textures[0].width;
-    self.animationPlay(scene.player1, w / 2 - offsetX, y + 80, false);
+    self.animationPlay(scene.playerType1, w / 2 - offsetX, y + 80, false);
 
     w = window.width / 2 - self.animationSunFlowerIdle.atlas.textures[0].width;
-    self.animationPlay(scene.player2, window.width / 2 + w / 2 + offsetX, y + 80, true);
+    self.animationPlay(scene.playerType2, window.width / 2 + w / 2 + offsetX, y + 80, true);
 }
 
 fn renderPlayerName(_: *SelectorScene) void {
-    var name = if (scene.player1 == .peaShooter) "Pea" else "Sun";
+    var name = if (scene.playerType1 == .peaShooter) "Pea" else "Sun";
     window.displayText(11, 19, name);
 
-    name = if (scene.player2 == .peaShooter) "Pea" else "Sun";
+    name = if (scene.playerType2 == .peaShooter) "Pea" else "Sun";
     window.displayText(49, 19, name);
     window.endDisplayText();
 }
