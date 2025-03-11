@@ -20,18 +20,18 @@ pub const Player = union(scene.PlayerType) {
             inline else => |*s| switch (ev.type) {
                 .KEY_DOWN => switch (ev.key_code) {
                     .A, .LEFT => {
-                        s.leftKeyDown = true;
-                        s.facingLeft = true;
+                        s.shared.leftKeyDown = true;
+                        s.shared.facingLeft = true;
                     },
                     .D, .RIGHT => {
-                        s.rightKeyDown = true;
-                        s.facingLeft = false;
+                        s.shared.rightKeyDown = true;
+                        s.shared.facingLeft = false;
                     },
                     else => {},
                 },
                 .KEY_UP => switch (ev.key_code) {
-                    .A, .LEFT => s.leftKeyDown = false,
-                    .D, .RIGHT => s.rightKeyDown = false,
+                    .A, .LEFT => s.shared.leftKeyDown = false,
+                    .D, .RIGHT => s.shared.rightKeyDown = false,
                     else => {},
                 },
                 else => {},
@@ -41,50 +41,65 @@ pub const Player = union(scene.PlayerType) {
 
     pub fn update(self: *Player, delta: f32) void {
         switch (self.*) {
-            inline else => |*s| s.animationIdle.update(delta),
+            inline else => |*player| {
+                var direction: f32 = 0;
+                if (player.shared.leftKeyDown) direction -= 1;
+                if (player.shared.rightKeyDown) direction += 1;
+                player.shared.x += direction * SharedPlayer.runVelocity * delta;
+                player.animationIdle.update(delta);
+
+                moveAndCollide(player, delta);
+            },
         }
+    }
+
+    fn moveAndCollide(player: anytype, delta: f32) void {
+        player.shared.velocity += SharedPlayer.gravity * delta;
+        player.shared.y += player.shared.velocity * delta;
     }
 
     pub fn draw(self: Player) void {
         switch (self) {
-            inline else => |*s| s.animationIdle.playFlipX(s.x, s.y, s.facingLeft),
+            inline else => |*s| {
+                s.animationIdle.playFlipX(s.shared.x, s.shared.y, s.shared.facingLeft);
+            },
         }
     }
 };
 
-const PeaShooterPlayer = struct {
+const SharedPlayer = struct {
     x: f32,
     y: f32,
-    facingLeft: bool = false,
+    facingLeft: bool,
     leftKeyDown: bool = false,
     rightKeyDown: bool = false,
+    velocity: f32 = 0,
+
+    const runVelocity: f32 = 0.55;
+    const gravity: f32 = 1.6e-3;
+};
+
+const PeaShooterPlayer = struct {
+    shared: SharedPlayer,
 
     animationIdle: gfx.BoundedFrameAnimation(9),
 
     pub fn init(x: f32, y: f32, faceLeft: bool) PeaShooterPlayer {
         return .{
-            .x = x,
-            .y = y,
-            .facingLeft = faceLeft,
+            .shared = .{ .x = x, .y = y, .facingLeft = faceLeft },
             .animationIdle = .init("assets/peashooter_idle_{}.png"),
         };
     }
 };
 
 const SunFlowerPlayer = struct {
-    x: f32,
-    y: f32,
-    facingLeft: bool,
-    leftKeyDown: bool = false,
-    rightKeyDown: bool = false,
+    shared: SharedPlayer,
 
     animationIdle: gfx.BoundedFrameAnimation(8),
 
     pub fn init(x: f32, y: f32, faceLeft: bool) SunFlowerPlayer {
         return .{
-            .x = x,
-            .y = y,
-            .facingLeft = faceLeft,
+            .shared = .{ .x = x, .y = y, .facingLeft = faceLeft },
             .animationIdle = .init("assets/sunflower_idle_{}.png"),
         };
     }

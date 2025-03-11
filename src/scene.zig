@@ -15,7 +15,7 @@ pub var playerType1: PlayerType = .peaShooter;
 pub var playerType2: PlayerType = .sunFlower;
 
 var menuScene: MenuScene = undefined;
-var gameScene: GameScene = undefined;
+pub var gameScene: GameScene = undefined;
 var selectorScene: SelectorScene = undefined;
 
 pub const PlayerType = enum { peaShooter, sunFlower };
