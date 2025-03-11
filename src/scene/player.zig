@@ -27,6 +27,10 @@ pub const Player = union(scene.PlayerType) {
                         s.shared.rightKeyDown = true;
                         s.shared.facingLeft = false;
                     },
+                    .W, .UP => {
+                        if (s.shared.velocity != 0) return;
+                        s.shared.velocity += SharedPlayer.jumpVelocity;
+                    },
                     else => {},
                 },
                 .KEY_UP => switch (ev.key_code) {
@@ -48,14 +52,32 @@ pub const Player = union(scene.PlayerType) {
                 player.shared.x += direction * SharedPlayer.runVelocity * delta;
                 player.animationIdle.update(delta);
 
-                moveAndCollide(player, delta);
+                moveAndCollide(&player.shared, delta);
             },
         }
     }
 
     fn moveAndCollide(player: anytype, delta: f32) void {
-        player.shared.velocity += SharedPlayer.gravity * delta;
-        player.shared.y += player.shared.velocity * delta;
+        player.velocity += SharedPlayer.gravity * delta;
+        player.y += player.velocity * delta;
+
+        const platforms = &scene.gameScene.platforms;
+        for (platforms) |*platform| {
+            const shape = platform.shape;
+            if (player.x + player.width < shape.left) continue;
+            if (player.x > shape.right) continue;
+            if (shape.y < player.y) continue;
+            if (shape.y > player.y + player.height) continue;
+
+            const deltaPosY = player.velocity * delta;
+            const lastFootPosY = player.y + player.height - deltaPosY;
+
+            if (lastFootPosY <= shape.y) {
+                player.y = shape.y - player.height;
+                player.velocity = 0;
+                break;
+            }
+        }
     }
 
     pub fn draw(self: Player) void {
@@ -74,9 +96,12 @@ const SharedPlayer = struct {
     leftKeyDown: bool = false,
     rightKeyDown: bool = false,
     velocity: f32 = 0,
+    width: f32 = 96,
+    height: f32 = 96,
 
     const runVelocity: f32 = 0.55;
     const gravity: f32 = 1.6e-3;
+    const jumpVelocity: f32 = -0.85;
 };
 
 const PeaShooterPlayer = struct {

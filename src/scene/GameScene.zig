@@ -69,8 +69,8 @@ pub fn exit(self: *GameScene) void {
 
 pub fn event(self: *GameScene, ev: *const window.Event) void {
     switch (ev.key_code) {
-        .A, .D => self.player1.event(ev),
-        .LEFT, .RIGHT => self.player2.event(ev),
+        .A, .D, .W => self.player1.event(ev),
+        .LEFT, .RIGHT, .UP => self.player2.event(ev),
         else => {},
     }
 }
