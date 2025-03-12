@@ -50,7 +50,12 @@ pub const Player = union(scene.PlayerType) {
                 if (player.shared.leftKeyDown) direction -= 1;
                 if (player.shared.rightKeyDown) direction += 1;
                 player.shared.x += direction * SharedPlayer.runVelocity * delta;
-                player.animationIdle.update(delta);
+
+                if (player.shared.leftKeyDown or player.shared.rightKeyDown) {
+                    player.animationRun.update(delta);
+                } else {
+                    player.animationIdle.update(delta);
+                }
 
                 moveAndCollide(&player.shared, delta);
             },
@@ -58,32 +63,39 @@ pub const Player = union(scene.PlayerType) {
     }
 
     fn moveAndCollide(player: anytype, delta: f32) void {
-        player.velocity += SharedPlayer.gravity * delta;
-        player.y += player.velocity * delta;
+        const velocity = player.velocity + SharedPlayer.gravity * delta;
+        const y = player.y + velocity * delta;
 
         const platforms = &scene.gameScene.platforms;
         for (platforms) |*platform| {
-            const shape = platform.shape;
-            if (player.x + player.width < shape.left) continue;
-            if (player.x > shape.right) continue;
-            if (shape.y < player.y) continue;
-            if (shape.y > player.y + player.height) continue;
+            if (player.x + player.width < platform.shape.left) continue;
+            if (player.x > platform.shape.right) continue;
+            if (y + player.height < platform.shape.y) continue;
 
             const deltaPosY = player.velocity * delta;
             const lastFootPosY = player.y + player.height - deltaPosY;
 
-            if (lastFootPosY <= shape.y) {
-                player.y = shape.y - player.height;
+            if (lastFootPosY <= platform.shape.y) {
+                player.y = platform.shape.y - player.height;
                 player.velocity = 0;
                 break;
             }
+        } else {
+            player.y = y;
+            player.velocity = velocity;
         }
     }
 
     pub fn draw(self: Player) void {
         switch (self) {
             inline else => |*s| {
-                s.animationIdle.playFlipX(s.shared.x, s.shared.y, s.shared.facingLeft);
+                if (s.shared.leftKeyDown) {
+                    s.animationRun.playFlipX(s.shared.x, s.shared.y, true);
+                } else if (s.shared.rightKeyDown) {
+                    s.animationRun.playFlipX(s.shared.x, s.shared.y, false);
+                } else {
+                    s.animationIdle.playFlipX(s.shared.x, s.shared.y, s.shared.facingLeft);
+                }
             },
         }
     }
@@ -108,11 +120,13 @@ const PeaShooterPlayer = struct {
     shared: SharedPlayer,
 
     animationIdle: gfx.BoundedFrameAnimation(9),
+    animationRun: gfx.BoundedFrameAnimation(5),
 
     pub fn init(x: f32, y: f32, faceLeft: bool) PeaShooterPlayer {
         return .{
             .shared = .{ .x = x, .y = y, .facingLeft = faceLeft },
             .animationIdle = .init("assets/peashooter_idle_{}.png"),
+            .animationRun = .init("assets/peashooter_run_{}.png"),
         };
     }
 };
@@ -121,11 +135,13 @@ const SunFlowerPlayer = struct {
     shared: SharedPlayer,
 
     animationIdle: gfx.BoundedFrameAnimation(8),
+    animationRun: gfx.BoundedFrameAnimation(5),
 
     pub fn init(x: f32, y: f32, faceLeft: bool) SunFlowerPlayer {
         return .{
             .shared = .{ .x = x, .y = y, .facingLeft = faceLeft },
             .animationIdle = .init("assets/sunflower_idle_{}.png"),
+            .animationRun = .init("assets/sunflower_run_{}.png"),
         };
     }
 };
