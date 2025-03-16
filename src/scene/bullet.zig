@@ -7,6 +7,7 @@ const scene = @import("../scene.zig");
 
 var peaBreakSound: [3]*audio.Sound = undefined;
 var peaShootSound: [2]*audio.Sound = undefined;
+var peaShootExSound: *audio.Sound = undefined;
 
 pub fn init() void {
     peaBreakSound[0] = scene.audioEngine.createSoundFromFile( //
@@ -21,11 +22,15 @@ pub fn init() void {
 
     peaShootSound[1] = scene.audioEngine.createSoundFromFile( //
         "assets/pea_shoot_2.mp3", .{}) catch unreachable;
+
+    peaShootExSound = scene.audioEngine.createSoundFromFile( //
+        "assets/pea_shoot_ex.mp3", .{}) catch unreachable;
 }
 
 pub fn deinit() void {
     for (peaBreakSound) |sound| sound.destroy();
     for (peaShootSound) |sound| sound.destroy();
+    peaShootExSound.destroy();
 }
 
 pub const Vector = struct {
@@ -42,8 +47,6 @@ pub const Vector = struct {
     }
 };
 
-pub const BulletType = enum { pea, sun };
-
 pub const Bullet = struct {
     size: Vector,
     position: Vector,
@@ -58,28 +61,62 @@ pub const Bullet = struct {
 
     texture: gfx.Texture = undefined,
 
-    pub fn init(p1: bool, ex: bool) Bullet {
-        const playerType = if (p1) scene.playerType1 else scene.playerType2;
-        _ = ex;
+    const peaSpeed: f32 = 0.75;
+    const peaSpeedEx: f32 = 1.5;
 
-        var self: Bullet = undefined;
-        if (playerType == .peaShooter) {
-            self.texture = gfx.loadTexture("assets/pea.png").?;
-            self.type = .pea;
-            self.animationBreak = .load("assets/pea_break_{}.png", 3);
-            self.damage = 10;
+    pub const BulletType = enum { pea, peaEx, sun };
 
-            const i = window.rand.uintLessThanBiased(u32, peaShootSound.len);
-            peaShootSound[i].start() catch unreachable;
-        } else {
-            self.texture = gfx.loadTexture("assets/sun_1.png").?;
-            self.type = .sun;
-        }
-        self.animationBreak.loop = false;
-        self.p1 = p1;
+    pub fn init(bulletType: BulletType) Bullet {
+        var self = switch (bulletType) {
+            .pea => initPeaBullet(),
+            .sun => initSunBullet(),
+            else => unreachable,
+        };
+
         self.size = .{ .x = self.texture.width, .y = self.texture.height };
 
         return self;
+    }
+
+    fn initPeaBullet() Bullet {
+        var self: Bullet = undefined;
+        self.texture = gfx.loadTexture("assets/pea.png").?;
+        self.type = .pea;
+        self.animationBreak = .load("assets/pea_break_{}.png", 3);
+        self.animationBreak.loop = false;
+        self.damage = 10;
+        self.velocity = .{ .x = peaSpeed };
+
+        return self;
+    }
+
+    fn initPeaBulletEx() Bullet {
+        var self: Bullet = undefined;
+        self.texture = gfx.loadTexture("assets/pea.png").?;
+        self.type = .pea;
+        self.animationBreak = .load("assets/pea_break_{}.png", 3);
+        self.animationBreak.loop = false;
+        self.damage = 10;
+        self.velocity = .{ .x = peaSpeedEx };
+    }
+
+    fn initSunBullet() Bullet {
+        var self: Bullet = undefined;
+        self.texture = gfx.loadTexture("assets/sun_1.png").?;
+        self.type = .sun;
+
+        return self;
+    }
+
+    pub fn playShootSound(self: *Bullet) void {
+        if (self.type == .pea) {
+            const i = window.rand.uintLessThanBiased(u32, peaShootSound.len);
+            peaShootSound[i].start() catch unreachable;
+        }
+    }
+
+    pub fn playShootExSound() void {
+        peaShootExSound.start() catch unreachable;
     }
 
     pub fn update(self: *Bullet, delta: f32) void {

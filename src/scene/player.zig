@@ -15,19 +15,27 @@ pub const Player = struct {
     velocity: f32 = 0,
     width: f32 = 96,
     height: f32 = 96,
+    p1: bool = true,
 
-    attackInterval: f32 = 200,
     attackTimer: f32 = 0,
+
+    isAttackEx: bool = false,
+    attackExTimer: f32 = 0,
 
     hp: u32 = 100,
     mp: u32 = 100,
 
     animationIdle: gfx.FrameAnimation = undefined,
     animationRun: gfx.FrameAnimation = undefined,
+    animationAttack: gfx.FrameAnimation = undefined,
 
     const runVelocity: f32 = 0.55;
     const gravity: f32 = 1.6e-3;
     const jumpVelocity: f32 = -0.85;
+    const attackInterval: f32 = 500;
+    const attackIntervalEx: f32 = 100;
+
+    const attackExDuration: f32 = 2500;
 
     pub fn init(playerType: scene.PlayerType, x: f32, y: f32, faceLeft: bool) Player {
         var self: Player = .{ .x = x, .y = y, .facingLeft = faceLeft };
@@ -35,15 +43,19 @@ pub const Player = struct {
         if (playerType == .peaShooter) {
             self.animationIdle = .load("assets/peashooter_idle_{}.png", 9);
             self.animationRun = .load("assets/peashooter_run_{}.png", 5);
+            self.animationAttack = .load("assets/peashooter_attack_ex_{}.png", 3);
         } else {
             self.animationIdle = .load("assets/sunflower_idle_{}.png", 8);
             self.animationRun = .load("assets/sunflower_run_{}.png", 5);
+            self.animationAttack = .load("assets/sunflower_attack_ex_{}.png", 9);
         }
 
         return self;
     }
 
     pub fn event(self: *Player, ev: *const window.Event) void {
+        if (self.isAttackEx and ev.type == .KEY_DOWN) return;
+
         switch (ev.type) {
             .KEY_DOWN => switch (ev.key_code) {
                 .A, .LEFT => {
@@ -58,8 +70,8 @@ pub const Player = struct {
                     if (self.velocity != 0) return;
                     self.velocity += Player.jumpVelocity;
                 },
-                .F => self.attack(true),
-                .PERIOD => self.attack(false),
+                .F, .PERIOD => self.attack(),
+                .G, .SLASH => self.attackEx(),
                 else => {},
             },
             .KEY_UP => switch (ev.key_code) {
@@ -72,6 +84,21 @@ pub const Player = struct {
     }
 
     pub fn update(self: *Player, delta: f32) void {
+        self.attackTimer -= delta;
+
+        if (self.isAttackEx) {
+            self.animationAttack.update(delta);
+            self.attackExTimer -= delta;
+            if (self.attackExTimer <= 0) {
+                self.isAttackEx = false;
+                self.attackTimer = attackInterval;
+            } else if (self.attackTimer < 0) {
+                const bullet = self.spawnPeaBullet();
+                scene.gameScene.bullets.append(bullet) catch unreachable;
+            }
+            return;
+        }
+
         var direction: f32 = 0;
         if (self.leftKeyDown) direction -= 1;
         if (self.rightKeyDown) direction += 1;
@@ -84,8 +111,6 @@ pub const Player = struct {
         }
 
         moveAndCollide(self, delta);
-
-        self.attackTimer -= delta;
     }
 
     fn moveAndCollide(self: *Player, delta: f32) void {
@@ -113,7 +138,9 @@ pub const Player = struct {
     }
 
     pub fn render(self: *Player) void {
-        if (self.leftKeyDown) {
+        if (self.isAttackEx) {
+            self.animationAttack.playFlipX(self.x, self.y, self.facingLeft);
+        } else if (self.leftKeyDown) {
             self.animationRun.playFlipX(self.x, self.y, true);
         } else if (self.rightKeyDown) {
             self.animationRun.playFlipX(self.x, self.y, false);
@@ -122,17 +149,37 @@ pub const Player = struct {
         }
     }
 
-    pub fn attack(self: *Player, p1: bool) void {
+    pub fn attack(self: *Player) void {
         if (self.attackTimer > 0) return;
 
-        self.attackTimer = self.attackInterval;
-
-        var bullet: Bullet = Bullet.init(p1, false);
-        const x: f32 = if (self.facingLeft) self.x else self.x + self.width;
-        bullet.position = .{ .x = x - bullet.texture.width / 2, .y = self.y };
-        bullet.velocity = .{ .x = if (self.facingLeft) -0.5 else 0.5 };
+        var bullet = self.spawnPeaBullet();
+        bullet.playShootSound();
 
         scene.gameScene.bullets.append(bullet) catch unreachable;
+    }
+
+    fn spawnPeaBullet(self: *Player) Bullet {
+        self.attackTimer = if (self.isAttackEx) attackIntervalEx else attackInterval;
+
+        const playerType = if (self.p1) scene.playerType1 else scene.playerType2;
+        const bulletType: Bullet.BulletType = if (playerType == .peaShooter) .pea else .sun;
+        var bullet: Bullet = .init(bulletType);
+
+        const x: f32 = if (self.facingLeft) self.x else self.x + self.width;
+        bullet.position = .{ .x = x - bullet.texture.width / 2, .y = self.y };
+        if (self.facingLeft) bullet.velocity.x = -bullet.velocity.x;
+        bullet.p1 = self.p1;
+
+        return bullet;
+    }
+
+    pub fn attackEx(self: *Player) void {
+        if (self.mp < 100) return;
+        self.isAttackEx = true;
+        self.attackExTimer = attackExDuration;
+        self.attackTimer = attackIntervalEx;
+        Bullet.playShootExSound();
+        self.mp = 0;
     }
 
     pub fn vectorIn(self: Player, vector: Vector) bool {

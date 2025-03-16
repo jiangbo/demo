@@ -66,6 +66,7 @@ pub fn enter(self: *GameScene) void {
 
     self.player1 = .init(scene.playerType1, 200, 50, false);
     self.player2 = .init(scene.playerType2, 975, 50, true);
+    self.player2.p1 = false;
 }
 
 pub fn exit(self: *GameScene) void {
