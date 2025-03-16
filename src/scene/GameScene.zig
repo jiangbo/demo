@@ -18,8 +18,6 @@ imageHill: gfx.Texture,
 
 platforms: [4]Platform,
 
-peaBreakSound: [3]*audio.Sound = undefined,
-
 pub fn init() GameScene {
     std.log.info("game scene init", .{});
 
@@ -29,14 +27,8 @@ pub fn init() GameScene {
     self.imageHill = gfx.loadTexture("assets/hills.png").?;
     self.bullets = std.BoundedArray(Bullet, 64).init(0) catch unreachable;
 
-    self.peaBreakSound[0] = scene.audioEngine.createSoundFromFile( //
-        "assets/pea_break_1.mp3", .{}) catch unreachable;
-    self.peaBreakSound[1] = scene.audioEngine.createSoundFromFile( //
-        "assets/pea_break_2.mp3", .{}) catch unreachable;
-    self.peaBreakSound[2] = scene.audioEngine.createSoundFromFile( //
-        "assets/pea_break_3.mp3", .{}) catch unreachable;
-
     self.initPlatforms();
+    @import("bullet.zig").init();
 
     return self;
 }
@@ -100,34 +92,15 @@ pub fn update(self: *GameScene) void {
 
 fn updateBullets(self: *GameScene, delta: f32) void {
     for (self.bullets.slice(), 0..) |*bullet, index| {
-        bullet.position = bullet.position.add(bullet.velocity.scale(delta));
+        bullet.update(delta);
 
         if (bullet.p1 and !bullet.collide) {
-            if (self.player2.shared().vectorIn(bullet.position)) {
-                if (bullet.type == .pea) {
-                    const soundIndex = window.rand.uintAtMostBiased(u32, 2);
-                    self.peaBreakSound[soundIndex].start() catch unreachable;
-                }
-
-                bullet.collide = true;
-                bullet.velocity = .{};
+            if (self.player2.vectorIn(bullet.position)) {
+                bullet.collidePlayer();
             }
         }
 
-        if (bullet.position.x + bullet.size.x < 0 or bullet.position.x > window.width)
-            bullet.dead = true;
-
-        if (bullet.position.y + bullet.size.y < 0 or bullet.position.y > window.height)
-            bullet.dead = true;
-
-        if (bullet.collide) {
-            bullet.animationBreak.update(delta);
-            if (bullet.animationBreak.done) bullet.dead = true;
-        }
-
-        if (bullet.dead) {
-            _ = self.bullets.swapRemove(index);
-        }
+        if (bullet.dead) _ = self.bullets.swapRemove(index);
     }
 }
 
@@ -144,15 +117,16 @@ pub fn render(self: *GameScene) void {
         gfx.draw(platform.x, platform.y, platform.texture);
     }
 
-    self.player1.draw();
-    self.player2.draw();
+    self.player1.render();
+    self.player2.render();
 
     for (self.bullets.slice()) |*bullet| bullet.render();
 }
 
 pub fn deinit(self: *GameScene) void {
     std.log.info("game scene deinit", .{});
-    for (self.peaBreakSound) |sound| sound.destroy();
+    @import("bullet.zig").deinit();
+    _ = self;
 }
 
 const Platform = struct {
