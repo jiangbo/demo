@@ -10,6 +10,7 @@ var peaShootSound: [2]*audio.Sound = undefined;
 var peaShootExSound: *audio.Sound = undefined;
 
 var sunExplodeSound: *audio.Sound = undefined;
+var sunExplodeExSound: *audio.Sound = undefined;
 
 pub fn init() void {
     peaBreakSound[0] = scene.audioEngine.createSoundFromFile( //
@@ -30,6 +31,9 @@ pub fn init() void {
 
     sunExplodeSound = scene.audioEngine.createSoundFromFile( //
         "assets/sun_explode.mp3", .{}) catch unreachable;
+
+    sunExplodeExSound = scene.audioEngine.createSoundFromFile( //
+        "assets/sun_explode_ex.mp3", .{}) catch unreachable;
 }
 
 pub fn deinit() void {
@@ -37,6 +41,7 @@ pub fn deinit() void {
     for (peaShootSound) |sound| sound.destroy();
     peaShootExSound.destroy();
     sunExplodeSound.destroy();
+    sunExplodeExSound.destroy();
 }
 
 pub const Vector = struct {
@@ -79,7 +84,7 @@ pub const Bullet = struct {
         var self = switch (bulletType) {
             .pea => initPeaBullet(),
             .sun => initSunBullet(),
-            else => unreachable,
+            .sunEx => initSunBulletEx(),
         };
 
         self.size = .{ .x = self.texture.width, .y = self.texture.height };
@@ -105,6 +110,25 @@ pub const Bullet = struct {
         self.type = .sun;
         self.animationIdle = .load("assets/sun_{}.png", 5);
         self.animationBreak = .load("assets/sun_explode_{}.png", 5);
+        self.animationBreak.interval = 75;
+        self.animationBreak.loop = false;
+        self.damage = 20;
+        self.velocity = .{ .x = 0.25, .y = -0.65 };
+
+        self.explodeOffset = .{
+            .x = (self.texture.width - self.animationBreak.textures[0].width) / 2,
+            .y = (self.texture.height - self.animationBreak.textures[0].height) / 2,
+        };
+
+        return self;
+    }
+
+    fn initSunBulletEx() Bullet {
+        var self: Bullet = undefined;
+        self.texture = gfx.loadTexture("assets/sun_ex_1.png").?;
+        self.type = .sun;
+        self.animationIdle = .load("assets/sun_ex_{}.png", 5);
+        self.animationBreak = .load("assets/sun_ex_explode_{}.png", 5);
         self.animationBreak.interval = 75;
         self.animationBreak.loop = false;
         self.damage = 20;

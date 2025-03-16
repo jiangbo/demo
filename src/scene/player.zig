@@ -178,6 +178,7 @@ pub const Player = struct {
     pub fn attackEx(self: *Player) void {
         if (self.mp < 100) return;
         self.isAttackEx = true;
+
         self.attackExTimer = attackExDuration;
         self.attackTimer = attackIntervalEx;
         Bullet.playShootExSound();
