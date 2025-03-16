@@ -13,6 +13,7 @@ pub const CallbackInfo = struct {
 
 pub var width: f32 = 1280;
 pub var height: f32 = 720;
+pub var rand: std.Random = undefined;
 
 var timer: std.time.Timer = undefined;
 var deltaTime: f32 = 0;

@@ -32,6 +32,18 @@ pub fn loadTexture(path: [:0]const u8) ?Texture {
     return cache.TextureCache.load(path);
 }
 
+pub fn loadTextures(textures: []Texture, comptime pathFmt: []const u8, from: u8) void {
+    std.log.info("loading texture slice : {s}", .{pathFmt});
+
+    var buffer: [128]u8 = undefined;
+    for (from..from + textures.len) |index| {
+        const path = std.fmt.bufPrintZ(&buffer, pathFmt, .{index});
+
+        const texture = loadTexture(path catch unreachable);
+        textures[index - from] = texture.?;
+    }
+}
+
 pub fn beginDraw() void {
     passEncoder = gpu.CommandEncoder.beginRenderPass(.{ .r = 1, .b = 1, .a = 1.0 });
     renderer.renderPass = passEncoder;
@@ -70,59 +82,64 @@ pub fn endDraw() void {
     passEncoder.submit();
 }
 
-pub fn BoundedTextureAtlas(max: u8) type {
+pub fn TextureArray(max: u8) type {
     return struct {
         textures: [max]Texture,
 
         pub fn init(comptime pathFmt: []const u8) @This() {
             var self = @This(){ .textures = undefined };
-            var buffer: [128]u8 = undefined;
-            for (0..max) |index| {
-                const path = std.fmt.bufPrintZ(&buffer, pathFmt, .{index + 1});
-
-                const texture = cache.TextureCache.load(path catch unreachable);
-                self.textures[index] = texture.?;
-            }
-
+            cache.TextureSliceCache.loadToSlice(&self.textures, pathFmt, 1);
             return self;
         }
-    };
-}
 
-pub fn BoundedFrameAnimation(max: u8) type {
-    return struct {
-        interval: f32 = 100,
-        timer: f32 = 0,
-        index: usize = 0,
-        loop: bool = true,
-        atlas: BoundedTextureAtlas(max),
-        callback: ?*const fn () void = null,
-
-        pub fn init(comptime pathFmt: []const u8) @This() {
-            return .{ .atlas = .init(pathFmt) };
-        }
-
-        pub fn update(self: *@This(), delta: f32) void {
-            self.timer += delta;
-            if (self.timer < self.interval) return;
-
-            self.timer = 0;
-            self.index += 1;
-
-            if (self.index < self.atlas.textures.len) return;
-
-            if (self.loop) self.index = 0 else {
-                self.index = self.atlas.textures.len - 1;
-                if (self.callback) |callback| callback();
-            }
-        }
-
-        pub fn play(self: @This(), x: f32, y: f32) void {
-            self.playFlipX(x, y, false);
-        }
-
-        pub fn playFlipX(self: @This(), x: f32, y: f32, flipX: bool) void {
-            drawFlipX(x, y, self.atlas.textures[self.index], flipX);
+        pub fn asSlice(self: @This()) []const Texture {
+            return self.textures[0..];
         }
     };
 }
+
+pub const FrameAnimation = SliceFrameAnimation;
+
+pub const SliceFrameAnimation = struct {
+    interval: f32 = 100,
+    timer: f32 = 0,
+    index: usize = 0,
+    loop: bool = true,
+    done: bool = false,
+
+    textures: []const Texture,
+
+    pub fn init(textures: []const Texture) SliceFrameAnimation {
+        return .{ .textures = textures };
+    }
+
+    pub fn load(comptime pathFmt: []const u8, max: u8) SliceFrameAnimation {
+        const textures = cache.TextureSliceCache.load(pathFmt, 1, max);
+        return .init(textures.?);
+    }
+
+    pub fn update(self: *@This(), delta: f32) void {
+        if (self.done) return;
+
+        self.timer += delta;
+        if (self.timer < self.interval) return;
+
+        self.timer = 0;
+        self.index += 1;
+
+        if (self.index < self.textures.len) return;
+
+        if (self.loop) self.index = 0 else {
+            self.index = self.textures.len - 1;
+            self.done = true;
+        }
+    }
+
+    pub fn play(self: @This(), x: f32, y: f32) void {
+        self.playFlipX(x, y, false);
+    }
+
+    pub fn playFlipX(self: @This(), x: f32, y: f32, flipX: bool) void {
+        drawFlipX(x, y, self.textures[self.index], flipX);
+    }
+};

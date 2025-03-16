@@ -1,18 +1,24 @@
 const std = @import("std");
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
+const audio = @import("zaudio");
 
 const scene = @import("../scene.zig");
-const Player = @import("player.zig").Player;
+const Bullet = @import("bullet.zig").Bullet;
+const player = @import("player.zig");
 const GameScene = @This();
 
-player1: Player = undefined,
-player2: Player = undefined,
+player1: player.Player,
+player2: player.Player,
+
+bullets: std.BoundedArray(Bullet, 64),
 
 imageSky: gfx.Texture,
 imageHill: gfx.Texture,
 
-platforms: [4]Platform = undefined,
+platforms: [4]Platform,
+
+peaBreakSound: [3]*audio.Sound = undefined,
 
 pub fn init() GameScene {
     std.log.info("game scene init", .{});
@@ -21,6 +27,14 @@ pub fn init() GameScene {
 
     self.imageSky = gfx.loadTexture("assets/sky.png").?;
     self.imageHill = gfx.loadTexture("assets/hills.png").?;
+    self.bullets = std.BoundedArray(Bullet, 64).init(0) catch unreachable;
+
+    self.peaBreakSound[0] = scene.audioEngine.createSoundFromFile( //
+        "assets/pea_break_1.mp3", .{}) catch unreachable;
+    self.peaBreakSound[1] = scene.audioEngine.createSoundFromFile( //
+        "assets/pea_break_2.mp3", .{}) catch unreachable;
+    self.peaBreakSound[2] = scene.audioEngine.createSoundFromFile( //
+        "assets/pea_break_3.mp3", .{}) catch unreachable;
 
     self.initPlatforms();
 
@@ -80,6 +94,41 @@ pub fn update(self: *GameScene) void {
 
     self.player1.update(deltaTime);
     self.player2.update(deltaTime);
+
+    self.updateBullets(deltaTime);
+}
+
+fn updateBullets(self: *GameScene, delta: f32) void {
+    for (self.bullets.slice(), 0..) |*bullet, index| {
+        bullet.position = bullet.position.add(bullet.velocity.scale(delta));
+
+        if (bullet.p1 and !bullet.collide) {
+            if (self.player2.shared().vectorIn(bullet.position)) {
+                if (bullet.type == .pea) {
+                    const soundIndex = window.rand.uintAtMostBiased(u32, 2);
+                    self.peaBreakSound[soundIndex].start() catch unreachable;
+                }
+
+                bullet.collide = true;
+                bullet.velocity = .{};
+            }
+        }
+
+        if (bullet.position.x + bullet.size.x < 0 or bullet.position.x > window.width)
+            bullet.dead = true;
+
+        if (bullet.position.y + bullet.size.y < 0 or bullet.position.y > window.height)
+            bullet.dead = true;
+
+        if (bullet.collide) {
+            bullet.animationBreak.update(delta);
+            if (bullet.animationBreak.done) bullet.dead = true;
+        }
+
+        if (bullet.dead) {
+            _ = self.bullets.swapRemove(index);
+        }
+    }
 }
 
 pub fn render(self: *GameScene) void {
@@ -97,6 +146,13 @@ pub fn render(self: *GameScene) void {
 
     self.player1.draw();
     self.player2.draw();
+
+    for (self.bullets.slice()) |*bullet| bullet.render();
+}
+
+pub fn deinit(self: *GameScene) void {
+    std.log.info("game scene deinit", .{});
+    for (self.peaBreakSound) |sound| sound.destroy();
 }
 
 const Platform = struct {

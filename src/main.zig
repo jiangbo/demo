@@ -44,6 +44,9 @@ pub fn main() void {
     window.width = 1280;
     window.height = 720;
 
+    var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
+    window.rand = prng.random();
+
     window.run(.{
         .title = "植物明星大乱斗",
         .init = init,

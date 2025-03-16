@@ -90,5 +90,6 @@ pub fn deinit() void {
     currentScene.exit();
     menuScene.deinit();
     selectorScene.deinit();
+    gameScene.deinit();
     audioEngine.destroy();
 }

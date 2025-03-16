@@ -26,8 +26,8 @@ image2PButtonIdle: gfx.Texture,
 image1PButtonDown: gfx.Texture,
 image2PButtonDown: gfx.Texture,
 
-animationPeaShooterIdle: gfx.BoundedFrameAnimation(9),
-animationSunFlowerIdle: gfx.BoundedFrameAnimation(8),
+animationPeaShooterIdle: gfx.FrameAnimation,
+animationSunFlowerIdle: gfx.FrameAnimation,
 
 soundUISwitch: *audio.Sound = undefined,
 soundUIConfirm: *audio.Sound = undefined,
@@ -60,8 +60,8 @@ pub fn init() SelectorScene {
     self.image1PButtonDown = gfx.loadTexture("assets/1P_selector_btn_down.png").?;
     self.image2PButtonDown = gfx.loadTexture("assets/2P_selector_btn_down.png").?;
 
-    self.animationPeaShooterIdle = .init("assets/peashooter_idle_{}.png");
-    self.animationSunFlowerIdle = .init("assets/sunflower_idle_{}.png");
+    self.animationPeaShooterIdle = .load("assets/peashooter_idle_{}.png", 9);
+    self.animationSunFlowerIdle = .load("assets/sunflower_idle_{}.png", 8);
 
     self.soundUISwitch = scene.audioEngine.createSoundFromFile(
         "assets/ui_switch.wav",
@@ -227,10 +227,10 @@ fn renderButton(self: *SelectorScene) void {
 
 fn renderPlayerAnimation(self: *SelectorScene) void {
     const y = self.image1P.height + 70;
-    var w = window.width / 2 - self.animationPeaShooterIdle.atlas.textures[0].width;
+    var w = window.width / 2 - self.animationPeaShooterIdle.textures[0].width;
     self.animationPlay(scene.playerType1, w / 2 - offsetX, y + 80, false);
 
-    w = window.width / 2 - self.animationSunFlowerIdle.atlas.textures[0].width;
+    w = window.width / 2 - self.animationSunFlowerIdle.textures[0].width;
     self.animationPlay(scene.playerType2, window.width / 2 + w / 2 + offsetX, y + 80, true);
 }
 

@@ -3,6 +3,8 @@ const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 
 const scene = @import("../scene.zig");
+const Bullet = @import("bullet.zig").Bullet;
+const Vector = @import("bullet.zig").Vector;
 
 pub const Player = union(scene.PlayerType) {
     peaShooter: PeaShooterPlayer,
@@ -31,6 +33,8 @@ pub const Player = union(scene.PlayerType) {
                         if (s.shared.velocity != 0) return;
                         s.shared.velocity += SharedPlayer.jumpVelocity;
                     },
+                    .F => s.attack(true),
+                    .PERIOD => s.attack(false),
                     else => {},
                 },
                 .KEY_UP => switch (ev.key_code) {
@@ -58,6 +62,8 @@ pub const Player = union(scene.PlayerType) {
                 }
 
                 moveAndCollide(&player.shared, delta);
+
+                player.shared.attackTimer -= delta;
             },
         }
     }
@@ -99,6 +105,15 @@ pub const Player = union(scene.PlayerType) {
             },
         }
     }
+
+    pub fn shared(self: Player) *SharedPlayer {
+        return switch (self) {
+            inline else => |*s| {
+                var share = s.shared;
+                return &share;
+            },
+        };
+    }
 };
 
 const SharedPlayer = struct {
@@ -111,37 +126,81 @@ const SharedPlayer = struct {
     width: f32 = 96,
     height: f32 = 96,
 
+    attackInterval: f32 = 200,
+    attackTimer: f32 = 0,
+
+    hp: u32 = 100,
+    mp: u32 = 100,
+
     const runVelocity: f32 = 0.55;
     const gravity: f32 = 1.6e-3;
     const jumpVelocity: f32 = -0.85;
+
+    pub fn attack(self: *SharedPlayer, p1: bool, texturePath: [:0]const u8) Bullet {
+        self.attackTimer = self.attackInterval;
+
+        var bullet: Bullet = undefined;
+        bullet.texture = gfx.loadTexture(texturePath).?;
+        bullet.size = .{ .x = bullet.texture.width, .y = bullet.texture.height };
+        const x: f32 = if (self.facingLeft) self.x else self.x + self.width;
+        bullet.position = .{ .x = x - bullet.texture.width / 2, .y = self.y };
+        bullet.velocity = .{ .x = if (self.facingLeft) -0.5 else 0.5 };
+        bullet.damage = 10;
+        bullet.p1 = p1;
+        return bullet;
+    }
+
+    pub fn vectorIn(self: SharedPlayer, vector: Vector) bool {
+        if (vector.x < self.x or vector.x > self.x + self.width) return false;
+        if (vector.y < self.y or vector.y > self.y + self.height) return false;
+        return true;
+    }
 };
 
 const PeaShooterPlayer = struct {
     shared: SharedPlayer,
 
-    animationIdle: gfx.BoundedFrameAnimation(9),
-    animationRun: gfx.BoundedFrameAnimation(5),
+    animationIdle: gfx.FrameAnimation,
+    animationRun: gfx.FrameAnimation,
 
     pub fn init(x: f32, y: f32, faceLeft: bool) PeaShooterPlayer {
         return .{
             .shared = .{ .x = x, .y = y, .facingLeft = faceLeft },
-            .animationIdle = .init("assets/peashooter_idle_{}.png"),
-            .animationRun = .init("assets/peashooter_run_{}.png"),
+            .animationIdle = .load("assets/peashooter_idle_{}.png", 9),
+            .animationRun = .load("assets/peashooter_run_{}.png", 5),
         };
+    }
+
+    pub fn attack(self: *PeaShooterPlayer, p1: bool) void {
+        if (self.shared.attackTimer > 0) return;
+        var bullet = self.shared.attack(p1, "assets/pea.png");
+        bullet.type = .pea;
+        bullet.animationBreak = .load("assets/pea_break_{}.png", 3);
+        bullet.animationBreak.loop = false;
+
+        scene.gameScene.bullets.append(bullet) catch unreachable;
     }
 };
 
 const SunFlowerPlayer = struct {
     shared: SharedPlayer,
 
-    animationIdle: gfx.BoundedFrameAnimation(8),
-    animationRun: gfx.BoundedFrameAnimation(5),
+    animationIdle: gfx.FrameAnimation,
+    animationRun: gfx.FrameAnimation,
 
     pub fn init(x: f32, y: f32, faceLeft: bool) SunFlowerPlayer {
         return .{
             .shared = .{ .x = x, .y = y, .facingLeft = faceLeft },
-            .animationIdle = .init("assets/sunflower_idle_{}.png"),
-            .animationRun = .init("assets/sunflower_run_{}.png"),
+            .animationIdle = .load("assets/sunflower_idle_{}.png", 8),
+            .animationRun = .load("assets/sunflower_run_{}.png", 5),
         };
+    }
+
+    pub fn attack(self: *SunFlowerPlayer, p1: bool) void {
+        if (self.shared.attackTimer > 0) return;
+
+        var bullet = self.shared.attack(p1, "assets/sun_1.png");
+        bullet.type = .sun;
+        scene.gameScene.bullets.append(bullet) catch unreachable;
     }
 };
