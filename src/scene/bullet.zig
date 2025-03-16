@@ -9,6 +9,8 @@ var peaBreakSound: [3]*audio.Sound = undefined;
 var peaShootSound: [2]*audio.Sound = undefined;
 var peaShootExSound: *audio.Sound = undefined;
 
+var sunExplodeSound: *audio.Sound = undefined;
+
 pub fn init() void {
     peaBreakSound[0] = scene.audioEngine.createSoundFromFile( //
         "assets/pea_break_1.mp3", .{}) catch unreachable;
@@ -25,12 +27,16 @@ pub fn init() void {
 
     peaShootExSound = scene.audioEngine.createSoundFromFile( //
         "assets/pea_shoot_ex.mp3", .{}) catch unreachable;
+
+    sunExplodeSound = scene.audioEngine.createSoundFromFile( //
+        "assets/sun_explode.mp3", .{}) catch unreachable;
 }
 
 pub fn deinit() void {
     for (peaBreakSound) |sound| sound.destroy();
     for (peaShootSound) |sound| sound.destroy();
     peaShootExSound.destroy();
+    sunExplodeSound.destroy();
 }
 
 pub const Vector = struct {
@@ -55,16 +61,19 @@ pub const Bullet = struct {
     dead: bool = false,
     collide: bool = false,
     p1: bool = true,
+    explodeOffset: Vector = .{},
 
     type: BulletType = .pea,
+    animationIdle: gfx.FrameAnimation,
     animationBreak: gfx.FrameAnimation,
 
     texture: gfx.Texture = undefined,
 
     const peaSpeed: f32 = 0.75;
     const peaSpeedEx: f32 = 1.5;
+    const gravity: f32 = 1.6e-3;
 
-    pub const BulletType = enum { pea, peaEx, sun };
+    pub const BulletType = enum { pea, sun, sunEx };
 
     pub fn init(bulletType: BulletType) Bullet {
         var self = switch (bulletType) {
@@ -90,20 +99,21 @@ pub const Bullet = struct {
         return self;
     }
 
-    fn initPeaBulletEx() Bullet {
-        var self: Bullet = undefined;
-        self.texture = gfx.loadTexture("assets/pea.png").?;
-        self.type = .pea;
-        self.animationBreak = .load("assets/pea_break_{}.png", 3);
-        self.animationBreak.loop = false;
-        self.damage = 10;
-        self.velocity = .{ .x = peaSpeedEx };
-    }
-
     fn initSunBullet() Bullet {
         var self: Bullet = undefined;
         self.texture = gfx.loadTexture("assets/sun_1.png").?;
         self.type = .sun;
+        self.animationIdle = .load("assets/sun_{}.png", 5);
+        self.animationBreak = .load("assets/sun_explode_{}.png", 5);
+        self.animationBreak.interval = 75;
+        self.animationBreak.loop = false;
+        self.damage = 20;
+        self.velocity = .{ .x = 0.25, .y = -0.65 };
+
+        self.explodeOffset = .{
+            .x = (self.texture.width - self.animationBreak.textures[0].width) / 2,
+            .y = (self.texture.height - self.animationBreak.textures[0].height) / 2,
+        };
 
         return self;
     }
@@ -119,11 +129,22 @@ pub const Bullet = struct {
         peaShootExSound.start() catch unreachable;
     }
 
+    pub fn center(self: Bullet) Vector {
+        return .{
+            .x = self.position.x + self.size.x / 2,
+            .y = self.position.y + self.size.y / 2,
+        };
+    }
+
     pub fn update(self: *Bullet, delta: f32) void {
+        if (self.type != .pea) {
+            self.velocity = self.velocity.add(.{ .y = gravity * delta });
+        }
         const position = self.position.add(self.velocity.scale(delta));
 
         if (self.collide) {
             self.animationBreak.update(delta);
+            if (self.type == .pea) self.position = position;
             if (self.animationBreak.done) self.dead = true;
             return;
         }
@@ -137,10 +158,12 @@ pub const Bullet = struct {
         if (self.type == .pea) {
             const i = window.rand.uintLessThanBiased(u32, peaBreakSound.len);
             peaBreakSound[i].start() catch unreachable;
-        } else {}
-
-        self.collide = true;
-        self.velocity = .{};
+            self.collide = true;
+            self.velocity = .{ .x = 0.2 };
+        } else {
+            self.collide = true;
+            sunExplodeSound.start() catch unreachable;
+        }
     }
 
     fn outWindow(position: Vector, size: Vector) bool {
@@ -151,7 +174,8 @@ pub const Bullet = struct {
 
     pub fn render(self: *Bullet) void {
         if (self.collide) {
-            self.animationBreak.play(self.position.x, self.position.y);
+            const pos = self.position.add(self.explodeOffset);
+            self.animationBreak.play(pos.x, pos.y);
         } else {
             gfx.draw(self.position.x, self.position.y, self.texture);
         }

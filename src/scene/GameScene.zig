@@ -96,7 +96,13 @@ fn updateBullets(self: *GameScene, delta: f32) void {
         bullet.update(delta);
 
         if (bullet.p1 and !bullet.collide) {
-            if (self.player2.vectorIn(bullet.position)) {
+            if (self.player2.vectorIn(bullet.center())) {
+                bullet.collidePlayer();
+            }
+        }
+
+        if (!bullet.p1 and !bullet.collide) {
+            if (self.player1.vectorIn(bullet.center())) {
                 bullet.collidePlayer();
             }
         }

@@ -28,6 +28,7 @@ pub const Player = struct {
     animationIdle: gfx.FrameAnimation = undefined,
     animationRun: gfx.FrameAnimation = undefined,
     animationAttack: gfx.FrameAnimation = undefined,
+    animationSunText: gfx.FrameAnimation = undefined,
 
     const runVelocity: f32 = 0.55;
     const gravity: f32 = 1.6e-3;
@@ -48,6 +49,7 @@ pub const Player = struct {
             self.animationIdle = .load("assets/sunflower_idle_{}.png", 8);
             self.animationRun = .load("assets/sunflower_run_{}.png", 5);
             self.animationAttack = .load("assets/sunflower_attack_ex_{}.png", 9);
+            self.animationSunText = .load("assets/sun_text_{}.png", 5);
         }
 
         return self;
@@ -93,7 +95,7 @@ pub const Player = struct {
                 self.isAttackEx = false;
                 self.attackTimer = attackInterval;
             } else if (self.attackTimer < 0) {
-                const bullet = self.spawnPeaBullet();
+                const bullet = self.spawnBullet();
                 scene.gameScene.bullets.append(bullet) catch unreachable;
             }
             return;
@@ -152,13 +154,13 @@ pub const Player = struct {
     pub fn attack(self: *Player) void {
         if (self.attackTimer > 0) return;
 
-        var bullet = self.spawnPeaBullet();
+        var bullet = self.spawnBullet();
         bullet.playShootSound();
 
         scene.gameScene.bullets.append(bullet) catch unreachable;
     }
 
-    fn spawnPeaBullet(self: *Player) Bullet {
+    fn spawnBullet(self: *Player) Bullet {
         self.attackTimer = if (self.isAttackEx) attackIntervalEx else attackInterval;
 
         const playerType = if (self.p1) scene.playerType1 else scene.playerType2;
