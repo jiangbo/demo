@@ -68,7 +68,7 @@ pub const Bullet = struct {
     p1: bool = true,
     explodeOffset: Vector = .{},
 
-    type: BulletType = .pea,
+    type: Type = .pea,
     animationIdle: gfx.FrameAnimation,
     animationBreak: gfx.FrameAnimation,
 
@@ -78,9 +78,9 @@ pub const Bullet = struct {
     const peaSpeedEx: f32 = 1.5;
     const gravity: f32 = 1.6e-3;
 
-    pub const BulletType = enum { pea, sun, sunEx };
+    pub const Type = enum { pea, sun, sunEx };
 
-    pub fn init(bulletType: BulletType) Bullet {
+    pub fn init(bulletType: Type) Bullet {
         var self = switch (bulletType) {
             .pea => initPeaBullet(),
             .sun => initSunBullet(),
@@ -110,7 +110,7 @@ pub const Bullet = struct {
         self.type = .sun;
         self.animationIdle = .load("assets/sun_{}.png", 5);
         self.animationBreak = .load("assets/sun_explode_{}.png", 5);
-        self.animationBreak.interval = 75;
+        self.animationBreak.timer.duration = 75;
         self.animationBreak.loop = false;
         self.damage = 20;
         self.velocity = .{ .x = 0.25, .y = -0.65 };
@@ -129,7 +129,7 @@ pub const Bullet = struct {
         self.type = .sun;
         self.animationIdle = .load("assets/sun_ex_{}.png", 5);
         self.animationBreak = .load("assets/sun_ex_explode_{}.png", 5);
-        self.animationBreak.interval = 75;
+        self.animationBreak.timer.duration = 75;
         self.animationBreak.loop = false;
         self.damage = 20;
         self.velocity = .{ .x = 0.25, .y = -0.65 };
@@ -169,7 +169,7 @@ pub const Bullet = struct {
         if (self.collide) {
             self.animationBreak.update(delta);
             if (self.type == .pea) self.position = position;
-            if (self.animationBreak.done) self.dead = true;
+            if (self.animationBreak.finished()) self.dead = true;
             return;
         }
 

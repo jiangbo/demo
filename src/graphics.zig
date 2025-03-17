@@ -1,6 +1,7 @@
 const std = @import("std");
 const cache = @import("cache.zig");
 const gpu = @import("gpu.zig");
+const window = @import("window.zig");
 
 pub const Texture = gpu.Texture;
 
@@ -101,16 +102,20 @@ pub fn TextureArray(max: u8) type {
 pub const FrameAnimation = SliceFrameAnimation;
 
 pub const SliceFrameAnimation = struct {
-    interval: f32 = 100,
-    timer: f32 = 0,
+    // interval: f32 = 100,
+    // timer: f32 = 0,
+    // index: usize = 0,
+    // loop: bool = true,
+    // done: bool = false,
+
+    timer: window.Timer,
     index: usize = 0,
     loop: bool = true,
-    done: bool = false,
 
     textures: []const Texture,
 
     pub fn init(textures: []const Texture) SliceFrameAnimation {
-        return .{ .textures = textures };
+        return .{ .textures = textures, .timer = .init(100) };
     }
 
     pub fn load(comptime pathFmt: []const u8, max: u8) SliceFrameAnimation {
@@ -119,20 +124,22 @@ pub const SliceFrameAnimation = struct {
     }
 
     pub fn update(self: *@This(), delta: f32) void {
-        if (self.done) return;
+        self.timer.update(delta);
+        if (self.timer.isRun()) return;
 
-        self.timer += delta;
-        if (self.timer < self.interval) return;
-
-        self.timer = 0;
-        self.index += 1;
-
-        if (self.index < self.textures.len) return;
-
-        if (self.loop) self.index = 0 else {
-            self.index = self.textures.len - 1;
-            self.done = true;
+        if (self.index == self.textures.len - 1) {
+            if (self.loop) {
+                self.index = 0;
+                self.timer.reset();
+            }
+        } else {
+            self.timer.reset();
+            self.index += 1;
         }
+    }
+
+    pub fn finished(self: *@This()) bool {
+        return self.timer.finished and !self.loop;
     }
 
     pub fn play(self: @This(), x: f32, y: f32) void {

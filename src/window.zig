@@ -11,6 +11,31 @@ pub const CallbackInfo = struct {
     deinit: ?*const fn () void = null,
 };
 
+pub const Timer = struct {
+    finished: bool = false,
+    duration: f32,
+    elapsed: f32 = 0,
+
+    pub fn init(duration: f32) Timer {
+        return Timer{ .duration = duration };
+    }
+
+    pub fn update(self: *Timer, delta: f32) void {
+        if (self.finished) return;
+        self.elapsed += delta;
+        if (self.elapsed >= self.duration) self.finished = true;
+    }
+
+    pub fn reset(self: *Timer) void {
+        self.finished = false;
+        self.elapsed = 0;
+    }
+
+    pub fn isRun(self: *Timer) bool {
+        return !self.finished;
+    }
+};
+
 pub var width: f32 = 1280;
 pub var height: f32 = 720;
 pub var rand: std.Random = undefined;
