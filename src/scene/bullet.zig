@@ -11,6 +11,7 @@ var peaShootExSound: *audio.Sound = undefined;
 
 var sunExplodeSound: *audio.Sound = undefined;
 var sunExplodeExSound: *audio.Sound = undefined;
+var sunTextSound: *audio.Sound = undefined;
 
 pub fn init() void {
     peaBreakSound[0] = scene.audioEngine.createSoundFromFile( //
@@ -34,6 +35,9 @@ pub fn init() void {
 
     sunExplodeExSound = scene.audioEngine.createSoundFromFile( //
         "assets/sun_explode_ex.mp3", .{}) catch unreachable;
+
+    sunTextSound = scene.audioEngine.createSoundFromFile( //
+        "assets/sun_text.mp3", .{}) catch unreachable;
 }
 
 pub fn deinit() void {
@@ -42,6 +46,7 @@ pub fn deinit() void {
     peaShootExSound.destroy();
     sunExplodeSound.destroy();
     sunExplodeExSound.destroy();
+    sunTextSound.destroy();
 }
 
 pub const Vector = struct {
@@ -77,18 +82,17 @@ pub const Bullet = struct {
     const peaSpeed: f32 = 0.75;
     const peaSpeedEx: f32 = 1.5;
     const gravity: f32 = 1.6e-3;
+    const Type = enum { pea, sun, sunEx };
 
-    pub const Type = enum { pea, sun, sunEx };
-
-    pub fn init(bulletType: Type) Bullet {
-        var self = switch (bulletType) {
-            .pea => initPeaBullet(),
-            .sun => initSunBullet(),
-            .sunEx => initSunBulletEx(),
+    pub fn init(p1: bool) Bullet {
+        const playerType = if (p1) scene.playerType1 else scene.playerType2;
+        var self = switch (playerType) {
+            .peaShooter => initPeaBullet(),
+            .sunFlower => initSunBullet(),
         };
 
         self.size = .{ .x = self.texture.width, .y = self.texture.height };
-
+        self.p1 = p1;
         return self;
     }
 
@@ -123,21 +127,24 @@ pub const Bullet = struct {
         return self;
     }
 
-    fn initSunBulletEx() Bullet {
+    pub fn initSunBulletEx() Bullet {
         var self: Bullet = undefined;
         self.texture = gfx.loadTexture("assets/sun_ex_1.png").?;
-        self.type = .sun;
+        self.type = .sunEx;
         self.animationIdle = .load("assets/sun_ex_{}.png", 5);
         self.animationBreak = .load("assets/sun_ex_explode_{}.png", 5);
         self.animationBreak.timer.duration = 75;
         self.animationBreak.loop = false;
         self.damage = 20;
-        self.velocity = .{ .x = 0.25, .y = -0.65 };
+        self.velocity = .{ .y = 0.15 };
+        self.position.y = -self.texture.height;
 
         self.explodeOffset = .{
             .x = (self.texture.width - self.animationBreak.textures[0].width) / 2,
             .y = (self.texture.height - self.animationBreak.textures[0].height) / 2,
         };
+
+        self.size = .{ .x = self.texture.width, .y = self.texture.height };
 
         return self;
     }
@@ -149,8 +156,11 @@ pub const Bullet = struct {
         }
     }
 
-    pub fn playShootExSound() void {
-        peaShootExSound.start() catch unreachable;
+    pub fn playShootExSound(playerType: scene.PlayerType) void {
+        if (playerType == .peaShooter)
+            peaShootExSound.start() catch unreachable
+        else
+            sunTextSound.start() catch unreachable;
     }
 
     pub fn center(self: Bullet) Vector {
@@ -161,7 +171,7 @@ pub const Bullet = struct {
     }
 
     pub fn update(self: *Bullet, delta: f32) void {
-        if (self.type != .pea) {
+        if (self.type == .sun) {
             self.velocity = self.velocity.add(.{ .y = gravity * delta });
         }
         const position = self.position.add(self.velocity.scale(delta));
@@ -175,19 +185,23 @@ pub const Bullet = struct {
 
         if (outWindow(position, self.size)) self.dead = true;
 
+        if (self.type != .pea) self.animationIdle.update(delta);
         self.position = position;
     }
 
     pub fn collidePlayer(self: *Bullet) void {
-        if (self.type == .pea) {
-            const i = window.rand.uintLessThanBiased(u32, peaBreakSound.len);
-            peaBreakSound[i].start() catch unreachable;
-            self.collide = true;
-            self.velocity = .{ .x = 0.2 };
-        } else {
-            self.collide = true;
-            sunExplodeSound.start() catch unreachable;
-        }
+        self.collide = true;
+
+        const sound = switch (self.type) {
+            .pea => label: {
+                self.velocity = .{ .x = 0.2 };
+                const i = window.rand.uintLessThanBiased(u32, peaBreakSound.len);
+                break :label peaBreakSound[i];
+            },
+            .sun => sunExplodeSound,
+            .sunEx => sunExplodeExSound,
+        };
+        sound.start() catch unreachable;
     }
 
     fn outWindow(position: Vector, size: Vector) bool {
@@ -200,8 +214,10 @@ pub const Bullet = struct {
         if (self.collide) {
             const pos = self.position.add(self.explodeOffset);
             self.animationBreak.play(pos.x, pos.y);
-        } else {
-            gfx.draw(self.position.x, self.position.y, self.texture);
+        } else switch (self.type) {
+            .pea => gfx.draw(self.position.x, self.position.y, self.texture),
+            .sun => self.animationIdle.play(self.position.x, self.position.y),
+            .sunEx => self.animationIdle.play(self.position.x, self.position.y),
         }
     }
 };

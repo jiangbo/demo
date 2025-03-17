@@ -18,7 +18,7 @@ pub const Player = struct {
     p1: bool = true,
 
     attackTimer: window.Timer = .init(attackInterval),
-    attackExTimer: window.Timer = .init(attackExDuration),
+    attackExTimer: window.Timer = .init(2500),
 
     hp: u32 = 100,
     mp: u32 = 100,
@@ -33,8 +33,6 @@ pub const Player = struct {
     const jumpVelocity: f32 = -0.85;
     const attackInterval: f32 = 500;
     const attackIntervalEx: f32 = 100;
-
-    const attackExDuration: f32 = 2500;
 
     pub fn init(playerType: scene.PlayerType, x: f32, y: f32, faceLeft: bool) Player {
         var self: Player = .{ .x = x, .y = y, .facingLeft = faceLeft };
@@ -160,14 +158,11 @@ pub const Player = struct {
     fn spawnBullet(self: *Player) Bullet {
         self.attackTimer.reset();
 
-        const playerType = if (self.p1) scene.playerType1 else scene.playerType2;
-        const bulletType: Bullet.Type = if (playerType == .peaShooter) .pea else .sun;
-        var bullet: Bullet = .init(bulletType);
+        var bullet = Bullet.init(self.p1);
 
         const x: f32 = if (self.facingLeft) self.x else self.x + self.width;
         bullet.position = .{ .x = x - bullet.texture.width / 2, .y = self.y };
         if (self.facingLeft) bullet.velocity.x = -bullet.velocity.x;
-        bullet.p1 = self.p1;
 
         return bullet;
     }
@@ -175,15 +170,38 @@ pub const Player = struct {
     pub fn attackEx(self: *Player) void {
         if (self.mp < 100) return;
 
-        self.attackExTimer.reset();
-        self.attackTimer.duration = attackIntervalEx;
-        Bullet.playShootExSound();
-        self.mp = 0;
+        const playerType = if (self.p1) scene.playerType1 else scene.playerType2;
+
+        if (playerType == .peaShooter) {
+            self.attackExTimer.reset();
+            self.attackTimer.duration = attackIntervalEx;
+        } else {
+            var bullet = Bullet.initSunBulletEx();
+            const player = if (self.p1)
+                scene.gameScene.player2
+            else
+                scene.gameScene.player1;
+            bullet.p1 = self.p1;
+            bullet.position.x = player.x + player.width / 2 - bullet.texture.width / 2;
+            scene.gameScene.bullets.append(bullet) catch unreachable;
+        }
+
+        Bullet.playShootExSound(playerType);
+        // self.mp = 0;
     }
 
-    pub fn vectorIn(self: Player, vector: Vector) bool {
-        if (vector.x < self.x or vector.x > self.x + self.width) return false;
-        if (vector.y < self.y or vector.y > self.y + self.height) return false;
+    pub fn collide(self: *Player, bullet: *Bullet) bool {
+        if (bullet.type != .sunEx) {
+            const pos = bullet.center();
+            if (pos.x < self.x or pos.x > self.x + self.width) return false;
+            if (pos.y < self.y or pos.y > self.y + self.height) return false;
+            return true;
+        }
+
+        if (self.x < bullet.position.x) return false;
+        if (self.x + self.width > bullet.position.x + bullet.texture.width) return false;
+        if (self.y < bullet.position.y) return false;
+        if (self.y + self.height > bullet.position.y + bullet.texture.height) return false;
         return true;
     }
 };
