@@ -18,6 +18,8 @@ imageHill: gfx.Texture,
 
 platforms: [4]Platform,
 
+backgroundSound: *audio.Sound,
+
 pub fn init() GameScene {
     std.log.info("game scene init", .{});
 
@@ -26,6 +28,10 @@ pub fn init() GameScene {
     self.imageSky = gfx.loadTexture("assets/sky.png").?;
     self.imageHill = gfx.loadTexture("assets/hills.png").?;
     self.bullets = std.BoundedArray(Bullet, 64).init(0) catch unreachable;
+    self.backgroundSound = scene.audioEngine.createSoundFromFile(
+        "assets/bgm_game.mp3",
+        .{ .flags = .{ .stream = true, .looping = true } },
+    ) catch unreachable;
 
     self.initPlatforms();
     @import("bullet.zig").init();
@@ -63,6 +69,7 @@ fn initPlatforms(self: *GameScene) void {
 
 pub fn enter(self: *GameScene) void {
     std.log.info("game scene enter", .{});
+    self.backgroundSound.start() catch unreachable;
 
     self.player1 = .init(scene.playerType1, 200, 50, false);
     self.player2 = .init(scene.playerType2, 975, 50, true);
@@ -71,7 +78,7 @@ pub fn enter(self: *GameScene) void {
 
 pub fn exit(self: *GameScene) void {
     std.log.info("game scene exit", .{});
-    _ = self;
+    self.backgroundSound.stop() catch unreachable;
 }
 
 pub fn event(self: *GameScene, ev: *const window.Event) void {
@@ -133,7 +140,7 @@ pub fn render(self: *GameScene) void {
 pub fn deinit(self: *GameScene) void {
     std.log.info("game scene deinit", .{});
     @import("bullet.zig").deinit();
-    _ = self;
+    self.backgroundSound.destroy();
 }
 
 const Platform = struct {
