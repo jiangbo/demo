@@ -19,6 +19,7 @@ pub const Player = struct {
 
     attackTimer: window.Timer = .init(attackInterval),
     attackExTimer: window.Timer = .init(2500),
+    sunTextTimer: window.Timer = .init(2500),
 
     hp: u32 = 100,
     mp: u32 = 100,
@@ -32,11 +33,12 @@ pub const Player = struct {
     const gravity: f32 = 1.6e-3;
     const jumpVelocity: f32 = -0.85;
     const attackInterval: f32 = 500;
-    const attackIntervalEx: f32 = 100;
+    const attackIntervalEx: f32 = 200;
 
     pub fn init(playerType: scene.PlayerType, x: f32, y: f32, faceLeft: bool) Player {
         var self: Player = .{ .x = x, .y = y, .facingLeft = faceLeft };
         self.attackExTimer.finished = true;
+        self.sunTextTimer.finished = true;
         if (playerType == .peaShooter) {
             self.animationIdle = .load("assets/peashooter_idle_{}.png", 9);
             self.animationRun = .load("assets/peashooter_run_{}.png", 5);
@@ -52,7 +54,7 @@ pub const Player = struct {
     }
 
     pub fn event(self: *Player, ev: *const window.Event) void {
-        if (self.attackExTimer.isRun() and ev.type == .KEY_DOWN) return;
+        if (self.attackExTimer.isRunning() and ev.type == .KEY_DOWN) return;
 
         switch (ev.type) {
             .KEY_DOWN => switch (ev.key_code) {
@@ -83,13 +85,16 @@ pub const Player = struct {
 
     pub fn update(self: *Player, delta: f32) void {
         self.attackTimer.update(delta);
+        if (self.sunTextTimer.isRunningAfterUpdate(delta))
+            self.animationSunText.update(delta);
 
-        if (self.attackExTimer.isRun()) {
+        if (self.attackExTimer.isRunning()) {
             self.animationAttack.update(delta);
             self.attackExTimer.update(delta);
             if (self.attackExTimer.finished) {
                 self.attackTimer.duration = attackInterval;
             } else if (self.attackTimer.finished) {
+                window.shakeCamera.restart(5, 100);
                 const bullet = self.spawnBullet();
                 scene.gameScene.bullets.append(bullet) catch unreachable;
             }
@@ -135,7 +140,7 @@ pub const Player = struct {
     }
 
     pub fn render(self: *Player) void {
-        if (self.attackExTimer.isRun()) {
+        if (self.attackExTimer.isRunning()) {
             self.animationAttack.playFlipX(self.x, self.y, self.facingLeft);
         } else if (self.leftKeyDown) {
             self.animationRun.playFlipX(self.x, self.y, true);
@@ -144,10 +149,17 @@ pub const Player = struct {
         } else {
             self.animationIdle.playFlipX(self.x, self.y, self.facingLeft);
         }
+
+        if (self.sunTextTimer.isRunning()) {
+            const text = self.animationSunText;
+            const x = self.x - self.width / 2 + text.textures[0].width / 2;
+            const y = self.y - text.textures[0].height;
+            text.playFlipX(x, y, self.facingLeft);
+        }
     }
 
     pub fn attack(self: *Player) void {
-        if (self.attackTimer.isRun()) return;
+        if (self.attackTimer.isRunning()) return;
 
         var bullet = self.spawnBullet();
         bullet.playShootSound();
@@ -184,6 +196,7 @@ pub const Player = struct {
             bullet.p1 = self.p1;
             bullet.position.x = player.x + player.width / 2 - bullet.texture.width / 2;
             scene.gameScene.bullets.append(bullet) catch unreachable;
+            self.sunTextTimer.reset();
         }
 
         Bullet.playShootExSound(playerType);

@@ -192,16 +192,21 @@ pub const Bullet = struct {
     pub fn collidePlayer(self: *Bullet) void {
         self.collide = true;
 
-        const sound = switch (self.type) {
-            .pea => label: {
+        switch (self.type) {
+            .pea => {
                 self.velocity = .{ .x = 0.2 };
                 const i = window.rand.uintLessThanBiased(u32, peaBreakSound.len);
-                break :label peaBreakSound[i];
+                peaBreakSound[i].start() catch unreachable;
             },
-            .sun => sunExplodeSound,
-            .sunEx => sunExplodeExSound,
-        };
-        sound.start() catch unreachable;
+            .sun => {
+                sunExplodeSound.start() catch unreachable;
+                window.shakeCamera.restart(5, 250);
+            },
+            .sunEx => {
+                sunExplodeExSound.start() catch unreachable;
+                window.shakeCamera.restart(20, 350);
+            },
+        }
     }
 
     fn outWindow(position: Vector, size: Vector) bool {

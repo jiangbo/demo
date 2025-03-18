@@ -51,12 +51,7 @@ pub fn beginDraw() void {
 }
 
 pub fn draw(x: f32, y: f32, tex: Texture) void {
-    renderer.draw(.{
-        .uniform = .{ .vp = camera.vp() },
-        .x = x,
-        .y = y,
-        .texture = tex,
-    });
+    drawFlipX(x, y, tex, false);
 }
 
 pub fn drawFlipX(x: f32, y: f32, tex: Texture, flipX: bool) void {
@@ -71,8 +66,8 @@ pub const DrawOptions = struct {
 pub fn drawOptions(x: f32, y: f32, texture: Texture, options: DrawOptions) void {
     renderer.draw(.{
         .uniform = .{ .vp = camera.vp() },
-        .x = x,
-        .y = y,
+        .x = x - window.shakeCamera.shakingX,
+        .y = y - window.shakeCamera.shakingY,
         .texture = texture,
         .flipX = options.flipX,
         .sourceRect = options.sourceRect,
@@ -102,12 +97,6 @@ pub fn TextureArray(max: u8) type {
 pub const FrameAnimation = SliceFrameAnimation;
 
 pub const SliceFrameAnimation = struct {
-    // interval: f32 = 100,
-    // timer: f32 = 0,
-    // index: usize = 0,
-    // loop: bool = true,
-    // done: bool = false,
-
     timer: window.Timer,
     index: usize = 0,
     loop: bool = true,
@@ -124,8 +113,7 @@ pub const SliceFrameAnimation = struct {
     }
 
     pub fn update(self: *@This(), delta: f32) void {
-        self.timer.update(delta);
-        if (self.timer.isRun()) return;
+        if (self.timer.isRunningAfterUpdate(delta)) return;
 
         if (self.index == self.textures.len - 1) {
             if (self.loop) {

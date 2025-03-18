@@ -23,6 +23,7 @@ backgroundSound: *audio.Sound,
 pub fn init() GameScene {
     std.log.info("game scene init", .{});
 
+    window.shakeCamera = window.ShakeCamera.init(0, 0);
     var self: GameScene = undefined;
 
     self.imageSky = gfx.loadTexture("assets/sky.png").?;
@@ -96,6 +97,7 @@ pub fn update(self: *GameScene) void {
     self.player2.update(deltaTime);
 
     self.updateBullets(deltaTime);
+    window.shakeCamera.update(deltaTime);
 }
 
 fn updateBullets(self: *GameScene, delta: f32) void {

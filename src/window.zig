@@ -26,13 +26,51 @@ pub const Timer = struct {
         if (self.elapsed >= self.duration) self.finished = true;
     }
 
+    pub fn isRunningAfterUpdate(self: *Timer, delta: f32) bool {
+        return !self.isFinishedAfterUpdate(delta);
+    }
+
+    pub fn isFinishedAfterUpdate(self: *Timer, delta: f32) bool {
+        self.update(delta);
+        return self.finished;
+    }
+
     pub fn reset(self: *Timer) void {
         self.finished = false;
         self.elapsed = 0;
     }
 
-    pub fn isRun(self: *Timer) bool {
+    pub fn isRunning(self: *Timer) bool {
         return !self.finished;
+    }
+};
+
+pub var shakeCamera: ShakeCamera = undefined;
+
+pub const ShakeCamera = struct {
+    shakingX: f32 = 0,
+    shakingY: f32 = 0,
+    timer: Timer,
+    strength: f32,
+
+    pub fn init(strength: f32, duration: f32) ShakeCamera {
+        return ShakeCamera{ .timer = .init(duration), .strength = strength };
+    }
+
+    pub fn update(self: *ShakeCamera, delta: f32) void {
+        if (self.timer.isFinishedAfterUpdate(delta)) {
+            self.shakingX, self.shakingY = .{ 0, 0 };
+            return;
+        }
+
+        const randomX = std.crypto.random.float(f32) * 2 - 1;
+        self.shakingX = randomX * self.strength;
+        const randomY = std.crypto.random.float(f32) * 2 - 1;
+        self.shakingY = randomY * self.strength;
+    }
+
+    pub fn restart(self: *ShakeCamera, strength: f32, duration: f32) void {
+        self.* = .init(strength, duration);
     }
 };
 
