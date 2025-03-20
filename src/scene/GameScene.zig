@@ -104,18 +104,19 @@ fn updateBullets(self: *GameScene, delta: f32) void {
     for (self.bullets.slice(), 0..) |*bullet, index| {
         bullet.update(delta);
 
-        if (bullet.p1 and !bullet.collide) {
-            if (self.player2.collide(bullet)) {
+        if (bullet.p1 and !bullet.collide and !self.player2.invulnerable) {
+            if (self.player2.isCollide(bullet)) {
                 bullet.collidePlayer();
+                self.player2.collideBullet(bullet);
             }
         }
 
-        if (!bullet.p1 and !bullet.collide) {
-            if (self.player1.collide(bullet)) {
+        if (!bullet.p1 and !bullet.collide and !self.player1.invulnerable) {
+            if (self.player1.isCollide(bullet)) {
                 bullet.collidePlayer();
+                self.player1.collideBullet(bullet);
             }
         }
-
         if (bullet.dead) _ = self.bullets.swapRemove(index);
     }
 }

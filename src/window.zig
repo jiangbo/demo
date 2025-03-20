@@ -40,7 +40,7 @@ pub const Timer = struct {
         self.elapsed = 0;
     }
 
-    pub fn isRunning(self: *Timer) bool {
+    pub fn isRunning(self: *const Timer) bool {
         return !self.finished;
     }
 };

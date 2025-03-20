@@ -194,7 +194,6 @@ pub const Bullet = struct {
 
         switch (self.type) {
             .pea => {
-                self.velocity = .{ .x = 0.2 };
                 const i = window.rand.uintLessThanBiased(u32, peaBreakSound.len);
                 peaBreakSound[i].start() catch unreachable;
             },
