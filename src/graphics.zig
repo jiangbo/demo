@@ -74,6 +74,7 @@ pub const DrawOptions = struct {
     sourceRect: ?gpu.Rectangle = null,
     targetRect: gpu.Rectangle,
 };
+pub const Rectangle = gpu.Rectangle;
 
 pub fn drawOptions(texture: Texture, options: DrawOptions) void {
     renderer.draw(.{

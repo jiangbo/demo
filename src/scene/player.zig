@@ -27,7 +27,7 @@ pub const Player = struct {
     invulnerableToggle: bool = false,
 
     hp: u32 = 100,
-    mp: u32 = 100,
+    mp: u32 = 0,
 
     textureIdle: gfx.Texture = undefined,
     animationIdle: gfx.FrameAnimation = undefined,
@@ -233,7 +233,7 @@ pub const Player = struct {
         }
 
         Bullet.playShootExSound(playerType);
-        // self.mp = 0;
+        self.mp = 0;
     }
 
     pub fn isCollide(self: *Player, bullet: *Bullet) bool {

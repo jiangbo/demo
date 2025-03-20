@@ -17,6 +17,8 @@ imageSky: gfx.Texture,
 imageHill: gfx.Texture,
 
 platforms: [4]Platform,
+player1StatusBars: StatusBar,
+player2StatusBars: StatusBar,
 
 backgroundSound: *audio.Sound,
 
@@ -35,6 +37,10 @@ pub fn init() GameScene {
     ) catch unreachable;
 
     self.initPlatforms();
+
+    self.player1StatusBars = .init(235, 625, scene.playerType1);
+    self.player2StatusBars = .init(675, 625, scene.playerType2);
+    self.player2StatusBars.faceLeft = true;
     @import("bullet.zig").init();
 
     return self;
@@ -108,6 +114,9 @@ fn updateBullets(self: *GameScene, delta: f32) void {
             if (self.player2.isCollide(bullet)) {
                 bullet.collidePlayer();
                 self.player2.collideBullet(bullet);
+                self.player2.hp -|= bullet.damage;
+                self.player1.mp += 10;
+                if (self.player1.mp > 100) self.player1.mp = 100;
             }
         }
 
@@ -115,6 +124,9 @@ fn updateBullets(self: *GameScene, delta: f32) void {
             if (self.player1.isCollide(bullet)) {
                 bullet.collidePlayer();
                 self.player1.collideBullet(bullet);
+                self.player1.hp -|= bullet.damage;
+                self.player2.mp += 10;
+                if (self.player2.mp > 100) self.player2.mp = 100;
             }
         }
         if (bullet.dead) _ = self.bullets.swapRemove(index);
@@ -138,6 +150,9 @@ pub fn render(self: *GameScene) void {
     self.player2.render();
 
     for (self.bullets.slice()) |*bullet| bullet.render();
+
+    self.player1StatusBars.render(self.player1.hp, self.player1.mp);
+    self.player2StatusBars.render(self.player2.hp, self.player2.mp);
 }
 
 pub fn deinit(self: *GameScene) void {
@@ -158,5 +173,54 @@ const Platform = struct {
 const StatusBar = struct {
     x: f32,
     y: f32,
-    texture: gfx.Texture,
+    faceLeft: bool = false,
+    back: gfx.Texture,
+    hp: gfx.Texture,
+    mp: gfx.Texture,
+    avatar: gfx.Texture,
+
+    pub fn init(x: f32, y: f32, playerType: scene.PlayerType) StatusBar {
+        const avatar = if (playerType == .peaShooter)
+            gfx.loadTexture("assets/avatar_peashooter.png").?
+        else
+            gfx.loadTexture("assets/avatar_sunflower.png").?;
+
+        return .{
+            .x = x,
+            .y = y,
+            .back = gfx.loadTexture("assets/empty.png").?,
+            .hp = gfx.loadTexture("assets/hp.png").?,
+            .mp = gfx.loadTexture("assets/mp.png").?,
+            .avatar = avatar,
+        };
+    }
+
+    pub fn render(self: *const StatusBar, hp: u32, mp: u32) void {
+        gfx.drawOptions(self.avatar, .{
+            .sourceRect = .{
+                .width = if (self.faceLeft) -self.avatar.width else self.avatar.width,
+                .height = self.avatar.height,
+            },
+            .targetRect = .{
+                .x = self.x,
+                .y = self.y,
+                .width = self.avatar.width,
+                .height = self.avatar.height,
+            },
+        });
+        renderBar(self.x + 100, self.y + 10, self.back, 100);
+        renderBar(self.x + 100, self.y + 10, self.hp, hp);
+
+        renderBar(self.x + 100, self.y + 45, self.back, 100);
+        renderBar(self.x + 100, self.y + 45, self.mp, mp);
+    }
+
+    fn renderBar(x: f32, y: f32, texture: gfx.Texture, value: u32) void {
+        gfx.drawOptions(texture, .{ .targetRect = .{
+            .x = x,
+            .y = y,
+            .width = texture.width * @as(f32, @floatFromInt(value)) / 5.5,
+            .height = texture.height * 1.5,
+        } });
+    }
 };

@@ -67,7 +67,7 @@ pub const Bullet = struct {
     size: Vector,
     position: Vector,
     velocity: Vector,
-    damage: f32,
+    damage: u32,
     dead: bool = false,
     collide: bool = false,
     p1: bool = true,
