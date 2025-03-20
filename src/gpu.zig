@@ -155,40 +155,31 @@ pub const Renderer = struct {
 
     pub const DrawOptions = struct {
         uniform: UniformParams,
-        x: f32 = 0,
-        y: f32 = 0,
         texture: Texture,
-        flipX: bool = false,
         sourceRect: ?Rectangle = null,
+        targetRect: Rectangle,
     };
 
     pub fn draw(self: *Renderer, options: DrawOptions) void {
-        var w = options.texture.width;
-        var h = options.texture.height;
+        const src: Rectangle = options.sourceRect orelse .{
+            .width = options.texture.width,
+            .height = options.texture.height,
+        };
 
-        var texU0: f32, var texU1: f32 = .{ 0, 1 };
-        var texV0: f32, var texV1: f32 = .{ 0, 1 };
-        if (options.sourceRect) |rect| {
-            texU0 = rect.x / options.texture.width;
-            texU1 = (rect.x + rect.width) / options.texture.width;
-            texV0 = rect.y / options.texture.height;
-            texV1 = (rect.y + rect.height) / options.texture.height;
-            w = rect.width;
-            h = rect.height;
-        }
+        const texU0 = src.x / options.texture.width;
+        const texU1 = (src.x + src.width) / options.texture.width;
+        const texV0 = src.y / options.texture.height;
+        const texV1 = (src.y + src.height) / options.texture.height;
 
-        if (options.flipX) {
-            texU0 = 1 - texU0;
-            texU1 = 1 - texU1;
-        }
-
+        const target = options.targetRect;
+        const w, const h = .{ target.width, target.height };
         const vertexBuffer = sk.gfx.makeBuffer(.{
             .data = sk.gfx.asRange(&[_]f32{
                 // 顶点和颜色
-                options.x,     options.y + h, 0.5, 1.0, 1.0, 1.0, texU0, 1,
-                options.x + w, options.y + h, 0.5, 1.0, 1.0, 1.0, texU1, 1,
-                options.x + w, options.y,     0.5, 1.0, 1.0, 1.0, texU1, 0,
-                options.x,     options.y,     0.5, 1.0, 1.0, 1.0, texU0, 0,
+                target.x,     target.y + h, 0.5, 1.0, 1.0, 1.0, texU0, texV1,
+                target.x + w, target.y + h, 0.5, 1.0, 1.0, 1.0, texU1, texV1,
+                target.x + w, target.y,     0.5, 1.0, 1.0, 1.0, texU1, texV0,
+                target.x,     target.y,     0.5, 1.0, 1.0, 1.0, texU0, texV0,
             }),
         });
 

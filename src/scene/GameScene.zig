@@ -17,6 +17,7 @@ imageSky: gfx.Texture,
 imageHill: gfx.Texture,
 
 platforms: [4]Platform,
+statusBars: [4]StatusBar,
 
 backgroundSound: *audio.Sound,
 
@@ -35,6 +36,7 @@ pub fn init() GameScene {
     ) catch unreachable;
 
     self.initPlatforms();
+    self.initStatusBar();
     @import("bullet.zig").init();
 
     return self;
@@ -66,6 +68,11 @@ fn initPlatforms(self: *GameScene) void {
     platform.shape.right = platform.x + texture.width - 40;
     platform.shape.y = platform.y + texture.height / 2;
     self.platforms[3] = platform;
+}
+
+fn initStatusBar(self: *GameScene) void {
+    const texture = gfx.loadTexture("assets/hp.png").?;
+    self.statusBars[0] = .{ .x = 100, .y = 50, .texture = texture };
 }
 
 pub fn enter(self: *GameScene) void {
@@ -138,6 +145,9 @@ pub fn render(self: *GameScene) void {
     self.player2.render();
 
     for (self.bullets.slice()) |*bullet| bullet.render();
+
+    const bar = self.statusBars[0];
+    gfx.draw(bar.x, bar.y, bar.texture);
 }
 
 pub fn deinit(self: *GameScene) void {
@@ -153,4 +163,10 @@ const Platform = struct {
     shape: Collision = .{ .left = 0, .right = 0, .y = 0 },
 
     const Collision = struct { left: f32, right: f32, y: f32 };
+};
+
+const StatusBar = struct {
+    x: f32,
+    y: f32,
+    texture: gfx.Texture,
 };

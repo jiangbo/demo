@@ -69,8 +69,8 @@ pub fn init() void {
     menuScene = MenuScene.init();
     gameScene = GameScene.init();
     selectorScene = SelectorScene.init();
-    currentScene = Scene{ .game = &gameScene };
-    // currentScene = Scene{ .menu = &menuScene };
+    // currentScene = Scene{ .game = &gameScene };
+    currentScene = Scene{ .menu = &menuScene };
 
     currentScene.enter();
 }

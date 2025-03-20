@@ -55,22 +55,32 @@ pub fn draw(x: f32, y: f32, tex: Texture) void {
 }
 
 pub fn drawFlipX(x: f32, y: f32, tex: Texture, flipX: bool) void {
-    drawOptions(x, y, tex, .{ .flipX = flipX });
+    const target: gpu.Rectangle = .{
+        .x = x - window.shakeCamera.shakingX,
+        .y = y - window.shakeCamera.shakingY,
+        .width = tex.width,
+        .height = tex.height,
+    };
+
+    const src = gpu.Rectangle{
+        .width = if (flipX) -tex.width else tex.width,
+        .height = tex.height,
+    };
+
+    drawOptions(tex, .{ .sourceRect = src, .targetRect = target });
 }
 
 pub const DrawOptions = struct {
-    flipX: bool = false,
     sourceRect: ?gpu.Rectangle = null,
+    targetRect: gpu.Rectangle,
 };
 
-pub fn drawOptions(x: f32, y: f32, texture: Texture, options: DrawOptions) void {
+pub fn drawOptions(texture: Texture, options: DrawOptions) void {
     renderer.draw(.{
         .uniform = .{ .vp = camera.vp() },
-        .x = x - window.shakeCamera.shakingX,
-        .y = y - window.shakeCamera.shakingY,
         .texture = texture,
-        .flipX = options.flipX,
         .sourceRect = options.sourceRect,
+        .targetRect = options.targetRect,
     });
 }
 

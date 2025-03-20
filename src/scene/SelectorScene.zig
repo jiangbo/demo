@@ -152,20 +152,31 @@ fn renderBackground(self: *SelectorScene) void {
         self.sunFlowerBackground;
     gfx.draw(self.backgroundOffsetX - width, 0, texture);
 
-    gfx.drawOptions(self.backgroundOffsetX, 0, texture, .{ .sourceRect = .{
-        .width = width - self.backgroundOffsetX,
-        .height = self.peaShooterBackground.height,
-    } });
+    gfx.drawOptions(texture, .{
+        .sourceRect = .{
+            .width = width - self.backgroundOffsetX,
+            .height = self.peaShooterBackground.height,
+        },
+        .targetRect = .{
+            .x = self.backgroundOffsetX,
+            .width = width - self.backgroundOffsetX,
+            .height = self.peaShooterBackground.height,
+        },
+    });
 
     texture = if (scene.playerType1 == .peaShooter)
         self.peaShooterBackground
     else
         self.sunFlowerBackground;
 
-    gfx.drawOptions(window.width - width, 0, texture, .{
-        .flipX = true,
+    gfx.drawOptions(texture, .{
         .sourceRect = .{
             .x = self.backgroundOffsetX,
+            .width = self.backgroundOffsetX - width,
+            .height = self.sunFlowerBackground.height,
+        },
+        .targetRect = .{
+            .x = window.width - width,
             .width = width - self.backgroundOffsetX,
             .height = self.sunFlowerBackground.height,
         },
