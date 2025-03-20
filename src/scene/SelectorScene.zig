@@ -171,7 +171,7 @@ fn renderBackground(self: *SelectorScene) void {
 
     gfx.drawOptions(texture, .{
         .sourceRect = .{
-            .x = self.backgroundOffsetX,
+            .x = -self.backgroundOffsetX,
             .width = self.backgroundOffsetX - width,
             .height = self.sunFlowerBackground.height,
         },

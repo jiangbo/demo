@@ -51,7 +51,7 @@ pub fn update(self: *MenuScene) void {
 }
 
 pub fn render(self: *MenuScene) void {
-    gfx.drawFlipX(0, 0, self.background, true);
+    gfx.draw(0, 0, self.background);
 }
 
 pub fn deinit(self: *MenuScene) void {
