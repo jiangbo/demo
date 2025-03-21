@@ -216,6 +216,7 @@ const StatusBar = struct {
     }
 
     fn renderBar(x: f32, y: f32, texture: gfx.Texture, value: u32) void {
+        if (value == 0) return;
         gfx.drawOptions(texture, .{ .targetRect = .{
             .x = x,
             .y = y,

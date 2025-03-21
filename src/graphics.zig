@@ -134,15 +134,15 @@ pub const SliceFrameAnimation = struct {
         }
     }
 
-    pub fn finished(self: *@This()) bool {
+    pub fn finished(self: *const @This()) bool {
         return self.timer.finished and !self.loop;
     }
 
-    pub fn play(self: @This(), x: f32, y: f32) void {
+    pub fn play(self: *const @This(), x: f32, y: f32) void {
         self.playFlipX(x, y, false);
     }
 
-    pub fn playFlipX(self: @This(), x: f32, y: f32, flipX: bool) void {
+    pub fn playFlipX(self: *const @This(), x: f32, y: f32, flipX: bool) void {
         drawFlipX(x, y, self.textures[self.index], flipX);
     }
 };

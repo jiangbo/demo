@@ -35,6 +35,15 @@ pub const Player = struct {
     animationAttack: gfx.FrameAnimation = undefined,
     animationSunText: gfx.FrameAnimation = undefined,
 
+    animationJump: gfx.FrameAnimation = undefined,
+    positionJump: Vector = .{},
+
+    animationLand: gfx.FrameAnimation = undefined,
+    positionLand: Vector = .{},
+
+    particles: std.BoundedArray(Particle, 32) = undefined,
+    particleTimer: window.Timer = .init(75),
+
     const runVelocity: f32 = 0.55;
     const gravity: f32 = 1.6e-3;
     const jumpVelocity: f32 = -0.85;
@@ -62,6 +71,10 @@ pub const Player = struct {
 
             self.textureIdle = whiteTexture("assets/sunflower_idle_1.png");
         }
+
+        self.animationJump = .load("assets/jump_effect_{}.png", 5);
+        self.animationLand = .load("assets/land_effect_{}.png", 2);
+        self.particles = std.BoundedArray(Particle, 32).init(0) catch unreachable;
 
         return self;
     }
@@ -100,6 +113,19 @@ pub const Player = struct {
         self.attackTimer.update(delta);
         self.invulnerableUpdate(delta);
 
+        {
+            var index: usize = self.particles.len;
+            while (index > 0) {
+                index -= 1;
+                var particle = &self.particles.buffer[index];
+                particle.update(delta);
+                if (!particle.valid) _ = self.particles.swapRemove(index);
+            }
+        }
+
+        if (self.attackExTimer.isRunningAfterUpdate(delta))
+            self.animationAttack.update(delta);
+
         if (self.sunTextTimer.isRunningAfterUpdate(delta))
             self.animationSunText.update(delta);
 
@@ -123,6 +149,13 @@ pub const Player = struct {
 
         if (self.leftKeyDown or self.rightKeyDown) {
             self.animationRun.update(delta);
+            if (self.particleTimer.isFinishedAfterUpdate(delta)) {
+                self.particleTimer.reset();
+                var effect: Particle = .load("assets/run_effect_{}.png", 4, 45);
+                effect.x = self.x + self.width / 2 - effect.width / 2;
+                effect.y = self.y + self.height - effect.height;
+                self.particles.appendAssumeCapacity(effect);
+            }
         } else {
             self.animationIdle.update(delta);
         }
@@ -174,6 +207,8 @@ pub const Player = struct {
             const y = self.y - text.textures[0].height;
             text.playFlipX(x, y, self.facingLeft);
         }
+
+        for (self.particles.slice()) |*particle| particle.render();
 
         if (self.invulnerable and self.invulnerableToggle) {
             gfx.draw(self.x, self.y, self.textureIdle);
@@ -273,3 +308,42 @@ fn whiteTexture(path: [:0]const u8) gfx.Texture {
 
     return gfx.Texture.init(image.width, image.height, image.data);
 }
+
+const Particle = struct {
+    x: f32 = 0,
+    y: f32 = 0,
+    width: f32,
+    height: f32,
+    index: usize = 0,
+    timer: f32 = 0,
+    lifespan: f32,
+    valid: bool = true,
+
+    textures: []const gfx.Texture,
+
+    pub fn load(comptime pathFmt: []const u8, max: u8, lifespan: f32) Particle {
+        const frame = gfx.FrameAnimation.load(pathFmt, max);
+        return .{
+            .textures = frame.textures,
+            .width = frame.textures[0].width,
+            .height = frame.textures[0].height,
+            .lifespan = lifespan,
+        };
+    }
+
+    pub fn update(self: *Particle, delta: f32) void {
+        self.timer += delta;
+
+        if (self.timer < self.lifespan) return;
+        self.timer = 0;
+        self.index += 1;
+        if (self.index >= self.textures.len) {
+            self.index = self.textures.len - 1;
+            self.valid = false;
+        }
+    }
+
+    pub fn render(self: *const Particle) void {
+        gfx.draw(self.x, self.y, self.textures[self.index]);
+    }
+};
