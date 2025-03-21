@@ -153,14 +153,10 @@ fn renderBackground(self: *SelectorScene) void {
     gfx.draw(self.backgroundOffsetX - width, 0, texture);
 
     gfx.drawOptions(texture, .{
-        .sourceRect = .{
-            .width = width - self.backgroundOffsetX,
-            .height = self.peaShooterBackground.height,
-        },
+        .sourceRect = .{ .width = width - self.backgroundOffsetX },
         .targetRect = .{
             .x = self.backgroundOffsetX,
             .width = width - self.backgroundOffsetX,
-            .height = self.peaShooterBackground.height,
         },
     });
 
@@ -173,12 +169,10 @@ fn renderBackground(self: *SelectorScene) void {
         .sourceRect = .{
             .x = -self.backgroundOffsetX,
             .width = self.backgroundOffsetX - width,
-            .height = self.sunFlowerBackground.height,
         },
         .targetRect = .{
             .x = window.width - width,
             .width = width - self.backgroundOffsetX,
-            .height = self.sunFlowerBackground.height,
         },
     });
     gfx.drawFlipX(window.width - self.backgroundOffsetX, 0, texture, true);

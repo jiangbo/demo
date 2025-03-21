@@ -7,8 +7,6 @@ pub const Color = sk.gfx.Color;
 pub const Buffer = sk.gfx.Buffer;
 
 pub const Texture = struct {
-    x: f32 = 0,
-    y: f32 = 0,
     width: f32,
     height: f32,
     value: sk.gfx.Image,
@@ -121,7 +119,7 @@ pub const Renderer = struct {
         });
         self.bind.bindIndexBuffer(indexBuffer.?);
 
-        sampler = sampler orelse Sampler.liner();
+        sampler = sampler orelse Sampler.nearest();
         self.bind.bindSampler(render.SMP_smp, sampler.?);
 
         pipeline = pipeline orelse RenderPipeline{
@@ -161,17 +159,21 @@ pub const Renderer = struct {
     };
 
     pub fn draw(self: *Renderer, options: DrawOptions) void {
-        const src: Rectangle = options.sourceRect orelse .{
+        var src: Rectangle = options.sourceRect orelse .{
             .width = options.texture.width,
             .height = options.texture.height,
         };
 
+        if (src.width == 0) src.width = options.texture.width;
+        if (src.height == 0) src.height = options.texture.height;
         const texU0 = src.x / options.texture.width;
         const texU1 = (src.x + src.width) / options.texture.width;
         const texV0 = src.y / options.texture.height;
         const texV1 = (src.y + src.height) / options.texture.height;
 
-        const target = options.targetRect;
+        var target = options.targetRect;
+        if (target.width == 0) target.width = options.texture.width;
+        if (target.height == 0) target.height = options.texture.height;
         const w, const h = .{ target.width, target.height };
         const vertexBuffer = sk.gfx.makeBuffer(.{
             .data = sk.gfx.asRange(&[_]f32{

@@ -58,13 +58,10 @@ pub fn drawFlipX(x: f32, y: f32, tex: Texture, flipX: bool) void {
     const target: gpu.Rectangle = .{
         .x = x - window.shakeCamera.shakingX,
         .y = y - window.shakeCamera.shakingY,
-        .width = tex.width,
-        .height = tex.height,
     };
 
     const src = gpu.Rectangle{
         .width = if (flipX) -tex.width else tex.width,
-        .height = tex.height,
     };
 
     drawOptions(tex, .{ .sourceRect = src, .targetRect = target });
