@@ -37,9 +37,11 @@ pub const Player = struct {
 
     animationJump: gfx.FrameAnimation = undefined,
     positionJump: Vector = .{},
+    jumpVisible: bool = false,
 
     animationLand: gfx.FrameAnimation = undefined,
     positionLand: Vector = .{},
+    landVisible: bool = false,
 
     particles: std.BoundedArray(Particle, 32) = undefined,
     particleTimer: window.Timer = .init(75),
@@ -73,7 +75,9 @@ pub const Player = struct {
         }
 
         self.animationJump = .load("assets/jump_effect_{}.png", 5);
+        self.animationJump.loop = false;
         self.animationLand = .load("assets/land_effect_{}.png", 2);
+        self.animationLand.loop = false;
         self.particles = std.BoundedArray(Particle, 32).init(0) catch unreachable;
 
         return self;
@@ -95,6 +99,11 @@ pub const Player = struct {
                 .W, .UP => {
                     if (self.velocity != 0) return;
                     self.velocity += Player.jumpVelocity;
+                    self.jumpVisible = true;
+                    const x = self.x + self.width / 2 - self.animationJump.textures[0].width / 2;
+                    const y = self.y + self.height - self.animationJump.textures[0].height;
+                    self.positionJump = .{ .x = x, .y = y };
+                    self.animationJump.reset();
                 },
                 .F, .PERIOD => self.attack(),
                 .G, .SLASH => self.attackEx(),
@@ -120,6 +129,16 @@ pub const Player = struct {
                 var particle = &self.particles.buffer[index];
                 particle.update(delta);
                 if (!particle.valid) _ = self.particles.swapRemove(index);
+            }
+        }
+        {
+            if (self.jumpVisible) {
+                self.animationJump.update(delta);
+                if (self.animationJump.finished()) self.jumpVisible = false;
+            }
+            if (self.landVisible) {
+                self.animationLand.update(delta);
+                if (self.animationLand.finished()) self.landVisible = false;
             }
         }
 
@@ -191,7 +210,14 @@ pub const Player = struct {
 
             if (lastFootPosY <= platform.shape.y) {
                 self.y = platform.shape.y - self.height;
-                self.velocity = 0;
+                defer self.velocity = 0;
+                if (self.velocity == 0) break;
+
+                self.landVisible = true;
+                const x = self.x + self.width / 2 - self.animationLand.textures[0].width / 2;
+                const height = self.y + self.height - self.animationLand.textures[0].height;
+                self.positionLand = .{ .x = x, .y = height };
+                self.animationLand.reset();
                 break;
             }
         } else {
@@ -209,6 +235,12 @@ pub const Player = struct {
         }
 
         for (self.particles.slice()) |*particle| particle.render();
+        if (self.jumpVisible) {
+            self.animationJump.play(self.positionJump.x, self.positionJump.y);
+        }
+        if (self.landVisible) {
+            self.animationLand.play(self.positionLand.x, self.positionLand.y);
+        }
 
         if (self.invulnerable and self.invulnerableToggle) {
             gfx.draw(self.x, self.y, self.textureIdle);

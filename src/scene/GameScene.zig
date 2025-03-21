@@ -4,7 +4,8 @@ const gfx = @import("../graphics.zig");
 const audio = @import("zaudio");
 
 const scene = @import("../scene.zig");
-const Bullet = @import("bullet.zig").Bullet;
+const bulletModule = @import("bullet.zig");
+const Bullet = bulletModule.Bullet;
 const player = @import("player.zig");
 const GameScene = @This();
 
@@ -21,6 +22,25 @@ player1StatusBars: StatusBar,
 player2StatusBars: StatusBar,
 
 backgroundSound: *audio.Sound,
+winSound: *audio.Sound,
+
+gameOver: bool = false,
+
+player1Win: gfx.Texture = undefined,
+player2Win: gfx.Texture = undefined,
+winnerBar: gfx.Texture = undefined,
+
+positionWinBar: bulletModule.Vector = .{},
+positionWinText: bulletModule.Vector = .{},
+WinBarDst: f32 = 0,
+WinTextDst: f32 = 0,
+
+timerIn: window.Timer = undefined,
+timerOut: window.Timer = undefined,
+startSlideOut: bool = false,
+
+const speedWinnerBar: f32 = 3.0;
+const speedWinnerText: f32 = 1.5;
 
 pub fn init() GameScene {
     std.log.info("game scene init", .{});
@@ -30,11 +50,19 @@ pub fn init() GameScene {
 
     self.imageSky = gfx.loadTexture("assets/sky.png").?;
     self.imageHill = gfx.loadTexture("assets/hills.png").?;
+
+    self.player1Win = gfx.loadTexture("assets/1P_winner.png").?;
+    self.player2Win = gfx.loadTexture("assets/2P_winner.png").?;
+    self.winnerBar = gfx.loadTexture("assets/winner_bar.png").?;
+
     self.bullets = std.BoundedArray(Bullet, 64).init(0) catch unreachable;
     self.backgroundSound = scene.audioEngine.createSoundFromFile(
         "assets/bgm_game.mp3",
         .{ .flags = .{ .stream = true, .looping = true } },
     ) catch unreachable;
+
+    self.winSound = scene.audioEngine.createSoundFromFile( //
+        "assets/ui_win.wav", .{}) catch unreachable;
 
     self.initPlatforms();
 
@@ -81,11 +109,26 @@ pub fn enter(self: *GameScene) void {
     self.player1 = .init(scene.playerType1, 200, 50, false);
     self.player2 = .init(scene.playerType2, 975, 50, true);
     self.player2.p1 = false;
+
+    self.gameOver = false;
+    self.startSlideOut = false;
+
+    self.positionWinBar.x = -self.winnerBar.width;
+    self.positionWinBar.y = (window.height - self.winnerBar.height) / 2;
+    self.WinBarDst = (window.width - self.winnerBar.width) / 2;
+
+    self.positionWinText.x = -self.player1Win.width;
+    self.positionWinText.y = (window.height - self.player1Win.height) / 2;
+    self.WinTextDst = (window.width - self.player1Win.width) / 2;
+
+    self.timerIn = window.Timer.init(2500);
+    self.timerOut = window.Timer.init(1000);
 }
 
 pub fn exit(self: *GameScene) void {
     std.log.info("game scene exit", .{});
     self.backgroundSound.stop() catch unreachable;
+    self.winSound.stop() catch unreachable;
 }
 
 pub fn event(self: *GameScene, ev: *const window.Event) void {
@@ -99,11 +142,44 @@ pub fn event(self: *GameScene, ev: *const window.Event) void {
 pub fn update(self: *GameScene) void {
     const deltaTime = window.deltaMillisecond();
 
+    var position: bulletModule.Vector = .{ .x = self.player1.x, .y = self.player1.y };
+    var size: bulletModule.Vector = .{ .x = self.player1.width, .y = self.player1.height };
+    if (bulletModule.Bullet.outWindow(position, size)) self.player1.hp = 0;
+    position = .{ .x = self.player2.x, .y = self.player2.y };
+    size = .{ .x = self.player2.width, .y = self.player2.height };
+    if (bulletModule.Bullet.outWindow(position, size)) self.player2.hp = 0;
+
+    if (self.player1.hp == 0 or self.player2.hp == 0) {
+        self.gameOver = true;
+        self.backgroundSound.stop() catch unreachable;
+        self.winSound.start() catch unreachable;
+    }
+
     self.player1.update(deltaTime);
     self.player2.update(deltaTime);
 
     self.updateBullets(deltaTime);
     window.shakeCamera.update(deltaTime);
+
+    if (self.gameOver) {
+        self.positionWinBar.x += speedWinnerBar * deltaTime;
+        self.positionWinText.x += speedWinnerText * deltaTime;
+
+        if (!self.startSlideOut) {
+            self.timerIn.update(deltaTime);
+            if (self.positionWinBar.x > self.WinBarDst)
+                self.positionWinBar.x = self.WinBarDst;
+
+            if (self.positionWinText.x > self.WinTextDst)
+                self.positionWinText.x = self.WinTextDst;
+
+            if (self.timerIn.finished) self.startSlideOut = true;
+        } else {
+            if (self.timerOut.isFinishedAfterUpdate(deltaTime)) {
+                scene.changeCurrentScene(.menu);
+            }
+        }
+    }
 }
 
 fn updateBullets(self: *GameScene, delta: f32) void {
@@ -153,12 +229,19 @@ pub fn render(self: *GameScene) void {
 
     self.player1StatusBars.render(self.player1.hp, self.player1.mp);
     self.player2StatusBars.render(self.player2.hp, self.player2.mp);
+
+    if (self.gameOver) {
+        gfx.draw(self.positionWinBar.x, self.positionWinBar.y, self.winnerBar);
+        const win = if (self.player1.hp == 0) self.player2Win else self.player1Win;
+        gfx.draw(self.positionWinText.x, self.positionWinText.y, win);
+    }
 }
 
 pub fn deinit(self: *GameScene) void {
     std.log.info("game scene deinit", .{});
-    @import("bullet.zig").deinit();
+    bulletModule.deinit();
     self.backgroundSound.destroy();
+    self.winSound.destroy();
 }
 
 const Platform = struct {

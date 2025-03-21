@@ -134,6 +134,11 @@ pub const SliceFrameAnimation = struct {
         }
     }
 
+    pub fn reset(self: *@This()) void {
+        self.timer.reset();
+        self.index = 0;
+    }
+
     pub fn finished(self: *const @This()) bool {
         return self.timer.finished and !self.loop;
     }
