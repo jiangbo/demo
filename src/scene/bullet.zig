@@ -208,7 +208,7 @@ pub const Bullet = struct {
         }
     }
 
-    pub fn outWindow(position: Vector, size: Vector) bool {
+    fn outWindow(position: Vector, size: Vector) bool {
         if (position.x + size.x < 0 or position.x > window.width) return true;
         if (position.y + size.y < 0 or position.y > window.height) return true;
         return false;

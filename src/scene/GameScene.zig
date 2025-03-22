@@ -142,12 +142,8 @@ pub fn event(self: *GameScene, ev: *const window.Event) void {
 pub fn update(self: *GameScene) void {
     const deltaTime = window.deltaMillisecond();
 
-    var position: bulletModule.Vector = .{ .x = self.player1.x, .y = self.player1.y };
-    var size: bulletModule.Vector = .{ .x = self.player1.width, .y = self.player1.height };
-    if (bulletModule.Bullet.outWindow(position, size)) self.player1.hp = 0;
-    position = .{ .x = self.player2.x, .y = self.player2.y };
-    size = .{ .x = self.player2.width, .y = self.player2.height };
-    if (bulletModule.Bullet.outWindow(position, size)) self.player2.hp = 0;
+    if (self.player1.y > window.height) self.player1.hp = 0;
+    if (self.player2.y > window.height) self.player2.hp = 0;
 
     if (self.player1.hp == 0 or self.player2.hp == 0) {
         self.gameOver = true;
