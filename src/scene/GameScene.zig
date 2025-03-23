@@ -132,6 +132,7 @@ pub fn exit(self: *GameScene) void {
 }
 
 pub fn event(self: *GameScene, ev: *const window.Event) void {
+    if (self.gameOver) return;
     switch (ev.key_code) {
         .A, .D, .W, .F, .G => self.player1.event(ev),
         .LEFT, .RIGHT, .UP, .PERIOD, .SLASH => self.player2.event(ev),
@@ -150,12 +151,6 @@ pub fn update(self: *GameScene) void {
         self.backgroundSound.stop() catch unreachable;
         self.winSound.start() catch unreachable;
     }
-
-    self.player1.update(deltaTime);
-    self.player2.update(deltaTime);
-
-    self.updateBullets(deltaTime);
-    window.shakeCamera.update(deltaTime);
 
     if (self.gameOver) {
         self.positionWinBar.x += speedWinnerBar * deltaTime;
@@ -176,6 +171,11 @@ pub fn update(self: *GameScene) void {
             }
         }
     }
+    self.player1.update(deltaTime);
+    self.player2.update(deltaTime);
+
+    self.updateBullets(deltaTime);
+    window.shakeCamera.update(deltaTime);
 }
 
 fn updateBullets(self: *GameScene, delta: f32) void {
@@ -186,8 +186,7 @@ fn updateBullets(self: *GameScene, delta: f32) void {
             if (self.player2.isCollide(bullet)) {
                 bullet.collidePlayer();
                 self.player2.collideBullet(bullet);
-                self.player2.hp -|= bullet.damage;
-                self.player1.mp += 10;
+                self.player1.mp += 30;
                 if (self.player1.mp > 100) self.player1.mp = 100;
             }
         }
@@ -196,8 +195,7 @@ fn updateBullets(self: *GameScene, delta: f32) void {
             if (self.player1.isCollide(bullet)) {
                 bullet.collidePlayer();
                 self.player1.collideBullet(bullet);
-                self.player1.hp -|= bullet.damage;
-                self.player2.mp += 10;
+                self.player2.mp += 30;
                 if (self.player2.mp > 100) self.player2.mp = 100;
             }
         }

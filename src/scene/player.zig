@@ -12,7 +12,7 @@ pub const Player = struct {
     facingLeft: bool,
     leftKeyDown: bool = false,
     rightKeyDown: bool = false,
-    velocity: f32 = 0,
+    velocity: Vector = .{},
     width: f32 = 96,
     height: f32 = 96,
     p1: bool = true,
@@ -21,7 +21,7 @@ pub const Player = struct {
     attackExTimer: window.Timer = .init(2500),
     sunTextTimer: window.Timer = .init(2500),
 
-    invulnerableTimer: window.Timer = .init(1000),
+    invulnerableTimer: window.Timer = .init(750),
     invulnerableToggleTimer: window.Timer = .init(75),
     invulnerable: bool = false,
     invulnerableToggle: bool = false,
@@ -46,6 +46,13 @@ pub const Player = struct {
     particles: std.BoundedArray(Particle, 32) = undefined,
     particleTimer: window.Timer = .init(75),
 
+    cursorVisible: bool = true,
+    cursorTimer: window.Timer = undefined,
+    cursorP1: gfx.Texture = undefined,
+    cursorP2: gfx.Texture = undefined,
+
+    hurtDirection: Vector = .{},
+
     const runVelocity: f32 = 0.55;
     const gravity: f32 = 1.6e-3;
     const jumpVelocity: f32 = -0.85;
@@ -58,6 +65,11 @@ pub const Player = struct {
         self.sunTextTimer.finished = true;
         self.invulnerableTimer.finished = true;
         self.invulnerableToggleTimer.finished = true;
+
+        self.cursorVisible = true;
+        self.cursorTimer = window.Timer.init(2500);
+        self.cursorP1 = gfx.loadTexture("assets/1P_cursor.png").?;
+        self.cursorP2 = gfx.loadTexture("assets/2P_cursor.png").?;
 
         if (playerType == .peaShooter) {
             self.animationIdle = .load("assets/peashooter_idle_{}.png", 9);
@@ -97,8 +109,8 @@ pub const Player = struct {
                     self.facingLeft = false;
                 },
                 .W, .UP => {
-                    if (self.velocity != 0) return;
-                    self.velocity += Player.jumpVelocity;
+                    if (self.velocity.y != 0) return;
+                    self.velocity.y += Player.jumpVelocity;
                     self.jumpVisible = true;
                     const x = self.x + self.width / 2 - self.animationJump.textures[0].width / 2;
                     const y = self.y + self.height - self.animationJump.textures[0].height;
@@ -121,6 +133,8 @@ pub const Player = struct {
     pub fn update(self: *Player, delta: f32) void {
         self.attackTimer.update(delta);
         self.invulnerableUpdate(delta);
+
+        if (self.cursorTimer.isFinishedAfterUpdate(delta)) self.cursorVisible = false;
 
         {
             var index: usize = self.particles.len;
@@ -180,6 +194,7 @@ pub const Player = struct {
         }
 
         moveAndCollide(self, delta);
+        self.x += self.velocity.x * delta;
     }
 
     fn invulnerableUpdate(self: *Player, delta: f32) void {
@@ -196,22 +211,22 @@ pub const Player = struct {
     }
 
     fn moveAndCollide(self: *Player, delta: f32) void {
-        const velocity = self.velocity + Player.gravity * delta;
+        const velocity = self.velocity.y + Player.gravity * delta;
         const y = self.y + velocity * delta;
 
         const platforms = &scene.gameScene.platforms;
         for (platforms) |*platform| {
             if (self.x + self.width < platform.shape.left) continue;
-            if (self.x > platform.shape.right) continue;
+            if (self.x > platform.shape.right or self.hp == 0) continue;
             if (y + self.height < platform.shape.y) continue;
 
-            const deltaPosY = self.velocity * delta;
+            const deltaPosY = self.velocity.y * delta;
             const lastFootPosY = self.y + self.height - deltaPosY;
 
             if (lastFootPosY <= platform.shape.y) {
                 self.y = platform.shape.y - self.height;
-                defer self.velocity = 0;
-                if (self.velocity == 0) break;
+                defer self.velocity.y = 0;
+                if (self.velocity.y == 0) break;
 
                 self.landVisible = true;
                 const x = self.x + self.width / 2 - self.animationLand.textures[0].width / 2;
@@ -222,7 +237,7 @@ pub const Player = struct {
             }
         } else {
             self.y = y;
-            self.velocity = velocity;
+            self.velocity.y = velocity;
         }
     }
 
@@ -232,6 +247,13 @@ pub const Player = struct {
             const x = self.x - self.width / 2 + text.textures[0].width / 2;
             const y = self.y - text.textures[0].height;
             text.playFlipX(x, y, self.facingLeft);
+        }
+
+        if (self.cursorVisible) {
+            const x = self.x + (self.width - self.cursorP1.width) / 2;
+            const y = self.y - self.cursorP1.height;
+            const cursor = if (self.p1) self.cursorP1 else self.cursorP2;
+            gfx.draw(x, y, cursor);
         }
 
         for (self.particles.slice()) |*particle| particle.render();
@@ -321,7 +343,15 @@ pub const Player = struct {
     pub fn collideBullet(self: *Player, bullet: *Bullet) void {
         self.invulnerable = true;
         self.invulnerableTimer.reset();
-        _ = bullet;
+
+        self.hp -|= bullet.damage;
+        const position: Vector = .{ .x = self.x, .y = self.y };
+        self.hurtDirection = bullet.position.sub(position);
+
+        if (self.hp == 0) {
+            self.velocity.x = if (self.hurtDirection.x < 0) 0.35 else -0.35;
+            self.velocity.y = -1;
+        }
     }
 };
 

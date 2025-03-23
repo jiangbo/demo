@@ -61,6 +61,10 @@ pub const Vector = struct {
     pub fn scale(a: Vector, b: f32) Vector {
         return .{ .x = a.x * b, .y = a.y * b, .z = a.z * b };
     }
+
+    pub fn sub(a: Vector, b: Vector) Vector {
+        return .{ .x = a.x - b.x, .y = a.y - b.y, .z = a.z - b.z };
+    }
 };
 
 pub const Bullet = struct {
@@ -102,7 +106,7 @@ pub const Bullet = struct {
         self.type = .pea;
         self.animationBreak = .load("assets/pea_break_{}.png", 3);
         self.animationBreak.loop = false;
-        self.damage = 10;
+        self.damage = 5;
         self.velocity = .{ .x = peaSpeed };
 
         return self;
@@ -116,7 +120,7 @@ pub const Bullet = struct {
         self.animationBreak = .load("assets/sun_explode_{}.png", 5);
         self.animationBreak.timer.duration = 75;
         self.animationBreak.loop = false;
-        self.damage = 20;
+        self.damage = 10;
         self.velocity = .{ .x = 0.25, .y = -0.65 };
 
         self.explodeOffset = .{
