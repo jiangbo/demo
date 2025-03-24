@@ -5,27 +5,17 @@ const window = @import("window.zig");
 
 pub const Texture = gpu.Texture;
 
-pub const Camera = struct {
-    const zm = @import("zmath");
-
-    proj: zm.Mat,
-
-    pub fn init(width: f32, height: f32) Camera {
-        const proj = zm.orthographicOffCenterLh(0, width, 0, height, 0, 1);
-        return .{ .proj = proj };
-    }
-
-    pub fn vp(self: Camera) zm.Mat {
-        return self.proj;
-    }
-};
-
-pub var camera: Camera = undefined;
 pub var renderer: gpu.Renderer = undefined;
+var matrix: [16]f32 = undefined;
 var passEncoder: gpu.RenderPassEncoder = undefined;
 
 pub fn init(width: f32, height: f32) void {
-    camera = Camera.init(width, height);
+    matrix = .{
+        2 / width, 0.0,         0.0, 0.0,
+        0.0,       2 / -height, 0.0, 0.0,
+        0.0,       0.0,         1,   0.0,
+        -1,        1,           0,   1.0,
+    };
     renderer = gpu.Renderer.init();
 }
 
@@ -75,7 +65,7 @@ pub const Rectangle = gpu.Rectangle;
 
 pub fn drawOptions(texture: Texture, options: DrawOptions) void {
     renderer.draw(.{
-        .uniform = .{ .vp = camera.vp() },
+        .uniform = .{ .vp = matrix },
         .texture = texture,
         .sourceRect = options.sourceRect,
         .targetRect = options.targetRect,

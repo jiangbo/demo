@@ -1,6 +1,3 @@
-#pragma sokol @header const zm = @import("zmath")
-#pragma sokol @ctype mat4 zm.Mat
-
 @vs vs
 layout(binding=0) uniform vs_params {
     mat4 vp;

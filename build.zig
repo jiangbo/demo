@@ -20,15 +20,12 @@ pub fn build(b: *std.Build) !void {
     });
     exe.root_module.addImport("sokol", sokol.module("sokol"));
 
-    const zstbi = b.dependency("zstbi", .{});
-    exe.root_module.addImport("stbi", zstbi.module("root"));
-    exe.linkLibrary(zstbi.artifact("zstbi"));
-
-    const zmath = b.dependency("zmath", .{
+    const zstbi = b.dependency("zstbi", .{
         .target = target,
         .optimize = optimize,
     });
-    exe.root_module.addImport("zmath", zmath.module("root"));
+    exe.root_module.addImport("stbi", zstbi.module("root"));
+    exe.linkLibrary(zstbi.artifact("zstbi"));
 
     const zaudio = b.dependency("zaudio", .{
         .target = target,
