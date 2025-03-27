@@ -23,86 +23,50 @@ pub const AudioState = struct {
     current: usize = 0,
 };
 
-const div: f32 = 24103;
+const div = std.math.maxInt(i16);
 pub var state: AudioState = undefined;
 
-fn callback(b: [*c]f32, f: i32, channels: i32) callconv(.C) void {
-    _ = channels;
+fn callback(b: [*c]f32, frames: i32, channels: i32) callconv(.C) void {
+    const buffer = b[0..@as(usize, @intCast(frames * channels))];
+    // @memset(buffer, 0);
 
-    // std.log.info("state frame: {d}", .{state.frame});
-
-    const buffer = b[0..@as(usize, @intCast(f))];
-    if (state.current + buffer.len < state.frame) {
-        @memcpy(buffer, state.audio.samples()[state.current..][0..buffer.len]);
-        state.current += buffer.len;
-        return;
-    }
-
-    var len: usize = state.frame - state.current;
-    @memcpy(buffer[0..len], state.audio.samples()[state.current..][0..len]);
-
-    len = buffer.len - len;
-    state.current = len;
-    @memcpy(buffer[len..], state.audio.samples()[0..len]);
-
-    // for (0..frames) |index| {
-    //     const i = index * 2;
-    //     state.current += 1;
-
-    //     if (state.current >= state.frame - 1) state.current = 0;
-    //     var value: f32 = @floatFromInt(state.audio.samples()[state.current]);
-    //     buffer[i] = value / div;
-    //     std.log.info("buffer: {d}", .{buffer[i]});
-    //     // std.log.info("buffer: {d}", .{buffer[i]});
-    //     value = @floatFromInt(state.audio.samples()[state.current + 1]);
-    //     buffer[i + 1] = value / div;
+    // if (sk.audio.sampleRate() != state.audio.header.sampleRate) {
+    resampleAudio(buffer, @intCast(sk.audio.sampleRate()));
     // }
 
-    // std.log.info("state current: {d}", .{state.current});
-
-    // const samples: usize = @intCast(frames * channels);
-
-    // const dest = buffer[0..samples];
-    // @memset(dest, 0);
-
-    // const count = writeSamples(clip, p.frame, @as(usize, @intCast(num_frames)), dst, p.volume());
-    // p.frame += count;
-
-    // if (p.frame >= clip.frameCount()) {
-    //     if (p.loop) {
-    //         // TODO I don't think this is a perfect loop
-    //         p.frame = 0;
-    //     } else {
-    //         p.clip = null;
-    //         p.frame = 0;
-    //     }
+    // for (buffer) |*dst| {
+    //     const value: f32 = @floatFromInt(state.audio.samples()[state.current]);
+    //     dst.* = value / div;
+    //     state.current += 1;
+    //     if (state.current >= state.frame) state.current = 0;
     // }
 }
 
-// fn writeSamples(clip: WavAudio, frame_offset: usize, frame_count: usize, output: []f32, volume: f32) usize {
-//     const clip_samples = clip.samples();
-//     const sample_offset = frame_offset * clip.format.nbrChannels;
-//     const frames_left = @divExact(clip_samples.len, clip.format.nbrChannels) - frame_offset;
-//     const frames_to_write = @min(sample_buf_length, @min(frame_count, frames_left));
+fn resampleAudio(buffer: []f32, sampleRate: u16) void {
+    const ratio = @divExact(sampleRate, state.audio.header.sampleRate);
 
-//     const src = clip_samples[sample_offset .. sample_offset + frames_to_write * clip.format.nbrChannels];
-//     const dst = output[0 .. frames_to_write * state.num_channels];
-
-//     for (src, 0..) |s, i| {
-//         const fs: f32 = @floatFromInt(s);
-//         const div: usize = if (fs < 0) @abs(std.math.minInt(i16)) else std.math.maxInt(i16);
-//         const result = (fs / @as(f32, @floatFromInt(div)));
-//         std.debug.assert(-1 <= result and result <= 1);
-//         if (clip.format.nbrChannels == 1) {
-//             dst[i * state.num_channels + 0] += result * volume;
-//             dst[i * state.num_channels + 1] += result * volume;
-//         } else if (clip.format.nbrChannels == 2) {
-//             dst[i] += result * volume;
-//         } else unreachable;
-//     }
-
-//     return frames_to_write;
-// }
+    for (0..@divExact(buffer.len, ratio)) |i| {
+        var next: f32 = 0;
+        if (state.current + 1 >= state.frame) {
+            next = @floatFromInt(state.audio.samples()[0]);
+        } else {
+            next = @floatFromInt(state.audio.samples()[state.current + 1]);
+        }
+        const current: f32 = @floatFromInt(state.audio.samples()[state.current]);
+        const step = (next - current) / @as(f32, @floatFromInt(ratio));
+        for (0..ratio) |j| {
+            const value: f32 = (current + step * @as(f32, @floatFromInt(j))) / div;
+            // std.log.info("value: {d}", .{value});
+            if (value > 0.9) std.log.info("value: {d}", .{value});
+            buffer[i * ratio + j] = value;
+        }
+        state.current += 1;
+        if (state.current >= state.frame) {
+            state.current = 0;
+            std.log.info("loop...", .{});
+        }
+    }
+}
 
 pub fn deinit() void {
     sk.audio.shutdown();
@@ -146,8 +110,8 @@ pub const WavAudio = struct {
         return @divExact(self.samples().len, self.header.channels);
     }
 
-    pub fn samples(self: WavAudio) []align(1) const f32 {
-        return std.mem.bytesAsSlice(f32, self.data);
+    pub fn samples(self: WavAudio) []align(1) const i16 {
+        return std.mem.bytesAsSlice(i16, self.data);
     }
 };
 

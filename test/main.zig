@@ -3,11 +3,12 @@ const std = @import("std");
 const audio = @import("audio.zig");
 
 pub fn main() !void {
-    const wavData: []const u8 = @embedFile("ui_win_f32.wav");
+    const wavData: []const u8 = @embedFile("ui_win.wav");
 
     const wav = audio.WavAudio.parse(wavData);
-    std.log.info("wav data len:{?}", .{wav.?.header});
-    audio.state = .{ .audio = wav.?, .frame = wav.?.frameCount() };
+    audio.state = .{ .audio = wav.?, .frame = wav.?.samples().len };
+
+    std.log.info("sample rate: {d}", .{wav.?.header.sampleRate});
 
     audio.init();
     defer audio.deinit();
