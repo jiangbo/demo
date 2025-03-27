@@ -6,24 +6,19 @@ pub fn build(b: *std.Build) !void {
 
     const exe = b.addExecutable(.{
         .name = "demo",
-        .root_source_file = b.path("src/main.zig"),
+        .root_source_file = b.path("test/main.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    exe.subsystem = .Windows;
+    if (optimize != .Debug) exe.subsystem = .Windows;
+
     b.installArtifact(exe);
 
-    const sokol = b.dependency("sokol", .{
-        .target = target,
-        .optimize = optimize,
-    });
+    const sokol = b.dependency("sokol", .{ .target = target, .optimize = optimize });
     exe.root_module.addImport("sokol", sokol.module("sokol"));
 
-    const zstbi = b.dependency("zstbi", .{
-        .target = target,
-        .optimize = optimize,
-    });
+    const zstbi = b.dependency("zstbi", .{ .target = target, .optimize = optimize });
     exe.root_module.addImport("stbi", zstbi.module("root"));
     exe.linkLibrary(zstbi.artifact("zstbi"));
 

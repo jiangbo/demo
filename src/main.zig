@@ -11,6 +11,17 @@ pub fn init() void {
     audio.init(allocator);
     gfx.init(window.width, window.height);
     scene.init();
+
+    const sk = @import("sokol");
+
+    sk.audio.setup(.{
+        .num_channels = 2,
+        .buffer_frames = 512, // lowers audio latency
+        // .stream_cb = stream_callback,
+        .logger = .{ .func = sk.log.func },
+    });
+
+    std.log.info("channels: {d}", .{sk.audio.channels()});
 }
 
 pub fn event(ev: *const window.Event) void {
