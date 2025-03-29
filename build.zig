@@ -21,21 +21,10 @@ pub fn build(b: *std.Build) !void {
     const writeFiles = b.addWriteFiles();
     exe.step.dependOn(&writeFiles.step);
 
-    // const stb = b.dependency("stb", .{ .target = target, .optimize = optimize });
-    // exe.root_module.addIncludePath(stb.path("."));
-    // const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
-    // exe.root_module.addCSourceFile(.{ .file = stbImagePath, .flags = &.{"-O3"} });
-
-    const zstbi = b.dependency("zstbi", .{ .target = target, .optimize = optimize });
-    exe.root_module.addImport("stbi", zstbi.module("root"));
-
-    const zaudio = b.dependency("zaudio", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
-    exe.root_module.addImport("zaudio", zaudio.module("root"));
-    exe.linkLibrary(zaudio.artifact("miniaudio"));
+    const stb = b.dependency("stb", .{ .target = target, .optimize = optimize });
+    exe.root_module.addIncludePath(stb.path("."));
+    const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
+    exe.root_module.addCSourceFile(.{ .file = stbImagePath, .flags = &.{"-O2"} });
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -49,6 +38,7 @@ pub fn build(b: *std.Build) !void {
 const stbImageSource =
     \\
     \\#define STB_IMAGE_IMPLEMENTATION
+    \\#define STBI_ONLY_PNG
     \\#include "stb_image.h"
     \\
 ;
