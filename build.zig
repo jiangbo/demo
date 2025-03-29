@@ -6,7 +6,7 @@ pub fn build(b: *std.Build) !void {
 
     const exe = b.addExecutable(.{
         .name = "demo",
-        .root_source_file = b.path("test/main.zig"),
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -18,9 +18,16 @@ pub fn build(b: *std.Build) !void {
     const sokol = b.dependency("sokol", .{ .target = target, .optimize = optimize });
     exe.root_module.addImport("sokol", sokol.module("sokol"));
 
+    const writeFiles = b.addWriteFiles();
+    exe.step.dependOn(&writeFiles.step);
+
+    // const stb = b.dependency("stb", .{ .target = target, .optimize = optimize });
+    // exe.root_module.addIncludePath(stb.path("."));
+    // const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
+    // exe.root_module.addCSourceFile(.{ .file = stbImagePath, .flags = &.{"-O3"} });
+
     const zstbi = b.dependency("zstbi", .{ .target = target, .optimize = optimize });
     exe.root_module.addImport("stbi", zstbi.module("root"));
-    exe.linkLibrary(zstbi.artifact("zstbi"));
 
     const zaudio = b.dependency("zaudio", .{
         .target = target,
@@ -30,14 +37,6 @@ pub fn build(b: *std.Build) !void {
     exe.root_module.addImport("zaudio", zaudio.module("root"));
     exe.linkLibrary(zaudio.artifact("miniaudio"));
 
-    // const sdl_dep = b.dependency("sdl", .{
-    //     .target = target,
-    //     .optimize = optimize,
-    //     .preferred_link_mode = .static,
-    // });
-    // const sdl_lib = sdl_dep.artifact("SDL3");
-    // exe.linkLibrary(sdl_lib);
-
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
@@ -46,3 +45,10 @@ pub fn build(b: *std.Build) !void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 }
+
+const stbImageSource =
+    \\
+    \\#define STB_IMAGE_IMPLEMENTATION
+    \\#include "stb_image.h"
+    \\
+;

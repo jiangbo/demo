@@ -1,80 +1,69 @@
 const std = @import("std");
-const mach = @import("mach");
-const render = @import("render.zig");
 
-pub const App = @This();
-const width = 640;
-const height = 480;
+const gfx = @import("graphics.zig");
+const window = @import("window.zig");
+const scene = @import("scene.zig");
+const cache = @import("cache.zig");
+const audio = @import("zaudio");
 
-var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-renderContext: render.RenderContext = undefined,
-timer: mach.Timer = undefined,
+pub fn init() void {
+    cache.init(allocator);
+    audio.init(allocator);
+    gfx.init(window.width, window.height);
+    scene.init();
 
-pub fn init(app: *App) !void {
-    try mach.core.init(.{
-        .title = "学习 WebGPU",
-        .size = .{ .width = width, .height = height },
-    });
-    // 设置帧率
-    mach.core.setFrameRateLimit(30);
-    mach.core.setInputFrequency(30);
+    const sk = @import("sokol");
 
-    app.renderContext = render.createRenderPipeline();
-
-    app.timer = try mach.Timer.start();
-}
-
-pub fn deinit(app: *App) void {
-    app.renderContext.release();
-    mach.core.deinit();
-    _ = gpa.deinit();
-}
-
-pub fn update(app: *App) !bool {
-    // 检查窗口是否需要关闭
-    var iterator = mach.core.pollEvents();
-    while (iterator.next()) |event| if (event == .close) return true;
-
-    const view = mach.core.swap_chain.getCurrentTextureView().?;
-    defer view.release();
-
-    const renderPass = mach.gpu.RenderPassDescriptor.init(.{
-        .color_attachments = &.{.{
-            .view = view,
-            .clear_value = std.mem.zeroes(mach.gpu.Color),
-            .load_op = .clear,
-            .store_op = .store,
-        }},
+    sk.audio.setup(.{
+        .num_channels = 2,
+        .buffer_frames = 512, // lowers audio latency
+        // .stream_cb = stream_callback,
+        .logger = .{ .func = sk.log.func },
     });
 
-    // 命令编码器
-    const encoder = mach.core.device.createCommandEncoder(null);
-    defer encoder.release();
-    const pass = encoder.beginRenderPass(&renderPass);
+    std.log.info("channels: {d}", .{sk.audio.channels()});
+}
 
-    // 设置渲染管线
-    const context = app.renderContext;
-    pass.setPipeline(context.pipeline);
-    pass.setBindGroup(0, context.bindGroup, &.{});
+pub fn event(ev: *const window.Event) void {
+    scene.currentScene.event(ev);
+}
 
-    const scaleX = 4.0 * 64.0 / @as(f32, @floatFromInt(width));
-    const scaleY = 4.0 * 64.0 / @as(f32, @floatFromInt(height));
-    const offsetX = @sin(app.timer.read() * 0.25) * 0.8;
-    const value: [4]f32 = [4]f32{ scaleX, scaleY, offsetX, -0.8 };
+pub fn update() void {
+    scene.currentScene.update();
+}
 
-    mach.core.queue.writeBuffer(context.modelBuffer, 0, &value);
+pub fn render() void {
+    gfx.beginDraw();
+    defer gfx.endDraw();
 
-    pass.draw(6, 1, 0, 0);
-    pass.end();
-    pass.release();
+    scene.currentScene.render();
+}
 
-    var command = encoder.finish(null);
-    defer command.release();
+pub fn deinit() void {
+    scene.deinit();
+    cache.deinit();
+    audio.deinit();
+}
 
-    // 提交命令
-    mach.core.queue.submit(&.{command});
-    mach.core.swap_chain.present();
+var allocator: std.mem.Allocator = undefined;
 
-    // 不退出渲染循环
-    return false;
+pub fn main() void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+
+    allocator = gpa.allocator();
+    window.width = 1280;
+    window.height = 720;
+
+    var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
+    window.rand = prng.random();
+
+    window.run(.{
+        .title = "植物明星大乱斗",
+        .init = init,
+        .event = event,
+        .update = update,
+        .render = render,
+        .deinit = deinit,
+    });
 }

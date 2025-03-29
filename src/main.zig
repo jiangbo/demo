@@ -1,69 +1,21 @@
 const std = @import("std");
 
-const gfx = @import("graphics.zig");
-const window = @import("window.zig");
-const scene = @import("scene.zig");
-const cache = @import("cache.zig");
-const audio = @import("zaudio");
+const audio = @import("audio.zig");
 
-pub fn init() void {
-    cache.init(allocator);
-    audio.init(allocator);
-    gfx.init(window.width, window.height);
-    scene.init();
+pub fn main() !void {
+    const wavData: []const u8 = @embedFile("ui_win1.wav");
 
-    const sk = @import("sokol");
+    const wav = audio.WavAudio.parse(wavData);
+    audio.state = .{ .audio = wav.?, .frame = wav.?.samples().len };
 
-    sk.audio.setup(.{
-        .num_channels = 2,
-        .buffer_frames = 512, // lowers audio latency
-        // .stream_cb = stream_callback,
-        .logger = .{ .func = sk.log.func },
-    });
+    std.log.info("sample rate: {d}", .{wav.?.header.sampleRate});
 
-    std.log.info("channels: {d}", .{sk.audio.channels()});
-}
+    audio.init();
+    defer audio.deinit();
 
-pub fn event(ev: *const window.Event) void {
-    scene.currentScene.event(ev);
-}
+    // const a: i16 = 0x7fffffff;
+    // const b: i16 = std.math.maxInt(i16);
+    // std.log.info("number a: {d}, b: {b}", .{ a, b });
 
-pub fn update() void {
-    scene.currentScene.update();
-}
-
-pub fn render() void {
-    gfx.beginDraw();
-    defer gfx.endDraw();
-
-    scene.currentScene.render();
-}
-
-pub fn deinit() void {
-    scene.deinit();
-    cache.deinit();
-    audio.deinit();
-}
-
-var allocator: std.mem.Allocator = undefined;
-
-pub fn main() void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-
-    allocator = gpa.allocator();
-    window.width = 1280;
-    window.height = 720;
-
-    var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
-    window.rand = prng.random();
-
-    window.run(.{
-        .title = "植物明星大乱斗",
-        .init = init,
-        .event = event,
-        .update = update,
-        .render = render,
-        .deinit = deinit,
-    });
+    std.Thread.sleep(10 * std.time.ns_per_s);
 }
