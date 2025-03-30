@@ -52,6 +52,7 @@ pub var rand: std.Random = undefined;
 var timer: std.time.Timer = undefined;
 var deltaTime: f32 = 0;
 var totalTime: f32 = 0;
+
 pub fn deltaMillisecond() f32 {
     return deltaTime;
 }
@@ -86,7 +87,6 @@ pub fn run(info: CallbackInfo) void {
         .height = @as(i32, @intFromFloat(height)),
         .window_title = info.title,
         .logger = .{ .func = sk.log.func },
-        .win32_console_attach = true,
         .init_cb = if (info.init) |_| init else null,
         .event_cb = if (info.event) |_| event else null,
         .frame_cb = if (info.update != null or info.render != null) frame else null,

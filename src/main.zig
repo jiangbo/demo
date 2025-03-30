@@ -1,8 +1,13 @@
 const std = @import("std");
 
+const cache = @import("cache.zig");
 const window = @import("window.zig");
+const gfx = @import("graphics.zig");
 
-pub fn init() void {}
+pub fn init() void {
+    cache.init(allocator);
+    gfx.init(window.width, window.height);
+}
 
 pub fn event(ev: *const window.Event) void {
     _ = ev;
@@ -10,9 +15,16 @@ pub fn event(ev: *const window.Event) void {
 
 pub fn update() void {}
 
-pub fn render() void {}
+pub fn render() void {
+    gfx.beginDraw();
+    defer gfx.endDraw();
 
-pub fn deinit() void {}
+    gfx.draw(0, 0, cache.TextureCache.load("assets/background.png"));
+}
+
+pub fn deinit() void {
+    cache.deinit();
+}
 
 var allocator: std.mem.Allocator = undefined;
 

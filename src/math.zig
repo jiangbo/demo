@@ -29,21 +29,21 @@ pub const Vector3 = struct {
 };
 
 pub const Rectangle = struct {
-    left: f32 = 0,
-    top: f32 = 0,
-    right: f32 = 0,
-    bottom: f32 = 0,
+    x: f32 = 0,
+    y: f32 = 0,
+    w: f32 = 0,
+    h: f32 = 0,
 
-    pub fn init(x: f32, y: f32, w: f32, h: f32) Rectangle {
-        return .{ .left = x, .top = y, .right = x + w, .bottom = y + h };
+    pub fn init(x1: f32, y1: f32, x2: f32, y2: f32) Rectangle {
+        return .{ .x = x1, .y = y1, .w = x2 - x1, .h = y2 - y1 };
     }
 
-    pub fn width(self: Rectangle) f32 {
-        return self.right - self.left;
+    pub fn right(self: Rectangle) f32 {
+        return self.x + self.w;
     }
 
-    pub fn height(self: Rectangle) f32 {
-        return self.bottom - self.top;
+    pub fn bottom(self: Rectangle) f32 {
+        return self.y + self.h;
     }
 
     pub fn intersects(self: Rectangle, other: Rectangle) bool {
