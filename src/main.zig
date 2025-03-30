@@ -4,22 +4,30 @@ const cache = @import("cache.zig");
 const window = @import("window.zig");
 const gfx = @import("graphics.zig");
 
+var runAnimation: gfx.FrameAnimation = undefined;
+
 pub fn init() void {
     cache.init(allocator);
     gfx.init(window.width, window.height);
+
+    runAnimation = .load("assets/enemy/run/{}.png", 8);
 }
 
 pub fn event(ev: *const window.Event) void {
     _ = ev;
 }
 
-pub fn update() void {}
+pub fn update() void {
+    const delta = window.deltaMillisecond();
+    runAnimation.update(delta);
+}
 
 pub fn render() void {
     gfx.beginDraw();
     defer gfx.endDraw();
 
-    gfx.draw(0, 0, cache.TextureCache.load("assets/background.png"));
+    gfx.draw(gfx.loadTexture("assets/background.png"), 0, 0);
+    gfx.play(&runAnimation, 500, 500);
 }
 
 pub fn deinit() void {

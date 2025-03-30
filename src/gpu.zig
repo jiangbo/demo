@@ -8,16 +8,14 @@ pub const Color = sk.gfx.Color;
 pub const Buffer = sk.gfx.Buffer;
 
 pub const Texture = struct {
-    width: f32,
-    height: f32,
     value: sk.gfx.Image,
 
-    pub fn init(width: u32, height: u32, data: []u8) Texture {
+    pub fn init(w: u32, h: u32, data: []u8) Texture {
         const image = sk.gfx.allocImage();
 
         sk.gfx.initImage(image, .{
-            .width = @as(i32, @intCast(width)),
-            .height = @as(i32, @intCast(height)),
+            .width = @as(i32, @intCast(w)),
+            .height = @as(i32, @intCast(h)),
             .pixel_format = .RGBA8,
             .data = init: {
                 var imageData = sk.gfx.ImageData{};
@@ -26,11 +24,19 @@ pub const Texture = struct {
             },
         });
 
-        return .{
-            .width = @floatFromInt(width),
-            .height = @floatFromInt(height),
-            .value = image,
-        };
+        return .{ .value = image };
+    }
+
+    pub fn width(self: Texture) f32 {
+        return @floatFromInt(sk.gfx.queryImageWidth(self.value));
+    }
+
+    pub fn height(self: Texture) f32 {
+        return @floatFromInt(sk.gfx.queryImageHeight(self.value));
+    }
+
+    pub fn deinit(self: *Texture) void {
+        sk.gfx.destroyImage(self.value);
     }
 };
 
@@ -157,21 +163,22 @@ pub const Renderer = struct {
     };
 
     pub fn draw(self: *Renderer, options: DrawOptions) void {
+        const textureWidth = options.texture.width();
+        const textureHeight = options.texture.height();
+
         var src: Rectangle = options.sourceRect orelse .{
-            .w = options.texture.width,
-            .h = options.texture.height,
+            .w = textureWidth,
+            .h = textureHeight,
         };
 
-        if (src.w == 0) src.w = options.texture.width;
-        if (src.h == 0) src.h = options.texture.height;
-        const U0 = src.x / options.texture.width;
-        const U1 = src.right() / options.texture.width;
-        const V0 = src.y / options.texture.height;
-        const V1 = src.bottom() / options.texture.height;
+        if (src.w == 0) src.w = textureWidth;
+        if (src.h == 0) src.h = textureHeight;
+        const U0, const U1 = .{ src.x / textureWidth, src.right() / textureWidth };
+        const V0, const V1 = .{ src.y / textureHeight, src.bottom() / textureHeight };
 
         var dst = options.targetRect;
-        if (dst.w == 0) dst.w = options.texture.width;
-        if (dst.h == 0) dst.h = options.texture.height;
+        if (dst.w == 0) dst.w = textureWidth;
+        if (dst.h == 0) dst.h = textureHeight;
         const vertexBuffer = sk.gfx.makeBuffer(.{
             .data = sk.gfx.asRange(&[_]f32{
                 // 顶点和颜色
