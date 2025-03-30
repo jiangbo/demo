@@ -45,37 +45,8 @@ pub const Timer = struct {
     }
 };
 
-pub var shakeCamera: ShakeCamera = undefined;
-
-pub const ShakeCamera = struct {
-    shakingX: f32 = 0,
-    shakingY: f32 = 0,
-    timer: Timer,
-    strength: f32,
-
-    pub fn init(strength: f32, duration: f32) ShakeCamera {
-        return ShakeCamera{ .timer = .init(duration), .strength = strength };
-    }
-
-    pub fn update(self: *ShakeCamera, delta: f32) void {
-        if (self.timer.isFinishedAfterUpdate(delta)) {
-            self.shakingX, self.shakingY = .{ 0, 0 };
-            return;
-        }
-
-        const randomX = std.crypto.random.float(f32) * 2 - 1;
-        self.shakingX = randomX * self.strength;
-        const randomY = std.crypto.random.float(f32) * 2 - 1;
-        self.shakingY = randomY * self.strength;
-    }
-
-    pub fn restart(self: *ShakeCamera, strength: f32, duration: f32) void {
-        self.* = .init(strength, duration);
-    }
-};
-
-pub var width: f32 = 1280;
-pub var height: f32 = 720;
+pub var width: f32 = 0;
+pub var height: f32 = 0;
 pub var rand: std.Random = undefined;
 
 var timer: std.time.Timer = undefined;
@@ -150,8 +121,8 @@ fn frame() callconv(.C) void {
     const nano: f32 = @floatFromInt(timer.lap());
     deltaTime = nano / std.time.ns_per_ms;
     totalTime += deltaTime;
-    callback.render.?();
     callback.update.?();
+    callback.render.?();
 }
 
 fn cleanup() callconv(.C) void {

@@ -17,10 +17,10 @@ pub fn deinit() void {}
 var allocator: std.mem.Allocator = undefined;
 
 pub fn main() void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
+    var debugAllocator = std.heap.DebugAllocator(.{}).init;
+    defer _ = debugAllocator.deinit();
 
-    allocator = gpa.allocator();
+    allocator = debugAllocator.allocator();
     window.width = 1280;
     window.height = 720;
 
