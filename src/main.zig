@@ -4,13 +4,15 @@ const cache = @import("cache.zig");
 const window = @import("window.zig");
 const gfx = @import("graphics.zig");
 
-var runAnimation: gfx.FrameAnimation = undefined;
+var enemyRunAnimation: gfx.SliceFrameAnimation = undefined;
+var playerRunAnimation: gfx.AtlasFrameAnimation = undefined;
 
 pub fn init() void {
     cache.init(allocator);
     gfx.init(window.width, window.height);
 
-    runAnimation = .load("assets/enemy/run/{}.png", 8);
+    enemyRunAnimation = .load("assets/enemy/run/{}.png", 8);
+    playerRunAnimation = .load("assets/player/run.png", 10);
 }
 
 pub fn event(ev: *const window.Event) void {
@@ -19,7 +21,8 @@ pub fn event(ev: *const window.Event) void {
 
 pub fn update() void {
     const delta = window.deltaMillisecond();
-    runAnimation.update(delta);
+    enemyRunAnimation.update(delta);
+    playerRunAnimation.update(delta);
 }
 
 pub fn render() void {
@@ -27,7 +30,16 @@ pub fn render() void {
     defer gfx.endDraw();
 
     gfx.draw(gfx.loadTexture("assets/background.png"), 0, 0);
-    gfx.play(&runAnimation, 500, 500);
+    gfx.playSliceFlipX(&enemyRunAnimation, 0, 0, true);
+
+    var x = window.width - enemyRunAnimation.textures[0].width();
+    gfx.playSlice(&enemyRunAnimation, x, 0);
+
+    const y = window.height - playerRunAnimation.texture.height();
+    gfx.playAtlas(&playerRunAnimation, 0, y);
+
+    x = window.width - playerRunAnimation.frames[0].w;
+    gfx.playAtlasFlipX(&playerRunAnimation, x, y, true);
 }
 
 pub fn deinit() void {

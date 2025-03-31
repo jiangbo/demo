@@ -1,5 +1,6 @@
 const std = @import("std");
 const gfx = @import("graphics.zig");
+const math = @import("math.zig");
 
 var allocator: std.mem.Allocator = undefined;
 
@@ -8,11 +9,12 @@ pub fn init(alloc: std.mem.Allocator) void {
 }
 
 pub fn deinit() void {
-    TextureCache.deinit();
-    TextureSliceCache.deinit();
+    Texture.deinit();
+    TextureSlice.deinit();
+    RectangleSlice.deinit();
 }
 
-pub const TextureCache = struct {
+pub const Texture = struct {
     const stbImage = @import("c.zig").stbImage;
 
     var cache: std.StringHashMapUnmanaged(gfx.Texture) = undefined;
@@ -38,7 +40,7 @@ pub const TextureCache = struct {
         for (from..from + textures.len) |index| {
             const path = std.fmt.bufPrintZ(&buffer, pathFmt, .{index});
 
-            const texture = TextureCache.load(path catch unreachable);
+            const texture = Texture.load(path catch unreachable);
             textures[index - from] = texture;
         }
     }
@@ -50,7 +52,7 @@ pub const TextureCache = struct {
     }
 };
 
-pub const TextureSliceCache = struct {
+pub const TextureSlice = struct {
     var cache: std.StringHashMapUnmanaged([]gfx.Texture) = undefined;
 
     pub fn load(comptime pathFmt: []const u8, from: u8, len: u8) []const gfx.Texture {
@@ -59,7 +61,7 @@ pub const TextureSliceCache = struct {
 
         const textures = allocator.alloc(gfx.Texture, len) catch unreachable;
 
-        TextureCache.loadSlice(textures, pathFmt, from);
+        Texture.loadSlice(textures, pathFmt, from);
         entry.value_ptr.* = textures;
         entry.key_ptr.* = allocator.dupe(u8, pathFmt) catch unreachable;
         return textures;
@@ -71,6 +73,25 @@ pub const TextureSliceCache = struct {
             allocator.free(entry.key_ptr.*);
             allocator.free(entry.value_ptr.*);
         }
+        cache.deinit(allocator);
+    }
+};
+
+pub const RectangleSlice = struct {
+    var cache: std.StringHashMapUnmanaged([]math.Rectangle) = undefined;
+
+    pub fn load(path: []const u8, count: u8) []math.Rectangle {
+        const entry = cache.getOrPut(allocator, path) catch unreachable;
+        if (entry.found_existing) return entry.value_ptr.*;
+
+        const slice = allocator.alloc(math.Rectangle, count) catch unreachable;
+        entry.value_ptr.* = slice;
+        return slice;
+    }
+
+    pub fn deinit() void {
+        var iterator = cache.valueIterator();
+        while (iterator.next()) |value| allocator.free(value.*);
         cache.deinit(allocator);
     }
 };

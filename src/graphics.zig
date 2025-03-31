@@ -21,7 +21,7 @@ pub fn init(width: f32, height: f32) void {
 }
 
 pub fn loadTexture(path: [:0]const u8) Texture {
-    return cache.TextureCache.load(path);
+    return cache.Texture.load(path);
 }
 
 pub fn beginDraw() void {
@@ -61,11 +61,24 @@ pub fn endDraw() void {
 }
 
 pub const FrameAnimation = animation.FrameAnimation;
+pub const SliceFrameAnimation = animation.SliceFrameAnimation;
+pub const AtlasFrameAnimation = animation.AtlasFrameAnimation;
 
-pub fn play(frameAnimation: *const FrameAnimation, x: f32, y: f32) void {
-    playFlipX(frameAnimation, x, y, false);
+pub fn playSlice(frameAnimation: *const FrameAnimation, x: f32, y: f32) void {
+    playSliceFlipX(frameAnimation, x, y, false);
 }
 
-pub fn playFlipX(frame: *const FrameAnimation, x: f32, y: f32, flipX: bool) void {
+pub fn playSliceFlipX(frame: *const FrameAnimation, x: f32, y: f32, flipX: bool) void {
     drawFlipX(frame.textures[frame.index], x, y, flipX);
+}
+
+pub fn playAtlas(frameAnimation: *const AtlasFrameAnimation, x: f32, y: f32) void {
+    playAtlasFlipX(frameAnimation, x, y, false);
+}
+
+pub fn playAtlasFlipX(frame: *const AtlasFrameAnimation, x: f32, y: f32, flipX: bool) void {
+    var src = frame.frames[frame.index];
+    const dst: gpu.Rectangle = .{ .x = x, .y = y, .w = src.w };
+    if (flipX) src.w = -src.w;
+    drawOptions(frame.texture, .{ .sourceRect = src, .targetRect = dst });
 }
