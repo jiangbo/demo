@@ -14,6 +14,7 @@ const sharedPlayer = struct {
     idleAnimation: gfx.AtlasFrameAnimation = undefined,
     runAnimation: gfx.AtlasFrameAnimation = undefined,
     jumpAnimation: gfx.AtlasFrameAnimation = undefined,
+    fallAnimation: gfx.AtlasFrameAnimation = undefined,
     faceLeft: bool = false,
 
     pub fn update(self: *sharedPlayer, delta: f32) void {
@@ -44,6 +45,10 @@ pub const Player = struct {
         idle: IdleState,
         run: RunState,
         jump: JumpState,
+        fall: FallState,
+        roll: RollState,
+        attack: AttackState,
+        // dead: DeadState,
 
         fn enter(self: State, player: *Player) void {
             switch (self) {
@@ -77,15 +82,44 @@ pub const Player = struct {
     rightKeyDown: bool = false,
     jumpKeyDown: bool = false,
 
+    rollKeyDown: bool = false,
+    rollAnimation: gfx.AtlasFrameAnimation,
+    rollTimer: window.Timer = .init(0.35),
+    rollCoolDown: window.Timer = .init(0.75),
+
+    attackKeyDown: bool = false,
+    attackAnimation: gfx.AtlasFrameAnimation,
+    attackLeft: gfx.AtlasFrameAnimation,
+    attackRight: gfx.AtlasFrameAnimation,
+    attackTimer: window.Timer = .init(0.3),
+    attackCoolDown: window.Timer = .init(0.5),
+
+    deadTimer: window.Timer = .init(0.5),
+
     pub fn init() Player {
-        return .{
+        var player: Player = .{
             .shared = .{
                 .idleAnimation = .load("assets/player/idle.png", 5),
                 .runAnimation = .load("assets/player/run.png", 10),
                 .jumpAnimation = .load("assets/player/jump.png", 5),
+                .fallAnimation = .load("assets/player/fall.png", 5),
             },
-            .state = .{ .idle = .{} },
+            .state = .idle,
+            .rollAnimation = .load("assets/player/roll.png", 7),
+            .attackAnimation = .load("assets/player/attack.png", 5),
+            .attackLeft = .load("assets/player/vfx_attack_left.png", 5),
+            .attackRight = .load("assets/player/vfx_attack_right.png", 5),
         };
+
+        player.rollAnimation.loop = false;
+        player.rollAnimation.timer = .init(0.005);
+        player.attackAnimation.loop = false;
+        player.attackAnimation.timer = .init(0.05);
+        player.attackLeft.loop = false;
+        player.attackLeft.timer = .init(0.05);
+        player.attackRight.loop = false;
+        player.attackRight.timer = .init(0.05);
+        return player;
     }
 
     pub fn deinit() void {}
@@ -96,6 +130,8 @@ pub const Player = struct {
                 .A => self.leftKeyDown = true,
                 .D => self.rightKeyDown = true,
                 .W => self.jumpKeyDown = true,
+                .F => self.attackKeyDown = true,
+                .SPACE => self.rollKeyDown = true,
                 else => {},
             }
         } else if (ev.type == .KEY_UP) {
@@ -103,12 +139,16 @@ pub const Player = struct {
                 .A => self.leftKeyDown = false,
                 .D => self.rightKeyDown = false,
                 .W => self.jumpKeyDown = false,
+                .F => self.attackKeyDown = false,
+                .SPACE => self.rollKeyDown = false,
                 else => {},
             }
         }
     }
 
     pub fn update(self: *Player, delta: f32) void {
+        self.rollCoolDown.update(delta);
+        self.attackCoolDown.update(delta);
         self.shared.update(delta);
         self.state.update(self, delta);
     }
@@ -130,12 +170,20 @@ pub const Player = struct {
         }
 
         fn update(player: *Player, delta: f32) void {
+            if (player.attackKeyDown and player.attackCoolDown.finished) {
+                player.changeState(.attack);
+            }
+
             if (player.leftKeyDown or player.rightKeyDown) {
-                player.changeState(.{ .run = .{} });
+                player.changeState(.run);
+            }
+
+            if (player.rollKeyDown and player.rollCoolDown.finished) {
+                player.changeState(.roll);
             }
 
             if (player.jumpKeyDown and player.shared.velocity.y == 0) {
-                player.changeState(.{ .jump = .{} });
+                player.changeState(.jump);
             }
 
             player.shared.idleAnimation.update(delta);
@@ -159,8 +207,8 @@ pub const Player = struct {
         }
 
         fn update(player: *Player, delta: f32) void {
-            if (player.shared.velocity.y == 0) {
-                player.changeState(.{ .idle = .{} });
+            if (player.shared.velocity.y > 0) {
+                player.changeState(.fall);
             }
 
             player.shared.jumpAnimation.update(delta);
@@ -172,6 +220,28 @@ pub const Player = struct {
 
         fn exit(player: *Player) void {
             player.shared.jumpAnimation.reset();
+        }
+    };
+
+    const FallState = struct {
+        fn enter(player: *Player) void {
+            player.state = .fall;
+        }
+
+        fn update(player: *Player, delta: f32) void {
+            if (player.shared.velocity.y == 0) {
+                player.changeState(.idle);
+            }
+
+            player.shared.fallAnimation.update(delta);
+        }
+
+        fn render(player: *const Player) void {
+            player.shared.play(&player.shared.fallAnimation);
+        }
+
+        fn exit(player: *Player) void {
+            player.shared.fallAnimation.reset();
         }
     };
 
@@ -191,12 +261,20 @@ pub const Player = struct {
         }
 
         fn update(player: *Player, delta: f32) void {
+            if (player.attackKeyDown and player.attackCoolDown.finished) {
+                player.changeState(.attack);
+            }
+
             if (!player.leftKeyDown and !player.rightKeyDown) {
-                player.changeState(.{ .idle = .{} });
+                player.changeState(.idle);
+            }
+
+            if (player.rollKeyDown and player.rollCoolDown.finished) {
+                player.changeState(.roll);
             }
 
             if (player.jumpKeyDown and player.shared.velocity.y == 0) {
-                player.changeState(.{ .jump = .{} });
+                player.changeState(.jump);
             }
 
             player.shared.runAnimation.update(delta);
@@ -208,6 +286,71 @@ pub const Player = struct {
 
         fn exit(player: *Player) void {
             player.shared.runAnimation.reset();
+        }
+    };
+
+    const RollState = struct {
+        const SPEED_ROLL = 800;
+        fn enter(player: *Player) void {
+            player.state = .roll;
+            player.rollTimer.reset();
+            player.rollCoolDown.reset();
+
+            if (player.shared.faceLeft) {
+                player.shared.velocity.x = -SPEED_ROLL;
+            } else {
+                player.shared.velocity.x = SPEED_ROLL;
+            }
+        }
+
+        fn update(player: *Player, delta: f32) void {
+            if (player.rollTimer.isFinishedAfterUpdate(delta)) {
+                player.changeState(.idle);
+            }
+
+            player.rollAnimation.update(delta);
+        }
+
+        fn render(player: *const Player) void {
+            player.shared.play(&player.rollAnimation);
+        }
+
+        fn exit(player: *Player) void {
+            player.rollAnimation.reset();
+        }
+    };
+
+    const AttackState = struct {
+        fn enter(player: *Player) void {
+            player.state = .attack;
+            player.attackTimer.reset();
+            player.attackCoolDown.reset();
+        }
+
+        fn update(player: *Player, delta: f32) void {
+            if (player.attackTimer.isFinishedAfterUpdate(delta)) {
+                player.changeState(.idle);
+            }
+
+            player.attackAnimation.update(delta);
+            player.attackLeft.update(delta);
+            player.attackRight.update(delta);
+        }
+
+        fn render(player: *const Player) void {
+            player.shared.play(&player.attackAnimation);
+            const pos = player.shared.position.add(.{ .y = 100 });
+            if (player.shared.faceLeft) {
+                gfx.playAtlas(&player.attackLeft, pos);
+            } else {
+                gfx.playAtlas(&player.attackRight, pos);
+            }
+        }
+
+        fn exit(player: *Player) void {
+            player.attackAnimation.reset();
+            player.attackLeft.reset();
+            player.attackRight.reset();
         }
     };
 };
