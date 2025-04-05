@@ -23,11 +23,12 @@ pub const SliceFrameAnimation = struct {
     timer: window.Timer,
     index: usize = 0,
     loop: bool = true,
+    anchor: Anchor = .bottomCenter,
 
     textures: []const Texture,
 
     pub fn init(textures: []const Texture) SliceFrameAnimation {
-        return .{ .textures = textures, .timer = .init(100) };
+        return .{ .textures = textures, .timer = .init(0.1) };
     }
 
     pub fn load(comptime pathFmt: []const u8, max: u8) SliceFrameAnimation {
@@ -39,10 +40,7 @@ pub const SliceFrameAnimation = struct {
         if (self.timer.isRunningAfterUpdate(delta)) return;
 
         if (self.index == self.textures.len - 1) {
-            if (self.loop) {
-                self.index = 0;
-                self.timer.reset();
-            }
+            if (self.loop) self.reset();
         } else {
             self.timer.reset();
             self.index += 1;
@@ -91,10 +89,7 @@ pub const AtlasFrameAnimation = struct {
         if (self.timer.isRunningAfterUpdate(delta)) return;
 
         if (self.index == self.frames.len - 1) {
-            if (self.loop) {
-                self.index = 0;
-                self.timer.reset();
-            }
+            if (self.loop) self.reset();
         } else {
             self.timer.reset();
             self.index += 1;

@@ -2,12 +2,14 @@ const std = @import("std");
 
 const window = @import("window.zig");
 const gfx = @import("graphics.zig");
-const actor = @import("actor.zig");
+const actor = @import("actor/actor.zig");
 
 var player: actor.Player = undefined;
+var enemy: actor.Enemy = undefined;
 
 pub fn init() void {
     player = actor.Player.init();
+    enemy = actor.Enemy.init();
 }
 
 pub fn deinit() void {}
@@ -19,6 +21,7 @@ pub fn event(ev: *const window.Event) void {
 pub fn update() void {
     const delta = window.deltaSecond();
     player.update(delta);
+    enemy.update(delta);
 }
 
 pub fn render() void {
@@ -26,6 +29,7 @@ pub fn render() void {
     defer gfx.endDraw();
 
     renderBackground();
+    enemy.render();
     player.render();
 }
 

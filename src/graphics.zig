@@ -31,11 +31,11 @@ pub fn beginDraw() void {
 }
 
 pub fn draw(tex: Texture, x: f32, y: f32) void {
-    drawFlipX(tex, x, y, false);
+    drawFlipX(tex, .{ .x = x, .y = y }, false);
 }
 
-pub fn drawFlipX(tex: Texture, x: f32, y: f32, flipX: bool) void {
-    const target: math.Rectangle = .{ .x = x, .y = y };
+pub fn drawFlipX(tex: Texture, pos: math.Vector, flipX: bool) void {
+    const target: math.Rectangle = .{ .x = pos.x, .y = pos.y };
     const src = math.Rectangle{
         .w = if (flipX) -tex.width() else tex.width(),
     };
@@ -65,12 +65,19 @@ pub const FrameAnimation = animation.FrameAnimation;
 pub const SliceFrameAnimation = animation.SliceFrameAnimation;
 pub const AtlasFrameAnimation = animation.AtlasFrameAnimation;
 
-pub fn playSlice(frameAnimation: *const FrameAnimation, x: f32, y: f32) void {
-    playSliceFlipX(frameAnimation, x, y, false);
+pub fn playSlice(frameAnimation: *const FrameAnimation, pos: math.Vector) void {
+    playSliceFlipX(frameAnimation, pos, false);
 }
 
-pub fn playSliceFlipX(frame: *const FrameAnimation, x: f32, y: f32, flipX: bool) void {
-    drawFlipX(frame.textures[frame.index], x, y, flipX);
+pub fn playSliceFlipX(frame: *const FrameAnimation, pos: math.Vector, flipX: bool) void {
+    const offset: math.Vector = switch (frame.anchor) {
+        .bottomCenter => .{
+            .x = pos.x - frame.textures[0].width() / 2,
+            .y = pos.y - frame.textures[0].height(),
+        },
+        else => unreachable,
+    };
+    drawFlipX(frame.textures[frame.index], offset, flipX);
 }
 
 pub fn playAtlas(frameAnimation: *const AtlasFrameAnimation, pos: math.Vector) void {
