@@ -5,54 +5,86 @@ const math = @import("math.zig");
 const window = @import("window.zig");
 
 const sharedPlayer = struct {
-    const floorY = 620;
-    const gravity = 980;
+    const FLOOR_Y = 620;
+    const GRAVITY = 980 * 2;
 
     enableGravity: bool = true,
-    position: math.Vector = .{ .x = 100, .y = floorY },
+    position: math.Vector = .{ .x = 100, .y = FLOOR_Y },
     velocity: math.Vector = .{},
     idleAnimation: gfx.AtlasFrameAnimation = undefined,
     runAnimation: gfx.AtlasFrameAnimation = undefined,
+    jumpAnimation: gfx.AtlasFrameAnimation = undefined,
     faceLeft: bool = false,
-    running: bool = false,
 
     pub fn update(self: *sharedPlayer, delta: f32) void {
         if (self.enableGravity) {
-            self.velocity.y += gravity * delta;
+            self.velocity.y += GRAVITY * delta;
         }
 
         self.position = self.position.add(self.velocity.scale(delta));
-        if (self.position.y >= floorY) {
-            self.position.y = floorY;
+        if (self.position.y >= FLOOR_Y) {
+            self.position.y = FLOOR_Y;
             self.velocity.y = 0;
         }
 
         self.position.x = std.math.clamp(self.position.x, 0, window.width);
-        if (self.running) {
-            self.runAnimation.update(delta);
-        } else {
-            self.idleAnimation.update(delta);
-        }
     }
 
     pub fn render(self: *const sharedPlayer) void {
-        if (self.running) {
-            gfx.playAtlasFlipX(&self.runAnimation, self.position, self.faceLeft);
-        } else {
-            gfx.playAtlasFlipX(&self.idleAnimation, self.position, self.faceLeft);
-        }
+        _ = self;
+    }
+
+    pub fn play(self: *const sharedPlayer, animation: *const gfx.AtlasFrameAnimation) void {
+        gfx.playAtlasFlipX(animation, self.position, self.faceLeft);
     }
 };
 
 pub const Player = struct {
+    const State = union(enum) {
+        idle: IdleState,
+        run: RunState,
+        jump: JumpState,
+
+        fn enter(self: State, player: *Player) void {
+            switch (self) {
+                inline else => |case| @TypeOf(case).enter(player),
+            }
+        }
+
+        fn update(self: State, player: *Player, delta: f32) void {
+            switch (self) {
+                inline else => |case| @TypeOf(case).update(player, delta),
+            }
+        }
+
+        fn render(self: State, player: *const Player) void {
+            switch (self) {
+                inline else => |case| @TypeOf(case).render(player),
+            }
+        }
+
+        fn exit(self: State, player: *Player) void {
+            switch (self) {
+                inline else => |case| @TypeOf(case).exit(player),
+            }
+        }
+    };
+
     shared: sharedPlayer,
+
+    state: State,
+    leftKeyDown: bool = false,
+    rightKeyDown: bool = false,
+    jumpKeyDown: bool = false,
 
     pub fn init() Player {
         return .{
             .shared = .{
                 .idleAnimation = .load("assets/player/idle.png", 5),
                 .runAnimation = .load("assets/player/run.png", 10),
+                .jumpAnimation = .load("assets/player/jump.png", 5),
             },
+            .state = .{ .idle = .{} },
         };
     }
 
@@ -61,28 +93,16 @@ pub const Player = struct {
     pub fn event(self: *Player, ev: *const window.Event) void {
         if (ev.type == .KEY_DOWN) {
             switch (ev.key_code) {
-                .A => {
-                    self.shared.velocity.x = -300;
-                    self.shared.faceLeft = true;
-                    self.shared.running = true;
-                },
-                .D => {
-                    self.shared.velocity.x = 300;
-                    self.shared.faceLeft = false;
-                    self.shared.running = true;
-                },
-                .W => {
-                    if (self.shared.velocity.y != 0) return;
-                    self.shared.velocity.y -= 780;
-                },
+                .A => self.leftKeyDown = true,
+                .D => self.rightKeyDown = true,
+                .W => self.jumpKeyDown = true,
                 else => {},
             }
         } else if (ev.type == .KEY_UP) {
             switch (ev.key_code) {
-                .A, .D => {
-                    self.shared.velocity.x = 0;
-                    self.shared.running = false;
-                },
+                .A => self.leftKeyDown = false,
+                .D => self.rightKeyDown = false,
+                .W => self.jumpKeyDown = false,
                 else => {},
             }
         }
@@ -90,9 +110,104 @@ pub const Player = struct {
 
     pub fn update(self: *Player, delta: f32) void {
         self.shared.update(delta);
+        self.state.update(self, delta);
     }
 
     pub fn render(self: *const Player) void {
         self.shared.render();
+        self.state.render(self);
     }
+
+    fn changeState(self: *Player, new: State) void {
+        self.state.exit(self);
+        new.enter(self);
+    }
+
+    const IdleState = struct {
+        fn enter(player: *Player) void {
+            player.state = .idle;
+            player.shared.velocity.x = 0;
+        }
+
+        fn update(player: *Player, delta: f32) void {
+            if (player.leftKeyDown or player.rightKeyDown) {
+                player.changeState(.{ .run = .{} });
+            }
+
+            if (player.jumpKeyDown and player.shared.velocity.y == 0) {
+                player.changeState(.{ .jump = .{} });
+            }
+
+            player.shared.idleAnimation.update(delta);
+        }
+
+        fn render(player: *const Player) void {
+            player.shared.play(&player.shared.idleAnimation);
+        }
+
+        fn exit(player: *Player) void {
+            player.shared.idleAnimation.reset();
+        }
+    };
+
+    const JumpState = struct {
+        const SPEED_JUMP = 780;
+
+        fn enter(player: *Player) void {
+            player.state = .jump;
+            player.shared.velocity.y = -SPEED_JUMP;
+        }
+
+        fn update(player: *Player, delta: f32) void {
+            if (player.shared.velocity.y == 0) {
+                player.changeState(.{ .idle = .{} });
+            }
+
+            player.shared.jumpAnimation.update(delta);
+        }
+
+        fn render(player: *const Player) void {
+            player.shared.play(&player.shared.jumpAnimation);
+        }
+
+        fn exit(player: *Player) void {
+            player.shared.jumpAnimation.reset();
+        }
+    };
+
+    const RunState = struct {
+        const SPEED_RUN = 300;
+
+        fn enter(player: *Player) void {
+            player.state = .run;
+
+            if (player.leftKeyDown) {
+                player.shared.velocity.x = -SPEED_RUN;
+                player.shared.faceLeft = true;
+            } else if (player.rightKeyDown) {
+                player.shared.velocity.x = SPEED_RUN;
+                player.shared.faceLeft = false;
+            }
+        }
+
+        fn update(player: *Player, delta: f32) void {
+            if (!player.leftKeyDown and !player.rightKeyDown) {
+                player.changeState(.{ .idle = .{} });
+            }
+
+            if (player.jumpKeyDown and player.shared.velocity.y == 0) {
+                player.changeState(.{ .jump = .{} });
+            }
+
+            player.shared.runAnimation.update(delta);
+        }
+
+        fn render(player: *const Player) void {
+            player.shared.play(&player.shared.runAnimation);
+        }
+
+        fn exit(player: *Player) void {
+            player.shared.runAnimation.reset();
+        }
+    };
 };
