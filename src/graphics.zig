@@ -2,6 +2,7 @@ const std = @import("std");
 
 const cache = @import("cache.zig");
 const gpu = @import("gpu.zig");
+const math = @import("math.zig");
 const animation = @import("animation.zig");
 
 pub const Texture = gpu.Texture;
@@ -34,8 +35,8 @@ pub fn draw(tex: Texture, x: f32, y: f32) void {
 }
 
 pub fn drawFlipX(tex: Texture, x: f32, y: f32, flipX: bool) void {
-    const target: gpu.Rectangle = .{ .x = x, .y = y };
-    const src = gpu.Rectangle{
+    const target: math.Rectangle = .{ .x = x, .y = y };
+    const src = math.Rectangle{
         .w = if (flipX) -tex.width() else tex.width(),
     };
 
@@ -43,8 +44,8 @@ pub fn drawFlipX(tex: Texture, x: f32, y: f32, flipX: bool) void {
 }
 
 pub const DrawOptions = struct {
-    sourceRect: ?gpu.Rectangle = null,
-    targetRect: gpu.Rectangle,
+    sourceRect: ?math.Rectangle = null,
+    targetRect: math.Rectangle,
 };
 
 pub fn drawOptions(texture: Texture, options: DrawOptions) void {
@@ -72,13 +73,19 @@ pub fn playSliceFlipX(frame: *const FrameAnimation, x: f32, y: f32, flipX: bool)
     drawFlipX(frame.textures[frame.index], x, y, flipX);
 }
 
-pub fn playAtlas(frameAnimation: *const AtlasFrameAnimation, x: f32, y: f32) void {
-    playAtlasFlipX(frameAnimation, x, y, false);
+pub fn playAtlas(frameAnimation: *const AtlasFrameAnimation, pos: math.Vector) void {
+    playAtlasFlipX(frameAnimation, pos, false);
 }
 
-pub fn playAtlasFlipX(frame: *const AtlasFrameAnimation, x: f32, y: f32, flipX: bool) void {
+pub fn playAtlasFlipX(frame: *const AtlasFrameAnimation, pos: math.Vector, flipX: bool) void {
     var src = frame.frames[frame.index];
-    const dst: gpu.Rectangle = .{ .x = x, .y = y, .w = src.w };
+
+    const offset: math.Vector = switch (frame.anchor) {
+        .bottomCenter => .{ .x = pos.x - src.w / 2, .y = pos.y - src.h },
+        else => unreachable,
+    };
+
+    const dst: gpu.Rectangle = .{ .x = offset.x, .y = offset.y, .w = src.w };
     if (flipX) src.w = -src.w;
     drawOptions(frame.texture, .{ .sourceRect = src, .targetRect = dst });
 }

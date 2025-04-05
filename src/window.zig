@@ -49,16 +49,8 @@ pub var width: f32 = 0;
 pub var height: f32 = 0;
 pub var rand: std.Random = undefined;
 
-var timer: std.time.Timer = undefined;
-var deltaTime: f32 = 0;
-var totalTime: f32 = 0;
-
-pub fn deltaMillisecond() f32 {
-    return deltaTime;
-}
-
-pub fn totalMillisecond() f32 {
-    return totalTime;
+pub fn deltaSecond() f32 {
+    return @floatCast(sk.app.frameDuration());
 }
 
 pub fn displayText(x: f32, y: f32, text: [:0]const u8) void {
@@ -109,7 +101,6 @@ fn init() callconv(.C) void {
         .logger = .{ .func = sk.log.func },
     });
 
-    timer = std.time.Timer.start() catch unreachable;
     callback.init.?();
 }
 
@@ -118,9 +109,6 @@ fn event(evt: ?*const Event) callconv(.C) void {
 }
 
 fn frame() callconv(.C) void {
-    const nano: f32 = @floatFromInt(timer.lap());
-    deltaTime = nano / std.time.ns_per_ms;
-    totalTime += deltaTime;
     callback.update.?();
     callback.render.?();
 }

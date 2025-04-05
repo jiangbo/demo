@@ -65,9 +65,10 @@ pub const AtlasFrameAnimation = struct {
     loop: bool = true,
     texture: Texture,
     frames: []const math.Rectangle,
+    anchor: Anchor = .bottomCenter,
 
     pub fn init(texture: Texture, frames: []const math.Rectangle) AtlasFrameAnimation {
-        return .{ .texture = texture, .frames = frames, .timer = .init(100) };
+        return .{ .texture = texture, .frames = frames, .timer = .init(0.1) };
     }
 
     pub fn load(path: [:0]const u8, count: u8) AtlasFrameAnimation {

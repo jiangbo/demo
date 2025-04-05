@@ -18,6 +18,10 @@ pub const Vector3 = struct {
         return .{ .x = self.x - other.x, .y = self.y - other.y, .z = self.z - other.z };
     }
 
+    pub fn scale(self: Vector3, scalar: f32) Vector3 {
+        return .{ .x = self.x * scalar, .y = self.y * scalar, .z = self.z * scalar };
+    }
+
     pub fn length(self: Vector3) f32 {
         return std.math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z);
     }
