@@ -18,6 +18,19 @@ jumpAnimation: gfx.SliceFrameAnimation,
 
 fallAnimation: gfx.SliceFrameAnimation,
 
+aimTimer: window.Timer = .init(0.5),
+aimAnimation: gfx.SliceFrameAnimation,
+
+dashInAirAnimation: gfx.SliceFrameAnimation,
+
+runAnimation: gfx.SliceFrameAnimation,
+
+squatTimer: window.Timer = .init(0.5),
+squatAnimation: gfx.SliceFrameAnimation,
+
+dashTimer: window.Timer = .init(0.5),
+dashOnFloorAnimation: gfx.SliceFrameAnimation,
+
 pub fn init() Enemy {
     timer = std.time.Timer.start() catch unreachable;
     var enemy: Enemy = .{
@@ -29,6 +42,11 @@ pub fn init() Enemy {
         .idleAnimation = .load("assets/enemy/idle/{}.png", 5),
         .jumpAnimation = .load("assets/enemy/jump/{}.png", 8),
         .fallAnimation = .load("assets/enemy/fall/{}.png", 4),
+        .aimAnimation = .load("assets/enemy/aim/{}.png", 9),
+        .dashInAirAnimation = .load("assets/enemy/dash_in_air/{}.png", 2),
+        .runAnimation = .load("assets/enemy/run/{}.png", 8),
+        .squatAnimation = .load("assets/enemy/squat/{}.png", 10),
+        .dashOnFloorAnimation = .load("assets/enemy/dash_on_floor/{}.png", 2),
     };
 
     enemy.state.enter(&enemy);
@@ -57,10 +75,19 @@ fn play(self: *const Enemy, animation: *const gfx.SliceFrameAnimation) void {
     gfx.playSliceFlipX(animation, self.shared.position, !self.shared.faceLeft);
 }
 
+fn isEnraged(self: *const Enemy) bool {
+    return self.shared.health <= 5;
+}
+
 const State = union(enum) {
     idle: IdleState,
     jump: JumpState,
     fall: FallState,
+    aim: AimState,
+    dashInAir: DashInAirState,
+    run: RunState,
+    squat: SquatState,
+    dashOnFloor: DashOnFloorState,
 
     fn enter(self: State, enemy: *Enemy) void {
         switch (self) {
@@ -92,7 +119,7 @@ const IdleState = struct {
         enemy.state = .idle;
         enemy.shared.velocity.x = 0;
 
-        const max: f32 = if (enemy.shared.health > 5) 0.5 else 0.25;
+        const max: f32 = if (enemy.isEnraged()) 0.5 else 0.25;
         enemy.idleTimer.duration = window.randomFloat(0, max);
         enemy.idleTimer.reset();
     }
@@ -101,15 +128,18 @@ const IdleState = struct {
         enemy.idleAnimation.update(delta);
         if (enemy.idleTimer.isRunningAfterUpdate(delta)) return;
 
-        if (enemy.shared.health <= 5) {
-            return updateEnraged(enemy);
-        }
+        if (!enemy.shared.isOnFloor()) return enemy.changeState(.fall);
+
+        if (enemy.isEnraged()) return updateEnraged(enemy);
 
         const rand = window.rand.intRangeLessThanBiased(u8, 0, 100);
-        switch (rand) {
-            0...50 => enemy.changeState(.jump),
-            else => enemy.changeState(.idle),
-        }
+        const state: State = switch (rand) {
+            0...24 => .jump,
+            25...49 => .run,
+            50...79 => .squat,
+            else => .idle,
+        };
+        enemy.changeState(state);
     }
 
     fn updateEnraged(enemy: *Enemy) void {
@@ -139,7 +169,20 @@ const JumpState = struct {
         enemy.jumpAnimation.update(delta);
         if (enemy.shared.velocity.y < 0) return;
 
-        enemy.changeState(.fall);
+        const rand = window.rand.intRangeLessThanBiased(u8, 0, 100);
+        if (enemy.isEnraged()) {
+            switch (rand) {
+                0...49 => enemy.changeState(.aim),
+                50...79 => enemy.changeState(.fall),
+                else => enemy.changeState(.fall),
+            }
+        } else {
+            switch (rand) {
+                0...49 => enemy.changeState(.aim),
+                50...79 => enemy.changeState(.fall),
+                else => enemy.changeState(.aim),
+            }
+        }
     }
 
     fn render(enemy: *const Enemy) void {
@@ -155,15 +198,160 @@ const FallState = struct {
     fn enter(enemy: *Enemy) void {
         enemy.state = .fall;
     }
+
     fn update(enemy: *Enemy, delta: f32) void {
         enemy.fallAnimation.update(delta);
         if (enemy.shared.isOnFloor()) enemy.changeState(.idle);
     }
+
     fn render(enemy: *const Enemy) void {
         enemy.play(&enemy.fallAnimation);
     }
 
     fn exit(enemy: *Enemy) void {
         enemy.fallAnimation.reset();
+    }
+};
+
+const AimState = struct {
+    fn enter(enemy: *Enemy) void {
+        enemy.state = .aim;
+        enemy.shared.velocity = .{};
+        enemy.shared.enableGravity = false;
+    }
+
+    fn update(enemy: *Enemy, delta: f32) void {
+        enemy.aimAnimation.update(delta);
+        if (enemy.aimTimer.isRunningAfterUpdate(delta)) return;
+
+        enemy.changeState(.dashInAir);
+    }
+
+    fn render(enemy: *const Enemy) void {
+        enemy.play(&enemy.aimAnimation);
+    }
+
+    fn exit(enemy: *Enemy) void {
+        enemy.aimTimer.reset();
+        enemy.shared.enableGravity = true;
+        enemy.aimAnimation.reset();
+    }
+};
+
+const DashInAirState = struct {
+    const SPEED_DASH = 1500;
+
+    fn enter(enemy: *Enemy) void {
+        enemy.state = .dashInAir;
+        enemy.shared.enableGravity = false;
+
+        const playerPosition = scene.player.shared.position;
+        const target: math.Vector = .{ .x = playerPosition.x, .y = SharedActor.FLOOR_Y };
+        const direction = target.sub(enemy.shared.position).normalize();
+        enemy.shared.velocity = direction.scale(SPEED_DASH);
+    }
+
+    fn update(enemy: *Enemy, delta: f32) void {
+        enemy.dashInAirAnimation.update(delta);
+        if (enemy.shared.isOnFloor()) enemy.changeState(.idle);
+    }
+
+    fn render(enemy: *const Enemy) void {
+        enemy.play(&enemy.dashInAirAnimation);
+    }
+
+    fn exit(enemy: *Enemy) void {
+        enemy.dashInAirAnimation.reset();
+        enemy.shared.enableGravity = true;
+    }
+};
+
+const RunState = struct {
+    const SPEED_RUN = 500;
+    const MIN_DISTANCE = 350;
+
+    fn enter(enemy: *Enemy) void {
+        enemy.state = .run;
+    }
+
+    fn update(enemy: *Enemy, delta: f32) void {
+        enemy.runAnimation.update(delta);
+
+        const playerX = scene.player.shared.position.x;
+        const enemyX = enemy.shared.position.x;
+        const direction: f32 = if (playerX > enemyX) 1 else -1;
+        enemy.shared.velocity.x = direction * SPEED_RUN;
+
+        if (@abs(playerX - enemyX) > MIN_DISTANCE) return;
+
+        const rand = window.rand.intRangeLessThanBiased(u8, 0, 100);
+        if (enemy.isEnraged()) {
+            switch (rand) {
+                0...74 => enemy.changeState(.idle),
+                else => enemy.changeState(.squat),
+            }
+        } else {
+            switch (rand) {
+                0...74 => enemy.changeState(.squat),
+                else => enemy.changeState(.idle),
+            }
+        }
+    }
+
+    fn render(enemy: *const Enemy) void {
+        enemy.play(&enemy.runAnimation);
+    }
+
+    fn exit(enemy: *Enemy) void {
+        enemy.runAnimation.reset();
+        enemy.shared.velocity = .{};
+    }
+};
+
+const SquatState = struct {
+    fn enter(enemy: *Enemy) void {
+        enemy.state = .squat;
+    }
+
+    fn update(enemy: *Enemy, delta: f32) void {
+        enemy.squatAnimation.update(delta);
+        if (enemy.squatTimer.isRunningAfterUpdate(delta)) return;
+
+        enemy.changeState(.dashOnFloor);
+    }
+
+    fn render(enemy: *const Enemy) void {
+        enemy.play(&enemy.squatAnimation);
+    }
+
+    fn exit(enemy: *Enemy) void {
+        enemy.squatAnimation.reset();
+        enemy.squatTimer.reset();
+    }
+};
+
+const DashOnFloorState = struct {
+    const SPEED_DASH = 1000;
+
+    fn enter(enemy: *Enemy) void {
+        enemy.state = .dashOnFloor;
+        const direction: f32 = if (enemy.shared.faceLeft) -1 else 1;
+        enemy.shared.velocity = .{ .x = direction * SPEED_DASH };
+    }
+
+    fn update(enemy: *Enemy, delta: f32) void {
+        enemy.dashOnFloorAnimation.update(delta);
+        if (enemy.dashTimer.isRunningAfterUpdate(delta)) return;
+
+        enemy.changeState(.idle);
+    }
+
+    fn render(enemy: *const Enemy) void {
+        enemy.play(&enemy.dashOnFloorAnimation);
+    }
+
+    fn exit(enemy: *Enemy) void {
+        enemy.dashOnFloorAnimation.reset();
+        enemy.dashTimer.reset();
     }
 };

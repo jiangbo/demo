@@ -28,7 +28,7 @@ pub const Vector3 = struct {
 
     pub fn normalize(self: Vector3) Vector3 {
         const len = self.length();
-        return Vector3.init(self.x / len, self.y / len, self.z / len);
+        return .{ .x = self.x / len, .y = self.y / len, .z = self.z / len };
     }
 };
 
