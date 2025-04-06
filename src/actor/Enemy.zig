@@ -22,6 +22,7 @@ aimTimer: window.Timer = .init(0.5),
 aimAnimation: gfx.SliceFrameAnimation,
 
 dashInAirAnimation: gfx.SliceFrameAnimation,
+dashInAirVfx: gfx.SliceFrameAnimation,
 
 runAnimation: gfx.SliceFrameAnimation,
 
@@ -30,6 +31,7 @@ squatAnimation: gfx.SliceFrameAnimation,
 
 dashTimer: window.Timer = .init(0.5),
 dashOnFloorAnimation: gfx.SliceFrameAnimation,
+dashOnFloorVfx: gfx.SliceFrameAnimation,
 
 throwSilkTimer: window.Timer = .init(0.9),
 throwSilkAnimation: gfx.SliceFrameAnimation,
@@ -48,9 +50,11 @@ pub fn init() Enemy {
         .fallAnimation = .load("assets/enemy/fall/{}.png", 4),
         .aimAnimation = .load("assets/enemy/aim/{}.png", 9),
         .dashInAirAnimation = .load("assets/enemy/dash_in_air/{}.png", 2),
+        .dashInAirVfx = .load("assets/enemy/vfx_dash_in_air/{}.png", 5),
         .runAnimation = .load("assets/enemy/run/{}.png", 8),
         .squatAnimation = .load("assets/enemy/squat/{}.png", 10),
         .dashOnFloorAnimation = .load("assets/enemy/dash_on_floor/{}.png", 2),
+        .dashOnFloorVfx = .load("assets/enemy/vfx_dash_on_floor/{}.png", 5),
         .throwSilkAnimation = .load("assets/enemy/throw_silk/{}.png", 17),
         .silkAnimation = .load("assets/enemy/silk/{}.png", 9),
     };
@@ -58,6 +62,8 @@ pub fn init() Enemy {
     enemy.state.enter(&enemy);
     enemy.jumpAnimation.loop = false;
     enemy.silkAnimation.anchor = .centerCenter;
+    enemy.dashInAirVfx.anchor = .centerCenter;
+    enemy.dashOnFloorVfx.anchor = .centerCenter;
     return enemy;
 }
 
@@ -261,15 +267,19 @@ const DashInAirState = struct {
 
     fn update(enemy: *Enemy, delta: f32) void {
         enemy.dashInAirAnimation.update(delta);
+        enemy.dashInAirVfx.update(delta);
         if (enemy.shared.isOnFloor()) enemy.changeState(.idle);
     }
 
     fn render(enemy: *const Enemy) void {
         enemy.play(&enemy.dashInAirAnimation);
+        const pos = enemy.shared.logicCenter();
+        gfx.playSliceFlipX(&enemy.dashInAirVfx, pos, !enemy.shared.faceLeft);
     }
 
     fn exit(enemy: *Enemy) void {
         enemy.dashInAirAnimation.reset();
+        enemy.dashInAirVfx.reset();
         enemy.shared.enableGravity = true;
     }
 };
@@ -349,6 +359,7 @@ const DashOnFloorState = struct {
 
     fn update(enemy: *Enemy, delta: f32) void {
         enemy.dashOnFloorAnimation.update(delta);
+        enemy.dashOnFloorVfx.update(delta);
         if (enemy.dashTimer.isRunningAfterUpdate(delta)) return;
 
         enemy.changeState(.idle);
@@ -356,10 +367,13 @@ const DashOnFloorState = struct {
 
     fn render(enemy: *const Enemy) void {
         enemy.play(&enemy.dashOnFloorAnimation);
+        const pos = enemy.shared.logicCenter();
+        gfx.playSliceFlipX(&enemy.dashOnFloorVfx, pos, !enemy.shared.faceLeft);
     }
 
     fn exit(enemy: *Enemy) void {
         enemy.dashOnFloorAnimation.reset();
+        enemy.dashOnFloorVfx.reset();
         enemy.dashTimer.reset();
     }
 };
