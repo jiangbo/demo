@@ -206,9 +206,7 @@ const FallState = struct {
     }
 
     fn update(player: *Player, delta: f32) void {
-        if (player.shared.velocity.y == 0) {
-            player.changeState(.idle);
-        }
+        if (player.shared.isOnFloor()) player.changeState(.idle);
 
         player.fallAnimation.update(delta);
     }

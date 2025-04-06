@@ -14,19 +14,29 @@ state: State = .idle,
 idleTimer: window.Timer = .init(0.5),
 idleAnimation: gfx.SliceFrameAnimation,
 
+jumpAnimation: gfx.SliceFrameAnimation,
+
+fallAnimation: gfx.SliceFrameAnimation,
+
 pub fn init() Enemy {
+    timer = std.time.Timer.start() catch unreachable;
     var enemy: Enemy = .{
         .shared = .{
-            .position = .{ .x = 700, .y = SharedActor.FLOOR_Y },
+            .position = .{ .x = 1050, .y = 200 },
             .faceLeft = true,
             .health = 10,
         },
         .idleAnimation = .load("assets/enemy/idle/{}.png", 5),
+        .jumpAnimation = .load("assets/enemy/jump/{}.png", 8),
+        .fallAnimation = .load("assets/enemy/fall/{}.png", 4),
     };
 
     enemy.state.enter(&enemy);
+    enemy.jumpAnimation.loop = false;
     return enemy;
 }
+
+var timer: std.time.Timer = undefined;
 
 pub fn update(self: *Enemy, delta: f32) void {
     self.shared.update(delta);
@@ -49,6 +59,8 @@ fn play(self: *const Enemy, animation: *const gfx.SliceFrameAnimation) void {
 
 const State = union(enum) {
     idle: IdleState,
+    jump: JumpState,
+    fall: FallState,
 
     fn enter(self: State, enemy: *Enemy) void {
         switch (self) {
@@ -89,7 +101,19 @@ const IdleState = struct {
         enemy.idleAnimation.update(delta);
         if (enemy.idleTimer.isRunningAfterUpdate(delta)) return;
 
-        enemy.changeState(.idle);
+        if (enemy.shared.health <= 5) {
+            return updateEnraged(enemy);
+        }
+
+        const rand = window.rand.intRangeLessThanBiased(u8, 0, 100);
+        switch (rand) {
+            0...50 => enemy.changeState(.jump),
+            else => enemy.changeState(.idle),
+        }
+    }
+
+    fn updateEnraged(enemy: *Enemy) void {
+        _ = enemy;
     }
 
     fn render(enemy: *const Enemy) void {
@@ -100,5 +124,46 @@ const IdleState = struct {
         enemy.idleAnimation.reset();
         const playerPosition = scene.player.shared.position;
         enemy.shared.faceLeft = playerPosition.x < enemy.shared.position.x;
+    }
+};
+
+const JumpState = struct {
+    const SPEED_JUMP = 1000;
+
+    fn enter(enemy: *Enemy) void {
+        enemy.state = .jump;
+        enemy.shared.velocity.y = -SPEED_JUMP;
+    }
+
+    fn update(enemy: *Enemy, delta: f32) void {
+        enemy.jumpAnimation.update(delta);
+        if (enemy.shared.velocity.y < 0) return;
+
+        enemy.changeState(.fall);
+    }
+
+    fn render(enemy: *const Enemy) void {
+        enemy.play(&enemy.jumpAnimation);
+    }
+
+    fn exit(enemy: *Enemy) void {
+        enemy.jumpAnimation.reset();
+    }
+};
+
+const FallState = struct {
+    fn enter(enemy: *Enemy) void {
+        enemy.state = .fall;
+    }
+    fn update(enemy: *Enemy, delta: f32) void {
+        enemy.fallAnimation.update(delta);
+        if (enemy.shared.isOnFloor()) enemy.changeState(.idle);
+    }
+    fn render(enemy: *const Enemy) void {
+        enemy.play(&enemy.fallAnimation);
+    }
+
+    fn exit(enemy: *Enemy) void {
+        enemy.fallAnimation.reset();
     }
 };

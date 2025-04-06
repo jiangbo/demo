@@ -34,4 +34,8 @@ pub const SharedActor = struct {
     pub fn render(self: *const SharedActor) void {
         _ = self;
     }
+
+    pub fn isOnFloor(self: *const SharedActor) bool {
+        return self.velocity.y == 0;
+    }
 };
