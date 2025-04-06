@@ -6,6 +6,8 @@ pub const Vector3 = struct {
     y: f32 = 0,
     z: f32 = 0,
 
+    pub const zero = Vector3{ .x = 0, .y = 0, .z = 0 };
+
     pub fn init(x: f32, y: f32) Vector3 {
         return .{ .x = x, .y = y, .z = 0 };
     }

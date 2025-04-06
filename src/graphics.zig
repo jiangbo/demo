@@ -75,6 +75,10 @@ pub fn playSliceFlipX(frame: *const FrameAnimation, pos: math.Vector, flipX: boo
             .x = pos.x - frame.textures[0].width() / 2,
             .y = pos.y - frame.textures[0].height(),
         },
+        .centerCenter => .{
+            .x = pos.x - frame.textures[0].width() / 2,
+            .y = pos.y - frame.textures[0].height() / 2,
+        },
         else => unreachable,
     };
     drawFlipX(frame.textures[frame.index], offset, flipX);
@@ -89,6 +93,7 @@ pub fn playAtlasFlipX(frame: *const AtlasFrameAnimation, pos: math.Vector, flipX
 
     const offset: math.Vector = switch (frame.anchor) {
         .bottomCenter => .{ .x = pos.x - src.w / 2, .y = pos.y - src.h },
+        .centerCenter => .{ .x = pos.x - src.w / 2, .y = pos.y - src.h / 2 },
         else => unreachable,
     };
 

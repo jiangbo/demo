@@ -38,4 +38,8 @@ pub const SharedActor = struct {
     pub fn isOnFloor(self: *const SharedActor) bool {
         return self.position.y >= FLOOR_Y;
     }
+
+    pub fn logicCenter(self: *const SharedActor) math.Vector {
+        return .{ .x = self.position.x, .y = self.position.y - 150 / 2 };
+    }
 };

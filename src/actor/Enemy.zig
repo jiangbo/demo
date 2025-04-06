@@ -31,6 +31,10 @@ squatAnimation: gfx.SliceFrameAnimation,
 dashTimer: window.Timer = .init(0.5),
 dashOnFloorAnimation: gfx.SliceFrameAnimation,
 
+throwSilkTimer: window.Timer = .init(0.9),
+throwSilkAnimation: gfx.SliceFrameAnimation,
+silkAnimation: gfx.SliceFrameAnimation,
+
 pub fn init() Enemy {
     timer = std.time.Timer.start() catch unreachable;
     var enemy: Enemy = .{
@@ -47,10 +51,13 @@ pub fn init() Enemy {
         .runAnimation = .load("assets/enemy/run/{}.png", 8),
         .squatAnimation = .load("assets/enemy/squat/{}.png", 10),
         .dashOnFloorAnimation = .load("assets/enemy/dash_on_floor/{}.png", 2),
+        .throwSilkAnimation = .load("assets/enemy/throw_silk/{}.png", 17),
+        .silkAnimation = .load("assets/enemy/silk/{}.png", 9),
     };
 
     enemy.state.enter(&enemy);
     enemy.jumpAnimation.loop = false;
+    enemy.silkAnimation.anchor = .centerCenter;
     return enemy;
 }
 
@@ -88,6 +95,7 @@ const State = union(enum) {
     run: RunState,
     squat: SquatState,
     dashOnFloor: DashOnFloorState,
+    throwSilk: ThrowSilkState,
 
     fn enter(self: State, enemy: *Enemy) void {
         switch (self) {
@@ -174,11 +182,11 @@ const JumpState = struct {
             switch (rand) {
                 0...49 => enemy.changeState(.aim),
                 50...79 => enemy.changeState(.fall),
-                else => enemy.changeState(.fall),
+                else => enemy.changeState(.throwSilk),
             }
         } else {
             switch (rand) {
-                0...49 => enemy.changeState(.aim),
+                0...49 => enemy.changeState(.throwSilk),
                 50...79 => enemy.changeState(.fall),
                 else => enemy.changeState(.aim),
             }
@@ -287,13 +295,13 @@ const RunState = struct {
         const rand = window.rand.intRangeLessThanBiased(u8, 0, 100);
         if (enemy.isEnraged()) {
             switch (rand) {
-                0...74 => enemy.changeState(.idle),
+                0...74 => enemy.changeState(.throwSilk),
                 else => enemy.changeState(.squat),
             }
         } else {
             switch (rand) {
                 0...74 => enemy.changeState(.squat),
-                else => enemy.changeState(.idle),
+                else => enemy.changeState(.throwSilk),
             }
         }
     }
@@ -353,5 +361,41 @@ const DashOnFloorState = struct {
     fn exit(enemy: *Enemy) void {
         enemy.dashOnFloorAnimation.reset();
         enemy.dashTimer.reset();
+    }
+};
+
+const ThrowSilkState = struct {
+    fn enter(enemy: *Enemy) void {
+        enemy.state = .throwSilk;
+        enemy.shared.enableGravity = false;
+        enemy.shared.velocity = .zero;
+    }
+
+    fn update(enemy: *Enemy, delta: f32) void {
+        enemy.throwSilkAnimation.update(delta);
+        enemy.silkAnimation.update(delta);
+        if (enemy.throwSilkTimer.isRunningAfterUpdate(delta)) return;
+
+        if (enemy.shared.isOnFloor()) return enemy.changeState(.idle);
+
+        const rand = window.rand.intRangeLessThanBiased(u8, 0, 100);
+        if (!enemy.isEnraged() and rand < 25) {
+            enemy.changeState(.aim);
+        } else {
+            enemy.changeState(.fall);
+        }
+    }
+
+    fn render(enemy: *const Enemy) void {
+        enemy.play(&enemy.throwSilkAnimation);
+        const pos = enemy.shared.logicCenter();
+        gfx.playSliceFlipX(&enemy.silkAnimation, pos, !enemy.shared.faceLeft);
+    }
+
+    fn exit(enemy: *Enemy) void {
+        enemy.throwSilkAnimation.reset();
+        enemy.throwSilkTimer.reset();
+        enemy.shared.enableGravity = true;
+        enemy.silkAnimation.reset();
     }
 };
