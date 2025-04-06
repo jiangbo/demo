@@ -15,6 +15,7 @@ pub const SharedActor = struct {
     position: math.Vector,
     velocity: math.Vector = .{},
     faceLeft: bool = false,
+    health: u8 = 5,
 
     pub fn update(self: *SharedActor, delta: f32) void {
         if (self.enableGravity) {

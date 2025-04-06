@@ -53,6 +53,10 @@ pub fn deltaSecond() f32 {
     return @floatCast(sk.app.frameDuration());
 }
 
+pub fn randomFloat(min: f32, max: f32) f32 {
+    return rand.float(f32) * (max - min) + min;
+}
+
 pub fn displayText(x: f32, y: f32, text: [:0]const u8) void {
     sk.debugtext.canvas(sk.app.widthf() * 0.4, sk.app.heightf() * 0.4);
     sk.debugtext.origin(x, y);

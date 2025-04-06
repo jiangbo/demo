@@ -7,40 +7,6 @@ const SharedActor = @import("actor.zig").SharedActor;
 
 const Player = @This();
 
-const State = union(enum) {
-    idle: IdleState,
-    run: RunState,
-    jump: JumpState,
-    fall: FallState,
-    roll: RollState,
-    attack: AttackState,
-    // dead: DeadState,
-
-    fn enter(self: State, player: *Player) void {
-        switch (self) {
-            inline else => |case| @TypeOf(case).enter(player),
-        }
-    }
-
-    fn update(self: State, player: *Player, delta: f32) void {
-        switch (self) {
-            inline else => |case| @TypeOf(case).update(player, delta),
-        }
-    }
-
-    fn render(self: State, player: *const Player) void {
-        switch (self) {
-            inline else => |case| @TypeOf(case).render(player),
-        }
-    }
-
-    fn exit(self: State, player: *Player) void {
-        switch (self) {
-            inline else => |case| @TypeOf(case).exit(player),
-        }
-    }
-};
-
 shared: SharedActor,
 
 state: State,
@@ -139,6 +105,40 @@ fn changeState(self: *Player, new: State) void {
 fn play(self: *const Player, animation: *const gfx.AtlasFrameAnimation) void {
     gfx.playAtlasFlipX(animation, self.shared.position, self.shared.faceLeft);
 }
+
+const State = union(enum) {
+    idle: IdleState,
+    run: RunState,
+    jump: JumpState,
+    fall: FallState,
+    roll: RollState,
+    attack: AttackState,
+    // dead: DeadState,
+
+    fn enter(self: State, player: *Player) void {
+        switch (self) {
+            inline else => |case| @TypeOf(case).enter(player),
+        }
+    }
+
+    fn update(self: State, player: *Player, delta: f32) void {
+        switch (self) {
+            inline else => |case| @TypeOf(case).update(player, delta),
+        }
+    }
+
+    fn render(self: State, player: *const Player) void {
+        switch (self) {
+            inline else => |case| @TypeOf(case).render(player),
+        }
+    }
+
+    fn exit(self: State, player: *Player) void {
+        switch (self) {
+            inline else => |case| @TypeOf(case).exit(player),
+        }
+    }
+};
 
 const IdleState = struct {
     fn enter(player: *Player) void {

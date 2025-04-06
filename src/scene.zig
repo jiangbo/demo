@@ -4,8 +4,8 @@ const window = @import("window.zig");
 const gfx = @import("graphics.zig");
 const actor = @import("actor/actor.zig");
 
-var player: actor.Player = undefined;
-var enemy: actor.Enemy = undefined;
+pub var player: actor.Player = undefined;
+pub var enemy: actor.Enemy = undefined;
 
 pub fn init() void {
     player = actor.Player.init();
