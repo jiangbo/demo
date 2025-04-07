@@ -26,6 +26,9 @@ pub fn build(b: *std.Build) !void {
     const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
     exe.root_module.addCSourceFile(.{ .file = stbImagePath, .flags = &.{"-O2"} });
 
+    const stbAudioPath = writeFiles.add("stb_audio.c", stbAudioSource);
+    exe.root_module.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{"-O2"} });
+
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
@@ -40,5 +43,13 @@ const stbImageSource =
     \\#define STB_IMAGE_IMPLEMENTATION
     \\#define STBI_ONLY_PNG
     \\#include "stb_image.h"
+    \\
+;
+
+const stbAudioSource =
+    \\
+    \\#define STB_VORBIS_NO_PUSHDATA_API
+    \\
+    \\#include "stb_vorbis.c"
     \\
 ;

@@ -41,6 +41,9 @@ pub fn main() void {
     var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
     window.rand = prng.random();
 
+    const c = @import("c.zig");
+    _ = c.stbVorbis.load("assets/audio/bgm.ogg") catch unreachable;
+
     window.run(.{
         .title = "空洞武士",
         .init = init,
