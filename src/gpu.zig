@@ -66,7 +66,11 @@ pub const BindGroup = struct {
 };
 
 pub const CommandEncoder = struct {
-    pub fn beginRenderPass(color: Color) RenderPassEncoder {
+    pub fn beginRenderPass(color: Color, matrix: []const f32) RenderPassEncoder {
+        sk.gl.defaults();
+        sk.gl.matrixModeModelview();
+        sk.gl.loadMatrix(@ptrCast(matrix));
+        sk.gl.pushMatrix();
         return RenderPassEncoder.begin(color);
     }
 };
@@ -99,6 +103,8 @@ pub const RenderPassEncoder = struct {
 
     pub fn submit(self: *RenderPassEncoder) void {
         _ = self;
+        sk.gl.popMatrix();
+        sk.gl.draw();
         sk.gfx.endPass();
         sk.gfx.commit();
     }
@@ -223,3 +229,15 @@ pub const Sampler = struct {
         return .{ .value = sampler };
     }
 };
+
+pub fn drawRectangleLine(rect: Rectangle) void {
+    sk.gl.beginLineStrip();
+
+    sk.gl.v2fC3b(rect.x, rect.y, 0, 255, 0);
+    sk.gl.v2fC3b(rect.right(), rect.y, 0, 255, 0);
+    sk.gl.v2fC3b(rect.right(), rect.bottom(), 0, 255, 0);
+    sk.gl.v2fC3b(rect.x, rect.bottom(), 0, 255, 0);
+    sk.gl.v2fC3b(rect.x, rect.y, 0, 255, 0);
+
+    sk.gl.end();
+}

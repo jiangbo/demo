@@ -26,8 +26,16 @@ pub fn loadTexture(path: [:0]const u8) Texture {
 }
 
 pub fn beginDraw() void {
-    passEncoder = gpu.CommandEncoder.beginRenderPass(.{ .r = 1, .b = 1, .a = 1.0 });
+    passEncoder = gpu.CommandEncoder.beginRenderPass(
+        .{ .r = 1, .b = 1, .a = 1.0 },
+        &matrix,
+    );
+
     renderer.renderPass = passEncoder;
+}
+
+pub fn drawRectangle(rect: math.Rectangle) void {
+    gpu.drawRectangleLine(rect);
 }
 
 pub fn draw(tex: Texture, x: f32, y: f32) void {

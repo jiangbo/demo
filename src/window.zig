@@ -97,6 +97,10 @@ fn init() callconv(.C) void {
         .image_pool_size = 150,
     });
 
+    sk.gl.setup(.{
+        .logger = .{ .func = sk.log.func },
+    });
+
     sk.debugtext.setup(.{
         .fonts = init: {
             var f: [8]sk.debugtext.FontDesc = @splat(.{});

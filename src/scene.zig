@@ -23,10 +23,11 @@ pub fn update() void {
     player.update(delta);
     enemy.update(delta);
 }
-
 pub fn render() void {
     gfx.beginDraw();
     defer gfx.endDraw();
+
+    gfx.drawRectangle(.{ .x = 100, .y = 100, .w = 100, .h = 100 });
 
     renderBackground();
     enemy.render();
