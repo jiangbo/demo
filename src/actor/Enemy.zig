@@ -5,7 +5,9 @@ const math = @import("../math.zig");
 const window = @import("../window.zig");
 const scene = @import("../scene.zig");
 const SharedActor = @import("actor.zig").SharedActor;
+const item = @import("item.zig");
 
+const Sword = item.Sword;
 const Enemy = @This();
 
 shared: SharedActor,
@@ -37,14 +39,20 @@ throwSilkTimer: window.Timer = .init(0.9),
 throwSilkAnimation: gfx.SliceFrameAnimation,
 silkAnimation: gfx.SliceFrameAnimation,
 
+swords: std.BoundedArray(Sword, 4),
+throwSwordTimer: window.Timer = .init(1),
+appearSwordTimer: ?window.Timer = null,
+throwSwordAnimation: gfx.SliceFrameAnimation,
+
 pub fn init() Enemy {
     timer = std.time.Timer.start() catch unreachable;
     var enemy: Enemy = .{
         .shared = .{
             .position = .{ .x = 1050, .y = 200 },
             .faceLeft = true,
-            .health = 10,
+            .health = 4,
         },
+        .swords = std.BoundedArray(Sword, 4).init(0) catch unreachable,
         .idleAnimation = .load("assets/enemy/idle/{}.png", 5),
         .jumpAnimation = .load("assets/enemy/jump/{}.png", 8),
         .fallAnimation = .load("assets/enemy/fall/{}.png", 4),
@@ -57,6 +65,7 @@ pub fn init() Enemy {
         .dashOnFloorVfx = .load("assets/enemy/vfx_dash_on_floor/{}.png", 5),
         .throwSilkAnimation = .load("assets/enemy/throw_silk/{}.png", 17),
         .silkAnimation = .load("assets/enemy/silk/{}.png", 9),
+        .throwSwordAnimation = .load("assets/enemy/throw_sword/{}.png", 16),
     };
 
     enemy.state.enter(&enemy);
@@ -64,6 +73,8 @@ pub fn init() Enemy {
     enemy.silkAnimation.anchor = .centerCenter;
     enemy.dashInAirVfx.anchor = .centerCenter;
     enemy.dashOnFloorVfx.anchor = .centerCenter;
+
+    enemy.throwSwordAnimation.loop = false;
     return enemy;
 }
 
@@ -72,11 +83,24 @@ var timer: std.time.Timer = undefined;
 pub fn update(self: *Enemy, delta: f32) void {
     self.shared.update(delta);
     self.state.update(self, delta);
+
+    var i = self.swords.len;
+    while (i > 0) : (i -= 1) {
+        var sword = &self.swords.slice()[i - 1];
+        if (!sword.valid) {
+            _ = self.swords.swapRemove(i - 1);
+            continue;
+        }
+        sword.update(delta);
+    }
 }
 
 pub fn render(self: *const Enemy) void {
     self.shared.render();
     self.state.render(self);
+    for (self.swords.slice()) |sword| {
+        sword.render();
+    }
 }
 
 fn changeState(self: *Enemy, new: State) void {
@@ -102,6 +126,7 @@ const State = union(enum) {
     squat: SquatState,
     dashOnFloor: DashOnFloorState,
     throwSilk: ThrowSilkState,
+    throwSword: ThrowSwordState,
 
     fn enter(self: State, enemy: *Enemy) void {
         switch (self) {
@@ -151,13 +176,23 @@ const IdleState = struct {
             0...24 => .jump,
             25...49 => .run,
             50...79 => .squat,
-            else => .idle,
+            80...89 => .throwSilk,
+            else => .throwSword,
         };
         enemy.changeState(state);
     }
 
     fn updateEnraged(enemy: *Enemy) void {
-        _ = enemy;
+        const rand = window.rand.intRangeLessThanBiased(u8, 0, 100);
+        const state: State = switch (rand) {
+            0...24 => .jump,
+            25...59 => .throwSword,
+            60...69 => .throwSilk,
+            // throw barb
+            70...89 => .idle,
+            else => .squat,
+        };
+        enemy.changeState(state);
     }
 
     fn render(enemy: *const Enemy) void {
@@ -262,6 +297,7 @@ const DashInAirState = struct {
         const playerPosition = scene.player.shared.position;
         const target: math.Vector = .{ .x = playerPosition.x, .y = SharedActor.FLOOR_Y };
         const direction = target.sub(enemy.shared.position).normalize();
+        enemy.shared.faceLeft = direction.x < 0;
         enemy.shared.velocity = direction.scale(SPEED_DASH);
     }
 
@@ -411,5 +447,51 @@ const ThrowSilkState = struct {
         enemy.throwSilkTimer.reset();
         enemy.shared.enableGravity = true;
         enemy.silkAnimation.reset();
+    }
+};
+
+const ThrowSwordState = struct {
+    fn enter(enemy: *Enemy) void {
+        enemy.state = .throwSword;
+        enemy.appearSwordTimer = .init(0.65);
+    }
+
+    fn update(enemy: *Enemy, delta: f32) void {
+        enemy.throwSwordAnimation.update(delta);
+
+        const shared = &enemy.shared;
+        if (enemy.appearSwordTimer) |*appearTimer| {
+            if (appearTimer.isFinishedAfterUpdate(delta)) {
+                const sword = Sword.init(shared.logicCenter(), shared.faceLeft);
+                enemy.swords.appendAssumeCapacity(sword);
+                enemy.appearSwordTimer = null;
+            }
+        }
+
+        if (enemy.throwSwordTimer.isRunningAfterUpdate(delta)) return;
+
+        const rand = window.rand.intRangeLessThanBiased(u8, 0, 100);
+        if (enemy.isEnraged()) {
+            switch (rand) {
+                0...49 => enemy.changeState(.jump),
+                50...79 => enemy.changeState(.idle),
+                else => enemy.changeState(.idle),
+            }
+        } else {
+            switch (rand) {
+                0...49 => enemy.changeState(.squat),
+                50...79 => enemy.changeState(.jump),
+                else => enemy.changeState(.idle),
+            }
+        }
+    }
+
+    fn render(enemy: *const Enemy) void {
+        enemy.play(&enemy.throwSwordAnimation);
+    }
+
+    fn exit(enemy: *Enemy) void {
+        enemy.throwSwordAnimation.reset();
+        enemy.throwSwordTimer.reset();
     }
 };
