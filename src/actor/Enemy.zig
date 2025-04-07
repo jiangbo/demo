@@ -8,6 +8,7 @@ const SharedActor = @import("actor.zig").SharedActor;
 const item = @import("item.zig");
 
 const Sword = item.Sword;
+const Barb = item.Barb;
 const Enemy = @This();
 
 shared: SharedActor,
@@ -44,6 +45,10 @@ throwSwordTimer: window.Timer = .init(1),
 appearSwordTimer: ?window.Timer = null,
 throwSwordAnimation: gfx.SliceFrameAnimation,
 
+barbs: std.BoundedArray(Barb, 18),
+throwBarbTimer: window.Timer = .init(0.8),
+throwBarbAnimation: gfx.SliceFrameAnimation,
+
 pub fn init() Enemy {
     timer = std.time.Timer.start() catch unreachable;
     var enemy: Enemy = .{
@@ -53,6 +58,7 @@ pub fn init() Enemy {
             .health = 4,
         },
         .swords = std.BoundedArray(Sword, 4).init(0) catch unreachable,
+        .barbs = std.BoundedArray(Barb, 18).init(0) catch unreachable,
         .idleAnimation = .load("assets/enemy/idle/{}.png", 5),
         .jumpAnimation = .load("assets/enemy/jump/{}.png", 8),
         .fallAnimation = .load("assets/enemy/fall/{}.png", 4),
@@ -66,6 +72,7 @@ pub fn init() Enemy {
         .throwSilkAnimation = .load("assets/enemy/throw_silk/{}.png", 17),
         .silkAnimation = .load("assets/enemy/silk/{}.png", 9),
         .throwSwordAnimation = .load("assets/enemy/throw_sword/{}.png", 16),
+        .throwBarbAnimation = .load("assets/enemy/throw_barb/{}.png", 8),
     };
 
     enemy.state.enter(&enemy);
@@ -83,23 +90,40 @@ var timer: std.time.Timer = undefined;
 pub fn update(self: *Enemy, delta: f32) void {
     self.shared.update(delta);
     self.state.update(self, delta);
-
-    var i = self.swords.len;
-    while (i > 0) : (i -= 1) {
-        var sword = &self.swords.slice()[i - 1];
-        if (!sword.valid) {
-            _ = self.swords.swapRemove(i - 1);
-            continue;
+    {
+        var i = self.swords.len;
+        while (i > 0) : (i -= 1) {
+            var sword = &self.swords.slice()[i - 1];
+            if (!sword.valid) {
+                _ = self.swords.swapRemove(i - 1);
+                continue;
+            }
+            sword.update(delta);
         }
-        sword.update(delta);
+    }
+    {
+        var i = self.barbs.len;
+        while (i > 0) : (i -= 1) {
+            var barb = &self.barbs.slice()[i - 1];
+            if (!barb.valid) {
+                _ = self.barbs.swapRemove(i - 1);
+                continue;
+            }
+            barb.update(delta);
+        }
     }
 }
 
 pub fn render(self: *const Enemy) void {
     self.shared.render();
     self.state.render(self);
+
     for (self.swords.slice()) |sword| {
         sword.render();
+    }
+
+    for (self.barbs.slice()) |barb| {
+        barb.render();
     }
 }
 
@@ -127,6 +151,7 @@ const State = union(enum) {
     dashOnFloor: DashOnFloorState,
     throwSilk: ThrowSilkState,
     throwSword: ThrowSwordState,
+    throwBarb: ThrowBarbState,
 
     fn enter(self: State, enemy: *Enemy) void {
         switch (self) {
@@ -188,8 +213,7 @@ const IdleState = struct {
             0...24 => .jump,
             25...59 => .throwSword,
             60...69 => .throwSilk,
-            // throw barb
-            70...89 => .idle,
+            70...89 => .throwBarb,
             else => .squat,
         };
         enemy.changeState(state);
@@ -493,5 +517,40 @@ const ThrowSwordState = struct {
     fn exit(enemy: *Enemy) void {
         enemy.throwSwordAnimation.reset();
         enemy.throwSwordTimer.reset();
+    }
+};
+
+const ThrowBarbState = struct {
+    fn enter(enemy: *Enemy) void {
+        enemy.state = .throwBarb;
+    }
+
+    fn update(enemy: *Enemy, delta: f32) void {
+        enemy.throwBarbAnimation.update(delta);
+
+        if (enemy.throwBarbTimer.isRunningAfterUpdate(delta)) return;
+
+        var number = window.rand.intRangeLessThanBiased(u8, 3, 6);
+        if (enemy.barbs.len > 10) number = 1;
+        const widthGrid: f32 = window.width / @as(f32, @floatFromInt(number));
+
+        for (0..number) |index| {
+            const start = widthGrid * @as(f32, @floatFromInt(index));
+            const x: f32 = window.randomFloat(start, widthGrid + start);
+            const y: f32 = window.randomFloat(250, 500);
+            const barb = Barb.init(.{ .x = x, .y = y });
+            enemy.barbs.appendAssumeCapacity(barb);
+        }
+
+        enemy.changeState(.idle);
+    }
+
+    fn render(enemy: *const Enemy) void {
+        enemy.play(&enemy.throwBarbAnimation);
+    }
+
+    fn exit(enemy: *Enemy) void {
+        enemy.throwBarbAnimation.reset();
+        enemy.throwBarbTimer.reset();
     }
 };

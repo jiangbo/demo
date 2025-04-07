@@ -94,6 +94,7 @@ fn init() callconv(.C) void {
     sk.gfx.setup(.{
         .environment = sk.glue.environment(),
         .logger = .{ .func = sk.log.func },
+        .image_pool_size = 150,
     });
 
     sk.debugtext.setup(.{
