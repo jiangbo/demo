@@ -13,7 +13,7 @@ pub fn deinit() void {
     Texture.deinit();
     TextureSlice.deinit();
     RectangleSlice.deinit();
-    // Audio.deinit();
+    Audio.deinit();
 }
 
 pub const Texture = struct {
@@ -96,22 +96,22 @@ pub const RectangleSlice = struct {
     }
 };
 
-// pub const Audio = struct {
-//     var cache: std.StringHashMapUnmanaged(*c.stbAudio.Audio) = .empty;
+pub const Audio = struct {
+    var cache: std.StringHashMapUnmanaged(*c.stbAudio.Audio) = .empty;
 
-//     pub fn load(path: [:0]const u8) *c.stbAudio.Audio {
-//         const entry = cache.getOrPut(allocator, path) catch unreachable;
-//         if (entry.found_existing) return entry.value_ptr.*;
+    pub fn load(path: [:0]const u8) *c.stbAudio.Audio {
+        const entry = cache.getOrPut(allocator, path) catch unreachable;
+        if (entry.found_existing) return entry.value_ptr.*;
 
-//         const audio = c.stbAudio.load(path) catch unreachable;
+        const audio = c.stbAudio.load(path) catch unreachable;
 
-//         entry.value_ptr.* = audio;
-//         return audio;
-//     }
+        entry.value_ptr.* = audio;
+        return audio;
+    }
 
-//     pub fn deinit() void {
-//         var iterator = cache.valueIterator();
-//         while (iterator.next()) |value| c.stbAudio.unload(value.*);
-//         cache.deinit(allocator);
-//     }
-// };
+    pub fn deinit() void {
+        var iterator = cache.valueIterator();
+        while (iterator.next()) |value| c.stbAudio.unload(value.*);
+        cache.deinit(allocator);
+    }
+};

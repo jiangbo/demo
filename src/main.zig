@@ -3,19 +3,19 @@ const std = @import("std");
 const cache = @import("cache.zig");
 const window = @import("window.zig");
 const gfx = @import("graphics.zig");
-// const audio = @import("audio.zig");
+const audio = @import("audio.zig");
 const scene = @import("scene.zig");
 
 pub fn init() void {
     cache.init(allocator);
     gfx.init(window.width, window.height);
-    // audio.init();
+    audio.init();
 
     scene.init();
-    // const bgm = audio.AudioNode.load("assets/audio/bgm.ogg");
-    // bgm.play();
-    // const music = audio.AudioNode.load("assets/audio/barb_break.ogg");
-    // music.play();
+    const music = audio.AudioNode.load("assets/audio/barb_break.ogg");
+    music.play();
+    const bgm = audio.AudioNode.load("assets/audio/bgm.ogg");
+    bgm.play();
 }
 
 pub fn event(ev: *const window.Event) void {
@@ -32,7 +32,7 @@ pub fn render() void {
 
 pub fn deinit() void {
     scene.deinit();
-    // audio.deinit();
+    audio.deinit();
     cache.deinit();
 }
 
