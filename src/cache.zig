@@ -1,6 +1,7 @@
 const std = @import("std");
 const gfx = @import("graphics.zig");
 const math = @import("math.zig");
+const c = @import("c.zig");
 
 var allocator: std.mem.Allocator = undefined;
 
@@ -12,20 +13,19 @@ pub fn deinit() void {
     Texture.deinit();
     TextureSlice.deinit();
     RectangleSlice.deinit();
+    // Audio.deinit();
 }
 
 pub const Texture = struct {
-    const stbImage = @import("c.zig").stbImage;
-
-    var cache: std.StringHashMapUnmanaged(gfx.Texture) = undefined;
+    var cache: std.StringHashMapUnmanaged(gfx.Texture) = .empty;
 
     pub fn load(path: [:0]const u8) gfx.Texture {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
         if (entry.found_existing) return entry.value_ptr.*;
 
         std.log.info("loading texture from: {s}", .{path});
-        const image = stbImage.load(path) catch unreachable;
-        defer stbImage.unload(image);
+        const image = c.stbImage.load(path) catch unreachable;
+        defer c.stbImage.unload(image);
 
         const texture = gfx.Texture.init(image.width, image.height, image.data);
         entry.value_ptr.* = texture;
@@ -53,7 +53,7 @@ pub const Texture = struct {
 };
 
 pub const TextureSlice = struct {
-    var cache: std.StringHashMapUnmanaged([]gfx.Texture) = undefined;
+    var cache: std.StringHashMapUnmanaged([]gfx.Texture) = .empty;
 
     pub fn load(comptime pathFmt: []const u8, from: u8, len: u8) []const gfx.Texture {
         const entry = cache.getOrPut(allocator, pathFmt) catch unreachable;
@@ -78,7 +78,7 @@ pub const TextureSlice = struct {
 };
 
 pub const RectangleSlice = struct {
-    var cache: std.StringHashMapUnmanaged([]math.Rectangle) = undefined;
+    var cache: std.StringHashMapUnmanaged([]math.Rectangle) = .empty;
 
     pub fn load(path: []const u8, count: u8) []math.Rectangle {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
@@ -95,3 +95,23 @@ pub const RectangleSlice = struct {
         cache.deinit(allocator);
     }
 };
+
+// pub const Audio = struct {
+//     var cache: std.StringHashMapUnmanaged(*c.stbAudio.Audio) = .empty;
+
+//     pub fn load(path: [:0]const u8) *c.stbAudio.Audio {
+//         const entry = cache.getOrPut(allocator, path) catch unreachable;
+//         if (entry.found_existing) return entry.value_ptr.*;
+
+//         const audio = c.stbAudio.load(path) catch unreachable;
+
+//         entry.value_ptr.* = audio;
+//         return audio;
+//     }
+
+//     pub fn deinit() void {
+//         var iterator = cache.valueIterator();
+//         while (iterator.next()) |value| c.stbAudio.unload(value.*);
+//         cache.deinit(allocator);
+//     }
+// };

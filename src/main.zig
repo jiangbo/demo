@@ -3,12 +3,19 @@ const std = @import("std");
 const cache = @import("cache.zig");
 const window = @import("window.zig");
 const gfx = @import("graphics.zig");
+// const audio = @import("audio.zig");
 const scene = @import("scene.zig");
 
 pub fn init() void {
     cache.init(allocator);
     gfx.init(window.width, window.height);
+    // audio.init();
+
     scene.init();
+    // const bgm = audio.AudioNode.load("assets/audio/bgm.ogg");
+    // bgm.play();
+    // const music = audio.AudioNode.load("assets/audio/barb_break.ogg");
+    // music.play();
 }
 
 pub fn event(ev: *const window.Event) void {
@@ -25,6 +32,7 @@ pub fn render() void {
 
 pub fn deinit() void {
     scene.deinit();
+    // audio.deinit();
     cache.deinit();
 }
 
@@ -40,9 +48,6 @@ pub fn main() void {
 
     var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
     window.rand = prng.random();
-
-    const c = @import("c.zig");
-    _ = c.stbVorbis.load("assets/audio/bgm.ogg") catch unreachable;
 
     window.run(.{
         .title = "空洞武士",
