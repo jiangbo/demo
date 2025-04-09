@@ -16,10 +16,7 @@ pub fn init() void {
     scene.init();
 
     audio.playMusic("assets/audio/bgm.ogg");
-
-    // const sound = audio.AudioNode.loadLoop("assets/audio/barb_break.ogg");
-    // sound.play();
-    _ = audio.playSoundLoop("assets/audio/barb_break.ogg");
+    audio.playSound("assets/audio/barb_break.ogg");
 }
 
 pub fn event(ev: *const window.Event) void {

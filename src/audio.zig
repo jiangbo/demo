@@ -17,23 +17,36 @@ pub fn deinit() void {
     sk.audio.shutdown();
 }
 
-var mutex: std.Thread.Mutex = .{};
+var musicMutex: std.Thread.Mutex = .{};
+var soundMutex: std.Thread.Mutex = .{};
 
 pub const Music = struct {
     source: *c.stbAudio.Audio,
     paused: bool = false,
+    loop: bool = true,
 };
 
 var music: ?Music = null;
 
 pub fn playMusic(path: [:0]const u8) void {
+    doPlayMusic(path, true);
+}
+
+pub fn playMusicOnce(path: [:0]const u8) void {
+    doPlayMusic(path, false);
+}
+
+fn doPlayMusic(path: [:0]const u8, loop: bool) void {
     stopMusic();
 
     const audio = c.stbAudio.load(path) catch unreachable;
     const info = c.stbAudio.getInfo(audio);
-    const args = .{ path, info.sample_rate, info.channels };
-    std.log.info("music path: {s}, sampleRate: {}, channels: {d}", args);
-    music = .{ .source = audio };
+    const args = .{ info.sample_rate, info.channels, path };
+    std.log.info("music sampleRate: {}, channels: {d}, path: {s}", args);
+
+    musicMutex.lock();
+    defer musicMutex.unlock();
+    music = .{ .source = audio, .loop = loop };
 }
 
 pub fn pauseMusic() void {
@@ -45,6 +58,9 @@ pub fn resumeMusic() void {
 }
 
 pub fn stopMusic() void {
+    musicMutex.lock();
+    defer musicMutex.unlock();
+
     if (music) |*value| {
         c.stbAudio.unload(value.source);
         music = null;
@@ -57,24 +73,28 @@ pub const Sound = struct {
     source: []f32,
     valid: bool = true,
     loop: bool = true,
-    index: u32 = 0,
+    index: usize = 0,
     sampleRate: u16 = 0,
     channels: u8 = 0,
 };
 
 pub fn playSound(path: [:0]const u8) void {
-    var sound = playSoundLoop(path);
-    sound.loop = false;
+    _ = doPlaySound(path, false);
 }
 
 pub fn playSoundLoop(path: [:0]const u8) *Sound {
-    const sound = cache.Sound.load(path);
+    return doPlaySound(path, true);
+}
 
-    const args = .{ path, sound.sampleRate, sound.channels };
-    std.log.info("audio path: {s}, sampleRate: {}, channels: {d}", args);
+fn doPlaySound(path: [:0]const u8, loop: bool) *Sound {
+    var sound = cache.Sound.load(path);
+    sound.loop = loop;
 
-    mutex.lock();
-    defer mutex.unlock();
+    const args = .{ sound.sampleRate, sound.channels, path };
+    std.log.info("audio sampleRate: {}, channels: {d}, path: {s}", args);
+
+    soundMutex.lock();
+    defer soundMutex.unlock();
     sounds.appendAssumeCapacity(sound);
     return &sounds.items[sounds.items.len - 1];
 }
@@ -82,28 +102,66 @@ pub fn playSoundLoop(path: [:0]const u8) *Sound {
 fn callback(b: [*c]f32, frames: i32, channels: i32) callconv(.C) void {
     const buffer = b[0..@as(usize, @intCast(frames * channels))];
     @memset(buffer, 0);
-
-    if (music) |m| blk: {
-        if (m.paused) break :blk;
-        const count = c.stbAudio.fillSamples(m.source, buffer, channels);
-        if (count == 0) c.stbAudio.reset(m.source);
-    }
-
-    mutex.lock();
-    defer mutex.unlock();
-
-    for (sounds.items) |*value| {
-        const sampleCount = c.stbAudio.fillSamples(value.source, buffer, channels);
-        if (sampleCount != 0) continue;
-
-        c.stbAudio.reset(value.source);
-        if (!value.loop) value.valid = false;
-    }
     {
-        var i: usize = 0;
-        while (i < sounds.items.len) : (i += 1) {
-            if (sounds.items[i].valid) continue;
-            _ = sounds.swapRemove(i);
+        musicMutex.lock();
+        defer musicMutex.unlock();
+        if (music) |m| blk: {
+            if (m.paused) break :blk;
+            const count = c.stbAudio.fillSamples(m.source, buffer, channels);
+            if (count == 0) {
+                if (m.loop) c.stbAudio.reset(m.source) else music = null;
+            }
         }
     }
+
+    soundMutex.lock();
+    defer soundMutex.unlock();
+
+    for (sounds.items) |*sound| {
+        var len = mixSamples(buffer, sound);
+        while (len < buffer.len and sound.valid) {
+            len += mixSamples(buffer[len..], sound);
+        }
+    }
+    var i: usize = sounds.items.len;
+    while (i > 0) : (i -= 1) {
+        if (sounds.items[i - 1].valid) continue;
+        _ = sounds.swapRemove(i - 1);
+    }
+}
+
+fn mixSamples(buffer: []f32, sound: *Sound) usize {
+    const len = if (sound.channels == 1)
+        mixMonoSamples(buffer, sound)
+    else if (sound.channels == 2)
+        mixStereoSamples(buffer, sound)
+    else
+        @panic("unsupported channels");
+
+    if (sound.index == sound.source.len) {
+        if (sound.loop) sound.index = 0 else sound.valid = false;
+    }
+
+    return len;
+}
+
+fn mixStereoSamples(dstBuffer: []f32, sound: *Sound) usize {
+    const srcBuffer = sound.source[sound.index..];
+    const len = @min(dstBuffer.len, srcBuffer.len);
+
+    for (0..len) |index| dstBuffer[index] += srcBuffer[index];
+    sound.index += len;
+    return len;
+}
+
+fn mixMonoSamples(dstBuffer: []f32, sound: *Sound) usize {
+    const srcBuffer = sound.source[sound.index..];
+    const len = @min(dstBuffer.len / 2, srcBuffer.len);
+
+    for (0..len) |index| {
+        dstBuffer[index * 2] += srcBuffer[index];
+        dstBuffer[index * 2 + 1] += srcBuffer[index];
+    }
+    sound.index += len;
+    return len * 2;
 }

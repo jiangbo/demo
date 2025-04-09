@@ -107,14 +107,13 @@ pub const Sound = struct {
         const stbAudio = c.stbAudio.load(path) catch unreachable;
         defer c.stbAudio.unload(stbAudio);
 
-        var sound: audio.Sound = undefined;
+        var sound: audio.Sound = .{ .source = undefined };
         const info = c.stbAudio.getInfo(stbAudio);
         sound.channels = @intCast(info.channels);
         sound.sampleRate = @intCast(info.sample_rate);
 
         const size = c.stbAudio.getSampleCount(stbAudio) * sound.channels;
         sound.source = allocator.alloc(f32, size) catch unreachable;
-        // std.log.info("info: {any}", .{info});
 
         _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
 
