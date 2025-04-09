@@ -6,16 +6,20 @@ const gfx = @import("graphics.zig");
 const audio = @import("audio.zig");
 const scene = @import("scene.zig");
 
+var soundBuffer: [10]audio.Sound = undefined;
+
 pub fn init() void {
     cache.init(allocator);
     gfx.init(window.width, window.height);
-    audio.init();
+    audio.init(&soundBuffer);
 
     scene.init();
-    const music = audio.AudioNode.load("assets/audio/barb_break.ogg");
-    music.play();
-    const bgm = audio.AudioNode.load("assets/audio/bgm.ogg");
-    bgm.play();
+
+    audio.playMusic("assets/audio/bgm.ogg");
+
+    // const sound = audio.AudioNode.loadLoop("assets/audio/barb_break.ogg");
+    // sound.play();
+    _ = audio.playSoundLoop("assets/audio/barb_break.ogg");
 }
 
 pub fn event(ev: *const window.Event) void {

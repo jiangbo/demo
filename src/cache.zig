@@ -13,7 +13,7 @@ pub fn deinit() void {
     Texture.deinit();
     TextureSlice.deinit();
     RectangleSlice.deinit();
-    Audio.deinit();
+    Sound.deinit();
 }
 
 pub const Texture = struct {
@@ -96,22 +96,35 @@ pub const RectangleSlice = struct {
     }
 };
 
-pub const Audio = struct {
-    var cache: std.StringHashMapUnmanaged(*c.stbAudio.Audio) = .empty;
+const audio = @import("audio.zig");
+pub const Sound = struct {
+    var cache: std.StringHashMapUnmanaged(audio.Sound) = .empty;
 
-    pub fn load(path: [:0]const u8) *c.stbAudio.Audio {
+    pub fn load(path: [:0]const u8) audio.Sound {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
         if (entry.found_existing) return entry.value_ptr.*;
 
-        const audio = c.stbAudio.load(path) catch unreachable;
+        const stbAudio = c.stbAudio.load(path) catch unreachable;
+        defer c.stbAudio.unload(stbAudio);
 
-        entry.value_ptr.* = audio;
-        return audio;
+        var sound: audio.Sound = undefined;
+        const info = c.stbAudio.getInfo(stbAudio);
+        sound.channels = @intCast(info.channels);
+        sound.sampleRate = @intCast(info.sample_rate);
+
+        const size = c.stbAudio.getSampleCount(stbAudio) * sound.channels;
+        sound.source = allocator.alloc(f32, size) catch unreachable;
+        // std.log.info("info: {any}", .{info});
+
+        _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
+
+        entry.value_ptr.* = sound;
+        return sound;
     }
 
     pub fn deinit() void {
         var iterator = cache.valueIterator();
-        while (iterator.next()) |value| c.stbAudio.unload(value.*);
+        while (iterator.next()) |value| allocator.free(value.source);
         cache.deinit(allocator);
     }
 };

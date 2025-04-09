@@ -3,175 +3,107 @@ const sk = @import("sokol");
 const cache = @import("cache.zig");
 const c = @import("c.zig");
 
-pub fn init() void {
+pub fn init(soundBuffer: []Sound) void {
     sk.audio.setup(.{
         .num_channels = 2,
         .stream_cb = callback,
         .logger = .{ .func = sk.log.func },
     });
-
-    playQueue = std.BoundedArray(AudioNode, 10).init(0) catch unreachable;
+    sounds = .initBuffer(soundBuffer);
 }
 
 pub fn deinit() void {
+    stopMusic();
     sk.audio.shutdown();
 }
 
-pub var playQueue: std.BoundedArray(AudioNode, 10) = undefined;
+var mutex: std.Thread.Mutex = .{};
 
-pub fn play(source: AudioNode) void {
-    playQueue.appendAssumeCapacity(source);
+pub const Music = struct {
+    source: *c.stbAudio.Audio,
+    paused: bool = false,
+};
+
+var music: ?Music = null;
+
+pub fn playMusic(path: [:0]const u8) void {
+    stopMusic();
+
+    const audio = c.stbAudio.load(path) catch unreachable;
+    const info = c.stbAudio.getInfo(audio);
+    const args = .{ path, info.sample_rate, info.channels };
+    std.log.info("music path: {s}, sampleRate: {}, channels: {d}", args);
+    music = .{ .source = audio };
 }
 
-pub const AudioNode = struct {
-    source: *c.stbAudio.Audio,
+pub fn pauseMusic() void {
+    if (music) |*value| value.paused = true;
+}
+
+pub fn resumeMusic() void {
+    if (music) |*value| value.paused = false;
+}
+
+pub fn stopMusic() void {
+    if (music) |*value| {
+        c.stbAudio.unload(value.source);
+        music = null;
+    }
+}
+
+var sounds: std.ArrayListUnmanaged(Sound) = .empty;
+
+pub const Sound = struct {
+    source: []f32,
     valid: bool = true,
-    totalSamples: usize,
-    loop: bool = false,
-    current: usize = 0,
-
-    pub fn load(path: [:0]const u8) AudioNode {
-        const audio = cache.Audio.load(path);
-        const info = c.stbAudio.getInfo(audio);
-
-        std.log.info("audio path: {s}, info: {any}", .{ path, info });
-        const samples = c.stbAudio.getSampleCount(audio);
-        std.log.info("sample count: {d}", .{samples});
-        return .{ .source = audio, .totalSamples = samples };
-    }
-
-    pub fn play(self: AudioNode) void {
-        playQueue.appendAssumeCapacity(self);
-    }
+    loop: bool = true,
+    index: u32 = 0,
+    sampleRate: u16 = 0,
+    channels: u8 = 0,
 };
+
+pub fn playSound(path: [:0]const u8) void {
+    var sound = playSoundLoop(path);
+    sound.loop = false;
+}
+
+pub fn playSoundLoop(path: [:0]const u8) *Sound {
+    const sound = cache.Sound.load(path);
+
+    const args = .{ path, sound.sampleRate, sound.channels };
+    std.log.info("audio path: {s}, sampleRate: {}, channels: {d}", args);
+
+    mutex.lock();
+    defer mutex.unlock();
+    sounds.appendAssumeCapacity(sound);
+    return &sounds.items[sounds.items.len - 1];
+}
 
 fn callback(b: [*c]f32, frames: i32, channels: i32) callconv(.C) void {
     const buffer = b[0..@as(usize, @intCast(frames * channels))];
     @memset(buffer, 0);
 
-    std.log.info("frames: {d}, channels: {d}", .{ frames, channels });
-    for (playQueue.slice()) |value| {
+    if (music) |m| blk: {
+        if (m.paused) break :blk;
+        const count = c.stbAudio.fillSamples(m.source, buffer, channels);
+        if (count == 0) c.stbAudio.reset(m.source);
+    }
+
+    mutex.lock();
+    defer mutex.unlock();
+
+    for (sounds.items) |*value| {
         const sampleCount = c.stbAudio.fillSamples(value.source, buffer, channels);
-        std.log.info("sample count: {d}", .{sampleCount});
-        if (sampleCount == 0) {
-            std.log.info("over", .{});
-            c.stbAudio.reset(value.source);
+        if (sampleCount != 0) continue;
+
+        c.stbAudio.reset(value.source);
+        if (!value.loop) value.valid = false;
+    }
+    {
+        var i: usize = 0;
+        while (i < sounds.items.len) : (i += 1) {
+            if (sounds.items[i].valid) continue;
+            _ = sounds.swapRemove(i);
         }
     }
 }
-
-// pub const AudioState = struct {
-//     audio: WavAudio,
-//     frame: usize,
-//     loop: bool = true,
-//     current: usize = 0,
-// };
-
-// const div = 0.000030517578125;
-// // const div = std.math.maxInt(i16);
-// pub var state: AudioState = undefined;
-
-// fn resampleAudio(buffer: []f32, sampleRate: u16) void {
-//     const ratio = @divExact(sampleRate, state.audio.header.sampleRate);
-
-//     for (0..@divExact(buffer.len, ratio)) |i| {
-//         var next: f32 = 0;
-//         if (state.current + 1 >= state.frame) {
-//             next = @floatFromInt(state.audio.samples()[0]);
-//         } else {
-//             next = @floatFromInt(state.audio.samples()[state.current + 1]);
-//         }
-//         const current: f32 = @floatFromInt(state.audio.samples()[state.current]);
-//         const step = (next - current) / @as(f32, @floatFromInt(ratio));
-//         for (0..ratio) |j| {
-//             const value: f32 = (current + step * @as(f32, @floatFromInt(j))) * div;
-//             // std.log.info("value: {d}", .{value});
-//             if (value > 0.9) std.log.info("value: {d}", .{value});
-//             buffer[i * ratio + j] = value;
-//         }
-//         state.current += 1;
-//         if (state.current >= state.frame) {
-//             state.current = 0;
-//             std.log.info("loop...", .{});
-//         }
-//     }
-// }
-
-// pub fn deinit() void {
-//     sk.audio.shutdown();
-// }
-
-// pub const RiffChunk = struct {
-//     data: []const u8,
-//     const id = std.mem.bytesToValue(u32, "RIFF");
-
-//     pub fn parse(data: []const u8) ?RiffChunk {
-//         if (data.len < 8) return null;
-
-//         const actualId = std.mem.bytesToValue(u32, data[0..4]);
-//         if (actualId != id) return null;
-
-//         const size = std.mem.bytesToValue(u32, data[4..8]);
-//         if (data.len < 8 + size) return null;
-
-//         return RiffChunk{ .data = data[8..][0..size] };
-//     }
-// };
-
-// pub const WavAudio = struct {
-//     const dataId = std.mem.bytesToValue(u32, "data");
-//     header: WavFormatChunk,
-//     data: []const u8,
-
-//     pub fn parse(data: []const u8) ?WavAudio {
-//         const header = WavFormatChunk.parse(data) orelse return null;
-
-//         const withoutHeader = data[36..];
-//         const actualDataId = std.mem.bytesToValue(u32, withoutHeader[0..4]);
-//         if (actualDataId != dataId) return null;
-
-//         const size = std.mem.bytesToValue(u32, withoutHeader[4..8]);
-//         if (size + 8 != withoutHeader.len) return null;
-//         return .{ .header = header, .data = withoutHeader[8..] };
-//     }
-
-//     pub fn frameCount(self: WavAudio) usize {
-//         return @divExact(self.samples().len, self.header.channels);
-//     }
-
-//     pub fn samples(self: WavAudio) []align(1) const i16 {
-//         return std.mem.bytesAsSlice(i16, self.data);
-//     }
-// };
-
-// pub const WavFormatChunk = packed struct {
-//     const formType = std.mem.bytesToValue(u32, "WAVE");
-//     const id = std.mem.bytesToValue(u32, "fmt ");
-
-//     audioFormat: u16, // Audio format (1: PCM integer, 3: IEEE 754 float)
-//     channels: u16, // Number of channels
-//     sampleRate: u32, // Sample rate (in hertz)
-//     bytesPerSecond: u32, // Number of bytes to read per second
-//     bytesPerBlock: u16, // Number of bytes per block (NbrChannels * BitsPerSample / 8).
-//     bitsPerSample: u16, // Number of bits per sample
-
-//     pub fn parse(data: []const u8) ?WavFormatChunk {
-//         return parseFromRiff(RiffChunk.parse(data));
-//     }
-
-//     pub fn parseFromRiff(chunk: ?RiffChunk) ?WavFormatChunk {
-//         const riff = chunk orelse return null;
-
-//         const actualFormType = std.mem.bytesToValue(u32, riff.data[0..4]);
-//         if (actualFormType != formType) return null;
-
-//         const actualId = std.mem.bytesToValue(u32, riff.data[4..8]);
-//         if (actualId != id) return null;
-
-//         const size = std.mem.bytesToValue(u32, riff.data[8..12]);
-//         if (size != 16) @panic("unsupported wav format");
-
-//         const wavFormat = riff.data[12..@sizeOf(WavFormatChunk)];
-//         return std.mem.bytesAsValue(WavFormatChunk, wavFormat).*;
-//     }
-// };
