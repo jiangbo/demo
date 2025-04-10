@@ -116,6 +116,8 @@ pub const Sound = struct {
         sound.source = allocator.alloc(f32, size) catch unreachable;
 
         _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
+        const args = .{ sound.sampleRate, sound.channels, path };
+        std.log.info("audio sampleRate: {}, channels: {d}, path: {s}", args);
 
         entry.value_ptr.* = sound;
         return sound;

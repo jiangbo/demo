@@ -15,9 +15,9 @@ pub const CollisionBox = struct {
     callback: ?*const fn () void = null,
     valid: bool = true,
 
-    pub fn setPosition(self: *CollisionBox, position: math.Vector) void {
-        self.rect.x = position.x;
-        self.rect.y = position.y;
+    pub fn setCenter(self: *CollisionBox, center: math.Vector) void {
+        self.rect.x = center.x - self.rect.w / 2;
+        self.rect.y = center.y - self.rect.h / 2;
     }
 };
 
@@ -79,7 +79,7 @@ pub const SharedActor = struct {
         }
 
         self.position.x = std.math.clamp(self.position.x, 0, window.width);
-        self.hurtBox.setPosition(self.logicCenter());
+        self.hurtBox.setCenter(self.logicCenter());
     }
 
     pub fn isOnFloor(self: *const SharedActor) bool {
@@ -106,6 +106,6 @@ pub const SharedActor = struct {
 
     pub fn enterInvulnerable(self: *SharedActor) void {
         self.isInvulnerable = true;
-        self.invulnerableStatusTimer.?.reset();
+        self.invulnerableStatusTimer.reset();
     }
 };

@@ -91,9 +91,6 @@ fn doPlaySound(path: [:0]const u8, loop: bool) *Sound {
     var sound = cache.Sound.load(path);
     sound.loop = loop;
 
-    const args = .{ sound.sampleRate, sound.channels, path };
-    std.log.info("audio sampleRate: {}, channels: {d}, path: {s}", args);
-
     soundMutex.lock();
     defer soundMutex.unlock();
     sounds.appendAssumeCapacity(sound);

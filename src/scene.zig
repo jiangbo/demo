@@ -13,20 +13,6 @@ pub var boxes: std.BoundedArray(actor.CollisionBox, 30) = undefined;
 
 pub fn init() void {
     boxes = std.BoundedArray(actor.CollisionBox, 30).init(0) catch unreachable;
-    _ = addCollisionBox(.{
-        .rect = .{ .x = 200, .y = 200, .w = 100, .h = 100 },
-        .dst = .enemy,
-    });
-
-    _ = addCollisionBox(.{
-        .rect = .{ .x = 800, .y = 200, .w = 100, .h = 100 },
-        .src = .enemy,
-        .callback = struct {
-            fn callback() void {
-                std.log.info("collision enemy", .{});
-            }
-        }.callback,
-    });
     player = actor.Player.init();
     enemy = actor.Enemy.init();
 
@@ -60,16 +46,16 @@ pub fn update() void {
     player.update(delta);
     enemy.update(delta);
 
-    boxes.buffer[0].rect.x += delta * 50;
-
     for (boxes.slice()) |*srcBox| {
         if (!srcBox.enable or srcBox.dst == .none or !srcBox.valid) continue;
         for (boxes.slice()) |*dstBox| {
             if (!dstBox.enable or srcBox == dstBox or //
-                dstBox.src == .none or !dstBox.valid) continue;
+                srcBox.dst != dstBox.src or !dstBox.valid) continue;
 
             if (srcBox.rect.intersects(dstBox.rect)) {
                 dstBox.valid = false;
+                std.log.info("src box: {any}", .{srcBox});
+                std.log.info("dst box: {any}", .{dstBox});
                 if (dstBox.callback) |callback| callback();
             }
         }

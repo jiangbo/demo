@@ -3,9 +3,12 @@ const std = @import("std");
 const gfx = @import("../graphics.zig");
 const math = @import("../math.zig");
 const window = @import("../window.zig");
+const audio = @import("../audio.zig");
 const SharedActor = @import("actor.zig").SharedActor;
+const scene = @import("../scene.zig");
 
 const Player = @This();
+const AttackDirection = enum { left, right, up, down };
 
 shared: SharedActor,
 
@@ -28,15 +31,44 @@ attackKeyDown: bool = false,
 attackAnimation: gfx.AtlasFrameAnimation,
 attackLeft: gfx.AtlasFrameAnimation,
 attackRight: gfx.AtlasFrameAnimation,
+attackUp: gfx.AtlasFrameAnimation,
+attackDown: gfx.AtlasFrameAnimation,
 attackTimer: window.Timer = .init(0.3),
 attackCoolDown: window.Timer = .init(0.5),
+attackDirection: AttackDirection = .left,
 
 deadTimer: window.Timer = .init(0.5),
+deadAnimation: gfx.AtlasFrameAnimation,
+
+jumpVfxAnimation: gfx.AtlasFrameAnimation,
+jumpPosition: math.Vector = .{},
+landVfxAnimation: gfx.AtlasFrameAnimation,
+landPosition: math.Vector = .{},
 
 pub fn init() Player {
-    const shared: SharedActor = .init(100);
+    var shared: SharedActor = .init(200);
+    shared.logicHeight = 120;
+    shared.hitBox.* = .{
+        .rect = .{ .w = 150, .h = 150 },
+        .dst = .enemy,
+        .enable = false,
+    };
+
+    shared.hurtBox.* = .{
+        .rect = .{ .w = 40, .h = 80 },
+        .src = .player,
+        .callback = struct {
+            fn callback() void {
+                std.log.info("player hurt", .{});
+                audio.playSound("assets/audio/player_hurt.ogg");
+                _ = scene.player.shared.hurtIf();
+            }
+        }.callback,
+    };
+
     var player: Player = .{
         .shared = shared,
+
         .idleAnimation = .load("assets/player/idle.png", 5),
         .runAnimation = .load("assets/player/run.png", 10),
         .jumpAnimation = .load("assets/player/jump.png", 5),
@@ -45,24 +77,65 @@ pub fn init() Player {
         .state = .idle,
         .rollAnimation = .load("assets/player/roll.png", 7),
         .attackAnimation = .load("assets/player/attack.png", 5),
+        .deadAnimation = .load("assets/player/dead.png", 6),
+
         .attackLeft = .load("assets/player/vfx_attack_left.png", 5),
         .attackRight = .load("assets/player/vfx_attack_right.png", 5),
+        .attackUp = .load("assets/player/vfx_attack_up.png", 5),
+        .attackDown = .load("assets/player/vfx_attack_down.png", 5),
+
+        .jumpVfxAnimation = .load("assets/player/vfx_jump.png", 5),
+        .landVfxAnimation = .load("assets/player/vfx_land.png", 2),
     };
 
+    player.idleAnimation.timer = .init(0.15);
+
+    player.runAnimation.loop = true;
+    player.runAnimation.timer = .init(0.075);
+
+    player.jumpAnimation.loop = false;
+    player.jumpAnimation.timer = .init(0.15);
+
+    player.fallAnimation.loop = false;
+    player.fallAnimation.timer = .init(0.15);
+
     player.rollAnimation.loop = false;
-    player.rollAnimation.timer = .init(0.005);
+    player.rollAnimation.timer = .init(0.05);
+
     player.attackAnimation.loop = false;
     player.attackAnimation.timer = .init(0.05);
+
+    player.deadAnimation.loop = false;
+    player.deadAnimation.timer = .init(0.1);
+
     player.attackLeft.loop = false;
-    player.attackLeft.timer = .init(0.05);
+    player.attackLeft.timer = .init(0.07);
+    player.attackLeft.anchor = .centerCenter;
     player.attackRight.loop = false;
-    player.attackRight.timer = .init(0.05);
+    player.attackRight.timer = .init(0.07);
+    player.attackRight.anchor = .centerCenter;
+    player.attackUp.loop = false;
+    player.attackUp.timer = .init(0.07);
+    player.attackUp.anchor = .centerCenter;
+    player.attackDown.loop = false;
+    player.attackDown.timer = .init(0.07);
+    player.attackDown.anchor = .centerCenter;
+
+    player.jumpVfxAnimation.loop = false;
+    player.jumpVfxAnimation.timer = .init(0.05);
+    player.jumpVfxAnimation.timer.finished = true;
+    player.landVfxAnimation.loop = false;
+    player.landVfxAnimation.timer = .init(0.1);
+    player.landVfxAnimation.timer.finished = true;
+
     return player;
 }
 
 pub fn deinit() void {}
 
 pub fn event(self: *Player, ev: *const window.Event) void {
+    if (self.shared.health <= 0) return;
+
     if (ev.type == .KEY_DOWN) {
         switch (ev.key_code) {
             .A => self.leftKeyDown = true,
@@ -87,11 +160,23 @@ pub fn event(self: *Player, ev: *const window.Event) void {
 pub fn update(self: *Player, delta: f32) void {
     self.rollCoolDown.update(delta);
     self.attackCoolDown.update(delta);
+
+    self.jumpVfxAnimation.update(delta);
+    self.landVfxAnimation.update(delta);
+
     self.shared.update(delta);
     self.state.update(self, delta);
 }
 
 pub fn render(self: *const Player) void {
+    if (self.jumpVfxAnimation.timer.isRunning()) {
+        gfx.playAtlas(&self.jumpVfxAnimation, self.jumpPosition);
+    }
+
+    if (self.landVfxAnimation.timer.isRunning()) {
+        gfx.playAtlas(&self.landVfxAnimation, self.landPosition);
+    }
+
     if (self.shared.isInvulnerable) {
         if (self.shared.isBlink) self.state.render(self);
     } else {
@@ -183,6 +268,8 @@ const JumpState = struct {
     fn enter(player: *Player) void {
         player.state = .jump;
         player.shared.velocity.y = -SPEED_JUMP;
+        player.jumpPosition = player.shared.position;
+        player.jumpVfxAnimation.reset();
     }
 
     fn update(player: *Player, delta: f32) void {
@@ -208,7 +295,11 @@ const FallState = struct {
     }
 
     fn update(player: *Player, delta: f32) void {
-        if (player.shared.isOnFloor()) player.changeState(.idle);
+        if (player.shared.isOnFloor()) {
+            player.changeState(.idle);
+            player.landPosition = player.shared.position;
+            player.landVfxAnimation.reset();
+        }
 
         player.fallAnimation.update(delta);
     }
@@ -302,6 +393,15 @@ const AttackState = struct {
         player.state = .attack;
         player.attackTimer.reset();
         player.attackCoolDown.reset();
+
+        player.attackDirection = if (player.shared.faceLeft) .left else .right;
+
+        switch (window.rand.intRangeAtMostBiased(u8, 1, 3)) {
+            1 => audio.playSound("assets/audio/player_attack_1.ogg"),
+            2 => audio.playSound("assets/audio/player_attack_2.ogg"),
+            3 => audio.playSound("assets/audio/player_attack_3.ogg"),
+            else => unreachable,
+        }
     }
 
     fn update(player: *Player, delta: f32) void {
@@ -310,17 +410,49 @@ const AttackState = struct {
         }
 
         player.attackAnimation.update(delta);
-        player.attackLeft.update(delta);
-        player.attackRight.update(delta);
+        updateHitBox(player, delta);
+    }
+
+    fn updateHitBox(player: *Player, delta: f32) void {
+        const playerCenter = player.shared.logicCenter();
+        var hitBox = player.shared.hitBox;
+        hitBox.enable = true;
+
+        std.log.info("dir: {}", .{player.attackDirection});
+        switch (player.attackDirection) {
+            .left => {
+                hitBox.setCenter(.{
+                    .x = playerCenter.x - hitBox.rect.w / 2,
+                    .y = playerCenter.y,
+                });
+                player.attackLeft.update(delta);
+            },
+            .right => {
+                hitBox.setCenter(.{
+                    .x = playerCenter.x + hitBox.rect.w / 2,
+                    .y = playerCenter.y,
+                });
+                player.attackRight.update(delta);
+            },
+            .up => {
+                hitBox.rect.x = playerCenter.x;
+                hitBox.rect.y = playerCenter.y - hitBox.rect.h / 2;
+                player.attackUp.update(delta);
+            },
+            .down => {
+                hitBox.rect.x = playerCenter.x;
+                hitBox.rect.y = playerCenter.y + hitBox.rect.h / 2;
+                player.attackDown.update(delta);
+            },
+        }
     }
 
     fn render(player: *const Player) void {
         player.play(&player.attackAnimation);
-        const pos = player.shared.position.add(.{ .y = 100 });
         if (player.shared.faceLeft) {
-            gfx.playAtlas(&player.attackLeft, pos);
+            gfx.playAtlas(&player.attackLeft, player.shared.logicCenter());
         } else {
-            gfx.playAtlas(&player.attackRight, pos);
+            gfx.playAtlas(&player.attackRight, player.shared.logicCenter());
         }
     }
 
@@ -328,5 +460,6 @@ const AttackState = struct {
         player.attackAnimation.reset();
         player.attackLeft.reset();
         player.attackRight.reset();
+        player.shared.hitBox.enable = false;
     }
 };
