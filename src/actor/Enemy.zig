@@ -51,12 +51,13 @@ throwBarbAnimation: gfx.SliceFrameAnimation,
 
 pub fn init() Enemy {
     timer = std.time.Timer.start() catch unreachable;
+
+    var shared: SharedActor = .init(1050);
+    shared.faceLeft = true;
+    shared.health = 4;
     var enemy: Enemy = .{
-        .shared = .{
-            .position = .{ .x = 1050, .y = 200 },
-            .faceLeft = true,
-            .health = 4,
-        },
+        .shared = shared,
+
         .swords = std.BoundedArray(Sword, 4).init(0) catch unreachable,
         .barbs = std.BoundedArray(Barb, 18).init(0) catch unreachable,
         .idleAnimation = .load("assets/enemy/idle/{}.png", 5),
@@ -115,8 +116,11 @@ pub fn update(self: *Enemy, delta: f32) void {
 }
 
 pub fn render(self: *const Enemy) void {
-    self.shared.render();
-    self.state.render(self);
+    if (self.shared.isInvulnerable) {
+        if (self.shared.isBlink) self.state.render(self);
+    } else {
+        self.state.render(self);
+    }
 
     for (self.swords.slice()) |sword| {
         sword.render();

@@ -3,6 +3,23 @@ const std = @import("std");
 const gfx = @import("../graphics.zig");
 const math = @import("../math.zig");
 const window = @import("../window.zig");
+const scene = @import("../scene.zig");
+
+pub const CollisionLayer = enum { none, player, enemy };
+
+pub const CollisionBox = struct {
+    rect: math.Rectangle,
+    enable: bool = true,
+    src: CollisionLayer = .none,
+    dst: CollisionLayer = .none,
+    callback: ?*const fn () void = null,
+    valid: bool = true,
+
+    pub fn setPosition(self: *CollisionBox, position: math.Vector) void {
+        self.rect.x = position.x;
+        self.rect.y = position.y;
+    }
+};
 
 pub const Player = @import("Player.zig");
 pub const Enemy = @import("Enemy.zig");
@@ -15,9 +32,31 @@ pub const SharedActor = struct {
     position: math.Vector,
     velocity: math.Vector = .{},
     faceLeft: bool = false,
-    health: u8 = 5,
+    logicHeight: f32 = 150,
+    health: u8 = 10,
+
+    hitBox: *CollisionBox = undefined,
+    hurtBox: *CollisionBox = undefined,
+
+    isInvulnerable: bool = false,
+    invulnerableStatusTimer: window.Timer = .init(1),
+    invulnerableBlinkTimer: window.Timer = .init(0.075),
+    isBlink: bool = false,
+
+    pub fn init(x: f32) SharedActor {
+        var self: SharedActor = .{
+            .position = .{ .x = x, .y = 200 },
+            .hitBox = scene.addCollisionBox(.{ .rect = .{} }),
+            .hurtBox = scene.addCollisionBox(.{ .rect = .{} }),
+        };
+
+        self.health = 10;
+        return self;
+    }
 
     pub fn update(self: *SharedActor, delta: f32) void {
+        if (self.health <= 0) self.velocity.x = 0;
+
         if (self.enableGravity) {
             self.velocity.y += GRAVITY * delta;
         }
@@ -28,11 +67,19 @@ pub const SharedActor = struct {
             self.velocity.y = 0;
         }
 
-        self.position.x = std.math.clamp(self.position.x, 0, window.width);
-    }
+        if (self.invulnerableStatusTimer.isFinishedAfterUpdate(delta)) {
+            self.isInvulnerable = false;
+        }
 
-    pub fn render(self: *const SharedActor) void {
-        _ = self;
+        if (self.isInvulnerable) {
+            if (self.invulnerableBlinkTimer.isFinishedAfterUpdate(delta)) {
+                self.isBlink = !self.isBlink;
+                self.invulnerableBlinkTimer.reset();
+            }
+        }
+
+        self.position.x = std.math.clamp(self.position.x, 0, window.width);
+        self.hurtBox.setPosition(self.logicCenter());
     }
 
     pub fn isOnFloor(self: *const SharedActor) bool {
@@ -40,6 +87,25 @@ pub const SharedActor = struct {
     }
 
     pub fn logicCenter(self: *const SharedActor) math.Vector {
-        return .{ .x = self.position.x, .y = self.position.y - 150 / 2 };
+        return .{
+            .x = self.position.x,
+            .y = self.position.y - self.logicHeight / 2,
+        };
+    }
+
+    pub fn hurtIf(self: *SharedActor) bool {
+        if (self.isInvulnerable) return false;
+
+        self.health -= 1;
+        if (self.health > 0) {
+            self.enterInvulnerable();
+            return true;
+        }
+        return false;
+    }
+
+    pub fn enterInvulnerable(self: *SharedActor) void {
+        self.isInvulnerable = true;
+        self.invulnerableStatusTimer.?.reset();
     }
 };

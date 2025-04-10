@@ -34,10 +34,9 @@ attackCoolDown: window.Timer = .init(0.5),
 deadTimer: window.Timer = .init(0.5),
 
 pub fn init() Player {
+    const shared: SharedActor = .init(100);
     var player: Player = .{
-        .shared = .{
-            .position = .{ .x = 100, .y = SharedActor.FLOOR_Y },
-        },
+        .shared = shared,
         .idleAnimation = .load("assets/player/idle.png", 5),
         .runAnimation = .load("assets/player/run.png", 10),
         .jumpAnimation = .load("assets/player/jump.png", 5),
@@ -93,8 +92,11 @@ pub fn update(self: *Player, delta: f32) void {
 }
 
 pub fn render(self: *const Player) void {
-    self.shared.render();
-    self.state.render(self);
+    if (self.shared.isInvulnerable) {
+        if (self.shared.isBlink) self.state.render(self);
+    } else {
+        self.state.render(self);
+    }
 }
 
 fn changeState(self: *Player, new: State) void {
