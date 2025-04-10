@@ -17,6 +17,7 @@ pub fn deinit() void {
     sk.audio.shutdown();
 }
 
+var musicLock: bool = false;
 var musicMutex: std.Thread.Mutex = .{};
 var soundMutex: std.Thread.Mutex = .{};
 
@@ -114,15 +115,15 @@ fn callback(b: [*c]f32, frames: i32, channels: i32) callconv(.C) void {
         }
     }
 
-    soundMutex.lock();
-    defer soundMutex.unlock();
-
     for (sounds.items) |*sound| {
         var len = mixSamples(buffer, sound);
         while (len < buffer.len and sound.valid) {
             len += mixSamples(buffer[len..], sound);
         }
     }
+
+    soundMutex.lock();
+    defer soundMutex.unlock();
     var i: usize = sounds.items.len;
     while (i > 0) : (i -= 1) {
         if (sounds.items[i - 1].valid) continue;

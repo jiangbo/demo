@@ -14,9 +14,6 @@ pub fn init() void {
     audio.init(&soundBuffer);
 
     scene.init();
-
-    audio.playMusic("assets/audio/bgm.ogg");
-    audio.playSound("assets/audio/barb_break.ogg");
 }
 
 pub fn event(ev: *const window.Event) void {

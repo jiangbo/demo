@@ -53,8 +53,8 @@ pub const Rectangle = struct {
     }
 
     pub fn intersects(self: Rectangle, other: Rectangle) bool {
-        return self.left < other.right and self.right > other.left and
-            self.top < other.bottom and self.bottom > other.top;
+        return self.x < other.right() and self.right() > other.x and
+            self.y < other.bottom() and self.bottom() > other.y;
     }
 
     pub fn contains(self: Rectangle, x: f32, y: f32) bool {
