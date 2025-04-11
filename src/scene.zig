@@ -7,6 +7,7 @@ const math = @import("math.zig");
 const audio = @import("audio.zig");
 
 var debug: bool = false;
+var pause: bool = false;
 pub var player: actor.Player = undefined;
 pub var enemy: actor.Enemy = undefined;
 pub var boxes: std.BoundedArray(actor.CollisionBox, 30) = undefined;
@@ -38,10 +39,17 @@ pub fn event(ev: *const window.Event) void {
         return;
     }
 
+    if (ev.type == .KEY_UP and ev.key_code == .Z) {
+        pause = !pause;
+        return;
+    }
+
     player.event(ev);
 }
 
 pub fn update() void {
+    if (pause) return;
+
     const delta = window.deltaSecond();
     player.update(delta);
     enemy.update(delta);
@@ -53,9 +61,6 @@ pub fn update() void {
                 srcBox.dst != dstBox.src or !dstBox.valid) continue;
 
             if (srcBox.rect.intersects(dstBox.rect)) {
-                dstBox.valid = false;
-                std.log.info("src box: {any}", .{srcBox});
-                std.log.info("dst box: {any}", .{dstBox});
                 if (dstBox.callback) |callback| callback();
             }
         }

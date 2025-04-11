@@ -58,9 +58,9 @@ pub fn init() Player {
     shared.hurtBox.src = .player;
     shared.hurtBox.callback = struct {
         fn callback() void {
-            std.log.info("player hurt", .{});
-            audio.playSound("assets/audio/player_hurt.ogg");
-            _ = scene.player.shared.hurtIf();
+            if (scene.player.shared.hurtIf()) {
+                audio.playSound("assets/audio/player_hurt.ogg");
+            }
         }
     }.callback;
 

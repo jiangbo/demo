@@ -69,6 +69,7 @@ pub const SharedActor = struct {
 
         if (self.invulnerableStatusTimer.isFinishedAfterUpdate(delta)) {
             self.isInvulnerable = false;
+            self.hurtBox.enable = true;
         }
 
         if (self.isInvulnerable) {
@@ -96,7 +97,8 @@ pub const SharedActor = struct {
     pub fn hurtIf(self: *SharedActor) bool {
         if (self.isInvulnerable) return false;
 
-        self.health -= 1;
+        self.health -|= 1;
+        std.log.info("health: {d}", .{self.health});
         if (self.health > 0) {
             self.enterInvulnerable();
             return true;
@@ -106,6 +108,7 @@ pub const SharedActor = struct {
 
     pub fn enterInvulnerable(self: *SharedActor) void {
         self.isInvulnerable = true;
+        self.hurtBox.enable = false;
         self.invulnerableStatusTimer.reset();
     }
 };
