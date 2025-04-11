@@ -4,14 +4,15 @@ const gfx = @import("../graphics.zig");
 const math = @import("../math.zig");
 const window = @import("../window.zig");
 const scene = @import("../scene.zig");
-const SharedActor = @import("actor.zig").SharedActor;
+const audio = @import("../audio.zig");
+const actor = @import("actor.zig");
 const item = @import("item.zig");
 
 const Sword = item.Sword;
 const Barb = item.Barb;
 const Enemy = @This();
 
-shared: SharedActor,
+shared: actor.SharedActor,
 state: State = .idle,
 
 idleTimer: window.Timer = .init(0.5),
@@ -39,6 +40,7 @@ dashOnFloorVfx: gfx.SliceFrameAnimation,
 throwSilkTimer: window.Timer = .init(0.9),
 throwSilkAnimation: gfx.SliceFrameAnimation,
 silkAnimation: gfx.SliceFrameAnimation,
+silkBox: *actor.CollisionBox,
 
 swords: std.BoundedArray(Sword, 4),
 throwSwordTimer: window.Timer = .init(1),
@@ -52,9 +54,30 @@ throwBarbAnimation: gfx.SliceFrameAnimation,
 pub fn init() Enemy {
     timer = std.time.Timer.start() catch unreachable;
 
-    var shared: SharedActor = .init(1050);
+    var shared: actor.SharedActor = .init(1050);
     shared.faceLeft = true;
-    shared.health = 4;
+
+    shared.hitBox.rect = .{ .w = 50, .h = 80 };
+    shared.hitBox.dst = .player;
+    shared.hitBox.enable = false;
+
+    shared.hurtBox.rect = .{ .w = 100, .h = 180 };
+    shared.hurtBox.src = .enemy;
+    shared.hurtBox.callback = struct {
+        fn callback() void {
+            if (scene.enemy.shared.hurtIf()) {
+                const rand = window.rand.intRangeAtMostBiased(u8, 1, 3);
+                const sound = switch (rand) {
+                    1 => "assets/audio/enemy_hurt_1.ogg",
+                    2 => "assets/audio/enemy_hurt_2.ogg",
+                    3 => "assets/audio/enemy_hurt_3.ogg",
+                    else => unreachable,
+                };
+                audio.playSound(sound);
+            }
+        }
+    }.callback;
+
     var enemy: Enemy = .{
         .shared = shared,
 
@@ -72,17 +95,36 @@ pub fn init() Enemy {
         .dashOnFloorVfx = .load("assets/enemy/vfx_dash_on_floor/{}.png", 5),
         .throwSilkAnimation = .load("assets/enemy/throw_silk/{}.png", 17),
         .silkAnimation = .load("assets/enemy/silk/{}.png", 9),
+        .silkBox = scene.addCollisionBox(.{ .rect = .{ .w = 225, .h = 255 } }),
         .throwSwordAnimation = .load("assets/enemy/throw_sword/{}.png", 16),
         .throwBarbAnimation = .load("assets/enemy/throw_barb/{}.png", 8),
     };
 
-    enemy.state.enter(&enemy);
+    enemy.silkBox.dst = .player;
+    enemy.silkBox.enable = false;
+
+    enemy.aimAnimation.loop = false;
+    enemy.aimAnimation.timer = .init(0.05);
+
+    enemy.dashInAirAnimation.timer = .init(0.05);
+    enemy.dashOnFloorAnimation.timer = .init(0.05);
+    enemy.runAnimation.timer = .init(0.05);
     enemy.jumpAnimation.loop = false;
+
+    enemy.squatAnimation.loop = false;
+    enemy.squatAnimation.timer = .init(0.05);
+    enemy.throwBarbAnimation.loop = false;
+    enemy.throwSilkAnimation.loop = false;
+    enemy.throwSwordAnimation.loop = false;
+    enemy.throwSwordAnimation.timer = .init(0.05);
+
     enemy.silkAnimation.anchor = .centerCenter;
     enemy.dashInAirVfx.anchor = .centerCenter;
+    enemy.dashInAirVfx.loop = false;
     enemy.dashOnFloorVfx.anchor = .centerCenter;
+    enemy.dashOnFloorVfx.loop = false;
 
-    enemy.throwSwordAnimation.loop = false;
+    enemy.state.enter(&enemy);
     return enemy;
 }
 
@@ -90,6 +132,7 @@ var timer: std.time.Timer = undefined;
 
 pub fn update(self: *Enemy, delta: f32) void {
     self.shared.update(delta);
+
     self.state.update(self, delta);
     {
         var i = self.swords.len;
@@ -116,18 +159,18 @@ pub fn update(self: *Enemy, delta: f32) void {
 }
 
 pub fn render(self: *const Enemy) void {
-    if (self.shared.isInvulnerable) {
-        if (self.shared.isBlink) self.state.render(self);
-    } else {
-        self.state.render(self);
-    }
-
     for (self.swords.slice()) |sword| {
         sword.render();
     }
 
     for (self.barbs.slice()) |barb| {
         barb.render();
+    }
+
+    if (self.shared.isInvulnerable) {
+        if (self.shared.isBlink) self.state.render(self);
+    } else {
+        self.state.render(self);
     }
 }
 
@@ -164,6 +207,11 @@ const State = union(enum) {
     }
 
     fn update(self: State, enemy: *Enemy, delta: f32) void {
+        if (enemy.shared.health == 0) {
+            std.log.info("win", .{});
+            window.exit();
+        }
+
         switch (self) {
             inline else => |case| @TypeOf(case).update(enemy, delta),
         }
@@ -187,7 +235,7 @@ const IdleState = struct {
         enemy.state = .idle;
         enemy.shared.velocity.x = 0;
 
-        const max: f32 = if (enemy.isEnraged()) 0.5 else 0.25;
+        const max: f32 = if (enemy.isEnraged()) 0.25 else 0.5;
         enemy.idleTimer.duration = window.randomFloat(0, max);
         enemy.idleTimer.reset();
     }
@@ -293,7 +341,7 @@ const FallState = struct {
 const AimState = struct {
     fn enter(enemy: *Enemy) void {
         enemy.state = .aim;
-        enemy.shared.velocity = .{};
+        enemy.shared.velocity = .zero;
         enemy.shared.enableGravity = false;
     }
 
@@ -323,10 +371,15 @@ const DashInAirState = struct {
         enemy.shared.enableGravity = false;
 
         const playerPosition = scene.player.shared.position;
-        const target: math.Vector = .{ .x = playerPosition.x, .y = SharedActor.FLOOR_Y };
+        const target: math.Vector = .{
+            .x = playerPosition.x,
+            .y = actor.SharedActor.FLOOR_Y,
+        };
         const direction = target.sub(enemy.shared.position).normalize();
         enemy.shared.faceLeft = direction.x < 0;
         enemy.shared.velocity = direction.scale(SPEED_DASH);
+
+        audio.playSound("assets/audio/enemy_dash.ogg");
     }
 
     fn update(enemy: *Enemy, delta: f32) void {
@@ -348,12 +401,14 @@ const DashInAirState = struct {
     }
 };
 
+var runSound: *audio.Sound = undefined;
 const RunState = struct {
     const SPEED_RUN = 500;
     const MIN_DISTANCE = 350;
 
     fn enter(enemy: *Enemy) void {
         enemy.state = .run;
+        runSound = audio.playSoundLoop("assets/audio/enemy_run.ogg");
     }
 
     fn update(enemy: *Enemy, delta: f32) void {
@@ -386,7 +441,8 @@ const RunState = struct {
 
     fn exit(enemy: *Enemy) void {
         enemy.runAnimation.reset();
-        enemy.shared.velocity = .{};
+        enemy.shared.velocity = .zero;
+        audio.stopSound(runSound);
     }
 };
 
@@ -419,6 +475,8 @@ const DashOnFloorState = struct {
         enemy.state = .dashOnFloor;
         const direction: f32 = if (enemy.shared.faceLeft) -1 else 1;
         enemy.shared.velocity = .{ .x = direction * SPEED_DASH };
+
+        audio.playSound("assets/audio/enemy_dash.ogg");
     }
 
     fn update(enemy: *Enemy, delta: f32) void {
@@ -447,11 +505,16 @@ const ThrowSilkState = struct {
         enemy.state = .throwSilk;
         enemy.shared.enableGravity = false;
         enemy.shared.velocity = .zero;
+        enemy.silkBox.enable = true;
+
+        audio.playSound("assets/audio/enemy_throw_silk.ogg");
     }
 
     fn update(enemy: *Enemy, delta: f32) void {
         enemy.throwSilkAnimation.update(delta);
         enemy.silkAnimation.update(delta);
+        enemy.silkBox.setCenter(enemy.shared.logicCenter());
+
         if (enemy.throwSilkTimer.isRunningAfterUpdate(delta)) return;
 
         if (enemy.shared.isOnFloor()) return enemy.changeState(.idle);
@@ -475,6 +538,7 @@ const ThrowSilkState = struct {
         enemy.throwSilkTimer.reset();
         enemy.shared.enableGravity = true;
         enemy.silkAnimation.reset();
+        enemy.silkBox.enable = false;
     }
 };
 
@@ -493,6 +557,7 @@ const ThrowSwordState = struct {
                 const sword = Sword.init(shared.logicCenter(), shared.faceLeft);
                 enemy.swords.appendAssumeCapacity(sword);
                 enemy.appearSwordTimer = null;
+                audio.playSound("assets/audio/enemy_throw_sword.ogg");
             }
         }
 
@@ -534,6 +599,7 @@ const ThrowBarbState = struct {
 
         if (enemy.throwBarbTimer.isRunningAfterUpdate(delta)) return;
 
+        audio.playSound("assets/audio/enemy_throw_barbs.ogg");
         var number = window.rand.intRangeLessThanBiased(u8, 3, 6);
         if (enemy.barbs.len > 10) number = 1;
         const widthGrid: f32 = window.width / @as(f32, @floatFromInt(number));

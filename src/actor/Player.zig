@@ -224,7 +224,7 @@ const State = union(enum) {
     }
 
     fn update(self: State, player: *Player, delta: f32) void {
-        if (player.deadTimer.finished and player.shared.health <= 0) {
+        if (player.shared.health <= 0 and player.state != .dead) {
             player.changeState(.dead);
         }
 
@@ -507,11 +507,11 @@ const DeadState = struct {
     fn enter(player: *Player) void {
         player.state = .dead;
         player.deadTimer.reset();
-
         audio.playSound("assets/audio/player_dead.ogg");
     }
 
     fn update(player: *Player, delta: f32) void {
+        player.deadAnimation.update(delta);
         if (player.deadTimer.isRunningAfterUpdate(delta)) return;
 
         std.log.info("player dead", .{});

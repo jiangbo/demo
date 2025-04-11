@@ -99,12 +99,8 @@ pub const SharedActor = struct {
         if (self.isInvulnerable) return false;
 
         self.health -|= 1;
-        std.log.info("health: {d}", .{self.health});
-        if (self.health > 0) {
-            self.enterInvulnerable();
-            return true;
-        }
-        return false;
+        self.enterInvulnerable();
+        return true;
     }
 
     pub fn enterInvulnerable(self: *SharedActor) void {
