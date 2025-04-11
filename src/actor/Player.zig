@@ -28,6 +28,7 @@ rollTimer: window.Timer = .init(0.35),
 rollCoolDown: window.Timer = .init(0.75),
 
 attackKeyDown: bool = false,
+attackPosition: ?math.Vector = null,
 attackAnimation: gfx.AtlasFrameAnimation,
 attackLeft: gfx.AtlasFrameAnimation,
 attackRight: gfx.AtlasFrameAnimation,
@@ -37,7 +38,7 @@ attackTimer: window.Timer = .init(0.3),
 attackCoolDown: window.Timer = .init(0.5),
 attackDirection: AttackDirection = .left,
 
-deadTimer: window.Timer = .init(0.5),
+deadTimer: window.Timer = .init(2),
 deadAnimation: gfx.AtlasFrameAnimation,
 
 jumpVfxAnimation: gfx.AtlasFrameAnimation,
@@ -48,23 +49,20 @@ landPosition: math.Vector = .{},
 pub fn init() Player {
     var shared: SharedActor = .init(200);
     shared.logicHeight = 120;
-    shared.hitBox.* = .{
-        .rect = .{ .w = 150, .h = 150 },
-        .dst = .enemy,
-        .enable = false,
-    };
 
-    shared.hurtBox.* = .{
-        .rect = .{ .w = 40, .h = 80 },
-        .src = .player,
-        .callback = struct {
-            fn callback() void {
-                std.log.info("player hurt", .{});
-                audio.playSound("assets/audio/player_hurt.ogg");
-                _ = scene.player.shared.hurtIf();
-            }
-        }.callback,
-    };
+    shared.hitBox.rect = .{ .w = 150, .h = 150 };
+    shared.hitBox.dst = .enemy;
+    shared.hitBox.enable = false;
+
+    shared.hurtBox.rect = .{ .w = 40, .h = 80 };
+    shared.hurtBox.src = .player;
+    shared.hurtBox.callback = struct {
+        fn callback() void {
+            std.log.info("player hurt", .{});
+            audio.playSound("assets/audio/player_hurt.ogg");
+            _ = scene.player.shared.hurtIf();
+        }
+    }.callback;
 
     var player: Player = .{
         .shared = shared,
@@ -107,6 +105,7 @@ pub fn init() Player {
 
     player.deadAnimation.loop = false;
     player.deadAnimation.timer = .init(0.1);
+    player.deadAnimation.timer.finished = true;
 
     player.attackLeft.loop = false;
     player.attackLeft.timer = .init(0.07);
@@ -138,21 +137,33 @@ pub fn event(self: *Player, ev: *const window.Event) void {
 
     if (ev.type == .KEY_DOWN) {
         switch (ev.key_code) {
-            .A => self.leftKeyDown = true,
-            .D => self.rightKeyDown = true,
-            .W => self.jumpKeyDown = true,
+            .A, .LEFT => self.leftKeyDown = true,
+            .D, .RIGHT => self.rightKeyDown = true,
+            .W, .UP => self.jumpKeyDown = true,
             .F => self.attackKeyDown = true,
-            .SPACE => self.rollKeyDown = true,
+            .S, .DOWN, .SPACE => self.rollKeyDown = true,
             else => {},
         }
     } else if (ev.type == .KEY_UP) {
         switch (ev.key_code) {
-            .A => self.leftKeyDown = false,
-            .D => self.rightKeyDown = false,
-            .W => self.jumpKeyDown = false,
+            .A, .LEFT => self.leftKeyDown = false,
+            .D, .RIGHT => self.rightKeyDown = false,
+            .W, .UP => self.jumpKeyDown = false,
             .F => self.attackKeyDown = false,
-            .SPACE => self.rollKeyDown = false,
+            .S, .DOWN, .SPACE => self.rollKeyDown = false,
             else => {},
+        }
+    }
+
+    if (ev.type == .MOUSE_DOWN) {
+        if (ev.mouse_button == .LEFT) {
+            self.attackKeyDown = true;
+            self.attackPosition = .{ .x = ev.mouse_x, .y = ev.mouse_y };
+        }
+    } else if (ev.type == .MOUSE_UP) {
+        if (ev.mouse_button == .LEFT) {
+            self.attackKeyDown = false;
+            self.attackPosition = null;
         }
     }
 }
@@ -193,6 +204,10 @@ fn play(self: *const Player, animation: *const gfx.AtlasFrameAnimation) void {
     gfx.playAtlasFlipX(animation, self.shared.position, self.shared.faceLeft);
 }
 
+fn canAttack(self: *const Player) bool {
+    return self.attackKeyDown and self.attackCoolDown.finished;
+}
+
 const State = union(enum) {
     idle: IdleState,
     run: RunState,
@@ -200,7 +215,7 @@ const State = union(enum) {
     fall: FallState,
     roll: RollState,
     attack: AttackState,
-    // dead: DeadState,
+    dead: DeadState,
 
     fn enter(self: State, player: *Player) void {
         switch (self) {
@@ -209,6 +224,10 @@ const State = union(enum) {
     }
 
     fn update(self: State, player: *Player, delta: f32) void {
+        if (player.deadTimer.finished and player.shared.health <= 0) {
+            player.changeState(.dead);
+        }
+
         switch (self) {
             inline else => |case| @TypeOf(case).update(player, delta),
         }
@@ -236,18 +255,14 @@ const IdleState = struct {
     fn update(player: *Player, delta: f32) void {
         if (player.attackKeyDown and player.attackCoolDown.finished) {
             player.changeState(.attack);
-        }
-
-        if (player.leftKeyDown or player.rightKeyDown) {
-            player.changeState(.run);
-        }
-
-        if (player.rollKeyDown and player.rollCoolDown.finished) {
-            player.changeState(.roll);
-        }
-
-        if (player.jumpKeyDown and player.shared.velocity.y == 0) {
+        } else if (player.shared.velocity.y > 0) {
+            player.changeState(.fall);
+        } else if (player.jumpKeyDown and player.shared.isOnFloor()) {
             player.changeState(.jump);
+        } else if (player.rollKeyDown and player.rollCoolDown.finished) {
+            player.changeState(.roll);
+        } else if (player.leftKeyDown or player.rightKeyDown) {
+            player.changeState(.run);
         }
 
         player.idleAnimation.update(delta);
@@ -270,12 +285,14 @@ const JumpState = struct {
         player.shared.velocity.y = -SPEED_JUMP;
         player.jumpPosition = player.shared.position;
         player.jumpVfxAnimation.reset();
+
+        audio.playSound("assets/audio/player_jump.ogg");
     }
 
     fn update(player: *Player, delta: f32) void {
-        if (player.shared.velocity.y > 0) {
-            player.changeState(.fall);
-        }
+        if (player.shared.velocity.y > 0) player.changeState(.fall);
+
+        if (player.canAttack()) player.changeState(.attack);
 
         player.jumpAnimation.update(delta);
     }
@@ -299,7 +316,10 @@ const FallState = struct {
             player.changeState(.idle);
             player.landPosition = player.shared.position;
             player.landVfxAnimation.reset();
+            audio.playSound("assets/audio/player_land.ogg");
         }
+
+        if (player.canAttack()) player.changeState(.attack);
 
         player.fallAnimation.update(delta);
     }
@@ -313,6 +333,7 @@ const FallState = struct {
     }
 };
 
+var runSound: *audio.Sound = undefined;
 const RunState = struct {
     const SPEED_RUN = 300;
 
@@ -326,10 +347,12 @@ const RunState = struct {
             player.shared.velocity.x = SPEED_RUN;
             player.shared.faceLeft = false;
         }
+
+        runSound = audio.playSoundLoop("assets/audio/player_run.ogg");
     }
 
     fn update(player: *Player, delta: f32) void {
-        if (player.attackKeyDown and player.attackCoolDown.finished) {
+        if (player.canAttack()) {
             player.changeState(.attack);
         }
 
@@ -354,6 +377,7 @@ const RunState = struct {
 
     fn exit(player: *Player) void {
         player.runAnimation.reset();
+        audio.stopSound(runSound);
     }
 };
 
@@ -364,11 +388,11 @@ const RollState = struct {
         player.rollTimer.reset();
         player.rollCoolDown.reset();
 
-        if (player.shared.faceLeft) {
-            player.shared.velocity.x = -SPEED_ROLL;
-        } else {
-            player.shared.velocity.x = SPEED_ROLL;
-        }
+        const direction: f32 = if (player.shared.faceLeft) -1 else 1;
+        player.shared.velocity.x = SPEED_ROLL * direction;
+
+        player.shared.hurtBox.enable = false;
+        audio.playSound("assets/audio/player_roll.ogg");
     }
 
     fn update(player: *Player, delta: f32) void {
@@ -385,6 +409,7 @@ const RollState = struct {
 
     fn exit(player: *Player) void {
         player.rollAnimation.reset();
+        player.shared.hurtBox.enable = true;
     }
 };
 
@@ -394,7 +419,18 @@ const AttackState = struct {
         player.attackTimer.reset();
         player.attackCoolDown.reset();
 
-        player.attackDirection = if (player.shared.faceLeft) .left else .right;
+        if (player.attackPosition) |pos| {
+            // 下面的公式根据教程编写，没有具体探究为什么
+            const angle = pos.sub(player.shared.logicCenter()).angle();
+            const half = std.math.pi / 4.0;
+            player.attackDirection = if (angle > -half and angle < half) .right //
+                else if (angle > half and angle < 3 * half) .down //
+                else if ((angle > 3 * half and angle < std.math.pi) or //
+                (angle > -std.math.pi and angle < -3 * half)) .left //
+                else .up;
+        } else {
+            player.attackDirection = if (player.shared.faceLeft) .left else .right;
+        }
 
         switch (window.rand.intRangeAtMostBiased(u8, 1, 3)) {
             1 => audio.playSound("assets/audio/player_attack_1.ogg"),
@@ -406,7 +442,11 @@ const AttackState = struct {
 
     fn update(player: *Player, delta: f32) void {
         if (player.attackTimer.isFinishedAfterUpdate(delta)) {
-            player.changeState(.idle);
+            if (player.shared.velocity.y > 0) {
+                player.changeState(.fall);
+            } else {
+                player.changeState(.idle);
+            }
         }
 
         player.attackAnimation.update(delta);
@@ -414,34 +454,27 @@ const AttackState = struct {
     }
 
     fn updateHitBox(player: *Player, delta: f32) void {
-        const playerCenter = player.shared.logicCenter();
         var hitBox = player.shared.hitBox;
         hitBox.enable = true;
+        hitBox.setCenter(player.shared.logicCenter());
 
-        std.log.info("dir: {}", .{player.attackDirection});
         switch (player.attackDirection) {
             .left => {
-                hitBox.setCenter(.{
-                    .x = playerCenter.x - hitBox.rect.w / 2,
-                    .y = playerCenter.y,
-                });
+                hitBox.rect.x -= hitBox.rect.w / 2;
                 player.attackLeft.update(delta);
+                player.shared.faceLeft = true;
             },
             .right => {
-                hitBox.setCenter(.{
-                    .x = playerCenter.x + hitBox.rect.w / 2,
-                    .y = playerCenter.y,
-                });
+                hitBox.rect.x += hitBox.rect.w / 2;
                 player.attackRight.update(delta);
+                player.shared.faceLeft = false;
             },
             .up => {
-                hitBox.rect.x = playerCenter.x;
-                hitBox.rect.y = playerCenter.y - hitBox.rect.h / 2;
+                hitBox.rect.y -= hitBox.rect.h / 2;
                 player.attackUp.update(delta);
             },
             .down => {
-                hitBox.rect.x = playerCenter.x;
-                hitBox.rect.y = playerCenter.y + hitBox.rect.h / 2;
+                hitBox.rect.y += hitBox.rect.h / 2;
                 player.attackDown.update(delta);
             },
         }
@@ -449,17 +482,47 @@ const AttackState = struct {
 
     fn render(player: *const Player) void {
         player.play(&player.attackAnimation);
-        if (player.shared.faceLeft) {
-            gfx.playAtlas(&player.attackLeft, player.shared.logicCenter());
-        } else {
-            gfx.playAtlas(&player.attackRight, player.shared.logicCenter());
-        }
+
+        const position = player.shared.logicCenter();
+        gfx.playAtlas(directionAnimation(@constCast(player)), position);
     }
 
     fn exit(player: *Player) void {
         player.attackAnimation.reset();
-        player.attackLeft.reset();
-        player.attackRight.reset();
+        directionAnimation(player).reset();
         player.shared.hitBox.enable = false;
+    }
+
+    fn directionAnimation(player: *Player) *gfx.AtlasFrameAnimation {
+        return switch (player.attackDirection) {
+            .left => &player.attackLeft,
+            .right => &player.attackRight,
+            .up => &player.attackUp,
+            .down => &player.attackDown,
+        };
+    }
+};
+
+const DeadState = struct {
+    fn enter(player: *Player) void {
+        player.state = .dead;
+        player.deadTimer.reset();
+
+        audio.playSound("assets/audio/player_dead.ogg");
+    }
+
+    fn update(player: *Player, delta: f32) void {
+        if (player.deadTimer.isRunningAfterUpdate(delta)) return;
+
+        std.log.info("player dead", .{});
+        window.exit();
+    }
+
+    fn render(player: *const Player) void {
+        player.play(&player.deadAnimation);
+    }
+
+    fn exit(player: *Player) void {
+        player.deadAnimation.reset();
     }
 };

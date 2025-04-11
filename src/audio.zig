@@ -17,10 +17,6 @@ pub fn deinit() void {
     sk.audio.shutdown();
 }
 
-var musicLock: bool = false;
-var musicMutex: std.Thread.Mutex = .{};
-var soundMutex: std.Thread.Mutex = .{};
-
 pub const Music = struct {
     source: *c.stbAudio.Audio,
     paused: bool = false,
@@ -45,8 +41,6 @@ fn doPlayMusic(path: [:0]const u8, loop: bool) void {
     const args = .{ info.sample_rate, info.channels, path };
     std.log.info("music sampleRate: {}, channels: {d}, path: {s}", args);
 
-    musicMutex.lock();
-    defer musicMutex.unlock();
     music = .{ .source = audio, .loop = loop };
 }
 
@@ -59,9 +53,6 @@ pub fn resumeMusic() void {
 }
 
 pub fn stopMusic() void {
-    musicMutex.lock();
-    defer musicMutex.unlock();
-
     if (music) |*value| {
         c.stbAudio.unload(value.source);
         music = null;
@@ -87,22 +78,28 @@ pub fn playSoundLoop(path: [:0]const u8) *Sound {
     return doPlaySound(path, true);
 }
 
+pub fn stopSound(sound: *Sound) void {
+    sound.valid = false;
+}
+
 fn doPlaySound(path: [:0]const u8, loop: bool) *Sound {
     var sound = cache.Sound.load(path);
     sound.loop = loop;
 
-    soundMutex.lock();
-    defer soundMutex.unlock();
-    sounds.appendAssumeCapacity(sound);
-    return &sounds.items[sounds.items.len - 1];
+    for (sounds.items) |*value| {
+        if (value.valid) continue;
+        value.* = sound;
+        return value;
+    } else {
+        sounds.appendAssumeCapacity(sound);
+        return &sounds.items[sounds.items.len - 1];
+    }
 }
 
 fn callback(b: [*c]f32, frames: i32, channels: i32) callconv(.C) void {
     const buffer = b[0..@as(usize, @intCast(frames * channels))];
     @memset(buffer, 0);
     {
-        musicMutex.lock();
-        defer musicMutex.unlock();
         if (music) |m| blk: {
             if (m.paused) break :blk;
             const count = c.stbAudio.fillSamples(m.source, buffer, channels);
@@ -113,18 +110,11 @@ fn callback(b: [*c]f32, frames: i32, channels: i32) callconv(.C) void {
     }
 
     for (sounds.items) |*sound| {
+        if (!sound.valid) continue;
         var len = mixSamples(buffer, sound);
         while (len < buffer.len and sound.valid) {
             len += mixSamples(buffer[len..], sound);
         }
-    }
-
-    soundMutex.lock();
-    defer soundMutex.unlock();
-    var i: usize = sounds.items.len;
-    while (i > 0) : (i -= 1) {
-        if (sounds.items[i - 1].valid) continue;
-        _ = sounds.swapRemove(i - 1);
     }
 }
 

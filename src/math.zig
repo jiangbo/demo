@@ -32,6 +32,10 @@ pub const Vector3 = struct {
         const len = self.length();
         return .{ .x = self.x / len, .y = self.y / len, .z = self.z / len };
     }
+
+    pub fn angle(self: Vector3) f32 {
+        return std.math.atan2(self.y, self.x);
+    }
 };
 
 pub const Rectangle = struct {

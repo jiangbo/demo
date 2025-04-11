@@ -35,8 +35,8 @@ pub const SharedActor = struct {
     logicHeight: f32 = 150,
     health: u8 = 10,
 
-    hitBox: *CollisionBox = undefined,
-    hurtBox: *CollisionBox = undefined,
+    hitBox: *CollisionBox,
+    hurtBox: *CollisionBox,
 
     isInvulnerable: bool = false,
     invulnerableStatusTimer: window.Timer = .init(1),
