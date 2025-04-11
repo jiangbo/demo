@@ -13,7 +13,8 @@ pub const CollisionBox = struct {
     src: CollisionLayer = .none,
     dst: CollisionLayer = .none,
     callback: ?*const fn () void = null,
-    valid: bool = true,
+    active: bool = true,
+    collided: bool = false,
 
     pub fn setCenter(self: *CollisionBox, center: math.Vector) void {
         self.rect.x = center.x - self.rect.w / 2;
@@ -67,12 +68,12 @@ pub const SharedActor = struct {
             self.velocity.y = 0;
         }
 
-        if (self.invulnerableStatusTimer.isFinishedAfterUpdate(delta)) {
-            self.isInvulnerable = false;
-            self.hurtBox.enable = true;
-        }
-
         if (self.isInvulnerable) {
+            if (self.invulnerableStatusTimer.isFinishedAfterUpdate(delta)) {
+                self.isInvulnerable = false;
+                self.hurtBox.enable = true;
+            }
+
             if (self.invulnerableBlinkTimer.isFinishedAfterUpdate(delta)) {
                 self.isBlink = !self.isBlink;
                 self.invulnerableBlinkTimer.reset();

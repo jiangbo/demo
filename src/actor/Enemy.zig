@@ -106,11 +106,11 @@ pub fn update(self: *Enemy, delta: f32) void {
         var i = self.barbs.len;
         while (i > 0) : (i -= 1) {
             var barb = &self.barbs.slice()[i - 1];
-            if (!barb.valid) {
+            if (barb.active) {
+                barb.update(delta);
+            } else {
                 _ = self.barbs.swapRemove(i - 1);
-                continue;
             }
-            barb.update(delta);
         }
     }
 }

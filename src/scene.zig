@@ -22,7 +22,9 @@ pub fn init() void {
 
 pub fn addCollisionBox(box: actor.CollisionBox) *actor.CollisionBox {
     for (boxes.slice()) |*value| {
-        if (!value.valid) value.* = box;
+        if (value.active) continue;
+        value.* = box;
+        return value;
     } else {
         boxes.appendAssumeCapacity(box);
         return &boxes.slice()[boxes.len - 1];
@@ -55,12 +57,13 @@ pub fn update() void {
     enemy.update(delta);
 
     for (boxes.slice()) |*srcBox| {
-        if (!srcBox.enable or srcBox.dst == .none or !srcBox.valid) continue;
+        if (!srcBox.enable or srcBox.dst == .none or !srcBox.active) continue;
         for (boxes.slice()) |*dstBox| {
             if (!dstBox.enable or srcBox == dstBox or //
-                srcBox.dst != dstBox.src or !dstBox.valid) continue;
+                srcBox.dst != dstBox.src or !dstBox.active) continue;
 
             if (srcBox.rect.intersects(dstBox.rect)) {
+                dstBox.collided = true;
                 if (dstBox.callback) |callback| callback();
             }
         }
@@ -76,7 +79,7 @@ pub fn render() void {
 
     if (debug) {
         for (boxes.slice()) |box| {
-            if (box.enable and box.valid) gfx.drawRectangle(box.rect);
+            if (box.enable and box.active) gfx.drawRectangle(box.rect);
         }
     }
 }

@@ -442,11 +442,11 @@ const AttackState = struct {
 
     fn update(player: *Player, delta: f32) void {
         if (player.attackTimer.isFinishedAfterUpdate(delta)) {
-            if (player.shared.velocity.y > 0) {
+            return if (player.shared.velocity.y > 0) {
                 player.changeState(.fall);
             } else {
                 player.changeState(.idle);
-            }
+            };
         }
 
         player.attackAnimation.update(delta);
