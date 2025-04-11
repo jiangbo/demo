@@ -159,11 +159,17 @@ pub fn event(self: *Player, ev: *const window.Event) void {
         if (ev.mouse_button == .LEFT) {
             self.attackKeyDown = true;
             self.attackPosition = .{ .x = ev.mouse_x, .y = ev.mouse_y };
+        } else if (ev.mouse_button == .RIGHT) {
+            audio.playSound("assets/audio/bullet_time.ogg");
+            scene.bulletTime = true;
         }
     } else if (ev.type == .MOUSE_UP) {
         if (ev.mouse_button == .LEFT) {
             self.attackKeyDown = false;
             self.attackPosition = null;
+        } else if (ev.mouse_button == .RIGHT) {
+            audio.playSound("assets/audio/bullet_time.ogg");
+            scene.bulletTime = false;
         }
     }
 }
@@ -192,6 +198,13 @@ pub fn render(self: *const Player) void {
         if (self.shared.isBlink) self.state.render(self);
     } else {
         self.state.render(self);
+    }
+
+    const heart = gfx.loadTexture("assets/ui_heart.png");
+    var x: f32 = 0;
+    for (0..self.shared.health) |index| {
+        x = 10 + @as(f32, @floatFromInt(index)) * 40;
+        gfx.draw(heart, x, 10);
     }
 }
 

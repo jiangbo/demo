@@ -6,16 +6,28 @@ const actor = @import("actor/actor.zig");
 const math = @import("math.zig");
 const audio = @import("audio.zig");
 
+pub const BulletTimerState = enum { entering, exiting };
+
+const SPEED_PROGRESS = 2;
+const DST_DELTA_FACTOR = 0.35;
+
 var debug: bool = false;
 var pause: bool = false;
 pub var player: actor.Player = undefined;
 pub var enemy: actor.Enemy = undefined;
 pub var boxes: std.BoundedArray(actor.CollisionBox, 30) = undefined;
 
+pub var bulletTime: bool = false;
+pub var progress: f32 = 0;
+pub var postProcessTexture: gfx.Texture = undefined;
+
 pub fn init() void {
     boxes = std.BoundedArray(actor.CollisionBox, 30).init(0) catch unreachable;
     player = actor.Player.init();
     enemy = actor.Enemy.init();
+
+    const data = [_]u8{ 0x00, 0x00, 0x00, 0x99 };
+    postProcessTexture = gfx.Texture.init(1, 1, &data);
 
     audio.playMusic("assets/audio/bgm.ogg");
 }
@@ -52,7 +64,13 @@ pub fn event(ev: *const window.Event) void {
 pub fn update() void {
     if (pause) return;
 
-    const delta = window.deltaSecond();
+    const realDelta = window.deltaSecond();
+
+    const dir: f32 = if (bulletTime) 1.0 else -1.0;
+    progress += SPEED_PROGRESS * realDelta * dir;
+    progress = std.math.clamp(progress, 0, 1);
+    const delta = std.math.lerp(1, DST_DELTA_FACTOR, progress) * realDelta;
+
     player.update(delta);
     enemy.update(delta);
 
@@ -75,6 +93,13 @@ pub fn render() void {
 
     renderBackground();
     enemy.render();
+
+    if (progress > 0.5) {
+        gfx.drawOptions(postProcessTexture, .{
+            .targetRect = .{ .w = window.width, .h = window.height },
+        });
+    }
+
     player.render();
 
     if (debug) {

@@ -10,7 +10,7 @@ pub const Buffer = sk.gfx.Buffer;
 pub const Texture = struct {
     value: sk.gfx.Image,
 
-    pub fn init(w: u32, h: u32, data: []u8) Texture {
+    pub fn init(w: u32, h: u32, data: []const u8) Texture {
         const image = sk.gfx.allocImage();
 
         sk.gfx.initImage(image, .{
