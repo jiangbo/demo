@@ -45,14 +45,11 @@ pub const SharedActor = struct {
     isBlink: bool = false,
 
     pub fn init(x: f32) SharedActor {
-        var self: SharedActor = .{
+        return .{
             .position = .{ .x = x, .y = 200 },
             .hitBox = scene.addCollisionBox(.{ .rect = .{} }),
             .hurtBox = scene.addCollisionBox(.{ .rect = .{} }),
         };
-
-        self.health = 10;
-        return self;
     }
 
     pub fn update(self: *SharedActor, delta: f32) void {

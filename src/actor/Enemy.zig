@@ -56,10 +56,10 @@ pub fn init() Enemy {
 
     var shared: actor.SharedActor = .init(1050);
     shared.faceLeft = true;
+    shared.health = 50;
 
     shared.hitBox.rect = .{ .w = 50, .h = 80 };
     shared.hitBox.dst = .player;
-    shared.hitBox.enable = false;
 
     shared.hurtBox.rect = .{ .w = 100, .h = 180 };
     shared.hurtBox.src = .enemy;
@@ -132,6 +132,7 @@ var timer: std.time.Timer = undefined;
 
 pub fn update(self: *Enemy, delta: f32) void {
     self.shared.update(delta);
+    self.shared.hitBox.setCenter(self.shared.logicCenter());
 
     self.state.update(self, delta);
     {
@@ -184,7 +185,7 @@ fn play(self: *const Enemy, animation: *const gfx.SliceFrameAnimation) void {
 }
 
 fn isEnraged(self: *const Enemy) bool {
-    return self.shared.health <= 5;
+    return self.shared.health <= 25;
 }
 
 const State = union(enum) {
@@ -297,15 +298,15 @@ const JumpState = struct {
         const rand = window.rand.intRangeLessThanBiased(u8, 0, 100);
         if (enemy.isEnraged()) {
             switch (rand) {
-                0...49 => enemy.changeState(.aim),
-                50...79 => enemy.changeState(.fall),
-                else => enemy.changeState(.throwSilk),
-            }
-        } else {
-            switch (rand) {
                 0...49 => enemy.changeState(.throwSilk),
                 50...79 => enemy.changeState(.fall),
                 else => enemy.changeState(.aim),
+            }
+        } else {
+            switch (rand) {
+                0...49 => enemy.changeState(.aim),
+                50...79 => enemy.changeState(.fall),
+                else => enemy.changeState(.throwSilk),
             }
         }
     }
