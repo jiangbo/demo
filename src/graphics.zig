@@ -7,9 +7,29 @@ const animation = @import("animation.zig");
 
 pub const Texture = gpu.Texture;
 
+pub const Camera = struct {
+    rect: math.Rectangle,
+
+    pub fn setPosition(self: *Camera, pos: math.Vector) void {
+        self.rect.x = pos.x;
+        self.rect.y = pos.y;
+    }
+
+    pub fn setSize(self: *Camera, size: math.Vector) void {
+        self.rect.w = size.x;
+        self.rect.h = size.y;
+    }
+
+    pub fn lookAt(self: *Camera, pos: math.Vector) void {
+        self.rect.x = pos.x - self.rect.w / 2;
+        self.rect.y = pos.y - self.rect.h / 2;
+    }
+};
+
 pub var renderer: gpu.Renderer = undefined;
 var matrix: [16]f32 = undefined;
 var passEncoder: gpu.RenderPassEncoder = undefined;
+pub var camera: Camera = undefined;
 
 pub fn init(width: f32, height: f32) void {
     matrix = .{
@@ -59,11 +79,15 @@ pub const DrawOptions = struct {
 };
 
 pub fn drawOptions(texture: Texture, options: DrawOptions) void {
+    var target = options.targetRect;
+    target.x = target.x - camera.rect.x;
+    target.y = target.y - camera.rect.y;
+
     renderer.draw(.{
         .uniform = .{ .vp = matrix },
         .texture = texture,
         .sourceRect = options.sourceRect,
-        .targetRect = options.targetRect,
+        .targetRect = target,
     });
 }
 

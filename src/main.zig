@@ -16,7 +16,7 @@ fn init() callconv(.C) void {
     audio.init(&soundBuffer);
 
     http.init(allocator);
-    scene.init();
+    scene.init(allocator);
     timer = std.time.Timer.start() catch unreachable;
 }
 
