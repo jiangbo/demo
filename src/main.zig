@@ -6,6 +6,7 @@ const math = @import("math.zig");
 const gfx = @import("graphics.zig");
 const audio = @import("audio.zig");
 const scene = @import("scene.zig");
+const http = @import("http.zig");
 
 var soundBuffer: [10]audio.Sound = undefined;
 
@@ -14,6 +15,7 @@ fn init() callconv(.C) void {
     gfx.init(window.width, window.height);
     audio.init(&soundBuffer);
 
+    http.init(allocator);
     scene.init();
     timer = std.time.Timer.start() catch unreachable;
 }
@@ -30,6 +32,8 @@ fn frame() callconv(.C) void {
 
 fn deinit() callconv(.C) void {
     scene.deinit();
+
+    http.deinit();
     audio.deinit();
     gfx.deinit();
     cache.deinit();
