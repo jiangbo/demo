@@ -15,6 +15,7 @@ fn init() callconv(.C) void {
     audio.init(&soundBuffer);
 
     scene.init();
+    timer = std.time.Timer.start() catch unreachable;
 }
 
 fn event(ev: ?*const window.Event) callconv(.C) void {
@@ -22,7 +23,8 @@ fn event(ev: ?*const window.Event) callconv(.C) void {
 }
 
 fn frame() callconv(.C) void {
-    scene.update();
+    const delta: f32 = @floatFromInt(timer.lap());
+    scene.update(delta / std.time.ns_per_s);
     scene.render();
 }
 
@@ -34,54 +36,26 @@ fn deinit() callconv(.C) void {
 }
 
 var allocator: std.mem.Allocator = undefined;
+var timer: std.time.Timer = undefined;
 
-// pub fn main() void {
-//     var debugAllocator = std.heap.DebugAllocator(.{}).init;
-//     defer _ = debugAllocator.deinit();
-
-//     allocator = debugAllocator.allocator();
-//     window.width = 1280;
-//     window.height = 720;
-
-//     var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
-//     math.rand = prng.random();
-//     window.rand = prng.random();
-
-//     window.run(.{
-//         .window_title = "空洞武士",
-//         .width = @as(i32, @intFromFloat(window.width)),
-//         .height = @as(i32, @intFromFloat(window.height)),
-//         .init_cb = init,
-//         .event_cb = event,
-//         .frame_cb = frame,
-//         .cleanup_cb = deinit,
-//     });
-// }
-
-pub fn main() !void {
+pub fn main() void {
     var debugAllocator = std.heap.DebugAllocator(.{}).init;
     defer _ = debugAllocator.deinit();
 
     allocator = debugAllocator.allocator();
+    window.width = 1280;
+    window.height = 720;
 
-    const http = @import("http.zig");
-    http.init(allocator);
-    defer http.deinit();
+    var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
+    math.rand = prng.random();
 
-    const playerId = http.sendValue("http://127.0.0.1:4444/api/login", null);
-    std.log.info("player id: {d}", .{playerId});
-    std.time.sleep(5 * std.time.ns_per_s);
-
-    const p2 = http.sendValue("http://127.0.0.1:4444/api/update1", 4);
-    std.log.info("player2 progress: {d}", .{p2});
-    std.time.sleep(5 * std.time.ns_per_s);
-
-    const text = http.sendAlloc(allocator, "http://127.0.0.1:4444/api/text");
-    defer text.deinit();
-
-    std.log.info("text: {s}", .{text.items});
-    std.time.sleep(5 * std.time.ns_per_s);
-
-    const exitId = http.sendValue("http://127.0.0.1:4444/api/logout", playerId);
-    std.log.info("exit id: {d}", .{exitId});
+    window.run(.{
+        .window_title = "哈基米大冒险",
+        .width = @as(i32, @intFromFloat(window.width)),
+        .height = @as(i32, @intFromFloat(window.height)),
+        .init_cb = init,
+        .event_cb = event,
+        .frame_cb = frame,
+        .cleanup_cb = deinit,
+    });
 }

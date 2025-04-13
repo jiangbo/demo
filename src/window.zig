@@ -37,14 +37,8 @@ pub const Timer = struct {
     }
 };
 
-pub var rand: std.Random = undefined;
-
 pub var width: f32 = 0;
 pub var height: f32 = 0;
-
-pub fn deltaSecond() f32 {
-    return @floatCast(sk.app.frameDuration());
-}
 
 pub fn displayText(x: f32, y: f32, text: [:0]const u8) void {
     sk.debugtext.canvas(sk.app.widthf() * 0.4, sk.app.heightf() * 0.4);
