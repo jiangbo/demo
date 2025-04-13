@@ -25,7 +25,7 @@ const FourAnimation = struct {
 
 const BASE_URL = "http://127.0.0.1:4444/api";
 
-var playerIndex: i32 = 0;
+var playerIndex: i32 = 1;
 
 var animationIdle1: FourAnimation = undefined;
 var animationRun1: FourAnimation = undefined;
@@ -62,13 +62,13 @@ pub fn init() void {
         .right = .load("assets/manbo_run_right_{}.png", 4),
     };
 
-    playerIndex = http.sendValue(BASE_URL ++ "/login", null);
+    // playerIndex = http.sendValue(BASE_URL ++ "/login", null);
 
     audio.playMusic("assets/bgm.ogg");
 }
 
 pub fn deinit() void {
-    _ = http.sendValue(BASE_URL ++ "/logout", playerIndex);
+    // _ = http.sendValue(BASE_URL ++ "/logout", playerIndex);
     audio.stopMusic();
 }
 
