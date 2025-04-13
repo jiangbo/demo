@@ -105,13 +105,3 @@ pub const Rectangle = struct {
             y >= self.top and y < self.bottom;
     }
 };
-
-pub var rand: std.Random = undefined;
-
-pub fn randomF32(min: f32, max: f32) f32 {
-    return rand.float(f32) * (max - min) + min;
-}
-
-pub fn randomU8(min: u8, max: u8) u8 {
-    return rand.intRangeLessThanBiased(u8, min, max);
-}

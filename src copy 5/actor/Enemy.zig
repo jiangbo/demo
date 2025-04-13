@@ -237,7 +237,7 @@ const IdleState = struct {
         enemy.shared.velocity.x = 0;
 
         const max: f32 = if (enemy.isEnraged()) 0.25 else 0.5;
-        enemy.idleTimer.duration = math.randomF32(0, max);
+        enemy.idleTimer.duration = window.randomFloat(0, max);
         enemy.idleTimer.reset();
     }
 
@@ -607,8 +607,8 @@ const ThrowBarbState = struct {
 
         for (0..number) |index| {
             const start = widthGrid * @as(f32, @floatFromInt(index));
-            const x: f32 = math.randomF32(start, widthGrid + start);
-            const y: f32 = math.randomF32(250, 500);
+            const x: f32 = window.randomFloat(start, widthGrid + start);
+            const y: f32 = window.randomFloat(250, 500);
             const barb = Barb.init(.{ .x = x, .y = y });
             enemy.barbs.appendAssumeCapacity(barb);
         }

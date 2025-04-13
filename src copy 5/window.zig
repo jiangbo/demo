@@ -37,13 +37,16 @@ pub const Timer = struct {
     }
 };
 
-pub var rand: std.Random = undefined;
-
 pub var width: f32 = 0;
 pub var height: f32 = 0;
+pub var rand: std.Random = undefined;
 
 pub fn deltaSecond() f32 {
     return @floatCast(sk.app.frameDuration());
+}
+
+pub fn randomFloat(min: f32, max: f32) f32 {
+    return rand.float(f32) * (max - min) + min;
 }
 
 pub fn displayText(x: f32, y: f32, text: [:0]const u8) void {

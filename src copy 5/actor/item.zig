@@ -74,7 +74,7 @@ pub const Barb = struct {
         var self: Barb = .{
             .basePosition = pos,
             .position = pos,
-            .diffPeriod = math.randomF32(0, 6),
+            .diffPeriod = window.randomFloat(0, 6),
             .looseAnimation = .load("assets/enemy/barb_loose/{}.png", 5),
             .deathAnimation = .load("assets/enemy/barb_break/{}.png", 3),
             .box = scene.addCollisionBox(.{ .rect = .{ .w = 20, .h = 20 } }),
@@ -86,7 +86,7 @@ pub const Barb = struct {
         self.deathAnimation.loop = false;
         self.deathAnimation.anchor = .centerCenter;
 
-        self.idleTimer = .init(math.randomF32(3, 10));
+        self.idleTimer = .init(window.randomFloat(3, 10));
 
         self.box.src = .enemy;
         self.box.dst = .player;
@@ -111,7 +111,7 @@ pub const Barb = struct {
                 }
             },
             .aim => {
-                const offsetX = math.randomF32(-10, 10);
+                const offsetX = window.randomFloat(-10, 10);
                 self.position.x = self.basePosition.x + offsetX;
                 if (self.aimTimer.isFinishedAfterUpdate(delta)) {
                     self.state = .dash;

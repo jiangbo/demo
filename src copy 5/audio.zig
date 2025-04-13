@@ -14,7 +14,6 @@ pub fn init(soundBuffer: []Sound) void {
 
 pub fn deinit() void {
     stopMusic();
-    for (sounds) |*sound| sound.valid = false;
     sk.audio.shutdown();
 }
 

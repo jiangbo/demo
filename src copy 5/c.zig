@@ -7,7 +7,6 @@ pub const stbImage = struct {
 
     pub fn load(path: [:0]const u8) !Image {
         var width: c_int, var height: c_int = .{ 0, 0 };
-
         const result = stb.stbi_load(path, &width, &height, 0, 4);
         if (result == null) return error.LoadImageFailed;
 
