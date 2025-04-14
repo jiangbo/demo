@@ -1,5 +1,6 @@
 const std = @import("std");
 const sk = @import("sokol");
+const math = @import("math.zig");
 
 pub const Event = sk.app.Event;
 
@@ -37,8 +38,7 @@ pub const Timer = struct {
     }
 };
 
-pub var width: f32 = 0;
-pub var height: f32 = 0;
+pub var size: math.Vector = .zero;
 
 pub fn displayText(x: f32, y: f32, text: [:0]const u8) void {
     sk.debugtext.canvas(sk.app.widthf() * 0.4, sk.app.heightf() * 0.4);

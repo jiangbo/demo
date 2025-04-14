@@ -12,7 +12,7 @@ var soundBuffer: [10]audio.Sound = undefined;
 
 fn init() callconv(.C) void {
     cache.init(allocator);
-    gfx.init(window.width, window.height);
+    gfx.init(window.size);
     audio.init(&soundBuffer);
 
     http.init(allocator);
@@ -47,16 +47,15 @@ pub fn main() void {
     defer _ = debugAllocator.deinit();
 
     allocator = debugAllocator.allocator();
-    window.width = 1280;
-    window.height = 720;
+    window.size = .{ .x = 1280, .y = 720 };
 
     var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
     math.rand = prng.random();
 
     window.run(.{
         .window_title = "哈基米大冒险",
-        .width = @as(i32, @intFromFloat(window.width)),
-        .height = @as(i32, @intFromFloat(window.height)),
+        .width = @as(i32, @intFromFloat(window.size.x)),
+        .height = @as(i32, @intFromFloat(window.size.y)),
         .high_dpi = false,
         .init_cb = init,
         .event_cb = event,

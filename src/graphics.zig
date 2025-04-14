@@ -8,7 +8,7 @@ const animation = @import("animation.zig");
 pub const Texture = gpu.Texture;
 
 pub const Camera = struct {
-    rect: math.Rectangle,
+    rect: math.Rectangle = .{},
 
     pub fn setPosition(self: *Camera, pos: math.Vector) void {
         self.rect.x = pos.x;
@@ -31,12 +31,12 @@ var matrix: [16]f32 = undefined;
 var passEncoder: gpu.RenderPassEncoder = undefined;
 pub var camera: Camera = undefined;
 
-pub fn init(width: f32, height: f32) void {
+pub fn init(size: math.Vector) void {
     matrix = .{
-        2 / width, 0.0,         0.0, 0.0,
-        0.0,       2 / -height, 0.0, 0.0,
-        0.0,       0.0,         1,   0.0,
-        -1,        1,           0,   1.0,
+        2 / size.x, 0.0,         0.0, 0.0,
+        0.0,        2 / -size.y, 0.0, 0.0,
+        0.0,        0.0,         1,   0.0,
+        -1,         1,           0,   1.0,
     };
     renderer = gpu.Renderer.init();
 }
