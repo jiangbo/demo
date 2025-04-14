@@ -6,73 +6,24 @@ const math = @import("math.zig");
 const audio = @import("audio.zig");
 const http = @import("http.zig");
 
-const FourAnimation = struct {
-    up: gfx.SliceFrameAnimation,
-    down: gfx.SliceFrameAnimation,
-    left: gfx.SliceFrameAnimation,
-    right: gfx.SliceFrameAnimation,
-};
-
+const Player = @import("Player.zig");
 const BASE_URL = "http://127.0.0.1:4444/api";
-const SPEED = 1;
-
-const Player = struct {
-    index: i32,
-    position: math.Vector = .{ .x = 400, .y = 400 },
-    idle: FourAnimation,
-    run: FourAnimation,
-    keydown: ?math.FourDirection = null,
-    current: math.FourDirection = .down,
-
-    fn init(index: i32) Player {
-        if (index == 1) return .{
-            .index = index,
-            .idle = .{
-                .up = .load("assets/hajimi_idle_back_{}.png", 4),
-                .down = .load("assets/hajimi_idle_front_{}.png", 4),
-                .left = .load("assets/hajimi_idle_left_{}.png", 4),
-                .right = .load("assets/hajimi_idle_right_{}.png", 4),
-            },
-
-            .run = .{
-                .up = .load("assets/hajimi_run_back_{}.png", 4),
-                .down = .load("assets/hajimi_run_front_{}.png", 4),
-                .left = .load("assets/hajimi_run_left_{}.png", 4),
-                .right = .load("assets/hajimi_run_right_{}.png", 4),
-            },
-        };
-
-        return .{
-            .index = index,
-            .idle = .{
-                .up = .load("assets/manbo_idle_back_{}.png", 4),
-                .down = .load("assets/manbo_idle_front_{}.png", 4),
-                .left = .load("assets/manbo_idle_left_{}.png", 4),
-                .right = .load("assets/manbo_idle_right_{}.png", 4),
-            },
-
-            .run = .{
-                .up = .load("assets/manbo_run_back_{}.png", 4),
-                .down = .load("assets/manbo_run_front_{}.png", 4),
-                .left = .load("assets/manbo_run_left_{}.png", 4),
-                .right = .load("assets/manbo_run_right_{}.png", 4),
-            },
-        };
-    }
-
-    pub fn currentAnimation(player: *Player) *gfx.SliceFrameAnimation {
-        var animation = if (player.keydown == null) &player.idle else &player.run;
-
-        return switch (player.current) {
-            .up => &animation.up,
-            .down => &animation.down,
-            .left => &animation.left,
-            .right => &animation.right,
-        };
-    }
-};
+const SPEED = 100;
 
 var text: std.ArrayList(u8) = undefined;
+const paths = [_]math.Vector{
+    .{ .x = 842, .y = 842 },
+    .{ .x = 1322, .y = 842 },
+    .{ .x = 1322, .y = 442 },
+    .{ .x = 2762, .y = 442 },
+    .{ .x = 2762, .y = 842 },
+    .{ .x = 3162, .y = 842 },
+    .{ .x = 3162, .y = 1722 },
+    .{ .x = 2122, .y = 1722 },
+    .{ .x = 2122, .y = 1562 },
+    .{ .x = 842, .y = 1562 },
+};
+var totalLength: f32 = 0;
 var player1: Player = undefined;
 var player2: Player = undefined;
 
@@ -80,14 +31,22 @@ var self: *Player = undefined;
 var other: *Player = undefined;
 
 pub fn init(allocator: std.mem.Allocator) void {
+    for (paths) |path| {
+        totalLength += path.length();
+    }
+
     player1 = Player.init(1);
     player2 = Player.init(2);
+    player1.anchorCenter();
+    player2.anchorCenter();
     gfx.camera.setSize(.{ .x = window.width, .y = window.height });
 
     text = http.sendAlloc(allocator, BASE_URL ++ "/text");
     const playerIndex = http.sendValue(BASE_URL ++ "/login", null);
     self = if (playerIndex == 1) &player1 else &player2;
     other = if (playerIndex == 1) &player2 else &player1;
+    self.position = paths[0];
+    other.position = paths[0];
 
     audio.playMusic("assets/bgm.ogg");
 }
@@ -125,7 +84,7 @@ pub fn update(delta: f32) void {
             .right => .{ .x = 1 },
         };
         self.current = key;
-        self.position = self.position.add(direction.scale(SPEED));
+        self.position = self.position.add(direction.scale(SPEED * delta));
     }
 
     gfx.camera.lookAt(self.position);

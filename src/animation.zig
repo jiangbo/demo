@@ -5,25 +5,13 @@ const cache = @import("cache.zig");
 const math = @import("math.zig");
 const Texture = @import("gpu.zig").Texture;
 
-const Anchor = enum {
-    topLeft,
-    topCenter,
-    topRight,
-    centerLeft,
-    centerCenter,
-    centerRight,
-    bottomLeft,
-    bottomCenter,
-    bottomRight,
-};
-
 pub const FrameAnimation = SliceFrameAnimation;
 
 pub const SliceFrameAnimation = struct {
     timer: window.Timer,
     index: usize = 0,
     loop: bool = true,
-    anchor: Anchor = .bottomCenter,
+    offset: math.Vector = .zero,
 
     textures: []const Texture,
 
@@ -47,6 +35,19 @@ pub const SliceFrameAnimation = struct {
         }
     }
 
+    pub fn anchor(self: *@This(), direction: math.EightDirection) void {
+        const tex = self.textures[0];
+        self.offset = switch (direction) {
+            .down => .{ .x = -tex.width() / 2, .y = -tex.height() },
+            else => unreachable,
+        };
+    }
+
+    pub fn anchorCenter(self: *@This()) void {
+        self.offset.x = -self.textures[0].width() / 2;
+        self.offset.y = -self.textures[0].height() / 2;
+    }
+
     pub fn reset(self: *@This()) void {
         self.timer.reset();
         self.index = 0;
@@ -63,7 +64,7 @@ pub const AtlasFrameAnimation = struct {
     loop: bool = true,
     texture: Texture,
     frames: []const math.Rectangle,
-    anchor: Anchor = .bottomCenter,
+    offset: math.Vector = .zero,
 
     pub fn init(texture: Texture, frames: []const math.Rectangle) AtlasFrameAnimation {
         return .{ .texture = texture, .frames = frames, .timer = .init(0.1) };
@@ -94,6 +95,19 @@ pub const AtlasFrameAnimation = struct {
             self.timer.reset();
             self.index += 1;
         }
+    }
+
+    pub fn anchor(self: *@This(), direction: math.EightDirection) void {
+        const tex = self.texture;
+        self.offset = switch (direction) {
+            .down => .{ .x = -tex.width() / 2, .y = -tex.height() },
+            else => unreachable,
+        };
+    }
+
+    pub fn anchorCenter(self: *@This()) void {
+        self.offset.x = -self.texture.width() / 2;
+        self.offset.y = -self.texture.height() / 2;
     }
 
     pub fn reset(self: *@This()) void {

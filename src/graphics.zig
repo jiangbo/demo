@@ -104,17 +104,7 @@ pub fn playSlice(frameAnimation: *const FrameAnimation, pos: math.Vector) void {
 }
 
 pub fn playSliceFlipX(frame: *const FrameAnimation, pos: math.Vector, flipX: bool) void {
-    const offset: math.Vector = switch (frame.anchor) {
-        .bottomCenter => .{
-            .x = pos.x - frame.textures[0].width() / 2,
-            .y = pos.y - frame.textures[0].height(),
-        },
-        .centerCenter => .{
-            .x = pos.x - frame.textures[0].width() / 2,
-            .y = pos.y - frame.textures[0].height() / 2,
-        },
-        else => unreachable,
-    };
+    const offset = pos.add(frame.offset);
     drawFlipX(frame.textures[frame.index], offset, flipX);
 }
 
@@ -124,12 +114,7 @@ pub fn playAtlas(frameAnimation: *const AtlasFrameAnimation, pos: math.Vector) v
 
 pub fn playAtlasFlipX(frame: *const AtlasFrameAnimation, pos: math.Vector, flipX: bool) void {
     var src = frame.frames[frame.index];
-
-    const offset: math.Vector = switch (frame.anchor) {
-        .bottomCenter => .{ .x = pos.x - src.w / 2, .y = pos.y - src.h },
-        .centerCenter => .{ .x = pos.x - src.w / 2, .y = pos.y - src.h / 2 },
-        else => unreachable,
-    };
+    const offset = pos.add(frame.offset);
 
     const dst: gpu.Rectangle = .{ .x = offset.x, .y = offset.y, .w = src.w };
     if (flipX) src.w = -src.w;

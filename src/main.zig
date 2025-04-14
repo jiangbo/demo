@@ -57,6 +57,7 @@ pub fn main() void {
         .window_title = "哈基米大冒险",
         .width = @as(i32, @intFromFloat(window.width)),
         .height = @as(i32, @intFromFloat(window.height)),
+        .high_dpi = false,
         .init_cb = init,
         .event_cb = event,
         .frame_cb = frame,
