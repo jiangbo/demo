@@ -15,7 +15,7 @@ var cameraUI: gfx.Camera = .{};
 
 var text: std.ArrayList(u8) = undefined;
 var lines: std.BoundedArray([]const u8, 100) = undefined;
-const paths = [_]math.Vector{
+var paths = [_]math.Vector{
     .{ .x = 842, .y = 842 },
     .{ .x = 1322, .y = 842 },
     .{ .x = 1322, .y = 442 },
@@ -28,9 +28,10 @@ const paths = [_]math.Vector{
     .{ .x = 842, .y = 1562 },
 };
 var totalLength: f32 = 0;
-var totalChar: usize = 0;
+var totalChar: f32 = 0;
 var currentLine: u8 = 0;
 var currentChar: u8 = 0;
+var finishedChar: f32 = 0;
 
 var player1: Player = undefined;
 var player2: Player = undefined;
@@ -45,7 +46,9 @@ pub fn init(allocator: std.mem.Allocator) void {
     cameraUI.setSize(window.size);
 
     for (0..paths.len - 1) |index| {
-        totalLength += paths[index + 1].sub(paths[index]).length();
+        const len = paths[index + 1].sub(paths[index]).length();
+        paths[index + 1].z = len;
+        totalLength += len;
     }
 
     player1 = Player.init(1);
@@ -59,7 +62,7 @@ pub fn init(allocator: std.mem.Allocator) void {
     var iter = std.mem.tokenizeScalar(u8, text.items, '\n');
     while (iter.next()) |line| {
         lines.appendAssumeCapacity(line);
-        totalChar += line.len;
+        totalChar += @as(f32, @floatFromInt(line.len));
     }
 
     const playerIndex = http.sendValue(BASE_URL ++ "/login", null);
@@ -80,23 +83,24 @@ pub fn deinit() void {
 }
 
 pub fn event(ev: *const window.Event) void {
-    if (ev.type == .KEY_DOWN) {
-        switch (ev.key_code) {
-            .A, .LEFT => self.keydown = .left,
-            .D, .RIGHT => self.keydown = .right,
-            .W, .UP => self.keydown = .up,
-            .S, .DOWN => self.keydown = .down,
-            else => {},
-        }
-    } else if (ev.type == .KEY_UP) {
-        switch (ev.key_code) {
-            .A, .LEFT, .D, .RIGHT => self.keydown = null,
-            .W, .UP, .S, .DOWN => self.keydown = null,
-            else => {},
+    if (ev.type == .CHAR and ev.char_code > 0 and ev.char_code < 127) {
+        const line = lines.get(currentLine);
+        if (@as(u8, @intCast(ev.char_code)) == line[currentChar]) {
+            currentChar += 1;
+            finishedChar += 1;
+            if (currentChar == line.len) {
+                currentLine += 1;
+                currentChar = 0;
+            }
+
+            if (currentLine == lines.len) {
+                player1Progress = 1;
+            }
         }
     }
 }
 
+var player1Progress: f32 = 0;
 pub fn update(delta: f32) void {
     if (self.keydown) |key| {
         const position: math.Vector = switch (key) {
@@ -110,6 +114,8 @@ pub fn update(delta: f32) void {
     }
 
     cameraScene.lookAt(self.position);
+
+    self.position = getProgressPosition(finishedChar / totalChar);
 
     self.currentAnimation().update(delta);
     other.currentAnimation().update(delta);
@@ -128,4 +134,52 @@ pub fn render() void {
 
     gfx.camera = cameraUI;
     gfx.draw(textbox, 0, 720 - textbox.height());
+
+    var buffer: [100]u8 = undefined;
+    const line = lines.get(currentLine);
+
+    @memcpy(buffer[0..currentChar], line[0..currentChar]);
+    buffer[currentChar] = 0;
+
+    moveTo(11.5, 39.5);
+    displayText(buffer[0..currentChar :0], 0, 149, 125);
+
+    @memcpy(buffer[currentChar..line.len], line[currentChar..]);
+    buffer[line.len] = 0;
+    displayText(buffer[currentChar..line.len :0], 0, 0, 0);
+
+    endDisplayText();
+}
+
+fn getProgressPosition(progress: f32) math.Vector {
+    if (progress == 0) return paths[0];
+    if (progress >= 1) return paths[paths.len - 1];
+
+    var remaining = totalLength * progress;
+
+    for (paths[1..], 1..) |path, index| {
+        if (remaining < path.z) {
+            const delta = path.sub(paths[index - 1]).scale(remaining / path.z);
+            return paths[index - 1].add(delta);
+        }
+        remaining -= path.z;
+    }
+    unreachable;
+}
+
+const sk = @import("sokol");
+fn moveTo(x: f32, y: f32) void {
+    sk.debugtext.canvas(sk.app.widthf() * 0.5, sk.app.heightf() * 0.5);
+    sk.debugtext.origin(x, y);
+    sk.debugtext.home();
+}
+
+fn displayText(str: [:0]const u8, r: u8, g: u8, b: u8) void {
+    sk.debugtext.font(0);
+    sk.debugtext.color3b(r, g, b);
+    sk.debugtext.puts(str);
+}
+
+fn endDisplayText() void {
+    sk.debugtext.draw();
 }
