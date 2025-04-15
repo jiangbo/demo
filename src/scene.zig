@@ -15,17 +15,24 @@ var cameraUI: gfx.Camera = .{};
 
 var text: std.ArrayList(u8) = undefined;
 var lines: std.BoundedArray([]const u8, 100) = undefined;
-var paths = [_]math.Vector{
-    .{ .x = 842, .y = 842 },
-    .{ .x = 1322, .y = 842 },
-    .{ .x = 1322, .y = 442 },
-    .{ .x = 2762, .y = 442 },
-    .{ .x = 2762, .y = 842 },
-    .{ .x = 3162, .y = 842 },
-    .{ .x = 3162, .y = 1722 },
-    .{ .x = 2122, .y = 1722 },
-    .{ .x = 2122, .y = 1562 },
-    .{ .x = 842, .y = 1562 },
+const paths = blk: {
+    var temp = [_]math.Vector{
+        .{ .x = 842, .y = 842 },
+        .{ .x = 1322, .y = 842 },
+        .{ .x = 1322, .y = 442 },
+        .{ .x = 2762, .y = 442 },
+        .{ .x = 2762, .y = 842 },
+        .{ .x = 3162, .y = 842 },
+        .{ .x = 3162, .y = 1722 },
+        .{ .x = 2122, .y = 1722 },
+        .{ .x = 2122, .y = 1562 },
+        .{ .x = 842, .y = 1562 },
+    };
+    for (0..temp.len - 1) |index| {
+        const len = temp[index + 1].sub(temp[index]).length();
+        temp[index + 1].z = len;
+    }
+    break :blk temp;
 };
 var totalLength: f32 = 0;
 var totalChar: f32 = 0;
@@ -42,14 +49,10 @@ var other: *Player = undefined;
 var textbox: gfx.Texture = undefined;
 
 pub fn init(allocator: std.mem.Allocator) void {
+    for (paths) |path| totalLength += path.z;
+
     cameraScene.setSize(window.size);
     cameraUI.setSize(window.size);
-
-    for (0..paths.len - 1) |index| {
-        const len = paths[index + 1].sub(paths[index]).length();
-        paths[index + 1].z = len;
-        totalLength += len;
-    }
 
     player1 = Player.init(1);
     player2 = Player.init(2);
@@ -93,9 +96,7 @@ pub fn event(ev: *const window.Event) void {
                 currentChar = 0;
             }
 
-            if (currentLine == lines.len) {
-                player1Progress = 1;
-            }
+            if (currentLine == lines.len) player1Progress = 1;
         }
     }
 }
@@ -115,7 +116,30 @@ pub fn update(delta: f32) void {
 
     cameraScene.lookAt(self.position);
 
-    self.position = getProgressPosition(finishedChar / totalChar);
+    const target = getProgressPosition(finishedChar / totalChar);
+    if (self.position.approx(target)) {
+        self.velocity = .zero;
+    } else {
+        const direction = target.sub(self.position).normalize();
+        self.velocity = direction.scale(SPEED);
+
+        if (direction.x > math.epsilon) {
+            self.current = .right;
+        } else if (direction.x < -math.epsilon) {
+            self.current = .left;
+        } else if (direction.y > math.epsilon) {
+            self.current = .down;
+        } else if (direction.y < -math.epsilon) {
+            self.current = .up;
+        }
+    }
+
+    const distance = self.velocity.scale(delta);
+    if (target.sub(self.position).length() < distance.length()) {
+        self.position = target;
+    } else {
+        self.position = self.position.add(distance);
+    }
 
     self.currentAnimation().update(delta);
     other.currentAnimation().update(delta);

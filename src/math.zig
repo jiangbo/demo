@@ -2,6 +2,7 @@ const std = @import("std");
 
 pub const FourDirection = enum { up, down, left, right };
 pub const EightDirection = enum { up, down, left, right, leftUp, leftDown, rightUp, rightDown };
+pub const epsilon = 1e-4;
 
 pub const Vector2 = struct {
     x: f32 = 0,
@@ -35,6 +36,11 @@ pub const Vector2 = struct {
 
     pub fn normalize(self: Vector2) Vector2 {
         return .{ .x = self.x / self.length(), .y = self.y / self.length() };
+    }
+
+    pub fn approx(self: Vector2, other: Vector2) bool {
+        return std.math.approxEqAbs(f32, self.x, other.x, epsilon) and
+            std.math.approxEqAbs(f32, self.y, other.y, epsilon);
     }
 };
 
@@ -77,6 +83,12 @@ pub const Vector3 = struct {
 
     pub fn angle(self: Vector3) f32 {
         return std.math.atan2(self.y, self.x);
+    }
+
+    pub fn approx(self: Vector3, other: Vector3) bool {
+        return std.math.approxEqAbs(f32, self.x, other.x, epsilon) and
+            std.math.approxEqAbs(f32, self.y, other.y, epsilon) and
+            std.math.approxEqAbs(f32, self.z, other.z, epsilon);
     }
 };
 

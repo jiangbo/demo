@@ -9,8 +9,11 @@ const FourAnimation = struct {
     right: gfx.SliceFrameAnimation,
 };
 
+const SPEED_RUN = 100;
+
 index: i32,
 position: math.Vector = .zero,
+velocity: math.Vector = .zero,
 idle: FourAnimation,
 run: FourAnimation,
 keydown: ?math.FourDirection = null,
