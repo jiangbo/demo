@@ -6,12 +6,14 @@ const math = @import("math.zig");
 const audio = @import("audio.zig");
 const http = @import("http.zig");
 
+const Stage = enum { waiting, ready, racing };
 const Player = @import("Player.zig");
 const BASE_URL = "http://127.0.0.1:4444/api";
 const SPEED = 100;
 
 var cameraScene: gfx.Camera = .{};
 var cameraUI: gfx.Camera = .{};
+var stage: Stage = .waiting;
 
 var text: std.ArrayList(u8) = undefined;
 var lines: std.BoundedArray([]const u8, 100) = undefined;
@@ -43,9 +45,6 @@ var finishedChar: f32 = 0;
 var player1: Player = undefined;
 var player2: Player = undefined;
 
-var self: *Player = undefined;
-var other: *Player = undefined;
-
 var textbox: gfx.Texture = undefined;
 
 pub fn init(allocator: std.mem.Allocator) void {
@@ -68,19 +67,20 @@ pub fn init(allocator: std.mem.Allocator) void {
         totalChar += @as(f32, @floatFromInt(line.len));
     }
 
-    const playerIndex = http.sendValue(BASE_URL ++ "/login", null);
-    self = if (playerIndex == 1) &player1 else &player2;
-    other = if (playerIndex == 1) &player2 else &player1;
-    self.position = paths[0];
-    other.position = paths[0];
+    playerIndex = http.sendValue(i32, BASE_URL ++ "/login", null);
+    player1.position = paths[0];
+    player2.position = paths[0];
 
     textbox = gfx.loadTexture("assets/ui_textbox.png");
 
     audio.playMusic("assets/bgm.ogg");
+
+    const thread = std.Thread.spawn(.{}, syncProgress, .{}) catch unreachable;
+    thread.detach();
 }
 
 pub fn deinit() void {
-    _ = http.sendValue(BASE_URL ++ "/logout", self.index);
+    _ = http.sendValue(i32, BASE_URL ++ "/logout", playerIndex);
     text.deinit();
     audio.stopMusic();
 }
@@ -96,13 +96,23 @@ pub fn event(ev: *const window.Event) void {
                 currentChar = 0;
             }
 
-            if (currentLine == lines.len) player1Progress = 1;
+            if (currentLine == lines.len) {
+                if (playerIndex == 1) {
+                    player1Progress.store(1, .release);
+                } else {
+                    player2Progress.store(1, .release);
+                }
+            }
         }
     }
 }
 
-var player1Progress: f32 = 0;
+var playerIndex: i32 = 0;
+var player1Progress: std.atomic.Value(f32) = .init(0);
+var player2Progress: std.atomic.Value(f32) = .init(0);
+
 pub fn update(delta: f32) void {
+    const self = if (playerIndex == 1) &player1 else &player2;
     if (self.keydown) |key| {
         const position: math.Vector = switch (key) {
             .up => .{ .y = -SPEED * delta },
@@ -116,33 +126,17 @@ pub fn update(delta: f32) void {
 
     cameraScene.lookAt(self.position);
 
-    const target = getProgressPosition(finishedChar / totalChar);
-    if (self.position.approx(target)) {
-        self.velocity = .zero;
+    if (playerIndex == 1) {
+        player1Progress.store(finishedChar / totalChar, .release);
     } else {
-        const direction = target.sub(self.position).normalize();
-        self.velocity = direction.scale(SPEED);
-
-        if (direction.x > math.epsilon) {
-            self.current = .right;
-        } else if (direction.x < -math.epsilon) {
-            self.current = .left;
-        } else if (direction.y > math.epsilon) {
-            self.current = .down;
-        } else if (direction.y < -math.epsilon) {
-            self.current = .up;
-        }
+        player2Progress.store(finishedChar / totalChar, .release);
     }
 
-    const distance = self.velocity.scale(delta);
-    if (target.sub(self.position).length() < distance.length()) {
-        self.position = target;
-    } else {
-        self.position = self.position.add(distance);
-    }
+    updatePlayer(&player1, player1Progress.load(.acquire), delta);
+    updatePlayer(&player2, player2Progress.load(.acquire), delta);
 
-    self.currentAnimation().update(delta);
-    other.currentAnimation().update(delta);
+    player1.currentAnimation().update(delta);
+    player2.currentAnimation().update(delta);
 }
 
 pub fn render() void {
@@ -153,8 +147,8 @@ pub fn render() void {
     const background = gfx.loadTexture("assets/background.png");
     gfx.draw(background, 0, 0);
 
-    gfx.playSlice(other.currentAnimation(), other.position);
-    gfx.playSlice(self.currentAnimation(), self.position);
+    gfx.playSlice(player1.currentAnimation(), player1.position);
+    gfx.playSlice(player2.currentAnimation(), player2.position);
 
     gfx.camera = cameraUI;
     gfx.draw(textbox, 0, 720 - textbox.height());
@@ -175,6 +169,29 @@ pub fn render() void {
     endDisplayText();
 }
 
+fn updatePlayer(player: *Player, progress: f32, delta: f32) void {
+    const target = getProgressPosition(progress);
+    if (player.position.approx(target)) {
+        player.velocity = .zero;
+    } else {
+        const direction = target.sub(player.position).normalize();
+        player.velocity = direction.scale(SPEED);
+
+        player.current = if (direction.x > math.epsilon) .right //
+            else if (direction.x < -math.epsilon) .left //
+            else if (direction.y > math.epsilon) .down //
+            else if (direction.y < -math.epsilon) .up //
+            else unreachable;
+    }
+
+    const distance = player.velocity.scale(delta);
+    if (target.sub(player.position).length() < distance.length()) {
+        player.position = target;
+    } else {
+        player.position = player.position.add(distance);
+    }
+}
+
 fn getProgressPosition(progress: f32) math.Vector {
     if (progress == 0) return paths[0];
     if (progress >= 1) return paths[paths.len - 1];
@@ -189,6 +206,21 @@ fn getProgressPosition(progress: f32) math.Vector {
         remaining -= path.z;
     }
     unreachable;
+}
+
+fn syncProgress() void {
+    while (true) {
+        std.time.sleep(100 * std.time.ns_per_ms);
+        if (playerIndex == 1) {
+            var progress = player1Progress.load(.acquire);
+            progress = http.sendValue(f32, BASE_URL ++ "/update1", progress);
+            player2Progress.store(progress, .release);
+        } else {
+            var progress = player2Progress.load(.acquire);
+            progress = http.sendValue(f32, BASE_URL ++ "/update2", progress);
+            player1Progress.store(progress, .release);
+        }
+    }
 }
 
 const sk = @import("sokol");

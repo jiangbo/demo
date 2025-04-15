@@ -10,7 +10,7 @@ pub fn deinit() void {
     client.deinit();
 }
 
-pub fn sendValue(url: []const u8, value: ?i32) i32 {
+pub fn sendValue(T: type, url: []const u8, value: ?T) T {
     var buffer: [16]u8 = undefined;
 
     var response: std.ArrayListUnmanaged(u8) = .initBuffer(&buffer);
@@ -25,7 +25,7 @@ pub fn sendValue(url: []const u8, value: ?i32) i32 {
     if (status.status != .ok)
         std.debug.panic("request error: {}", .{status.status});
 
-    return std.mem.bytesToValue(i32, response.items);
+    return std.mem.bytesToValue(T, response.items);
 }
 
 pub fn sendAlloc(alloc: std.mem.Allocator, url: []const u8) std.ArrayList(u8) {
