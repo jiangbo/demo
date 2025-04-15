@@ -61,7 +61,11 @@ pub fn drawRectangle(rect: math.Rectangle) void {
 }
 
 pub fn draw(tex: Texture, x: f32, y: f32) void {
-    drawFlipX(tex, .{ .x = x, .y = y }, false);
+    drawV(tex, .{ .x = x, .y = y });
+}
+
+pub fn drawV(tex: Texture, position: math.Vector) void {
+    drawFlipX(tex, position, false);
 }
 
 pub fn drawFlipX(tex: Texture, pos: math.Vector, flipX: bool) void {

@@ -45,6 +45,11 @@ var finishedChar: f32 = 0;
 var player1: Player = undefined;
 var player2: Player = undefined;
 
+var ui1: gfx.Texture = undefined;
+var ui2: gfx.Texture = undefined;
+var ui3: gfx.Texture = undefined;
+var uiFight: gfx.Texture = undefined;
+
 var textbox: gfx.Texture = undefined;
 
 pub fn init(allocator: std.mem.Allocator) void {
@@ -70,8 +75,19 @@ pub fn init(allocator: std.mem.Allocator) void {
     playerIndex = http.sendValue(i32, BASE_URL ++ "/login", null);
     player1.position = paths[0];
     player2.position = paths[0];
+    cameraScene.lookAt(paths[0]);
 
+    ui1 = gfx.loadTexture("assets/ui_1.png");
+    ui2 = gfx.loadTexture("assets/ui_2.png");
+    ui3 = gfx.loadTexture("assets/ui_3.png");
+    uiFight = gfx.loadTexture("assets/ui_fight.png");
     textbox = gfx.loadTexture("assets/ui_textbox.png");
+
+    if (playerIndex == 1) {
+        player1Progress.store(0, .release);
+    } else {
+        player2Progress.store(0, .release);
+    }
 
     audio.playMusic("assets/bgm.ogg");
 
@@ -86,9 +102,20 @@ pub fn deinit() void {
 }
 
 pub fn event(ev: *const window.Event) void {
+    if (stage != .racing) return;
+
     if (ev.type == .CHAR and ev.char_code > 0 and ev.char_code < 127) {
         const line = lines.get(currentLine);
         if (@as(u8, @intCast(ev.char_code)) == line[currentChar]) {
+            const rand = math.randomU8(1, 5);
+            switch (rand) {
+                1 => audio.playSound("assets/click_1.ogg"),
+                2 => audio.playSound("assets/click_2.ogg"),
+                3 => audio.playSound("assets/click_3.ogg"),
+                4 => audio.playSound("assets/click_4.ogg"),
+                else => unreachable,
+            }
+
             currentChar += 1;
             finishedChar += 1;
             if (currentChar == line.len) {
@@ -108,10 +135,39 @@ pub fn event(ev: *const window.Event) void {
 }
 
 var playerIndex: i32 = 0;
-var player1Progress: std.atomic.Value(f32) = .init(0);
-var player2Progress: std.atomic.Value(f32) = .init(0);
+var player1Progress: std.atomic.Value(f32) = .init(-1);
+var player2Progress: std.atomic.Value(f32) = .init(-1);
+var count: i8 = 4;
+var timer: window.Timer = .init(1);
 
 pub fn update(delta: f32) void {
+    player1.currentAnimation().update(delta);
+    player2.currentAnimation().update(delta);
+
+    if (stage == .waiting) {
+        if (player1Progress.load(.acquire) >= 0 //
+        and player2Progress.load(.acquire) >= 0) {
+            stage = .ready;
+        }
+    } else if (stage == .ready) {
+        if (timer.isFinishedAfterUpdate(delta)) {
+            timer.reset();
+            count -= 1;
+            switch (count) {
+                3 => audio.playSound("assets/ui_3.ogg"),
+                2 => audio.playSound("assets/ui_2.ogg"),
+                1 => audio.playSound("assets/ui_1.ogg"),
+                0 => audio.playSound("assets/ui_fight.ogg"),
+                -1 => stage = .racing,
+                else => unreachable,
+            }
+        }
+    } else {
+        updateScene(delta);
+    }
+}
+
+fn updateScene(delta: f32) void {
     const self = if (playerIndex == 1) &player1 else &player2;
     if (self.keydown) |key| {
         const position: math.Vector = switch (key) {
@@ -146,6 +202,28 @@ pub fn render() void {
     gfx.camera = cameraScene;
     const background = gfx.loadTexture("assets/background.png");
     gfx.draw(background, 0, 0);
+
+    if (stage == .waiting) {
+        if (playerIndex == 1) {
+            gfx.playSlice(player1.currentAnimation(), player1.position);
+        } else {
+            gfx.playSlice(player2.currentAnimation(), player2.position);
+        }
+        return;
+    } else if (stage == .ready) {
+        gfx.playSlice(player1.currentAnimation(), player1.position);
+        gfx.playSlice(player2.currentAnimation(), player2.position);
+
+        gfx.camera = cameraUI;
+        switch (count) {
+            3 => gfx.drawV(ui3, window.size.sub(ui3.size()).scale(0.5)),
+            2 => gfx.drawV(ui2, window.size.sub(ui2.size()).scale(0.5)),
+            1 => gfx.drawV(ui1, window.size.sub(ui1.size()).scale(0.5)),
+            0 => gfx.drawV(uiFight, window.size.sub(uiFight.size()).scale(0.5)),
+            else => {},
+        }
+        return;
+    }
 
     gfx.playSlice(player1.currentAnimation(), player1.position);
     gfx.playSlice(player2.currentAnimation(), player2.position);
@@ -211,6 +289,7 @@ fn getProgressPosition(progress: f32) math.Vector {
 fn syncProgress() void {
     while (true) {
         std.time.sleep(100 * std.time.ns_per_ms);
+
         if (playerIndex == 1) {
             var progress = player1Progress.load(.acquire);
             progress = http.sendValue(f32, BASE_URL ++ "/update1", progress);

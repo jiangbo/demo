@@ -35,6 +35,10 @@ pub const Texture = struct {
         return @floatFromInt(sk.gfx.queryImageHeight(self.value));
     }
 
+    pub fn size(self: Texture) math.Vector {
+        return .{ .x = self.width(), .y = self.height() };
+    }
+
     pub fn deinit(self: *Texture) void {
         sk.gfx.destroyImage(self.value);
     }
