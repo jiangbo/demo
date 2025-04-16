@@ -76,6 +76,14 @@ pub const Vector3 = struct {
         return self.x * other.x + self.y * other.y + self.z * other.z;
     }
 
+    pub fn mul(self: Vector3, other: Vector3) Vector3 {
+        return .{ .x = self.x * other.x, .y = self.y * other.y, .z = self.z * other.z };
+    }
+
+    pub fn div(self: Vector3, other: Vector3) Vector3 {
+        return .{ .x = self.x / other.x, .y = self.y / other.y, .z = self.z / other.z };
+    }
+
     pub fn length(self: Vector3) f32 {
         return std.math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z);
     }
@@ -99,22 +107,6 @@ pub const Vector3 = struct {
 pub const Rectangle = struct {
     position: Vector = .zero,
     size: Vector = .zero,
-
-    pub fn x(self: Rectangle) f32 {
-        return self.position.x;
-    }
-
-    pub fn y(self: Rectangle) f32 {
-        return self.position.y;
-    }
-
-    pub fn w(self: Rectangle) f32 {
-        return self.size.x;
-    }
-
-    pub fn h(self: Rectangle) f32 {
-        return self.size.y;
-    }
 
     pub fn left(self: Rectangle) f32 {
         return self.position.x;

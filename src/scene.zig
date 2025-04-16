@@ -22,6 +22,9 @@ pub fn render() void {
 
     const background = gfx.loadTexture("assets/background.png");
     gfx.draw(background, window.size.sub(background.size()).scale(0.5));
+
+    const fire = gfx.loadTexture("assets/barrel_fire_1.png");
+    gfx.drawOptions(fire, .{ .angle = 45, .pivot = .{} });
 }
 
 pub fn deinit() void {}

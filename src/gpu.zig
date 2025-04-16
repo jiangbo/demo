@@ -36,7 +36,7 @@ pub const Texture = struct {
     }
 
     pub fn size(self: Texture) math.Vector {
-        return .{ .x = self.width(), .y = self.height() };
+        return .{ .x = self.width(), .y = self.height(), .z = 1 };
     }
 
     pub fn deinit(self: *Texture) void {
@@ -194,52 +194,50 @@ pub const Renderer = struct {
     };
 
     pub fn draw(self: *Renderer, options: DrawOptions) void {
-        const textureWidth = options.texture.width();
-        const textureHeight = options.texture.height();
+        // const textureWidth = options.texture.width();
+        // const textureHeight = options.texture.height();
 
-        var src: Rectangle = options.sourceRect;
+        const dst = options.targetRect;
 
-        if (src.w() == 0) src.size.x = textureWidth;
-        if (src.h() == 0) src.size.y = textureHeight;
-        const U0, const U1 = .{ src.x() / textureWidth, src.right() / textureWidth };
-        const V0, const V1 = .{ src.y() / textureHeight, src.bottom() / textureHeight };
+        const pos = options.sourceRect.position.div(options.texture.size());
+        const size = options.sourceRect.size.div(options.texture.size());
 
-        var dst = options.targetRect;
-        if (dst.w() == 0) dst.size.x = textureWidth;
-        if (dst.h() == 0) dst.size.y = textureHeight;
-
-        var vertex = [_]math.Vector2{
-            .{ .x = dst.x(), .y = dst.bottom() },
+        var vertex = [_]math.Vector3{
+            .{ .x = dst.position.x, .y = dst.bottom() },
             .{ .x = dst.right(), .y = dst.bottom() },
-            .{ .x = dst.right(), .y = dst.y() },
-            .{ .x = dst.x(), .y = dst.y() },
+            .{ .x = dst.right(), .y = dst.position.y },
+            .{ .x = dst.position.x, .y = dst.position.y },
         };
 
         if (options.radians != 0) {
             // 将纹理坐标系下的 pivot 转换到目标坐标系
-            const ox = dst.x() + (options.pivot.x / textureWidth) * dst.w();
-            const oy = dst.y() + (options.pivot.y / textureHeight) * dst.h();
+
+            const vec = options.pivot.div(options.texture.size()).mul(dst.size);
+            // const ox = dst.position.x + (options.pivot.x / textureWidth) * dst.size.x;
+            // const oy = dst.position.y + (options.pivot.y / textureHeight) * dst.size.y;
+            const pivot = dst.position.add(vec);
 
             const cos = @cos(options.radians);
             const sin = @sin(options.radians);
 
             for (&vertex) |*point| {
                 // 坐标平移至原点
-                const dx = point.x - ox;
-                const dy = point.y - oy;
+                // const dx = point.x - pivot.x;
+                // const dy = point.y - pivot.y;
+                const dv = point.sub(pivot);
                 // 应用旋转矩阵
-                point.x = ox + dx * cos - dy * sin;
-                point.y = oy + dx * sin + dy * cos;
+                point.x = pivot.x + dv.x * cos - dv.y * sin;
+                point.y = pivot.y + dv.x * sin + dv.y * cos;
             }
         }
 
         const vertexBuffer = sk.gfx.makeBuffer(.{
             .data = sk.gfx.asRange(&[_]f32{
                 // 顶点和颜色
-                vertex[0].x, vertex[0].y, 0.5, 1.0, 1.0, 1.0, U0, V1,
-                vertex[1].x, vertex[1].y, 0.5, 1.0, 1.0, 1.0, U1, V1,
-                vertex[2].x, vertex[2].y, 0.5, 1.0, 1.0, 1.0, U1, V0,
-                vertex[3].x, vertex[3].y, 0.5, 1.0, 1.0, 1.0, U0, V0,
+                vertex[0].x, vertex[0].y, 0.5, 1.0, 1.0, 1.0, pos.x,  size.y,
+                vertex[1].x, vertex[1].y, 0.5, 1.0, 1.0, 1.0, size.x, size.y,
+                vertex[2].x, vertex[2].y, 0.5, 1.0, 1.0, 1.0, size.x, pos.y,
+                vertex[3].x, vertex[3].y, 0.5, 1.0, 1.0, 1.0, pos.x,  pos.y,
             }),
         });
 
