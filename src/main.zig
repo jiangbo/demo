@@ -6,7 +6,6 @@ const math = @import("math.zig");
 const gfx = @import("graphics.zig");
 const audio = @import("audio.zig");
 const scene = @import("scene.zig");
-const http = @import("http.zig");
 
 var soundBuffer: [10]audio.Sound = undefined;
 
@@ -15,8 +14,7 @@ fn init() callconv(.C) void {
     gfx.init(window.size);
     audio.init(&soundBuffer);
 
-    http.init(allocator);
-    scene.init(allocator);
+    scene.init();
     timer = std.time.Timer.start() catch unreachable;
 }
 
@@ -33,7 +31,6 @@ fn frame() callconv(.C) void {
 fn deinit() callconv(.C) void {
     scene.deinit();
 
-    http.deinit();
     audio.deinit();
     gfx.deinit();
     cache.deinit();
@@ -53,7 +50,7 @@ pub fn main() void {
     math.rand = prng.random();
 
     window.run(.{
-        .window_title = "哈基米大冒险",
+        .window_title = "生化危鸡",
         .width = @as(i32, @intFromFloat(window.size.x)),
         .height = @as(i32, @intFromFloat(window.size.y)),
         .high_dpi = false,
