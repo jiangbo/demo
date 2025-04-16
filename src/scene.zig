@@ -209,6 +209,22 @@ pub fn render() void {
         } else {
             gfx.playSlice(player2.currentAnimation(), player2.position);
         }
+
+        const fire = gfx.loadTexture("assets/barrel_fire_1.png");
+        gfx.drawOptions(fire, .{
+            .angle = 45,
+            .pivot = .{ .x = 30, .y = 30 },
+            .targetRect = .{
+                .x = player1.position.x,
+                .y = player1.position.y,
+            },
+        });
+        gfx.drawRectangle(.{
+            .x = player1.position.x - cameraScene.rect.x,
+            .y = player1.position.y - cameraScene.rect.y,
+            .w = fire.width(),
+            .h = fire.height(),
+        });
         return;
     } else if (stage == .ready) {
         gfx.playSlice(player1.currentAnimation(), player1.position);

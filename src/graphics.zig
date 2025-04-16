@@ -80,18 +80,21 @@ pub fn drawFlipX(tex: Texture, pos: math.Vector, flipX: bool) void {
 pub const DrawOptions = struct {
     sourceRect: ?math.Rectangle = null,
     targetRect: math.Rectangle,
+    angle: f32 = 0,
+    pivot: math.Vector = .zero,
 };
 
 pub fn drawOptions(texture: Texture, options: DrawOptions) void {
-    var target = options.targetRect;
-    target.x = target.x - camera.rect.x;
-    target.y = target.y - camera.rect.y;
+    matrix[12] = -1 - camera.rect.x * matrix[0];
+    matrix[13] = 1 - camera.rect.y * matrix[5];
 
     renderer.draw(.{
         .uniform = .{ .vp = matrix },
         .texture = texture,
         .sourceRect = options.sourceRect,
-        .targetRect = target,
+        .targetRect = options.targetRect,
+        .radians = std.math.degreesToRadians(options.angle),
+        .pivot = options.pivot,
     });
 }
 

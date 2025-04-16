@@ -119,6 +119,10 @@ pub const Rectangle = struct {
         return x >= self.left and x < self.right and
             y >= self.top and y < self.bottom;
     }
+
+    pub fn position(self: Rectangle) Vector3 {
+        return .{ .x = self.x, .y = self.y };
+    }
 };
 
 pub var rand: std.Random = undefined;

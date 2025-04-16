@@ -189,6 +189,8 @@ pub const Renderer = struct {
         texture: Texture,
         sourceRect: ?Rectangle = null,
         targetRect: Rectangle,
+        radians: f32 = 0,
+        pivot: math.Vector = .zero,
     };
 
     pub fn draw(self: *Renderer, options: DrawOptions) void {
@@ -208,13 +210,39 @@ pub const Renderer = struct {
         var dst = options.targetRect;
         if (dst.w == 0) dst.w = textureWidth;
         if (dst.h == 0) dst.h = textureHeight;
+
+        var vertex = [_]math.Vector2{
+            .{ .x = dst.x, .y = dst.bottom() },
+            .{ .x = dst.right(), .y = dst.bottom() },
+            .{ .x = dst.right(), .y = dst.y },
+            .{ .x = dst.x, .y = dst.y },
+        };
+
+        if (options.radians != 0) {
+            // 将纹理坐标系下的 pivot 转换到目标坐标系
+            const ox = dst.x + (options.pivot.x / textureWidth) * dst.w;
+            const oy = dst.y + (options.pivot.y / textureHeight) * dst.h;
+
+            const cos = @cos(options.radians);
+            const sin = @sin(options.radians);
+
+            for (&vertex) |*point| {
+                // 坐标平移至原点
+                const dx = point.x - ox;
+                const dy = point.y - oy;
+                // 应用旋转矩阵
+                point.x = ox + dx * cos - dy * sin;
+                point.y = oy + dx * sin + dy * cos;
+            }
+        }
+
         const vertexBuffer = sk.gfx.makeBuffer(.{
             .data = sk.gfx.asRange(&[_]f32{
                 // 顶点和颜色
-                dst.x,       dst.bottom(), 0.5, 1.0, 1.0, 1.0, U0, V1,
-                dst.right(), dst.bottom(), 0.5, 1.0, 1.0, 1.0, U1, V1,
-                dst.right(), dst.y,        0.5, 1.0, 1.0, 1.0, U1, V0,
-                dst.x,       dst.y,        0.5, 1.0, 1.0, 1.0, U0, V0,
+                vertex[0].x, vertex[0].y, 0.5, 1.0, 1.0, 1.0, U0, V1,
+                vertex[1].x, vertex[1].y, 0.5, 1.0, 1.0, 1.0, U1, V1,
+                vertex[2].x, vertex[2].y, 0.5, 1.0, 1.0, 1.0, U1, V0,
+                vertex[3].x, vertex[3].y, 0.5, 1.0, 1.0, 1.0, U0, V0,
             }),
         });
 
