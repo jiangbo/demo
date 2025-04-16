@@ -194,9 +194,6 @@ pub const Renderer = struct {
     };
 
     pub fn draw(self: *Renderer, options: DrawOptions) void {
-        // const textureWidth = options.texture.width();
-        // const textureHeight = options.texture.height();
-
         const dst = options.targetRect;
 
         const pos = options.sourceRect.position.div(options.texture.size());
@@ -210,24 +207,11 @@ pub const Renderer = struct {
         };
 
         if (options.radians != 0) {
-            // 将纹理坐标系下的 pivot 转换到目标坐标系
-
-            const vec = options.pivot.div(options.texture.size()).mul(dst.size);
-            // const ox = dst.position.x + (options.pivot.x / textureWidth) * dst.size.x;
-            // const oy = dst.position.y + (options.pivot.y / textureHeight) * dst.size.y;
-            const pivot = dst.position.add(vec);
-
-            const cos = @cos(options.radians);
-            const sin = @sin(options.radians);
+            const percent = options.pivot.div(options.texture.size());
+            const pivot = dst.position.add(percent.mul(dst.size));
 
             for (&vertex) |*point| {
-                // 坐标平移至原点
-                // const dx = point.x - pivot.x;
-                // const dy = point.y - pivot.y;
-                const dv = point.sub(pivot);
-                // 应用旋转矩阵
-                point.x = pivot.x + dv.x * cos - dv.y * sin;
-                point.y = pivot.y + dv.x * sin + dv.y * cos;
+                point.* = pivot.add(point.sub(pivot).rotate(options.radians));
             }
         }
 

@@ -93,6 +93,16 @@ pub const Vector3 = struct {
         return .{ .x = self.x / len, .y = self.y / len, .z = self.z / len };
     }
 
+    pub fn rotate(self: Vector3, radians: f32) Vector3 {
+        const cos = @cos(radians);
+        const sin = @sin(radians);
+        return .{
+            .x = self.x * cos - self.y * sin,
+            .y = self.x * sin + self.y * cos,
+            .z = self.z,
+        };
+    }
+
     pub fn angle(self: Vector3) f32 {
         return std.math.atan2(self.y, self.x);
     }
