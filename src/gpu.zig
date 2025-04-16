@@ -187,7 +187,7 @@ pub const Renderer = struct {
     pub const DrawOptions = struct {
         uniform: UniformParams,
         texture: Texture,
-        sourceRect: ?Rectangle = null,
+        sourceRect: Rectangle,
         targetRect: Rectangle,
         radians: f32 = 0,
         pivot: math.Vector = .zero,
@@ -197,31 +197,28 @@ pub const Renderer = struct {
         const textureWidth = options.texture.width();
         const textureHeight = options.texture.height();
 
-        var src: Rectangle = options.sourceRect orelse .{
-            .w = textureWidth,
-            .h = textureHeight,
-        };
+        var src: Rectangle = options.sourceRect;
 
-        if (src.w == 0) src.w = textureWidth;
-        if (src.h == 0) src.h = textureHeight;
-        const U0, const U1 = .{ src.x / textureWidth, src.right() / textureWidth };
-        const V0, const V1 = .{ src.y / textureHeight, src.bottom() / textureHeight };
+        if (src.w() == 0) src.size.x = textureWidth;
+        if (src.h() == 0) src.size.y = textureHeight;
+        const U0, const U1 = .{ src.x() / textureWidth, src.right() / textureWidth };
+        const V0, const V1 = .{ src.y() / textureHeight, src.bottom() / textureHeight };
 
         var dst = options.targetRect;
-        if (dst.w == 0) dst.w = textureWidth;
-        if (dst.h == 0) dst.h = textureHeight;
+        if (dst.w() == 0) dst.size.x = textureWidth;
+        if (dst.h() == 0) dst.size.y = textureHeight;
 
         var vertex = [_]math.Vector2{
-            .{ .x = dst.x, .y = dst.bottom() },
+            .{ .x = dst.x(), .y = dst.bottom() },
             .{ .x = dst.right(), .y = dst.bottom() },
-            .{ .x = dst.right(), .y = dst.y },
-            .{ .x = dst.x, .y = dst.y },
+            .{ .x = dst.right(), .y = dst.y() },
+            .{ .x = dst.x(), .y = dst.y() },
         };
 
         if (options.radians != 0) {
             // 将纹理坐标系下的 pivot 转换到目标坐标系
-            const ox = dst.x + (options.pivot.x / textureWidth) * dst.w;
-            const oy = dst.y + (options.pivot.y / textureHeight) * dst.h;
+            const ox = dst.x() + (options.pivot.x / textureWidth) * dst.w();
+            const oy = dst.y() + (options.pivot.y / textureHeight) * dst.h();
 
             const cos = @cos(options.radians);
             const sin = @sin(options.radians);

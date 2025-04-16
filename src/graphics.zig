@@ -10,16 +10,6 @@ pub const Texture = gpu.Texture;
 pub const Camera = struct {
     rect: math.Rectangle = .{},
 
-    pub fn setPosition(self: *Camera, pos: math.Vector) void {
-        self.rect.x = pos.x;
-        self.rect.y = pos.y;
-    }
-
-    pub fn setSize(self: *Camera, size: math.Vector) void {
-        self.rect.w = size.x;
-        self.rect.h = size.y;
-    }
-
     pub fn lookAt(self: *Camera, pos: math.Vector) void {
         self.rect.x = pos.x - self.rect.w / 2;
         self.rect.y = pos.y - self.rect.h / 2;
@@ -60,33 +50,29 @@ pub fn drawRectangle(rect: math.Rectangle) void {
     gpu.drawRectangleLine(rect);
 }
 
-pub fn draw(tex: Texture, x: f32, y: f32) void {
-    drawV(tex, .{ .x = x, .y = y });
-}
-
-pub fn drawV(tex: Texture, position: math.Vector) void {
+pub fn draw(tex: Texture, position: math.Vector) void {
     drawFlipX(tex, position, false);
 }
 
 pub fn drawFlipX(tex: Texture, pos: math.Vector, flipX: bool) void {
-    const target: math.Rectangle = .{ .x = pos.x, .y = pos.y };
-    const src = math.Rectangle{
-        .w = if (flipX) -tex.width() else tex.width(),
-    };
+    const target: math.Rectangle = .{ .position = pos };
+    const src = math.Rectangle{ .size = .{
+        .x = if (flipX) -tex.width() else tex.width(),
+    } };
 
     drawOptions(tex, .{ .sourceRect = src, .targetRect = target });
 }
 
 pub const DrawOptions = struct {
-    sourceRect: ?math.Rectangle = null,
+    sourceRect: math.Rectangle,
     targetRect: math.Rectangle,
     angle: f32 = 0,
     pivot: math.Vector = .zero,
 };
 
 pub fn drawOptions(texture: Texture, options: DrawOptions) void {
-    matrix[12] = -1 - camera.rect.x * matrix[0];
-    matrix[13] = 1 - camera.rect.y * matrix[5];
+    matrix[12] = -1 - camera.rect.left() * matrix[0];
+    matrix[13] = 1 - camera.rect.top() * matrix[5];
 
     renderer.draw(.{
         .uniform = .{ .vp = matrix },

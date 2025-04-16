@@ -72,6 +72,10 @@ pub const Vector3 = struct {
         return .{ .x = self.x * scalar, .y = self.y * scalar, .z = self.z * scalar };
     }
 
+    pub fn dot(self: Vector3, other: Vector3) f32 {
+        return self.x * other.x + self.y * other.y + self.z * other.z;
+    }
+
     pub fn length(self: Vector3) f32 {
         return std.math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z);
     }
@@ -93,35 +97,49 @@ pub const Vector3 = struct {
 };
 
 pub const Rectangle = struct {
-    x: f32 = 0,
-    y: f32 = 0,
-    w: f32 = 0,
-    h: f32 = 0,
+    position: Vector = .zero,
+    size: Vector = .zero,
 
-    pub fn init(x1: f32, y1: f32, x2: f32, y2: f32) Rectangle {
-        return .{ .x = x1, .y = y1, .w = x2 - x1, .h = y2 - y1 };
+    pub fn x(self: Rectangle) f32 {
+        return self.position.x;
+    }
+
+    pub fn y(self: Rectangle) f32 {
+        return self.position.y;
+    }
+
+    pub fn w(self: Rectangle) f32 {
+        return self.size.x;
+    }
+
+    pub fn h(self: Rectangle) f32 {
+        return self.size.y;
+    }
+
+    pub fn left(self: Rectangle) f32 {
+        return self.position.x;
+    }
+
+    pub fn top(self: Rectangle) f32 {
+        return self.position.y;
     }
 
     pub fn right(self: Rectangle) f32 {
-        return self.x + self.w;
+        return self.position.x + self.size.x;
     }
 
     pub fn bottom(self: Rectangle) f32 {
-        return self.y + self.h;
+        return self.position.y + self.size.y;
     }
 
-    pub fn intersects(self: Rectangle, other: Rectangle) bool {
-        return self.x < other.right() and self.right() > other.x and
-            self.y < other.bottom() and self.bottom() > other.y;
+    pub fn intersect(self: Rectangle, other: Rectangle) bool {
+        return self.left() < other.right() and self.right() > other.left() and
+            self.top() < other.bottom() and self.bottom() > other.top();
     }
 
-    pub fn contains(self: Rectangle, x: f32, y: f32) bool {
-        return x >= self.left and x < self.right and
-            y >= self.top and y < self.bottom;
-    }
-
-    pub fn position(self: Rectangle) Vector3 {
-        return .{ .x = self.x, .y = self.y };
+    pub fn contains(self: Rectangle, point: Vector) bool {
+        return point.x >= self.left() and point.x < self.right() and
+            point.y >= self.top() and point.y < self.bottom();
     }
 };
 
