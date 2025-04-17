@@ -58,6 +58,10 @@ var spawnIntervalTimer: window.Timer = .init(1.5);
 var spawnNumberTimer: window.Timer = .init(8);
 var spawnNumber: usize = 0;
 
+var health: u8 = 10;
+var heart: gfx.Texture = undefined;
+var score: usize = 0;
+
 pub fn init() void {
     window.showCursor(false);
 
@@ -72,6 +76,8 @@ pub fn init() void {
     animationFire = .load("assets/barrel_fire_{}.png", 3);
     animationFire.loop = false;
     animationFire.timer.duration = 0.04;
+
+    heart = gfx.loadTexture("assets/heart.png");
 
     audio.playMusic("assets/bgm.ogg");
 }
@@ -135,10 +141,15 @@ pub fn update(delta: f32) void {
                 chicken.animationRun.update(delta);
             } else {
                 chicken.animationExplosion.update(delta);
-                if (chicken.animationExplosion.finished()) chicken.valid = false;
+                if (chicken.animationExplosion.finished())
+                    chicken.valid = false;
             }
 
-            if (chicken.position.y > window.size.y) chicken.valid = false;
+            if (chicken.position.y > window.size.y) {
+                chicken.valid = false;
+                health -|= 1;
+                audio.playSound("assets/hurt.ogg");
+            }
         }
     }
 
@@ -211,6 +222,7 @@ fn checkCollision() void {
                 chicken.alive = false;
                 audio.playSound("assets/explosion.ogg");
                 bullet.valid = false;
+                score += 1;
             }
         }
     }
@@ -246,6 +258,16 @@ pub fn render() void {
     } else {
         playOptions(&animationFire, options);
     }
+
+    for (0..health) |index| {
+        const x = 15 + (heart.width() + 10) * @as(f32, @floatFromInt(index));
+        gfx.draw(heart, .{ .x = x, .y = 15 });
+    }
+
+    var buffer: [50]u8 = undefined;
+    const text = std.fmt.bufPrintZ(&buffer, "SCORE: {d}", .{score});
+    window.displayText(53, 1, text catch unreachable);
+    window.endDisplayText();
 
     gfx.draw(crosshair, crosshairPosition.sub(crosshair.size().scale(0.5)));
 }
