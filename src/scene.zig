@@ -62,6 +62,26 @@ var health: u8 = 10;
 var heart: gfx.Texture = undefined;
 var score: usize = 0;
 
+pub const ShakeCamera = struct {
+    position: math.Vector = .zero,
+    timer: window.Timer,
+    strength: f32 = 0.1,
+
+    pub fn update(self: *ShakeCamera, delta: f32) void {
+        if (self.timer.isRunningAfterUpdate(delta)) {
+            const offset: math.Vector = .{
+                .x = math.randomF32(-50, 50),
+                .y = math.randomF32(-50, 50),
+            };
+            self.position = offset.scale(self.strength);
+        } else {
+            self.position = .zero;
+        }
+    }
+};
+
+var camera: ShakeCamera = .{ .timer = .init(0.3) };
+
 pub fn init() void {
     window.showCursor(false);
 
@@ -78,6 +98,8 @@ pub fn init() void {
     animationFire.timer.duration = 0.04;
 
     heart = gfx.loadTexture("assets/heart.png");
+
+    camera.timer.finished = true;
 
     audio.playMusic("assets/bgm.ogg");
 }
@@ -104,6 +126,8 @@ pub fn update(delta: f32) void {
         spawnNumberTimer.reset();
         spawnNumber += 1;
     }
+
+    camera.update(delta);
 
     if (!coolDown) {
         animationFire.update(delta);
@@ -188,6 +212,7 @@ fn spawnChicken() void {
 fn fire() void {
     animationFire.reset();
     coolDown = false;
+    camera.timer.reset();
 
     const barrelCenter: math.Vector = .{ .x = 640, .y = 610 };
 
@@ -232,6 +257,7 @@ pub fn render() void {
     gfx.beginDraw();
     defer gfx.endDraw();
 
+    gfx.camera.rect.position = camera.position;
     gfx.draw(background, window.size.sub(background.size()).scale(0.5));
 
     for (chickens.slice()) |*chicken| {
@@ -259,6 +285,9 @@ pub fn render() void {
         playOptions(&animationFire, options);
     }
 
+    gfx.draw(crosshair, crosshairPosition.sub(crosshair.size().scale(0.5)));
+
+    gfx.camera.rect.position = .zero;
     for (0..health) |index| {
         const x = 15 + (heart.width() + 10) * @as(f32, @floatFromInt(index));
         gfx.draw(heart, .{ .x = x, .y = 15 });
@@ -268,8 +297,6 @@ pub fn render() void {
     const text = std.fmt.bufPrintZ(&buffer, "SCORE: {d}", .{score});
     window.displayText(53, 1, text catch unreachable);
     window.endDisplayText();
-
-    gfx.draw(crosshair, crosshairPosition.sub(crosshair.size().scale(0.5)));
 }
 
 fn playOptions(frame: *const gfx.SliceFrameAnimation, options: gfx.DrawOptions) void {
