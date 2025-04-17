@@ -72,6 +72,8 @@ pub fn init() void {
     animationFire = .load("assets/barrel_fire_{}.png", 3);
     animationFire.loop = false;
     animationFire.timer.duration = 0.04;
+
+    audio.playMusic("assets/bgm.ogg");
 }
 
 pub fn event(ev: *const window.Event) void {
@@ -104,14 +106,43 @@ pub fn update(delta: f32) void {
 
     if (coolDown and fireKeyDown) fire();
 
-    for (chickens.slice()) |*chicken| {
-        chicken.position.y += chicken.speed * delta;
-        chicken.animationRun.update(delta);
+    {
+        var i: usize = bullets.len;
+        while (i > 0) : (i -= 1) {
+            var bullet: *Bullet = &bullets.buffer[i - 1];
+            if (!bullet.valid) {
+                _ = bullets.swapRemove(i - 1);
+                continue;
+            }
+
+            bullet.position = bullet.position.add(bullet.velocity.scale(delta));
+            const windowRect: math.Rectangle = .{ .size = window.size };
+            if (!windowRect.contains(bullet.position)) bullet.valid = false;
+        }
     }
 
-    for (bullets.slice()) |*bullet| {
-        bullet.position = bullet.position.add(bullet.velocity.scale(delta));
+    {
+        var i: usize = chickens.len;
+        while (i > 0) : (i -= 1) {
+            var chicken: *Chicken = &chickens.buffer[i - 1];
+            if (!chicken.valid) {
+                _ = chickens.swapRemove(i - 1);
+                continue;
+            }
+
+            if (chicken.alive) {
+                chicken.position.y += chicken.speed * delta;
+                chicken.animationRun.update(delta);
+            } else {
+                chicken.animationExplosion.update(delta);
+                if (chicken.animationExplosion.finished()) chicken.valid = false;
+            }
+
+            if (chicken.position.y > window.size.y) chicken.valid = false;
+        }
     }
+
+    checkCollision();
 }
 
 fn spawnChicken() void {
@@ -154,6 +185,35 @@ fn fire() void {
     bullets.append(bullet) catch {
         std.log.info("bullet array is full", .{});
     };
+
+    const rand = math.randomU8(1, 4);
+    switch (rand) {
+        1 => audio.playSound("assets/fire_1.ogg"),
+        2 => audio.playSound("assets/fire_2.ogg"),
+        3 => audio.playSound("assets/fire_3.ogg"),
+        else => unreachable,
+    }
+}
+
+fn checkCollision() void {
+    for (bullets.slice()) |*bullet| {
+        if (!bullet.valid) continue;
+        for (chickens.slice()) |*chicken| {
+            if (!chicken.alive or !chicken.valid) continue;
+
+            const size: math.Vector = .init(30, 40);
+            const chickenRect: math.Rectangle = .{
+                .size = size,
+                .position = chicken.position,
+            };
+
+            if (chickenRect.contains(bullet.position)) {
+                chicken.alive = false;
+                audio.playSound("assets/explosion.ogg");
+                bullet.valid = false;
+            }
+        }
+    }
 }
 
 pub fn render() void {
@@ -163,7 +223,11 @@ pub fn render() void {
     gfx.draw(background, window.size.sub(background.size()).scale(0.5));
 
     for (chickens.slice()) |*chicken| {
-        gfx.playSlice(&chicken.animationRun, chicken.position);
+        if (chicken.alive) {
+            gfx.playSlice(&chicken.animationRun, chicken.position);
+        } else {
+            gfx.playSlice(&chicken.animationExplosion, chicken.position);
+        }
     }
 
     for (bullets.slice()) |*bullet| {

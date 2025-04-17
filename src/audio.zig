@@ -98,7 +98,7 @@ fn addItem(slice: anytype, item: anytype) usize {
             return index;
         }
     }
-    std.debug.panic("too many items: {any}", .{item});
+    @panic("too many audio sound");
 }
 
 fn callback(b: [*c]f32, frames: i32, channels: i32) callconv(.C) void {

@@ -7,11 +7,9 @@ const gfx = @import("graphics.zig");
 const audio = @import("audio.zig");
 const scene = @import("scene.zig");
 
-var soundBuffer: [10]audio.Sound = undefined;
+var soundBuffer: [20]audio.Sound = undefined;
 
 fn init() callconv(.C) void {
-    // window.showCursor(false);
-
     cache.init(allocator);
     gfx.init(window.size);
     audio.init(&soundBuffer);
