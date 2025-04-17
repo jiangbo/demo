@@ -61,6 +61,7 @@ var spawnNumber: usize = 0;
 var health: u8 = 10;
 var heart: gfx.Texture = undefined;
 var score: usize = 0;
+var deadTimer: window.Timer = .init(5);
 
 pub const ShakeCamera = struct {
     position: math.Vector = .zero,
@@ -105,6 +106,8 @@ pub fn init() void {
 }
 
 pub fn event(ev: *const window.Event) void {
+    if (health == 0) return;
+
     if (ev.type == .MOUSE_DOWN) fireKeyDown = true;
     if (ev.type == .MOUSE_UP) fireKeyDown = false;
     if (ev.type == .KEY_DOWN and ev.key_code == .SPACE) fireKeyDown = true;
@@ -117,6 +120,13 @@ pub fn event(ev: *const window.Event) void {
     }
 }
 pub fn update(delta: f32) void {
+    if (health == 0) {
+        if (deadTimer.isFinishedAfterUpdate(delta)) {
+            window.exit();
+        }
+        return;
+    }
+
     if (spawnIntervalTimer.isFinishedAfterUpdate(delta)) {
         spawnIntervalTimer.reset();
         spawnChicken();
@@ -172,7 +182,11 @@ pub fn update(delta: f32) void {
             if (chicken.position.y > window.size.y) {
                 chicken.valid = false;
                 health -|= 1;
-                audio.playSound("assets/hurt.ogg");
+                if (health == 0) {
+                    audio.playMusic("assets/loss.ogg");
+                } else {
+                    audio.playSound("assets/hurt.ogg");
+                }
             }
         }
     }
