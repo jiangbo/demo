@@ -126,6 +126,10 @@ pub const Rectangle = struct {
         return self.max.sub(self.min);
     }
 
+    pub fn center(self: Rectangle) Vector {
+        return self.min.add(self.size().scale(0.5));
+    }
+
     pub fn intersect(self: Rectangle, other: Rectangle) bool {
         return self.min.x < other.max.x and self.max.x > other.min.x and
             self.min.y < other.max.y and self.max.y > other.min.y;
@@ -144,5 +148,5 @@ pub fn randF32(min: f32, max: f32) f32 {
 }
 
 pub fn randU8(min: u8, max: u8) u8 {
-    return rand.intRangeLessThanBiased(u8, min, max);
+    return rand.intRangeAtMostBiased(u8, min, max);
 }
