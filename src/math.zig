@@ -115,42 +115,34 @@ pub const Vector3 = struct {
 };
 
 pub const Rectangle = struct {
-    position: Vector = .zero,
-    size: Vector = .zero,
+    min: Vector = .zero,
+    max: Vector = .zero,
 
-    pub fn left(self: Rectangle) f32 {
-        return self.position.x;
+    pub fn init(position: Vector, sizeV: Vector) Rectangle {
+        return Rectangle{ .min = position, .max = position.add(sizeV) };
     }
 
-    pub fn top(self: Rectangle) f32 {
-        return self.position.y;
-    }
-
-    pub fn right(self: Rectangle) f32 {
-        return self.position.x + self.size.x;
-    }
-
-    pub fn bottom(self: Rectangle) f32 {
-        return self.position.y + self.size.y;
+    pub fn size(self: Rectangle) Vector {
+        return self.max.sub(self.min);
     }
 
     pub fn intersect(self: Rectangle, other: Rectangle) bool {
-        return self.left() < other.right() and self.right() > other.left() and
-            self.top() < other.bottom() and self.bottom() > other.top();
+        return self.min.x < other.max.x and self.max.x > other.min.x and
+            self.min.y < other.max.y and self.max.y > other.min.y;
     }
 
     pub fn contains(self: Rectangle, point: Vector) bool {
-        return point.x >= self.left() and point.x < self.right() and
-            point.y >= self.top() and point.y < self.bottom();
+        return point.x >= self.min.x and point.x <= self.max.x and
+            point.y >= self.min.y and point.y <= self.max.y;
     }
 };
 
 pub var rand: std.Random = undefined;
 
-pub fn randomF32(min: f32, max: f32) f32 {
+pub fn randF32(min: f32, max: f32) f32 {
     return rand.float(f32) * (max - min) + min;
 }
 
-pub fn randomU8(min: u8, max: u8) u8 {
+pub fn randU8(min: u8, max: u8) u8 {
     return rand.intRangeLessThanBiased(u8, min, max);
 }

@@ -196,19 +196,19 @@ pub const Renderer = struct {
     pub fn draw(self: *Renderer, options: DrawOptions) void {
         const dst = options.targetRect;
 
-        const pos = options.sourceRect.position.div(options.texture.size());
-        const size = options.sourceRect.size.div(options.texture.size());
+        const pos = options.sourceRect.min.div(options.texture.size());
+        const size = options.sourceRect.size().div(options.texture.size());
 
         var vertex = [_]math.Vector3{
-            .{ .x = dst.position.x, .y = dst.bottom() },
-            .{ .x = dst.right(), .y = dst.bottom() },
-            .{ .x = dst.right(), .y = dst.position.y },
-            .{ .x = dst.position.x, .y = dst.position.y },
+            .{ .x = dst.min.x, .y = dst.max.y },
+            .{ .x = dst.max.x, .y = dst.max.y },
+            .{ .x = dst.max.x, .y = dst.min.y },
+            .{ .x = dst.min.x, .y = dst.min.y },
         };
 
         if (options.radians != 0) {
             const percent = options.pivot.div(options.texture.size());
-            const pivot = dst.position.add(percent.mul(dst.size));
+            const pivot = dst.min.add(percent.mul(dst.size()));
 
             for (&vertex) |*point| {
                 point.* = pivot.add(point.sub(pivot).rotate(options.radians));

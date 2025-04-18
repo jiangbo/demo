@@ -50,7 +50,7 @@ pub fn main() void {
     math.rand = prng.random();
 
     window.run(.{
-        .window_title = "生化危鸡",
+        .window_title = "拼好饭传奇",
         .width = @as(i32, @intFromFloat(window.size.x)),
         .height = @as(i32, @intFromFloat(window.size.y)),
         .high_dpi = false,

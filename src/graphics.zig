@@ -55,8 +55,8 @@ pub fn draw(tex: Texture, position: math.Vector) void {
 }
 
 pub fn drawFlipX(tex: Texture, pos: math.Vector, flipX: bool) void {
-    const target: math.Rectangle = .{ .position = pos };
-    const src = math.Rectangle{ .size = .{
+    const target: math.Rectangle = .init(pos, .zero);
+    const src = math.Rectangle{ .max = .{
         .x = if (flipX) -tex.width() else tex.width(),
     } };
 
@@ -71,14 +71,14 @@ pub const DrawOptions = struct {
 };
 
 pub fn drawOptions(texture: Texture, options: DrawOptions) void {
-    matrix[12] = -1 - camera.rect.left() * matrix[0];
-    matrix[13] = 1 - camera.rect.top() * matrix[5];
+    matrix[12] = -1 - camera.rect.min.x * matrix[0];
+    matrix[13] = 1 - camera.rect.min.y * matrix[5];
 
     var src, var dst = .{ options.sourceRect, options.targetRect };
-    if (src.size.x == 0) src.size.x = texture.width();
-    if (src.size.y == 0) src.size.y = texture.height();
-    if (dst.size.x == 0) dst.size.x = texture.width();
-    if (dst.size.y == 0) dst.size.y = texture.height();
+    if (src.min.x == src.max.x) src.max.x = src.min.x + texture.width();
+    if (src.min.y == src.max.y) src.max.y = src.min.y + texture.height();
+    if (dst.min.x == dst.max.x) dst.max.x = dst.min.x + texture.width();
+    if (dst.min.y == dst.max.y) dst.max.y = dst.min.y + texture.height();
 
     renderer.draw(.{
         .uniform = .{ .vp = matrix },
