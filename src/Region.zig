@@ -113,9 +113,13 @@ pub fn place(self: *Region) void {
 
 pub fn placeInTakeoutBox(self: *Region) void {
     if (self.meal == null) {
-        if (cursor.picked.?.type == .takeoutBox) {
-            self.meal = cursor.picked;
-            cursor.picked = null;
+        switch (cursor.picked.?.type) {
+            .cola, .sprite, .meatBallBox => {},
+            .braisedChickenBox, .redCookedPorkBox => {},
+            else => {
+                self.meal = cursor.picked;
+                cursor.picked = null;
+            },
         }
         return;
     }

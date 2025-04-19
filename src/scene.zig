@@ -94,6 +94,7 @@ pub fn render() void {
         if (value.type == .takeoutBox) {
             if (value.meal) |meal|
                 gfx.draw(meal.place, value.area.min.add(.{ .y = 20 }));
+            gfx.drawRectangle(value.area);
         }
 
         if (value.type == .microWave and value.timer == null) {
