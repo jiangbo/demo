@@ -267,11 +267,11 @@ pub const Sampler = struct {
 pub fn drawRectangleLine(rect: Rectangle) void {
     sk.gl.beginLineStrip();
 
-    sk.gl.v2fC3b(rect.x, rect.y, 0, 255, 0);
-    sk.gl.v2fC3b(rect.right(), rect.y, 0, 255, 0);
-    sk.gl.v2fC3b(rect.right(), rect.bottom(), 0, 255, 0);
-    sk.gl.v2fC3b(rect.x, rect.bottom(), 0, 255, 0);
-    sk.gl.v2fC3b(rect.x, rect.y, 0, 255, 0);
+    sk.gl.v2fC3b(rect.min.x, rect.min.y, 0, 255, 0);
+    sk.gl.v2fC3b(rect.max.x, rect.min.y, 0, 255, 0);
+    sk.gl.v2fC3b(rect.max.x, rect.max.y, 0, 255, 0);
+    sk.gl.v2fC3b(rect.min.x, rect.max.y, 0, 255, 0);
+    sk.gl.v2fC3b(rect.min.x, rect.min.y, 0, 255, 0);
 
     sk.gl.end();
 }
