@@ -10,9 +10,9 @@ const Region = @import("Region.zig");
 
 var regions: [15]Region = undefined;
 var returnTimer: ?window.Timer = null;
-var returnPosition: math.Vector = .zero;
-var pickedRegion: *Region = undefined;
-var pickedMeal: ?cursor.Meal = undefined;
+pub var returnPosition: math.Vector = .zero;
+pub var pickedRegion: *Region = undefined;
+pub var pickedMeal: ?cursor.Meal = undefined;
 var position: math.Vector = .zero;
 var velocity: math.Vector = .zero;
 
@@ -39,7 +39,7 @@ pub fn init() void {
     regions[13] = .init(1040, 560, .takeoutBox);
     regions[14] = .init(1145, 560, .takeoutBox);
 
-    audio.playMusic("assets/bgm.ogg");
+    // audio.playMusic("assets/bgm.ogg");
 }
 
 pub fn event(ev: *const window.Event) void {
@@ -59,12 +59,16 @@ pub fn update(delta: f32) void {
     }
 
     for (&regions) |*region| {
+        if (region.timer) |*timer| if (timer.isFinishedAfterUpdate(delta)) {
+            region.timerFinished();
+        };
+
         if (cursor.picked == null and cursor.leftKeyDown) {
-            if (region.area.contains(cursor.position)) pick(region);
+            if (region.area.contains(cursor.position)) region.pick();
         }
 
         if (cursor.picked != null and !cursor.leftKeyDown) {
-            if (region.area.contains(cursor.position)) place(region);
+            if (region.area.contains(cursor.position)) region.place();
         }
     }
 
@@ -78,31 +82,6 @@ fn returnMeal() void {
     velocity = returnPosition.sub(position).scale(1 / returnTimer.?.duration);
 }
 
-fn pick(region: *Region) void {
-    cursor.picked = region.meal;
-    returnPosition = cursor.position;
-    pickedMeal = cursor.picked;
-    pickedRegion = region;
-
-    if (region.type == .takeoutBox) {
-        region.meal = null;
-        returnPosition = region.area.min;
-    }
-}
-
-fn place(region: *Region) void {
-    if (region.type == .takeoutBox) {
-        if (region.meal == null and cursor.picked.?.type == .takeoutBox) {
-            region.meal = cursor.picked;
-            cursor.picked = null;
-        }
-    } else if (region.meal) |meal| {
-        if (meal.type == cursor.picked.?.type) {
-            cursor.picked = null;
-        }
-    }
-}
-
 pub fn render() void {
     gfx.beginDraw();
     defer gfx.endDraw();
@@ -114,8 +93,12 @@ pub fn render() void {
 
         if (value.type == .takeoutBox) {
             if (value.meal) |meal|
-                gfx.draw(meal.picked, value.area.min.add(.{ .y = 20 }));
-            gfx.drawRectangle(value.area);
+                gfx.draw(meal.place, value.area.min.add(.{ .y = 20 }));
+        }
+
+        if (value.type == .microWave and value.timer == null) {
+            if (value.meal) |meal|
+                gfx.draw(meal.place, value.area.min.add(.{ .x = 113, .y = 65 }));
         }
     }
 

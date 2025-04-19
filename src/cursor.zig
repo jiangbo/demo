@@ -22,25 +22,65 @@ pub const MealType = enum {
 
 pub const Meal = struct {
     type: MealType,
-    picked: gfx.Texture,
+    picked: gfx.Texture = undefined,
+    place: gfx.Texture = undefined,
 
     pub fn init(mealType: MealType) Meal {
-        const path = switch (mealType) {
-            .cola => "assets/cola.png",
-            .sprite => "assets/sprite.png",
-            .braisedChickenHot => "assets/bc_hot_picked.png",
-            .braisedChickenCold => "assets/bc_cold_picked.png",
-            .meatBallHot => "assets/mb_hot_picked.png",
-            .meatBallCold => "assets/mb_cold_picked.png",
-            .redCookedPorkHot => "assets/rcp_hot_picked.png",
-            .redCookedPorkCold => "assets/rcp_cold_picked.png",
-            .braisedChickenBox => "assets/bc_box.png",
-            .meatBallBox => "assets/mb_box.png",
-            .redCookedPorkBox => "assets/rcp_box.png",
-            .takeoutBox => "assets/tb_picked.png",
-        };
+        var self: Meal = Meal{ .type = mealType };
 
-        return Meal{ .type = mealType, .picked = gfx.loadTexture(path) };
+        switch (mealType) {
+            .cola => {
+                self.picked = gfx.loadTexture("assets/cola.png");
+                self.place = gfx.loadTexture("assets/cola.png");
+            },
+            .sprite => {
+                self.picked = gfx.loadTexture("assets/sprite.png");
+                self.place = gfx.loadTexture("assets/sprite.png");
+            },
+            .braisedChickenHot => {
+                self.picked = gfx.loadTexture("assets/bc_hot_picked.png");
+                self.place = gfx.loadTexture("assets/bc_hot.png");
+            },
+            .braisedChickenCold => {
+                self.picked = gfx.loadTexture("assets/bc_cold_picked.png");
+                self.place = gfx.loadTexture("assets/bc_cold.png");
+            },
+            .meatBallHot => {
+                self.picked = gfx.loadTexture("assets/mb_hot_picked.png");
+                self.place = gfx.loadTexture("assets/mb_hot.png");
+            },
+            .meatBallCold => {
+                self.picked = gfx.loadTexture("assets/mb_cold_picked.png");
+                self.place = gfx.loadTexture("assets/mb_cold.png");
+            },
+            .redCookedPorkHot => {
+                self.picked = gfx.loadTexture("assets/rcp_hot_picked.png");
+                self.place = gfx.loadTexture("assets/rcp_hot.png");
+            },
+            .redCookedPorkCold => {
+                self.picked = gfx.loadTexture("assets/rcp_cold_picked.png");
+                self.place = gfx.loadTexture("assets/rcp_cold.png");
+            },
+
+            .braisedChickenBox => {
+                self.picked = gfx.loadTexture("assets/bc_box.png");
+                self.place = gfx.loadTexture("assets/bc_box.png");
+            },
+            .meatBallBox => {
+                self.picked = gfx.loadTexture("assets/mb_box.png");
+                self.place = gfx.loadTexture("assets/mb_box.png");
+            },
+            .redCookedPorkBox => {
+                self.picked = gfx.loadTexture("assets/rcp_box.png");
+                self.place = gfx.loadTexture("assets/rcp_box.png");
+            },
+            .takeoutBox => {
+                self.picked = gfx.loadTexture("assets/tb_picked.png");
+                self.place = gfx.loadTexture("assets/tb.png");
+            },
+        }
+
+        return self;
     }
 };
 
