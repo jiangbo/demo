@@ -68,7 +68,9 @@ pub fn event(ev: *const window.Event) void {
 }
 
 pub fn render() void {
-    if (picked) |meal| gfx.draw(meal.picked, position);
+    if (picked) |meal| {
+        gfx.draw(meal.picked, position.sub(meal.picked.size().scale(0.3)));
+    }
 
     if (leftKeyDown) {
         gfx.draw(gfx.loadTexture("assets/cursor_down.png"), position);
