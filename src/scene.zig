@@ -39,7 +39,7 @@ pub fn init() void {
     regions[13] = .init(1040, 560, .takeoutBox);
     regions[14] = .init(1145, 560, .takeoutBox);
 
-    // audio.playMusic("assets/bgm.ogg");
+    audio.playMusic("assets/bgm.ogg");
 }
 
 pub fn event(ev: *const window.Event) void {
