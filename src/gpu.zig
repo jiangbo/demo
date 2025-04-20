@@ -161,7 +161,7 @@ pub const Renderer = struct {
                 .layout = init: {
                     var l = sk.gfx.VertexLayoutState{};
                     l.attrs[render.ATTR_single_position].format = .FLOAT3;
-                    l.attrs[render.ATTR_single_color0].format = .FLOAT3;
+                    l.attrs[render.ATTR_single_color0].format = .FLOAT4;
                     l.attrs[render.ATTR_single_texcoord0].format = .FLOAT2;
                     break :init l;
                 },
@@ -191,6 +191,7 @@ pub const Renderer = struct {
         targetRect: Rectangle,
         radians: f32 = 0,
         pivot: math.Vector = .zero,
+        alpha: f32 = 1,
     };
 
     pub fn draw(self: *Renderer, options: DrawOptions) void {
@@ -217,10 +218,10 @@ pub const Renderer = struct {
 
         const myTest = [_]f32{
             // 顶点和颜色
-            vertex[0].x, vertex[0].y, 0.5, 1.0, 1.0, 1.0, min.x, max.y, // 左上
-            vertex[1].x, vertex[1].y, 0.5, 1.0, 1.0, 1.0, max.x, max.y, // 右上
-            vertex[2].x, vertex[2].y, 0.5, 1.0, 1.0, 1.0, max.x, min.y, // 右下
-            vertex[3].x, vertex[3].y, 0.5, 1.0, 1.0, 1.0, min.x, min.y, // 左下
+            vertex[0].x, vertex[0].y, 0.5, 1.0, 1.0, 1.0, options.alpha, min.x, max.y, // 左上
+            vertex[1].x, vertex[1].y, 0.5, 1.0, 1.0, 1.0, options.alpha, max.x, max.y, // 右上
+            vertex[2].x, vertex[2].y, 0.5, 1.0, 1.0, 1.0, options.alpha, max.x, min.y, // 右下
+            vertex[3].x, vertex[3].y, 0.5, 1.0, 1.0, 1.0, options.alpha, min.x, min.y, // 左下
         };
 
         const vertexBuffer = sk.gfx.makeBuffer(.{

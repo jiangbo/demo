@@ -230,6 +230,7 @@ pub fn renderDeliver(self: *const Region) void {
 
             gfx.drawOptions(meal.icon, .{
                 .targetRect = .init(pos.add(offset), .init(20, 26)),
+                .alpha = 0.35,
             });
 
             drinks += 1;
@@ -239,6 +240,7 @@ pub fn renderDeliver(self: *const Region) void {
         const offset: math.Vector = .init(18, 32 * index + 5);
         gfx.drawOptions(meal.icon, .{
             .targetRect = .init(pos.add(offset), .init(45, 25)),
+            .alpha = 0.35,
         });
     }
 }

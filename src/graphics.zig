@@ -68,6 +68,7 @@ pub const DrawOptions = struct {
     targetRect: math.Rectangle = .{},
     angle: f32 = 0,
     pivot: math.Vector = .zero,
+    alpha: f32 = 1,
 };
 
 pub fn drawOptions(texture: Texture, options: DrawOptions) void {
@@ -87,6 +88,7 @@ pub fn drawOptions(texture: Texture, options: DrawOptions) void {
         .targetRect = dst,
         .radians = std.math.degreesToRadians(options.angle),
         .pivot = options.pivot,
+        .alpha = options.alpha,
     });
 }
 
