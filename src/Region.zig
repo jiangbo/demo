@@ -43,43 +43,7 @@ pub fn init(x: f32, y: f32, regionType: RegionType) Region {
 
     var self: Region = .{ .area = .{}, .type = regionType };
     switch (regionType) {
-        .deliver => {
-
-            // 随机外卖员形象
-            const meituan = math.rand.boolean();
-            if (meituan) {
-                self.texture = gfx.loadTexture("assets/meituan.png");
-            } else {
-                self.texture = gfx.loadTexture("assets/eleme.png");
-            }
-
-            self.waitedTime = math.epsilon;
-
-            // 随机要求餐品
-            self.wanted = std.BoundedArray(cursor.Meal, 10).init(0) catch unreachable;
-            const drinks = math.randU8(0, 7); // 随机 0 到 7 个饮料
-            const lines = (drinks + DRINKS_PER_LINE - 1) / DRINKS_PER_LINE;
-
-            // 先加菜品
-            for (0..DELIVER_TOTAL_LINES - lines) |_| {
-                // 随机要求菜品
-                const meal: cursor.Meal = switch (math.randU8(0, 2)) {
-                    0 => .init(.braisedChickenHot),
-                    1 => .init(.meatBallHot),
-                    2 => .init(.redCookedPorkHot),
-                    else => unreachable,
-                };
-                self.wanted.?.appendAssumeCapacity(meal);
-            }
-
-            // 再加饮料
-            for (0..drinks) |_| {
-                if (math.rand.boolean())
-                    self.wanted.?.appendAssumeCapacity(.init(.cola))
-                else
-                    self.wanted.?.appendAssumeCapacity(.init(.sprite));
-            }
-        },
+        .deliver => refreshDeliver(&self),
 
         .cola => {
             self.texture = gfx.loadTexture("assets/cola_bundle.png");
@@ -124,6 +88,58 @@ pub fn init(x: f32, y: f32, regionType: RegionType) Region {
     }
 
     return self;
+}
+
+fn refreshDeliver(self: *Region) void {
+    // 随机外卖员形象
+    const meituan = math.rand.boolean();
+    if (meituan) {
+        self.texture = gfx.loadTexture("assets/meituan.png");
+    } else {
+        self.texture = gfx.loadTexture("assets/eleme.png");
+    }
+
+    self.waitedTime = math.epsilon;
+
+    // 随机要求餐品
+    self.wanted = std.BoundedArray(cursor.Meal, 10).init(0) catch unreachable;
+    const drinks = math.randU8(0, 7); // 随机 0 到 7 个饮料
+    const lines = (drinks + DRINKS_PER_LINE - 1) / DRINKS_PER_LINE;
+
+    // 先加菜品
+    for (0..DELIVER_TOTAL_LINES - lines) |_| {
+        // 随机要求菜品
+        const meal: cursor.Meal = switch (math.randU8(0, 2)) {
+            0 => .init(.braisedChickenHot),
+            1 => .init(.meatBallHot),
+            2 => .init(.redCookedPorkHot),
+            else => unreachable,
+        };
+        self.wanted.?.appendAssumeCapacity(meal);
+    }
+
+    // 再加饮料
+    for (0..drinks) |_| {
+        if (math.rand.boolean())
+            self.wanted.?.appendAssumeCapacity(.init(.cola))
+        else
+            self.wanted.?.appendAssumeCapacity(.init(.sprite));
+    }
+}
+
+fn hiddenDeliver(self: *Region) void {
+    self.wanted = null;
+    self.texture = null;
+    self.waitedTime = math.epsilon;
+    self.timer = .init(math.randF32(10, 20));
+}
+
+pub fn updateDeliver(self: *Region, delta: f32) void {
+    if (self.wanted == null) return;
+
+    self.waitedTime += delta;
+    if (self.waitedTime >= DELIVER_TIMEOUT)
+        self.hiddenDeliver();
 }
 
 pub fn pick(self: *Region) void {
@@ -201,9 +217,15 @@ pub fn placeInDeliver(self: *Region) void {
         if (meal.type == cursorType and !meal.done) {
             cursor.picked = null;
             meal.done = true;
-            return;
+            audio.playSound("assets/complete.ogg");
+            break;
         }
     }
+
+    // 检查是否全部完成
+    for (self.wanted.?.slice()) |meal| if (!meal.done) return;
+
+    self.hiddenDeliver();
 }
 
 pub fn timerFinished(self: *Region) void {
@@ -211,10 +233,15 @@ pub fn timerFinished(self: *Region) void {
         self.texture = gfx.loadTexture("assets/mo_opening.png");
         audio.playSound("assets/mo_complete.ogg");
     }
+
+    if (self.type == .deliver) refreshDeliver(self);
+
     self.timer = null;
 }
 
 pub fn renderDeliver(self: *const Region) void {
+    if (self.wanted == null) return;
+
     var pos = self.area.min.add(.{ .x = -35, .y = 15 });
 
     // 耐心条的边框
