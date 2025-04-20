@@ -30,9 +30,11 @@ texture: ?gfx.Texture = null,
 meal: ?cursor.Meal = null,
 timer: ?window.Timer = null,
 
-wanted: [6]cursor.Meal = undefined,
+wanted: ?std.BoundedArray(cursor.Meal, 10) = null,
 
-const DELIVER_TIMEOUT = 40;
+const DELIVER_TIMEOUT = 40; // 外卖员耐心超时秒数
+const DRINKS_PER_LINE = 2; // 每行 2 个饮料
+const DELIVER_TOTAL_LINES = 4; // 总共 4 行外卖
 
 pub fn init(x: f32, y: f32, regionType: RegionType) Region {
     const position: math.Vector = .init(x, y);
@@ -40,11 +42,38 @@ pub fn init(x: f32, y: f32, regionType: RegionType) Region {
     var self: Region = .{ .area = .{}, .type = regionType };
     switch (regionType) {
         .deliver => {
+
+            // 随机外卖员形象
             const meituan = math.rand.boolean();
             if (meituan) {
                 self.texture = gfx.loadTexture("assets/meituan.png");
             } else {
                 self.texture = gfx.loadTexture("assets/eleme.png");
+            }
+
+            // 随机要求餐品
+            self.wanted = std.BoundedArray(cursor.Meal, 10).init(0) catch unreachable;
+            const drinks = math.randU8(0, 7); // 随机 0 到 7 个饮料
+            const lines = (drinks + DRINKS_PER_LINE - 1) / DRINKS_PER_LINE;
+
+            // 先加菜品
+            for (0..DELIVER_TOTAL_LINES - lines) |_| {
+                // 随机要求菜品
+                const meal: cursor.Meal = switch (math.randU8(0, 2)) {
+                    0 => .init(.braisedChickenHot),
+                    1 => .init(.meatBallHot),
+                    2 => .init(.redCookedPorkHot),
+                    else => unreachable,
+                };
+                self.wanted.?.appendAssumeCapacity(meal);
+            }
+
+            // 再加饮料
+            for (0..drinks) |_| {
+                if (math.rand.boolean())
+                    self.wanted.?.appendAssumeCapacity(.init(.cola))
+                else
+                    self.wanted.?.appendAssumeCapacity(.init(.sprite));
             }
         },
 
@@ -167,14 +196,49 @@ pub fn timerFinished(self: *Region) void {
     self.timer = null;
 }
 
-pub fn draw(self: *Region) void {
-    if (self.texture) |texture| {
-        gfx.drawTexture(texture, self.area.min);
-    }
-}
+pub fn renderDeliver(self: *const Region) void {
+    var pos = self.area.min.add(.{ .x = -35, .y = 15 });
 
-pub fn update(self: *Region) void {
-    if (self.type == .microWave) {
-        if (self.meal) {}
+    // 耐心条的边框
+    gfx.draw(gfx.loadTexture("assets/patience_border.png"), pos);
+
+    const percent: f32 = 0.4;
+
+    // 耐心条的长度
+    const content = gfx.loadTexture("assets/patience_content.png");
+    var dst: math.Rectangle = .init(pos, content.size());
+    dst.min.y = dst.max.y - content.height() * percent;
+    var src: math.Rectangle = .init(.zero, content.size());
+    src.min.y = src.max.y - content.height() * percent;
+    gfx.drawOptions(content, .{ .sourceRect = src, .targetRect = dst });
+
+    // 对话框
+    pos = self.area.min.add(.{ .x = 175, .y = 55 });
+    gfx.draw(gfx.loadTexture("assets/bubble.png"), pos);
+
+    var drinks: u8 = 0;
+    for (self.wanted.?.slice(), 0..) |meal, i| {
+        const index: f32 = @floatFromInt(i);
+        if (meal.type == .cola or meal.type == .sprite) {
+            // 所有食物放置后的偏移
+            const mealOffsetY = 32 * (i - drinks) + 10;
+            const drinkOffsetY = 28 * (drinks / DRINKS_PER_LINE); // 饮料本身的偏移
+            const offsetY: f32 = @floatFromInt(mealOffsetY + drinkOffsetY);
+            var offset: math.Vector = .init(18, offsetY);
+
+            if (drinks % DRINKS_PER_LINE != 0) offset.x += 32; // 饮料并排放置
+
+            gfx.drawOptions(meal.icon, .{
+                .targetRect = .init(pos.add(offset), .init(20, 26)),
+            });
+
+            drinks += 1;
+            continue;
+        }
+
+        const offset: math.Vector = .init(18, 32 * index + 5);
+        gfx.drawOptions(meal.icon, .{
+            .targetRect = .init(pos.add(offset), .init(45, 25)),
+        });
     }
 }

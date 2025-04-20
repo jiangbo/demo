@@ -24,6 +24,7 @@ pub const Meal = struct {
     type: MealType,
     picked: gfx.Texture = undefined,
     place: gfx.Texture = undefined,
+    icon: gfx.Texture = undefined,
     done: bool = false,
 
     pub fn init(mealType: MealType) Meal {
@@ -33,14 +34,17 @@ pub const Meal = struct {
             .cola => {
                 self.picked = gfx.loadTexture("assets/cola.png");
                 self.place = gfx.loadTexture("assets/cola.png");
+                self.icon = gfx.loadTexture("assets/cola_icon.png");
             },
             .sprite => {
                 self.picked = gfx.loadTexture("assets/sprite.png");
                 self.place = gfx.loadTexture("assets/sprite.png");
+                self.icon = gfx.loadTexture("assets/sprite_icon.png");
             },
             .braisedChickenHot => {
                 self.picked = gfx.loadTexture("assets/bc_hot_picked.png");
                 self.place = gfx.loadTexture("assets/bc_hot.png");
+                self.icon = gfx.loadTexture("assets/bc_icon.png");
             },
             .braisedChickenCold => {
                 self.picked = gfx.loadTexture("assets/bc_cold_picked.png");
@@ -49,6 +53,7 @@ pub const Meal = struct {
             .meatBallHot => {
                 self.picked = gfx.loadTexture("assets/mb_hot_picked.png");
                 self.place = gfx.loadTexture("assets/mb_hot.png");
+                self.icon = gfx.loadTexture("assets/mb_icon.png");
             },
             .meatBallCold => {
                 self.picked = gfx.loadTexture("assets/mb_cold_picked.png");
@@ -57,6 +62,7 @@ pub const Meal = struct {
             .redCookedPorkHot => {
                 self.picked = gfx.loadTexture("assets/rcp_hot_picked.png");
                 self.place = gfx.loadTexture("assets/rcp_hot.png");
+                self.icon = gfx.loadTexture("assets/rcp_icon.png");
             },
             .redCookedPorkCold => {
                 self.picked = gfx.loadTexture("assets/rcp_cold_picked.png");
