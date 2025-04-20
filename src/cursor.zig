@@ -24,6 +24,7 @@ pub const Meal = struct {
     type: MealType,
     picked: gfx.Texture = undefined,
     place: gfx.Texture = undefined,
+    done: bool = false,
 
     pub fn init(mealType: MealType) Meal {
         var self: Meal = Meal{ .type = mealType };

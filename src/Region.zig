@@ -30,13 +30,22 @@ texture: ?gfx.Texture = null,
 meal: ?cursor.Meal = null,
 timer: ?window.Timer = null,
 
+wanted: [6]cursor.Meal = undefined,
+
+const DELIVER_TIMEOUT = 40;
+
 pub fn init(x: f32, y: f32, regionType: RegionType) Region {
     const position: math.Vector = .init(x, y);
 
     var self: Region = .{ .area = .{}, .type = regionType };
     switch (regionType) {
         .deliver => {
-            self.texture = gfx.loadTexture("assets/eleme.png");
+            const meituan = math.rand.boolean();
+            if (meituan) {
+                self.texture = gfx.loadTexture("assets/meituan.png");
+            } else {
+                self.texture = gfx.loadTexture("assets/eleme.png");
+            }
         },
 
         .cola => {
@@ -153,6 +162,7 @@ pub fn placeInMicroWave(self: *Region) void {
 pub fn timerFinished(self: *Region) void {
     if (self.type == .microWave) {
         self.texture = gfx.loadTexture("assets/mo_opening.png");
+        audio.playSound("assets/mo_complete.ogg");
     }
     self.timer = null;
 }

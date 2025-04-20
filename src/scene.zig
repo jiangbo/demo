@@ -101,6 +101,21 @@ pub fn render() void {
             if (value.meal) |meal|
                 gfx.draw(meal.place, value.area.min.add(.{ .x = 113, .y = 65 }));
         }
+
+        if (value.type == .deliver) {
+            const pos = value.area.min.add(.{ .x = -35, .y = 15 });
+
+            gfx.draw(gfx.loadTexture("assets/patience_border.png"), pos);
+
+            const percent: f32 = 0.4;
+
+            const content = gfx.loadTexture("assets/patience_content.png");
+            var dst: math.Rectangle = .init(pos, content.size());
+            dst.min.y = dst.max.y - content.height() * percent;
+            var src: math.Rectangle = .init(.zero, content.size());
+            src.min.y = src.max.y - content.height() * percent;
+            gfx.drawOptions(content, .{ .sourceRect = src, .targetRect = dst });
+        }
     }
 
     if (returnTimer != null) {

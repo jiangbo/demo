@@ -53,7 +53,7 @@ pub fn main() void {
         .window_title = "拼好饭传奇",
         .width = @as(i32, @intFromFloat(window.size.x)),
         .height = @as(i32, @intFromFloat(window.size.y)),
-        .high_dpi = false,
+        .high_dpi = true,
         .init_cb = init,
         .event_cb = event,
         .frame_cb = frame,

@@ -196,8 +196,8 @@ pub const Renderer = struct {
     pub fn draw(self: *Renderer, options: DrawOptions) void {
         const dst = options.targetRect;
 
-        const pos = options.sourceRect.min.div(options.texture.size());
-        const size = options.sourceRect.size().div(options.texture.size());
+        const min = options.sourceRect.min.div(options.texture.size());
+        const max = options.sourceRect.max.div(options.texture.size());
 
         var vertex = [_]math.Vector3{
             .{ .x = dst.min.x, .y = dst.max.y },
@@ -215,14 +215,16 @@ pub const Renderer = struct {
             }
         }
 
+        const myTest = [_]f32{
+            // 顶点和颜色
+            vertex[0].x, vertex[0].y, 0.5, 1.0, 1.0, 1.0, min.x, max.y, // 左上
+            vertex[1].x, vertex[1].y, 0.5, 1.0, 1.0, 1.0, max.x, max.y, // 右上
+            vertex[2].x, vertex[2].y, 0.5, 1.0, 1.0, 1.0, max.x, min.y, // 右下
+            vertex[3].x, vertex[3].y, 0.5, 1.0, 1.0, 1.0, min.x, min.y, // 左下
+        };
+
         const vertexBuffer = sk.gfx.makeBuffer(.{
-            .data = sk.gfx.asRange(&[_]f32{
-                // 顶点和颜色
-                vertex[0].x, vertex[0].y, 0.5, 1.0, 1.0, 1.0, pos.x,  size.y,
-                vertex[1].x, vertex[1].y, 0.5, 1.0, 1.0, 1.0, size.x, size.y,
-                vertex[2].x, vertex[2].y, 0.5, 1.0, 1.0, 1.0, size.x, pos.y,
-                vertex[3].x, vertex[3].y, 0.5, 1.0, 1.0, 1.0, pos.x,  pos.y,
-            }),
+            .data = sk.gfx.asRange(&myTest),
         });
 
         self.bind.bindVertexBuffer(0, vertexBuffer);
