@@ -30,7 +30,9 @@ texture: ?gfx.Texture = null,
 meal: ?cursor.Meal = null,
 timer: ?window.Timer = null,
 
+// 外卖员专有字段
 wanted: ?std.BoundedArray(cursor.Meal, 10) = null,
+waitedTime: f32 = math.epsilon, // 外卖员已经等待的时间
 
 const DELIVER_TIMEOUT = 40; // 外卖员耐心超时秒数
 const DRINKS_PER_LINE = 2; // 每行 2 个饮料
@@ -50,6 +52,8 @@ pub fn init(x: f32, y: f32, regionType: RegionType) Region {
             } else {
                 self.texture = gfx.loadTexture("assets/eleme.png");
             }
+
+            self.waitedTime = math.epsilon;
 
             // 随机要求餐品
             self.wanted = std.BoundedArray(cursor.Meal, 10).init(0) catch unreachable;
@@ -141,6 +145,7 @@ pub fn pick(self: *Region) void {
 pub fn place(self: *Region) void {
     if (self.type == .takeoutBox) return self.placeInTakeoutBox();
     if (self.type == .microWave) return self.placeInMicroWave();
+    if (self.type == .deliver) return self.placeInDeliver();
 
     if (self.meal) |meal| {
         if (meal.type == cursor.picked.?.type) {
@@ -188,6 +193,19 @@ pub fn placeInMicroWave(self: *Region) void {
     self.timer = .init(9);
 }
 
+pub fn placeInDeliver(self: *Region) void {
+    if (self.wanted == null) return;
+
+    const cursorType = cursor.picked.?.type;
+    for (self.wanted.?.slice()) |*meal| {
+        if (meal.type == cursorType and !meal.done) {
+            cursor.picked = null;
+            meal.done = true;
+            return;
+        }
+    }
+}
+
 pub fn timerFinished(self: *Region) void {
     if (self.type == .microWave) {
         self.texture = gfx.loadTexture("assets/mo_opening.png");
@@ -202,7 +220,7 @@ pub fn renderDeliver(self: *const Region) void {
     // 耐心条的边框
     gfx.draw(gfx.loadTexture("assets/patience_border.png"), pos);
 
-    const percent: f32 = 0.4;
+    const percent: f32 = self.waitedTime / DELIVER_TIMEOUT;
 
     // 耐心条的长度
     const content = gfx.loadTexture("assets/patience_content.png");
@@ -230,7 +248,7 @@ pub fn renderDeliver(self: *const Region) void {
 
             gfx.drawOptions(meal.icon, .{
                 .targetRect = .init(pos.add(offset), .init(20, 26)),
-                .alpha = 0.35,
+                .alpha = if (meal.done) 0.35 else 1,
             });
 
             drinks += 1;
@@ -240,7 +258,7 @@ pub fn renderDeliver(self: *const Region) void {
         const offset: math.Vector = .init(18, 32 * index + 5);
         gfx.drawOptions(meal.icon, .{
             .targetRect = .init(pos.add(offset), .init(45, 25)),
-            .alpha = 0.35,
+            .alpha = if (meal.done) 0.35 else 1,
         });
     }
 }

@@ -63,6 +63,8 @@ pub fn update(delta: f32) void {
             region.timerFinished();
         };
 
+        if (region.type == .deliver) region.waitedTime += delta;
+
         if (cursor.picked == null and cursor.leftKeyDown) {
             if (region.area.contains(cursor.position)) region.pick();
         }
