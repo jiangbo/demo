@@ -204,7 +204,7 @@ pub fn placeInMicroWave(self: *Region) void {
         else => return,
     };
     cursor.picked = null;
-    audio.playSound("assets/mo_working.ogg");
+    // audio.playSound("assets/mo_working.ogg");
     self.texture = gfx.loadTexture("assets/mo_working.png");
     self.timer = .init(9);
 }
@@ -217,7 +217,7 @@ pub fn placeInDeliver(self: *Region) void {
         if (meal.type == cursorType and !meal.done) {
             cursor.picked = null;
             meal.done = true;
-            audio.playSound("assets/complete.ogg");
+            // audio.playSound("assets/complete.ogg");
             break;
         }
     }
@@ -231,7 +231,7 @@ pub fn placeInDeliver(self: *Region) void {
 pub fn timerFinished(self: *Region) void {
     if (self.type == .microWave) {
         self.texture = gfx.loadTexture("assets/mo_opening.png");
-        audio.playSound("assets/mo_complete.ogg");
+        // audio.playSound("assets/mo_complete.ogg");
     }
 
     if (self.type == .deliver) refreshDeliver(self);

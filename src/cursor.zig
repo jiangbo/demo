@@ -104,9 +104,9 @@ pub fn event(ev: *const window.Event) void {
         if (ev.type == .MOUSE_DOWN) {
             leftKeyDown = true;
             switch (math.randU8(1, 3)) {
-                1 => audio.playSound("assets/click_1.ogg"),
-                2 => audio.playSound("assets/click_2.ogg"),
-                3 => audio.playSound("assets/click_3.ogg"),
+                // 1 => audio.playSound("assets/click_1.ogg"),
+                // 2 => audio.playSound("assets/click_2.ogg"),
+                // 3 => audio.playSound("assets/click_3.ogg"),
                 else => unreachable,
             }
         }

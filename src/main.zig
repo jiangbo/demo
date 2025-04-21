@@ -15,31 +15,24 @@ fn init() callconv(.C) void {
     gfx.init(window.size);
     // audio.init(&soundBuffer);
 
-    _ = gfx.loadTexture("assets/background.png");
-
-    // scene.init();
+    scene.init();
     timer = std.time.Timer.start() catch unreachable;
 }
 
 fn event(ev: ?*const window.Event) callconv(.C) void {
-    // if (ev) |e| scene.event(e);
-    _ = ev;
+    std.log.info("ev: {any}", .{ev});
+    if (ev) |e| scene.event(e);
 }
 
 fn frame() callconv(.C) void {
-    // const delta: f32 = @floatFromInt(timer.lap());
-    // scene.update(delta / std.time.ns_per_s);
-    // scene.render();
-
+    const delta: f32 = @floatFromInt(timer.lap());
     cache.loading();
-
-    gfx.beginDraw();
-    defer gfx.endDraw();
-    gfx.draw(gfx.loadTexture("assets/background.png"), .zero);
+    scene.update(delta / std.time.ns_per_s);
+    scene.render();
 }
 
 fn deinit() callconv(.C) void {
-    // scene.deinit();
+    scene.deinit();
 
     // audio.deinit();
     gfx.deinit();
@@ -47,13 +40,17 @@ fn deinit() callconv(.C) void {
 }
 
 var allocator: std.mem.Allocator = undefined;
+
 var timer: std.time.Timer = undefined;
 
 pub fn main() void {
-    var debugAllocator = std.heap.DebugAllocator(.{}).init;
-    defer _ = debugAllocator.deinit();
+    // var debugAllocator = std.heap.DebugAllocator(.{}).init;
+    // defer _ = debugAllocator.deinit();
 
-    allocator = debugAllocator.allocator();
+    // allocator = debugAllocator.allocator();
+
+    allocator = std.heap.c_allocator;
+
     window.size = .{ .x = 1280, .y = 720 };
 
     var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));

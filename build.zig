@@ -34,8 +34,8 @@ fn buildNative(b: *std.Build, target: std.Build.ResolvedTarget) !void {
     const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
     exe.root_module.addCSourceFile(.{ .file = stbImagePath, .flags = &.{"-O2"} });
 
-    const stbAudioPath = writeFiles.add("stb_audio.c", stbAudioSource);
-    exe.root_module.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{"-O2"} });
+    // const stbAudioPath = writeFiles.add("stb_audio.c", stbAudioSource);
+    // exe.root_module.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{"-O2"} });
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -58,36 +58,36 @@ fn buildWeb(b: *std.Build, target: std.Build.ResolvedTarget) !void {
     const sokol = b.dependency("sokol", .{ .target = target, .optimize = optimize });
     exe.root_module.addImport("sokol", sokol.module("sokol"));
 
-    const writeFiles = b.addWriteFiles();
-    exe.step.dependOn(&writeFiles.step);
-    exe.linkLibC();
-
-    const stb = b.dependency("stb", .{ .target = target, .optimize = optimize });
-    exe.root_module.addIncludePath(stb.path("."));
-    const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
-    exe.root_module.addCSourceFile(.{ .file = stbImagePath, .flags = &.{"-O2"} });
-
     // const stbAudioPath = writeFiles.add("stb_audio.c", stbAudioSource);
     // exe.root_module.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{"-O2"} });
 
     // create a build step which invokes the Emscripten linker
     const emsdk = sokol.builder.dependency("emsdk", .{});
+    const writeFiles = b.addWriteFiles();
+    exe.step.dependOn(&writeFiles.step);
+
+    const stb = b.dependency("stb", .{ .target = target, .optimize = optimize });
+    exe.root_module.addIncludePath(stb.path("."));
+    const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
+    exe.root_module.addCSourceFile(.{ .file = stbImagePath, .flags = &.{ "-O2", "-fno-sanitize=undefined" } });
+
+    const include = emsdk.path(b.pathJoin(&.{ "upstream", "emscripten", "cache", "sysroot", "include" }));
+    exe.addSystemIncludePath(include);
+
     const link_step = try sk.emLinkStep(b, .{
         .lib_main = exe,
         .target = target,
         .optimize = optimize,
         .emsdk = emsdk,
+        .use_offset_converter = true,
         .use_webgl2 = true,
         .use_emmalloc = true,
         .use_filesystem = false,
         .shell_file_path = sokol.path("src/sokol/web/shell.html"),
     });
+
     // attach Emscripten linker output to default install step
     b.getInstallStep().dependOn(&link_step.step);
-    // ...and a special run step to start the web build output via 'emrun'
-    const run = sk.emRunStep(b, .{ .name = "demo", .emsdk = emsdk });
-    run.step.dependOn(&link_step.step);
-    b.step("run", "Run the app").dependOn(&run.step);
 }
 
 const stbImageSource =
