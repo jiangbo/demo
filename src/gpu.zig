@@ -10,10 +10,12 @@ pub const Buffer = sk.gfx.Buffer;
 pub const Texture = struct {
     value: sk.gfx.Image,
 
-    pub fn init(w: u32, h: u32, data: []const u8) Texture {
-        const image = sk.gfx.allocImage();
+    pub fn alloc() Texture {
+        return .{ .value = sk.gfx.allocImage() };
+    }
 
-        sk.gfx.initImage(image, .{
+    pub fn init(self: *Texture, w: u32, h: u32, data: []const u8) void {
+        sk.gfx.initImage(self.value, .{
             .width = @as(i32, @intCast(w)),
             .height = @as(i32, @intCast(h)),
             .pixel_format = .RGBA8,
@@ -23,8 +25,6 @@ pub const Texture = struct {
                 break :init imageData;
             },
         });
-
-        return .{ .value = image };
     }
 
     pub fn width(self: Texture) f32 {
@@ -128,7 +128,6 @@ pub const Renderer = struct {
         sk.gfx.setup(.{
             .environment = sk.glue.environment(),
             .logger = .{ .func = sk.log.func },
-            .image_pool_size = 150,
         });
 
         sk.gl.setup(.{

@@ -9,29 +9,39 @@ const scene = @import("scene.zig");
 
 var soundBuffer: [20]audio.Sound = undefined;
 
+const sk = @import("sokol");
 fn init() callconv(.C) void {
     cache.init(allocator);
     gfx.init(window.size);
-    audio.init(&soundBuffer);
+    // audio.init(&soundBuffer);
 
-    scene.init();
+    _ = gfx.loadTexture("assets/background.png");
+
+    // scene.init();
     timer = std.time.Timer.start() catch unreachable;
 }
 
 fn event(ev: ?*const window.Event) callconv(.C) void {
-    if (ev) |e| scene.event(e);
+    // if (ev) |e| scene.event(e);
+    _ = ev;
 }
 
 fn frame() callconv(.C) void {
-    const delta: f32 = @floatFromInt(timer.lap());
-    scene.update(delta / std.time.ns_per_s);
-    scene.render();
+    // const delta: f32 = @floatFromInt(timer.lap());
+    // scene.update(delta / std.time.ns_per_s);
+    // scene.render();
+
+    cache.loading();
+
+    gfx.beginDraw();
+    defer gfx.endDraw();
+    gfx.draw(gfx.loadTexture("assets/background.png"), .zero);
 }
 
 fn deinit() callconv(.C) void {
-    scene.deinit();
+    // scene.deinit();
 
-    audio.deinit();
+    // audio.deinit();
     gfx.deinit();
     cache.deinit();
 }

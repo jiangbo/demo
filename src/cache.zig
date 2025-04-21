@@ -2,11 +2,13 @@ const std = @import("std");
 const gfx = @import("graphics.zig");
 const math = @import("math.zig");
 const c = @import("c.zig");
+const sk = @import("sokol");
 
 var allocator: std.mem.Allocator = undefined;
 
 pub fn init(alloc: std.mem.Allocator) void {
     allocator = alloc;
+    sk.fetch.setup(.{ .logger = .{ .func = sk.log.func } });
 }
 
 pub fn deinit() void {
@@ -14,6 +16,43 @@ pub fn deinit() void {
     TextureSlice.deinit();
     RectangleSlice.deinit();
     Sound.deinit();
+    sk.fetch.shutdown();
+}
+
+pub fn loading() void {
+    sk.fetch.dowork();
+}
+
+var loadingBuffer: [1024 * 1024]u8 = undefined;
+
+pub fn send(path: [:0]const u8) void {
+    std.log.info("loading {s}", .{path});
+
+    _ = sk.fetch.send(.{
+        .path = path,
+        .callback = callback,
+        .buffer = sk.fetch.asRange(&loadingBuffer),
+    });
+}
+
+fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
+    const response = responses[0];
+    std.log.info("{}", .{response});
+
+    if (response.failed) @panic("failed to load assets");
+
+    const path = std.mem.span(response.path);
+    if (std.mem.endsWith(u8, path, ".png")) {
+        std.log.info("loaded texture from: {s}", .{path});
+
+        const data = rangeToSlice(response.buffer);
+        const image = c.stbImage.loadFromMemory(data) catch unreachable;
+        Texture.init(path, image);
+    }
+}
+
+fn rangeToSlice(range: sk.fetch.Range) []const u8 {
+    return @as([*]const u8, @ptrCast(range.ptr))[0..range.size];
 }
 
 pub const Texture = struct {
@@ -23,14 +62,16 @@ pub const Texture = struct {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
         if (entry.found_existing) return entry.value_ptr.*;
 
-        std.log.info("loading texture from: {s}", .{path});
-        const image = c.stbImage.load(path) catch unreachable;
-        defer c.stbImage.unload(image);
+        send(path);
 
-        const texture = gfx.Texture.init(image.width, image.height, image.data);
-        entry.value_ptr.* = texture;
+        entry.value_ptr.* = .{ .value = sk.gfx.allocImage() };
         entry.key_ptr.* = allocator.dupe(u8, path) catch unreachable;
-        return texture;
+        return entry.value_ptr.*;
+    }
+
+    fn init(path: [:0]const u8, image: c.stbImage.Image) void {
+        defer c.stbImage.unload(image);
+        cache.getPtr(path).?.init(image.width, image.height, image.data);
     }
 
     pub fn loadSlice(textures: []gfx.Texture, comptime pathFmt: []const u8, from: u8) void {
