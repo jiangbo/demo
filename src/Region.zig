@@ -24,8 +24,8 @@ pub const RegionType = enum {
     takeoutBox,
 };
 
+position: math.Vector,
 type: RegionType,
-area: math.Rectangle,
 texture: ?gfx.Texture = null,
 meal: ?cursor.Meal = null,
 timer: ?window.Timer = null,
@@ -39,9 +39,7 @@ const DRINKS_PER_LINE = 2; // 每行 2 个饮料
 const DELIVER_TOTAL_LINES = 4; // 总共 4 行外卖
 
 pub fn init(x: f32, y: f32, regionType: RegionType) Region {
-    const position: math.Vector = .init(x, y);
-
-    var self: Region = .{ .area = .{}, .type = regionType };
+    var self: Region = .{ .position = .init(x, y), .type = regionType };
     switch (regionType) {
         .deliver => refreshDeliver(&self),
 
@@ -78,16 +76,15 @@ pub fn init(x: f32, y: f32, regionType: RegionType) Region {
         .microWave => {
             self.texture = gfx.loadTexture("assets/mo_opening.png");
         },
-        .takeoutBox => {
-            self.area = .init(position, .{ .x = 92, .y = 100 });
-        },
-    }
-
-    if (self.texture) |texture| {
-        self.area = .init(position, texture.size());
+        .takeoutBox => {},
     }
 
     return self;
+}
+
+pub fn area(self: Region) math.Rectangle {
+    if (self.type == .takeoutBox) return .init(self.position, .{ .x = 92, .y = 100 });
+    return .init(self.position, self.texture.?.size());
 }
 
 fn refreshDeliver(self: *Region) void {
@@ -150,11 +147,11 @@ pub fn pick(self: *Region) void {
 
     if (self.type == .takeoutBox) {
         self.meal = null;
-        scene.returnPosition = self.area.min;
+        scene.returnPosition = self.position;
     }
     if (self.type == .microWave) {
         self.meal = null;
-        scene.returnPosition = self.area.min.add(.{ .x = 113, .y = 65 });
+        scene.returnPosition = self.position.add(.{ .x = 113, .y = 65 });
     }
 }
 
@@ -204,7 +201,7 @@ pub fn placeInMicroWave(self: *Region) void {
         else => return,
     };
     cursor.picked = null;
-    // audio.playSound("assets/mo_working.ogg");
+    audio.playSound("assets/mo_working.ogg");
     self.texture = gfx.loadTexture("assets/mo_working.png");
     self.timer = .init(9);
 }
@@ -217,7 +214,7 @@ pub fn placeInDeliver(self: *Region) void {
         if (meal.type == cursorType and !meal.done) {
             cursor.picked = null;
             meal.done = true;
-            // audio.playSound("assets/complete.ogg");
+            audio.playSound("assets/complete.ogg");
             break;
         }
     }
@@ -231,7 +228,7 @@ pub fn placeInDeliver(self: *Region) void {
 pub fn timerFinished(self: *Region) void {
     if (self.type == .microWave) {
         self.texture = gfx.loadTexture("assets/mo_opening.png");
-        // audio.playSound("assets/mo_complete.ogg");
+        audio.playSound("assets/mo_complete.ogg");
     }
 
     if (self.type == .deliver) refreshDeliver(self);
@@ -242,7 +239,7 @@ pub fn timerFinished(self: *Region) void {
 pub fn renderDeliver(self: *const Region) void {
     if (self.wanted == null) return;
 
-    var pos = self.area.min.add(.{ .x = -35, .y = 15 });
+    var pos = self.position.add(.{ .x = -35, .y = 15 });
 
     // 耐心条的边框
     gfx.draw(gfx.loadTexture("assets/patience_border.png"), pos);
@@ -258,7 +255,7 @@ pub fn renderDeliver(self: *const Region) void {
     gfx.drawOptions(content, .{ .sourceRect = src, .targetRect = dst });
 
     // 对话框
-    pos = self.area.min.add(.{ .x = 175, .y = 55 });
+    pos = self.position.add(.{ .x = 175, .y = 55 });
     gfx.draw(gfx.loadTexture("assets/bubble.png"), pos);
 
     var drinks: u8 = 0;

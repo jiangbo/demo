@@ -39,7 +39,7 @@ pub fn init() void {
     regions[13] = .init(1040, 560, .takeoutBox);
     regions[14] = .init(1145, 560, .takeoutBox);
 
-    // audio.playMusic("assets/bgm.ogg");
+    audio.playMusic("assets/bgm.ogg");
 }
 
 pub fn event(ev: *const window.Event) void {
@@ -66,11 +66,11 @@ pub fn update(delta: f32) void {
         if (region.type == .deliver) region.updateDeliver(delta);
 
         if (cursor.picked == null and cursor.leftKeyDown) {
-            if (region.area.contains(cursor.position)) region.pick();
+            if (region.area().contains(cursor.position)) region.pick();
         }
 
         if (cursor.picked != null and !cursor.leftKeyDown) {
-            if (region.area.contains(cursor.position)) region.place();
+            if (region.area().contains(cursor.position)) region.place();
         }
     }
 
@@ -91,16 +91,16 @@ pub fn render() void {
     gfx.draw(gfx.loadTexture("assets/background.png"), .zero);
 
     for (&regions) |*value| {
-        if (value.texture) |texture| gfx.draw(texture, value.area.min);
+        if (value.texture) |texture| gfx.draw(texture, value.area().min);
 
         if (value.type == .takeoutBox) {
             if (value.meal) |meal|
-                gfx.draw(meal.place, value.area.min.add(.{ .y = 20 }));
+                gfx.draw(meal.place, value.area().min.add(.{ .y = 20 }));
         }
 
         if (value.type == .microWave and value.timer == null) {
             if (value.meal) |meal|
-                gfx.draw(meal.place, value.area.min.add(.{ .x = 113, .y = 65 }));
+                gfx.draw(meal.place, value.area().min.add(.{ .x = 113, .y = 65 }));
         }
 
         if (value.type == .deliver) value.renderDeliver();
@@ -115,5 +115,5 @@ pub fn render() void {
 
 pub fn deinit() void {
     window.showCursor(true);
-    // audio.stopMusic();
+    audio.stopMusic();
 }

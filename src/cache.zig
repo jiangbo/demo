@@ -139,34 +139,34 @@ pub const RectangleSlice = struct {
     }
 };
 
-// const audio = @import("audio.zig");
-// pub const Sound = struct {
-//     var cache: std.StringHashMapUnmanaged(audio.Sound) = .empty;
+const audio = @import("audio.zig");
+pub const Sound = struct {
+    var cache: std.StringHashMapUnmanaged(audio.Sound) = .empty;
 
-//     pub fn load(path: [:0]const u8) audio.Sound {
-//         const entry = cache.getOrPut(allocator, path) catch unreachable;
-//         if (entry.found_existing) return entry.value_ptr.*;
+    pub fn load(path: [:0]const u8) audio.Sound {
+        const entry = cache.getOrPut(allocator, path) catch unreachable;
+        if (entry.found_existing) return entry.value_ptr.*;
 
-//         std.log.info("loading audio from: {s}", .{path});
-//         const stbAudio = c.stbAudio.load(path) catch unreachable;
-//         defer c.stbAudio.unload(stbAudio);
+        std.log.info("loading audio from: {s}", .{path});
+        const stbAudio = c.stbAudio.load(path) catch unreachable;
+        defer c.stbAudio.unload(stbAudio);
 
-//         var sound: audio.Sound = .{ .source = undefined };
-//         const info = c.stbAudio.getInfo(stbAudio);
-//         sound.channels = @intCast(info.channels);
-//         sound.sampleRate = @intCast(info.sample_rate);
+        var sound: audio.Sound = .{ .source = undefined };
+        const info = c.stbAudio.getInfo(stbAudio);
+        sound.channels = @intCast(info.channels);
+        sound.sampleRate = @intCast(info.sample_rate);
 
-//         const size = c.stbAudio.getSampleCount(stbAudio) * sound.channels;
-//         sound.source = allocator.alloc(f32, size) catch unreachable;
+        const size = c.stbAudio.getSampleCount(stbAudio) * sound.channels;
+        sound.source = allocator.alloc(f32, size) catch unreachable;
 
-//         _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
-//         entry.value_ptr.* = sound;
-//         return sound;
-//     }
+        _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
+        entry.value_ptr.* = sound;
+        return sound;
+    }
 
-//     pub fn deinit() void {
-//         var iterator = cache.valueIterator();
-//         while (iterator.next()) |value| allocator.free(value.source);
-//         cache.deinit(allocator);
-//     }
-// };
+    pub fn deinit() void {
+        var iterator = cache.valueIterator();
+        while (iterator.next()) |value| allocator.free(value.source);
+        cache.deinit(allocator);
+    }
+};

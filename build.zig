@@ -34,8 +34,8 @@ fn buildNative(b: *std.Build, target: std.Build.ResolvedTarget) !void {
     const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
     exe.root_module.addCSourceFile(.{ .file = stbImagePath, .flags = &.{"-O2"} });
 
-    // const stbAudioPath = writeFiles.add("stb_audio.c", stbAudioSource);
-    // exe.root_module.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{"-O2"} });
+    const stbAudioPath = writeFiles.add("stb_audio.c", stbAudioSource);
+    exe.root_module.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{"-O2"} });
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());

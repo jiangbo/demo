@@ -13,14 +13,13 @@ const sk = @import("sokol");
 fn init() callconv(.C) void {
     cache.init(allocator);
     gfx.init(window.size);
-    // audio.init(&soundBuffer);
+    audio.init(&soundBuffer);
 
     scene.init();
     timer = std.time.Timer.start() catch unreachable;
 }
 
 fn event(ev: ?*const window.Event) callconv(.C) void {
-    std.log.info("ev: {any}", .{ev});
     if (ev) |e| scene.event(e);
 }
 
@@ -34,7 +33,7 @@ fn frame() callconv(.C) void {
 fn deinit() callconv(.C) void {
     scene.deinit();
 
-    // audio.deinit();
+    audio.deinit();
     gfx.deinit();
     cache.deinit();
 }
@@ -60,7 +59,7 @@ pub fn main() void {
         .window_title = "拼好饭传奇",
         .width = @as(i32, @intFromFloat(window.size.x)),
         .height = @as(i32, @intFromFloat(window.size.y)),
-        .high_dpi = true,
+        .high_dpi = false,
         .init_cb = init,
         .event_cb = event,
         .frame_cb = frame,
