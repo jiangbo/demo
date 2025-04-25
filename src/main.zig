@@ -9,28 +9,28 @@ const scene = @import("scene.zig");
 
 var soundBuffer: [20]audio.Sound = undefined;
 
-const sk = @import("sokol");
-fn init() callconv(.C) void {
+export fn init() void {
     cache.init(allocator);
     gfx.init(window.size);
     audio.init(&soundBuffer);
 
+    var prng = std.Random.DefaultPrng.init(timer.lap());
+    math.rand = prng.random();
     scene.init();
-    timer = std.time.Timer.start() catch unreachable;
 }
 
-fn event(ev: ?*const window.Event) callconv(.C) void {
+export fn event(ev: ?*const window.Event) void {
     if (ev) |e| scene.event(e);
 }
 
-fn frame() callconv(.C) void {
+export fn frame() void {
     const delta: f32 = @floatFromInt(timer.lap());
     cache.loading();
     scene.update(delta / std.time.ns_per_s);
     scene.render();
 }
 
-fn deinit() callconv(.C) void {
+export fn deinit() void {
     scene.deinit();
 
     audio.deinit();
@@ -51,15 +51,12 @@ pub fn main() void {
     allocator = std.heap.c_allocator;
 
     window.size = .{ .x = 1280, .y = 720 };
-
-    var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
-    math.rand = prng.random();
+    timer = std.time.Timer.start() catch unreachable;
 
     window.run(.{
         .window_title = "拼好饭传奇",
         .width = @as(i32, @intFromFloat(window.size.x)),
         .height = @as(i32, @intFromFloat(window.size.y)),
-        .high_dpi = false,
         .init_cb = init,
         .event_cb = event,
         .frame_cb = frame,
