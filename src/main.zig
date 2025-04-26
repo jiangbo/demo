@@ -13,9 +13,9 @@ export fn init() void {
     cache.init(allocator);
     gfx.init(window.size);
     audio.init(&soundBuffer);
-    initRand();
 
     scene.init();
+    _ = timer.lap();
 }
 
 export fn event(ev: ?*const window.Event) void {
@@ -47,6 +47,7 @@ var allocator: std.mem.Allocator = undefined;
 var timer: std.time.Timer = undefined;
 
 pub fn main() void {
+    timer = std.time.Timer.start() catch unreachable;
     var debugAllocator: std.heap.DebugAllocator(.{}) = undefined;
     if (@import("builtin").mode == .Debug) {
         debugAllocator = std.heap.DebugAllocator(.{}).init;
@@ -60,7 +61,7 @@ pub fn main() void {
     };
 
     window.size = .{ .x = 1280, .y = 720 };
-    timer = std.time.Timer.start() catch unreachable;
+    initRand();
 
     window.run(.{
         .window_title = "拼好饭传奇",

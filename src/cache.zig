@@ -46,14 +46,14 @@ fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
     const path = std.mem.span(response.path);
     if (std.mem.endsWith(u8, path, ".png")) {
         std.log.info("loaded texture from: {s}", .{path});
-        Texture.init(path, rangeToSlice(response.buffer));
+        Texture.init(path, rangeToSlice(response.data));
     } else if (std.mem.endsWith(u8, path, "bgm.ogg")) {
         std.log.info("loaded bgm from: {s}", .{path});
-        const data = rangeToSlice(response.buffer);
+        const data = rangeToSlice(response.data);
         Music.init(path, allocator.dupe(u8, data) catch unreachable);
     } else if (std.mem.endsWith(u8, path, ".ogg")) {
         std.log.info("loaded ogg from: {s}", .{path});
-        Sound.init(path, rangeToSlice(response.buffer));
+        Sound.init(path, rangeToSlice(response.data));
     }
 }
 
@@ -153,7 +153,10 @@ pub const Sound = struct {
         if (entry.found_existing) return entry.value_ptr.*;
 
         send(path);
-        return .{ .source = undefined, .valid = false };
+        entry.value_ptr.* = .{ .source = undefined };
+        entry.key_ptr.* = path;
+
+        return entry.value_ptr.*;
     }
 
     pub fn init(path: [:0]const u8, data: []const u8) void {

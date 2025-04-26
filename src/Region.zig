@@ -84,6 +84,7 @@ pub fn init(x: f32, y: f32, regionType: RegionType) Region {
 
 pub fn area(self: Region) math.Rectangle {
     if (self.type == .takeoutBox) return .init(self.position, .{ .x = 92, .y = 100 });
+    if (self.texture == null) return .{};
     return .init(self.position, self.texture.?.size());
 }
 
