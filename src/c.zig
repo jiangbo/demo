@@ -36,16 +36,17 @@ pub const stbVorbis = struct {
         @cDefine("STB_VORBIS_NO_PUSHDATA_API", {});
         @cDefine("STB_VORBIS_HEADER_ONLY", {});
         @cDefine("STB_VORBIS_NO_INTEGER_CONVERSION", {});
+        @cDefine("STB_VORBIS_NO_STDIO", {});
         @cInclude("stb_Vorbis.c");
     });
 
     pub const Audio = stb.stb_vorbis;
     pub const AudioInfo = stb.stb_vorbis_info;
 
-    pub fn load(path: [:0]const u8) !*Audio {
+    pub fn loadFromMemory(data: []const u8) !*Audio {
         var errorCode: c_int = 0;
 
-        const vorbis = stb.stb_vorbis_open_filename(path, &errorCode, null);
+        const vorbis = stb.stb_vorbis_open_memory(data.ptr, @intCast(data.len), &errorCode, null);
         if (errorCode != 0 or vorbis == null) return error.loadAudioFailed;
         return vorbis.?;
     }

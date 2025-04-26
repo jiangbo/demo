@@ -115,5 +115,4 @@ pub fn render() void {
 
 pub fn deinit() void {
     window.showCursor(true);
-    audio.stopMusic();
 }

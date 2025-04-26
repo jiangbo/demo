@@ -15,7 +15,7 @@ pub fn deinit() void {
     Texture.deinit();
     TextureSlice.deinit();
     RectangleSlice.deinit();
-    // Sound.deinit();
+    Sound.deinit();
     sk.fetch.shutdown();
 }
 
@@ -23,7 +23,7 @@ pub fn loading() void {
     sk.fetch.dowork();
 }
 
-var loadingBuffer: [1024 * 1024]u8 = undefined;
+var loadingBuffer: [1.5 * 1024 * 1024]u8 = undefined;
 
 pub fn send(path: [:0]const u8) void {
     std.log.info("loading {s}", .{path});
@@ -37,19 +37,23 @@ pub fn send(path: [:0]const u8) void {
 
 fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
     const response = responses[0];
-    std.log.info("{}", .{response});
 
-    if (response.failed) @panic("failed to load assets");
+    if (response.failed) {
+        std.log.info("failed to load assets, path: {s}", .{response.path});
+        return;
+    }
 
     const path = std.mem.span(response.path);
     if (std.mem.endsWith(u8, path, ".png")) {
         std.log.info("loaded texture from: {s}", .{path});
-
+        Texture.init(path, rangeToSlice(response.buffer));
+    } else if (std.mem.endsWith(u8, path, "bgm.ogg")) {
+        std.log.info("loaded bgm from: {s}", .{path});
         const data = rangeToSlice(response.buffer);
-        const image = c.stbImage.loadFromMemory(data) catch unreachable;
-        defer c.stbImage.unload(image);
-
-        Texture.init(path, image);
+        Music.init(path, allocator.dupe(u8, data) catch unreachable);
+    } else if (std.mem.endsWith(u8, path, ".ogg")) {
+        std.log.info("loaded ogg from: {s}", .{path});
+        Sound.init(path, rangeToSlice(response.buffer));
     }
 }
 
@@ -71,8 +75,9 @@ pub const Texture = struct {
         return entry.value_ptr.*;
     }
 
-    fn init(path: [:0]const u8, image: c.stbImage.Image) void {
-        // defer c.stbImage.unload(image);
+    fn init(path: [:0]const u8, data: []const u8) void {
+        const image = c.stbImage.loadFromMemory(data) catch unreachable;
+        defer c.stbImage.unload(image);
         cache.getPtr(path).?.init(image.width, image.height, image.data);
     }
 
@@ -147,12 +152,16 @@ pub const Sound = struct {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
         if (entry.found_existing) return entry.value_ptr.*;
 
-        std.log.info("loading audio from: {s}", .{path});
-        const stbAudio = c.stbAudio.load(path) catch unreachable;
-        defer c.stbAudio.unload(stbAudio);
+        send(path);
+        return .{ .source = undefined, .valid = false };
+    }
 
-        var sound: audio.Sound = .{ .source = undefined };
+    pub fn init(path: [:0]const u8, data: []const u8) void {
+        const stbAudio = c.stbAudio.loadFromMemory(data) catch unreachable;
         const info = c.stbAudio.getInfo(stbAudio);
+
+        var sound = cache.getPtr(path).?;
+
         sound.channels = @intCast(info.channels);
         sound.sampleRate = @intCast(info.sample_rate);
 
@@ -160,13 +169,41 @@ pub const Sound = struct {
         sound.source = allocator.alloc(f32, size) catch unreachable;
 
         _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
-        entry.value_ptr.* = sound;
-        return sound;
+        sound.valid = true;
     }
 
     pub fn deinit() void {
         var iterator = cache.valueIterator();
         while (iterator.next()) |value| allocator.free(value.source);
         cache.deinit(allocator);
+    }
+};
+
+pub const Music = struct {
+    pub fn load(path: [:0]const u8, loop: bool) audio.Music {
+        if (audio.music) |m| {
+            if (std.mem.eql(u8, m.path, path)) return audio.music.?;
+        }
+
+        send(path);
+        return .{ .path = path, .loop = loop };
+    }
+
+    pub fn init(path: [:0]const u8, data: []const u8) void {
+        const stbAudio = c.stbAudio.loadFromMemory(data) catch unreachable;
+        const info = c.stbAudio.getInfo(stbAudio);
+        const args = .{ info.sample_rate, info.channels, path };
+        std.log.info("music sampleRate: {}, channels: {d}, path: {s}", args);
+        audio.music.?.source = stbAudio;
+        audio.music.?.data = data;
+        audio.music.?.valid = true;
+    }
+
+    pub fn unload() void {
+        c.stbAudio.unload(audio.music.?.source);
+        audio.music.?.valid = false;
+        if (audio.music.?.data.len != 0) {
+            allocator.free(audio.music.?.data);
+        }
     }
 };

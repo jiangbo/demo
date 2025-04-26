@@ -18,13 +18,16 @@ pub fn deinit() void {
     sk.audio.shutdown();
 }
 
-const Music = struct {
-    source: *c.stbAudio.Audio,
+pub const Music = struct {
+    path: [:0]const u8 = &.{},
+    source: *c.stbAudio.Audio = undefined,
+    data: []const u8 = &.{},
     paused: bool = false,
     loop: bool = true,
+    valid: bool = false,
 };
 
-var music: ?Music = null;
+pub var music: ?Music = null;
 
 pub fn playMusic(path: [:0]const u8) void {
     doPlayMusic(path, true);
@@ -37,12 +40,7 @@ pub fn playMusicOnce(path: [:0]const u8) void {
 fn doPlayMusic(path: [:0]const u8, loop: bool) void {
     stopMusic();
 
-    const audio = c.stbAudio.load(path) catch unreachable;
-    const info = c.stbAudio.getInfo(audio);
-    const args = .{ info.sample_rate, info.channels, path };
-    std.log.info("music sampleRate: {}, channels: {d}, path: {s}", args);
-
-    music = .{ .source = audio, .loop = loop };
+    music = cache.Music.load(path, loop);
 }
 
 pub fn pauseMusic() void {
@@ -54,17 +52,14 @@ pub fn resumeMusic() void {
 }
 
 pub fn stopMusic() void {
-    if (music) |*value| {
-        c.stbAudio.unload(value.source);
-        music = null;
-    }
+    if (music != null) cache.Music.unload();
 }
 
 var sounds: []Sound = &.{};
 
 pub const Sound = struct {
     source: []f32,
-    valid: bool = true,
+    valid: bool = false,
     loop: bool = true,
     index: usize = 0,
     sampleRate: u16 = 0,
@@ -101,12 +96,12 @@ fn addItem(slice: anytype, item: anytype) usize {
     @panic("too many audio sound");
 }
 
-fn callback(b: [*c]f32, frames: i32, channels: i32) callconv(.C) void {
+export fn callback(b: [*c]f32, frames: i32, channels: i32) void {
     const buffer = b[0..@as(usize, @intCast(frames * channels))];
     @memset(buffer, 0);
     {
         if (music) |m| blk: {
-            if (m.paused) break :blk;
+            if (m.paused or !m.valid) break :blk;
             const count = c.stbAudio.fillSamples(m.source, buffer, channels);
             if (count == 0) {
                 if (m.loop) c.stbAudio.reset(m.source) else music = null;

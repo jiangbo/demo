@@ -19,7 +19,7 @@ pub const Camera = struct {
 pub var renderer: gpu.Renderer = undefined;
 var matrix: [16]f32 = undefined;
 var passEncoder: gpu.RenderPassEncoder = undefined;
-pub var camera: Camera = undefined;
+pub var camera: Camera = .{};
 
 pub fn init(size: math.Vector) void {
     matrix = .{

@@ -13,9 +13,8 @@ export fn init() void {
     cache.init(allocator);
     gfx.init(window.size);
     audio.init(&soundBuffer);
+    initRand();
 
-    var prng = std.Random.DefaultPrng.init(timer.lap());
-    math.rand = prng.random();
     scene.init();
 }
 
@@ -38,17 +37,27 @@ export fn deinit() void {
     cache.deinit();
 }
 
+fn initRand() void {
+    var prng = std.Random.DefaultPrng.init(timer.lap());
+    math.rand = prng.random();
+}
+
 var allocator: std.mem.Allocator = undefined;
 
 var timer: std.time.Timer = undefined;
 
 pub fn main() void {
-    // var debugAllocator = std.heap.DebugAllocator(.{}).init;
-    // defer _ = debugAllocator.deinit();
+    var debugAllocator: std.heap.DebugAllocator(.{}) = undefined;
+    if (@import("builtin").mode == .Debug) {
+        debugAllocator = std.heap.DebugAllocator(.{}).init;
+        allocator = debugAllocator.allocator();
+    } else {
+        allocator = std.heap.c_allocator;
+    }
 
-    // allocator = debugAllocator.allocator();
-
-    allocator = std.heap.c_allocator;
+    defer if (@import("builtin").mode == .Debug) {
+        _ = debugAllocator.deinit();
+    };
 
     window.size = .{ .x = 1280, .y = 720 };
     timer = std.time.Timer.start() catch unreachable;
@@ -61,5 +70,7 @@ pub fn main() void {
         .event_cb = event,
         .frame_cb = frame,
         .cleanup_cb = deinit,
+        .logger = .{ .func = window.log },
+        .html5_bubble_key_events = true,
     });
 }
