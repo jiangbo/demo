@@ -82,7 +82,7 @@ fn buildWeb(b: *std.Build, target: std.Build.ResolvedTarget) !void {
         .use_webgl2 = true,
         .use_emmalloc = true,
         .use_filesystem = false,
-        .shell_file_path = sokol.path("src/sokol/web/shell.html"),
+        .shell_file_path = b.path("index.html"),
     });
 
     // attach Emscripten linker output to default install step

@@ -141,12 +141,16 @@ pub const Rectangle = struct {
     }
 };
 
-pub var rand: std.Random = undefined;
+pub var rand: std.Random.DefaultPrng = undefined;
+
+pub fn random() std.Random {
+    return rand.random();
+}
 
 pub fn randF32(min: f32, max: f32) f32 {
-    return rand.float(f32) * (max - min) + min;
+    return random().float(f32) * (max - min) + min;
 }
 
 pub fn randU8(min: u8, max: u8) u8 {
-    return rand.intRangeAtMostBiased(u8, min, max);
+    return random().intRangeAtMostBiased(u8, min, max);
 }

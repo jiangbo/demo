@@ -90,7 +90,7 @@ pub fn area(self: Region) math.Rectangle {
 
 fn refreshDeliver(self: *Region) void {
     // 随机外卖员形象
-    const meituan = math.rand.boolean();
+    const meituan = math.random().boolean();
     if (meituan) {
         self.texture = gfx.loadTexture("assets/meituan.png");
     } else {
@@ -118,7 +118,7 @@ fn refreshDeliver(self: *Region) void {
 
     // 再加饮料
     for (0..drinks) |_| {
-        if (math.rand.boolean())
+        if (math.random().boolean())
             self.wanted.?.appendAssumeCapacity(.init(.cola))
         else
             self.wanted.?.appendAssumeCapacity(.init(.sprite));

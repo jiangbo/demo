@@ -14,8 +14,8 @@ export fn init() void {
     gfx.init(window.size);
     audio.init(&soundBuffer);
 
+    math.rand = .init(timer.lap());
     scene.init();
-    _ = timer.lap();
 }
 
 export fn event(ev: ?*const window.Event) void {
@@ -37,17 +37,11 @@ export fn deinit() void {
     cache.deinit();
 }
 
-fn initRand() void {
-    var prng = std.Random.DefaultPrng.init(timer.lap());
-    math.rand = prng.random();
-}
-
 var allocator: std.mem.Allocator = undefined;
 
 var timer: std.time.Timer = undefined;
 
 pub fn main() void {
-    timer = std.time.Timer.start() catch unreachable;
     var debugAllocator: std.heap.DebugAllocator(.{}) = undefined;
     if (@import("builtin").mode == .Debug) {
         debugAllocator = std.heap.DebugAllocator(.{}).init;
@@ -61,7 +55,7 @@ pub fn main() void {
     };
 
     window.size = .{ .x = 1280, .y = 720 };
-    initRand();
+    timer = std.time.Timer.start() catch unreachable;
 
     window.run(.{
         .window_title = "拼好饭传奇",
