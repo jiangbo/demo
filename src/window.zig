@@ -39,6 +39,23 @@ pub const Timer = struct {
 };
 
 pub var size: math.Vector = .zero;
+var keyState: std.StaticBitSet(512) = .initEmpty();
+
+pub fn event(ev: *const Event) void {
+    switch (ev.type) {
+        .KEY_DOWN => keyState.set(@intCast(@intFromEnum(ev.key_code))),
+        .KEY_UP => keyState.unset(@intCast(@intFromEnum(ev.key_code))),
+        else => {},
+    }
+}
+
+pub fn isKeyDown(keyCode: KeyCode) bool {
+    return keyState.isSet(@intCast(@intFromEnum(keyCode)));
+}
+
+pub fn isKeyUp(keyCode: KeyCode) bool {
+    return !isKeyDown(keyCode);
+}
 
 pub fn showCursor(show: bool) void {
     sk.app.showMouse(show);
@@ -62,4 +79,5 @@ pub fn exit() void {
     sk.app.quit();
 }
 pub const run = sk.app.run;
+pub const KeyCode = sk.app.Keycode;
 pub const log = sk.log.func;

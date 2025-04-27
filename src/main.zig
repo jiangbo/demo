@@ -19,7 +19,7 @@ export fn init() void {
 }
 
 export fn event(ev: ?*const window.Event) void {
-    if (ev) |e| scene.event(e);
+    if (ev) |e| window.event(e);
 }
 
 export fn frame() void {
