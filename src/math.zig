@@ -64,12 +64,6 @@ pub const Vector3 = struct {
         return .{ .x = self.x + other.x, .y = self.y + other.y, .z = self.z + other.z };
     }
 
-    pub fn selfAdd(self: *Vector3, other: Vector3) void {
-        self.x += other.x;
-        self.y += other.y;
-        self.z += other.z;
-    }
-
     pub fn sub(self: Vector3, other: Vector3) Vector3 {
         return .{ .x = self.x - other.x, .y = self.y - other.y, .z = self.z - other.z };
     }
