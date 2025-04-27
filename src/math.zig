@@ -143,6 +143,10 @@ pub const Rectangle = struct {
 
 pub var rand: std.Random.DefaultPrng = undefined;
 
+pub fn setRandomSeed(seed: u64) void {
+    rand = .init(seed);
+}
+
 pub fn random() std.Random {
     return rand.random();
 }

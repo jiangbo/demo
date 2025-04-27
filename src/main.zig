@@ -14,7 +14,7 @@ export fn init() void {
     gfx.init(window.size);
     audio.init(&soundBuffer);
 
-    math.rand = .init(timer.lap());
+    math.setRandomSeed(timer.lap());
     scene.init();
 }
 
