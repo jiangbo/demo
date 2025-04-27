@@ -30,15 +30,12 @@ export fn frame() void {
 }
 
 export fn deinit() void {
-    scene.deinit();
-
     audio.deinit();
     gfx.deinit();
     cache.deinit();
 }
 
 var allocator: std.mem.Allocator = undefined;
-
 var timer: std.time.Timer = undefined;
 
 pub fn main() void {
@@ -54,18 +51,18 @@ pub fn main() void {
         _ = debugAllocator.deinit();
     };
 
-    window.size = .{ .x = 1280, .y = 720 };
+    window.size = .{ .x = 640, .y = 480 };
     timer = std.time.Timer.start() catch unreachable;
 
     window.run(.{
-        .window_title = "拼好饭传奇",
+        .window_title = "教你制作RPG游戏",
         .width = @as(i32, @intFromFloat(window.size.x)),
         .height = @as(i32, @intFromFloat(window.size.y)),
+        .high_dpi = true,
         .init_cb = init,
         .event_cb = event,
         .frame_cb = frame,
         .cleanup_cb = deinit,
         .logger = .{ .func = window.log },
-        .html5_bubble_key_events = true,
     });
 }

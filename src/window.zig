@@ -62,5 +62,4 @@ pub fn exit() void {
     sk.app.quit();
 }
 pub const run = sk.app.run;
-
 pub const log = sk.log.func;
