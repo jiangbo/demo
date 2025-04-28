@@ -9,7 +9,17 @@ const SPEED = 100;
 var position: math.Vector = .zero;
 var facing: math.FourDirection = .down;
 
-pub fn init() void {}
+var upTexture: gfx.Texture = undefined;
+var downTexture: gfx.Texture = undefined;
+var leftTexture: gfx.Texture = undefined;
+var rightTexture: gfx.Texture = undefined;
+
+pub fn init() void {
+    upTexture = gfx.loadTexture("assets/role2.png");
+    downTexture = gfx.loadTexture("assets/role.png");
+    leftTexture = gfx.loadTexture("assets/role3.png");
+    rightTexture = gfx.loadTexture("assets/role4.png");
+}
 
 pub fn update(delta: f32) void {
     updatePlayer(delta);
@@ -48,5 +58,12 @@ pub fn render() void {
     gfx.beginDraw();
     defer gfx.endDraw();
 
-    gfx.draw(gfx.loadTexture("assets/role.png"), position);
+    const current = switch (facing) {
+        .up => upTexture,
+        .down => downTexture,
+        .left => leftTexture,
+        .right => rightTexture,
+    };
+
+    gfx.draw(current, position);
 }
