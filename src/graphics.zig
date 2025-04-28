@@ -8,10 +8,18 @@ pub const Texture = gpu.Texture;
 
 pub const Camera = struct {
     rect: math.Rectangle = .{},
+    border: math.Vector = .zero,
 
     pub fn lookAt(self: *Camera, pos: math.Vector) void {
-        self.rect.x = pos.x - self.rect.w / 2;
-        self.rect.y = pos.y - self.rect.h / 2;
+        const half = self.rect.size().scale(-0.5);
+        var rect = self.rect.move(half.add(pos));
+
+        const border = self.border.sub(half);
+
+        rect.min.x = std.math.clamp(rect.min.x, 0, border.x);
+        rect.min.y = std.math.clamp(rect.min.y, 0, border.y);
+
+        self.rect = .init(rect.min, self.rect.size());
     }
 };
 

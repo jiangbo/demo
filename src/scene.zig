@@ -16,10 +16,17 @@ var facing: math.FourDirection = .down;
 var keyPressed: bool = false;
 var velocity: math.Vector = .zero;
 
+var map: gfx.Texture = undefined;
+
 pub fn init() void {
+    const mapSize: math.Vector = .init(1000, 800);
+    gfx.camera = .{ .rect = .init(.zero, window.size), .border = mapSize };
+
     players[0] = .init("assets/r1.png", 0);
     players[1] = .init("assets/r2.png", 1);
     players[2] = .init("assets/r3.png", 2);
+
+    map = assets.loadTexture("assets/map1.png", mapSize);
 }
 
 pub fn event(ev: *const window.Event) void {
@@ -45,7 +52,12 @@ pub fn update(delta: f32) void {
     } else {
         velocity = velocity.normalize().scale(delta * PLAYER_SPEED);
         position = position.add(velocity);
+        std.log.info("position: {}", .{position});
+        gfx.camera.lookAt(position);
     }
+
+    gfx.camera.lookAt(position);
+    std.log.info("camera: {}", .{gfx.camera.rect});
 
     if (keyPressed) currentPlayer.current(facing).update(delta);
 }
@@ -59,6 +71,8 @@ fn updatePlayer(direction: math.FourDirection) void {
 pub fn render() void {
     gfx.beginDraw();
     defer gfx.endDraw();
+
+    gfx.draw(map, .zero);
 
     gfx.draw(currentPlayer.current(facing).current(), position);
 }
