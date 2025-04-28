@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const cache = @import("cache.zig");
+const assets = @import("assets.zig");
 const window = @import("window.zig");
 const math = @import("math.zig");
 const gfx = @import("graphics.zig");
@@ -10,7 +10,7 @@ const scene = @import("scene.zig");
 var soundBuffer: [20]audio.Sound = undefined;
 
 export fn init() void {
-    cache.init(allocator);
+    assets.init(allocator);
     gfx.init(window.size);
     audio.init(&soundBuffer);
 
@@ -24,7 +24,7 @@ export fn event(ev: ?*const window.Event) void {
 
 export fn frame() void {
     const delta: f32 = @floatFromInt(timer.lap());
-    cache.loading();
+    assets.loading();
     scene.update(delta / std.time.ns_per_s);
     scene.render();
 }
@@ -32,7 +32,7 @@ export fn frame() void {
 export fn deinit() void {
     audio.deinit();
     gfx.deinit();
-    cache.deinit();
+    assets.deinit();
 }
 
 var allocator: std.mem.Allocator = undefined;

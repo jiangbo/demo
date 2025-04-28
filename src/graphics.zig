@@ -1,6 +1,5 @@
 const std = @import("std");
 
-const cache = @import("cache.zig");
 const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const animation = @import("animation.zig");

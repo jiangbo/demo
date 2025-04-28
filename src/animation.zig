@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const window = @import("window.zig");
-const cache = @import("cache.zig");
+const assets = @import("assets.zig");
 const math = @import("math.zig");
 const Texture = @import("gpu.zig").Texture;
 
@@ -14,7 +14,7 @@ pub const FrameAnimation = struct {
     offset: math.Vector = .zero,
 
     pub fn init(name: []const u8, texture: Texture, count: u8) FrameAnimation {
-        const frames = cache.RectangleSlice.load(name, count);
+        const frames = assets.RectangleSlice.load(name, count);
 
         const width = @divExact(texture.width(), @as(f32, @floatFromInt(count)));
         const size: math.Vector = .{ .x = width, .y = texture.height() };

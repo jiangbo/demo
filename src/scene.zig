@@ -4,7 +4,7 @@ const window = @import("window.zig");
 const gfx = @import("graphics.zig");
 const math = @import("math.zig");
 const audio = @import("audio.zig");
-const cache = @import("cache.zig");
+const assets = @import("assets.zig");
 
 const SPEED = 100;
 var position: math.Vector = .zero;
@@ -18,7 +18,7 @@ var rightAnimation: gfx.FrameAnimation = undefined;
 var roleTexture: gfx.Texture = undefined;
 
 pub fn init() void {
-    roleTexture = cache.loadTexture("assets/r1.png", .init(960, 960));
+    roleTexture = assets.loadTexture("assets/r1.png", .init(960, 960));
 
     const size: math.Vector = .init(960, 240);
     const upTexture = roleTexture.sub(.init(.{ .y = 720 }, size));

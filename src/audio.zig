@@ -1,6 +1,6 @@
 const std = @import("std");
 const sk = @import("sokol");
-const cache = @import("cache.zig");
+const assets = @import("assets.zig");
 const c = @import("c.zig");
 
 pub fn init(soundBuffer: []Sound) void {
@@ -40,7 +40,7 @@ pub fn playMusicOnce(path: [:0]const u8) void {
 fn doPlayMusic(path: [:0]const u8, loop: bool) void {
     stopMusic();
 
-    music = cache.Music.load(path, loop);
+    music = assets.Music.load(path, loop);
 }
 
 pub fn pauseMusic() void {
@@ -52,7 +52,7 @@ pub fn resumeMusic() void {
 }
 
 pub fn stopMusic() void {
-    if (music != null) cache.Music.unload();
+    if (music != null) assets.Music.unload();
 }
 
 var sounds: []Sound = &.{};
@@ -80,7 +80,7 @@ pub fn stopSound(sound: SoundIndex) void {
 }
 
 fn doPlaySound(path: [:0]const u8, loop: bool) SoundIndex {
-    var sound = cache.Sound.load(path);
+    var sound = assets.Sound.load(path);
     sound.loop = loop;
 
     return addItem(sounds, sound);
