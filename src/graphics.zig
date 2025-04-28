@@ -52,15 +52,13 @@ pub fn draw(tex: Texture, position: math.Vector) void {
 
 pub fn drawFlipX(tex: Texture, pos: math.Vector, flipX: bool) void {
     const target: math.Rectangle = .init(pos, tex.size());
-    // var src = tex.area;
-    // src if (flipX) {}
-    // math.Rectangle{ .max = .{
-    //     .x = if (flipX) -tex.width() else tex.width(),
-    // } };
-    // TODO 翻转X
-    _ = flipX;
+    var src = tex.area;
+    if (flipX) {
+        src.min.x = tex.area.max.x;
+        src.max.x = tex.area.min.x;
+    }
 
-    drawOptions(tex, .{ .sourceRect = tex.area, .targetRect = target });
+    drawOptions(tex, .{ .sourceRect = src, .targetRect = target });
 }
 
 pub const DrawOptions = struct {
@@ -75,17 +73,11 @@ pub fn drawOptions(texture: Texture, options: DrawOptions) void {
     matrix[12] = -1 - camera.rect.min.x * matrix[0];
     matrix[13] = 1 - camera.rect.min.y * matrix[5];
 
-    var src, var dst = .{ options.sourceRect, options.targetRect };
-    if (src.min.x == src.max.x) src.max.x = src.min.x + texture.width();
-    if (src.min.y == src.max.y) src.max.y = src.min.y + texture.height();
-    if (dst.min.x == dst.max.x) dst.max.x = dst.min.x + texture.width();
-    if (dst.min.y == dst.max.y) dst.max.y = dst.min.y + texture.height();
-
     renderer.draw(.{
         .uniform = .{ .vp = matrix },
         .texture = texture,
-        .sourceRect = src,
-        .targetRect = dst,
+        .sourceRect = options.sourceRect,
+        .targetRect = options.targetRect,
         .radians = std.math.degreesToRadians(options.angle),
         .pivot = options.pivot,
         .alpha = options.alpha,
