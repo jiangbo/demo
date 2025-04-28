@@ -1,6 +1,20 @@
 const std = @import("std");
 
-pub const FourDirection = enum { up, down, left, right };
+pub const FourDirection = enum {
+    up,
+    down,
+    left,
+    right,
+
+    pub fn toVector(self: FourDirection) Vector {
+        return switch (self) {
+            .up => Vector{ .y = -1 },
+            .down => Vector{ .y = 1 },
+            .left => Vector{ .x = -1 },
+            .right => Vector{ .x = 1 },
+        };
+    }
+};
 pub const EightDirection = enum { up, down, left, right, leftUp, leftDown, rightUp, rightDown };
 pub const epsilon = 1e-4;
 

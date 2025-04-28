@@ -19,23 +19,23 @@ fn updatePlayer(delta: f32) void {
     var velocity: math.Vector = .zero;
 
     if (window.isKeyDown(.UP) or window.isKeyDown(.W)) {
-        velocity = velocity.add(.{ .y = -1 });
         facing = .up;
+        velocity = velocity.add(facing.toVector());
     }
 
     if (window.isKeyDown(.DOWN) or window.isKeyDown(.S)) {
-        velocity = velocity.add(.{ .y = 1 });
         facing = .down;
+        velocity = velocity.add(facing.toVector());
     }
 
     if (window.isKeyDown(.LEFT) or window.isKeyDown(.A)) {
-        velocity = velocity.add(.{ .x = -1 });
         facing = .left;
+        velocity = velocity.add(facing.toVector());
     }
 
     if (window.isKeyDown(.RIGHT) or window.isKeyDown(.D)) {
-        velocity = velocity.add(.{ .x = 1 });
         facing = .right;
+        velocity = velocity.add(facing.toVector());
     }
 
     if (!velocity.approx(.zero)) {
