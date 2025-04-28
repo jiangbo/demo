@@ -88,27 +88,4 @@ pub fn endDraw() void {
 }
 
 pub const FrameAnimation = animation.FrameAnimation;
-pub const SliceFrameAnimation = animation.SliceFrameAnimation;
-pub const AtlasFrameAnimation = animation.AtlasFrameAnimation;
-
-pub fn playSlice(frameAnimation: *const FrameAnimation, pos: math.Vector) void {
-    playSliceFlipX(frameAnimation, pos, false);
-}
-
-pub fn playSliceFlipX(frame: *const FrameAnimation, pos: math.Vector, flipX: bool) void {
-    const offset = pos.add(frame.offset);
-    drawFlipX(frame.textures[frame.index], offset, flipX);
-}
-
-pub fn playAtlas(frameAnimation: *const AtlasFrameAnimation, pos: math.Vector) void {
-    playAtlasFlipX(frameAnimation, pos, false);
-}
-
-pub fn playAtlasFlipX(frame: *const AtlasFrameAnimation, pos: math.Vector, flipX: bool) void {
-    var src = frame.frames[frame.index];
-    const offset = pos.add(frame.offset);
-
-    const dst: gpu.Rectangle = .{ .x = offset.x, .y = offset.y, .w = src.w };
-    if (flipX) src.w = -src.w;
-    drawOptions(frame.texture, .{ .sourceRect = src, .targetRect = dst });
-}
+pub const FixedFrameAnimation = animation.FixedFrameAnimation;

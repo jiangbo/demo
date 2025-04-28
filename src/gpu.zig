@@ -23,14 +23,14 @@ pub const Texture = struct {
         return self.area.size();
     }
 
-    pub fn sub(self: *const Texture, area: math.Rectangle) Texture {
+    pub fn subTexture(self: *const Texture, area: math.Rectangle) Texture {
         return Texture{ .image = self.image, .area = .{
             .min = self.area.min.add(area.min),
             .max = self.area.min.add(area.max),
         } };
     }
 
-    pub fn map(self: *const Texture, area: math.Rectangle) Texture {
+    pub fn mapTexture(self: *const Texture, area: math.Rectangle) Texture {
         return Texture{ .image = self.image, .area = area };
     }
 

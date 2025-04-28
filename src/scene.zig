@@ -6,14 +6,16 @@ const math = @import("math.zig");
 const audio = @import("audio.zig");
 const assets = @import("assets.zig");
 
+const FrameAnimation = gfx.FixedFrameAnimation(4, 0.25);
+
 const SPEED = 100;
 var position: math.Vector = .zero;
 var facing: math.FourDirection = .down;
 
-var upAnimation: gfx.FrameAnimation = undefined;
-var downAnimation: gfx.FrameAnimation = undefined;
-var leftAnimation: gfx.FrameAnimation = undefined;
-var rightAnimation: gfx.FrameAnimation = undefined;
+var upAnimation: FrameAnimation = undefined;
+var downAnimation: FrameAnimation = undefined;
+var leftAnimation: FrameAnimation = undefined;
+var rightAnimation: FrameAnimation = undefined;
 
 var roleTexture: gfx.Texture = undefined;
 
@@ -21,21 +23,13 @@ pub fn init() void {
     roleTexture = assets.loadTexture("assets/r1.png", .init(960, 960));
 
     const size: math.Vector = .init(960, 240);
-    const upTexture = roleTexture.sub(.init(.{ .y = 720 }, size));
-    upAnimation = .init("up", upTexture, 4);
-    upAnimation.timer = .init(0.25);
+    upAnimation = .init(roleTexture.subTexture(.init(.{ .y = 720 }, size)));
 
-    const downTexture = roleTexture.sub(.init(.{ .y = 0 }, size));
-    downAnimation = .init("down", downTexture, 4);
-    downAnimation.timer = .init(0.25);
+    downAnimation = .init(roleTexture.subTexture(.init(.{ .y = 0 }, size)));
 
-    const leftTexture = roleTexture.sub(.init(.{ .y = 240 }, size));
-    leftAnimation = .init("left", leftTexture, 4);
-    leftAnimation.timer = .init(0.25);
+    leftAnimation = .init(roleTexture.subTexture(.init(.{ .y = 240 }, size)));
 
-    const rightTexture = roleTexture.sub(.init(.{ .y = 480 }, size));
-    rightAnimation = .init("right", rightTexture, 4);
-    rightAnimation.timer = .init(0.25);
+    rightAnimation = .init(roleTexture.subTexture(.init(.{ .y = 480 }, size)));
 }
 
 pub fn update(delta: f32) void {
