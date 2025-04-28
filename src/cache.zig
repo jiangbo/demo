@@ -61,16 +61,21 @@ fn rangeToSlice(range: sk.fetch.Range) []const u8 {
     return @as([*]const u8, @ptrCast(range.ptr))[0..range.size];
 }
 
+pub fn loadTexture(path: [:0]const u8, size: math.Vector) gfx.Texture {
+    return Texture.load(path, size);
+}
+
 pub const Texture = struct {
     var cache: std.StringHashMapUnmanaged(gfx.Texture) = .empty;
 
-    pub fn load(path: [:0]const u8) gfx.Texture {
+    pub fn load(path: [:0]const u8, size: math.Vector) gfx.Texture {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
         if (entry.found_existing) return entry.value_ptr.*;
 
         send(path);
 
-        entry.value_ptr.* = .{ .value = sk.gfx.allocImage() };
+        const image = sk.gfx.allocImage();
+        entry.value_ptr.* = .{ .image = image, .area = .init(.zero, size) };
         entry.key_ptr.* = allocator.dupe(u8, path) catch unreachable;
         return entry.value_ptr.*;
     }
@@ -78,7 +83,17 @@ pub const Texture = struct {
     fn init(path: [:0]const u8, data: []const u8) void {
         const image = c.stbImage.loadFromMemory(data) catch unreachable;
         defer c.stbImage.unload(image);
-        cache.getPtr(path).?.init(image.width, image.height, image.data);
+        const texture = cache.getPtr(path).?;
+
+        sk.gfx.initImage(texture.image, .{
+            .width = image.width,
+            .height = image.height,
+            .data = init: {
+                var imageData = sk.gfx.ImageData{};
+                imageData.subimage[0][0] = sk.gfx.asRange(image.data);
+                break :init imageData;
+            },
+        });
     }
 
     pub fn loadSlice(textures: []gfx.Texture, comptime pathFmt: []const u8, from: u8) void {

@@ -8,41 +8,38 @@ pub const Color = sk.gfx.Color;
 pub const Buffer = sk.gfx.Buffer;
 
 pub const Texture = struct {
-    value: sk.gfx.Image,
+    image: sk.gfx.Image,
+    area: math.Rectangle = .{},
 
-    pub fn alloc() Texture {
-        return .{ .value = sk.gfx.allocImage() };
+    pub fn width(self: *const Texture) f32 {
+        return self.size().x;
     }
 
-    pub fn init(self: *Texture, w: u32, h: u32, data: []const u8) void {
-        sk.gfx.initImage(self.value, .{
-            .width = @as(i32, @intCast(w)),
-            .height = @as(i32, @intCast(h)),
-            .pixel_format = .RGBA8,
-            .data = init: {
-                var imageData = sk.gfx.ImageData{};
-                imageData.subimage[0][0] = sk.gfx.asRange(data);
-                break :init imageData;
-            },
-        });
+    pub fn height(self: *const Texture) f32 {
+        return self.size().y;
     }
 
-    pub fn width(self: Texture) f32 {
-        return @floatFromInt(sk.gfx.queryImageWidth(self.value));
+    pub fn size(self: *const Texture) math.Vector {
+        return self.area.size();
     }
 
-    pub fn height(self: Texture) f32 {
-        return @floatFromInt(sk.gfx.queryImageHeight(self.value));
-    }
-
-    pub fn size(self: Texture) math.Vector {
-        return .{ .x = self.width(), .y = self.height(), .z = 1 };
+    pub fn sub(self: *const Texture, area: math.Rectangle) Texture {
+        const min = self.area.min.add(area.min);
+        const max = self.area.min.add(area.max);
+        return Texture{ .image = self.image, .area = .{ .min = min, .max = max } };
     }
 
     pub fn deinit(self: *Texture) void {
-        sk.gfx.destroyImage(self.value);
+        sk.gfx.destroyImage(self.image);
     }
 };
+
+fn queryTextureSize(image: sk.gfx.Image) math.Vector {
+    return math.Vector{
+        .x = @floatFromInt(sk.gfx.queryImageWidth(image)),
+        .y = @floatFromInt(sk.gfx.queryImageHeight(image)),
+    };
+}
 
 pub const BindGroup = struct {
     value: sk.gfx.Bindings = .{},
@@ -57,7 +54,7 @@ pub const BindGroup = struct {
     }
 
     pub fn bindTexture(self: *BindGroup, index: u32, texture: Texture) void {
-        self.value.images[index] = texture.value;
+        self.value.images[index] = texture.image;
     }
 
     pub fn bindSampler(self: *BindGroup, index: u32, sampler: Sampler) void {
@@ -196,8 +193,11 @@ pub const Renderer = struct {
     pub fn draw(self: *Renderer, options: DrawOptions) void {
         const dst = options.targetRect;
 
-        const min = options.sourceRect.min.div(options.texture.size());
-        const max = options.sourceRect.max.div(options.texture.size());
+        const size = queryTextureSize(options.texture.image);
+        if (size.approx(.zero)) return;
+
+        const min = options.sourceRect.min.div(size);
+        const max = options.sourceRect.max.div(size);
 
         var vertex = [_]math.Vector3{
             .{ .x = dst.min.x, .y = dst.max.y },
@@ -207,7 +207,7 @@ pub const Renderer = struct {
         };
 
         if (options.radians != 0) {
-            const percent = options.pivot.div(options.texture.size());
+            const percent = options.pivot.div(size);
             const pivot = dst.min.add(percent.mul(dst.size()));
 
             for (&vertex) |*point| {
@@ -215,7 +215,7 @@ pub const Renderer = struct {
             }
         }
 
-        const myTest = [_]f32{
+        const vertexes = [_]f32{
             // 顶点和颜色
             vertex[0].x, vertex[0].y, 0.5, 1.0, 1.0, 1.0, options.alpha, min.x, max.y, // 左上
             vertex[1].x, vertex[1].y, 0.5, 1.0, 1.0, 1.0, options.alpha, max.x, max.y, // 右上
@@ -224,7 +224,7 @@ pub const Renderer = struct {
         };
 
         const vertexBuffer = sk.gfx.makeBuffer(.{
-            .data = sk.gfx.asRange(&myTest),
+            .data = sk.gfx.asRange(&vertexes),
         });
 
         self.bind.bindVertexBuffer(0, vertexBuffer);

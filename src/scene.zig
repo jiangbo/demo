@@ -4,6 +4,7 @@ const window = @import("window.zig");
 const gfx = @import("graphics.zig");
 const math = @import("math.zig");
 const audio = @import("audio.zig");
+const cache = @import("cache.zig");
 
 const SPEED = 100;
 var position: math.Vector = .zero;
@@ -14,11 +15,16 @@ var downTexture: gfx.Texture = undefined;
 var leftTexture: gfx.Texture = undefined;
 var rightTexture: gfx.Texture = undefined;
 
+var roleTexture: gfx.Texture = undefined;
+
 pub fn init() void {
-    upTexture = gfx.loadTexture("assets/role2.png");
-    downTexture = gfx.loadTexture("assets/role.png");
-    leftTexture = gfx.loadTexture("assets/role3.png");
-    rightTexture = gfx.loadTexture("assets/role4.png");
+    roleTexture = cache.loadTexture("assets/r1.png", .init(960, 960));
+
+    const size: math.Vector = .init(240, 240);
+    upTexture = roleTexture.sub(.init(.{ .y = 720 }, size));
+    downTexture = roleTexture.sub(.init(.{ .y = 0 }, size));
+    leftTexture = roleTexture.sub(.init(.{ .y = 240 }, size));
+    rightTexture = roleTexture.sub(.init(.{ .y = 480 }, size));
 }
 
 pub fn update(delta: f32) void {

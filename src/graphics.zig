@@ -33,10 +33,6 @@ pub fn init(size: math.Vector) void {
 
 pub const deinit = gpu.deinit;
 
-pub fn loadTexture(path: [:0]const u8) Texture {
-    return cache.Texture.load(path);
-}
-
 pub fn beginDraw() void {
     passEncoder = gpu.CommandEncoder.beginRenderPass(
         .{ .r = 1, .b = 1, .a = 1.0 },
@@ -55,12 +51,16 @@ pub fn draw(tex: Texture, position: math.Vector) void {
 }
 
 pub fn drawFlipX(tex: Texture, pos: math.Vector, flipX: bool) void {
-    const target: math.Rectangle = .init(pos, .zero);
-    const src = math.Rectangle{ .max = .{
-        .x = if (flipX) -tex.width() else tex.width(),
-    } };
+    const target: math.Rectangle = .init(pos, tex.size());
+    // var src = tex.area;
+    // src if (flipX) {}
+    // math.Rectangle{ .max = .{
+    //     .x = if (flipX) -tex.width() else tex.width(),
+    // } };
+    // TODO 翻转X
+    _ = flipX;
 
-    drawOptions(tex, .{ .sourceRect = src, .targetRect = target });
+    drawOptions(tex, .{ .sourceRect = tex.area, .targetRect = target });
 }
 
 pub const DrawOptions = struct {
