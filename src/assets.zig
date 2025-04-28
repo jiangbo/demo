@@ -37,8 +37,7 @@ fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
     const response = responses[0];
 
     if (response.failed) {
-        std.log.info("failed to load assets, path: {s}", .{response.path});
-        return;
+        std.debug.panic("failed to load assets, path: {s}", .{response.path});
     }
 
     const path = std.mem.span(response.path);

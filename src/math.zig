@@ -144,6 +144,10 @@ pub const Rectangle = struct {
         return self.min.add(self.size().scale(0.5));
     }
 
+    pub fn move(self: Rectangle, offset: Vector) Rectangle {
+        return .{ .min = self.min.add(offset), .max = self.max.add(offset) };
+    }
+
     pub fn intersect(self: Rectangle, other: Rectangle) bool {
         return self.min.x < other.max.x and self.max.x > other.min.x and
             self.min.y < other.max.y and self.max.y > other.min.y;
