@@ -3,25 +3,26 @@ const std = @import("std");
 pub const stbImage = struct {
     const stb = @cImport(@cInclude("stb_image.h"));
 
-    pub const Image = struct { data: []u8 = &[_]u8{}, width: u32, height: u32 };
+    pub const Image = struct { data: []u8 = &[_]u8{}, width: i32, height: i32 };
 
     pub fn load(path: [:0]const u8) !Image {
-        var width: c_int, var height: c_int = .{ 0, 0 };
+        var width: i32, var height: i32 = .{ 0, 0 };
 
         const result = stb.stbi_load(path, &width, &height, 0, 4);
         if (result == null) return error.LoadImageFailed;
 
-        var image: Image = .{ .width = @intCast(width), .height = @intCast(height) };
+        var image: Image = .{ .width = width, .height = height };
         image.data = @as([*]u8, @ptrCast(result))[0 .. image.width * image.height * 4];
         return image;
     }
 
     pub fn loadFromMemory(buffer: []const u8) !Image {
-        var width: c_int, var height: c_int = .{ 0, 0 };
+        var width: i32, var height: i32 = .{ 0, 0 };
         const result = stb.stbi_load_from_memory(buffer.ptr, @intCast(buffer.len), &width, &height, 0, 4);
         if (result == null) return error.LoadImageFailed;
-        var image: Image = .{ .width = @intCast(width), .height = @intCast(height) };
-        image.data = @as([*]u8, @ptrCast(result))[0 .. image.width * image.height * 4];
+        var image: Image = .{ .width = width, .height = height };
+        const size: usize = @intCast(image.width * image.height * 4);
+        image.data = @as([*]u8, @ptrCast(result))[0..size];
         return image;
     }
 

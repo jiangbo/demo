@@ -76,7 +76,7 @@ pub fn endDisplayText() void {
 }
 
 pub fn exit() void {
-    sk.app.quit();
+    sk.app.requestQuit();
 }
 pub const run = sk.app.run;
 pub const KeyCode = sk.app.Keycode;
