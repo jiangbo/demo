@@ -1,79 +1,38 @@
 const std = @import("std");
-const math = @import("math.zig");
+
+const window = @import("window.zig");
 const gfx = @import("graphics.zig");
+const math = @import("math.zig");
+const audio = @import("audio.zig");
+const assets = @import("assets.zig");
 
-const FourAnimation = struct {
-    up: gfx.SliceFrameAnimation,
-    down: gfx.SliceFrameAnimation,
-    left: gfx.SliceFrameAnimation,
-    right: gfx.SliceFrameAnimation,
-};
+const Player = @This();
+const FrameAnimation = gfx.FixedFrameAnimation(4, 0.2);
 
-const SPEED_RUN = 100;
+index: u8,
+upAnimation: FrameAnimation,
+downAnimation: FrameAnimation,
+leftAnimation: FrameAnimation,
+rightAnimation: FrameAnimation,
 
-index: i32,
-position: math.Vector = .zero,
-velocity: math.Vector = .zero,
-idle: FourAnimation,
-run: FourAnimation,
-keydown: ?math.FourDirection = null,
-current: math.FourDirection = .right,
+pub fn init(path: [:0]const u8, index: u8) Player {
+    const role = assets.loadTexture(path, .init(960, 960));
+    const size: math.Vector = .init(960, 240);
 
-pub fn init(index: i32) @This() {
-    if (index == 1) return .{
+    return Player{
         .index = index,
-        .idle = .{
-            .up = .load("assets/hajimi_idle_back_{}.png", 4),
-            .down = .load("assets/hajimi_idle_front_{}.png", 4),
-            .left = .load("assets/hajimi_idle_left_{}.png", 4),
-            .right = .load("assets/hajimi_idle_right_{}.png", 4),
-        },
-
-        .run = .{
-            .up = .load("assets/hajimi_run_back_{}.png", 4),
-            .down = .load("assets/hajimi_run_front_{}.png", 4),
-            .left = .load("assets/hajimi_run_left_{}.png", 4),
-            .right = .load("assets/hajimi_run_right_{}.png", 4),
-        },
-    };
-
-    return .{
-        .index = index,
-        .idle = .{
-            .up = .load("assets/manbo_idle_back_{}.png", 4),
-            .down = .load("assets/manbo_idle_front_{}.png", 4),
-            .left = .load("assets/manbo_idle_left_{}.png", 4),
-            .right = .load("assets/manbo_idle_right_{}.png", 4),
-        },
-
-        .run = .{
-            .up = .load("assets/manbo_run_back_{}.png", 4),
-            .down = .load("assets/manbo_run_front_{}.png", 4),
-            .left = .load("assets/manbo_run_left_{}.png", 4),
-            .right = .load("assets/manbo_run_right_{}.png", 4),
-        },
+        .upAnimation = .init(role.subTexture(.init(.{ .y = 720 }, size))),
+        .downAnimation = .init(role.subTexture(.init(.{ .y = 0 }, size))),
+        .leftAnimation = .init(role.subTexture(.init(.{ .y = 240 }, size))),
+        .rightAnimation = .init(role.subTexture(.init(.{ .y = 480 }, size))),
     };
 }
 
-pub fn currentAnimation(player: *@This()) *gfx.SliceFrameAnimation {
-    var animation = if (player.keydown == null) &player.idle else &player.run;
-
-    return switch (player.current) {
-        .up => &animation.up,
-        .down => &animation.down,
-        .left => &animation.left,
-        .right => &animation.right,
+pub fn current(self: *Player, face: math.FourDirection) *FrameAnimation {
+    return switch (face) {
+        .up => &self.upAnimation,
+        .down => &self.downAnimation,
+        .left => &self.leftAnimation,
+        .right => &self.rightAnimation,
     };
-}
-
-pub fn anchorCenter(player: *@This()) void {
-    anchor(&player.idle);
-    anchor(&player.run);
-}
-
-fn anchor(animation: *FourAnimation) void {
-    animation.up.anchorCenter();
-    animation.down.anchorCenter();
-    animation.left.anchorCenter();
-    animation.right.anchorCenter();
 }
