@@ -40,7 +40,9 @@ pub fn update(delta: f32) void {
 
     if (window.isKeyDown(.RIGHT) or window.isKeyDown(.D)) updatePlayer(.right);
 
-    if (!velocity.approx(.zero)) {
+    if (velocity.approx(.zero)) {
+        currentPlayer.current(facing).reset();
+    } else {
         velocity = velocity.normalize().scale(delta * PLAYER_SPEED);
         position = position.add(velocity);
     }
