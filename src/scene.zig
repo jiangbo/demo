@@ -14,6 +14,7 @@ var currentPlayer: *Player = &players[0];
 var position: math.Vector = .zero;
 var facing: math.FourDirection = .down;
 var keyPressed: bool = false;
+var velocity: math.Vector = .zero;
 
 pub fn init() void {
     players[0] = .init("assets/r1.png", 0);
@@ -28,43 +29,29 @@ pub fn event(ev: *const window.Event) void {
 }
 
 pub fn update(delta: f32) void {
-    updatePlayer(delta);
-
-    if (keyPressed) currentPlayer.current(facing).update(delta);
-}
-
-fn updatePlayer(delta: f32) void {
-    var velocity: math.Vector = .zero;
+    velocity = .zero;
     keyPressed = false;
 
-    if (window.isKeyDown(.UP) or window.isKeyDown(.W)) {
-        facing = .up;
-        velocity = velocity.add(facing.toVector());
-        keyPressed = true;
-    }
+    if (window.isKeyDown(.UP) or window.isKeyDown(.W)) updatePlayer(.up);
 
-    if (window.isKeyDown(.DOWN) or window.isKeyDown(.S)) {
-        facing = .down;
-        velocity = velocity.add(facing.toVector());
-        keyPressed = true;
-    }
+    if (window.isKeyDown(.DOWN) or window.isKeyDown(.S)) updatePlayer(.down);
 
-    if (window.isKeyDown(.LEFT) or window.isKeyDown(.A)) {
-        facing = .left;
-        velocity = velocity.add(facing.toVector());
-        keyPressed = true;
-    }
+    if (window.isKeyDown(.LEFT) or window.isKeyDown(.A)) updatePlayer(.left);
 
-    if (window.isKeyDown(.RIGHT) or window.isKeyDown(.D)) {
-        facing = .right;
-        velocity = velocity.add(facing.toVector());
-        keyPressed = true;
-    }
+    if (window.isKeyDown(.RIGHT) or window.isKeyDown(.D)) updatePlayer(.right);
 
     if (!velocity.approx(.zero)) {
         velocity = velocity.normalize().scale(delta * PLAYER_SPEED);
         position = position.add(velocity);
     }
+
+    if (keyPressed) currentPlayer.current(facing).update(delta);
+}
+
+fn updatePlayer(direction: math.FourDirection) void {
+    facing = direction;
+    keyPressed = true;
+    velocity = velocity.add(direction.toVector());
 }
 
 pub fn render() void {
