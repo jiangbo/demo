@@ -17,6 +17,7 @@ var keyPressed: bool = false;
 var velocity: math.Vector = .zero;
 
 var map: gfx.Texture = undefined;
+var mapShade: gfx.Texture = undefined;
 const MAP_SIZE: math.Vector = .init(1000, 800);
 const PLAYER_SIZE: math.Vector = .init(96, 96);
 
@@ -29,6 +30,7 @@ pub fn init() void {
     players[2] = .init("assets/r3.png", 2);
 
     map = assets.loadTexture("assets/map1.png", MAP_SIZE);
+    mapShade = assets.loadTexture("assets/map1_shade.png", MAP_SIZE);
 }
 
 pub fn event(ev: *const window.Event) void {
@@ -76,4 +78,6 @@ pub fn render() void {
     gfx.drawOptions(currentPlayer.current(facing).current(), .{
         .targetRect = .init(position, PLAYER_SIZE),
     });
+
+    gfx.draw(mapShade, .zero);
 }
