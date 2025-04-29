@@ -11,15 +11,18 @@ pub const Camera = struct {
     border: math.Vector = .zero,
 
     pub fn lookAt(self: *Camera, pos: math.Vector) void {
-        const half = self.rect.size().scale(-0.5);
-        var rect = self.rect.move(half.add(pos));
+        const half = self.rect.size().scale(0.5);
+        // var rect = self.rect.move(pos.sub(half));
 
-        const border = self.border.sub(half);
+        // const border = self.border.sub(half);
 
-        rect.min.x = std.math.clamp(rect.min.x, 0, border.x);
-        rect.min.y = std.math.clamp(rect.min.y, 0, border.y);
+        // rect.min.x = std.math.clamp(rect.min.x, 0, border.x);
+        // rect.min.y = std.math.clamp(rect.min.y, 0, border.y);
+        // std.log.info("pos: {}", .{pos});
+        // std.log.info("min: {}", .{rect.min});
+        // self.rect = .init(rect.min, self.rect.size());
 
-        self.rect = .init(rect.min, self.rect.size());
+        self.rect = .init(pos.sub(half), self.rect.size());
     }
 };
 

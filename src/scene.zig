@@ -21,6 +21,7 @@ var map: gfx.Texture = undefined;
 pub fn init() void {
     const mapSize: math.Vector = .init(1000, 800);
     gfx.camera = .{ .rect = .init(.zero, window.size), .border = mapSize };
+    gfx.camera.lookAt(position);
 
     players[0] = .init("assets/r1.png", 0);
     players[1] = .init("assets/r2.png", 1);
@@ -52,12 +53,8 @@ pub fn update(delta: f32) void {
     } else {
         velocity = velocity.normalize().scale(delta * PLAYER_SPEED);
         position = position.add(velocity);
-        std.log.info("position: {}", .{position});
         gfx.camera.lookAt(position);
     }
-
-    gfx.camera.lookAt(position);
-    std.log.info("camera: {}", .{gfx.camera.rect});
 
     if (keyPressed) currentPlayer.current(facing).update(delta);
 }

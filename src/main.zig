@@ -54,7 +54,7 @@ pub fn main() void {
         _ = debugAllocator.deinit();
     };
 
-    window.size = .{ .x = 800, .y = 600 };
+    window.size = .{ .x = 640, .y = 480 };
     timer = std.time.Timer.start() catch unreachable;
 
     window.run(.{
