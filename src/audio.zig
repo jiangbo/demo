@@ -23,7 +23,7 @@ pub const Music = struct {
     source: *c.stbAudio.Audio = undefined,
     paused: bool = false,
     loop: bool = true,
-    valid: bool = false,
+    active: bool = false,
 };
 
 pub var music: ?Music = null;
@@ -46,7 +46,7 @@ fn musicCallback(data: []const u8) void {
     const stbAudio = c.stbAudio.loadFromMemory(data);
     if (music) |*m| {
         m.source = stbAudio catch unreachable;
-        m.valid = true;
+        m.active = true;
     }
 }
 
@@ -108,7 +108,7 @@ export fn callback(b: [*c]f32, frames: i32, channels: i32) void {
     @memset(buffer, 0);
     {
         if (music) |m| blk: {
-            if (m.paused or !m.valid) break :blk;
+            if (m.paused or !m.active) break :blk;
             const count = c.stbAudio.fillSamples(m.source, buffer, channels);
             if (count == 0) {
                 if (m.loop) c.stbAudio.reset(m.source) else music = null;
