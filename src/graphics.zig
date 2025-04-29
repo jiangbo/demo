@@ -7,29 +7,23 @@ const animation = @import("animation.zig");
 pub const Texture = gpu.Texture;
 
 pub const Camera = struct {
-    rect: math.Rectangle = .{},
-    border: math.Vector = .zero,
+    rect: math.Rectangle,
+    border: math.Vector,
 
     pub fn lookAt(self: *Camera, pos: math.Vector) void {
         const half = self.rect.size().scale(0.5);
-        // var rect = self.rect.move(pos.sub(half));
 
-        // const border = self.border.sub(half);
+        const max = self.border.sub(self.rect.size());
+        const offset = pos.sub(half).clamp(.zero, max);
 
-        // rect.min.x = std.math.clamp(rect.min.x, 0, border.x);
-        // rect.min.y = std.math.clamp(rect.min.y, 0, border.y);
-        // std.log.info("pos: {}", .{pos});
-        // std.log.info("min: {}", .{rect.min});
-        // self.rect = .init(rect.min, self.rect.size());
-
-        self.rect = .init(pos.sub(half), self.rect.size());
+        self.rect = .init(offset, self.rect.size());
     }
 };
 
 pub var renderer: gpu.Renderer = undefined;
 var matrix: [16]f32 = undefined;
 var passEncoder: gpu.RenderPassEncoder = undefined;
-pub var camera: Camera = .{};
+pub var camera: Camera = .{ .rect = .{}, .border = .zero };
 
 pub fn init(size: math.Vector) void {
     matrix = .{
@@ -83,10 +77,15 @@ pub fn drawOptions(texture: Texture, options: DrawOptions) void {
     matrix[12] = -1 - camera.rect.min.x * matrix[0];
     matrix[13] = 1 - camera.rect.min.y * matrix[5];
 
+    var src = options.sourceRect;
+    if (src.min.approx(.zero) and src.max.approx(.zero)) {
+        src = texture.area;
+    }
+
     renderer.draw(.{
         .uniform = .{ .vp = matrix },
         .texture = texture,
-        .sourceRect = options.sourceRect,
+        .sourceRect = src,
         .targetRect = options.targetRect,
         .radians = std.math.degreesToRadians(options.angle),
         .pivot = options.pivot,

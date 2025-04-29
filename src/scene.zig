@@ -17,17 +17,18 @@ var keyPressed: bool = false;
 var velocity: math.Vector = .zero;
 
 var map: gfx.Texture = undefined;
+const MAP_SIZE: math.Vector = .init(1000, 800);
+const PLAYER_SIZE: math.Vector = .init(96, 96);
 
 pub fn init() void {
-    const mapSize: math.Vector = .init(1000, 800);
-    gfx.camera = .{ .rect = .init(.zero, window.size), .border = mapSize };
+    gfx.camera = .{ .rect = .init(.zero, window.size), .border = MAP_SIZE };
     gfx.camera.lookAt(position);
 
     players[0] = .init("assets/r1.png", 0);
     players[1] = .init("assets/r2.png", 1);
     players[2] = .init("assets/r3.png", 2);
 
-    map = assets.loadTexture("assets/map1.png", mapSize);
+    map = assets.loadTexture("assets/map1.png", MAP_SIZE);
 }
 
 pub fn event(ev: *const window.Event) void {
@@ -53,6 +54,7 @@ pub fn update(delta: f32) void {
     } else {
         velocity = velocity.normalize().scale(delta * PLAYER_SPEED);
         position = position.add(velocity);
+        position = position.clamp(.zero, MAP_SIZE.sub(PLAYER_SIZE));
         gfx.camera.lookAt(position);
     }
 
@@ -71,5 +73,7 @@ pub fn render() void {
 
     gfx.draw(map, .zero);
 
-    gfx.draw(currentPlayer.current(facing).current(), position);
+    gfx.drawOptions(currentPlayer.current(facing).current(), .{
+        .targetRect = .init(position, PLAYER_SIZE),
+    });
 }

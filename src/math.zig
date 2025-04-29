@@ -74,6 +74,14 @@ pub const Vector3 = struct {
         return .{ .x = self.x, .y = self.y };
     }
 
+    pub fn clamp(self: Vector3, min: Vector3, max: Vector3) Vector3 {
+        return .{
+            .x = std.math.clamp(self.x, min.x, max.x),
+            .y = std.math.clamp(self.y, min.y, max.y),
+            .z = std.math.clamp(self.z, min.z, max.z),
+        };
+    }
+
     pub fn add(self: Vector3, other: Vector3) Vector3 {
         return .{ .x = self.x + other.x, .y = self.y + other.y, .z = self.z + other.z };
     }
