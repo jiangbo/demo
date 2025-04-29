@@ -7,7 +7,7 @@ const audio = @import("audio.zig");
 const assets = @import("assets.zig");
 
 const Player = @This();
-const FrameAnimation = gfx.FixedFrameAnimation(4, 0.2);
+const FrameAnimation = gfx.FixedFrameAnimation(4, 0.15);
 
 index: u8,
 upAnimation: FrameAnimation,

@@ -8,7 +8,7 @@ const assets = @import("assets.zig");
 
 const Player = @import("Player.zig");
 const map = @import("map.zig");
-const PLAYER_SPEED = 100;
+const PLAYER_SPEED = 150;
 const PLAYER_OFFSET: math.Vector = .init(120, 220);
 
 var players: [3]Player = undefined;
