@@ -5,7 +5,6 @@ const math = @import("math.zig");
 pub const Event = sk.app.Event;
 
 pub const Timer = struct {
-    finished: bool = false,
     duration: f32,
     elapsed: f32 = 0,
 
@@ -14,27 +13,24 @@ pub const Timer = struct {
     }
 
     pub fn update(self: *Timer, delta: f32) void {
-        if (self.finished) return;
-        self.elapsed += delta;
-        if (self.elapsed >= self.duration) self.finished = true;
+        if (self.elapsed < self.duration) self.elapsed += delta;
     }
 
     pub fn isRunningAfterUpdate(self: *Timer, delta: f32) bool {
-        return !self.isFinishedAfterUpdate(delta);
+        self.update(delta);
+        return self.isRunning();
     }
 
     pub fn isFinishedAfterUpdate(self: *Timer, delta: f32) bool {
-        self.update(delta);
-        return self.finished;
-    }
-
-    pub fn reset(self: *Timer) void {
-        self.finished = false;
-        self.elapsed = 0;
+        return !self.isRunningAfterUpdate(delta);
     }
 
     pub fn isRunning(self: *const Timer) bool {
-        return !self.finished;
+        return self.elapsed < self.duration;
+    }
+
+    pub fn reset(self: *Timer) void {
+        self.elapsed = 0;
     }
 };
 

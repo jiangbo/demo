@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const window = @import("window.zig");
-const assets = @import("assets.zig");
 const math = @import("math.zig");
 const Texture = @import("gpu.zig").Texture;
 
@@ -32,7 +31,7 @@ pub fn FixedFrameAnimation(count: u8, time: f32) type {
             return .{ .texture = texture, .frames = frames };
         }
 
-        pub fn current(self: *const Animation) Texture {
+        pub fn currentTexture(self: *const Animation) Texture {
             return self.texture.mapTexture(self.frames[self.index]);
         }
 

@@ -9,6 +9,7 @@ const assets = @import("assets.zig");
 const Player = @import("Player.zig");
 const map = @import("map.zig");
 const PLAYER_SPEED = 100;
+const PLAYER_OFFSET: math.Vector = .init(120, 220);
 
 var players: [3]Player = undefined;
 var currentPlayer: *Player = &players[0];
@@ -16,8 +17,6 @@ var position: math.Vector = .init(30, 500);
 var facing: math.FourDirection = .down;
 var keyPressed: bool = false;
 var velocity: math.Vector = .zero;
-
-const PLAYER_SIZE: math.Vector = .init(96, 96);
 
 pub fn init() void {
     gfx.camera = .{ .rect = .init(.zero, window.size), .border = map.SIZE };
@@ -72,11 +71,8 @@ pub fn render() void {
 
     map.drawBackground();
 
-    gfx.drawOptions(currentPlayer.current(facing).current(), .{
-        .targetRect = .init(position, PLAYER_SIZE),
-    });
+    const playerTexture = currentPlayer.current(facing).currentTexture();
+    gfx.draw(playerTexture, position.sub(PLAYER_OFFSET));
 
     map.drawForeground();
-
-    gfx.drawRectangle(.init(position, PLAYER_SIZE));
 }
