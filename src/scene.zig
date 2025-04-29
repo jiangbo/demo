@@ -77,4 +77,6 @@ pub fn render() void {
     });
 
     map.drawForeground();
+
+    gfx.drawRectangle(.init(position, PLAYER_SIZE));
 }
