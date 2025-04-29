@@ -23,12 +23,18 @@ pub fn loading() void {
 
 var loadingBuffer: [1.5 * 1024 * 1024]u8 = undefined;
 
-pub fn send(path: [:0]const u8) void {
+pub fn loadFile(path: [:0]const u8) void {
+    loadCallback(path, callback);
+}
+
+pub const Callback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
+pub const Response = sk.fetch.Response;
+pub fn loadCallback(path: [:0]const u8, cb: Callback) void {
     std.log.info("loading {s}", .{path});
 
     _ = sk.fetch.send(.{
         .path = path,
-        .callback = callback,
+        .callback = cb,
         .buffer = sk.fetch.asRange(&loadingBuffer),
     });
 }
@@ -54,7 +60,7 @@ fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
     }
 }
 
-fn rangeToSlice(range: sk.fetch.Range) []const u8 {
+pub fn rangeToSlice(range: sk.fetch.Range) []const u8 {
     return @as([*]const u8, @ptrCast(range.ptr))[0..range.size];
 }
 
@@ -69,7 +75,7 @@ pub const Texture = struct {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
         if (entry.found_existing) return entry.value_ptr.*;
 
-        send(path);
+        loadFile(path);
 
         const image = sk.gfx.allocImage();
         entry.value_ptr.* = .{ .image = image, .area = .init(.zero, size) };
@@ -101,7 +107,7 @@ pub const Sound = struct {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
         if (entry.found_existing) return entry.value_ptr.*;
 
-        send(path);
+        loadFile(path);
         entry.value_ptr.* = .{ .source = undefined };
         entry.key_ptr.* = path;
 
@@ -137,7 +143,7 @@ pub const Music = struct {
             if (std.mem.eql(u8, m.path, path)) return audio.music.?;
         }
 
-        send(path);
+        _ = loadFile(path);
         return .{ .path = path, .loop = loop };
     }
 

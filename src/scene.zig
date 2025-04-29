@@ -7,30 +7,27 @@ const audio = @import("audio.zig");
 const assets = @import("assets.zig");
 
 const Player = @import("Player.zig");
+const map = @import("map.zig");
 const PLAYER_SPEED = 100;
 
 var players: [3]Player = undefined;
 var currentPlayer: *Player = &players[0];
-var position: math.Vector = .zero;
+var position: math.Vector = .init(30, 500);
 var facing: math.FourDirection = .down;
 var keyPressed: bool = false;
 var velocity: math.Vector = .zero;
 
-var map: gfx.Texture = undefined;
-var mapShade: gfx.Texture = undefined;
-const MAP_SIZE: math.Vector = .init(1000, 800);
 const PLAYER_SIZE: math.Vector = .init(96, 96);
 
 pub fn init() void {
-    gfx.camera = .{ .rect = .init(.zero, window.size), .border = MAP_SIZE };
+    gfx.camera = .{ .rect = .init(.zero, window.size), .border = map.SIZE };
     gfx.camera.lookAt(position);
 
     players[0] = .init("assets/r1.png", 0);
     players[1] = .init("assets/r2.png", 1);
     players[2] = .init("assets/r3.png", 2);
 
-    map = assets.loadTexture("assets/map1.png", MAP_SIZE);
-    mapShade = assets.loadTexture("assets/map1_shade.png", MAP_SIZE);
+    map.init();
 }
 
 pub fn event(ev: *const window.Event) void {
@@ -55,8 +52,8 @@ pub fn update(delta: f32) void {
         currentPlayer.current(facing).reset();
     } else {
         velocity = velocity.normalize().scale(delta * PLAYER_SPEED);
-        position = position.add(velocity);
-        position = position.clamp(.zero, MAP_SIZE.sub(PLAYER_SIZE));
+        const tempPosition = position.add(velocity);
+        if (map.canWalk(tempPosition)) position = tempPosition;
         gfx.camera.lookAt(position);
     }
 
@@ -73,11 +70,11 @@ pub fn render() void {
     gfx.beginDraw();
     defer gfx.endDraw();
 
-    gfx.draw(map, .zero);
+    map.drawBackground();
 
     gfx.drawOptions(currentPlayer.current(facing).current(), .{
         .targetRect = .init(position, PLAYER_SIZE),
     });
 
-    gfx.draw(mapShade, .zero);
+    map.drawForeground();
 }
