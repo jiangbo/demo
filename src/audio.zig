@@ -21,7 +21,6 @@ pub fn deinit() void {
 pub const Music = struct {
     path: [:0]const u8 = &.{},
     source: *c.stbAudio.Audio = undefined,
-    data: []const u8 = &.{},
     paused: bool = false,
     loop: bool = true,
     valid: bool = false,
@@ -39,8 +38,16 @@ pub fn playMusicOnce(path: [:0]const u8) void {
 
 fn doPlayMusic(path: [:0]const u8, loop: bool) void {
     stopMusic();
+    music = .{ .loop = loop };
+    assets.String.load(path, musicCallback);
+}
 
-    music = assets.Music.load(path, loop);
+fn musicCallback(data: []const u8) void {
+    const stbAudio = c.stbAudio.loadFromMemory(data);
+    if (music) |*m| {
+        m.source = stbAudio catch unreachable;
+        m.valid = true;
+    }
 }
 
 pub fn pauseMusic() void {
@@ -52,7 +59,7 @@ pub fn resumeMusic() void {
 }
 
 pub fn stopMusic() void {
-    if (music != null) assets.Music.unload();
+    music = null;
 }
 
 var sounds: []Sound = &.{};

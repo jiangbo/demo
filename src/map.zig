@@ -19,7 +19,9 @@ pub fn init() void {
     mapShade = assets.loadTexture("assets/map1_shade.png", SIZE);
     mapBack = assets.loadTexture("assets/map1_back.png", SIZE);
 
-    _ = assets.loadCallback("assets/map1_block.png", callback);
+    _ = assets.String.load("assets/map1_block.png", callback);
+
+    audio.playMusic("assets/1.ogg");
 }
 
 pub fn canWalk(pos: math.Vector) bool {
@@ -31,12 +33,7 @@ pub fn canWalk(pos: math.Vector) bool {
     } else return false;
 }
 
-fn callback(responses: [*c]const assets.Response) callconv(.C) void {
-    if (responses[0].failed) {
-        @panic("failed to load map block");
-    }
-
-    const buffer = assets.rangeToSlice(responses[0].data);
+fn callback(buffer: []const u8) void {
     const image = c.stbImage.loadFromMemory(buffer) catch unreachable;
     defer c.stbImage.unload(image);
 
