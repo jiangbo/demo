@@ -1,8 +1,11 @@
 const std = @import("std");
 const sk = @import("sokol");
 const math = @import("math.zig");
+const assets = @import("assets.zig");
+const gfx = @import("graphics.zig");
 
 pub const Event = sk.app.Event;
+pub const KeyCode = sk.app.Keycode;
 
 pub const Timer = struct {
     duration: f32,
@@ -34,23 +37,103 @@ pub const Timer = struct {
     }
 };
 
-pub var size: math.Vector = .zero;
-var keyState: std.StaticBitSet(512) = .initEmpty();
-
-pub fn event(ev: *const Event) void {
-    switch (ev.type) {
-        .KEY_DOWN => keyState.set(@intCast(@intFromEnum(ev.key_code))),
-        .KEY_UP => keyState.unset(@intCast(@intFromEnum(ev.key_code))),
-        else => {},
-    }
-}
+pub var lastKeyState: std.StaticBitSet(512) = .initEmpty();
+pub var keyState: std.StaticBitSet(512) = .initEmpty();
 
 pub fn isKeyDown(keyCode: KeyCode) bool {
     return keyState.isSet(@intCast(@intFromEnum(keyCode)));
 }
 
+pub fn isAnyKeyDown(keys: []const KeyCode) bool {
+    for (keys) |key| if (isKeyDown(key)) return true;
+    return false;
+}
+
+pub fn isAllKeyDown(keys: []const KeyCode) bool {
+    for (keys) |key| if (!isKeyDown(key)) return false;
+    return true;
+}
+
+pub fn isPressed(keyCode: KeyCode) bool {
+    const key: usize = @intCast(@intFromEnum(keyCode));
+    return !lastKeyState.isSet(key) and keyState.isSet(key);
+}
+
+pub fn isRelease(keyCode: KeyCode) bool {
+    const key: usize = @intCast(@intFromEnum(keyCode));
+    return lastKeyState.isSet(key) and !keyState.isSet(key);
+}
+
 pub fn showCursor(show: bool) void {
     sk.app.showMouse(show);
+}
+
+pub const WindowInfo = struct {
+    title: [:0]const u8,
+    size: math.Vector,
+    alloc: std.mem.Allocator,
+    init: ?*const fn () void = null,
+    update: ?*const fn (delta: f32) void = null,
+    render: ?*const fn () void = null,
+    event: ?*const fn (*const Event) void = null,
+    deinit: ?*const fn () void = null,
+};
+
+pub var size: math.Vector = .zero;
+pub var allocator: std.mem.Allocator = undefined;
+var timer: std.time.Timer = undefined;
+var windowInfo: WindowInfo = undefined;
+
+pub fn run(info: WindowInfo) void {
+    timer = std.time.Timer.start() catch unreachable;
+    size = info.size;
+    allocator = info.alloc;
+    windowInfo = info;
+    sk.app.run(.{
+        .window_title = info.title,
+        .width = @as(i32, @intFromFloat(size.x)),
+        .height = @as(i32, @intFromFloat(size.y)),
+        .high_dpi = true,
+        .init_cb = windowInit,
+        .event_cb = windowEvent,
+        .frame_cb = windowFrame,
+        .cleanup_cb = windowDeinit,
+    });
+}
+
+export fn windowInit() void {
+    assets.init(allocator);
+    gfx.init(size);
+
+    if (windowInfo.init) |init| init();
+    math.setRandomSeed(timer.lap());
+}
+
+export fn windowEvent(event: ?*const Event) void {
+    if (event) |ev| {
+        const code: usize = @intCast(@intFromEnum(ev.key_code));
+        switch (ev.type) {
+            .KEY_DOWN => keyState.set(code),
+            .KEY_UP => keyState.unset(code),
+            else => {},
+        }
+        if (windowInfo.event) |eventHandle| eventHandle(ev);
+    }
+}
+
+export fn windowFrame() void {
+    assets.loading();
+    const delta: f32 = @floatFromInt(timer.lap());
+    if (windowInfo.update) |update| update(delta / std.time.ns_per_s);
+    if (windowInfo.render) |render| render();
+
+    lastKeyState = keyState;
+}
+
+export fn windowDeinit() void {
+    if (windowInfo.deinit) |deinit| deinit();
+    gfx.deinit();
+    assets.deinit();
 }
 
 pub fn displayText(x: f32, y: f32, text: [:0]const u8) void {
@@ -70,6 +153,3 @@ pub fn endDisplayText() void {
 pub fn exit() void {
     sk.app.requestQuit();
 }
-pub const run = sk.app.run;
-pub const KeyCode = sk.app.Keycode;
-pub const log = sk.log.func;

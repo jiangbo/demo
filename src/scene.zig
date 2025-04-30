@@ -33,23 +33,16 @@ pub fn event(ev: *const window.Event) void {
     if (ev.type == .KEY_UP and ev.key_code == .TAB) {
         currentPlayer = &players[(currentPlayer.index + 1) % players.len];
     }
-
-    if (ev.type == .KEY_UP and ev.key_code == .SPACE) {
-        map.changeMap();
-    }
 }
 
 pub fn update(delta: f32) void {
     velocity = .zero;
     keyPressed = false;
 
-    if (window.isKeyDown(.UP) or window.isKeyDown(.W)) updatePlayer(.up);
-
-    if (window.isKeyDown(.DOWN) or window.isKeyDown(.S)) updatePlayer(.down);
-
-    if (window.isKeyDown(.LEFT) or window.isKeyDown(.A)) updatePlayer(.left);
-
-    if (window.isKeyDown(.RIGHT) or window.isKeyDown(.D)) updatePlayer(.right);
+    if (window.isAnyKeyDown(&.{ .UP, .W })) updatePlayer(.up);
+    if (window.isAnyKeyDown(&.{ .DOWN, .S })) updatePlayer(.down);
+    if (window.isAnyKeyDown(&.{ .LEFT, .A })) updatePlayer(.left);
+    if (window.isAnyKeyDown(&.{ .RIGHT, .D })) updatePlayer(.right);
 
     if (velocity.approx(.zero)) {
         currentPlayer.current(facing).reset();
@@ -61,6 +54,12 @@ pub fn update(delta: f32) void {
     }
 
     if (keyPressed) currentPlayer.current(facing).update(delta);
+
+    if (window.isPressed(.SPACE)) {
+        for (map.npcSlice()) |*npc| {
+            if (npc.area.contains(position)) npc.action();
+        }
+    }
 }
 
 fn updatePlayer(direction: math.FourDirection) void {
@@ -85,6 +84,8 @@ pub fn render() void {
         if (npc.texture) |texture| {
             gfx.draw(texture, npc.position.sub(PLAYER_OFFSET));
         }
+
+        gfx.drawRectangle(npc.area);
     }
 
     if (playerNotDraw) drawPlayer();

@@ -1,47 +1,34 @@
 const std = @import("std");
 
-const assets = @import("assets.zig");
 const window = @import("window.zig");
-const math = @import("math.zig");
-const gfx = @import("graphics.zig");
 const audio = @import("audio.zig");
 const scene = @import("scene.zig");
 
 var soundBuffer: [20]audio.Sound = undefined;
 
-export fn init() void {
-    assets.init(allocator);
-    gfx.init(window.size);
+fn init() void {
     audio.init(44100 / 4, &soundBuffer);
-
-    math.setRandomSeed(timer.lap());
     scene.init();
 }
 
-export fn event(ev: ?*const window.Event) void {
-    if (ev) |e| {
-        window.event(e);
-        scene.event(e);
-    }
+fn event(ev: *const window.Event) void {
+    scene.event(ev);
 }
 
-export fn frame() void {
-    const delta: f32 = @floatFromInt(timer.lap());
-    assets.loading();
-    scene.update(delta / std.time.ns_per_s);
+fn update(delta: f32) void {
+    scene.update(delta);
+}
+
+fn render() void {
     scene.render();
 }
 
-export fn deinit() void {
+fn deinit() void {
     audio.deinit();
-    gfx.deinit();
-    assets.deinit();
 }
 
-var allocator: std.mem.Allocator = undefined;
-var timer: std.time.Timer = undefined;
-
 pub fn main() void {
+    var allocator: std.mem.Allocator = undefined;
     var debugAllocator: std.heap.DebugAllocator(.{}) = undefined;
     if (@import("builtin").mode == .Debug) {
         debugAllocator = std.heap.DebugAllocator(.{}).init;
@@ -54,18 +41,14 @@ pub fn main() void {
         _ = debugAllocator.deinit();
     };
 
-    window.size = .{ .x = 800, .y = 600 };
-    timer = std.time.Timer.start() catch unreachable;
-
     window.run(.{
-        .window_title = "教你制作RPG游戏",
-        .width = @as(i32, @intFromFloat(window.size.x)),
-        .height = @as(i32, @intFromFloat(window.size.y)),
-        .high_dpi = true,
-        .init_cb = init,
-        .event_cb = event,
-        .frame_cb = frame,
-        .cleanup_cb = deinit,
-        .logger = .{ .func = window.log },
+        .alloc = allocator,
+        .title = "教你制作RPG游戏",
+        .size = .{ .x = 800, .y = 600 },
+        .init = init,
+        .event = event,
+        .update = update,
+        .render = render,
+        .deinit = deinit,
     });
 }

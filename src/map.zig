@@ -10,8 +10,23 @@ const c = @import("c.zig");
 pub const SIZE: math.Vector = .init(1000, 800);
 const PLAYER_OFFSET: math.Vector = .init(120, 220);
 const NPC_SIZE: math.Vector = .init(240, 240);
+const NPC_AREA: math.Vector = .init(80, 100);
 
-const NPC = struct { position: math.Vector, texture: ?gfx.Texture = null };
+const Action = *const fn () void;
+const NPC = struct {
+    position: math.Vector,
+    texture: ?gfx.Texture = null,
+    area: math.Rectangle = .{},
+    action: *const fn () void = undefined,
+
+    pub fn init(x: f32, y: f32, path: ?[:0]const u8, action: Action) NPC {
+        var self: NPC = .{ .position = .init(x, y), .action = action };
+
+        if (path) |p| self.texture = assets.loadTexture(p, NPC_SIZE);
+        self.area = .init(self.position.sub(.init(40, 60)), NPC_AREA);
+        return self;
+    }
+};
 
 const Map = struct {
     map: gfx.Texture,
@@ -24,21 +39,22 @@ const Map = struct {
 var index: usize = maps.len - 1;
 var maps: [2]Map = undefined;
 
+fn npc1Action() void {
+    std.log.info("npc1 action", .{});
+}
+
+fn npc2Action() void {
+    std.log.info("npc2 action", .{});
+}
+
 pub fn init() void {
     maps[0] = Map{
         .map = assets.loadTexture("assets/map1.png", SIZE),
         .mapShade = assets.loadTexture("assets/map1_shade.png", SIZE),
         .mapBack = assets.loadTexture("assets/map1_back.png", SIZE),
-    };
-
-    maps[0].npcArray = .{
-        .{
-            .position = .init(800, 300),
-            .texture = assets.loadTexture("assets/npc1.png", NPC_SIZE),
-        },
-        .{
-            .position = .init(700, 280),
-            .texture = assets.loadTexture("assets/npc2.png", NPC_SIZE),
+        .npcArray = .{
+            .init(800, 300, "assets/npc1.png", npc1Action),
+            .init(700, 280, "assets/npc2.png", npc2Action),
         },
     };
 
