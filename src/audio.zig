@@ -20,7 +20,6 @@ pub fn deinit() void {
 }
 
 pub const Music = struct {
-    path: [:0]const u8 = &.{},
     source: *c.stbAudio.Audio = undefined,
     paused: bool = false,
     loop: bool = true,
@@ -40,11 +39,18 @@ pub fn playMusicOnce(path: [:0]const u8) void {
 fn doPlayMusic(path: [:0]const u8, loop: bool) void {
     stopMusic();
     music = .{ .loop = loop };
-    assets.String.load(path, musicCallback);
+    const file = assets.File.load(path, musicCallback);
+    if (file.data.len != 0) {
+        const source = c.stbAudio.loadFromMemory(file.data) catch unreachable;
+        music = .{ .source = source, .loop = loop, .active = true };
+    }
 }
 
-fn musicCallback(data: []const u8) void {
-    const stbAudio = c.stbAudio.loadFromMemory(data);
+fn musicCallback(allocator: std.mem.Allocator, buffer: *[]const u8) void {
+    const data = allocator.dupe(u8, buffer.*);
+    buffer.* = data catch unreachable;
+
+    const stbAudio = c.stbAudio.loadFromMemory(buffer.*);
     if (music) |*m| {
         m.source = stbAudio catch unreachable;
         m.active = true;

@@ -22,7 +22,7 @@ pub fn init() void {
     const file = assets.File.load("assets/map1_block.png", callback);
     if (file.data.len != 0) initMapBlock(file.data);
 
-    _ = audio.playSoundLoop("assets/1.ogg");
+    audio.playMusic("assets/1.ogg");
 }
 
 pub fn canWalk(pos: math.Vector) bool {
