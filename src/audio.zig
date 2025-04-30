@@ -1,7 +1,7 @@
 const std = @import("std");
 const sk = @import("sokol");
 const assets = @import("assets.zig");
-const c = @import("c.zig");
+const stbAudio = @import("c.zig").stbAudio;
 
 pub fn init(sampleRate: u32, soundBuffer: []Sound) void {
     sk.audio.setup(.{
@@ -20,12 +20,12 @@ pub fn deinit() void {
 }
 
 const Music = struct {
-    source: *c.stbAudio.Audio = undefined,
+    source: *stbAudio.Audio = undefined,
     paused: bool = false,
     loop: bool = true,
 
     fn init(data: []const u8, loop: bool) Music {
-        const source = c.stbAudio.loadFromMemory(data) catch unreachable;
+        const source = stbAudio.loadFromMemory(data) catch unreachable;
         return .{ .source = source, .loop = loop };
     }
 
@@ -116,9 +116,9 @@ export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
 
     if (music != null and !music.?.paused) {
         const source = music.?.source;
-        const count = c.stbAudio.fillSamples(source, buffer, channels);
+        const count = stbAudio.fillSamples(source, buffer, channels);
         if (count == 0) {
-            if (music.?.loop) c.stbAudio.reset(source) else music = null;
+            if (music.?.loop) stbAudio.reset(source) else music = null;
         }
     }
 
