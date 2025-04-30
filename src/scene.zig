@@ -33,6 +33,10 @@ pub fn event(ev: *const window.Event) void {
     if (ev.type == .KEY_UP and ev.key_code == .TAB) {
         currentPlayer = &players[(currentPlayer.index + 1) % players.len];
     }
+
+    if (ev.type == .KEY_UP and ev.key_code == .SPACE) {
+        map.changeMap();
+    }
 }
 
 pub fn update(delta: f32) void {

@@ -49,10 +49,6 @@ pub fn isKeyDown(keyCode: KeyCode) bool {
     return keyState.isSet(@intCast(@intFromEnum(keyCode)));
 }
 
-pub fn isKeyUp(keyCode: KeyCode) bool {
-    return !isKeyDown(keyCode);
-}
-
 pub fn showCursor(show: bool) void {
     sk.app.showMouse(show);
 }
