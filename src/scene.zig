@@ -13,7 +13,7 @@ const PLAYER_OFFSET: math.Vector = .init(120, 220);
 
 var players: [3]Player = undefined;
 var currentPlayer: *Player = &players[0];
-var position: math.Vector = .init(30, 500);
+var position: math.Vector = .init(800, 500);
 var facing: math.FourDirection = .down;
 var keyPressed: bool = false;
 var velocity: math.Vector = .zero;
@@ -75,8 +75,24 @@ pub fn render() void {
 
     map.drawBackground();
 
-    const playerTexture = currentPlayer.current(facing).currentTexture();
-    gfx.draw(playerTexture, position.sub(PLAYER_OFFSET));
+    var playerNotDraw: bool = true;
+    for (map.npcSlice()) |npc| {
+        if (npc.position.y > position.y and playerNotDraw) {
+            drawPlayer();
+            playerNotDraw = false;
+        }
+
+        if (npc.texture) |texture| {
+            gfx.draw(texture, npc.position.sub(PLAYER_OFFSET));
+        }
+    }
+
+    if (playerNotDraw) drawPlayer();
 
     map.drawForeground();
+}
+
+fn drawPlayer() void {
+    const playerTexture = currentPlayer.current(facing).currentTexture();
+    gfx.draw(playerTexture, position.sub(PLAYER_OFFSET));
 }

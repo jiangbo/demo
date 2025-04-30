@@ -8,12 +8,17 @@ const assets = @import("assets.zig");
 const c = @import("c.zig");
 
 pub const SIZE: math.Vector = .init(1000, 800);
+const PLAYER_OFFSET: math.Vector = .init(120, 220);
+const NPC_SIZE: math.Vector = .init(240, 240);
+
+const NPC = struct { position: math.Vector, texture: ?gfx.Texture = null };
 
 const Map = struct {
     map: gfx.Texture,
     mapShade: gfx.Texture,
     mapBack: ?gfx.Texture = null,
     mapBlock: ?std.StaticBitSet(SIZE.x * SIZE.y) = null,
+    npcArray: [2]NPC = undefined,
 };
 
 var index: usize = maps.len - 1;
@@ -25,6 +30,23 @@ pub fn init() void {
         .mapShade = assets.loadTexture("assets/map1_shade.png", SIZE),
         .mapBack = assets.loadTexture("assets/map1_back.png", SIZE),
     };
+
+    maps[0].npcArray = .{
+        .{
+            .position = .init(800, 300),
+            .texture = assets.loadTexture("assets/npc1.png", NPC_SIZE),
+        },
+        .{
+            .position = .init(700, 280),
+            .texture = assets.loadTexture("assets/npc2.png", NPC_SIZE),
+        },
+    };
+
+    std.mem.sort(NPC, &maps[0].npcArray, {}, struct {
+        fn lessThan(_: void, a: NPC, b: NPC) bool {
+            return a.position.y < b.position.y;
+        }
+    }.lessThan);
 
     maps[1] = Map{
         .map = assets.loadTexture("assets/map2.png", SIZE),
@@ -65,6 +87,10 @@ pub fn canWalk(pos: math.Vector) bool {
     } else return false;
 }
 
+pub fn npcSlice() []NPC {
+    return maps[index].npcArray[0..];
+}
+
 fn callback(allocator: std.mem.Allocator, buffer: *[]const u8) void {
     const image = c.stbImage.loadFromMemory(buffer.*) catch unreachable;
     defer c.stbImage.unload(image);
@@ -78,9 +104,8 @@ fn initMapBlock(buffer: []const u8) void {
     std.debug.assert(data.len == SIZE.x * SIZE.y);
 
     var blocks: std.StaticBitSet(SIZE.x * SIZE.y) = .initEmpty();
-    for (data, 0..) |color, i| {
-        if (color == 0xFF000000) blocks.set(i);
-    }
+    for (data, 0..) |color, i| if (color == 0xFF000000) blocks.set(i);
+
     maps[index].mapBlock = blocks;
 }
 
