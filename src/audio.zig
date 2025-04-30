@@ -114,11 +114,11 @@ export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     const buffer = b[0..@as(usize, @intCast(frames * channels))];
     @memset(buffer, 0);
 
-    if (music) |m| blk: {
-        if (m.paused) break :blk;
-        const count = c.stbAudio.fillSamples(m.source, buffer, channels);
+    if (music != null and !music.?.paused) {
+        const source = music.?.source;
+        const count = c.stbAudio.fillSamples(source, buffer, channels);
         if (count == 0) {
-            if (m.loop) c.stbAudio.reset(m.source) else music = null;
+            if (music.?.loop) c.stbAudio.reset(source) else music = null;
         }
     }
 
