@@ -3,9 +3,10 @@ const sk = @import("sokol");
 const assets = @import("assets.zig");
 const c = @import("c.zig");
 
-pub fn init(soundBuffer: []Sound) void {
+pub fn init(sampleRate: u32, soundBuffer: []Sound) void {
     sk.audio.setup(.{
         .num_channels = 2,
+        .sample_rate = @intCast(sampleRate),
         .stream_cb = callback,
         .logger = .{ .func = sk.log.func },
     });

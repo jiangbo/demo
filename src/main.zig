@@ -12,7 +12,7 @@ var soundBuffer: [20]audio.Sound = undefined;
 export fn init() void {
     assets.init(allocator);
     gfx.init(window.size);
-    audio.init(&soundBuffer);
+    audio.init(44100 / 4, &soundBuffer);
 
     math.setRandomSeed(timer.lap());
     scene.init();
