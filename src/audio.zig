@@ -7,7 +7,7 @@ pub fn init(sampleRate: u32, soundBuffer: []Sound) void {
     sk.audio.setup(.{
         .num_channels = 2,
         .sample_rate = @intCast(sampleRate),
-        .stream_cb = callback,
+        .stream_cb = audioCallback,
         .logger = .{ .func = sk.log.func },
     });
     sounds = soundBuffer;
@@ -23,11 +23,10 @@ const Music = struct {
     source: *c.stbAudio.Audio = undefined,
     paused: bool = false,
     loop: bool = true,
-    active: bool = false,
 
     fn init(data: []const u8, loop: bool) Music {
         const source = c.stbAudio.loadFromMemory(data) catch unreachable;
-        return .{ .source = source, .loop = loop, .active = true };
+        return .{ .source = source, .loop = loop };
     }
 
     fn loader(allocator: std.mem.Allocator, buffer: *[]const u8) void {
@@ -54,7 +53,7 @@ fn doPlayMusic(path: [:0]const u8, loop: bool) void {
     if (file.data.len != 0) {
         music = Music.init(file.data, loop);
     } else {
-        music = .{ .loop = loop };
+        music = .{ .loop = loop, .paused = true };
     }
 }
 
@@ -111,16 +110,15 @@ fn addItem(slice: anytype, item: anytype) usize {
     @panic("too many audio sound");
 }
 
-export fn callback(b: [*c]f32, frames: i32, channels: i32) void {
+export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     const buffer = b[0..@as(usize, @intCast(frames * channels))];
     @memset(buffer, 0);
-    {
-        if (music) |m| blk: {
-            if (m.paused or !m.active) break :blk;
-            const count = c.stbAudio.fillSamples(m.source, buffer, channels);
-            if (count == 0) {
-                if (m.loop) c.stbAudio.reset(m.source) else music = null;
-            }
+
+    if (music) |m| blk: {
+        if (m.paused) break :blk;
+        const count = c.stbAudio.fillSamples(m.source, buffer, channels);
+        if (count == 0) {
+            if (m.loop) c.stbAudio.reset(m.source) else music = null;
         }
     }
 
