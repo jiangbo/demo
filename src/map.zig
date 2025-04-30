@@ -6,6 +6,7 @@ const math = @import("math.zig");
 const audio = @import("audio.zig");
 const assets = @import("assets.zig");
 const c = @import("c.zig");
+const scene = @import("scene.zig");
 
 pub const SIZE: math.Vector = .init(1000, 800);
 const PLAYER_OFFSET: math.Vector = .init(120, 220);
@@ -13,10 +14,11 @@ const NPC_SIZE: math.Vector = .init(240, 240);
 const NPC_AREA: math.Vector = .init(80, 100);
 
 const Action = *const fn () void;
-const NPC = struct {
+pub const NPC = struct {
     position: math.Vector,
     texture: ?gfx.Texture = null,
     area: math.Rectangle = .{},
+    keyTrigger: bool = true,
     action: *const fn () void = undefined,
 
     pub fn init(x: f32, y: f32, path: ?[:0]const u8, action: Action) NPC {
@@ -33,7 +35,7 @@ const Map = struct {
     mapShade: gfx.Texture,
     mapBack: ?gfx.Texture = null,
     mapBlock: ?std.StaticBitSet(SIZE.x * SIZE.y) = null,
-    npcArray: [2]NPC = undefined,
+    npcArray: [3]NPC = undefined,
 };
 
 var index: usize = maps.len - 1;
@@ -55,8 +57,11 @@ pub fn init() void {
         .npcArray = .{
             .init(800, 300, "assets/npc1.png", npc1Action),
             .init(700, 280, "assets/npc2.png", npc2Action),
+            .init(0, 0, null, changeMap0),
         },
     };
+    maps[0].npcArray[2].area = .init(.{ .y = 400 }, .init(20, 600));
+    maps[0].npcArray[2].keyTrigger = false;
 
     std.mem.sort(NPC, &maps[0].npcArray, {}, struct {
         fn lessThan(_: void, a: NPC, b: NPC) bool {
@@ -67,12 +72,29 @@ pub fn init() void {
     maps[1] = Map{
         .map = assets.loadTexture("assets/map2.png", SIZE),
         .mapShade = assets.loadTexture("assets/map2_shade.png", SIZE),
+        .npcArray = .{
+            .init(800, 300, "assets/npc1.png", npc1Action),
+            .init(700, 280, "assets/npc2.png", npc2Action),
+            .init(0, 0, null, changeMap1),
+        },
     };
+    maps[1].npcArray[2].area = .init(.init(980, 400), .init(20, 600));
+    maps[1].npcArray[2].keyTrigger = false;
 
     const file = assets.File.load("assets/map1_block.png", callback);
     if (file.data.len != 0) initMapBlock(file.data);
 
     changeMap();
+}
+
+fn changeMap0() void {
+    changeMap();
+    scene.position.x = SIZE.x - 25;
+}
+
+fn changeMap1() void {
+    changeMap();
+    scene.position.x = 25;
 }
 
 pub fn changeMap() void {

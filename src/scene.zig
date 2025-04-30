@@ -13,7 +13,7 @@ const PLAYER_OFFSET: math.Vector = .init(120, 220);
 
 var players: [3]Player = undefined;
 var currentPlayer: *Player = &players[0];
-var position: math.Vector = .init(800, 500);
+pub var position: math.Vector = .init(100, 500);
 var facing: math.FourDirection = .down;
 var keyPressed: bool = false;
 var velocity: math.Vector = .zero;
@@ -53,11 +53,18 @@ pub fn update(delta: f32) void {
 
     if (keyPressed) currentPlayer.current(facing).update(delta);
 
-    if (window.isPressed(.SPACE)) {
-        for (map.npcSlice()) |*npc| {
-            if (npc.area.contains(position)) npc.action();
+    for (map.npcSlice()) |*npc| {
+        if (npc.area.contains(position)) {
+            if (npc.keyTrigger) {
+                if (window.isRelease(.SPACE)) npc.action();
+            } else npc.action();
         }
     }
+}
+
+fn npcAction(npc: *map.NPC) void {
+    if (!npc.keyTrigger) return npc.action();
+    if (npc.keyTrigger and window.isPressed(.SPACE)) npc.action();
 }
 
 fn updatePlayer(direction: math.FourDirection) void {
