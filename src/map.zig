@@ -21,7 +21,7 @@ pub fn init() void {
 
     _ = assets.String.load("assets/map1_block.png", callback);
 
-    audio.playMusic("assets/1.ogg");
+    _ = audio.playSoundLoop("assets/1.ogg");
 }
 
 pub fn canWalk(pos: math.Vector) bool {

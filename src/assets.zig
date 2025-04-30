@@ -95,7 +95,6 @@ pub const Sound = struct {
         send(path, callback);
 
         entry.value_ptr.* = .{ .source = undefined };
-        entry.key_ptr.* = path;
 
         return entry.value_ptr.*;
     }
