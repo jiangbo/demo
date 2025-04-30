@@ -19,11 +19,22 @@ pub fn deinit() void {
     sk.audio.shutdown();
 }
 
-pub const Music = struct {
+const Music = struct {
     source: *c.stbAudio.Audio = undefined,
     paused: bool = false,
     loop: bool = true,
     active: bool = false,
+
+    fn init(data: []const u8, loop: bool) Music {
+        const source = c.stbAudio.loadFromMemory(data) catch unreachable;
+        return .{ .source = source, .loop = loop, .active = true };
+    }
+
+    fn loader(allocator: std.mem.Allocator, buffer: *[]const u8) void {
+        const data = allocator.dupe(u8, buffer.*);
+        buffer.* = data catch unreachable;
+        if (music) |*m| music = Music.init(buffer.*, m.loop);
+    }
 };
 
 pub var music: ?Music = null;
@@ -38,22 +49,12 @@ pub fn playMusicOnce(path: [:0]const u8) void {
 
 fn doPlayMusic(path: [:0]const u8, loop: bool) void {
     stopMusic();
-    music = .{ .loop = loop };
-    const file = assets.File.load(path, musicCallback);
+
+    const file = assets.File.load(path, Music.loader);
     if (file.data.len != 0) {
-        const source = c.stbAudio.loadFromMemory(file.data) catch unreachable;
-        music = .{ .source = source, .loop = loop, .active = true };
-    }
-}
-
-fn musicCallback(allocator: std.mem.Allocator, buffer: *[]const u8) void {
-    const data = allocator.dupe(u8, buffer.*);
-    buffer.* = data catch unreachable;
-
-    const stbAudio = c.stbAudio.loadFromMemory(buffer.*);
-    if (music) |*m| {
-        m.source = stbAudio catch unreachable;
-        m.active = true;
+        music = Music.init(file.data, loop);
+    } else {
+        music = .{ .loop = loop };
     }
 }
 
