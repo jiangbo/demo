@@ -14,36 +14,12 @@ pub fn init(alloc: std.mem.Allocator) void {
 pub fn deinit() void {
     Texture.cache.deinit(allocator);
     Sound.deinit();
-    String.deinit();
+    File.deinit();
     sk.fetch.shutdown();
 }
 
 pub fn loading() void {
     sk.fetch.dowork();
-}
-
-var loadingBuffer: [1.5 * 1024 * 1024]u8 = undefined;
-
-const SkCallback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
-const Response = struct { path: [:0]const u8, data: []const u8 };
-
-fn send(path: [:0]const u8, cb: SkCallback) void {
-    std.log.info("loading {s}", .{path});
-
-    const buffer = sk.fetch.asRange(&loadingBuffer);
-    _ = sk.fetch.send(.{ .path = path, .callback = cb, .buffer = buffer });
-}
-
-fn extractResponses(responses: [*c]const sk.fetch.Response) Response {
-    const res = responses[0];
-    if (res.failed) {
-        std.debug.panic("assets load failed, path: {s}", .{res.path});
-    }
-
-    const data: [*]const u8 = @ptrCast(res.data.ptr);
-    const path = std.mem.span(res.path);
-    std.log.info("loaded from: {s}", .{path});
-    return .{ .path = path, .data = data[0..res.data.size] };
 }
 
 pub fn loadTexture(path: [:0]const u8, size: math.Vector) gfx.Texture {
@@ -125,25 +101,52 @@ pub const Sound = struct {
     }
 };
 
-pub const String = struct {
-    var cache: std.StringHashMapUnmanaged(StringCallback) = .empty;
-    const Callback = *const fn ([]const u8) void;
-    const StringCallback = struct { data: []const u8, callback: Callback };
+var loadingBuffer: [1.5 * 1024 * 1024]u8 = undefined;
 
-    pub fn load(path: [:0]const u8, cb: Callback) void {
+const SkCallback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
+const Response = struct {
+    path: [:0]const u8,
+    data: []const u8 = &.{},
+    callback: Callback = undefined,
+};
+const Callback = *const fn (alloc: std.mem.Allocator, data: *[]const u8) void;
+
+fn send(path: [:0]const u8, cb: SkCallback) void {
+    std.log.info("loading {s}", .{path});
+
+    const buffer = sk.fetch.asRange(&loadingBuffer);
+    _ = sk.fetch.send(.{ .path = path, .callback = cb, .buffer = buffer });
+}
+
+fn extractResponses(responses: [*c]const sk.fetch.Response) Response {
+    const res = responses[0];
+    if (res.failed) {
+        std.debug.panic("assets load failed, path: {s}", .{res.path});
+    }
+
+    const data: [*]const u8 = @ptrCast(res.data.ptr);
+    const path = std.mem.span(res.path);
+    std.log.info("loaded from: {s}", .{path});
+    return .{ .path = path, .data = data[0..res.data.size] };
+}
+
+pub const File = struct {
+    var cache: std.StringHashMapUnmanaged(Response) = .empty;
+
+    pub fn load(path: [:0]const u8, cb: Callback) *Response {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
-        if (entry.found_existing) return cb(entry.value_ptr.*.data);
+        if (entry.found_existing) return entry.value_ptr;
 
-        entry.value_ptr.* = .{ .data = &.{}, .callback = cb };
+        entry.value_ptr.* = .{ .path = path, .callback = cb };
         send(path, callback);
+        return entry.value_ptr;
     }
 
     fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
         const response = extractResponses(responses);
-        const data = allocator.dupe(u8, response.data) catch unreachable;
         const value = cache.getPtr(response.path).?;
-        value.data = data;
-        value.callback(data);
+        value.data = response.data;
+        value.callback(allocator, &value.data);
     }
 
     pub fn deinit() void {

@@ -19,7 +19,8 @@ pub fn init() void {
     mapShade = assets.loadTexture("assets/map1_shade.png", SIZE);
     mapBack = assets.loadTexture("assets/map1_back.png", SIZE);
 
-    _ = assets.String.load("assets/map1_block.png", callback);
+    const file = assets.File.load("assets/map1_block.png", callback);
+    if (file.data.len != 0) initMapBlock(file.data);
 
     _ = audio.playSoundLoop("assets/1.ogg");
 }
@@ -33,11 +34,16 @@ pub fn canWalk(pos: math.Vector) bool {
     } else return false;
 }
 
-fn callback(buffer: []const u8) void {
-    const image = c.stbImage.loadFromMemory(buffer) catch unreachable;
+fn callback(allocator: std.mem.Allocator, buffer: *[]const u8) void {
+    const image = c.stbImage.loadFromMemory(buffer.*) catch unreachable;
     defer c.stbImage.unload(image);
 
-    const data: []const u32 = @ptrCast(@alignCast(image.data));
+    buffer.* = allocator.dupe(u8, image.data) catch unreachable;
+    initMapBlock(buffer.*);
+}
+
+fn initMapBlock(buffer: []const u8) void {
+    const data: []const u32 = @ptrCast(@alignCast(buffer));
     std.debug.assert(data.len == SIZE.x * SIZE.y);
 
     var blocks: std.StaticBitSet(SIZE.x * SIZE.y) = .initEmpty();
