@@ -29,12 +29,6 @@ pub fn init() void {
     map.init();
 }
 
-pub fn event(ev: *const window.Event) void {
-    if (ev.type == .KEY_UP and ev.key_code == .TAB) {
-        currentPlayer = &players[(currentPlayer.index + 1) % players.len];
-    }
-}
-
 pub fn update(delta: f32) void {
     velocity = .zero;
     keyPressed = false;
@@ -43,6 +37,10 @@ pub fn update(delta: f32) void {
     if (window.isAnyKeyDown(&.{ .DOWN, .S })) updatePlayer(.down);
     if (window.isAnyKeyDown(&.{ .LEFT, .A })) updatePlayer(.left);
     if (window.isAnyKeyDown(&.{ .RIGHT, .D })) updatePlayer(.right);
+
+    if (window.isRelease(.TAB)) {
+        currentPlayer = &players[(currentPlayer.index + 1) % players.len];
+    }
 
     if (velocity.approx(.zero)) {
         currentPlayer.current(facing).reset();

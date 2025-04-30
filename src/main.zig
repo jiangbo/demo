@@ -11,10 +11,6 @@ fn init() void {
     scene.init();
 }
 
-fn event(ev: *const window.Event) void {
-    scene.event(ev);
-}
-
 fn update(delta: f32) void {
     scene.update(delta);
 }
@@ -46,7 +42,6 @@ pub fn main() void {
         .title = "教你制作RPG游戏",
         .size = .{ .x = 800, .y = 600 },
         .init = init,
-        .event = event,
         .update = update,
         .render = render,
         .deinit = deinit,
