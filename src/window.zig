@@ -121,12 +121,42 @@ export fn windowEvent(event: ?*const Event) void {
     }
 }
 
-export fn windowFrame() void {
-    assets.loading();
-    const delta: f32 = @floatFromInt(timer.lap());
-    if (windowInfo.update) |update| update(delta / std.time.ns_per_s);
-    if (windowInfo.render) |render| render();
+pub fn showFrameRate() void {
+    if (frameRateTimer.isRunningAfterUpdate(deltaSeconds)) {
+        frameRateCount += 1;
+        logicNanoSeconds += timer.read();
+    } else {
+        frameRateTimer.reset();
+        realFrameRate = frameRateCount;
+        frameRateCount = 1;
+        logicFrameRate = std.time.ns_per_s / logicNanoSeconds * realFrameRate;
+        logicNanoSeconds = 0;
+    }
 
+    var buffer: [64]u8 = undefined;
+    const fmt = std.fmt.bufPrintZ;
+    var text = fmt(&buffer, "real frame rate: {d}", .{realFrameRate});
+    displayText(2, 2, text catch unreachable);
+
+    text = fmt(&buffer, "logic frame rate: {d}", .{logicFrameRate});
+    displayText(2, 4, text catch unreachable);
+    endDisplayText();
+}
+
+var frameRateTimer: Timer = .init(1);
+var frameRateCount: u32 = 0;
+var realFrameRate: u32 = 0;
+var logicNanoSeconds: u64 = 0;
+var logicFrameRate: u64 = 0;
+var deltaSeconds: f32 = 0;
+
+export fn windowFrame() void {
+    const deltaNano: f32 = @floatFromInt(timer.lap());
+    deltaSeconds = deltaNano / std.time.ns_per_s;
+
+    assets.loading();
+    if (windowInfo.update) |update| update(deltaSeconds);
+    if (windowInfo.render) |render| render();
     lastKeyState = keyState;
 }
 

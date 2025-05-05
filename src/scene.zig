@@ -62,11 +62,6 @@ pub fn update(delta: f32) void {
     }
 }
 
-fn npcAction(npc: *map.NPC) void {
-    if (!npc.keyTrigger) return npc.action();
-    if (npc.keyTrigger and window.isPressed(.SPACE)) npc.action();
-}
-
 fn updatePlayer(direction: math.FourDirection) void {
     facing = direction;
     keyPressed = true;
@@ -96,6 +91,8 @@ pub fn render() void {
     if (playerNotDraw) drawPlayer();
 
     map.drawForeground();
+
+    window.showFrameRate();
 }
 
 fn drawPlayer() void {
