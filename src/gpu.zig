@@ -127,24 +127,6 @@ pub const Renderer = struct {
     var sampler: ?Sampler = null;
 
     pub fn init() Renderer {
-        sk.gfx.setup(.{
-            .environment = sk.glue.environment(),
-            .logger = .{ .func = sk.log.func },
-        });
-
-        sk.gl.setup(.{
-            .logger = .{ .func = sk.log.func },
-        });
-
-        sk.debugtext.setup(.{
-            .fonts = init: {
-                var f: [8]sk.debugtext.FontDesc = @splat(.{});
-                f[0] = sk.debugtext.fontKc854();
-                break :init f;
-            },
-            .logger = .{ .func = sk.log.func },
-        });
-
         var self = Renderer{ .bind = .{}, .renderPass = undefined };
 
         indexBuffer = indexBuffer orelse sk.gfx.makeBuffer(.{
@@ -242,10 +224,6 @@ pub const Renderer = struct {
         sk.gfx.destroyBuffer(vertexBuffer);
     }
 };
-
-pub fn deinit() void {
-    sk.gfx.shutdown();
-}
 
 pub const RenderPipeline = struct {
     value: sk.gfx.Pipeline,

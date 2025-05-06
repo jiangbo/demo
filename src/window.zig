@@ -49,12 +49,7 @@ pub fn isAnyKeyDown(keys: []const KeyCode) bool {
     return false;
 }
 
-pub fn isAllKeyDown(keys: []const KeyCode) bool {
-    for (keys) |key| if (!isKeyDown(key)) return false;
-    return true;
-}
-
-pub fn isPressed(keyCode: KeyCode) bool {
+pub fn isPress(keyCode: KeyCode) bool {
     const key: usize = @intCast(@intFromEnum(keyCode));
     return !lastKeyState.isSet(key) and keyState.isSet(key);
 }
@@ -103,6 +98,25 @@ pub fn run(info: WindowInfo) void {
 
 export fn windowInit() void {
     assets.init(allocator);
+
+    sk.gfx.setup(.{
+        .environment = sk.glue.environment(),
+        .logger = .{ .func = sk.log.func },
+    });
+
+    sk.gl.setup(.{
+        .logger = .{ .func = sk.log.func },
+    });
+
+    sk.debugtext.setup(.{
+        .fonts = init: {
+            var f: [8]sk.debugtext.FontDesc = @splat(.{});
+            f[0] = sk.debugtext.fontKc854();
+            break :init f;
+        },
+        .logger = .{ .func = sk.log.func },
+    });
+
     gfx.init(size);
 
     if (windowInfo.init) |init| init();
@@ -156,13 +170,14 @@ export fn windowFrame() void {
 
     assets.loading();
     if (windowInfo.update) |update| update(deltaSeconds);
+
     if (windowInfo.render) |render| render();
     lastKeyState = keyState;
 }
 
 export fn windowDeinit() void {
     if (windowInfo.deinit) |deinit| deinit();
-    gfx.deinit();
+    sk.gfx.shutdown();
     assets.deinit();
 }
 
