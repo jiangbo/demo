@@ -132,7 +132,7 @@ fn extractResponse(responses: [*c]const sk.fetch.Response) Response {
 }
 
 pub const AssetIndex = extern struct {
-    state: enum(u8) { init, loading, loaded, active, unload } = .init,
+    state: enum(u8) { init, loading, loaded, unload } = .init,
     _: u8 = 0,
     version: u16 = 0,
     index: u32,
@@ -172,6 +172,7 @@ pub const File = struct {
         response.allocator = allocator;
 
         value.data = value.loader(response);
+        value.index.state = .loaded;
     }
 
     pub fn deinit() void {

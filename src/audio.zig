@@ -49,7 +49,7 @@ pub fn playMusicOnce(path: [:0]const u8) void {
 
 fn doPlayMusic(path: [:0]const u8, loop: bool) void {
     const file = assets.File.load(path, 0, Music.loader);
-    if (file.index.state == .active) {
+    if (file.index.state == .loaded) {
         music = Music.init(file.data, loop);
     } else {
         music = .{ .loop = loop, .paused = true };
