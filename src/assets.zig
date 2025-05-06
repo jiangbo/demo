@@ -18,10 +18,6 @@ pub fn deinit() void {
     sk.fetch.shutdown();
 }
 
-pub fn loading() void {
-    sk.fetch.dowork();
-}
-
 pub fn loadTexture(path: [:0]const u8, size: math.Vector) gfx.Texture {
     return Texture.load(path, size);
 }
@@ -132,8 +128,7 @@ fn extractResponse(responses: [*c]const sk.fetch.Response) Response {
 }
 
 pub const AssetIndex = extern struct {
-    state: enum(u8) { init, loading, loaded, unload } = .init,
-    _: u8 = 0,
+    state: enum(u16) { init, loading, loaded, unload } = .init,
     version: u16 = 0,
     index: u32,
 

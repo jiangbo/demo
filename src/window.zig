@@ -168,7 +168,7 @@ export fn windowFrame() void {
     const deltaNano: f32 = @floatFromInt(timer.lap());
     deltaSeconds = deltaNano / std.time.ns_per_s;
 
-    assets.loading();
+    sk.fetch.dowork();
     if (windowInfo.update) |update| update(deltaSeconds);
 
     if (windowInfo.render) |render| render();
