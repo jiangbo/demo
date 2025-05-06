@@ -60,7 +60,7 @@ pub fn update(delta: f32) void {
             } else npc.action();
         }
 
-        if (npc.animation) |*animation| animation.update(delta);
+        map.updateNpc(npc, delta);
     }
 }
 
