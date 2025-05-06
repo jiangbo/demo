@@ -29,9 +29,9 @@ const Music = struct {
         return .{ .source = source, .loop = loop };
     }
 
-    fn loader(response: assets.Response) []const u8 {
-        const allocator = response.allocator;
-        const data = allocator.dupe(u8, response.data) catch unreachable;
+    fn loader(res: assets.Response) []const u8 {
+        const content, const allocator = .{ res.data, res.allocator };
+        const data = allocator.dupe(u8, content) catch unreachable;
         if (music) |*m| music = Music.init(data, m.loop);
         return data;
     }
@@ -49,7 +49,7 @@ pub fn playMusicOnce(path: [:0]const u8) void {
 
 fn doPlayMusic(path: [:0]const u8, loop: bool) void {
     const file = assets.File.load(path, 0, Music.loader);
-    if (file.data.len != 0) {
+    if (file.index.state == .active) {
         music = Music.init(file.data, loop);
     } else {
         music = .{ .loop = loop, .paused = true };

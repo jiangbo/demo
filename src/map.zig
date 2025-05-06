@@ -200,8 +200,8 @@ pub fn updateNpc(npc: *NPC, delta: f32) void {
 }
 
 fn callback(res: assets.Response) []const u8 {
-    const fileData, const allocator = .{ res.data, res.allocator };
-    const image = c.stbImage.loadFromMemory(fileData) catch unreachable;
+    const content, const allocator = .{ res.data, res.allocator };
+    const image = c.stbImage.loadFromMemory(content) catch unreachable;
     defer c.stbImage.unload(image);
 
     const data = allocator.dupe(u8, image.data) catch unreachable;
