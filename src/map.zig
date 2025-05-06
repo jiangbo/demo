@@ -64,7 +64,11 @@ fn npc2Action() void {
 }
 
 fn map2npc1Action() void {
-    maps[1].npcArray[0].animation.?.reset();
+    for (&maps[1].npcArray) |*npc| {
+        if (npc.animation != null and npc.type == .fixed) {
+            npc.animation.?.reset();
+        }
+    }
 }
 
 pub fn init() void {
@@ -115,8 +119,8 @@ pub fn init() void {
     maps[1].npcArray[2].keyTrigger = false;
     sortNPC(&maps[1].npcArray);
 
-    const file = assets.File.load("assets/map1_block.png", callback);
-    if (file.data.len != 0) initMapBlock(file.data);
+    const file = assets.File.load("assets/map1_block.png", 0, callback);
+    if (file.index.state == .active) initMapBlock(file.data);
 
     changeMap();
 }
@@ -148,12 +152,12 @@ pub fn changeMap() void {
     }
 
     if (maps[index].mapBlock == null and index == 0) {
-        const file = assets.File.load("assets/map1_block.png", callback);
+        const file = assets.File.load("assets/map1_block.png", 0, callback);
         if (file.data.len != 0) initMapBlock(file.data);
     }
 
     if (maps[index].mapBlock == null and index == 1) {
-        const file = assets.File.load("assets/map2_block.png", callback);
+        const file = assets.File.load("assets/map2_block.png", 0, callback);
         if (file.data.len != 0) initMapBlock(file.data);
     }
 }
@@ -195,12 +199,14 @@ pub fn updateNpc(npc: *NPC, delta: f32) void {
     npc.area = .init(npc.position.sub(.init(40, 60)), NPC_AREA);
 }
 
-fn callback(allocator: std.mem.Allocator, buffer: *[]const u8) void {
-    const image = c.stbImage.loadFromMemory(buffer.*) catch unreachable;
+fn callback(res: assets.Response) []const u8 {
+    const fileData, const allocator = .{ res.data, res.allocator };
+    const image = c.stbImage.loadFromMemory(fileData) catch unreachable;
     defer c.stbImage.unload(image);
 
-    buffer.* = allocator.dupe(u8, image.data) catch unreachable;
-    initMapBlock(buffer.*);
+    const data = allocator.dupe(u8, image.data) catch unreachable;
+    initMapBlock(data);
+    return data;
 }
 
 fn initMapBlock(buffer: []const u8) void {

@@ -41,7 +41,7 @@ pub const Texture = struct {
     }
 
     fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
-        const response = extractResponses(responses);
+        const response = extractResponse(responses);
         const data = response.data;
 
         const image = c.stbImage.loadFromMemory(data) catch unreachable;
@@ -76,7 +76,7 @@ pub const Sound = struct {
     }
 
     fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
-        const response = extractResponses(responses);
+        const response = extractResponse(responses);
         const data = response.data;
 
         const stbAudio = c.stbAudio.loadFromMemory(data) catch unreachable;
@@ -104,12 +104,13 @@ pub const Sound = struct {
 var loadingBuffer: [1.5 * 1024 * 1024]u8 = undefined;
 
 const SkCallback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
-const Response = struct {
+pub const Response = struct {
+    allocator: std.mem.Allocator = undefined,
+    index: AssetIndex = undefined,
     path: [:0]const u8,
     data: []const u8 = &.{},
-    callback: Callback = undefined,
 };
-const Callback = *const fn (alloc: std.mem.Allocator, data: *[]const u8) void;
+const Loader = *const fn (response: Response) []const u8;
 
 fn send(path: [:0]const u8, cb: SkCallback) void {
     std.log.info("loading {s}", .{path});
@@ -118,7 +119,7 @@ fn send(path: [:0]const u8, cb: SkCallback) void {
     _ = sk.fetch.send(.{ .path = path, .callback = cb, .buffer = buffer });
 }
 
-fn extractResponses(responses: [*c]const sk.fetch.Response) Response {
+fn extractResponse(responses: [*c]const sk.fetch.Response) Response {
     const res = responses[0];
     if (res.failed) {
         std.debug.panic("assets load failed, path: {s}", .{res.path});
@@ -130,23 +131,47 @@ fn extractResponses(responses: [*c]const sk.fetch.Response) Response {
     return .{ .path = path, .data = data[0..res.data.size] };
 }
 
-pub const File = struct {
-    var cache: std.StringHashMapUnmanaged(Response) = .empty;
+pub const AssetIndex = extern struct {
+    state: enum(u8) { init, loading, loaded, active, unload } = .init,
+    _: u8 = 0,
+    version: u16 = 0,
+    index: u32,
 
-    pub fn load(path: [:0]const u8, cb: Callback) *Response {
+    pub fn init(index: u32) AssetIndex {
+        return .{ .index = index };
+    }
+};
+
+const Cache = struct {
+    index: AssetIndex,
+    data: []const u8 = &.{},
+    loader: Loader = undefined,
+
+    pub fn init(index: u32, loader: Loader) Cache {
+        return .{ .index = .init(index), .loader = loader };
+    }
+};
+
+pub const File = struct {
+    var cache: std.StringHashMapUnmanaged(Cache) = .empty;
+
+    pub fn load(path: [:0]const u8, index: u32, loader: Loader) *Cache {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
         if (entry.found_existing) return entry.value_ptr;
 
-        entry.value_ptr.* = .{ .path = path, .callback = cb };
+        entry.value_ptr.* = .{ .index = .init(index), .loader = loader };
         send(path, callback);
+        entry.value_ptr.index.state = .loading;
         return entry.value_ptr;
     }
 
     fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
-        const response = extractResponses(responses);
+        var response = extractResponse(responses);
         const value = cache.getPtr(response.path).?;
-        value.data = response.data;
-        value.callback(allocator, &value.data);
+        response.index = value.index;
+        response.allocator = allocator;
+
+        value.data = value.loader(response);
     }
 
     pub fn deinit() void {
