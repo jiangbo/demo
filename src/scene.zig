@@ -59,6 +59,8 @@ pub fn update(delta: f32) void {
                 if (window.isRelease(.SPACE)) npc.action();
             } else npc.action();
         }
+
+        if (npc.animation) |*animation| animation.update(delta);
     }
 }
 
@@ -81,8 +83,12 @@ pub fn render() void {
             playerNotDraw = false;
         }
 
-        if (npc.texture) |texture| {
-            gfx.draw(texture, npc.position.sub(PLAYER_OFFSET));
+        const npcPosition = npc.position.sub(PLAYER_OFFSET);
+
+        if (npc.animation != null and !npc.animation.?.finished()) {
+            gfx.draw(npc.animation.?.currentTexture(), npcPosition);
+        } else if (npc.texture) |texture| {
+            gfx.draw(texture, npcPosition);
         }
 
         gfx.drawRectangle(npc.area);

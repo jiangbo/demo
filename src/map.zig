@@ -13,10 +13,13 @@ const PLAYER_OFFSET: math.Vector = .init(120, 220);
 const NPC_SIZE: math.Vector = .init(240, 240);
 const NPC_AREA: math.Vector = .init(80, 100);
 
+const FrameAnimation = gfx.FixedFrameAnimation(4, 0.25);
+
 const Action = *const fn () void;
 pub const NPC = struct {
     position: math.Vector,
     texture: ?gfx.Texture = null,
+    animation: ?FrameAnimation = null,
     area: math.Rectangle = .{},
     keyTrigger: bool = true,
     action: *const fn () void = undefined,
@@ -49,6 +52,10 @@ fn npc2Action() void {
     std.log.info("npc2 action", .{});
 }
 
+fn map2npc1Action() void {
+    maps[1].npcArray[0].animation.?.reset();
+}
+
 pub fn init() void {
     maps[0] = Map{
         .map = assets.loadTexture("assets/map1.png", SIZE),
@@ -69,15 +76,23 @@ pub fn init() void {
         }
     }.lessThan);
 
+    // 地图二的具有动画的 NPC
+    const anim = assets.loadTexture("assets/Anm1.png", .init(480, 480));
+    const animation = anim.subTexture(.init(.zero, .init(480, 240)));
+    var anim2 = FrameAnimation.initWithCount(animation, 2);
+    anim2.addFrame(.init(.init(0, 240), .init(240, 240)));
+    anim2.stop();
+
     maps[1] = Map{
         .map = assets.loadTexture("assets/map2.png", SIZE),
         .mapShade = assets.loadTexture("assets/map2_shade.png", SIZE),
         .npcArray = .{
-            .init(800, 300, "assets/npc1.png", npc1Action),
-            .init(700, 280, "assets/npc2.png", npc2Action),
+            .init(700, 300, "assets/npc3.png", map2npc1Action),
+            .init(500, 280, null, npc2Action),
             .init(0, 0, null, changeMap1),
         },
     };
+    maps[1].npcArray[0].animation = anim2;
     maps[1].npcArray[2].area = .init(.init(980, 400), .init(20, 600));
     maps[1].npcArray[2].keyTrigger = false;
 
