@@ -1,7 +1,7 @@
 const std = @import("std");
 const sk = @import("sokol");
 const assets = @import("assets.zig");
-const stbAudio = @import("c.zig").stbAudio;
+const c = @import("c.zig");
 
 pub fn init(sampleRate: u32, soundBuffer: []Sound) void {
     sk.audio.setup(.{
@@ -11,21 +11,22 @@ pub fn init(sampleRate: u32, soundBuffer: []Sound) void {
         .logger = .{ .func = sk.log.func },
     });
     sounds = soundBuffer;
+    for (sounds) |*sound| sound.handle.state = .remove;
 }
 
 pub fn deinit() void {
     stopMusic();
-    for (sounds) |*sound| sound.valid = false;
+    for (sounds) |*sound| sound.handle.state = .remove;
     sk.audio.shutdown();
 }
 
 const Music = struct {
-    source: *stbAudio.Audio = undefined,
+    source: *c.stbAudio.Audio = undefined,
     paused: bool = false,
     loop: bool = true,
 
     fn init(data: []const u8, loop: bool) Music {
-        const source = stbAudio.loadFromMemory(data) catch unreachable;
+        const source = c.stbAudio.loadFromMemory(data) catch unreachable;
         return .{ .source = source, .loop = loop };
     }
 
@@ -71,41 +72,71 @@ pub fn stopMusic() void {
 var sounds: []Sound = &.{};
 
 pub const Sound = struct {
+    handle: SoundHandle,
     source: []f32,
-    valid: bool = false,
     loop: bool = true,
     index: usize = 0,
     sampleRate: u16 = 0,
     channels: u8 = 0,
+
+    fn init(stbAudio: c.stbAudio.Audio) Sound {
+        var sound: Sound = undefined;
+
+        const info = c.stbAudio.getInfo(stbAudio);
+        sound.channels = @intCast(info.channels);
+        sound.sampleRate = @intCast(info.sample_rate);
+
+        const size = c.stbAudio.getSampleCount(stbAudio) * sound.channels;
+        sound.source = allocator.alloc(f32, size) catch unreachable;
+
+        _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
+        sound.valid = true;
+    }
+
+    fn loader(res: assets.Response) []const u8 {
+        const content, const allocator = .{ res.data, res.allocator };
+
+        const stbAudio = c.stbAudio.loadFromMemory(content) catch unreachable;
+        const info = c.stbAudio.getInfo(stbAudio);
+
+        var sound = cache.getPtr(response.path).?;
+
+        sound.channels = @intCast(info.channels);
+        sound.sampleRate = @intCast(info.sample_rate);
+
+        const size = c.stbAudio.getSampleCount(stbAudio) * sound.channels;
+        sound.source = allocator.alloc(f32, size) catch unreachable;
+
+        _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
+        sound.valid = true;
+    }
 };
-pub const SoundIndex = usize;
+pub const SoundHandle = assets.AssetHandle;
 
 pub fn playSound(path: [:0]const u8) void {
     _ = doPlaySound(path, false);
 }
 
-pub fn playSoundLoop(path: [:0]const u8) SoundIndex {
+pub fn playSoundLoop(path: [:0]const u8) SoundHandle {
     return doPlaySound(path, true);
 }
 
-pub fn stopSound(sound: SoundIndex) void {
+pub fn stopSound(sound: SoundHandle) void {
     sounds[sound].valid = false;
 }
 
-fn doPlaySound(path: [:0]const u8, loop: bool) SoundIndex {
-    var sound = assets.Sound.load(path);
-    sound.loop = loop;
+fn doPlaySound(path: [:0]const u8, loop: bool) SoundHandle {
+    for (sounds, 0..) |*sound, index| {
+        if (sound.handle.state != .remove) continue;
 
-    return addItem(sounds, sound);
-}
+        const file = assets.File.load(path, @intCast(index), undefined);
+        sound.loop = loop;
+        sound.handle = file.handle.nextVersion();
+        if (file.handle.state == .loaded) sound.handle.state = .active;
 
-fn addItem(slice: anytype, item: anytype) usize {
-    for (slice, 0..) |*value, index| {
-        if (!value.valid) {
-            value.* = item;
-            return index;
-        }
+        return sound.handle;
     }
+
     @panic("too many audio sound");
 }
 
@@ -122,10 +153,11 @@ export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     }
 
     for (sounds) |*sound| {
-        if (!sound.valid) continue;
-        var len = mixSamples(buffer, sound);
-        while (len < buffer.len and sound.valid) {
-            len += mixSamples(buffer[len..], sound);
+        if (sound.handle.state == .active) {
+            var len = mixSamples(buffer, sound);
+            while (len < buffer.len and sound.handle.isActive()) {
+                len += mixSamples(buffer[len..], sound);
+            }
         }
     }
 }
@@ -139,7 +171,7 @@ fn mixSamples(buffer: []f32, sound: *Sound) usize {
         std.debug.panic("unsupported channels: {d}", .{sound.channels});
 
     if (sound.index == sound.source.len) {
-        if (sound.loop) sound.index = 0 else sound.valid = false;
+        if (sound.loop) sound.index = 0 else sound.handle.state = .remove;
     }
 
     return len;

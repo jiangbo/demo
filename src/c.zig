@@ -41,39 +41,41 @@ pub const stbVorbis = struct {
         @cInclude("stb_Vorbis.c");
     });
 
-    pub const Audio = stb.stb_vorbis;
     pub const AudioInfo = stb.stb_vorbis_info;
+    pub const Audio = struct {
+        audio: *stb.stb_vorbis,
 
-    pub fn loadFromMemory(data: []const u8) !*Audio {
-        var errorCode: c_int = 0;
+        pub fn init(data: []const u8) !Audio {
+            var errorCode: c_int = 0;
 
-        const vorbis = stb.stb_vorbis_open_memory(data.ptr, @intCast(data.len), &errorCode, null);
-        if (errorCode != 0 or vorbis == null) return error.loadAudioFailed;
-        return vorbis.?;
-    }
+            const vorbis = stb.stb_vorbis_open_memory(data.ptr, @intCast(data.len), &errorCode, null);
+            if (errorCode != 0 or vorbis == null) return error.loadAudioFailed;
+            return vorbis.?;
+        }
 
-    pub fn getInfo(audio: *Audio) AudioInfo {
-        return stb.stb_vorbis_get_info(audio);
-    }
+        pub fn getInfo(self: *Audio) AudioInfo {
+            return stb.stb_vorbis_get_info(self.audio);
+        }
 
-    pub fn getSampleCount(audio: *Audio) usize {
-        return stb.stb_vorbis_stream_length_in_samples(audio);
-    }
+        pub fn getSampleCount(self: *Audio) usize {
+            return stb.stb_vorbis_stream_length_in_samples(self.audio);
+        }
 
-    pub fn fillSamples(audio: *Audio, buffer: []f32, channels: i32) c_int {
-        return stb.stb_vorbis_get_samples_float_interleaved(
-            audio,
-            channels,
-            @ptrCast(buffer),
-            @intCast(buffer.len),
-        );
-    }
+        pub fn fillSamples(self: *Audio, buffer: []f32, channels: i32) c_int {
+            return stb.stb_vorbis_get_samples_float_interleaved(
+                self.audio,
+                channels,
+                @ptrCast(buffer),
+                @intCast(buffer.len),
+            );
+        }
 
-    pub fn reset(audio: *Audio) void {
-        _ = stb.stb_vorbis_seek_start(audio);
-    }
+        pub fn reset(self: *Audio) void {
+            _ = stb.stb_vorbis_seek_start(self.audio);
+        }
 
-    pub fn unload(audio: *Audio) void {
-        stb.stb_vorbis_close(audio);
-    }
+        pub fn unload(self: *Audio) void {
+            stb.stb_vorbis_close(self.audio);
+        }
+    };
 };

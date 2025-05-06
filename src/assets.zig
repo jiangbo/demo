@@ -13,7 +13,6 @@ pub fn init(alloc: std.mem.Allocator) void {
 
 pub fn deinit() void {
     Texture.cache.deinit(allocator);
-    Sound.deinit();
     File.deinit();
     sk.fetch.shutdown();
 }
@@ -60,40 +59,34 @@ const audio = @import("audio.zig");
 pub const Sound = struct {
     var cache: std.StringHashMapUnmanaged(audio.Sound) = .empty;
 
-    pub fn load(path: [:0]const u8) audio.Sound {
+    pub fn load(path: [:0]const u8, index: u32) audio.Sound {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
         if (entry.found_existing) return entry.value_ptr.*;
 
-        send(path, callback);
+        const file = File.load(path, index, loader);
+        if (file.handle.state == .loaded) {}
 
         entry.value_ptr.* = .{ .source = undefined };
 
         return entry.value_ptr.*;
     }
 
-    fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
-        const response = extractResponse(responses);
-        const data = response.data;
+    fn loader(response: Response) []const u8 {
+        const content = response.data;
 
-        const stbAudio = c.stbAudio.loadFromMemory(data) catch unreachable;
-        const info = c.stbAudio.getInfo(stbAudio);
+        const stbAudio = c.stbAudio.Audio.init(content) catch unreachable;
+        const info = stbAudio.getInfo();
 
         var sound = cache.getPtr(response.path).?;
 
         sound.channels = @intCast(info.channels);
         sound.sampleRate = @intCast(info.sample_rate);
 
-        const size = c.stbAudio.getSampleCount(stbAudio) * sound.channels;
+        const size = stbAudio.getSampleCount() * sound.channels;
         sound.source = allocator.alloc(f32, size) catch unreachable;
 
-        _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
-        sound.valid = true;
-    }
-
-    pub fn deinit() void {
-        var iterator = cache.valueIterator();
-        while (iterator.next()) |value| allocator.free(value.source);
-        cache.deinit(allocator);
+        _ = stbAudio.fillSamples(sound.source, sound.channels);
+        return sound.source;
     }
 };
 
@@ -102,7 +95,7 @@ var loadingBuffer: [1.5 * 1024 * 1024]u8 = undefined;
 const SkCallback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
 pub const Response = struct {
     allocator: std.mem.Allocator = undefined,
-    index: AssetIndex = undefined,
+    handle: AssetHandle = undefined,
     path: [:0]const u8,
     data: []const u8 = &.{},
 };
@@ -127,23 +120,33 @@ fn extractResponse(responses: [*c]const sk.fetch.Response) Response {
     return .{ .path = path, .data = data[0..res.data.size] };
 }
 
-pub const AssetIndex = extern struct {
-    state: enum(u16) { init, loading, loaded, unload } = .init,
+pub const AssetHandle = extern struct {
+    state: enum(u16) { init, loading, loaded, active, remove } = .init,
     version: u16 = 0,
     index: u32,
 
-    pub fn init(index: u32) AssetIndex {
+    pub fn init(index: u32) AssetHandle {
         return .{ .index = index };
+    }
+
+    pub fn isActive(self: *const AssetHandle) bool {
+        return self.state == .active;
+    }
+
+    pub fn nextVersion(self: AssetHandle) AssetHandle {
+        var result = self;
+        result.version +%= 1;
+        return result;
     }
 };
 
 const Cache = struct {
-    index: AssetIndex,
+    handle: AssetHandle,
     data: []const u8 = &.{},
     loader: Loader = undefined,
 
     pub fn init(index: u32, loader: Loader) Cache {
-        return .{ .index = .init(index), .loader = loader };
+        return .{ .handle = .init(index), .loader = loader };
     }
 };
 
@@ -154,20 +157,20 @@ pub const File = struct {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
         if (entry.found_existing) return entry.value_ptr;
 
-        entry.value_ptr.* = .{ .index = .init(index), .loader = loader };
+        entry.value_ptr.* = .{ .handle = .init(index), .loader = loader };
         send(path, callback);
-        entry.value_ptr.index.state = .loading;
+        entry.value_ptr.handle.state = .loading;
         return entry.value_ptr;
     }
 
     fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
         var response = extractResponse(responses);
         const value = cache.getPtr(response.path).?;
-        response.index = value.index;
+        response.handle = value.handle;
         response.allocator = allocator;
 
         value.data = value.loader(response);
-        value.index.state = .loaded;
+        value.handle.state = .loaded;
     }
 
     pub fn deinit() void {

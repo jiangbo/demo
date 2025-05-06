@@ -120,7 +120,7 @@ pub fn init() void {
     sortNPC(&maps[1].npcArray);
 
     const file = assets.File.load("assets/map1_block.png", 0, callback);
-    if (file.index.state == .loaded) initMapBlock(file.data);
+    if (file.handle.state == .loaded) initMapBlock(file.data);
 
     changeMap();
 }
@@ -146,8 +146,8 @@ fn sortNPC(npcArray: []NPC) void {
 pub fn changeMap() void {
     index = (index + 1) % maps.len;
     switch (index) {
-        0 => audio.playMusic("assets/1.ogg"),
-        1 => audio.playMusic("assets/2.ogg"),
+        0 => _ = audio.playSoundLoop("assets/1.ogg"),
+        1 => _ = audio.playSoundLoop("assets/2.ogg"),
         else => unreachable,
     }
 
