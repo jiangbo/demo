@@ -15,6 +15,7 @@ pub fn init(alloc: std.mem.Allocator) void {
 pub fn deinit() void {
     Texture.cache.deinit(allocator);
     Sound.cache.deinit(allocator);
+    Music.cache.deinit(allocator);
     File.deinit();
     sk.fetch.shutdown();
 }
@@ -23,8 +24,12 @@ pub fn loadTexture(path: [:0]const u8, size: gfx.Vector) gfx.Texture {
     return Texture.load(path, size);
 }
 
-pub fn loadSound(path: [:0]const u8, loop: bool) audio.Sound {
+pub fn loadSound(path: [:0]const u8, loop: bool) *audio.Sound {
     return Sound.load(path, loop);
+}
+
+pub fn loadMusic(path: [:0]const u8, loop: bool) *audio.Music {
+    return Music.load(path, loop);
 }
 
 pub const Texture = struct {
@@ -64,16 +69,16 @@ pub const Texture = struct {
 const Sound = struct {
     var cache: std.StringHashMapUnmanaged(audio.Sound) = .empty;
 
-    fn load(path: [:0]const u8, loop: bool) audio.Sound {
+    fn load(path: [:0]const u8, loop: bool) *audio.Sound {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
-        if (entry.found_existing) return entry.value_ptr.*;
+        if (entry.found_existing) return entry.value_ptr;
 
         for (audio.sounds, 0..) |*sound, index| {
             if (sound.state == .stopped) {
                 sound.* = .{ .handle = index, .loop = loop };
                 entry.value_ptr.* = sound.*;
                 _ = File.load(path, entry.value_ptr.*.handle, handler);
-                return entry.value_ptr.*;
+                return entry.value_ptr;
             }
         }
         @panic("too many audio sound");
@@ -99,6 +104,36 @@ const Sound = struct {
         sound.state = .playing;
         audio.sounds[response.index] = sound.*;
         return @ptrCast(sound.source);
+    }
+};
+
+const Music = struct {
+    var cache: std.StringHashMapUnmanaged(audio.Music) = .empty;
+
+    fn load(path: [:0]const u8, loop: bool) *audio.Music {
+        const entry = cache.getOrPut(allocator, path) catch unreachable;
+        if (entry.found_existing) return entry.value_ptr;
+
+        _ = File.load(path, 0, handler);
+        entry.value_ptr.* = .{ .loop = loop };
+        return entry.value_ptr;
+    }
+
+    fn handler(response: Response) []const u8 {
+        const data = allocator.dupe(u8, response.data) catch unreachable;
+        const stbAudio = c.stbAudio.loadFromMemory(data) catch unreachable;
+
+        const value = cache.getPtr(response.path).?;
+        value.source = stbAudio;
+        value.state = .playing;
+        audio.music = value.*;
+        return data;
+    }
+
+    pub fn deinit() void {
+        var iterator = cache.valueIterator();
+        while (iterator.next()) |value| c.stbAudio.unload(value.source);
+        cache.deinit(allocator);
     }
 };
 

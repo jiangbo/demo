@@ -146,8 +146,8 @@ fn sortNPC(npcArray: []NPC) void {
 pub fn changeMap() void {
     index = (index + 1) % maps.len;
     switch (index) {
-        0 => _ = audio.playSoundLoop("assets/1.ogg"),
-        1 => _ = audio.playSoundLoop("assets/2.ogg"),
+        0 => audio.playMusic("assets/1.ogg"),
+        1 => audio.playMusic("assets/2.ogg"),
         else => unreachable,
     }
 

@@ -20,53 +20,33 @@ pub fn deinit() void {
     sk.audio.shutdown();
 }
 
-const Music = struct {
+const AudioState = enum { init, playing, paused, stopped };
+pub const Music = struct {
     source: *stbAudio.Audio = undefined,
-    paused: bool = false,
+    state: AudioState = .init,
     loop: bool = true,
-
-    fn init(data: []const u8, loop: bool) Music {
-        const source = stbAudio.Audio.init(data) catch unreachable;
-        return .{ .source = source, .loop = loop };
-    }
-
-    fn loader(res: assets.Response) []const u8 {
-        const content, const allocator = .{ res.data, res.allocator };
-        const data = allocator.dupe(u8, content) catch unreachable;
-        if (music) |*m| music = Music.init(data, m.loop);
-        return data;
-    }
 };
 
 pub var music: ?Music = null;
 
 pub fn playMusic(path: [:0]const u8) void {
-    doPlayMusic(path, true);
+    music = assets.loadMusic(path, true).*;
 }
 
 pub fn playMusicOnce(path: [:0]const u8) void {
-    doPlayMusic(path, false);
-}
-
-fn doPlayMusic(path: [:0]const u8, loop: bool) void {
-    const file = assets.File.load(path, 0, Music.loader);
-    if (file.index.state == .handled) {
-        music = Music.init(file.data, loop);
-    } else {
-        music = .{ .loop = loop, .paused = true };
-    }
+    music = assets.loadMusic(path, false).*;
 }
 
 pub fn pauseMusic() void {
-    if (music) |*value| value.paused = true;
+    if (music) |*value| value.state = .paused;
 }
 
 pub fn resumeMusic() void {
-    if (music) |*value| value.paused = false;
+    if (music) |*value| value.state = .playing;
 }
 
 pub fn stopMusic() void {
-    music = null;
+    if (music) |*value| value.state = .stopped;
 }
 
 pub var sounds: []Sound = &.{};
@@ -78,7 +58,7 @@ pub const Sound = struct {
     index: usize = 0,
     sampleRate: u16 = 0,
     channels: u8 = 0,
-    state: enum { init, playing, paused, stopped } = .init,
+    state: AudioState = .init,
 };
 pub const SoundHandle = usize;
 
@@ -99,7 +79,7 @@ export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     const buffer = b[0..@as(usize, @intCast(frames * channels))];
     @memset(buffer, 0);
 
-    if (music != null and !music.?.paused) {
+    if (music != null and music.?.state == .playing) {
         const source = music.?.source;
         const count = stbAudio.fillSamples(source, buffer, channels);
         if (count == 0) {
