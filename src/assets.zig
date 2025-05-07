@@ -1,8 +1,9 @@
 const std = @import("std");
-const gfx = @import("graphics.zig");
-const math = @import("math.zig");
-const c = @import("c.zig");
+
 const sk = @import("sokol");
+const c = @import("c.zig");
+const gfx = @import("graphics.zig");
+const audio = @import("audio.zig");
 
 var allocator: std.mem.Allocator = undefined;
 
@@ -13,133 +14,20 @@ pub fn init(alloc: std.mem.Allocator) void {
 
 pub fn deinit() void {
     Texture.cache.deinit(allocator);
+    Sound.cache.deinit(allocator);
     File.deinit();
     sk.fetch.shutdown();
 }
 
-pub fn loadTexture(path: [:0]const u8, size: math.Vector) gfx.Texture {
+pub fn loadTexture(path: [:0]const u8, size: gfx.Vector) gfx.Texture {
     return Texture.load(path, size);
 }
 
+pub fn loadSound(path: [:0]const u8, loop: bool) audio.Sound {
+    return Sound.load(path, loop);
+}
+
 const AssetState = enum { init, loading, loaded, handled };
-
-pub const Texture = struct {
-    var cache: std.StringHashMapUnmanaged(gfx.Texture) = .empty;
-
-    pub fn load(path: [:0]const u8, size: math.Vector) gfx.Texture {
-        const entry = cache.getOrPut(allocator, path) catch unreachable;
-        if (entry.found_existing) return entry.value_ptr.*;
-
-        send(path, callback);
-
-        const image = sk.gfx.allocImage();
-        entry.value_ptr.* = .{ .image = image, .area = .init(.zero, size) };
-        return entry.value_ptr.*;
-    }
-
-    fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
-        const response = extractResponse(responses);
-        const data = response.data;
-
-        const image = c.stbImage.loadFromMemory(data) catch unreachable;
-        defer c.stbImage.unload(image);
-        const texture = cache.getPtr(response.path).?;
-
-        sk.gfx.initImage(texture.image, .{
-            .width = image.width,
-            .height = image.height,
-            .data = init: {
-                var imageData = sk.gfx.ImageData{};
-                imageData.subimage[0][0] = sk.gfx.asRange(image.data);
-                break :init imageData;
-            },
-        });
-    }
-};
-
-const audio = @import("audio.zig");
-pub const Sound = struct {
-    var cache: std.StringHashMapUnmanaged(audio.Sound) = .empty;
-
-    pub fn load(path: [:0]const u8, index: u32) audio.Sound {
-        const entry = cache.getOrPut(allocator, path) catch unreachable;
-        if (entry.found_existing) return entry.value_ptr.*;
-
-        const file = File.load(path, index, loader);
-        if (file.handle.state == .loaded) {}
-
-        entry.value_ptr.* = .{ .source = undefined };
-
-        return entry.value_ptr.*;
-    }
-
-    fn loader(response: Response) []const u8 {
-        const content = response.data;
-
-        const stbAudio = c.stbAudio.Audio.init(content) catch unreachable;
-        const info = stbAudio.getInfo();
-
-        var sound = cache.getPtr(response.path).?;
-
-        sound.channels = @intCast(info.channels);
-        sound.sampleRate = @intCast(info.sample_rate);
-
-        const size = stbAudio.getSampleCount() * sound.channels;
-        sound.source = allocator.alloc(f32, size) catch unreachable;
-
-        _ = stbAudio.fillSamples(sound.source, sound.channels);
-        return sound.source;
-    }
-};
-
-var loadingBuffer: [1.5 * 1024 * 1024]u8 = undefined;
-
-const SkCallback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
-pub const Response = struct {
-    allocator: std.mem.Allocator = undefined,
-    index: usize = undefined,
-    path: [:0]const u8,
-    data: []const u8 = &.{},
-};
-
-fn send(path: [:0]const u8, cb: SkCallback) void {
-    std.log.info("loading {s}", .{path});
-
-    const buffer = sk.fetch.asRange(&loadingBuffer);
-    _ = sk.fetch.send(.{ .path = path, .callback = cb, .buffer = buffer });
-}
-
-fn extractResponse(responses: [*c]const sk.fetch.Response) Response {
-    const res = responses[0];
-    if (res.failed) {
-        std.debug.panic("assets load failed, path: {s}", .{res.path});
-    }
-
-    const data: [*]const u8 = @ptrCast(res.data.ptr);
-    const path = std.mem.span(res.path);
-    std.log.info("loaded from: {s}", .{path});
-    return .{ .path = path, .data = data[0..res.data.size] };
-}
-
-pub const AssetHandle = extern struct {
-    state: enum(u16) { init, loading, loaded, active, remove } = .init,
-    version: u16 = 0,
-    index: u32,
-
-    pub fn init(index: u32) AssetHandle {
-        return .{ .index = index };
-    }
-
-    pub fn isActive(self: *const AssetHandle) bool {
-        return self.state == .active;
-    }
-
-    pub fn nextVersion(self: AssetHandle) AssetHandle {
-        var result = self;
-        result.version +%= 1;
-        return result;
-    }
-};
 
 pub const File = struct {
     const Handler = *const fn (response: Response) []const u8;
@@ -179,3 +67,107 @@ pub const File = struct {
         cache.deinit(allocator);
     }
 };
+
+pub const Texture = struct {
+    var cache: std.StringHashMapUnmanaged(gfx.Texture) = .empty;
+
+    pub fn load(path: [:0]const u8, size: gfx.Vector) gfx.Texture {
+        const entry = cache.getOrPut(allocator, path) catch unreachable;
+        if (entry.found_existing) return entry.value_ptr.*;
+
+        send(path, callback);
+
+        const image = sk.gfx.allocImage();
+        entry.value_ptr.* = .{ .image = image, .area = .init(.zero, size) };
+        return entry.value_ptr.*;
+    }
+
+    fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
+        const response = extractResponse(responses);
+        const data = response.data;
+
+        const image = c.stbImage.loadFromMemory(data) catch unreachable;
+        defer c.stbImage.unload(image);
+        const texture = cache.getPtr(response.path).?;
+
+        sk.gfx.initImage(texture.image, .{
+            .width = image.width,
+            .height = image.height,
+            .data = init: {
+                var imageData = sk.gfx.ImageData{};
+                imageData.subimage[0][0] = sk.gfx.asRange(image.data);
+                break :init imageData;
+            },
+        });
+    }
+};
+
+pub const Sound = struct {
+    var cache: std.StringHashMapUnmanaged(audio.Sound) = .empty;
+
+    fn load(path: [:0]const u8, loop: bool) audio.Sound {
+        const entry = cache.getOrPut(allocator, path) catch unreachable;
+        if (entry.found_existing) return entry.value_ptr.*;
+
+        for (audio.sounds, 0..) |*sound, index| {
+            if (sound.state == .stopped) {
+                sound.* = .{ .handle = index, .loop = loop };
+                entry.value_ptr.* = sound.*;
+                _ = File.load(path, entry.value_ptr.*.handle, handler);
+                return entry.value_ptr.*;
+            }
+        }
+        @panic("too many audio sound");
+    }
+
+    fn handler(response: Response) []const u8 {
+        const content = response.data;
+
+        const stbAudio = c.stbAudio.loadFromMemory(content) catch unreachable;
+        defer c.stbAudio.unload(stbAudio);
+        const info = c.stbAudio.getInfo(stbAudio);
+
+        var sound = cache.getPtr(response.path).?;
+
+        sound.channels = @intCast(info.channels);
+        sound.sampleRate = @intCast(info.sample_rate);
+
+        const size = c.stbAudio.getSampleCount(stbAudio) * sound.channels;
+        sound.source = allocator.alloc(f32, size) catch unreachable;
+
+        _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
+
+        sound.state = .playing;
+        audio.sounds[response.index] = sound.*;
+        return @ptrCast(sound.source);
+    }
+};
+
+var loadingBuffer: [1.5 * 1024 * 1024]u8 = undefined;
+
+const SkCallback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
+pub const Response = struct {
+    allocator: std.mem.Allocator = undefined,
+    index: usize = undefined,
+    path: [:0]const u8,
+    data: []const u8 = &.{},
+};
+
+fn send(path: [:0]const u8, cb: SkCallback) void {
+    std.log.info("loading {s}", .{path});
+
+    const buffer = sk.fetch.asRange(&loadingBuffer);
+    _ = sk.fetch.send(.{ .path = path, .callback = cb, .buffer = buffer });
+}
+
+fn extractResponse(responses: [*c]const sk.fetch.Response) Response {
+    const res = responses[0];
+    if (res.failed) {
+        std.debug.panic("assets load failed, path: {s}", .{res.path});
+    }
+
+    const data: [*]const u8 = @ptrCast(res.data.ptr);
+    const path = std.mem.span(res.path);
+    std.log.info("loaded from: {s}", .{path});
+    return .{ .path = path, .data = data[0..res.data.size] };
+}

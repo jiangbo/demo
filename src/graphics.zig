@@ -5,6 +5,7 @@ const math = @import("math.zig");
 const animation = @import("animation.zig");
 
 pub const Texture = gpu.Texture;
+pub const Vector = math.Vector;
 
 pub const Camera = struct {
     rect: math.Rectangle,

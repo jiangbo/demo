@@ -11,12 +11,12 @@ pub fn init(sampleRate: u32, soundBuffer: []Sound) void {
         .logger = .{ .func = sk.log.func },
     });
     sounds = soundBuffer;
-    for (sounds) |*sound| sound.active = false;
+    for (sounds) |*sound| sound.state = .stopped;
 }
 
 pub fn deinit() void {
     stopMusic();
-    for (sounds) |*sound| sound.active = false;
+    for (sounds) |*sound| sound.state = .stopped;
     sk.audio.shutdown();
 }
 
@@ -50,7 +50,7 @@ pub fn playMusicOnce(path: [:0]const u8) void {
 
 fn doPlayMusic(path: [:0]const u8, loop: bool) void {
     const file = assets.File.load(path, 0, Music.loader);
-    if (file.index.state == .loaded) {
+    if (file.index.state == .handled) {
         music = Music.init(file.data, loop);
     } else {
         music = .{ .loop = loop, .paused = true };
@@ -69,42 +69,30 @@ pub fn stopMusic() void {
     music = null;
 }
 
-var sounds: []Sound = &.{};
+pub var sounds: []Sound = &.{};
 
 pub const Sound = struct {
-    source: []f32,
+    handle: SoundHandle,
+    source: []f32 = &.{},
     loop: bool = true,
     index: usize = 0,
     sampleRate: u16 = 0,
     channels: u8 = 0,
-    active: bool = true,
+    state: enum { init, playing, paused, stopped } = .init,
 };
 pub const SoundHandle = usize;
 
 pub fn playSound(path: [:0]const u8) void {
-    _ = doPlaySound(path, false);
+    _ = assets.Sound.load(path, false);
 }
 
 pub fn playSoundLoop(path: [:0]const u8) SoundHandle {
-    return doPlaySound(path, true);
+    const sound = assets.loadSound(path, false);
+    return sound.handle;
 }
 
 pub fn stopSound(sound: SoundHandle) void {
-    sounds[sound].valid = false;
-}
-
-fn doPlaySound(path: [:0]const u8, loop: bool) usize {
-    for (sounds, 0..) |*sound, index| {
-        if (sound.active) continue;
-
-        _ = assets.File.load(path, @intCast(index), undefined);
-        sound.loop = loop;
-        sound.active = true;
-
-        return index;
-    }
-
-    @panic("too many audio sound");
+    sounds[sound].state = .stopped;
 }
 
 export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
@@ -120,9 +108,9 @@ export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     }
 
     for (sounds) |*sound| {
-        if (sound.active) {
+        if (sound.state == .playing) {
             var len = mixSamples(buffer, sound);
-            while (len < buffer.len and sound.active) {
+            while (len < buffer.len and sound.state == .playing) {
                 len += mixSamples(buffer[len..], sound);
             }
         }
@@ -138,7 +126,7 @@ fn mixSamples(buffer: []f32, sound: *Sound) usize {
         std.debug.panic("unsupported channels: {d}", .{sound.channels});
 
     if (sound.index == sound.source.len) {
-        if (sound.loop) sound.index = 0 else sound.active = false;
+        if (sound.loop) sound.index = 0 else sound.state = .stopped;
     }
 
     return len;
