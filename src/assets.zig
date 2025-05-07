@@ -15,7 +15,7 @@ pub fn init(alloc: std.mem.Allocator) void {
 pub fn deinit() void {
     Texture.cache.deinit(allocator);
     Sound.cache.deinit(allocator);
-    Music.cache.deinit(allocator);
+    Music.deinit();
     File.deinit();
     sk.fetch.shutdown();
 }

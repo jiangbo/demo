@@ -56,7 +56,6 @@ pub const Sound = struct {
     source: []f32 = &.{},
     loop: bool = true,
     index: usize = 0,
-    sampleRate: u16 = 0,
     channels: u8 = 0,
     state: AudioState = .init,
 };
