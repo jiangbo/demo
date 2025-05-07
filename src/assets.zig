@@ -24,8 +24,8 @@ pub fn loadTexture(path: [:0]const u8, size: gfx.Vector) gfx.Texture {
     return Texture.load(path, size);
 }
 
-pub fn loadSound(path: [:0]const u8, sound: *audio.Sound) void {
-    return Sound.load(path, sound);
+pub fn loadSound(path: [:0]const u8, loop: bool) *audio.Sound {
+    return Sound.load(path, loop);
 }
 
 pub fn loadMusic(path: [:0]const u8, loop: bool) *audio.Music {
@@ -69,18 +69,14 @@ pub const Texture = struct {
 const Sound = struct {
     var cache: std.StringHashMapUnmanaged(audio.Sound) = .empty;
 
-    fn load(path: [:0]const u8, sound: *audio.Sound) void {
+    fn load(path: [:0]const u8, loop: bool) *audio.Sound {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
-        if (entry.found_existing) {
-            var result = entry.value_ptr.*;
-            result.loop = sound.loop;
-            result.handle = sound.handle;
-            sound.* = result;
-            return;
-        }
+        if (entry.found_existing) return entry.value_ptr;
 
-        entry.value_ptr.* = sound.*;
-        _ = File.load(path, entry.value_ptr.*.handle, handler);
+        const index = audio.allocSoundBuffer();
+        entry.value_ptr.* = .{ .loop = loop, .handle = index };
+        _ = File.load(path, index, handler);
+        return entry.value_ptr;
     }
 
     fn handler(response: Response) []const u8 {
@@ -93,7 +89,6 @@ const Sound = struct {
         var sound = cache.getPtr(response.path).?;
 
         sound.channels = @intCast(info.channels);
-        sound.sampleRate = @intCast(info.sample_rate);
 
         const size = c.stbAudio.getSampleCount(stbAudio) * sound.channels;
         sound.source = allocator.alloc(f32, size) catch unreachable;

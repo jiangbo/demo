@@ -62,21 +62,23 @@ pub const Sound = struct {
 pub const SoundHandle = usize;
 
 pub fn playSound(path: [:0]const u8) void {
-    assets.loadSound(path, addToSoundBuffer(false));
+    const sound = assets.loadSound(path, false).*;
+    if (sound.state == .playing) sounds[allocSoundBuffer()] = sound;
 }
 
 pub fn playSoundLoop(path: [:0]const u8) SoundHandle {
-    const sound = addToSoundBuffer(true);
-    assets.loadSound(path, sound);
-    return sound.handle;
+    const sound = assets.loadSound(path, true).*;
+    var index = sound.handle;
+    if (sound.state == .playing) {
+        index = allocSoundBuffer();
+        sounds[index] = sound;
+    }
+    return index;
 }
 
-pub fn addToSoundBuffer(loop: bool) *Sound {
+pub fn allocSoundBuffer() usize {
     for (sounds, 0..) |*sound, index| {
-        if (sound.state == .stopped) {
-            sound.* = .{ .handle = index, .loop = loop };
-            return sound;
-        }
+        if (sound.state == .stopped) return index;
     }
     @panic("too many audio sound");
 }
