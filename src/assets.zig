@@ -24,8 +24,8 @@ pub fn loadTexture(path: [:0]const u8, size: gfx.Vector) gfx.Texture {
     return Texture.load(path, size);
 }
 
-pub fn loadSound(path: [:0]const u8, loop: bool) *audio.Sound {
-    return Sound.load(path, loop);
+pub fn loadSound(path: [:0]const u8, sound: *audio.Sound) void {
+    return Sound.load(path, sound);
 }
 
 pub fn loadMusic(path: [:0]const u8, loop: bool) *audio.Music {
@@ -69,19 +69,18 @@ pub const Texture = struct {
 const Sound = struct {
     var cache: std.StringHashMapUnmanaged(audio.Sound) = .empty;
 
-    fn load(path: [:0]const u8, loop: bool) *audio.Sound {
+    fn load(path: [:0]const u8, sound: *audio.Sound) void {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
-        if (entry.found_existing) return entry.value_ptr;
-
-        for (audio.sounds, 0..) |*sound, index| {
-            if (sound.state == .stopped) {
-                sound.* = .{ .handle = index, .loop = loop };
-                entry.value_ptr.* = sound.*;
-                _ = File.load(path, entry.value_ptr.*.handle, handler);
-                return entry.value_ptr;
-            }
+        if (entry.found_existing) {
+            var result = entry.value_ptr.*;
+            result.loop = sound.loop;
+            result.handle = sound.handle;
+            sound.* = result;
+            return;
         }
-        @panic("too many audio sound");
+
+        entry.value_ptr.* = sound.*;
+        _ = File.load(path, entry.value_ptr.*.handle, handler);
     }
 
     fn handler(response: Response) []const u8 {

@@ -63,12 +63,23 @@ pub const Sound = struct {
 pub const SoundHandle = usize;
 
 pub fn playSound(path: [:0]const u8) void {
-    _ = assets.Sound.load(path, false);
+    assets.loadSound(path, addToSoundBuffer(false));
 }
 
 pub fn playSoundLoop(path: [:0]const u8) SoundHandle {
-    const sound = assets.loadSound(path, false);
+    const sound = addToSoundBuffer(true);
+    assets.loadSound(path, sound);
     return sound.handle;
+}
+
+pub fn addToSoundBuffer(loop: bool) *Sound {
+    for (sounds, 0..) |*sound, index| {
+        if (sound.state == .stopped) {
+            sound.* = .{ .handle = index, .loop = loop };
+            return sound;
+        }
+    }
+    @panic("too many audio sound");
 }
 
 pub fn stopSound(sound: SoundHandle) void {
@@ -88,11 +99,10 @@ export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     }
 
     for (sounds) |*sound| {
-        if (sound.state == .playing) {
-            var len = mixSamples(buffer, sound);
-            while (len < buffer.len and sound.state == .playing) {
-                len += mixSamples(buffer[len..], sound);
-            }
+        if (sound.state != .playing) continue;
+        var len: usize = 0;
+        while (len < buffer.len and sound.state == .playing) {
+            len += mixSamples(buffer[len..], sound);
         }
     }
 }
