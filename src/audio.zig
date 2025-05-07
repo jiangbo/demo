@@ -1,7 +1,7 @@
 const std = @import("std");
 const sk = @import("sokol");
 const assets = @import("assets.zig");
-const c = @import("c.zig");
+const stbAudio = @import("c.zig").stbAudio;
 
 pub fn init(sampleRate: u32, soundBuffer: []Sound) void {
     sk.audio.setup(.{
@@ -11,22 +11,22 @@ pub fn init(sampleRate: u32, soundBuffer: []Sound) void {
         .logger = .{ .func = sk.log.func },
     });
     sounds = soundBuffer;
-    for (sounds) |*sound| sound.handle.state = .remove;
+    for (sounds) |*sound| sound.active = false;
 }
 
 pub fn deinit() void {
     stopMusic();
-    for (sounds) |*sound| sound.handle.state = .remove;
+    for (sounds) |*sound| sound.active = false;
     sk.audio.shutdown();
 }
 
 const Music = struct {
-    source: *c.stbAudio.Audio = undefined,
+    source: *stbAudio.Audio = undefined,
     paused: bool = false,
     loop: bool = true,
 
     fn init(data: []const u8, loop: bool) Music {
-        const source = c.stbAudio.loadFromMemory(data) catch unreachable;
+        const source = stbAudio.Audio.init(data) catch unreachable;
         return .{ .source = source, .loop = loop };
     }
 
@@ -72,46 +72,14 @@ pub fn stopMusic() void {
 var sounds: []Sound = &.{};
 
 pub const Sound = struct {
-    handle: SoundHandle,
     source: []f32,
     loop: bool = true,
     index: usize = 0,
     sampleRate: u16 = 0,
     channels: u8 = 0,
-
-    fn init(stbAudio: c.stbAudio.Audio) Sound {
-        var sound: Sound = undefined;
-
-        const info = c.stbAudio.getInfo(stbAudio);
-        sound.channels = @intCast(info.channels);
-        sound.sampleRate = @intCast(info.sample_rate);
-
-        const size = c.stbAudio.getSampleCount(stbAudio) * sound.channels;
-        sound.source = allocator.alloc(f32, size) catch unreachable;
-
-        _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
-        sound.valid = true;
-    }
-
-    fn loader(res: assets.Response) []const u8 {
-        const content, const allocator = .{ res.data, res.allocator };
-
-        const stbAudio = c.stbAudio.loadFromMemory(content) catch unreachable;
-        const info = c.stbAudio.getInfo(stbAudio);
-
-        var sound = cache.getPtr(response.path).?;
-
-        sound.channels = @intCast(info.channels);
-        sound.sampleRate = @intCast(info.sample_rate);
-
-        const size = c.stbAudio.getSampleCount(stbAudio) * sound.channels;
-        sound.source = allocator.alloc(f32, size) catch unreachable;
-
-        _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
-        sound.valid = true;
-    }
+    active: bool = true,
 };
-pub const SoundHandle = assets.AssetHandle;
+pub const SoundHandle = usize;
 
 pub fn playSound(path: [:0]const u8) void {
     _ = doPlaySound(path, false);
@@ -125,16 +93,15 @@ pub fn stopSound(sound: SoundHandle) void {
     sounds[sound].valid = false;
 }
 
-fn doPlaySound(path: [:0]const u8, loop: bool) SoundHandle {
+fn doPlaySound(path: [:0]const u8, loop: bool) usize {
     for (sounds, 0..) |*sound, index| {
-        if (sound.handle.state != .remove) continue;
+        if (sound.active) continue;
 
-        const file = assets.File.load(path, @intCast(index), undefined);
+        _ = assets.File.load(path, @intCast(index), undefined);
         sound.loop = loop;
-        sound.handle = file.handle.nextVersion();
-        if (file.handle.state == .loaded) sound.handle.state = .active;
+        sound.active = true;
 
-        return sound.handle;
+        return index;
     }
 
     @panic("too many audio sound");
@@ -153,9 +120,9 @@ export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     }
 
     for (sounds) |*sound| {
-        if (sound.handle.state == .active) {
+        if (sound.active) {
             var len = mixSamples(buffer, sound);
-            while (len < buffer.len and sound.handle.isActive()) {
+            while (len < buffer.len and sound.active) {
                 len += mixSamples(buffer[len..], sound);
             }
         }
@@ -171,7 +138,7 @@ fn mixSamples(buffer: []f32, sound: *Sound) usize {
         std.debug.panic("unsupported channels: {d}", .{sound.channels});
 
     if (sound.index == sound.source.len) {
-        if (sound.loop) sound.index = 0 else sound.handle.state = .remove;
+        if (sound.loop) sound.index = 0 else sound.active = false;
     }
 
     return len;

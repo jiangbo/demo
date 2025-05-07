@@ -120,7 +120,7 @@ pub fn init() void {
     sortNPC(&maps[1].npcArray);
 
     const file = assets.File.load("assets/map1_block.png", 0, callback);
-    if (file.handle.state == .loaded) initMapBlock(file.data);
+    if (file.state == .loaded) initMapBlock(file.data);
 
     changeMap();
 }

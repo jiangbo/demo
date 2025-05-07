@@ -61,21 +61,21 @@ pub const stbVorbis = struct {
             return stb.stb_vorbis_stream_length_in_samples(self.audio);
         }
 
-        pub fn fillSamples(self: *Audio, buffer: []f32, channels: i32) c_int {
-            return stb.stb_vorbis_get_samples_float_interleaved(
-                self.audio,
-                channels,
-                @ptrCast(buffer),
-                @intCast(buffer.len),
-            );
-        }
-
-        pub fn reset(self: *Audio) void {
-            _ = stb.stb_vorbis_seek_start(self.audio);
-        }
-
         pub fn unload(self: *Audio) void {
             stb.stb_vorbis_close(self.audio);
         }
     };
+
+    pub fn fillSamples(self: *Audio, buffer: []f32, channels: i32) c_int {
+        return stb.stb_vorbis_get_samples_float_interleaved(
+            self.audio,
+            channels,
+            @ptrCast(buffer),
+            @intCast(buffer.len),
+        );
+    }
+
+    pub fn reset(self: *Audio) void {
+        _ = stb.stb_vorbis_seek_start(self.audio);
+    }
 };

@@ -21,6 +21,8 @@ pub fn loadTexture(path: [:0]const u8, size: math.Vector) gfx.Texture {
     return Texture.load(path, size);
 }
 
+const AssetState = enum { init, loading, loaded, handled };
+
 pub const Texture = struct {
     var cache: std.StringHashMapUnmanaged(gfx.Texture) = .empty;
 
@@ -95,11 +97,10 @@ var loadingBuffer: [1.5 * 1024 * 1024]u8 = undefined;
 const SkCallback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
 pub const Response = struct {
     allocator: std.mem.Allocator = undefined,
-    handle: AssetHandle = undefined,
+    index: usize = undefined,
     path: [:0]const u8,
     data: []const u8 = &.{},
 };
-const Loader = *const fn (response: Response) []const u8;
 
 fn send(path: [:0]const u8, cb: SkCallback) void {
     std.log.info("loading {s}", .{path});
@@ -140,37 +141,36 @@ pub const AssetHandle = extern struct {
     }
 };
 
-const Cache = struct {
-    handle: AssetHandle,
-    data: []const u8 = &.{},
-    loader: Loader = undefined,
-
-    pub fn init(index: u32, loader: Loader) Cache {
-        return .{ .handle = .init(index), .loader = loader };
-    }
-};
-
 pub const File = struct {
-    var cache: std.StringHashMapUnmanaged(Cache) = .empty;
+    const Handler = *const fn (response: Response) []const u8;
+    const FileCache = struct {
+        state: AssetState = .init,
+        index: usize,
+        data: []const u8 = &.{},
+        handler: Handler = undefined,
+    };
 
-    pub fn load(path: [:0]const u8, index: u32, loader: Loader) *Cache {
+    var cache: std.StringHashMapUnmanaged(FileCache) = .empty;
+
+    pub fn load(path: [:0]const u8, index: usize, handler: Handler) *FileCache {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
         if (entry.found_existing) return entry.value_ptr;
 
-        entry.value_ptr.* = .{ .handle = .init(index), .loader = loader };
+        entry.value_ptr.* = .{ .index = index, .handler = handler };
         send(path, callback);
-        entry.value_ptr.handle.state = .loading;
+        entry.value_ptr.state = .loading;
         return entry.value_ptr;
     }
 
     fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
         var response = extractResponse(responses);
-        const value = cache.getPtr(response.path).?;
-        response.handle = value.handle;
+        const value = cache.getPtr(response.path) orelse return;
+        response.index = value.index;
         response.allocator = allocator;
 
-        value.data = value.loader(response);
-        value.handle.state = .loaded;
+        value.state = .loaded;
+        value.data = value.handler(response);
+        value.state = .handled;
     }
 
     pub fn deinit() void {
