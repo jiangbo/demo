@@ -90,17 +90,19 @@ export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     const buffer = b[0..@as(usize, @intCast(frames * channels))];
     @memset(buffer, 0);
 
-    if (music != null and music.?.state == .playing) {
+    var len: usize = 0;
+    while (music != null and music.?.state == .playing) {
         const source = music.?.source;
-        const count = stbAudio.fillSamples(source, buffer, channels);
-        if (count == 0) {
-            if (music.?.loop) stbAudio.reset(source) else music = null;
-        }
+        const count = stbAudio.fillSamples(source, buffer[len..], channels);
+        len += @as(usize, @intCast(count * channels));
+
+        if (len == buffer.len) break;
+        if (music.?.loop) stbAudio.reset(source) else music = null;
     }
 
     for (sounds) |*sound| {
+        len = 0;
         if (sound.state != .playing) continue;
-        var len: usize = 0;
         while (len < buffer.len and sound.state == .playing) {
             len += mixSamples(buffer[len..], sound);
         }
