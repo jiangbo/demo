@@ -6,16 +6,13 @@ const gfx = @import("graphics.zig");
 const titleScene = @import("scene/title.zig");
 const worldScene = @import("scene/world.zig");
 
-const SceneType = enum {
-    title,
-    world,
-};
+const SceneType = enum { title, world };
 
-var currentSceneType: SceneType = .world;
+var currentSceneType: SceneType = .title;
 
 pub fn init() void {
     titleScene.init();
-    worldScene.init();
+    // worldScene.init();
 }
 
 pub fn update(delta: f32) void {

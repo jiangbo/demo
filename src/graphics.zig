@@ -3,11 +3,13 @@ const std = @import("std");
 const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const animation = @import("animation.zig");
+const assets = @import("assets.zig");
 
 pub const Texture = gpu.Texture;
 pub const Vector = math.Vector;
 pub const FourDirection = math.FourDirection;
 pub const Rectangle = math.Rectangle;
+pub const loadTexture = assets.loadTexture;
 
 pub const Camera = struct {
     rect: math.Rectangle,
