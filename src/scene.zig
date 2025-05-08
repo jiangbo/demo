@@ -22,21 +22,16 @@ pub fn update(delta: f32) void {
     }
 }
 
-// fn invokeScene(comptime func: []const u8, args: anytype) void {
-//     switch (currentSceneType) {
-//         .title => {
-//             if (@TypeOf(args) == void) {
-//                 @field(titleScene, func)();
-//             } else {
-//                 @field(titleScene, func)(args);
-//             }
-//         },
-//     }
-// }
-
 pub fn render() void {
     switch (currentSceneType) {
         .title => titleScene.render(),
         .world => worldScene.render(),
     }
 }
+
+// fn sceneCall(comptime function: []const u8, args: anytype) void {
+//     switch (currentSceneType) {
+//         .title => @call(.auto, @field(titleScene, function), args),
+//         .world => @call(.auto, @field(worldScene, function), args),
+//     }
+// }
