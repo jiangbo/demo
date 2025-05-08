@@ -1,10 +1,7 @@
 const std = @import("std");
 
-const window = @import("window.zig");
-const gfx = @import("graphics.zig");
-const math = @import("math.zig");
-const audio = @import("audio.zig");
-const assets = @import("assets.zig");
+const window = @import("../window.zig");
+const gfx = @import("../graphics.zig");
 
 const Player = @This();
 const FrameAnimation = gfx.FixedFrameAnimation(4, 0.15);
@@ -16,8 +13,8 @@ leftAnimation: FrameAnimation,
 rightAnimation: FrameAnimation,
 
 pub fn init(path: [:0]const u8, index: u8) Player {
-    const role = assets.loadTexture(path, .init(960, 960));
-    const size: math.Vector = .init(960, 240);
+    const role = window.loadTexture(path, .init(960, 960));
+    const size: gfx.Vector = .init(960, 240);
 
     return Player{
         .index = index,
@@ -28,7 +25,7 @@ pub fn init(path: [:0]const u8, index: u8) Player {
     };
 }
 
-pub fn current(self: *Player, face: math.FourDirection) *FrameAnimation {
+pub fn current(self: *Player, face: gfx.FourDirection) *FrameAnimation {
     return switch (face) {
         .up => &self.upAnimation,
         .down => &self.downAnimation,

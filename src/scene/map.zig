@@ -1,17 +1,14 @@
 const std = @import("std");
 
-const window = @import("window.zig");
-const gfx = @import("graphics.zig");
-const math = @import("math.zig");
-const audio = @import("audio.zig");
-const assets = @import("assets.zig");
-const c = @import("c.zig");
-const scene = @import("scene.zig");
+const window = @import("../window.zig");
+const gfx = @import("../graphics.zig");
+const c = @import("../c.zig");
+const scene = @import("world.zig");
 
-pub const SIZE: math.Vector = .init(1000, 800);
-const PLAYER_OFFSET: math.Vector = .init(120, 220);
-const NPC_SIZE: math.Vector = .init(240, 240);
-const NPC_AREA: math.Vector = .init(80, 100);
+pub const SIZE: gfx.Vector = .init(1000, 800);
+const PLAYER_OFFSET: gfx.Vector = .init(120, 220);
+const NPC_SIZE: gfx.Vector = .init(240, 240);
+const NPC_AREA: gfx.Vector = .init(80, 100);
 const NPC_SPEED = 80;
 
 const FrameAnimation = gfx.FixedFrameAnimation(4, 0.25);
@@ -20,17 +17,17 @@ var upAnimation: FrameAnimation = undefined;
 var downAnimation: FrameAnimation = undefined;
 var leftAnimation: FrameAnimation = undefined;
 var rightAnimation: FrameAnimation = undefined;
-var facing: math.FourDirection = .down;
+var facing: gfx.FourDirection = .down;
 var timer: window.Timer = .init(1.5);
 
 const NPCType = enum { fixed, walk, fly };
 
 const Action = *const fn () void;
 pub const NPC = struct {
-    position: math.Vector,
+    position: gfx.Vector,
     texture: ?gfx.Texture = null,
     animation: ?FrameAnimation = null,
-    area: math.Rectangle = .{},
+    area: gfx.Rectangle = .{},
     keyTrigger: bool = true,
     action: *const fn () void = undefined,
     type: NPCType = .fixed,
@@ -38,7 +35,7 @@ pub const NPC = struct {
     pub fn init(x: f32, y: f32, path: ?[:0]const u8, action: Action) NPC {
         var self: NPC = .{ .position = .init(x, y), .action = action };
 
-        if (path) |p| self.texture = assets.loadTexture(p, NPC_SIZE);
+        if (path) |p| self.texture = window.loadTexture(p, NPC_SIZE);
         self.area = .init(self.position.sub(.init(40, 60)), NPC_AREA);
         return self;
     }
@@ -73,9 +70,9 @@ fn map2npc1Action() void {
 
 pub fn init() void {
     maps[0] = Map{
-        .map = assets.loadTexture("assets/map1.png", SIZE),
-        .mapShade = assets.loadTexture("assets/map1_shade.png", SIZE),
-        .mapBack = assets.loadTexture("assets/map1_back.png", SIZE),
+        .map = window.loadTexture("assets/map1.png", SIZE),
+        .mapShade = window.loadTexture("assets/map1_shade.png", SIZE),
+        .mapBack = window.loadTexture("assets/map1_back.png", SIZE),
         .npcArray = .{
             .init(800, 300, "assets/npc1.png", npc1Action),
             .init(700, 280, "assets/npc2.png", npc2Action),
@@ -88,15 +85,15 @@ pub fn init() void {
     sortNPC(&maps[1].npcArray);
 
     // 地图二的具有动画的 NPC
-    const anim = assets.loadTexture("assets/Anm1.png", .init(480, 480));
+    const anim = window.loadTexture("assets/Anm1.png", .init(480, 480));
     const animation = anim.subTexture(.init(.zero, .init(480, 240)));
     var anim2 = FrameAnimation.initWithCount(animation, 2);
     anim2.addFrame(.init(.init(0, 240), .init(240, 240)));
     anim2.stop();
 
     maps[1] = Map{
-        .map = assets.loadTexture("assets/map2.png", SIZE),
-        .mapShade = assets.loadTexture("assets/map2_shade.png", SIZE),
+        .map = window.loadTexture("assets/map2.png", SIZE),
+        .mapShade = window.loadTexture("assets/map2_shade.png", SIZE),
         .npcArray = .{
             .init(700, 300, "assets/npc3.png", map2npc1Action),
             .init(500, 280, null, npc2Action),
@@ -105,8 +102,8 @@ pub fn init() void {
     };
     maps[1].npcArray[0].animation = anim2;
 
-    const npc4 = assets.loadTexture("assets/npc4.png", .init(960, 960));
-    const size: math.Vector = .init(960, 240);
+    const npc4 = window.loadTexture("assets/npc4.png", .init(960, 960));
+    const size: gfx.Vector = .init(960, 240);
     upAnimation = .init(npc4.subTexture(.init(.{ .y = 720 }, size)));
     downAnimation = .init(npc4.subTexture(.init(.{ .y = 0 }, size)));
     leftAnimation = .init(npc4.subTexture(.init(.{ .y = 240 }, size)));
@@ -119,7 +116,7 @@ pub fn init() void {
     maps[1].npcArray[2].keyTrigger = false;
     sortNPC(&maps[1].npcArray);
 
-    const file = assets.File.load("assets/map1_block.png", 0, callback);
+    const file = window.File.load("assets/map1_block.png", 0, callback);
     if (file.state == .loaded) initMapBlock(file.data);
 
     changeMap();
@@ -146,23 +143,23 @@ fn sortNPC(npcArray: []NPC) void {
 pub fn changeMap() void {
     index = (index + 1) % maps.len;
     switch (index) {
-        0 => audio.playMusic("assets/1.ogg"),
-        1 => audio.playMusic("assets/2.ogg"),
+        0 => window.playMusic("assets/1.ogg"),
+        1 => window.playMusic("assets/2.ogg"),
         else => unreachable,
     }
 
     if (maps[index].mapBlock == null and index == 0) {
-        const file = assets.File.load("assets/map1_block.png", 0, callback);
+        const file = window.File.load("assets/map1_block.png", 0, callback);
         if (file.data.len != 0) initMapBlock(file.data);
     }
 
     if (maps[index].mapBlock == null and index == 1) {
-        const file = assets.File.load("assets/map2_block.png", 0, callback);
+        const file = window.File.load("assets/map2_block.png", 0, callback);
         if (file.data.len != 0) initMapBlock(file.data);
     }
 }
 
-pub fn canWalk(pos: math.Vector) bool {
+pub fn canWalk(pos: gfx.Vector) bool {
     const x, const y = .{ @round(pos.x), @round(pos.y) };
 
     if (x < 0 or x >= SIZE.x or y < 0 or y >= SIZE.y) return false;
@@ -181,7 +178,7 @@ pub fn updateNpc(npc: *NPC, delta: f32) void {
     if (npc.type == .fixed) return;
 
     if (timer.isFinishedAfterUpdate(delta)) {
-        facing = math.random().enumValue(math.FourDirection);
+        facing = window.random().enumValue(gfx.FourDirection);
         npc.animation = switch (facing) {
             .up => upAnimation,
             .down => downAnimation,
@@ -199,7 +196,7 @@ pub fn updateNpc(npc: *NPC, delta: f32) void {
     npc.area = .init(npc.position.sub(.init(40, 60)), NPC_AREA);
 }
 
-fn callback(res: assets.Response) []const u8 {
+fn callback(res: @import("../assets.zig").Response) []const u8 {
     const content, const allocator = .{ res.data, res.allocator };
     const image = c.stbImage.loadFromMemory(content) catch unreachable;
     defer c.stbImage.unload(image);

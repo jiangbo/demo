@@ -3,6 +3,7 @@ const sk = @import("sokol");
 const math = @import("math.zig");
 const assets = @import("assets.zig");
 const gfx = @import("graphics.zig");
+const audio = @import("audio.zig");
 
 pub const Event = sk.app.Event;
 pub const KeyCode = sk.app.Keycode;
@@ -198,3 +199,9 @@ pub fn endDisplayText() void {
 pub fn exit() void {
     sk.app.requestQuit();
 }
+
+pub const File = assets.File;
+pub const loadTexture = assets.loadTexture;
+pub const playSound = audio.playSound;
+pub const playMusic = audio.playMusic;
+pub const random = math.random;
