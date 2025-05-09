@@ -37,8 +37,7 @@ pub fn main() void {
         _ = debugAllocator.deinit();
     };
 
-    window.run(.{
-        .alloc = allocator,
+    window.run(allocator, .{
         .title = "教你制作RPG游戏",
         .size = .{ .x = 800, .y = 600 },
         .init = init,

@@ -67,9 +67,8 @@ pub fn showCursor(show: bool) void {
 pub const WindowInfo = struct {
     title: [:0]const u8,
     size: math.Vector,
-    alloc: std.mem.Allocator,
     init: ?*const fn () void = null,
-    update: ?*const fn (delta: f32) void = null,
+    update: ?*const fn (f32) void = null,
     render: ?*const fn () void = null,
     event: ?*const fn (*const Event) void = null,
     deinit: ?*const fn () void = null,
@@ -80,10 +79,10 @@ pub var allocator: std.mem.Allocator = undefined;
 var timer: std.time.Timer = undefined;
 var windowInfo: WindowInfo = undefined;
 
-pub fn run(info: WindowInfo) void {
+pub fn run(alloc: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
     size = info.size;
-    allocator = info.alloc;
+    allocator = alloc;
     windowInfo = info;
     sk.app.run(.{
         .window_title = info.title,
