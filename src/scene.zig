@@ -24,14 +24,15 @@ pub fn exit() void {
     sceneCall("exit", .{});
 }
 
+pub fn changeScene() void {
+    exit();
+    const next: usize = @intFromEnum(currentSceneType);
+    const len = std.enums.values(SceneType).len;
+    currentSceneType = @enumFromInt((next + 1) % len);
+    enter();
+}
+
 pub fn update(delta: f32) void {
-    if (window.isKeyPress(.SPACE)) {
-        exit();
-        const next: usize = @intFromEnum(currentSceneType);
-        const len = std.enums.values(SceneType).len;
-        currentSceneType = @enumFromInt((next + 1) % len);
-        enter();
-    }
     sceneCall("update", .{delta});
 }
 

@@ -2,6 +2,7 @@ const std = @import("std");
 
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
+const scene = @import("../scene.zig");
 
 var background1: gfx.Texture = undefined;
 
@@ -20,7 +21,7 @@ const Button = struct {
 };
 
 var buttons: [3]Button = undefined;
-var currentButton: u7 = 0;
+var currentButton: u8 = 0;
 
 pub fn init() void {
     background1 = gfx.loadTexture("assets/T_bg1.png", .init(800, 600));
@@ -56,6 +57,15 @@ pub fn update(delta: f32) void {
     if (window.isAnyKeyRelease(&.{ .W, .UP })) currentButton -|= 1;
     if (window.isAnyKeyRelease(&.{ .S, .DOWN })) currentButton += 1;
     currentButton = @min(currentButton, buttons.len - 1);
+
+    if (window.isAnyKeyRelease(&.{ .ENTER, .SPACE })) {
+        switch (currentButton) {
+            0 => scene.changeScene(),
+            1 => std.log.info("load game", .{}),
+            2 => window.exit(),
+            else => unreachable,
+        }
+    }
 }
 
 pub fn render() void {
