@@ -15,10 +15,16 @@ var facing: gfx.FourDirection = .down;
 var keyPressed: bool = false;
 var velocity: gfx.Vector = .zero;
 
+var msg: gfx.Texture = undefined;
+var face: gfx.Texture = undefined;
+
 pub fn init() void {
     players[0] = .init("assets/r1.png", 0);
     players[1] = .init("assets/r2.png", 1);
     players[2] = .init("assets/r3.png", 2);
+
+    msg = gfx.loadTexture("assets/msg.png", .init(790, 163));
+    face = gfx.loadTexture("assets/face1_1.png", .init(307, 355));
 
     map.init();
 }
@@ -102,6 +108,11 @@ pub fn render() void {
     if (playerNotDraw) drawPlayer();
 
     map.drawForeground();
+
+    gfx.camera.lookAt(.zero);
+    gfx.draw(msg, .init(0, 415));
+    gfx.draw(face, .init(0, 245));
+    gfx.camera.lookAt(position);
 
     window.showFrameRate();
 }
