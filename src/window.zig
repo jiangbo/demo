@@ -50,12 +50,12 @@ pub fn isAnyKeyDown(keys: []const KeyCode) bool {
     return false;
 }
 
-pub fn isPress(keyCode: KeyCode) bool {
+pub fn isKeyPress(keyCode: KeyCode) bool {
     const key: usize = @intCast(@intFromEnum(keyCode));
     return !lastKeyState.isSet(key) and keyState.isSet(key);
 }
 
-pub fn isRelease(keyCode: KeyCode) bool {
+pub fn isKeyRelease(keyCode: KeyCode) bool {
     const key: usize = @intCast(@intFromEnum(keyCode));
     return lastKeyState.isSet(key) and !keyState.isSet(key);
 }
@@ -203,4 +203,5 @@ pub const File = assets.File;
 pub const loadTexture = assets.loadTexture;
 pub const playSound = audio.playSound;
 pub const playMusic = audio.playMusic;
+pub const stopMusic = audio.stopMusic;
 pub const random = math.random;

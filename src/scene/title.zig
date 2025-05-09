@@ -9,8 +9,15 @@ pub fn init() void {
     background1 = gfx.loadTexture("assets/T_bg1.png", .init(800, 600));
 }
 
+pub fn enter() void {
+    window.playMusic("assets/2.ogg");
+}
+
+pub fn exit() void {
+    window.stopMusic();
+}
+
 pub fn update(delta: f32) void {
-    std.log.info("update title", .{});
     _ = delta;
 }
 

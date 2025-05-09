@@ -16,14 +16,22 @@ var keyPressed: bool = false;
 var velocity: gfx.Vector = .zero;
 
 pub fn init() void {
-    gfx.camera = .{ .rect = .init(.zero, window.size), .border = map.SIZE };
-    gfx.camera.lookAt(position);
-
     players[0] = .init("assets/r1.png", 0);
     players[1] = .init("assets/r2.png", 1);
     players[2] = .init("assets/r3.png", 2);
 
     map.init();
+}
+
+pub fn enter() void {
+    gfx.camera = .{ .rect = .init(.zero, window.size), .border = map.SIZE };
+    gfx.camera.lookAt(position);
+    window.playMusic("assets/1.ogg");
+}
+
+pub fn exit() void {
+    gfx.camera.lookAt(.zero);
+    window.stopMusic();
 }
 
 pub fn update(delta: f32) void {
@@ -35,7 +43,7 @@ pub fn update(delta: f32) void {
     if (window.isAnyKeyDown(&.{ .LEFT, .A })) updatePlayer(.left);
     if (window.isAnyKeyDown(&.{ .RIGHT, .D })) updatePlayer(.right);
 
-    if (window.isRelease(.TAB)) {
+    if (window.isKeyRelease(.TAB)) {
         currentPlayer = &players[(currentPlayer.index + 1) % players.len];
     }
 
@@ -53,7 +61,7 @@ pub fn update(delta: f32) void {
     for (map.npcSlice()) |*npc| {
         if (npc.area.contains(position)) {
             if (npc.keyTrigger) {
-                if (window.isRelease(.SPACE)) npc.action();
+                if (window.isKeyRelease(.SPACE)) npc.action();
             } else npc.action();
         }
 

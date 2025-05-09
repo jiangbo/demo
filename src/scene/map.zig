@@ -142,11 +142,6 @@ fn sortNPC(npcArray: []NPC) void {
 
 pub fn changeMap() void {
     index = (index + 1) % maps.len;
-    switch (index) {
-        0 => window.playMusic("assets/1.ogg"),
-        1 => window.playMusic("assets/2.ogg"),
-        else => unreachable,
-    }
 
     if (maps[index].mapBlock == null and index == 0) {
         const file = window.File.load("assets/map1_block.png", 0, callback);
