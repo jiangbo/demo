@@ -55,9 +55,19 @@ pub fn isKeyPress(keyCode: KeyCode) bool {
     return !lastKeyState.isSet(key) and keyState.isSet(key);
 }
 
+pub fn isAnyKeyPress(keys: []const KeyCode) bool {
+    for (keys) |key| if (isKeyPress(key)) return true;
+    return false;
+}
+
 pub fn isKeyRelease(keyCode: KeyCode) bool {
     const key: usize = @intCast(@intFromEnum(keyCode));
     return lastKeyState.isSet(key) and !keyState.isSet(key);
+}
+
+pub fn isAnyKeyRelease(keys: []const KeyCode) bool {
+    for (keys) |key| if (isKeyRelease(key)) return true;
+    return false;
 }
 
 pub fn showCursor(show: bool) void {
