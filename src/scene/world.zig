@@ -3,8 +3,6 @@ const std = @import("std");
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 
-const scene = @import("../scene.zig");
-
 const Player = @import("Player.zig");
 const map = @import("map.zig");
 const PLAYER_SPEED = 150;
@@ -20,24 +18,27 @@ var velocity: gfx.Vector = .zero;
 var msg: gfx.Texture = undefined;
 var face: gfx.Texture = undefined;
 
-pub fn init() void {
+var playerCamera: *gfx.Camera = undefined;
+
+pub fn init(camera: *gfx.Camera) void {
     players[0] = .init("assets/r1.png", 0);
     players[1] = .init("assets/r2.png", 1);
     players[2] = .init("assets/r3.png", 2);
 
     msg = gfx.loadTexture("assets/msg.png", .init(790, 163));
     face = gfx.loadTexture("assets/face1_1.png", .init(307, 355));
+    playerCamera = camera;
 
     map.init();
 }
 
 pub fn enter() void {
-    scene.camera.lookAt(position);
+    playerCamera.lookAt(position);
     window.playMusic("assets/1.ogg");
 }
 
 pub fn exit() void {
-    scene.camera.lookAt(.zero);
+    playerCamera.lookAt(.zero);
     window.stopMusic();
 }
 
@@ -60,7 +61,7 @@ pub fn update(delta: f32) void {
         velocity = velocity.normalize().scale(delta * PLAYER_SPEED);
         const tempPosition = position.add(velocity);
         if (map.canWalk(tempPosition)) position = tempPosition;
-        scene.camera.lookAt(position);
+        playerCamera.lookAt(position);
     }
 
     if (keyPressed) currentPlayer.current(facing).update(delta);

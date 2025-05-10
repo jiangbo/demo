@@ -110,11 +110,6 @@ pub const BindGroup = struct {
 
 pub const CommandEncoder = struct {
     pub fn beginRenderPass(_: CommandEncoder, color: Color) RenderPassEncoder {
-        // sk.gl.defaults();
-        // sk.gl.matrixModeModelview();
-        // sk.gl.loadMatrix(@ptrCast(matrix));
-        // sk.gl.pushMatrix();
-
         var action = sk.gfx.PassAction{};
         action.colors[0] = .{ .load_action = .CLEAR, .clear_value = color };
         sk.gfx.beginPass(.{ .action = action, .swapchain = sk.glue.swapchain() });
@@ -122,9 +117,6 @@ pub const CommandEncoder = struct {
     }
 
     pub fn submit(_: *CommandEncoder) void {
-        // sk.gl.popMatrix();
-        // sk.gl.draw();
-
         sk.gfx.commit();
     }
 };

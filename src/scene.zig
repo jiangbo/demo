@@ -15,7 +15,7 @@ pub var camera: gfx.Camera = undefined;
 pub fn init() void {
     camera = .init(.init(.zero, window.size), SIZE);
     titleScene.init();
-    worldScene.init();
+    worldScene.init(&camera);
     enter();
 }
 
