@@ -7,10 +7,13 @@ const titleScene = @import("scene/title.zig");
 const worldScene = @import("scene/world.zig");
 
 const SceneType = enum { title, world };
-
 var currentSceneType: SceneType = .title;
 
+const SIZE: gfx.Vector = .init(1000, 800);
+pub var camera: gfx.Camera = undefined;
+
 pub fn init() void {
+    camera = .init(.init(.zero, window.size), SIZE);
     titleScene.init();
     worldScene.init();
     enter();
@@ -37,7 +40,9 @@ pub fn update(delta: f32) void {
 }
 
 pub fn render() void {
-    sceneCall("render", .{});
+    camera.beginDraw(.{ .a = 1 });
+    defer camera.endDraw();
+    sceneCall("render", .{&camera});
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {

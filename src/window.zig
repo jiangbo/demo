@@ -114,9 +114,9 @@ export fn windowInit() void {
         .logger = .{ .func = sk.log.func },
     });
 
-    sk.gl.setup(.{
-        .logger = .{ .func = sk.log.func },
-    });
+    // sk.gl.setup(.{
+    //     .logger = .{ .func = sk.log.func },
+    // });
 
     sk.debugtext.setup(.{
         .fonts = init: {
@@ -127,7 +127,7 @@ export fn windowInit() void {
         .logger = .{ .func = sk.log.func },
     });
 
-    gfx.init(size);
+    // gfx.init(size);
 
     if (windowInfo.init) |init| init();
     math.setRandomSeed(timer.lap());

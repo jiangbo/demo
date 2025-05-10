@@ -3,6 +3,8 @@ const std = @import("std");
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 
+const scene = @import("../scene.zig");
+
 const Player = @import("Player.zig");
 const map = @import("map.zig");
 const PLAYER_SPEED = 150;
@@ -30,13 +32,12 @@ pub fn init() void {
 }
 
 pub fn enter() void {
-    gfx.camera = .{ .rect = .init(.zero, window.size), .border = map.SIZE };
-    gfx.camera.lookAt(position);
+    scene.camera.lookAt(position);
     window.playMusic("assets/1.ogg");
 }
 
 pub fn exit() void {
-    gfx.camera.lookAt(.zero);
+    scene.camera.lookAt(.zero);
     window.stopMusic();
 }
 
@@ -59,7 +60,7 @@ pub fn update(delta: f32) void {
         velocity = velocity.normalize().scale(delta * PLAYER_SPEED);
         const tempPosition = position.add(velocity);
         if (map.canWalk(tempPosition)) position = tempPosition;
-        gfx.camera.lookAt(position);
+        scene.camera.lookAt(position);
     }
 
     if (keyPressed) currentPlayer.current(facing).update(delta);
@@ -81,43 +82,40 @@ fn updatePlayer(direction: gfx.FourDirection) void {
     velocity = velocity.add(direction.toVector());
 }
 
-pub fn render() void {
-    gfx.beginDraw();
-    defer gfx.endDraw();
-
-    map.drawBackground();
+pub fn render(camera: *gfx.Camera) void {
+    map.drawBackground(camera);
 
     var playerNotDraw: bool = true;
     for (map.npcSlice()) |npc| {
         if (npc.position.y > position.y and playerNotDraw) {
-            drawPlayer();
+            drawPlayer(camera);
             playerNotDraw = false;
         }
 
         const npcPosition = npc.position.sub(PLAYER_OFFSET);
 
         if (npc.animation != null and !npc.animation.?.finished()) {
-            gfx.draw(npc.animation.?.currentTexture(), npcPosition);
+            camera.draw(npc.animation.?.currentTexture(), npcPosition);
         } else if (npc.texture) |texture| {
-            gfx.draw(texture, npcPosition);
+            camera.draw(texture, npcPosition);
         }
 
-        gfx.drawRectangle(npc.area);
+        // camera.drawRectangle(npc.area);
     }
 
-    if (playerNotDraw) drawPlayer();
+    if (playerNotDraw) drawPlayer(camera);
 
-    map.drawForeground();
+    map.drawForeground(camera);
 
-    gfx.camera.lookAt(.zero);
-    gfx.draw(msg, .init(0, 415));
-    gfx.draw(face, .init(0, 245));
-    gfx.camera.lookAt(position);
+    camera.lookAt(.zero);
+    camera.draw(msg, .init(0, 415));
+    camera.draw(face, .init(0, 245));
+    camera.lookAt(position);
 
     window.showFrameRate();
 }
 
-fn drawPlayer() void {
+fn drawPlayer(camera: *gfx.Camera) void {
     const playerTexture = currentPlayer.current(facing).currentTexture();
-    gfx.draw(playerTexture, position.sub(PLAYER_OFFSET));
+    camera.draw(playerTexture, position.sub(PLAYER_OFFSET));
 }

@@ -1,15 +1,13 @@
 const std = @import("std");
-const sk = @import("sokol");
 
-const render = @import("shader/single.glsl.zig");
+const sk = @import("sokol");
 const math = @import("math.zig");
 
-pub const Color = sk.gfx.Color;
-pub const Buffer = sk.gfx.Buffer;
+pub const Rectangle = math.Rectangle;
 
 pub const Texture = struct {
     image: sk.gfx.Image,
-    area: math.Rectangle = .{},
+    area: Rectangle = .{},
 
     pub fn width(self: *const Texture) f32 {
         return self.size().x;
@@ -23,14 +21,14 @@ pub const Texture = struct {
         return self.area.size();
     }
 
-    pub fn subTexture(self: *const Texture, area: math.Rectangle) Texture {
+    pub fn subTexture(self: *const Texture, area: Rectangle) Texture {
         return Texture{ .image = self.image, .area = .{
             .min = self.area.min.add(area.min),
             .max = self.area.min.add(area.max),
         } };
     }
 
-    pub fn mapTexture(self: *const Texture, area: math.Rectangle) Texture {
+    pub fn mapTexture(self: *const Texture, area: Rectangle) Texture {
         return Texture{ .image = self.image, .area = area };
     }
 
@@ -46,9 +44,52 @@ fn queryTextureSize(image: sk.gfx.Image) math.Vector {
     };
 }
 
+pub const asRange = sk.gfx.asRange;
+pub const queryBackend = sk.gfx.queryBackend;
+pub const Buffer = sk.gfx.Buffer;
+pub const Color = sk.gfx.Color;
+pub const Sampler = sk.gfx.Sampler;
+pub const Shader = sk.gfx.Shader;
+pub const VertexLayout = sk.gfx.VertexLayoutState;
+
+pub fn createBuffer(desc: sk.gfx.BufferDesc) Buffer {
+    return sk.gfx.makeBuffer(desc);
+}
+
+pub const RenderPipelineDesc = struct {
+    shader: sk.gfx.Shader,
+    vertexLayout: VertexLayout,
+    primitive: sk.gfx.PrimitiveType = .TRIANGLES,
+    color: sk.gfx.ColorTargetState = .{},
+    index_type: sk.gfx.IndexType = .DEFAULT,
+    depth: sk.gfx.DepthState = .{},
+};
+
+pub fn createRenderPipeline(desc: RenderPipelineDesc) RenderPipeline {
+    return .{ .value = sk.gfx.makePipeline(.{
+        .shader = desc.shader,
+        .layout = desc.vertexLayout,
+        .primitive_type = desc.primitive,
+        .colors = init: {
+            var c: [4]sk.gfx.ColorTargetState = @splat(.{});
+            c[0] = desc.color;
+            break :init c;
+        },
+        .index_type = desc.index_type,
+        .depth = desc.depth,
+    }) };
+}
+
+pub fn createShaderModule(desc: sk.gfx.ShaderDesc) sk.gfx.Shader {
+    return sk.gfx.makeShader(desc);
+}
+
+pub fn createSampler(desc: sk.gfx.SamplerDesc) Sampler {
+    return sk.gfx.makeSampler(desc);
+}
+
 pub const BindGroup = struct {
     value: sk.gfx.Bindings = .{},
-    uniform: render.VsParams = undefined,
 
     pub fn bindIndexBuffer(self: *BindGroup, buffer: Buffer) void {
         self.value.index_buffer = buffer;
@@ -63,34 +104,32 @@ pub const BindGroup = struct {
     }
 
     pub fn bindSampler(self: *BindGroup, index: u32, sampler: Sampler) void {
-        self.value.samplers[index] = sampler.value;
-    }
-
-    pub fn bindUniformBuffer(self: *BindGroup, uniform: UniformParams) void {
-        self.uniform = uniform;
+        self.value.samplers[index] = sampler;
     }
 };
 
 pub const CommandEncoder = struct {
-    pub fn beginRenderPass(color: Color, matrix: []const f32) RenderPassEncoder {
-        sk.gl.defaults();
-        sk.gl.matrixModeModelview();
-        sk.gl.loadMatrix(@ptrCast(matrix));
-        sk.gl.pushMatrix();
-        return RenderPassEncoder.begin(color);
-    }
-};
+    pub fn beginRenderPass(_: CommandEncoder, color: Color) RenderPassEncoder {
+        // sk.gl.defaults();
+        // sk.gl.matrixModeModelview();
+        // sk.gl.loadMatrix(@ptrCast(matrix));
+        // sk.gl.pushMatrix();
 
-pub const Rectangle = math.Rectangle;
-
-pub const RenderPassEncoder = struct {
-    pub fn begin(color: Color) RenderPassEncoder {
         var action = sk.gfx.PassAction{};
         action.colors[0] = .{ .load_action = .CLEAR, .clear_value = color };
         sk.gfx.beginPass(.{ .action = action, .swapchain = sk.glue.swapchain() });
         return RenderPassEncoder{};
     }
 
+    pub fn submit(_: *CommandEncoder) void {
+        // sk.gl.popMatrix();
+        // sk.gl.draw();
+
+        sk.gfx.commit();
+    }
+};
+
+pub const RenderPassEncoder = struct {
     pub fn setPipeline(self: *RenderPassEncoder, pipeline: RenderPipeline) void {
         _ = self;
         sk.gfx.applyPipeline(pipeline.value);
@@ -98,8 +137,12 @@ pub const RenderPassEncoder = struct {
 
     pub fn setBindGroup(self: *RenderPassEncoder, group: BindGroup) void {
         _ = self;
-        sk.gfx.applyUniforms(render.UB_vs_params, sk.gfx.asRange(&group.uniform));
         sk.gfx.applyBindings(group.value);
+    }
+
+    pub fn setUniform(self: *RenderPassEncoder, index: u32, uniform: anytype) void {
+        _ = self;
+        sk.gfx.applyUniforms(index, sk.gfx.asRange(&uniform));
     }
 
     pub fn draw(self: *RenderPassEncoder, number: u32) void {
@@ -107,146 +150,67 @@ pub const RenderPassEncoder = struct {
         sk.gfx.draw(0, number, 1);
     }
 
-    pub fn submit(self: *RenderPassEncoder) void {
+    pub fn end(self: *RenderPassEncoder) void {
         _ = self;
-        sk.gl.popMatrix();
-        sk.gl.draw();
         sk.gfx.endPass();
-        sk.gfx.commit();
     }
 };
 
-const UniformParams = render.VsParams;
+pub const DrawOptions = struct {
+    texture: Texture,
+    sourceRect: Rectangle,
+    targetRect: Rectangle,
+    radians: f32 = 0,
+    pivot: math.Vector = .zero,
+    alpha: f32 = 1,
+};
 
-pub const Renderer = struct {
-    bind: BindGroup,
-    renderPass: RenderPassEncoder,
+pub fn draw(renderPass: *RenderPassEncoder, bind: *BindGroup, options: DrawOptions) void {
+    const dst = options.targetRect;
 
-    var indexBuffer: ?Buffer = null;
-    var pipeline: ?RenderPipeline = null;
-    var sampler: ?Sampler = null;
+    const size = queryTextureSize(options.texture.image);
+    if (size.approx(.zero)) return;
 
-    pub fn init() Renderer {
-        var self = Renderer{ .bind = .{}, .renderPass = undefined };
+    const min = options.sourceRect.min.div(size);
+    const max = options.sourceRect.max.div(size);
 
-        indexBuffer = indexBuffer orelse sk.gfx.makeBuffer(.{
-            .type = .INDEXBUFFER,
-            .data = sk.gfx.asRange(&[_]u16{ 0, 1, 2, 0, 2, 3 }),
-        });
-        self.bind.bindIndexBuffer(indexBuffer.?);
-
-        sampler = sampler orelse Sampler.nearest();
-        self.bind.bindSampler(render.SMP_smp, sampler.?);
-
-        pipeline = pipeline orelse RenderPipeline{
-            .value = sk.gfx.makePipeline(.{
-                .shader = sk.gfx.makeShader(render.singleShaderDesc(sk.gfx.queryBackend())),
-                .layout = init: {
-                    var l = sk.gfx.VertexLayoutState{};
-                    l.attrs[render.ATTR_single_position].format = .FLOAT3;
-                    l.attrs[render.ATTR_single_color0].format = .FLOAT4;
-                    l.attrs[render.ATTR_single_texcoord0].format = .FLOAT2;
-                    break :init l;
-                },
-                .colors = init: {
-                    var c: [4]sk.gfx.ColorTargetState = @splat(.{});
-                    c[0] = .{
-                        .blend = .{
-                            .enabled = true,
-                            .src_factor_rgb = .SRC_ALPHA,
-                            .dst_factor_rgb = .ONE_MINUS_SRC_ALPHA,
-                        },
-                    };
-                    break :init c;
-                },
-                .index_type = .UINT16,
-                .depth = .{ .compare = .LESS_EQUAL, .write_enabled = true },
-            }),
-        };
-
-        return self;
-    }
-
-    pub const DrawOptions = struct {
-        uniform: UniformParams,
-        texture: Texture,
-        sourceRect: Rectangle,
-        targetRect: Rectangle,
-        radians: f32 = 0,
-        pivot: math.Vector = .zero,
-        alpha: f32 = 1,
+    var vertex = [_]math.Vector3{
+        .{ .x = dst.min.x, .y = dst.max.y },
+        .{ .x = dst.max.x, .y = dst.max.y },
+        .{ .x = dst.max.x, .y = dst.min.y },
+        .{ .x = dst.min.x, .y = dst.min.y },
     };
 
-    pub fn draw(self: *Renderer, options: DrawOptions) void {
-        const dst = options.targetRect;
+    if (options.radians != 0) {
+        const percent = options.pivot.div(size);
+        const pivot = dst.min.add(percent.mul(dst.size()));
 
-        const size = queryTextureSize(options.texture.image);
-        if (size.approx(.zero)) return;
-
-        const min = options.sourceRect.min.div(size);
-        const max = options.sourceRect.max.div(size);
-
-        var vertex = [_]math.Vector3{
-            .{ .x = dst.min.x, .y = dst.max.y },
-            .{ .x = dst.max.x, .y = dst.max.y },
-            .{ .x = dst.max.x, .y = dst.min.y },
-            .{ .x = dst.min.x, .y = dst.min.y },
-        };
-
-        if (options.radians != 0) {
-            const percent = options.pivot.div(size);
-            const pivot = dst.min.add(percent.mul(dst.size()));
-
-            for (&vertex) |*point| {
-                point.* = pivot.add(point.sub(pivot).rotate(options.radians));
-            }
+        for (&vertex) |*point| {
+            point.* = pivot.add(point.sub(pivot).rotate(options.radians));
         }
-
-        const vertexes = [_]f32{
-            // 顶点和颜色
-            vertex[0].x, vertex[0].y, 0.5, 1.0, 1.0, 1.0, options.alpha, min.x, max.y, // 左上
-            vertex[1].x, vertex[1].y, 0.5, 1.0, 1.0, 1.0, options.alpha, max.x, max.y, // 右上
-            vertex[2].x, vertex[2].y, 0.5, 1.0, 1.0, 1.0, options.alpha, max.x, min.y, // 右下
-            vertex[3].x, vertex[3].y, 0.5, 1.0, 1.0, 1.0, options.alpha, min.x, min.y, // 左下
-        };
-
-        const vertexBuffer = sk.gfx.makeBuffer(.{
-            .data = sk.gfx.asRange(&vertexes),
-        });
-
-        self.bind.bindVertexBuffer(0, vertexBuffer);
-        self.bind.bindUniformBuffer(options.uniform);
-
-        self.renderPass.setPipeline(pipeline.?);
-        self.bind.bindTexture(render.IMG_tex, options.texture);
-        self.renderPass.setBindGroup(self.bind);
-        sk.gfx.draw(0, 6, 1);
-        sk.gfx.destroyBuffer(vertexBuffer);
     }
-};
+
+    const vertexes = [_]f32{
+        // 顶点和颜色
+        vertex[0].x, vertex[0].y, 0.5, 1.0, 1.0, 1.0, options.alpha, min.x, max.y, // 左上
+        vertex[1].x, vertex[1].y, 0.5, 1.0, 1.0, 1.0, options.alpha, max.x, max.y, // 右上
+        vertex[2].x, vertex[2].y, 0.5, 1.0, 1.0, 1.0, options.alpha, max.x, min.y, // 右下
+        vertex[3].x, vertex[3].y, 0.5, 1.0, 1.0, 1.0, options.alpha, min.x, min.y, // 左下
+    };
+
+    const vertexBuffer = sk.gfx.makeBuffer(.{
+        .data = sk.gfx.asRange(&vertexes),
+    });
+
+    bind.bindVertexBuffer(0, vertexBuffer);
+    renderPass.setBindGroup(bind.*);
+
+    sk.gfx.draw(0, 6, 1);
+    sk.gfx.destroyBuffer(vertexBuffer);
+}
 
 pub const RenderPipeline = struct {
     value: sk.gfx.Pipeline,
-};
-
-pub const Sampler = struct {
-    value: sk.gfx.Sampler,
-
-    pub fn liner() Sampler {
-        const sampler = sk.gfx.makeSampler(.{
-            .min_filter = .LINEAR,
-            .mag_filter = .LINEAR,
-        });
-        return .{ .value = sampler };
-    }
-
-    pub fn nearest() Sampler {
-        const sampler = sk.gfx.makeSampler(.{
-            .min_filter = .NEAREST,
-            .mag_filter = .NEAREST,
-        });
-        return .{ .value = sampler };
-    }
 };
 
 pub fn drawRectangleLine(rect: Rectangle) void {

@@ -107,28 +107,25 @@ pub fn update(delta: f32) void {
     }
 }
 
-pub fn render() void {
-    gfx.beginDraw();
-    defer gfx.endDraw();
-
-    gfx.draw(backgrounds[currentBackground], .zero);
-    gfx.draw(logo, .init(260, 80));
+pub fn render(camera: *gfx.Camera) void {
+    camera.draw(backgrounds[currentBackground], .zero);
+    camera.draw(logo, .init(260, 80));
 
     if (displayPopup) {
-        gfx.draw(popup.background, .init(283, 250));
-        renderButtons(&popup.buttons, popup.current, 305);
+        camera.draw(popup.background, .init(283, 250));
+        renderButtons(camera, &popup.buttons, popup.current, 305);
     } else {
-        renderButtons(&menuButtons, currentButton, 350);
+        renderButtons(camera, &menuButtons, currentButton, 350);
     }
 }
 
-fn renderButtons(buttons: []Button, current: u8, y: f32) void {
+fn renderButtons(camera: *gfx.Camera, buttons: []Button, current: u8, y: f32) void {
     for (buttons, 0..) |button, index| {
         const offsetY: f32 = @floatFromInt(index * 50);
         if (current == index) {
-            gfx.draw(button.hover, .init(325, y + offsetY));
+            camera.draw(button.hover, .init(325, y + offsetY));
         } else {
-            gfx.draw(button.normal, .init(325, y + offsetY));
+            camera.draw(button.normal, .init(325, y + offsetY));
         }
     }
 }

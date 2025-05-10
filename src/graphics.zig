@@ -2,8 +2,10 @@ const std = @import("std");
 
 const gpu = @import("gpu.zig");
 const math = @import("math.zig");
-const animation = @import("animation.zig");
 const assets = @import("assets.zig");
+const window = @import("window.zig");
+
+pub const Camera = @import("Camera.zig");
 
 pub const Texture = gpu.Texture;
 pub const Vector = math.Vector;
@@ -11,96 +13,85 @@ pub const FourDirection = math.FourDirection;
 pub const Rectangle = math.Rectangle;
 pub const loadTexture = assets.loadTexture;
 
-pub const Camera = struct {
-    rect: math.Rectangle,
-    border: math.Vector,
+pub const FrameAnimation = FixedFrameAnimation(4, 0.1);
 
-    pub fn lookAt(self: *Camera, pos: math.Vector) void {
-        const half = self.rect.size().scale(0.5);
+pub fn FixedFrameAnimation(maxSize: u8, time: f32) type {
+    return struct {
+        timer: window.Timer = .init(time),
+        index: usize = 0,
+        loop: bool = true,
+        texture: Texture,
+        frames: [maxSize]math.Rectangle,
+        count: u8 = maxSize,
+        offset: math.Vector = .zero,
 
-        const max = self.border.sub(self.rect.size());
-        const offset = pos.sub(half).clamp(.zero, max);
+        const Animation = @This();
 
-        self.rect = .init(offset, self.rect.size());
-    }
-};
+        pub fn init(texture: Texture) Animation {
+            return initWithCount(texture, maxSize);
+        }
 
-pub var renderer: gpu.Renderer = undefined;
-var matrix: [16]f32 = undefined;
-var passEncoder: gpu.RenderPassEncoder = undefined;
-pub var camera: Camera = .{ .rect = .{}, .border = .zero };
+        pub fn initWithCount(texture: Texture, count: u8) Animation {
+            var frames: [maxSize]math.Rectangle = undefined;
 
-pub fn init(size: math.Vector) void {
-    matrix = .{
-        2 / size.x, 0.0,         0.0, 0.0,
-        0.0,        2 / -size.y, 0.0, 0.0,
-        0.0,        0.0,         1,   0.0,
-        -1,         1,           0,   1.0,
+            const floatCount: f32 = @floatFromInt(count);
+            const width = @divExact(texture.width(), floatCount);
+            const size: math.Vector = .{ .x = width, .y = texture.height() };
+
+            for (0..count) |index| {
+                const x = @as(f32, @floatFromInt(index)) * width;
+                frames[index] = .init(.init(x, texture.area.min.y), size);
+            }
+
+            return .{ .texture = texture, .frames = frames, .count = count };
+        }
+
+        pub fn addFrame(self: *Animation, rect: math.Rectangle) void {
+            self.frames[self.count] = rect;
+            self.count += 1;
+        }
+
+        pub fn currentTexture(self: *const Animation) Texture {
+            return self.texture.mapTexture(self.frames[self.index]);
+        }
+
+        pub fn update(self: *Animation, delta: f32) void {
+            if (self.timer.isRunningAfterUpdate(delta)) return;
+
+            if (self.index == self.count - 1) {
+                if (self.loop) self.reset();
+            } else {
+                self.timer.reset();
+                self.index += 1;
+            }
+        }
+
+        pub fn anchor(self: *Animation, direction: math.EightDirection) void {
+            const tex = self.texture;
+            self.offset = switch (direction) {
+                .down => .{ .x = -tex.width() / 2, .y = -tex.height() },
+                else => unreachable,
+            };
+        }
+
+        pub fn anchorCenter(self: *Animation) void {
+            self.offset.x = -self.texture.width() / 2;
+            self.offset.y = -self.texture.height() / 2;
+        }
+
+        pub fn reset(self: *Animation) void {
+            self.timer.reset();
+            self.index = 0;
+        }
+
+        pub fn stop(self: *Animation) void {
+            self.timer.elapsed = self.timer.duration;
+            self.index = self.count - 1;
+            self.loop = false;
+        }
+
+        pub fn finished(self: *const Animation) bool {
+            return !self.timer.isRunning() and !self.loop;
+        }
     };
-    renderer = gpu.Renderer.init();
 }
-
-pub const deinit = gpu.deinit;
-
-pub fn beginDraw() void {
-    passEncoder = gpu.CommandEncoder.beginRenderPass(
-        .{ .r = 1, .b = 1, .a = 1.0 },
-        &matrix,
-    );
-
-    renderer.renderPass = passEncoder;
-}
-
-pub fn drawRectangle(rect: math.Rectangle) void {
-    gpu.drawRectangleLine(rect);
-}
-
-pub fn draw(tex: Texture, position: math.Vector) void {
-    drawFlipX(tex, position, false);
-}
-
-pub fn drawFlipX(tex: Texture, pos: math.Vector, flipX: bool) void {
-    const target: math.Rectangle = .init(pos, tex.size());
-    var src = tex.area;
-    if (flipX) {
-        src.min.x = tex.area.max.x;
-        src.max.x = tex.area.min.x;
-    }
-
-    drawOptions(tex, .{ .sourceRect = src, .targetRect = target });
-}
-
-pub const DrawOptions = struct {
-    sourceRect: math.Rectangle = .{},
-    targetRect: math.Rectangle = .{},
-    angle: f32 = 0,
-    pivot: math.Vector = .zero,
-    alpha: f32 = 1,
-};
-
-pub fn drawOptions(texture: Texture, options: DrawOptions) void {
-    matrix[12] = -1 - camera.rect.min.x * matrix[0];
-    matrix[13] = 1 - camera.rect.min.y * matrix[5];
-
-    var src = options.sourceRect;
-    if (src.min.approx(.zero) and src.max.approx(.zero)) {
-        src = texture.area;
-    }
-
-    renderer.draw(.{
-        .uniform = .{ .vp = matrix },
-        .texture = texture,
-        .sourceRect = src,
-        .targetRect = options.targetRect,
-        .radians = std.math.degreesToRadians(options.angle),
-        .pivot = options.pivot,
-        .alpha = options.alpha,
-    });
-}
-
-pub fn endDraw() void {
-    passEncoder.submit();
-}
-
-pub const FrameAnimation = animation.FrameAnimation;
-pub const FixedFrameAnimation = animation.FixedFrameAnimation;

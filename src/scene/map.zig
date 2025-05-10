@@ -211,11 +211,11 @@ fn initMapBlock(buffer: []const u8) void {
     maps[index].mapBlock = blocks;
 }
 
-pub fn drawBackground() void {
-    if (maps[index].mapBack) |back| gfx.draw(back, .zero);
-    gfx.draw(maps[index].map, .zero);
+pub fn drawBackground(camera: *gfx.Camera) void {
+    if (maps[index].mapBack) |back| camera.draw(back, .zero);
+    camera.draw(maps[index].map, .zero);
 }
 
-pub fn drawForeground() void {
-    gfx.draw(maps[index].mapShade, .zero);
+pub fn drawForeground(camera: *gfx.Camera) void {
+    camera.draw(maps[index].mapShade, .zero);
 }
