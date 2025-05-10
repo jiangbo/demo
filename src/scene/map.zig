@@ -3,7 +3,7 @@ const std = @import("std");
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 const c = @import("../c.zig");
-const scene = @import("world.zig");
+const world = @import("world.zig");
 
 pub const SIZE: gfx.Vector = .init(1000, 800);
 const PLAYER_OFFSET: gfx.Vector = .init(120, 220);
@@ -31,6 +31,7 @@ pub const NPC = struct {
     keyTrigger: bool = true,
     action: *const fn () void = undefined,
     type: NPCType = .fixed,
+    face: ?gfx.Texture = null,
 
     pub fn init(x: f32, y: f32, path: ?[:0]const u8, action: Action) NPC {
         var self: NPC = .{ .position = .init(x, y), .action = action };
@@ -53,11 +54,11 @@ var index: usize = maps.len - 1;
 var maps: [2]Map = undefined;
 
 fn npc1Action() void {
-    std.log.info("npc1 action", .{});
+    world.showDialog(&maps[0].npcArray[0]);
 }
 
 fn npc2Action() void {
-    std.log.info("npc2 action", .{});
+    std.log.info("npc2Action", .{});
 }
 
 fn map2npc1Action() void {
@@ -81,6 +82,8 @@ pub fn init() void {
     };
     maps[0].npcArray[2].area = .init(.{ .y = 400 }, .init(20, 600));
     maps[0].npcArray[2].keyTrigger = false;
+    const face = window.loadTexture("assets/face3_2.png", .init(307, 355));
+    maps[0].npcArray[0].face = face;
 
     sortNPC(&maps[1].npcArray);
 
@@ -124,12 +127,12 @@ pub fn init() void {
 
 fn changeMap0() void {
     changeMap();
-    scene.position.x = SIZE.x - 25;
+    world.Player.position.x = SIZE.x - 25;
 }
 
 fn changeMap1() void {
     changeMap();
-    scene.position.x = 25;
+    world.Player.position.x = 25;
 }
 
 fn sortNPC(npcArray: []NPC) void {

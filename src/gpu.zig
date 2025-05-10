@@ -204,15 +204,3 @@ pub fn draw(renderPass: *RenderPassEncoder, bind: *BindGroup, options: DrawOptio
 pub const RenderPipeline = struct {
     value: sk.gfx.Pipeline,
 };
-
-pub fn drawRectangleLine(rect: Rectangle) void {
-    sk.gl.beginLineStrip();
-
-    sk.gl.v2fC3b(rect.min.x, rect.min.y, 0, 255, 0);
-    sk.gl.v2fC3b(rect.max.x, rect.min.y, 0, 255, 0);
-    sk.gl.v2fC3b(rect.max.x, rect.max.y, 0, 255, 0);
-    sk.gl.v2fC3b(rect.min.x, rect.max.y, 0, 255, 0);
-    sk.gl.v2fC3b(rect.min.x, rect.min.y, 0, 255, 0);
-
-    sk.gl.end();
-}

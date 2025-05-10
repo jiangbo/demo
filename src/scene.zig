@@ -7,7 +7,7 @@ const titleScene = @import("scene/title.zig");
 const worldScene = @import("scene/world.zig");
 
 const SceneType = enum { title, world };
-var currentSceneType: SceneType = .title;
+var currentSceneType: SceneType = .world;
 
 const SIZE: gfx.Vector = .init(1000, 800);
 pub var camera: gfx.Camera = undefined;
