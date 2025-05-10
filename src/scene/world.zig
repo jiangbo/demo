@@ -13,12 +13,18 @@ const Dialog = struct {
     npc: *map.NPC = undefined,
 };
 
+const Tip = struct {
+    var background: gfx.Texture = undefined;
+};
+
 pub var players: [3]Player = undefined;
 pub var currentPlayer: *Player = &players[0];
 pub var playerCamera: *gfx.Camera = undefined;
 
 var dialog: ?Dialog = null;
 var face: gfx.Texture = undefined;
+
+var tip: ?Tip = null;
 
 pub fn init(camera: *gfx.Camera) void {
     players[0] = .init("assets/r1.png", 0);
@@ -28,6 +34,8 @@ pub fn init(camera: *gfx.Camera) void {
     Dialog.background = gfx.loadTexture("assets/msg.png", .init(790, 163));
     face = gfx.loadTexture("assets/face1_1.png", .init(307, 355));
     playerCamera = camera;
+
+    Tip.background = gfx.loadTexture("assets/msgtip.png", .init(291, 42));
 
     map.init();
 }
@@ -47,6 +55,11 @@ pub fn update(delta: f32) void {
         if (window.isKeyRelease(.SPACE)) {
             if (d.left) d.left = false else dialog = null;
         }
+        return;
+    }
+
+    if (tip) |_| {
+        if (window.isKeyRelease(.SPACE)) tip = null;
         return;
     }
 
@@ -98,9 +111,20 @@ pub fn render(camera: *gfx.Camera) void {
         }
         camera.lookAt(Player.position);
     }
+
+    if (tip) |_| {
+        camera.lookAt(.zero);
+        camera.draw(Tip.background, .init(251, 200));
+        camera.lookAt(Player.position);
+    }
+
     window.showFrameRate();
 }
 
 pub fn showDialog(npc: *map.NPC) void {
     dialog = Dialog{ .face = face, .npc = npc };
+}
+
+pub fn showTip() void {
+    tip = Tip{};
 }

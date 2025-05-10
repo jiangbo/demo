@@ -58,7 +58,7 @@ fn npc1Action() void {
 }
 
 fn npc2Action() void {
-    std.log.info("npc2Action", .{});
+    world.showTip();
 }
 
 fn map2npc1Action() void {
