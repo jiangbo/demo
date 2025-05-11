@@ -11,11 +11,14 @@ var currentSceneType: SceneType = .title;
 
 const SIZE: gfx.Vector = .init(1000, 800);
 pub var camera: gfx.Camera = undefined;
+var cursor: gfx.Texture = undefined;
 
 pub fn init() void {
     camera = .init(.init(.zero, window.size), SIZE);
     titleScene.init();
     worldScene.init(&camera);
+    window.showCursor(false);
+    cursor = gfx.loadTexture("assets/mc_1.png", .init(32, 32));
     enter();
 }
 
@@ -43,6 +46,8 @@ pub fn render() void {
     camera.beginDraw(.{ .a = 1 });
     defer camera.endDraw();
     sceneCall("render", .{&camera});
+
+    camera.draw(cursor, window.mousePosition.add(camera.rect.min));
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {

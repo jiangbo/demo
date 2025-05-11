@@ -155,8 +155,9 @@ export fn windowEvent(event: ?*const Event) void {
             .KEY_DOWN => keyState.set(keyCode),
             .KEY_UP => keyState.unset(keyCode),
             .MOUSE_MOVE => {
-                const position = math.Vector.init(ev.mouse_x, ev.mouse_y);
-                mousePosition = position.scale(1.0 / sk.app.dpiScale());
+                var pos = math.Vector.init(ev.mouse_x, ev.mouse_y);
+                pos = pos.div(.init(sk.app.widthf(), sk.app.heightf()));
+                mousePosition = pos.mul(size);
             },
             .MOUSE_DOWN => buttonState.set(buttonCode),
             .MOUSE_UP => buttonState.unset(buttonCode),

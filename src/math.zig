@@ -67,7 +67,7 @@ pub const Vector3 = struct {
     pub const zero = Vector3{ .x = 0, .y = 0, .z = 0 };
 
     pub fn init(x: f32, y: f32) Vector3 {
-        return .{ .x = x, .y = y, .z = 0 };
+        return .{ .x = x, .y = y, .z = 1 };
     }
 
     pub fn toVector2(self: Vector3) Vector2 {
