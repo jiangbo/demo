@@ -133,12 +133,33 @@ export fn windowInit() void {
     math.setRandomSeed(timer.lap());
 }
 
+pub var mousePosition: math.Vector = .zero;
+var lastButtonState: std.StaticBitSet(3) = .initEmpty();
+var buttonState: std.StaticBitSet(3) = .initEmpty();
+
+pub fn isButtonPress(button: sk.app.Mousebutton) bool {
+    const code: usize = @intCast(@intFromEnum(button));
+    return !lastButtonState.isSet(code) and buttonState.isSet(code);
+}
+
+pub fn isButtonRelease(button: sk.app.Mousebutton) bool {
+    const code: usize = @intCast(@intFromEnum(button));
+    return lastButtonState.isSet(code) and !buttonState.isSet(code);
+}
+
 export fn windowEvent(event: ?*const Event) void {
     if (event) |ev| {
-        const code: usize = @intCast(@intFromEnum(ev.key_code));
+        const keyCode: usize = @intCast(@intFromEnum(ev.key_code));
+        const buttonCode: usize = @intCast(@intFromEnum(ev.mouse_button));
         switch (ev.type) {
-            .KEY_DOWN => keyState.set(code),
-            .KEY_UP => keyState.unset(code),
+            .KEY_DOWN => keyState.set(keyCode),
+            .KEY_UP => keyState.unset(keyCode),
+            .MOUSE_MOVE => {
+                const position = math.Vector.init(ev.mouse_x, ev.mouse_y);
+                mousePosition = position.scale(1.0 / sk.app.dpiScale());
+            },
+            .MOUSE_DOWN => buttonState.set(buttonCode),
+            .MOUSE_UP => buttonState.unset(buttonCode),
             else => {},
         }
         if (windowInfo.event) |eventHandle| eventHandle(ev);
@@ -183,6 +204,7 @@ export fn windowFrame() void {
 
     if (windowInfo.render) |render| render();
     lastKeyState = keyState;
+    lastButtonState = buttonState;
 }
 
 export fn windowDeinit() void {

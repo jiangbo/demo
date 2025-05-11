@@ -5,7 +5,6 @@ const math = @import("math.zig");
 const shader = @import("shader/single.glsl.zig");
 
 const Camera = @This();
-var commandEncoder: gpu.CommandEncoder = .{};
 
 rect: math.Rectangle,
 border: math.Vector,
@@ -64,7 +63,7 @@ pub fn lookAt(self: *Camera, pos: math.Vector) void {
 }
 
 pub fn beginDraw(self: *Camera, color: gpu.Color) void {
-    self.renderPass = commandEncoder.beginRenderPass(color);
+    self.renderPass = gpu.commandEncoder.beginRenderPass(color);
 }
 
 pub fn draw(self: *Camera, tex: gpu.Texture, position: math.Vector) void {
@@ -101,5 +100,5 @@ pub fn drawOptions(self: *Camera, options: DrawOptions) void {
 
 pub fn endDraw(self: *Camera) void {
     self.renderPass.end();
-    commandEncoder.submit();
+    gpu.commandEncoder.submit();
 }

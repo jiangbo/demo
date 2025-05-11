@@ -108,6 +108,7 @@ pub const BindGroup = struct {
     }
 };
 
+pub var commandEncoder: CommandEncoder = .{};
 pub const CommandEncoder = struct {
     pub fn beginRenderPass(_: CommandEncoder, color: Color) RenderPassEncoder {
         var action = sk.gfx.PassAction{};

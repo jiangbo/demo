@@ -9,7 +9,11 @@ var currentBackground: u8 = 0;
 var timer: window.Timer = .init(5);
 var logo: gfx.Texture = undefined;
 
-const Button = struct { normal: gfx.Texture, hover: gfx.Texture };
+const Button = struct {
+    position: gfx.Vector,
+    normal: gfx.Texture,
+    hover: gfx.Texture,
+};
 
 var menuButtons: [3]Button = undefined;
 var currentButton: u8 = 0;
@@ -37,16 +41,19 @@ pub fn init() void {
 
     const size = gfx.Vector.init(142, 36);
     menuButtons[0] = .{
+        .position = .init(325, 350),
         .normal = gfx.loadTexture("assets/T_start_1.png", size),
         .hover = gfx.loadTexture("assets/T_start_2.png", size),
     };
 
     menuButtons[1] = .{
+        .position = .init(325, 400),
         .normal = gfx.loadTexture("assets/T_load_1.png", size),
         .hover = gfx.loadTexture("assets/T_load_2.png", size),
     };
 
     menuButtons[2] = .{
+        .position = .init(325, 450),
         .normal = gfx.loadTexture("assets/T_exit_1.png", size),
         .hover = gfx.loadTexture("assets/T_exit_2.png", size),
     };
@@ -54,10 +61,12 @@ pub fn init() void {
     const bg = gfx.loadTexture("assets/confirm_bg.png", .init(227, 155));
     popup = Popup{ .background = bg };
     popup.buttons[0] = .{
+        .position = .init(325, 305),
         .normal = gfx.loadTexture("assets/confirm_yes_1.png", size),
         .hover = gfx.loadTexture("assets/confirm_yes_2.png", size),
     };
     popup.buttons[1] = .{
+        .position = .init(325, 355),
         .normal = gfx.loadTexture("assets/confirm_no_1.png", size),
         .hover = gfx.loadTexture("assets/confirm_no_2.png", size),
     };
@@ -79,32 +88,57 @@ pub fn update(delta: f32) void {
         timer.reset();
     }
 
-    if (displayPopup) {
-        if (window.isAnyKeyRelease(&.{ .W, .UP })) popup.current -|= 1;
-        if (window.isAnyKeyRelease(&.{ .S, .DOWN })) popup.current += 1;
-        popup.current = @min(popup.current, popup.buttons.len - 1);
+    if (displayPopup) return updatePopup(delta);
 
-        if (window.isAnyKeyRelease(&.{ .ENTER, .SPACE })) {
-            switch (popup.current) {
-                0 => window.exit(),
-                1 => popup.shadow(),
-                else => unreachable,
-            }
-        }
-    } else {
-        if (window.isAnyKeyRelease(&.{ .W, .UP })) currentButton -|= 1;
-        if (window.isAnyKeyRelease(&.{ .S, .DOWN })) currentButton += 1;
-        currentButton = @min(currentButton, menuButtons.len - 1);
+    var mousePress = false;
+    if (mouseInButton(&menuButtons)) |index| {
+        currentButton = index;
+        if (window.isButtonRelease(.LEFT)) mousePress = true;
+    }
 
-        if (window.isAnyKeyRelease(&.{ .ENTER, .SPACE })) {
-            switch (currentButton) {
-                0 => scene.changeScene(),
-                1 => std.log.info("load game", .{}),
-                2 => displayPopup = true,
-                else => unreachable,
-            }
+    if (window.isAnyKeyRelease(&.{ .W, .UP })) currentButton -|= 1;
+    if (window.isAnyKeyRelease(&.{ .S, .DOWN })) currentButton += 1;
+    currentButton = @min(currentButton, menuButtons.len - 1);
+
+    if (window.isAnyKeyRelease(&.{ .ENTER, .SPACE }) or mousePress) {
+        switch (currentButton) {
+            0 => scene.changeScene(),
+            1 => std.log.info("load game", .{}),
+            2 => displayPopup = true,
+            else => unreachable,
         }
     }
+}
+
+fn updatePopup(_: f32) void {
+    var mousePress = false;
+    if (mouseInButton(&popup.buttons)) |index| {
+        popup.current = index;
+        if (window.isButtonRelease(.LEFT)) mousePress = true;
+    }
+
+    if (window.isAnyKeyRelease(&.{ .W, .UP })) popup.current -|= 1;
+    if (window.isAnyKeyRelease(&.{ .S, .DOWN })) popup.current += 1;
+    popup.current = @min(popup.current, popup.buttons.len - 1);
+
+    if (window.isAnyKeyRelease(&.{ .ENTER, .SPACE }) or mousePress) {
+        switch (popup.current) {
+            0 => window.exit(),
+            1 => popup.shadow(),
+            else => unreachable,
+        }
+    }
+}
+
+fn mouseInButton(buttons: []const Button) ?u8 {
+    const size = buttons[0].normal.size();
+
+    for (buttons, 0..) |button, index| {
+        const area = gfx.Rectangle.init(button.position, size);
+        if (area.contains(window.mousePosition))
+            return @intCast(index);
+    }
+    return null;
 }
 
 pub fn render(camera: *gfx.Camera) void {
@@ -113,19 +147,18 @@ pub fn render(camera: *gfx.Camera) void {
 
     if (displayPopup) {
         camera.draw(popup.background, .init(283, 250));
-        renderButtons(camera, &popup.buttons, popup.current, 305);
+        renderButtons(camera, &popup.buttons, popup.current);
     } else {
-        renderButtons(camera, &menuButtons, currentButton, 350);
+        renderButtons(camera, &menuButtons, currentButton);
     }
 }
 
-fn renderButtons(camera: *gfx.Camera, buttons: []Button, current: u8, y: f32) void {
+fn renderButtons(camera: *gfx.Camera, buttons: []Button, current: u8) void {
     for (buttons, 0..) |button, index| {
-        const offsetY: f32 = @floatFromInt(index * 50);
         if (current == index) {
-            camera.draw(button.hover, .init(325, y + offsetY));
+            camera.draw(button.hover, button.position);
         } else {
-            camera.draw(button.normal, .init(325, y + offsetY));
+            camera.draw(button.normal, button.position);
         }
     }
 }
