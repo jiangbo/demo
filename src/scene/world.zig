@@ -26,6 +26,11 @@ var face: gfx.Texture = undefined;
 
 var tip: ?Tip = null;
 
+pub var mouseTarget: ?gfx.Vector = null;
+var targetTexture: gfx.Texture = undefined;
+var moveTimer: window.Timer = .init(0.4);
+var moveDisplay: bool = true;
+
 pub fn init(camera: *gfx.Camera) void {
     players[0] = .init("assets/r1.png", 0);
     players[1] = .init("assets/r2.png", 1);
@@ -36,6 +41,7 @@ pub fn init(camera: *gfx.Camera) void {
     playerCamera = camera;
 
     Tip.background = gfx.loadTexture("assets/msgtip.png", .init(291, 42));
+    targetTexture = gfx.loadTexture("assets/move_flag.png", .init(33, 37));
 
     map.init();
 }
@@ -61,6 +67,17 @@ pub fn update(delta: f32) void {
     if (tip) |_| {
         if (window.isKeyRelease(.SPACE)) tip = null;
         return;
+    }
+
+    if (window.isButtonRelease(.LEFT)) {
+        mouseTarget = playerCamera.rect.min.add(window.mousePosition);
+    }
+
+    if (mouseTarget != null) {
+        if (moveTimer.isFinishedAfterUpdate(delta)) {
+            moveDisplay = !moveDisplay;
+            moveTimer.reset();
+        }
     }
 
     currentPlayer.update(delta);
@@ -98,6 +115,12 @@ pub fn render(camera: *gfx.Camera) void {
     }
 
     if (playerNotDraw) currentPlayer.render(camera);
+
+    if (mouseTarget) |target| blk: {
+        if (!moveDisplay) break :blk;
+        const size = targetTexture.size();
+        camera.draw(targetTexture, target.sub(.init(size.x / 2, size.y)));
+    }
 
     map.drawForeground(camera);
 

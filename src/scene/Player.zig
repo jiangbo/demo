@@ -38,6 +38,21 @@ pub fn update(self: *Player, delta: f32) void {
     velocity = .zero;
     keyPressed = false;
 
+    if (world.mouseTarget) |target| {
+        velocity = target.sub(position).normalize();
+        if (@abs(velocity.x) > @abs(velocity.y)) {
+            facing = if (velocity.x > 0) .right else .left;
+        } else {
+            facing = if (velocity.y > 0) .down else .up;
+        }
+        keyPressed = true;
+        const distance = target.sub(position);
+        if (@abs(distance.x) < 16 and @abs(distance.y) < 16) {
+            velocity = .zero;
+            world.mouseTarget = null;
+        }
+    }
+
     if (window.isAnyKeyDown(&.{ .UP, .W })) updatePlayer(.up);
     if (window.isAnyKeyDown(&.{ .DOWN, .S })) updatePlayer(.down);
     if (window.isAnyKeyDown(&.{ .LEFT, .A })) updatePlayer(.left);
@@ -64,6 +79,7 @@ fn updatePlayer(direction: gfx.FourDirection) void {
     facing = direction;
     keyPressed = true;
     velocity = velocity.add(direction.toVector());
+    world.mouseTarget = null;
 }
 
 pub fn render(self: *Player, camera: *gfx.Camera) void {
