@@ -34,8 +34,8 @@ var targetTexture: gfx.Texture = undefined;
 var moveTimer: window.Timer = .init(0.4);
 var moveDisplay: bool = true;
 
-var popup: Popup = undefined;
-var displayPopup: bool = true;
+var statusPopup: Popup = undefined;
+var displayStatusPopup: bool = true;
 
 pub fn init(camera: *gfx.Camera) void {
     players[0] = .init("assets/r1.png", 0);
@@ -51,7 +51,7 @@ pub fn init(camera: *gfx.Camera) void {
 
     talkTexture = gfx.loadTexture("assets/mc_2.png", .init(30, 30));
 
-    popup = .{
+    statusPopup = .{
         .position = .init(60, 60),
         .background = gfx.loadTexture("assets/item/status_bg.png", .init(677, 428)),
     };
@@ -170,8 +170,8 @@ fn renderPopup(camera: *gfx.Camera) void {
         camera.draw(Tip.background, .init(251, 200));
     }
 
-    if (displayPopup) {
-        camera.draw(popup.background, popup.position);
+    if (displayStatusPopup) {
+        camera.draw(statusPopup.background, statusPopup.position);
     }
     camera.lookAt(Player.position);
 }
