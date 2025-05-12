@@ -199,8 +199,7 @@ export fn windowFrame() void {
     deltaSeconds = deltaNano / std.time.ns_per_s;
 
     sk.fetch.dowork();
-    call(root, "update", .{deltaSeconds});
-    call(root, "render", .{});
+    call(root, "frame", .{deltaSeconds});
 
     lastKeyState = keyState;
     lastButtonState = buttonState;

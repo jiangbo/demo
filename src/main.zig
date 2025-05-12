@@ -11,11 +11,8 @@ pub fn init() void {
     scene.init();
 }
 
-pub fn update(delta: f32) void {
+pub fn frame(delta: f32) void {
     scene.update(delta);
-}
-
-pub fn render() void {
     scene.render();
 }
 
