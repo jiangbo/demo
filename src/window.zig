@@ -77,23 +77,21 @@ pub fn showCursor(show: bool) void {
 pub const WindowInfo = struct {
     title: [:0]const u8,
     size: math.Vector,
-    init: ?*const fn () void = null,
-    update: ?*const fn (f32) void = null,
-    render: ?*const fn () void = null,
-    event: ?*const fn (*const Event) void = null,
-    deinit: ?*const fn () void = null,
 };
+
+pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
+    if (@hasDecl(object, name)) @call(.auto, @field(object, name), args);
+}
 
 pub var size: math.Vector = .zero;
 pub var allocator: std.mem.Allocator = undefined;
 var timer: std.time.Timer = undefined;
-var windowInfo: WindowInfo = undefined;
 
+const root = @import("root");
 pub fn run(alloc: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
     size = info.size;
     allocator = alloc;
-    windowInfo = info;
     sk.app.run(.{
         .window_title = info.title,
         .width = @as(i32, @intFromFloat(size.x)),
@@ -129,7 +127,7 @@ export fn windowInit() void {
 
     // gfx.init(size);
 
-    if (windowInfo.init) |init| init();
+    call(root, "init", .{});
     math.setRandomSeed(timer.lap());
 }
 
@@ -163,7 +161,7 @@ export fn windowEvent(event: ?*const Event) void {
             .MOUSE_UP => buttonState.unset(buttonCode),
             else => {},
         }
-        if (windowInfo.event) |eventHandle| eventHandle(ev);
+        call(root, "event", .{ev});
     }
 }
 
@@ -201,15 +199,15 @@ export fn windowFrame() void {
     deltaSeconds = deltaNano / std.time.ns_per_s;
 
     sk.fetch.dowork();
-    if (windowInfo.update) |update| update(deltaSeconds);
+    call(root, "update", .{deltaSeconds});
+    call(root, "render", .{});
 
-    if (windowInfo.render) |render| render();
     lastKeyState = keyState;
     lastButtonState = buttonState;
 }
 
 export fn windowDeinit() void {
-    if (windowInfo.deinit) |deinit| deinit();
+    call(root, "deinit", .{});
     sk.gfx.shutdown();
     assets.deinit();
 }

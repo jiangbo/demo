@@ -6,20 +6,20 @@ const scene = @import("scene.zig");
 
 var soundBuffer: [20]audio.Sound = undefined;
 
-fn init() void {
+pub fn init() void {
     audio.init(44100 / 4, &soundBuffer);
     scene.init();
 }
 
-fn update(delta: f32) void {
+pub fn update(delta: f32) void {
     scene.update(delta);
 }
 
-fn render() void {
+pub fn render() void {
     scene.render();
 }
 
-fn deinit() void {
+pub fn deinit() void {
     audio.deinit();
 }
 
@@ -40,9 +40,5 @@ pub fn main() void {
     window.run(allocator, .{
         .title = "教你制作RPG游戏",
         .size = .{ .x = 800, .y = 600 },
-        .init = init,
-        .update = update,
-        .render = render,
-        .deinit = deinit,
     });
 }

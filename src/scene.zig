@@ -55,7 +55,7 @@ pub fn render() void {
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {
     switch (currentSceneType) {
-        .title => @call(.auto, @field(titleScene, function), args),
-        .world => @call(.auto, @field(worldScene, function), args),
+        .title => window.call(titleScene, function, args),
+        .world => window.call(worldScene, function, args),
     }
 }
