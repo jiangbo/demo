@@ -5,6 +5,7 @@ const gfx = @import("../graphics.zig");
 
 pub const Player = @import("Player.zig");
 pub const map = @import("map.zig");
+const Popup = @import("Popup.zig");
 const scene = @import("../scene.zig");
 
 const Dialog = struct {
@@ -33,6 +34,9 @@ var targetTexture: gfx.Texture = undefined;
 var moveTimer: window.Timer = .init(0.4);
 var moveDisplay: bool = true;
 
+var popup: Popup = undefined;
+var displayPopup: bool = true;
+
 pub fn init(camera: *gfx.Camera) void {
     players[0] = .init("assets/r1.png", 0);
     players[1] = .init("assets/r2.png", 1);
@@ -46,6 +50,11 @@ pub fn init(camera: *gfx.Camera) void {
     targetTexture = gfx.loadTexture("assets/move_flag.png", .init(33, 37));
 
     talkTexture = gfx.loadTexture("assets/mc_2.png", .init(30, 30));
+
+    popup = .{
+        .position = .init(60, 60),
+        .background = gfx.loadTexture("assets/item/status_bg.png", .init(677, 428)),
+    };
 
     map.init();
 }
@@ -141,25 +150,30 @@ pub fn render(camera: *gfx.Camera) void {
     }
 
     map.drawForeground(camera);
+    renderPopup(camera);
 
+    window.showFrameRate();
+}
+
+fn renderPopup(camera: *gfx.Camera) void {
+    camera.lookAt(.zero);
     if (dialog) |d| {
-        camera.lookAt(.zero);
         camera.draw(Dialog.background, .init(0, 415));
         if (d.left) {
             camera.draw(d.face, .init(0, 245));
         } else {
             camera.draw(d.npc.face.?, .init(486, 245));
         }
-        camera.lookAt(Player.position);
     }
 
     if (tip) |_| {
-        camera.lookAt(.zero);
         camera.draw(Tip.background, .init(251, 200));
-        camera.lookAt(Player.position);
     }
 
-    window.showFrameRate();
+    if (displayPopup) {
+        camera.draw(popup.background, popup.position);
+    }
+    camera.lookAt(Player.position);
 }
 
 pub fn showDialog(npc: *map.NPC) void {
