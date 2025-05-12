@@ -5,6 +5,7 @@ const gfx = @import("../graphics.zig");
 
 pub const Player = @import("Player.zig");
 pub const map = @import("map.zig");
+const scene = @import("../scene.zig");
 
 const Dialog = struct {
     var background: gfx.Texture = undefined;
@@ -25,6 +26,7 @@ var dialog: ?Dialog = null;
 var face: gfx.Texture = undefined;
 
 var tip: ?Tip = null;
+var talkTexture: gfx.Texture = undefined;
 
 pub var mouseTarget: ?gfx.Vector = null;
 var targetTexture: gfx.Texture = undefined;
@@ -43,6 +45,8 @@ pub fn init(camera: *gfx.Camera) void {
     Tip.background = gfx.loadTexture("assets/msgtip.png", .init(291, 42));
     targetTexture = gfx.loadTexture("assets/move_flag.png", .init(33, 37));
 
+    talkTexture = gfx.loadTexture("assets/mc_2.png", .init(30, 30));
+
     map.init();
 }
 
@@ -57,15 +61,18 @@ pub fn exit() void {
 }
 
 pub fn update(delta: f32) void {
+    const confirm = window.isAnyKeyRelease(&.{ .SPACE, .ENTER }) or
+        window.isButtonRelease(.LEFT);
+
     if (dialog) |*d| {
-        if (window.isKeyRelease(.SPACE)) {
+        if (confirm) {
             if (d.left) d.left = false else dialog = null;
         }
         return;
     }
 
     if (tip) |_| {
-        if (window.isKeyRelease(.SPACE)) tip = null;
+        if (confirm) tip = null;
         return;
     }
 
@@ -83,12 +90,23 @@ pub fn update(delta: f32) void {
     currentPlayer.update(delta);
 
     for (map.npcSlice()) |*npc| {
-        if (npc.area.contains(Player.position)) {
+        const contains = npc.area.contains(Player.position);
+        if (contains) {
             if (npc.keyTrigger) {
-                if (window.isKeyRelease(.SPACE)) npc.action();
+                if (window.isAnyKeyRelease(&.{ .SPACE, .ENTER }))
+                    npc.action();
             } else npc.action();
         }
 
+        if (npc.texture != null) {
+            const area = npc.area.move(scene.camera.rect.min.neg());
+            if (area.contains(window.mousePosition)) {
+                scene.cursor = talkTexture;
+                if (window.isButtonRelease(.LEFT) and contains) {
+                    npc.action();
+                }
+            }
+        }
         map.updateNpc(npc, delta);
     }
 }

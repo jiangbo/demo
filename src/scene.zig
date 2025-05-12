@@ -7,18 +7,20 @@ const titleScene = @import("scene/title.zig");
 const worldScene = @import("scene/world.zig");
 
 const SceneType = enum { title, world };
-var currentSceneType: SceneType = .title;
+var currentSceneType: SceneType = .world;
 
 const SIZE: gfx.Vector = .init(1000, 800);
 pub var camera: gfx.Camera = undefined;
-var cursor: gfx.Texture = undefined;
+pub var cursor: gfx.Texture = undefined;
+var cursorTexture: gfx.Texture = undefined;
 
 pub fn init() void {
     camera = .init(.init(.zero, window.size), SIZE);
     titleScene.init();
     worldScene.init(&camera);
     window.showCursor(false);
-    cursor = gfx.loadTexture("assets/mc_1.png", .init(32, 32));
+    cursorTexture = gfx.loadTexture("assets/mc_1.png", .init(32, 32));
+    cursor = cursorTexture;
     enter();
 }
 
@@ -39,6 +41,7 @@ pub fn changeScene() void {
 }
 
 pub fn update(delta: f32) void {
+    cursor = cursorTexture;
     sceneCall("update", .{delta});
 }
 

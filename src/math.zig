@@ -90,6 +90,10 @@ pub const Vector3 = struct {
         return .{ .x = self.x - other.x, .y = self.y - other.y, .z = self.z - other.z };
     }
 
+    pub fn neg(self: Vector3) Vector3 {
+        return .{ .x = -self.x, .y = -self.y, .z = -self.z };
+    }
+
     pub fn scale(self: Vector3, scalar: f32) Vector3 {
         return .{ .x = self.x * scalar, .y = self.y * scalar, .z = self.z * scalar };
     }
