@@ -26,6 +26,7 @@ pub const Item = struct {
     tip: []const u8,
 };
 pub var items: [10]Item = undefined;
+pub var skills: [10]Item = undefined;
 
 pub var players: [3]Player = undefined;
 pub var currentPlayer: *Player = &players[0];
@@ -60,6 +61,11 @@ pub fn init(camera: *gfx.Camera) void {
 
     map.init();
 
+    initItems();
+    initSkills();
+}
+
+fn initItems() void {
     for (&items) |*item| item.count = 0;
 
     items[0] = .{
@@ -81,6 +87,24 @@ pub fn init(camera: *gfx.Camera) void {
         .texture = gfx.loadTexture("assets/item/item3.png", .init(66, 66)),
         .tip = "一把钢制短剑",
         .count = 2,
+    };
+}
+
+fn initSkills() void {
+    for (&skills) |*skill| skill.count = 0;
+
+    skills[0] = .{
+        .name = "治疗术",
+        .texture = gfx.loadTexture("assets/item/skill1.png", .init(66, 66)),
+        .tip = "恢复少量 HP",
+        .count = 20,
+    };
+
+    skills[1] = .{
+        .name = "黑洞漩涡",
+        .texture = gfx.loadTexture("assets/item/skill2.png", .init(66, 66)),
+        .tip = "攻击型技能，将敌人吸入漩涡",
+        .count = 20,
     };
 }
 
