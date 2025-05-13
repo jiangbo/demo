@@ -5,7 +5,7 @@ const gfx = @import("../graphics.zig");
 
 pub const Player = @import("Player.zig");
 pub const map = @import("map.zig");
-const Popup = @import("Popup.zig");
+const statusPopup = @import("statusPopup.zig");
 const scene = @import("../scene.zig");
 
 const Dialog = struct {
@@ -34,9 +34,6 @@ var targetTexture: gfx.Texture = undefined;
 var moveTimer: window.Timer = .init(0.4);
 var moveDisplay: bool = true;
 
-var statusPopup: Popup = undefined;
-var displayStatusPopup: bool = true;
-
 pub fn init(camera: *gfx.Camera) void {
     players[0] = .init("assets/r1.png", 0);
     players[1] = .init("assets/r2.png", 1);
@@ -51,10 +48,7 @@ pub fn init(camera: *gfx.Camera) void {
 
     talkTexture = gfx.loadTexture("assets/mc_2.png", .init(30, 30));
 
-    statusPopup = .{
-        .position = .init(60, 60),
-        .background = gfx.loadTexture("assets/item/status_bg.png", .init(677, 428)),
-    };
+    statusPopup.init();
 
     map.init();
 }
@@ -83,6 +77,12 @@ pub fn update(delta: f32) void {
     if (tip) |_| {
         if (confirm) tip = null;
         return;
+    }
+
+    if (statusPopup.display) return statusPopup.update(delta);
+
+    if (!statusPopup.display and (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }))) {
+        statusPopup.display = true;
     }
 
     if (window.isButtonRelease(.LEFT)) {
@@ -169,10 +169,7 @@ fn renderPopup(camera: *gfx.Camera) void {
     if (tip) |_| {
         camera.draw(Tip.background, .init(251, 200));
     }
-
-    if (displayStatusPopup) {
-        camera.draw(statusPopup.background, statusPopup.position);
-    }
+    statusPopup.render(camera);
     camera.lookAt(Player.position);
 }
 
