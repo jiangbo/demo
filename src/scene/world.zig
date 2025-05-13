@@ -19,6 +19,14 @@ const Tip = struct {
     var background: gfx.Texture = undefined;
 };
 
+pub const Item = struct {
+    name: []const u8,
+    count: u32 = 0,
+    texture: gfx.Texture,
+    tip: []const u8,
+};
+pub var items: [10]Item = undefined;
+
 pub var players: [3]Player = undefined;
 pub var currentPlayer: *Player = &players[0];
 pub var playerCamera: *gfx.Camera = undefined;
@@ -51,6 +59,29 @@ pub fn init(camera: *gfx.Camera) void {
     statusPopup.init();
 
     map.init();
+
+    for (&items) |*item| item.count = 0;
+
+    items[0] = .{
+        .name = "红药水",
+        .texture = gfx.loadTexture("assets/item/item1.png", .init(66, 66)),
+        .tip = "恢复少量 HP",
+        .count = 2,
+    };
+
+    items[1] = .{
+        .name = "蓝药水",
+        .texture = gfx.loadTexture("assets/item/item2.png", .init(66, 66)),
+        .tip = "恢复少量 MP",
+        .count = 3,
+    };
+
+    items[2] = .{
+        .name = "短剑",
+        .texture = gfx.loadTexture("assets/item/item3.png", .init(66, 66)),
+        .tip = "一把钢制短剑",
+        .count = 2,
+    };
 }
 
 pub fn enter() void {

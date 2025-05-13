@@ -23,6 +23,8 @@ leftAnimation: FrameAnimation = undefined,
 rightAnimation: FrameAnimation = undefined,
 
 statusTexture: gfx.Texture = undefined,
+attack: ?gfx.Texture = null,
+defend: ?gfx.Texture = null,
 
 pub fn init(index: u8) Player {
     var player = switch (index) {
@@ -55,6 +57,8 @@ fn initPlayer1() Player {
         .index = 0,
         .roleTexture = role,
         .statusTexture = window.loadTexture("assets/item/face1.png", .init(357, 317)),
+        .attack = window.loadTexture("assets/item/item3.png", .init(66, 66)),
+        .defend = window.loadTexture("assets/item/item5.png", .init(66, 66)),
     };
 }
 
