@@ -35,9 +35,9 @@ var moveTimer: window.Timer = .init(0.4);
 var moveDisplay: bool = true;
 
 pub fn init(camera: *gfx.Camera) void {
-    players[0] = .init("assets/r1.png", 0);
-    players[1] = .init("assets/r2.png", 1);
-    players[2] = .init("assets/r3.png", 2);
+    players[0] = Player.init(0);
+    players[1] = Player.init(1);
+    players[2] = Player.init(2);
 
     Dialog.background = gfx.loadTexture("assets/msg.png", .init(790, 163));
     face = gfx.loadTexture("assets/face1_1.png", .init(307, 355));
