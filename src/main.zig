@@ -9,7 +9,6 @@ var soundBuffer: [20]audio.Sound = undefined;
 pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
 
 pub fn init() void {
-    std.log.info("thread id: {d}", .{std.Thread.getCurrentId()});
     audio.init(44100 / 4, &soundBuffer);
     scene.init();
 }
@@ -37,8 +36,7 @@ pub fn main() void {
         _ = debugAllocator.deinit();
     };
 
-    const r = ImmDisableIME(-1);
-    std.log.info("ImmDisableIME: {d}", .{r});
+    _ = ImmDisableIME(-1);
 
     window.run(allocator, .{
         .title = "教你制作RPG游戏",

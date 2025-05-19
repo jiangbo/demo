@@ -7,5 +7,6 @@
         "d3dx9shape.h": "c",
         "d3d9.h": "c",
         "d3dx9mesh.h": "c"
-    }
+    },
+    "Codegeex.RepoIndex": true
 }
