@@ -28,6 +28,7 @@ defend: ?gfx.Texture = null,
 
 battleTexture: gfx.Texture = undefined,
 attackTexture: gfx.Texture = undefined,
+battleFace: gfx.Texture = undefined,
 
 pub fn init(index: u8) Player {
     var player = switch (index) {
@@ -67,6 +68,7 @@ fn initPlayer1() Player {
         .attack = window.loadTexture("assets/item/item3.png", .init(66, 66)),
         .defend = window.loadTexture("assets/item/item5.png", .init(66, 66)),
         .battleTexture = window.loadTexture("assets/fight/p1.png", .init(960, 240)),
+        .battleFace = window.loadTexture("assets/fight/fm_face1.png", .init(319, 216)),
     };
 }
 
@@ -78,6 +80,7 @@ fn initPlayer2() Player {
         .roleTexture = role,
         .statusTexture = window.loadTexture("assets/item/face2.png", .init(357, 317)),
         .battleTexture = window.loadTexture("assets/fight/p2.png", .init(960, 240)),
+        .battleFace = window.loadTexture("assets/fight/fm_face2.png", .init(319, 216)),
     };
 }
 
@@ -88,6 +91,7 @@ fn initPlayer3() Player {
         .roleTexture = role,
         .statusTexture = window.loadTexture("assets/item/face3.png", .init(357, 317)),
         .battleTexture = window.loadTexture("assets/fight/p3.png", .init(960, 240)),
+        .battleFace = window.loadTexture("assets/fight/fm_face3.png", .init(319, 216)),
     };
 }
 
