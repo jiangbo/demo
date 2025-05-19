@@ -4,13 +4,27 @@ const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 const world = @import("world.zig");
 
+pub const Enemy = struct {
+    active: bool = false,
+    texture: gfx.Texture = undefined,
+};
+
 var background: gfx.Texture = undefined;
+var enemyTexture: gfx.Texture = undefined;
+var enemies: [3]Enemy = undefined;
 
 pub fn init() void {
     background = gfx.loadTexture("assets/fight/f_scene.png", .init(800, 600));
+    enemyTexture = gfx.loadTexture("assets/fight/enemy.png", .init(1920, 240));
 }
 
 pub fn enter() void {
+    for (&enemies) |*enemy| {
+        enemy.active = true;
+        const area = gfx.Rectangle.init(.zero, .init(480, 240));
+        enemy.texture = enemyTexture.subTexture(area);
+    }
+
     window.playMusic("assets/fight/fight.ogg");
 }
 
@@ -25,7 +39,7 @@ pub fn update(delta: f32) void {
 pub fn render(camera: *gfx.Camera) void {
     camera.draw(background, .init(0, 0));
 
-    const offset = gfx.Vector.init(120, 120).scale(-1);
+    var offset = gfx.Vector.init(120, 120).scale(-1);
 
     const player1 = &world.players[0];
     camera.draw(player1.attackTexture, offset.add(.init(617, 258)));
@@ -35,4 +49,9 @@ pub fn render(camera: *gfx.Camera) void {
 
     const player3 = &world.players[2];
     camera.draw(player3.attackTexture, offset.add(.init(588, 417)));
+
+    offset = gfx.Vector.init(-160, -120);
+    camera.draw(enemies[0].texture, offset.add(.init(253, 250)));
+    camera.draw(enemies[1].texture, offset.add(.init(179, 345)));
+    camera.draw(enemies[2].texture, offset.add(.init(220, 441)));
 }
