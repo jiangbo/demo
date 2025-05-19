@@ -5,9 +5,10 @@ const gfx = @import("graphics.zig");
 
 const titleScene = @import("scene/title.zig");
 const worldScene = @import("scene/world.zig");
+const battleScene = @import("scene/battle.zig");
 
-const SceneType = enum { title, world };
-var currentSceneType: SceneType = .world;
+const SceneType = enum { title, world, battle };
+var currentSceneType: SceneType = .battle;
 
 const SIZE: gfx.Vector = .init(1000, 800);
 pub var camera: gfx.Camera = undefined;
@@ -18,6 +19,7 @@ pub fn init() void {
     camera = .init(.init(.zero, window.size), SIZE);
     titleScene.init();
     worldScene.init(&camera);
+    battleScene.init();
     window.showCursor(false);
     cursorTexture = gfx.loadTexture("assets/mc_1.png", .init(32, 32));
     cursor = cursorTexture;
@@ -57,5 +59,6 @@ fn sceneCall(comptime function: []const u8, args: anytype) void {
     switch (currentSceneType) {
         .title => window.call(titleScene, function, args),
         .world => window.call(worldScene, function, args),
+        .battle => window.call(battleScene, function, args),
     }
 }
