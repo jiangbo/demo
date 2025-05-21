@@ -18,7 +18,7 @@ pub const FourDirection = enum {
 pub const EightDirection = enum { up, down, left, right, leftUp, leftDown, rightUp, rightDown };
 pub const epsilon = 1e-4;
 
-pub const Vector2 = struct {
+pub const Vector2 = extern struct {
     x: f32 = 0,
     y: f32 = 0,
 
@@ -58,8 +58,20 @@ pub const Vector2 = struct {
     }
 };
 
+pub const Vector4 = extern struct {
+    x: f32 = 0,
+    y: f32 = 0,
+    z: f32 = 0,
+    w: f32 = 0,
+    pub const zero = Vector4{ .x = 0, .y = 0, .z = 0, .w = 0 };
+
+    pub fn init(x: f32, y: f32, z: f32, w: f32) Vector4 {
+        return .{ .x = x, .y = y, .z = z, .w = w };
+    }
+};
+
 pub const Vector = Vector3;
-pub const Vector3 = struct {
+pub const Vector3 = extern struct {
     x: f32 = 0,
     y: f32 = 0,
     z: f32 = 0,

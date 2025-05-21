@@ -52,6 +52,12 @@ pub const Sampler = sk.gfx.Sampler;
 pub const Shader = sk.gfx.Shader;
 pub const VertexLayout = sk.gfx.VertexLayoutState;
 
+pub const Vertex = extern struct {
+    position: math.Vector3 = .zero, // 顶点坐标
+    color: math.Vector4 = .init(1, 1, 1, 1), // 顶点颜色
+    uv: math.Vector2 = .zero, // 纹理坐标
+};
+
 pub fn createBuffer(desc: sk.gfx.BufferDesc) Buffer {
     return sk.gfx.makeBuffer(desc);
 }
@@ -183,12 +189,12 @@ pub fn draw(renderPass: *RenderPassEncoder, bind: *BindGroup, options: DrawOptio
         }
     }
 
-    const vertexes = [_]f32{
-        // 顶点和颜色
-        vertex[0].x, vertex[0].y, 0.5, 1.0, 1.0, 1.0, options.alpha, min.x, max.y, // 左上
-        vertex[1].x, vertex[1].y, 0.5, 1.0, 1.0, 1.0, options.alpha, max.x, max.y, // 右上
-        vertex[2].x, vertex[2].y, 0.5, 1.0, 1.0, 1.0, options.alpha, max.x, min.y, // 右下
-        vertex[3].x, vertex[3].y, 0.5, 1.0, 1.0, 1.0, options.alpha, min.x, min.y, // 左下
+    const color = math.Vector4.init(1, 1, 1, options.alpha);
+    const vertexes = [_]Vertex{
+        .{ .position = vertex[0], .color = color, .uv = .init(min.x, max.y) }, // 左上
+        .{ .position = vertex[1], .color = color, .uv = .init(max.x, max.y) }, // 右上
+        .{ .position = vertex[2], .color = color, .uv = .init(max.x, min.y) }, // 右下
+        .{ .position = vertex[3], .color = color, .uv = .init(min.x, min.y) }, // 左下
     };
 
     const vertexBuffer = sk.gfx.makeBuffer(.{
