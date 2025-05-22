@@ -62,8 +62,11 @@ pub fn lookAt(self: *Camera, pos: math.Vector) void {
     self.rect = .init(offset, self.rect.size());
 }
 
+const sgl = @import("sokol").gl;
 pub fn beginDraw(self: *Camera, color: gpu.Color) void {
     self.renderPass = gpu.commandEncoder.beginRenderPass(color);
+    sgl.defaults();
+    sgl.loadMatrix(@ptrCast(&self.matrix));
 }
 
 pub fn draw(self: *Camera, tex: gpu.Texture, position: math.Vector) void {
@@ -99,6 +102,7 @@ pub fn drawOptions(self: *Camera, options: DrawOptions) void {
 }
 
 pub fn endDraw(self: *Camera) void {
+    sgl.draw();
     self.renderPass.end();
     gpu.commandEncoder.submit();
 }

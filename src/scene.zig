@@ -47,12 +47,15 @@ pub fn update(delta: f32) void {
     sceneCall("update", .{delta});
 }
 
+const sgl = @import("sokol").gl;
 pub fn render() void {
     camera.beginDraw(.{ .a = 1 });
     defer camera.endDraw();
+
     sceneCall("render", .{&camera});
 
     camera.draw(cursor, window.mousePosition.add(camera.rect.min));
+    gfx.drawQuad();
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {

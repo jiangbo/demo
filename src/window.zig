@@ -112,9 +112,9 @@ export fn windowInit() void {
         .logger = .{ .func = sk.log.func },
     });
 
-    // sk.gl.setup(.{
-    //     .logger = .{ .func = sk.log.func },
-    // });
+    sk.gl.setup(.{
+        .logger = .{ .func = sk.log.func },
+    });
 
     sk.debugtext.setup(.{
         .fonts = init: {
@@ -207,6 +207,8 @@ export fn windowFrame() void {
 
 export fn windowDeinit() void {
     call(root, "deinit", .{});
+    sk.debugtext.shutdown();
+    sk.gl.shutdown();
     sk.gfx.shutdown();
     assets.deinit();
 }
