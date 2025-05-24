@@ -13,7 +13,12 @@ renderPass: gpu.RenderPassEncoder = undefined,
 bindGroup: gpu.BindGroup = .{},
 pipeline: gpu.RenderPipeline = undefined,
 
-pub fn init(rect: math.Rectangle, border: math.Vector) Camera {
+vertexBuffer: []gpu.Vertex = undefined,
+buffer: gpu.Buffer = undefined,
+
+batchDrawCount: u32 = 0,
+
+pub fn init(rect: math.Rectangle, border: math.Vector, vertexBuffer: []gpu.Vertex, indexBuffer: []u16) Camera {
     var self: Camera = .{ .rect = rect, .border = border };
 
     self.matrix = .{
@@ -25,8 +30,16 @@ pub fn init(rect: math.Rectangle, border: math.Vector) Camera {
 
     self.bindGroup.bindIndexBuffer(gpu.createBuffer(.{
         .type = .INDEXBUFFER,
-        .data = gpu.asRange(&[_]u16{ 0, 1, 2, 0, 2, 3 }),
+        .data = gpu.asRange(indexBuffer),
     }));
+
+    self.buffer = gpu.createBuffer(.{
+        .type = .VERTEXBUFFER,
+        .size = @sizeOf(gpu.Vertex) * vertexBuffer.len,
+        .usage = .STREAM,
+    });
+
+    self.vertexBuffer = vertexBuffer;
 
     self.bindGroup.bindSampler(shader.SMP_smp, gpu.createSampler(.{}));
     self.pipeline = initPipeline();
@@ -65,8 +78,9 @@ pub fn lookAt(self: *Camera, pos: math.Vector) void {
 const sgl = @import("sokol").gl;
 pub fn beginDraw(self: *Camera, color: gpu.Color) void {
     self.renderPass = gpu.commandEncoder.beginRenderPass(color);
-    sgl.defaults();
-    sgl.loadMatrix(@ptrCast(&self.matrix));
+    // sgl.defaults();
+    // sgl.loadMatrix(@ptrCast(&self.matrix));
+    self.batchDrawCount = 0;
 }
 
 pub fn draw(self: *Camera, tex: gpu.Texture, position: math.Vector) void {
@@ -101,8 +115,56 @@ pub fn drawOptions(self: *Camera, options: DrawOptions) void {
     gpu.draw(&self.renderPass, &self.bindGroup, options);
 }
 
+pub fn batchDraw(self: *Camera, texture: gpu.Texture, position: math.Vector) void {
+    const size = gpu.queryTextureSize(texture.image);
+    if (size.approx(.zero)) return;
+
+    const sourceRect = texture.area;
+    const min = sourceRect.min.div(size);
+    const max = sourceRect.max.div(size);
+
+    self.vertexBuffer[self.batchDrawCount * 4 + 0] = .{
+        .position = position.addY(texture.size().y),
+        .uv = .init(min.x, max.y),
+    };
+
+    self.vertexBuffer[self.batchDrawCount * 4 + 1] = .{
+        .position = position.add(texture.size()),
+        .uv = .init(max.x, max.y),
+    };
+
+    self.vertexBuffer[self.batchDrawCount * 4 + 2] = .{
+        .position = position.addX(texture.size().x),
+        .uv = .init(max.x, min.y),
+    };
+
+    self.vertexBuffer[self.batchDrawCount * 4 + 3] = .{
+        .position = position,
+        .uv = .init(min.x, min.y),
+    };
+
+    self.bindGroup.bindTexture(shader.IMG_tex, texture);
+    self.batchDrawCount += 1;
+}
+
+const sk = @import("sokol");
 pub fn endDraw(self: *Camera) void {
-    sgl.draw();
+    // sgl.draw();
+
+    if (self.batchDrawCount != 0) {
+        for (self.vertexBuffer) |*value| {
+            value.position.z = 0;
+        }
+
+        sk.gfx.updateBuffer(self.buffer, sk.gfx.asRange(self.vertexBuffer));
+
+        self.bindGroup.bindVertexBuffer(0, self.buffer);
+        self.renderPass.setPipeline(self.pipeline);
+        self.renderPass.setUniform(shader.UB_vs_params, .{ .vp = self.matrix });
+        self.renderPass.setBindGroup(self.bindGroup);
+        sk.gfx.draw(0, 6 * self.batchDrawCount, 1);
+    }
+
     self.renderPass.end();
     gpu.commandEncoder.submit();
 }

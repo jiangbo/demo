@@ -37,7 +37,7 @@ pub const Texture = struct {
     }
 };
 
-fn queryTextureSize(image: sk.gfx.Image) math.Vector {
+pub fn queryTextureSize(image: sk.gfx.Image) math.Vector {
     return math.Vector{
         .x = @floatFromInt(sk.gfx.queryImageWidth(image)),
         .y = @floatFromInt(sk.gfx.queryImageHeight(image)),
