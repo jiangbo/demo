@@ -17,6 +17,7 @@ vertexBuffer: []gpu.Vertex = undefined,
 buffer: gpu.Buffer = undefined,
 
 batchDrawCount: u32 = 0,
+batchTexture: gpu.Texture = undefined,
 
 pub fn init(rect: math.Rectangle, border: math.Vector, vertexBuffer: []gpu.Vertex, indexBuffer: []u16) Camera {
     var self: Camera = .{ .rect = rect, .border = border };
@@ -78,8 +79,6 @@ pub fn lookAt(self: *Camera, pos: math.Vector) void {
 const sgl = @import("sokol").gl;
 pub fn beginDraw(self: *Camera, color: gpu.Color) void {
     self.renderPass = gpu.commandEncoder.beginRenderPass(color);
-    // sgl.defaults();
-    // sgl.loadMatrix(@ptrCast(&self.matrix));
     self.batchDrawCount = 0;
 }
 
@@ -143,7 +142,7 @@ pub fn batchDraw(self: *Camera, texture: gpu.Texture, position: math.Vector) voi
         .uv = .init(min.x, min.y),
     };
 
-    self.bindGroup.bindTexture(shader.IMG_tex, texture);
+    self.batchTexture = texture;
     self.batchDrawCount += 1;
 }
 
@@ -160,6 +159,7 @@ pub fn endDraw(self: *Camera) void {
 
         self.bindGroup.bindVertexBuffer(0, self.buffer);
         self.renderPass.setPipeline(self.pipeline);
+        self.bindGroup.bindTexture(shader.IMG_tex, self.batchTexture);
         self.renderPass.setUniform(shader.UB_vs_params, .{ .vp = self.matrix });
         self.renderPass.setBindGroup(self.bindGroup);
         sk.gfx.draw(0, 6 * self.batchDrawCount, 1);
