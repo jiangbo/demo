@@ -4,9 +4,12 @@ const math = @import("math.zig");
 const assets = @import("assets.zig");
 const gfx = @import("graphics.zig");
 const audio = @import("audio.zig");
+const font = @import("font.zig");
 
 pub const Event = sk.app.Event;
 pub const KeyCode = sk.app.Keycode;
+pub const Char = font.Char;
+pub const Font = font.Font;
 
 pub const Timer = struct {
     duration: f32,
@@ -77,6 +80,7 @@ pub fn showCursor(show: bool) void {
 pub const WindowInfo = struct {
     title: [:0]const u8,
     size: math.Vector,
+    chars: []const font.Char = &.{},
 };
 
 pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
@@ -92,6 +96,15 @@ pub fn run(alloc: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
     size = info.size;
     allocator = alloc;
+
+    if (info.chars.len != 0) {
+        const len: u32 = @intCast(info.chars.len);
+        fonts.ensureTotalCapacity(alloc, len) catch unreachable;
+    }
+    for (info.chars) |char| {
+        fonts.putAssumeCapacity(char.id, char);
+    }
+
     sk.app.run(.{
         .window_title = info.title,
         .width = @as(i32, @intFromFloat(size.x)),
@@ -123,10 +136,11 @@ export fn windowInit() void {
 
     // gfx.init(size);
 
-    call(root, "init", .{});
     math.setRandomSeed(timer.lap());
+    call(root, "init", .{});
 }
 
+pub var fonts: std.AutoHashMapUnmanaged(u32, font.Char) = .empty;
 pub var mousePosition: math.Vector = .zero;
 var lastButtonState: std.StaticBitSet(3) = .initEmpty();
 var buttonState: std.StaticBitSet(3) = .initEmpty();
@@ -204,6 +218,7 @@ export fn windowFrame() void {
 export fn windowDeinit() void {
     call(root, "deinit", .{});
     sk.debugtext.shutdown();
+    fonts.deinit(allocator);
     sk.gfx.shutdown();
     assets.deinit();
 }

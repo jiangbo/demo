@@ -6,11 +6,14 @@ const scene = @import("scene.zig");
 
 var soundBuffer: [20]audio.Sound = undefined;
 
-pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
+// pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
 
 pub fn init() void {
     audio.init(44100 / 4, &soundBuffer);
     scene.init();
+
+    const a = window.fonts.getPtr('A');
+    std.log.info("char: {any}", .{a});
 }
 
 pub fn frame(delta: f32) void {
@@ -21,6 +24,20 @@ pub fn frame(delta: f32) void {
 pub fn deinit() void {
     audio.deinit();
 }
+
+// pub fn main() void {
+//     const font = @import("bmfont.zig");
+
+//     const data = @embedFile("6.fnt");
+//     const allocator = std.heap.c_allocator;
+//     font.parse(allocator, data);
+
+//     // 写入 font.zon 文件
+//     const file = std.fs.cwd().createFile("src/font.zon", .{}) catch unreachable;
+//     defer file.close();
+//     const writer = file.writer();
+//     std.zon.stringify.serialize(font.bmfont.chars, .{ .whitespace = false }, writer) catch unreachable;
+// }
 
 pub fn main() void {
     var allocator: std.mem.Allocator = undefined;
@@ -36,10 +53,13 @@ pub fn main() void {
         _ = debugAllocator.deinit();
     };
 
-    _ = ImmDisableIME(-1);
+    // _ = ImmDisableIME(-1);
+
+    const chars: []const window.Char = @import("font.zon");
 
     window.run(allocator, .{
         .title = "教你制作RPG游戏",
         .size = .{ .x = 800, .y = 600 },
+        .chars = chars,
     });
 }
