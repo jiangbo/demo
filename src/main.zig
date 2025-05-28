@@ -25,41 +25,41 @@ pub fn deinit() void {
     audio.deinit();
 }
 
-// pub fn main() void {
-//     const font = @import("bmfont.zig");
-
-//     const data = @embedFile("6.fnt");
-//     const allocator = std.heap.c_allocator;
-//     font.parse(allocator, data);
-
-//     // 写入 font.zon 文件
-//     const file = std.fs.cwd().createFile("src/font.zon", .{}) catch unreachable;
-//     defer file.close();
-//     const writer = file.writer();
-//     std.zon.stringify.serialize(font.bmfont.chars, .{ .whitespace = false }, writer) catch unreachable;
-// }
-
 pub fn main() void {
-    var allocator: std.mem.Allocator = undefined;
-    var debugAllocator: std.heap.DebugAllocator(.{}) = undefined;
-    if (@import("builtin").mode == .Debug) {
-        debugAllocator = std.heap.DebugAllocator(.{}).init;
-        allocator = debugAllocator.allocator();
-    } else {
-        allocator = std.heap.c_allocator;
-    }
+    const font = @import("bmfont.zig");
 
-    defer if (@import("builtin").mode == .Debug) {
-        _ = debugAllocator.deinit();
-    };
+    const data = @embedFile("6.fnt");
+    const allocator = std.heap.c_allocator;
+    const result = font.parse(allocator, data);
 
-    // _ = ImmDisableIME(-1);
-
-    const chars: []const window.Char = @import("font.zon");
-
-    window.run(allocator, .{
-        .title = "教你制作RPG游戏",
-        .size = .{ .x = 800, .y = 600 },
-        .chars = chars,
-    });
+    // 写入 font.zon 文件
+    const file = std.fs.cwd().createFile("src/font.zon", .{}) catch unreachable;
+    defer file.close();
+    const writer = file.writer();
+    std.zon.stringify.serialize(result.chars, .{ .whitespace = false }, writer) catch unreachable;
 }
+
+// pub fn main() void {
+//     var allocator: std.mem.Allocator = undefined;
+//     var debugAllocator: std.heap.DebugAllocator(.{}) = undefined;
+//     if (@import("builtin").mode == .Debug) {
+//         debugAllocator = std.heap.DebugAllocator(.{}).init;
+//         allocator = debugAllocator.allocator();
+//     } else {
+//         allocator = std.heap.c_allocator;
+//     }
+
+//     defer if (@import("builtin").mode == .Debug) {
+//         _ = debugAllocator.deinit();
+//     };
+
+//     // _ = ImmDisableIME(-1);
+
+//     const chars: []const window.Char = @import("font.zon");
+
+//     window.run(allocator, .{
+//         .title = "教你制作RPG游戏",
+//         .size = .{ .x = 800, .y = 600 },
+//         .chars = chars,
+//     });
+// }

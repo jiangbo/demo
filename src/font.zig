@@ -1,6 +1,7 @@
 const std = @import("std");
 
 pub const Font = struct {
+    name: []const u8,
     info: Info,
     common: Common,
     pages: []const []const u8,
@@ -8,7 +9,7 @@ pub const Font = struct {
     kerningPairs: []const KerningPair,
 };
 
-pub const Info = struct {
+pub const Info = extern struct {
     fontSize: i16,
     bitField: u8,
     charSet: u8,
@@ -21,7 +22,6 @@ pub const Info = struct {
     spacingHoriz: u8,
     spacingVert: u8,
     outline: u8,
-    fontName: []const u8 = &.{},
 };
 
 pub const Common = extern struct {
@@ -37,7 +37,7 @@ pub const Common = extern struct {
     blueChnl: u8,
 };
 
-pub const Char = struct {
+pub const Char = extern struct {
     id: u32,
     x: u16,
     y: u16,
@@ -50,8 +50,8 @@ pub const Char = struct {
     chnl: u8,
 };
 
-pub const KerningPair = struct {
-    first: u32,
-    second: u32,
-    amount: i16,
+pub const KerningPair = extern struct {
+    first: u32 align(1),
+    second: u32 align(1),
+    amount: i16 align(1),
 };

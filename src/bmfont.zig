@@ -1,137 +1,94 @@
 const std = @import("std");
 const font = @import("font.zig");
 
-pub fn parse(allocator: std.mem.Allocator, data: []const u8) void {
+pub fn parse(allocator: std.mem.Allocator, data: []const u8) font.Font {
     var arenaAllocator = std.heap.ArenaAllocator.init(allocator);
-    arena = arenaAllocator.allocator();
-    var stream = std.io.fixedBufferStream(data);
-    doParse(stream.reader()) catch unreachable;
-}
+    var arena = arenaAllocator.allocator();
+    var result: font.Font = undefined;
 
-const BlockTag = enum(u8) { none, info, common, page, char, kerning };
-
-fn doParse(reader: anytype) !void {
+    var buffer = data;
     {
         // 验证文件头
-        var headerBuffer: [3]u8 = undefined;
-        const index = try reader.readAll(&headerBuffer);
+        if (!std.mem.eql(u8, buffer[0..3], "BMF"))
+            @panic("invalid file header");
 
-        if (!std.mem.eql(u8, headerBuffer[0..index], "BMF")) {
-            return error.badHeader;
+        if (buffer[3] != 3) @panic("incompatible version");
+        buffer = buffer[4..];
+    }
+    {
+        // info block
+        if (buffer[0] != 1) @panic("error info block tag");
+        const len: usize = std.mem.readInt(u32, buffer[1..5], .little);
+        buffer = buffer[5..];
+
+        result.info = std.mem.bytesToValue(font.Info, buffer);
+        std.log.info("info: {any}", .{result.info});
+
+        const name = buffer[@sizeOf(font.Info) .. len - 1];
+        result.name = arena.dupe(u8, name) catch unreachable;
+        std.log.info("font name: {s}", .{result.name});
+        buffer = buffer[len..];
+    }
+    {
+        // common block
+        if (buffer[0] != 2) @panic("error common block tag");
+        const len: usize = std.mem.readInt(u32, buffer[1..5], .little);
+        buffer = buffer[5..];
+
+        result.common = std.mem.bytesToValue(font.Common, buffer);
+        std.log.info("common: {any}", .{result.common});
+        buffer = buffer[len..];
+    }
+    {
+        // page block
+        if (buffer[0] != 3) @panic("error page block tag");
+        const len: usize = std.mem.readInt(u32, buffer[1..5], .little);
+        buffer = buffer[5..];
+
+        var pages = std.ArrayListUnmanaged([]const u8).empty;
+        var readLength: usize = 0;
+        while (readLength < len) {
+            const name = std.mem.sliceTo(buffer, 0);
+            std.log.info("file name: {s}", .{name});
+            readLength += name.len + 1;
+            pages.append(arena, name) catch unreachable;
         }
+        result.pages = pages.toOwnedSlice(arena) catch unreachable;
+        buffer = buffer[len..];
+    }
+    {
+        // char block
+        if (buffer[0] != 4) @panic("error char block tag");
+        const len: usize = std.mem.readInt(u32, buffer[1..5], .little);
+        buffer = buffer[5..];
 
-        if (try reader.readByte() != 3) {
-            return error.incompatibleVersion;
+        const charsCount: usize = @divExact(len, @sizeOf(font.Char));
+        const chars = arena.alloc(font.Char, charsCount) catch unreachable;
+        std.log.info("char number: {d}", .{charsCount});
+
+        for (chars) |*char| {
+            char.* = std.mem.bytesToValue(font.Char, buffer);
+            buffer = buffer[@sizeOf(font.Char)..];
         }
+        result.chars = chars;
+    }
+    {
+        // kerning block
+        if (buffer[0] != 5) @panic("error kerning block tag");
+        const len: usize = std.mem.readInt(u32, buffer[1..5], .little);
+        buffer = buffer[5..];
+
+        const pairsCount: usize = @divExact(len, @sizeOf(font.KerningPair));
+        const kerningPairs = arena.alloc(font.KerningPair, pairsCount) catch unreachable;
+        std.log.info("kerning pair number: {d}", .{pairsCount});
+
+        for (kerningPairs) |*pair| {
+            pair.* = std.mem.bytesToValue(font.KerningPair, buffer);
+            buffer = buffer[@sizeOf(font.KerningPair)..];
+        }
+        result.kerningPairs = kerningPairs;
     }
 
-    try parseInfo(reader, try parseSize(reader, .info));
-    try parseCommon(reader, try parseSize(reader, .common));
-    try parsePage(reader, try parseSize(reader, .page));
-    try parseChar(reader, try parseSize(reader, .char));
-    try parseKerningPairs(reader, try parseSize(reader, .kerning));
-}
-
-fn parseSize(reader: anytype, tag: BlockTag) !usize {
-    const actual = try reader.readEnum(BlockTag, .little);
-    if (actual != tag) return error.unexpectedBlock;
-
-    const len = try reader.readInt(i32, .little);
-    std.log.info("block type: {} , size: {}", .{ tag, len });
-    return @intCast(len);
-}
-
-pub var bmfont: font.Font = undefined;
-pub var arena: std.mem.Allocator = undefined;
-
-fn parseInfo(reader: anytype, _: usize) !void {
-    bmfont.info = .{
-        .fontSize = try reader.readInt(i16, .little),
-        .bitField = try reader.readInt(u8, .little),
-        .charSet = try reader.readInt(u8, .little),
-        .stretchH = try reader.readInt(u16, .little),
-        .aa = try reader.readInt(u8, .little),
-        .paddingUp = try reader.readInt(u8, .little),
-        .paddingRight = try reader.readInt(u8, .little),
-        .paddingDown = try reader.readInt(u8, .little),
-        .paddingLeft = try reader.readInt(u8, .little),
-        .spacingHoriz = try reader.readInt(u8, .little),
-        .spacingVert = try reader.readInt(u8, .little),
-        .outline = try reader.readInt(u8, .little),
-    };
-    std.log.info("info: {any}", .{bmfont.info});
-
-    const name = try reader.readUntilDelimiterAlloc(arena, 0, 256);
-    std.log.info("font name: {s}", .{name});
-    bmfont.info.fontName = name;
-}
-
-fn parseCommon(reader: anytype, _: usize) !void {
-    bmfont.common = .{
-        .lineHeight = try reader.readInt(u16, .little),
-        .base = try reader.readInt(u16, .little),
-        .scaleW = try reader.readInt(u16, .little),
-        .scaleH = try reader.readInt(u16, .little),
-        .pages = try reader.readInt(u16, .little),
-        .bitField = try reader.readInt(u8, .little),
-        .alphaChnl = try reader.readInt(u8, .little),
-        .redChnl = try reader.readInt(u8, .little),
-        .greenChnl = try reader.readInt(u8, .little),
-        .blueChnl = try reader.readInt(u8, .little),
-    };
-    std.log.info("common: {any}", .{bmfont.common});
-}
-
-fn parsePage(reader: anytype, size: usize) !void {
-    var len: usize = 0;
-
-    var pages = std.ArrayListUnmanaged([]const u8).empty;
-
-    while (len + 1 < size) {
-        const name = try reader.readUntilDelimiterAlloc(arena, 0, 256);
-        std.log.info("file name: {s}", .{name});
-        len += name.len + 1;
-        try pages.append(arena, name);
-    }
-
-    bmfont.pages = pages.toOwnedSlice(arena) catch unreachable;
-}
-
-fn parseChar(reader: anytype, size: usize) !void {
-    const len: usize = @intCast(@divExact(size, 20));
-
-    const chars = try arena.alloc(font.Char, len);
-    std.log.info("char number: {d}", .{len});
-
-    for (chars) |*char| {
-        char.* = font.Char{
-            .id = try reader.readInt(u32, .little),
-            .x = try reader.readInt(u16, .little),
-            .y = try reader.readInt(u16, .little),
-            .width = try reader.readInt(u16, .little),
-            .height = try reader.readInt(u16, .little),
-            .xOffset = try reader.readInt(i16, .little),
-            .yOffset = try reader.readInt(i16, .little),
-            .xAdvance = try reader.readInt(i16, .little),
-            .page = try reader.readInt(u8, .little),
-            .chnl = try reader.readInt(u8, .little),
-        };
-    }
-    bmfont.chars = chars;
-}
-
-fn parseKerningPairs(reader: anytype, size: usize) !void {
-    const pairs: usize = @intCast(@divExact(size, 10));
-
-    const kerningPairs = try arena.alloc(font.KerningPair, pairs);
-    std.log.info("kerning pair number: {d}", .{pairs});
-
-    for (kerningPairs) |*pair| {
-        pair.* = font.KerningPair{
-            .first = try reader.readInt(u32, .little),
-            .second = try reader.readInt(u32, .little),
-            .amount = try reader.readInt(i16, .little),
-        };
-    }
-    bmfont.kerningPairs = kerningPairs;
+    if (buffer.len != 0) @panic("unexpected data at the end of file");
+    return result;
 }
