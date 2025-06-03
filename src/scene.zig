@@ -62,18 +62,17 @@ pub fn changeScene() void {
 
 pub fn update(delta: f32) void {
     cursor = cursorTexture;
-    sceneCall("update", .{delta});
+    _ = delta;
+    // sceneCall("update", .{delta});
 }
 
-const sgl = @import("sokol").gl;
 pub fn render() void {
     camera.beginDraw(.{ .a = 1 });
     defer camera.endDraw();
 
-    sceneCall("render", .{&camera});
+    // sceneCall("render", .{&camera});
 
     camera.draw(cursor, window.mousePosition.add(camera.rect.min));
-    // gfx.drawQuad();
 
     var tex = texture.subTexture(.init(.zero, .init(240, 240)));
     camera.batchDraw(tex, .init(0, 0));
