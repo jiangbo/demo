@@ -6,14 +6,11 @@ const scene = @import("scene.zig");
 
 var soundBuffer: [20]audio.Sound = undefined;
 
-// pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
+pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
 
 pub fn init() void {
     audio.init(44100 / 4, &soundBuffer);
     scene.init();
-
-    const a = window.fonts.getPtr('A');
-    std.log.info("char: {any}", .{a});
 }
 
 pub fn frame(delta: f32) void {
@@ -39,7 +36,7 @@ pub fn main() void {
         _ = debugAllocator.deinit();
     };
 
-    // _ = ImmDisableIME(-1);
+    _ = ImmDisableIME(-1);
 
     const chars: []const window.Char = @import("font.zon");
 

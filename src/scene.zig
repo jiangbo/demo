@@ -65,15 +65,14 @@ pub fn changeScene() void {
 
 pub fn update(delta: f32) void {
     cursor = cursorTexture;
-    _ = delta;
-    // sceneCall("update", .{delta});
+    sceneCall("update", .{delta});
 }
 
 pub fn render() void {
     camera.beginDraw(.{ .a = 1 });
     defer camera.endDraw();
 
-    // sceneCall("render", .{&camera});
+    sceneCall("render", .{&camera});
 
     var char = window.fonts.get('A').?;
 
