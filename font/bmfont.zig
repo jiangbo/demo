@@ -2,8 +2,7 @@ const std = @import("std");
 const font = @import("font.zig");
 
 pub fn parse(allocator: std.mem.Allocator, data: []const u8) void {
-    var arenaAllocator = std.heap.ArenaAllocator.init(allocator);
-    arena = arenaAllocator.allocator();
+    arena = allocator;
     var stream = std.io.fixedBufferStream(data);
     doParse(stream.reader()) catch unreachable;
 }
@@ -63,7 +62,7 @@ fn parseInfo(reader: anytype, _: usize) !void {
 
     const name = try reader.readUntilDelimiterAlloc(arena, 0, 256);
     std.log.info("font name: {s}", .{name});
-    bmfont.info.fontName = name;
+    bmfont.info.name = name;
 }
 
 fn parseCommon(reader: anytype, _: usize) !void {
