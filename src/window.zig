@@ -4,12 +4,21 @@ const math = @import("math.zig");
 const assets = @import("assets.zig");
 const gfx = @import("graphics.zig");
 const audio = @import("audio.zig");
-const font = @import("font.zig");
 
 pub const Event = sk.app.Event;
 pub const KeyCode = sk.app.Keycode;
-pub const Char = font.Char;
-pub const Font = font.Font;
+pub const Char = struct {
+    id: u32,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    xOffset: i16,
+    yOffset: i16,
+    xAdvance: i16,
+    page: u8,
+    chnl: u8,
+};
 
 pub const Timer = struct {
     duration: f32,
@@ -80,7 +89,7 @@ pub fn showCursor(show: bool) void {
 pub const WindowInfo = struct {
     title: [:0]const u8,
     size: math.Vector,
-    chars: []const font.Char = &.{},
+    chars: []const Char = &.{},
 };
 
 pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
@@ -140,7 +149,7 @@ export fn windowInit() void {
     call(root, "init", .{});
 }
 
-pub var fonts: std.AutoHashMapUnmanaged(u32, font.Char) = .empty;
+pub var fonts: std.AutoHashMapUnmanaged(u32, Char) = .empty;
 pub var mousePosition: math.Vector = .zero;
 var lastButtonState: std.StaticBitSet(3) = .initEmpty();
 var buttonState: std.StaticBitSet(3) = .initEmpty();

@@ -21,6 +21,7 @@ var vertexBuffer: [MAX_COUNT * 4]gfx.Vertex = undefined;
 var indexBuffer: [MAX_COUNT * 6]u16 = undefined;
 
 var texture: gfx.Texture = undefined;
+var font: gfx.Texture = undefined;
 
 pub fn init() void {
     var index: u16 = 0;
@@ -41,6 +42,8 @@ pub fn init() void {
     cursorTexture = gfx.loadTexture("assets/mc_1.png", .init(32, 32));
     texture = gfx.loadTexture("assets/fight/p1.png", .init(960, 240));
     cursor = cursorTexture;
+    font = gfx.loadTexture("assets/6_0.png", .init(256, 256));
+
     enter();
 }
 
@@ -72,19 +75,24 @@ pub fn render() void {
 
     // sceneCall("render", .{&camera});
 
+    var char = window.fonts.get('A').?;
+
+    var tex = font.subTexture(.init(.init(char.x, char.y), .init(char.width, char.height)));
+    camera.batchDraw(tex, .init(100, 100));
+
+    char = window.fonts.get('B').?;
+    tex = font.subTexture(.init(.init(char.x, char.y), .init(char.width, char.height)));
+    camera.batchDraw(tex, .init(200, 100));
+
+    char = window.fonts.get('C').?;
+    tex = font.subTexture(.init(.init(char.x, char.y), .init(char.width, char.height)));
+    camera.batchDraw(tex, .init(300, 100));
+
+    char = window.fonts.get('你').?;
+    tex = font.subTexture(.init(.init(char.x, char.y), .init(char.width, char.height)));
+    camera.batchDraw(tex, .init(400, 100));
+
     camera.draw(cursor, window.mousePosition.add(camera.rect.min));
-
-    var tex = texture.subTexture(.init(.zero, .init(240, 240)));
-    camera.batchDraw(tex, .init(0, 0));
-
-    tex = texture.subTexture(.init(.init(240, 0), .init(240, 240)));
-    camera.batchDraw(tex, .init(800 - 240, 0));
-
-    tex = texture.subTexture(.init(.init(480, 0), .init(240, 240)));
-    camera.batchDraw(tex, .init(0, 600 - 240));
-
-    tex = texture.subTexture(.init(.init(720, 0), .init(240, 240)));
-    camera.batchDraw(tex, .init(800 - 240, 600 - 240));
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {
