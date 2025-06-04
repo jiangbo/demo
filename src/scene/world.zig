@@ -176,6 +176,7 @@ pub fn update(delta: f32) void {
 }
 
 pub fn render(camera: *gfx.Camera) void {
+    playerCamera.lookAt(Player.position);
     map.drawBackground(camera);
 
     var playerNotDraw: bool = true;
@@ -206,6 +207,7 @@ pub fn render(camera: *gfx.Camera) void {
 
     map.drawForeground(camera);
     renderPopup(camera);
+    playerCamera.lookAt(.zero);
 
     window.showFrameRate();
 }

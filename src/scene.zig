@@ -8,7 +8,7 @@ const worldScene = @import("scene/world.zig");
 const battleScene = @import("scene/battle.zig");
 
 const SceneType = enum { title, world, battle };
-var currentSceneType: SceneType = .battle;
+var currentSceneType: SceneType = .world;
 
 const SIZE: gfx.Vector = .init(1000, 800);
 pub var camera: gfx.Camera = undefined;
