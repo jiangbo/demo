@@ -101,8 +101,12 @@ pub const BindGroup = struct {
         self.value.index_buffer = buffer;
     }
 
-    pub fn bindVertexBuffer(self: *BindGroup, index: u32, buffer: Buffer) void {
-        self.value.vertex_buffers[index] = buffer;
+    pub fn bindVertexBuffer(self: *BindGroup, buffer: Buffer) void {
+        self.value.vertex_buffers[0] = buffer;
+    }
+
+    pub fn setVertexOffset(self: *BindGroup, offset: u32) void {
+        self.value.vertex_buffer_offsets[0] = offset;
     }
 
     pub fn bindTexture(self: *BindGroup, index: u32, texture: Texture) void {
@@ -201,7 +205,7 @@ pub fn draw(renderPass: *RenderPassEncoder, bind: *BindGroup, options: DrawOptio
         .data = sk.gfx.asRange(&vertexes),
     });
 
-    bind.bindVertexBuffer(0, vertexBuffer);
+    bind.bindVertexBuffer(vertexBuffer);
     renderPass.setBindGroup(bind.*);
 
     sk.gfx.draw(0, 6, 1);

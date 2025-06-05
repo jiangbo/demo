@@ -177,7 +177,7 @@ pub fn endDraw() void {
 
         sk.gfx.updateBuffer(buffer, sk.gfx.asRange(vertexBuffer));
 
-        bindGroup.bindVertexBuffer(0, buffer);
+        bindGroup.bindVertexBuffer(buffer);
         renderPass.setPipeline(pipeline);
         bindGroup.bindTexture(shader.IMG_tex, batchTexture);
         const size = gpu.queryTextureSize(batchTexture.image);
