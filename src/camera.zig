@@ -2,14 +2,15 @@ const std = @import("std");
 
 const gpu = @import("gpu.zig");
 const math = @import("math.zig");
-const shader = @import("shader/single.glsl.zig");
+const shader = @import("shader/2d.glsl.zig");
 const window = @import("window.zig");
 
 const Camera = @This();
 
 pub var rect: math.Rectangle = undefined;
 var border: math.Vector = undefined;
-var matrix: [16]f32 = undefined;
+var viewMatrix: [16]f32 = undefined;
+var textureMatrix: [16]f32 = undefined;
 var renderPass: gpu.RenderPassEncoder = undefined;
 var bindGroup: gpu.BindGroup = .{};
 var pipeline: gpu.RenderPipeline = undefined;
@@ -24,11 +25,15 @@ pub fn init(r: math.Rectangle, b: math.Vector, vertex: []gpu.Vertex, index: []u1
     rect = r;
     border = b;
 
-    matrix = .{
-        2 / rect.size().x, 0.0,                0.0, 0.0,
-        0.0,               2 / -rect.size().y, 0.0, 0.0,
-        0.0,               0.0,                1,   0.0,
-        -1,                1,                  0,   1.0,
+    viewMatrix = .{
+        2 / rect.size().x, 0,                  0, 0,
+        0,                 2 / -rect.size().y, 0, 0,
+        0,                 0,                  1, 0,
+        -1,                1,                  0, 1,
+    };
+    textureMatrix = .{
+        1, 0, 0, 0, 0,  1, 0, 0,
+        0, 0, 1, 0, -1, 1, 0, 1,
     };
 
     bindGroup.bindIndexBuffer(gpu.createBuffer(.{
@@ -50,7 +55,7 @@ pub fn init(r: math.Rectangle, b: math.Vector, vertex: []gpu.Vertex, index: []u1
 
 fn initPipeline() gpu.RenderPipeline {
     var vertexLayout = gpu.VertexLayout{};
-    vertexLayout.attrs[shader.ATTR_single_position].format = .FLOAT3;
+    vertexLayout.attrs[shader.ATTR_single_position0].format = .FLOAT3;
     vertexLayout.attrs[shader.ATTR_single_color0].format = .FLOAT4;
     vertexLayout.attrs[shader.ATTR_single_texcoord0].format = .FLOAT2;
 
@@ -99,16 +104,19 @@ pub fn drawFlipX(tex: gpu.Texture, pos: math.Vector, flipX: bool) void {
 
 pub const DrawOptions = gpu.DrawOptions;
 pub fn drawOptions(options: DrawOptions) void {
-    matrix[12] = -1 - rect.min.x * matrix[0];
-    matrix[13] = 1 - rect.min.y * matrix[5];
+    viewMatrix[12] = -1 - rect.min.x * viewMatrix[0];
+    viewMatrix[13] = 1 - rect.min.y * viewMatrix[5];
 
-    // var src = options.sourceRect;
-    // if (src.min.approx(.zero) and src.max.approx(.zero)) {
-    //     src = options.texture.area;
-    // }
+    const size = gpu.queryTextureSize(options.texture.image);
+    textureMatrix[0] = 1 / size.x;
+    textureMatrix[5] = 1 / size.y;
 
     renderPass.setPipeline(pipeline);
-    renderPass.setUniform(shader.UB_vs_params, .{ .vp = matrix });
+
+    renderPass.setUniform(shader.UB_vs_params, .{
+        .viewMatrix = viewMatrix,
+        .textureMatrix = textureMatrix,
+    });
     bindGroup.bindTexture(shader.IMG_tex, options.texture);
 
     gpu.draw(&renderPass, &bindGroup, options);
@@ -172,7 +180,13 @@ pub fn endDraw() void {
         bindGroup.bindVertexBuffer(0, buffer);
         renderPass.setPipeline(pipeline);
         bindGroup.bindTexture(shader.IMG_tex, batchTexture);
-        renderPass.setUniform(shader.UB_vs_params, .{ .vp = matrix });
+        const size = gpu.queryTextureSize(batchTexture.image);
+        textureMatrix[0] = 1 / size.x;
+        textureMatrix[5] = 1 / size.y;
+        renderPass.setUniform(shader.UB_vs_params, .{
+            .viewMatrix = viewMatrix,
+            .textureMatrix = textureMatrix,
+        });
         renderPass.setBindGroup(bindGroup);
         sk.gfx.draw(0, 6 * batchDrawCount, 1);
     }

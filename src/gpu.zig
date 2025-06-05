@@ -170,8 +170,8 @@ pub fn draw(renderPass: *RenderPassEncoder, bind: *BindGroup, options: DrawOptio
     const size = queryTextureSize(options.texture.image);
     if (size.approx(.zero)) return;
 
-    const min = options.sourceRect.min.div(size);
-    const max = options.sourceRect.max.div(size);
+    const min = options.sourceRect.min;
+    const max = options.sourceRect.max;
 
     var vertex = [_]math.Vector3{
         .{ .x = dst.min.x, .y = dst.max.y },
