@@ -9,7 +9,7 @@ const worldScene = @import("scene/world.zig");
 const battleScene = @import("scene/battle.zig");
 
 const SceneType = enum { title, world, battle };
-var currentSceneType: SceneType = .title;
+var currentSceneType: SceneType = .world;
 
 const SIZE: gfx.Vector = .init(1000, 800);
 pub var cursor: gfx.Texture = undefined;
@@ -71,14 +71,8 @@ pub fn render() void {
     camera.beginDraw(.{ .a = 1 });
     defer camera.endDraw();
 
-    // sceneCall("render", .{});
-    // const sub = texture.subTexture(.init(.init(480, 0), .init(240, 240)));
-    // camera.draw(sub, .zero);
-
-    const bg = gfx.loadTexture("assets/T_bg1.png", .init(800, 600));
-    camera.draw(bg, .zero);
-
-    // camera.draw(cursor, window.mousePosition.add(camera.rect.min));
+    sceneCall("render", .{});
+    camera.draw(cursor, window.mousePosition.add(camera.rect.min));
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {

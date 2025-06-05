@@ -127,8 +127,8 @@ pub fn batchDraw(texture: gpu.Texture, position: math.Vector) void {
     if (size.approx(.zero)) return;
 
     const sourceRect = texture.area;
-    const min = sourceRect.min.div(size);
-    const max = sourceRect.max.div(size);
+    const min = sourceRect.min;
+    const max = sourceRect.max;
 
     vertexBuffer[batchDrawCount * 4 + 0] = .{
         .position = position.addY(texture.size().y),
