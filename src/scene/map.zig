@@ -4,6 +4,7 @@ const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 const c = @import("../c.zig");
 const world = @import("world.zig");
+const camera = @import("../camera.zig");
 
 pub const SIZE: gfx.Vector = .init(1000, 800);
 const PLAYER_OFFSET: gfx.Vector = .init(120, 220);
@@ -214,11 +215,11 @@ fn initMapBlock(buffer: []const u8) void {
     maps[index].mapBlock = blocks;
 }
 
-pub fn drawBackground(camera: *gfx.Camera) void {
+pub fn drawBackground() void {
     if (maps[index].mapBack) |back| camera.draw(back, .zero);
     camera.draw(maps[index].map, .zero);
 }
 
-pub fn drawForeground(camera: *gfx.Camera) void {
+pub fn drawForeground() void {
     camera.draw(maps[index].mapShade, .zero);
 }

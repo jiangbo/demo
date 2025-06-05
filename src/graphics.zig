@@ -5,7 +5,7 @@ const math = @import("math.zig");
 const assets = @import("assets.zig");
 const window = @import("window.zig");
 
-pub const Camera = @import("Camera.zig");
+pub const camera = @import("camera.zig");
 
 pub const Texture = gpu.Texture;
 pub const Vector = math.Vector;

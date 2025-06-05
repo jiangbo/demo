@@ -2,6 +2,7 @@ const std = @import("std");
 
 const window = @import("window.zig");
 const gfx = @import("graphics.zig");
+const camera = @import("camera.zig");
 
 const titleScene = @import("scene/title.zig");
 const worldScene = @import("scene/world.zig");
@@ -11,7 +12,6 @@ const SceneType = enum { title, world, battle };
 var currentSceneType: SceneType = .world;
 
 const SIZE: gfx.Vector = .init(1000, 800);
-pub var camera: gfx.Camera = undefined;
 pub var cursor: gfx.Texture = undefined;
 var cursorTexture: gfx.Texture = undefined;
 
@@ -32,10 +32,10 @@ pub fn init() void {
         indexBuffer[index * 6 + 4] = index * 4 + 2;
         indexBuffer[index * 6 + 5] = index * 4 + 3;
     }
-    camera = .init(.init(.zero, window.size), SIZE, &vertexBuffer, &indexBuffer);
+    camera.init(.init(.zero, window.size), SIZE, &vertexBuffer, &indexBuffer);
 
     titleScene.init();
-    worldScene.init(&camera);
+    worldScene.init();
     battleScene.init();
     window.showCursor(false);
     cursorTexture = gfx.loadTexture("assets/mc_1.png", .init(32, 32));
@@ -71,7 +71,7 @@ pub fn render() void {
     camera.beginDraw(.{ .a = 1 });
     defer camera.endDraw();
 
-    sceneCall("render", .{&camera});
+    sceneCall("render", .{});
     camera.draw(cursor, window.mousePosition.add(camera.rect.min));
 }
 

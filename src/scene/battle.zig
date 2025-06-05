@@ -3,6 +3,7 @@ const std = @import("std");
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 const world = @import("world.zig");
+const camera = @import("../camera.zig");
 
 pub const Enemy = struct {
     active: bool = false,
@@ -56,7 +57,7 @@ pub fn update(delta: f32) void {
     _ = delta;
 }
 
-pub fn render(camera: *gfx.Camera) void {
+pub fn render() void {
     camera.draw(background, .init(0, 0));
 
     var offset = gfx.Vector.init(120, 120).scale(-1);

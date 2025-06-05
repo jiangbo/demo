@@ -3,6 +3,7 @@ const std = @import("std");
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 const world = @import("world.zig");
+const camera = @import("../camera.zig");
 
 pub const MenuType = enum { item, skill };
 
@@ -42,7 +43,7 @@ pub fn update(delta: f32) void {
     _ = delta;
 }
 
-pub fn render(camera: *gfx.Camera) void {
+pub fn render() void {
     if (!display) return;
 
     camera.draw(background, position);

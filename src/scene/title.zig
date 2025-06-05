@@ -3,6 +3,7 @@ const std = @import("std");
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 const scene = @import("../scene.zig");
+const camera = @import("../camera.zig");
 
 var backgrounds: [3]gfx.Texture = undefined;
 var currentBackground: u8 = 0;
@@ -141,19 +142,19 @@ fn mouseInButton(buttons: []const Button) ?u8 {
     return null;
 }
 
-pub fn render(camera: *gfx.Camera) void {
+pub fn render() void {
     camera.draw(backgrounds[currentBackground], .zero);
     camera.draw(logo, .init(260, 80));
 
     if (displayPopup) {
         camera.draw(popup.background, .init(283, 250));
-        renderButtons(camera, &popup.buttons, popup.current);
+        renderButtons(&popup.buttons, popup.current);
     } else {
-        renderButtons(camera, &menuButtons, currentButton);
+        renderButtons(&menuButtons, currentButton);
     }
 }
 
-fn renderButtons(camera: *gfx.Camera, buttons: []Button, current: u8) void {
+fn renderButtons(buttons: []Button, current: u8) void {
     for (buttons, 0..) |button, index| {
         if (current == index) {
             camera.draw(button.hover, button.position);

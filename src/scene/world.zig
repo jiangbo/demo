@@ -2,6 +2,7 @@ const std = @import("std");
 
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
+const camera = @import("../camera.zig");
 
 pub const Player = @import("Player.zig");
 pub const map = @import("map.zig");
@@ -32,7 +33,6 @@ pub var skills: [10]Item = undefined;
 
 pub var players: [3]Player = undefined;
 pub var currentPlayer: *Player = &players[0];
-pub var playerCamera: *gfx.Camera = undefined;
 
 var dialog: ?Dialog = null;
 var face: gfx.Texture = undefined;
@@ -45,14 +45,13 @@ var targetTexture: gfx.Texture = undefined;
 var moveTimer: window.Timer = .init(0.4);
 var moveDisplay: bool = true;
 
-pub fn init(camera: *gfx.Camera) void {
+pub fn init() void {
     players[0] = Player.init(0);
     players[1] = Player.init(1);
     players[2] = Player.init(2);
 
     Dialog.background = gfx.loadTexture("assets/msg.png", .init(790, 163));
     face = gfx.loadTexture("assets/face1_1.png", .init(307, 355));
-    playerCamera = camera;
 
     Tip.background = gfx.loadTexture("assets/msgtip.png", .init(291, 42));
     targetTexture = gfx.loadTexture("assets/move_flag.png", .init(33, 37));
@@ -111,17 +110,17 @@ fn initSkills() void {
 }
 
 pub fn enter() void {
-    playerCamera.lookAt(Player.position);
+    camera.lookAt(Player.position);
     window.playMusic("assets/1.ogg");
 }
 
 pub fn exit() void {
-    playerCamera.lookAt(.zero);
+    camera.lookAt(.zero);
     window.stopMusic();
 }
 
 pub fn update(delta: f32) void {
-    playerCamera.lookAt(Player.position);
+    camera.lookAt(Player.position);
     const confirm = window.isAnyKeyRelease(&.{ .SPACE, .ENTER }) or
         window.isButtonRelease(.LEFT);
 
@@ -144,7 +143,7 @@ pub fn update(delta: f32) void {
     }
 
     if (window.isButtonRelease(.LEFT)) {
-        mouseTarget = playerCamera.rect.min.add(window.mousePosition);
+        mouseTarget = camera.rect.min.add(window.mousePosition);
     }
 
     if (mouseTarget != null) {
@@ -166,7 +165,7 @@ pub fn update(delta: f32) void {
         }
 
         if (npc.texture != null) {
-            const area = npc.area.move(scene.camera.rect.min.neg());
+            const area = npc.area.move(camera.rect.min.neg());
             if (area.contains(window.mousePosition)) {
                 scene.cursor = talkTexture;
                 if (window.isButtonRelease(.LEFT) and contains) {
@@ -178,14 +177,14 @@ pub fn update(delta: f32) void {
     }
 }
 
-pub fn render(camera: *gfx.Camera) void {
-    playerCamera.lookAt(Player.position);
-    map.drawBackground(camera);
+pub fn render() void {
+    camera.lookAt(Player.position);
+    map.drawBackground();
 
     var playerNotDraw: bool = true;
     for (map.npcSlice()) |npc| {
         if (npc.position.y > Player.position.y and playerNotDraw) {
-            currentPlayer.render(camera);
+            currentPlayer.render();
             playerNotDraw = false;
         }
 
@@ -200,7 +199,7 @@ pub fn render(camera: *gfx.Camera) void {
         // camera.drawRectangle(npc.area);
     }
 
-    if (playerNotDraw) currentPlayer.render(camera);
+    if (playerNotDraw) currentPlayer.render();
 
     if (mouseTarget) |target| blk: {
         if (!moveDisplay) break :blk;
@@ -208,14 +207,14 @@ pub fn render(camera: *gfx.Camera) void {
         camera.draw(targetTexture, target.sub(.init(size.x / 2, size.y)));
     }
 
-    map.drawForeground(camera);
-    renderPopup(camera);
-    playerCamera.lookAt(.zero);
+    map.drawForeground();
+    renderPopup();
+    camera.lookAt(.zero);
 
     window.showFrameRate();
 }
 
-fn renderPopup(camera: *gfx.Camera) void {
+fn renderPopup() void {
     camera.lookAt(.zero);
     if (dialog) |d| {
         camera.draw(Dialog.background, .init(0, 415));
@@ -230,7 +229,7 @@ fn renderPopup(camera: *gfx.Camera) void {
     if (tip) |_| {
         camera.draw(Tip.background, .init(251, 200));
     }
-    statusPopup.render(camera);
+    statusPopup.render();
     camera.lookAt(Player.position);
 }
 

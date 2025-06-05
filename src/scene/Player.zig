@@ -3,6 +3,7 @@ const std = @import("std");
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 const world = @import("world.zig");
+const camera = @import("../camera.zig");
 
 const Player = @This();
 const FrameAnimation = gfx.FixedFrameAnimation(4, 0.15);
@@ -130,7 +131,7 @@ pub fn update(self: *Player, delta: f32) void {
         velocity = velocity.normalize().scale(delta * PLAYER_SPEED);
         const tempPosition = position.add(velocity);
         if (world.map.canWalk(tempPosition)) position = tempPosition;
-        world.playerCamera.lookAt(position);
+        camera.lookAt(position);
     }
 
     if (keyPressed) self.current(facing).update(delta);
@@ -143,7 +144,7 @@ fn updatePlayer(direction: gfx.FourDirection) void {
     world.mouseTarget = null;
 }
 
-pub fn render(self: *Player, camera: *gfx.Camera) void {
+pub fn render(self: *Player) void {
     const playerTexture = self.current(facing).currentTexture();
     camera.draw(playerTexture, position.sub(.init(120, 220)));
 }
