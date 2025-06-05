@@ -15,7 +15,7 @@ pub const Char = struct {
     height: f32,
     xOffset: i16,
     yOffset: i16,
-    xAdvance: i16,
+    xAdvance: f32,
     page: u8,
     chnl: u8,
 };
@@ -150,6 +150,7 @@ export fn windowInit() void {
 }
 
 pub var fonts: std.AutoHashMapUnmanaged(u32, Char) = .empty;
+pub var fontTexture: gfx.Texture = undefined;
 pub var mousePosition: math.Vector = .zero;
 var lastButtonState: std.StaticBitSet(3) = .initEmpty();
 var buttonState: std.StaticBitSet(3) = .initEmpty();

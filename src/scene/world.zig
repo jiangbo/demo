@@ -13,6 +13,8 @@ const Dialog = struct {
     face: gfx.Texture = undefined,
     left: bool = true,
     npc: *map.NPC = undefined,
+    name: []const u8 = &.{},
+    content: []const u8 = &.{},
 };
 
 const Tip = struct {
@@ -119,6 +121,7 @@ pub fn exit() void {
 }
 
 pub fn update(delta: f32) void {
+    playerCamera.lookAt(Player.position);
     const confirm = window.isAnyKeyRelease(&.{ .SPACE, .ENTER }) or
         window.isButtonRelease(.LEFT);
 
@@ -217,6 +220,7 @@ fn renderPopup(camera: *gfx.Camera) void {
     if (dialog) |d| {
         camera.draw(Dialog.background, .init(0, 415));
         if (d.left) {
+            camera.drawText("主角，你好啊", .init(300, 470));
             camera.draw(d.face, .init(0, 245));
         } else {
             camera.draw(d.npc.face.?, .init(486, 245));

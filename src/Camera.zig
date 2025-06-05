@@ -3,6 +3,7 @@ const std = @import("std");
 const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const shader = @import("shader/single.glsl.zig");
+const window = @import("window.zig");
 
 const Camera = @This();
 
@@ -143,6 +144,20 @@ pub fn batchDraw(self: *Camera, texture: gpu.Texture, position: math.Vector) voi
 
     self.batchTexture = texture;
     self.batchDrawCount += 1;
+}
+
+pub fn drawText(camera: *Camera, text: []const u8, position: math.Vector) void {
+    var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
+
+    var pos = position;
+    while (iterator.nextCodepoint()) |code| {
+        const char = window.fonts.get(code).?;
+        const size = math.Vector.init(char.width, char.height);
+        const area = math.Rectangle.init(.init(char.x, char.y), size);
+        const tex = window.fontTexture.subTexture(area);
+        camera.batchDraw(tex, pos);
+        pos = pos.addX(char.xAdvance);
+    }
 }
 
 const sk = @import("sokol");
