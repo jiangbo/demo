@@ -3,7 +3,7 @@ const std = @import("std");
 pub fn main() void {
     const font = @import("bmfont.zig");
 
-    const data = @embedFile("6.fnt");
+    const data = @embedFile("4.fnt");
     const allocator = std.heap.c_allocator;
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();

@@ -42,7 +42,7 @@ pub fn init() void {
     cursorTexture = gfx.loadTexture("assets/mc_1.png", .init(32, 32));
     texture = gfx.loadTexture("assets/fight/p1.png", .init(960, 240));
     cursor = cursorTexture;
-    font = gfx.loadTexture("assets/6_0.png", .init(256, 256));
+    font = gfx.loadTexture("assets/4_0.png", .init(256, 256));
 
     enter();
 }

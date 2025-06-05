@@ -76,7 +76,6 @@ pub fn lookAt(self: *Camera, pos: math.Vector) void {
     self.rect = .init(offset, self.rect.size());
 }
 
-const sgl = @import("sokol").gl;
 pub fn beginDraw(self: *Camera, color: gpu.Color) void {
     self.renderPass = gpu.commandEncoder.beginRenderPass(color);
     self.batchDrawCount = 0;
