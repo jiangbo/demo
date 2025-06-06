@@ -26,8 +26,6 @@ pub var skills: [10]Item = undefined;
 pub var players: [3]Player = undefined;
 pub var currentPlayer: *Player = &players[0];
 
-var face: gfx.Texture = undefined;
-
 var tip: ?Tip = null;
 var talkTexture: gfx.Texture = undefined;
 
@@ -40,8 +38,6 @@ pub fn init() void {
     players[0] = Player.init(0);
     players[1] = Player.init(1);
     players[2] = Player.init(2);
-
-    face = gfx.loadTexture("assets/face1_1.png", .init(307, 355));
 
     Tip.background = gfx.loadTexture("assets/msgtip.png", .init(291, 42));
     targetTexture = gfx.loadTexture("assets/move_flag.png", .init(33, 37));
@@ -113,9 +109,7 @@ pub fn update(delta: f32) void {
         window.isButtonRelease(.LEFT);
 
     if (dialog.active) {
-        if (confirm) {
-            if (dialog.left) dialog.left = false else dialog.active = false;
-        }
+        if (confirm) dialog.update(delta);
         return;
     }
 
@@ -211,16 +205,7 @@ fn renderPopup() void {
 }
 
 pub fn showDialog(npc: *map.NPC) void {
-    dialog.face = face;
-    dialog.left = true;
-    dialog.name = "主角";
-    dialog.content =
-        \\夏山如碧，绿树成荫，总会令人怡然自乐。
-        \\此地山清水秀，我十分喜爱。我们便约好了，
-        \\闲暇时，便来此地，彻茶共饮。
-    ;
-    dialog.npc = npc;
-    dialog.active = true;
+    dialog.show(npc);
 }
 
 pub fn showTip() void {

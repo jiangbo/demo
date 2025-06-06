@@ -147,7 +147,8 @@ pub fn drawTextOptions(options: TextOptions) void {
             continue;
         }
 
-        const char = window.fonts.get(code).?;
+        const char = window.fonts.get(code) orelse
+            window.fonts.get(std.math.maxInt(u32)).?;
         const size = math.Vector.init(char.width, char.height);
         const area = math.Rectangle.init(.init(char.x, char.y), size);
         const tex = window.fontTexture.subTexture(area);
