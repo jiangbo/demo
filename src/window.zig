@@ -150,6 +150,7 @@ export fn windowInit() void {
 }
 
 pub var fonts: std.AutoHashMapUnmanaged(u32, Char) = .empty;
+pub var lineHeight: f32 = 0;
 pub var fontTexture: gfx.Texture = undefined;
 pub var mousePosition: math.Vector = .zero;
 var lastButtonState: std.StaticBitSet(3) = .initEmpty();

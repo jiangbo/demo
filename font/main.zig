@@ -1,8 +1,7 @@
 const std = @import("std");
 
+const font = @import("bmfont.zig");
 pub fn main() void {
-    const font = @import("bmfont.zig");
-
     const data = @embedFile("4.fnt");
     const allocator = std.heap.c_allocator;
     var arena = std.heap.ArenaAllocator.init(allocator);
@@ -14,5 +13,16 @@ pub fn main() void {
     const file = std.fs.cwd().createFile("font/font.zon", .{}) catch unreachable;
     defer file.close();
     const writer = file.writer();
-    std.zon.stringify.serialize(font.bmfont.chars, .{ .whitespace = false }, writer) catch unreachable;
+
+    const result = Font{
+        .lineHeight = font.bmfont.common.lineHeight,
+        .chars = font.bmfont.chars,
+    };
+
+    std.zon.stringify.serialize(result, .{ .whitespace = false }, writer) catch unreachable;
 }
+
+const Font = struct {
+    lineHeight: u16,
+    chars: []const @import("font.zig").Char,
+};

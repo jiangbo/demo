@@ -128,7 +128,14 @@ pub fn drawText(text: []const u8, position: math.Vector) void {
     var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
 
     var pos = position;
+    var line: f32 = 1;
     while (iterator.nextCodepoint()) |code| {
+        if (code == '\n') {
+            pos = position.addY(line * window.lineHeight);
+            line += 1;
+            continue;
+        }
+
         const char = window.fonts.get(code).?;
         const size = math.Vector.init(char.width, char.height);
         const area = math.Rectangle.init(.init(char.x, char.y), size);

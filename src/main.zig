@@ -38,11 +38,14 @@ pub fn main() void {
 
     _ = ImmDisableIME(-1);
 
-    const chars: []const window.Char = @import("font.zon");
+    const Font = struct { lineHeight: i32, chars: []const window.Char };
+
+    const font: Font = @import("font.zon");
+    window.lineHeight = font.lineHeight;
 
     window.run(allocator, .{
         .title = "教你制作RPG游戏",
         .size = .{ .x = 800, .y = 600 },
-        .chars = chars,
+        .chars = font.chars,
     });
 }
