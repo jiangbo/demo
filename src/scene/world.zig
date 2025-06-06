@@ -6,17 +6,9 @@ const camera = @import("../camera.zig");
 
 pub const Player = @import("Player.zig");
 pub const map = @import("map.zig");
+const dialog = @import("dialog.zig");
 const statusPopup = @import("statusPopup.zig");
 const scene = @import("../scene.zig");
-
-const Dialog = struct {
-    var background: gfx.Texture = undefined;
-    face: gfx.Texture = undefined,
-    left: bool = true,
-    npc: *map.NPC = undefined,
-    name: []const u8 = &.{},
-    content: []const u8 = &.{},
-};
 
 const Tip = struct {
     var background: gfx.Texture = undefined;
@@ -34,7 +26,6 @@ pub var skills: [10]Item = undefined;
 pub var players: [3]Player = undefined;
 pub var currentPlayer: *Player = &players[0];
 
-var dialog: ?Dialog = null;
 var face: gfx.Texture = undefined;
 
 var tip: ?Tip = null;
@@ -50,7 +41,6 @@ pub fn init() void {
     players[1] = Player.init(1);
     players[2] = Player.init(2);
 
-    Dialog.background = gfx.loadTexture("assets/msg.png", .init(790, 163));
     face = gfx.loadTexture("assets/face1_1.png", .init(307, 355));
 
     Tip.background = gfx.loadTexture("assets/msgtip.png", .init(291, 42));
@@ -59,6 +49,7 @@ pub fn init() void {
     talkTexture = gfx.loadTexture("assets/mc_2.png", .init(30, 30));
 
     statusPopup.init();
+    dialog.init();
 
     map.init();
 
@@ -121,9 +112,9 @@ pub fn update(delta: f32) void {
     const confirm = window.isAnyKeyRelease(&.{ .SPACE, .ENTER }) or
         window.isButtonRelease(.LEFT);
 
-    if (dialog) |*d| {
+    if (dialog.active) {
         if (confirm) {
-            if (d.left) d.left = false else dialog = null;
+            if (dialog.left) dialog.left = false else dialog.active = false;
         }
         return;
     }
@@ -209,24 +200,8 @@ pub fn render() void {
 
 fn renderPopup() void {
     camera.lookAt(.zero);
-    if (dialog) |d| {
-        camera.draw(Dialog.background, .init(0, 415));
-        if (d.left) {
-            const text =
-                \\主角夏山如碧，绿树成荫，总会令人怡然自乐。
-                \\此地山清水秀，我十分喜爱。我们便约好了，
-                \\闲暇时，便来此地，彻茶共饮。
-            ;
-            camera.drawTextOptions(.{
-                .text = text,
-                .position = .init(305, 455),
-                .color = .{ .r = 1, .a = 1 },
-            });
-            camera.draw(d.face, .init(0, 245));
-        } else {
-            camera.draw(d.npc.face.?, .init(486, 245));
-        }
-    }
+
+    if (dialog.active) dialog.render();
 
     if (tip) |_| {
         camera.draw(Tip.background, .init(251, 200));
@@ -236,7 +211,16 @@ fn renderPopup() void {
 }
 
 pub fn showDialog(npc: *map.NPC) void {
-    dialog = Dialog{ .face = face, .npc = npc };
+    dialog.face = face;
+    dialog.left = true;
+    dialog.name = "主角";
+    dialog.content =
+        \\夏山如碧，绿树成荫，总会令人怡然自乐。
+        \\此地山清水秀，我十分喜爱。我们便约好了，
+        \\闲暇时，便来此地，彻茶共饮。
+    ;
+    dialog.npc = npc;
+    dialog.active = true;
 }
 
 pub fn showTip() void {
