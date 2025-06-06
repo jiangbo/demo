@@ -52,12 +52,6 @@ pub const Sampler = sk.gfx.Sampler;
 pub const Shader = sk.gfx.Shader;
 pub const VertexLayout = sk.gfx.VertexLayoutState;
 
-pub const Vertex = extern struct {
-    position: math.Vector3 = .zero, // 顶点坐标
-    color: math.Vector4 = .init(1, 1, 1, 1), // 顶点颜色
-    uv: math.Vector2 = .zero, // 纹理坐标
-};
-
 pub fn createBuffer(desc: sk.gfx.BufferDesc) Buffer {
     return sk.gfx.makeBuffer(desc);
 }
@@ -94,26 +88,34 @@ pub fn createSampler(desc: sk.gfx.SamplerDesc) Sampler {
     return sk.gfx.makeSampler(desc);
 }
 
+pub fn appendBuffer(buffer: Buffer, data: anytype) void {
+    _ = sk.gfx.appendBuffer(buffer, sk.gfx.asRange(data));
+}
+
 pub const BindGroup = struct {
     value: sk.gfx.Bindings = .{},
 
-    pub fn bindIndexBuffer(self: *BindGroup, buffer: Buffer) void {
+    pub fn setIndexBuffer(self: *BindGroup, buffer: Buffer) void {
         self.value.index_buffer = buffer;
     }
 
-    pub fn bindVertexBuffer(self: *BindGroup, buffer: Buffer) void {
+    pub fn setIndexOffset(self: *BindGroup, offset: u32) void {
+        self.value.index_buffer_offset = @intCast(offset);
+    }
+
+    pub fn setVertexBuffer(self: *BindGroup, buffer: Buffer) void {
         self.value.vertex_buffers[0] = buffer;
     }
 
     pub fn setVertexOffset(self: *BindGroup, offset: u32) void {
-        self.value.vertex_buffer_offsets[0] = offset;
+        self.value.vertex_buffer_offsets[0] = @intCast(offset);
     }
 
-    pub fn bindTexture(self: *BindGroup, index: u32, texture: Texture) void {
+    pub fn setTexture(self: *BindGroup, index: u32, texture: Texture) void {
         self.value.images[index] = texture.image;
     }
 
-    pub fn bindSampler(self: *BindGroup, index: u32, sampler: Sampler) void {
+    pub fn setSampler(self: *BindGroup, index: u32, sampler: Sampler) void {
         self.value.samplers[index] = sampler;
     }
 };
@@ -158,59 +160,6 @@ pub const RenderPassEncoder = struct {
         sk.gfx.endPass();
     }
 };
-
-pub const DrawOptions = struct {
-    texture: Texture,
-    sourceRect: Rectangle,
-    targetRect: Rectangle,
-    radians: f32 = 0,
-    pivot: math.Vector = .zero,
-    alpha: f32 = 1,
-};
-
-pub fn draw(renderPass: *RenderPassEncoder, bind: *BindGroup, options: DrawOptions) void {
-    const dst = options.targetRect;
-
-    const size = queryTextureSize(options.texture.image);
-    if (size.approx(.zero)) return;
-
-    const min = options.sourceRect.min;
-    const max = options.sourceRect.max;
-
-    var vertex = [_]math.Vector3{
-        .{ .x = dst.min.x, .y = dst.max.y },
-        .{ .x = dst.max.x, .y = dst.max.y },
-        .{ .x = dst.max.x, .y = dst.min.y },
-        .{ .x = dst.min.x, .y = dst.min.y },
-    };
-
-    if (options.radians != 0) {
-        const percent = options.pivot.div(size);
-        const pivot = dst.min.add(percent.mul(dst.size()));
-
-        for (&vertex) |*point| {
-            point.* = pivot.add(point.sub(pivot).rotate(options.radians));
-        }
-    }
-
-    const color = math.Vector4.init(1, 1, 1, options.alpha);
-    const vertexes = [_]Vertex{
-        .{ .position = vertex[0], .color = color, .uv = .init(min.x, max.y) }, // 左上
-        .{ .position = vertex[1], .color = color, .uv = .init(max.x, max.y) }, // 右上
-        .{ .position = vertex[2], .color = color, .uv = .init(max.x, min.y) }, // 右下
-        .{ .position = vertex[3], .color = color, .uv = .init(min.x, min.y) }, // 左下
-    };
-
-    const vertexBuffer = sk.gfx.makeBuffer(.{
-        .data = sk.gfx.asRange(&vertexes),
-    });
-
-    bind.bindVertexBuffer(vertexBuffer);
-    renderPass.setBindGroup(bind.*);
-
-    sk.gfx.draw(0, 6, 1);
-    sk.gfx.destroyBuffer(vertexBuffer);
-}
 
 pub const RenderPipeline = struct {
     value: sk.gfx.Pipeline,

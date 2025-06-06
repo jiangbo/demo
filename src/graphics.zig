@@ -12,7 +12,6 @@ pub const Vector = math.Vector;
 pub const FourDirection = math.FourDirection;
 pub const Rectangle = math.Rectangle;
 pub const loadTexture = assets.loadTexture;
-pub const Vertex = gpu.Vertex;
 
 pub const FrameAnimation = FixedFrameAnimation(4, 0.1);
 

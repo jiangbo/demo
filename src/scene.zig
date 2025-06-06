@@ -17,7 +17,7 @@ var cursorTexture: gfx.Texture = undefined;
 
 const MAX_COUNT = 100;
 
-var vertexBuffer: [MAX_COUNT * 4]gfx.Vertex = undefined;
+var vertexBuffer: [MAX_COUNT * 4]camera.Vertex = undefined;
 var indexBuffer: [MAX_COUNT * 6]u16 = undefined;
 
 var texture: gfx.Texture = undefined;

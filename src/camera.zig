@@ -5,46 +5,50 @@ const math = @import("math.zig");
 const shader = @import("shader/2d.glsl.zig");
 const window = @import("window.zig");
 
-const Camera = @This();
+pub const Vertex = extern struct {
+    position: math.Vector3, // 顶点坐标
+    color: gpu.Color, // 顶点颜色
+    uv: math.Vector2 = .zero, // 纹理坐标
+};
 
 pub var rect: math.Rectangle = undefined;
 var border: math.Vector = undefined;
+
 var viewMatrix: [16]f32 = undefined;
 var renderPass: gpu.RenderPassEncoder = undefined;
 var bindGroup: gpu.BindGroup = .{};
 var pipeline: gpu.RenderPipeline = undefined;
 
-var vertexBuffer: []gpu.Vertex = undefined;
+// var vertexBuffer: []gpu.Vertex = undefined;
 var buffer: gpu.Buffer = undefined;
+var needDrawCount: u32 = 0;
+var totalDrawCount: u32 = 0;
+var texture: gpu.Texture = .{ .image = .{} };
 
-var batchDrawCount: u32 = 0;
-var batchTexture: gpu.Texture = undefined;
+// var batchDrawCount: u32 = 0;
+// var batchTexture: gpu.Texture = undefined;
 
-pub fn init(r: math.Rectangle, b: math.Vector, vertex: []gpu.Vertex, index: []u16) void {
+pub fn init(r: math.Rectangle, b: math.Vector, vertex: []Vertex, index: []u16) void {
     rect = r;
     border = b;
 
+    const x, const y = .{ rect.size().x, rect.size().y };
     viewMatrix = .{
-        2 / rect.size().x, 0,                  0, 0,
-        0,                 2 / -rect.size().y, 0, 0,
-        0,                 0,                  1, 0,
-        -1,                1,                  0, 1,
+        2 / x, 0, 0, 0, 0,  2 / -y, 0, 0,
+        0,     0, 1, 0, -1, 1,      0, 1,
     };
 
-    bindGroup.bindIndexBuffer(gpu.createBuffer(.{
+    bindGroup.setIndexBuffer(gpu.createBuffer(.{
         .type = .INDEXBUFFER,
         .data = gpu.asRange(index),
     }));
 
     buffer = gpu.createBuffer(.{
-        .type = .VERTEXBUFFER,
-        .size = @sizeOf(gpu.Vertex) * vertex.len,
+        .size = @sizeOf(Vertex) * vertex.len,
         .usage = .STREAM,
     });
 
-    vertexBuffer = vertex;
-
-    bindGroup.bindSampler(shader.SMP_smp, gpu.createSampler(.{}));
+    bindGroup.setSampler(shader.SMP_smp, gpu.createSampler(.{}));
     pipeline = initPipeline();
 }
 
@@ -79,7 +83,7 @@ pub fn lookAt(pos: math.Vector) void {
 
 pub fn beginDraw(color: gpu.Color) void {
     renderPass = gpu.commandEncoder.beginRenderPass(color);
-    batchDrawCount = 0;
+    totalDrawCount = 0;
 }
 
 pub fn draw(tex: gpu.Texture, position: math.Vector) void {
@@ -94,93 +98,95 @@ pub fn drawFlipX(tex: gpu.Texture, pos: math.Vector, flipX: bool) void {
         src.max.x = tex.area.min.x;
     }
 
-    drawOptions(.{ .texture = tex, .sourceRect = src, .targetRect = target });
+    drawOptions(.{ .texture = tex, .source = src, .target = target });
 }
 
-pub const DrawOptions = gpu.DrawOptions;
-pub fn drawOptions(options: DrawOptions) void {
-    viewMatrix[12] = -1 - rect.min.x * viewMatrix[0];
-    viewMatrix[13] = 1 - rect.min.y * viewMatrix[5];
+const DrawOptions = struct {
+    texture: gpu.Texture,
+    source: math.Rectangle,
+    target: math.Rectangle,
+    radians: f32 = 0,
+    pivot: math.Vector = .zero,
+    color: gpu.Color = .{ .r = 1, .g = 1, .b = 1, .a = 1 },
+};
 
-    const size = gpu.queryTextureSize(options.texture.image);
+pub fn drawOptions(options: DrawOptions) void {
+    var vertexes = createVertexes(options.source, options.target);
+    for (&vertexes) |*value| value.position.z = 0.5;
+    for (&vertexes) |*value| value.color = options.color;
+    gpu.appendBuffer(buffer, &vertexes);
+
+    defer {
+        needDrawCount += 1;
+        totalDrawCount += 1;
+        texture = options.texture;
+    }
+
+    if (totalDrawCount == 0) return; // 第一次绘制
+    if (options.texture.image.id != texture.image.id) doDraw();
+}
+
+// pub fn drawText(text: []const u8, position: math.Vector) void {
+//     var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
+
+//     var pos = position;
+//     while (iterator.nextCodepoint()) |code| {
+//         const char = window.fonts.get(code).?;
+//         const size = math.Vector.init(char.width, char.height);
+//         const area = math.Rectangle.init(.init(char.x, char.y), size);
+//         const tex = window.fontTexture.subTexture(area);
+//         batchDraw(tex, pos);
+//         pos = pos.addX(char.xAdvance);
+//     }
+// }
+
+pub fn endDraw() void {
+    if (needDrawCount != 0) doDraw();
+
+    renderPass.end();
+    gpu.commandEncoder.submit();
+}
+
+fn createVertexes(src: math.Rectangle, dst: math.Rectangle) [4]Vertex {
+    var vertexes: [4]Vertex = undefined;
+
+    vertexes[0].position = dst.min.addY(dst.size().y);
+    vertexes[0].uv = .init(src.min.x, src.max.y);
+
+    vertexes[1].position = dst.max;
+    vertexes[1].uv = .init(src.max.x, src.max.y);
+
+    vertexes[2].position = dst.min.addX(dst.size().x);
+    vertexes[2].uv = .init(src.max.x, src.min.y);
+
+    vertexes[3].position = dst.min;
+    vertexes[3].uv = .init(src.min.x, src.min.y);
+    return vertexes;
+}
+
+fn doDraw() void {
+
+    // 绑定流水线
     renderPass.setPipeline(pipeline);
 
+    // 处理 uniform 变量
+    viewMatrix[12] = -1 - rect.min.x * viewMatrix[0];
+    viewMatrix[13] = 1 - rect.min.y * viewMatrix[5];
+    const size = gpu.queryTextureSize(texture.image);
     renderPass.setUniform(shader.UB_vs_params, .{
         .viewMatrix = viewMatrix,
         .textureVec = [4]f32{ size.x, size.y, 1, 1 },
     });
-    bindGroup.bindTexture(shader.IMG_tex, options.texture);
 
-    gpu.draw(&renderPass, &bindGroup, options);
-}
+    // 绑定组
+    bindGroup.setTexture(shader.IMG_tex, texture);
+    bindGroup.setVertexBuffer(buffer);
 
-pub fn batchDraw(texture: gpu.Texture, position: math.Vector) void {
-    const size = gpu.queryTextureSize(texture.image);
-    if (size.approx(.zero)) return;
+    const offset = totalDrawCount - needDrawCount;
+    bindGroup.setIndexOffset(offset * 6 * @sizeOf(u16));
+    renderPass.setBindGroup(bindGroup);
 
-    const sourceRect = texture.area;
-    const min = sourceRect.min;
-    const max = sourceRect.max;
-
-    vertexBuffer[batchDrawCount * 4 + 0] = .{
-        .position = position.addY(texture.size().y),
-        .uv = .init(min.x, max.y),
-    };
-
-    vertexBuffer[batchDrawCount * 4 + 1] = .{
-        .position = position.add(texture.size()),
-        .uv = .init(max.x, max.y),
-    };
-
-    vertexBuffer[batchDrawCount * 4 + 2] = .{
-        .position = position.addX(texture.size().x),
-        .uv = .init(max.x, min.y),
-    };
-
-    vertexBuffer[batchDrawCount * 4 + 3] = .{
-        .position = position,
-        .uv = .init(min.x, min.y),
-    };
-
-    batchTexture = texture;
-    batchDrawCount += 1;
-}
-
-pub fn drawText(text: []const u8, position: math.Vector) void {
-    var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
-
-    var pos = position;
-    while (iterator.nextCodepoint()) |code| {
-        const char = window.fonts.get(code).?;
-        const size = math.Vector.init(char.width, char.height);
-        const area = math.Rectangle.init(.init(char.x, char.y), size);
-        const tex = window.fontTexture.subTexture(area);
-        batchDraw(tex, pos);
-        pos = pos.addX(char.xAdvance);
-    }
-}
-
-const sk = @import("sokol");
-pub fn endDraw() void {
-    if (batchDrawCount != 0) {
-        for (vertexBuffer) |*value| {
-            value.position.z = 0;
-        }
-
-        sk.gfx.updateBuffer(buffer, sk.gfx.asRange(vertexBuffer));
-
-        bindGroup.bindVertexBuffer(buffer);
-        renderPass.setPipeline(pipeline);
-        bindGroup.bindTexture(shader.IMG_tex, batchTexture);
-        const size = gpu.queryTextureSize(batchTexture.image);
-        renderPass.setUniform(shader.UB_vs_params, .{
-            .viewMatrix = viewMatrix,
-            .textureVec = [4]f32{ size.x, size.y, 1, 1 },
-        });
-        renderPass.setBindGroup(bindGroup);
-        sk.gfx.draw(0, 6 * batchDrawCount, 1);
-    }
-
-    renderPass.end();
-    gpu.commandEncoder.submit();
+    // 绘制
+    renderPass.draw(needDrawCount * 6);
+    needDrawCount = 0;
 }

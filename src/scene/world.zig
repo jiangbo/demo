@@ -110,17 +110,14 @@ fn initSkills() void {
 }
 
 pub fn enter() void {
-    camera.lookAt(Player.position);
     window.playMusic("assets/1.ogg");
 }
 
 pub fn exit() void {
-    camera.lookAt(.zero);
     window.stopMusic();
 }
 
 pub fn update(delta: f32) void {
-    camera.lookAt(Player.position);
     const confirm = window.isAnyKeyRelease(&.{ .SPACE, .ENTER }) or
         window.isButtonRelease(.LEFT);
 
@@ -178,7 +175,6 @@ pub fn update(delta: f32) void {
 }
 
 pub fn render() void {
-    camera.lookAt(Player.position);
     map.drawBackground();
 
     var playerNotDraw: bool = true;
@@ -195,8 +191,6 @@ pub fn render() void {
         } else if (npc.texture) |texture| {
             camera.draw(texture, npcPosition);
         }
-
-        // camera.drawRectangle(npc.area);
     }
 
     if (playerNotDraw) currentPlayer.render();
@@ -209,7 +203,6 @@ pub fn render() void {
 
     map.drawForeground();
     renderPopup();
-    camera.lookAt(.zero);
 
     window.showFrameRate();
 }
@@ -219,7 +212,7 @@ fn renderPopup() void {
     if (dialog) |d| {
         camera.draw(Dialog.background, .init(0, 415));
         if (d.left) {
-            camera.drawText("主角，你好啊", .init(300, 470));
+            // camera.drawText("主角，你好啊", .init(300, 470));
             camera.draw(d.face, .init(0, 245));
         } else {
             camera.draw(d.npc.face.?, .init(486, 245));
