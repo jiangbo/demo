@@ -12,6 +12,7 @@ const scene = @import("../scene.zig");
 
 const Tip = struct {
     var background: gfx.Texture = undefined;
+    content: []const u8,
 };
 
 pub const Item = struct {
@@ -197,8 +198,9 @@ fn renderPopup() void {
 
     if (dialog.active) dialog.render();
 
-    if (tip) |_| {
+    if (tip) |t| {
         camera.draw(Tip.background, .init(251, 200));
+        camera.drawText(t.content, .init(340, 207));
     }
     statusPopup.render();
     camera.lookAt(Player.position);
@@ -209,5 +211,5 @@ pub fn showDialog(npc: *map.NPC) void {
 }
 
 pub fn showTip() void {
-    tip = Tip{};
+    tip = Tip{ .content = "遇到一个人" };
 }

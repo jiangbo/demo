@@ -6,8 +6,6 @@ const camera = @import("../camera.zig");
 
 const map = @import("map.zig");
 
-const Dialog = @This();
-
 pub var active: bool = false;
 
 var index: u8 = 0;
@@ -56,7 +54,7 @@ pub fn update(_: f32) void {
 }
 
 pub fn render() void {
-    camera.draw(Dialog.background, .init(0, 415));
+    camera.draw(background, .init(0, 415));
     if (left) {
         camera.draw(face, .init(0, 245));
         camera.drawTextOptions(.{
@@ -72,6 +70,6 @@ pub fn render() void {
             .position = .init(160, 440),
             .color = .{ .r = 0.7, .g = 0.5, .b = 0.3, .a = 1 },
         });
-        camera.drawText(content, .init(210, 455));
+        camera.drawText(content, .init(410, 455));
     }
 }
