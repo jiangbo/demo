@@ -212,7 +212,7 @@ fn renderPopup() void {
     if (dialog) |d| {
         camera.draw(Dialog.background, .init(0, 415));
         if (d.left) {
-            // camera.drawText("主角，你好啊", .init(300, 470));
+            camera.drawText("主角，你好啊", .init(300, 470));
             camera.draw(d.face, .init(0, 245));
         } else {
             camera.draw(d.npc.face.?, .init(486, 245));

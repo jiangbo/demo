@@ -19,14 +19,10 @@ var renderPass: gpu.RenderPassEncoder = undefined;
 var bindGroup: gpu.BindGroup = .{};
 var pipeline: gpu.RenderPipeline = undefined;
 
-// var vertexBuffer: []gpu.Vertex = undefined;
 var buffer: gpu.Buffer = undefined;
 var needDrawCount: u32 = 0;
 var totalDrawCount: u32 = 0;
 var texture: gpu.Texture = .{ .image = .{} };
-
-// var batchDrawCount: u32 = 0;
-// var batchTexture: gpu.Texture = undefined;
 
 pub fn init(r: math.Rectangle, b: math.Vector, vertex: []Vertex, index: []u16) void {
     rect = r;
@@ -73,6 +69,8 @@ fn initPipeline() gpu.RenderPipeline {
 }
 
 pub fn lookAt(pos: math.Vector) void {
+    if (needDrawCount != 0) doDraw();
+
     const half = rect.size().scale(0.5);
 
     const max = border.sub(rect.size());
@@ -126,19 +124,19 @@ pub fn drawOptions(options: DrawOptions) void {
     if (options.texture.image.id != texture.image.id) doDraw();
 }
 
-// pub fn drawText(text: []const u8, position: math.Vector) void {
-//     var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
+pub fn drawText(text: []const u8, position: math.Vector) void {
+    var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
 
-//     var pos = position;
-//     while (iterator.nextCodepoint()) |code| {
-//         const char = window.fonts.get(code).?;
-//         const size = math.Vector.init(char.width, char.height);
-//         const area = math.Rectangle.init(.init(char.x, char.y), size);
-//         const tex = window.fontTexture.subTexture(area);
-//         batchDraw(tex, pos);
-//         pos = pos.addX(char.xAdvance);
-//     }
-// }
+    var pos = position;
+    while (iterator.nextCodepoint()) |code| {
+        const char = window.fonts.get(code).?;
+        const size = math.Vector.init(char.width, char.height);
+        const area = math.Rectangle.init(.init(char.x, char.y), size);
+        const tex = window.fontTexture.subTexture(area);
+        draw(tex, pos.add(.init(char.xOffset, char.yOffset)));
+        pos = pos.addX(char.xAdvance);
+    }
+}
 
 pub fn endDraw() void {
     if (needDrawCount != 0) doDraw();
