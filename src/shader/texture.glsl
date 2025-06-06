@@ -32,4 +32,4 @@ void main() {
 }
 @end
 
-@program single vs fs
+@program texture vs fs

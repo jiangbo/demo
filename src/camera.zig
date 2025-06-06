@@ -2,7 +2,7 @@ const std = @import("std");
 
 const gpu = @import("gpu.zig");
 const math = @import("math.zig");
-const shader = @import("shader/2d.glsl.zig");
+const shader = @import("shader/texture.glsl.zig");
 const window = @import("window.zig");
 
 pub const Vertex = extern struct {
@@ -50,11 +50,11 @@ pub fn init(r: math.Rectangle, b: math.Vector, vertex: []Vertex, index: []u16) v
 
 fn initPipeline() gpu.RenderPipeline {
     var vertexLayout = gpu.VertexLayout{};
-    vertexLayout.attrs[shader.ATTR_single_position0].format = .FLOAT3;
-    vertexLayout.attrs[shader.ATTR_single_color0].format = .FLOAT4;
-    vertexLayout.attrs[shader.ATTR_single_texcoord0].format = .FLOAT2;
+    vertexLayout.attrs[shader.ATTR_texture_position0].format = .FLOAT3;
+    vertexLayout.attrs[shader.ATTR_texture_color0].format = .FLOAT4;
+    vertexLayout.attrs[shader.ATTR_texture_texcoord0].format = .FLOAT2;
 
-    const shaderDesc = shader.singleShaderDesc(gpu.queryBackend());
+    const shaderDesc = shader.textureShaderDesc(gpu.queryBackend());
     return gpu.createRenderPipeline(.{
         .shader = gpu.createShaderModule(shaderDesc),
         .vertexLayout = vertexLayout,
