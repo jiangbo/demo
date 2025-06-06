@@ -10,7 +10,6 @@ const Camera = @This();
 pub var rect: math.Rectangle = undefined;
 var border: math.Vector = undefined;
 var viewMatrix: [16]f32 = undefined;
-var textureMatrix: [16]f32 = undefined;
 var renderPass: gpu.RenderPassEncoder = undefined;
 var bindGroup: gpu.BindGroup = .{};
 var pipeline: gpu.RenderPipeline = undefined;
@@ -30,10 +29,6 @@ pub fn init(r: math.Rectangle, b: math.Vector, vertex: []gpu.Vertex, index: []u1
         0,                 2 / -rect.size().y, 0, 0,
         0,                 0,                  1, 0,
         -1,                1,                  0, 1,
-    };
-    textureMatrix = .{
-        1, 0, 0, 0, 0,  1, 0, 0,
-        0, 0, 1, 0, -1, 1, 0, 1,
     };
 
     bindGroup.bindIndexBuffer(gpu.createBuffer(.{
@@ -108,14 +103,11 @@ pub fn drawOptions(options: DrawOptions) void {
     viewMatrix[13] = 1 - rect.min.y * viewMatrix[5];
 
     const size = gpu.queryTextureSize(options.texture.image);
-    textureMatrix[0] = 1 / size.x;
-    textureMatrix[5] = 1 / size.y;
-
     renderPass.setPipeline(pipeline);
 
     renderPass.setUniform(shader.UB_vs_params, .{
         .viewMatrix = viewMatrix,
-        .textureMatrix = textureMatrix,
+        .textureVec = [4]f32{ size.x, size.y, 1, 1 },
     });
     bindGroup.bindTexture(shader.IMG_tex, options.texture);
 
@@ -181,11 +173,9 @@ pub fn endDraw() void {
         renderPass.setPipeline(pipeline);
         bindGroup.bindTexture(shader.IMG_tex, batchTexture);
         const size = gpu.queryTextureSize(batchTexture.image);
-        textureMatrix[0] = 1 / size.x;
-        textureMatrix[5] = 1 / size.y;
         renderPass.setUniform(shader.UB_vs_params, .{
             .viewMatrix = viewMatrix,
-            .textureMatrix = textureMatrix,
+            .textureVec = [4]f32{ size.x, size.y, 1, 1 },
         });
         renderPass.setBindGroup(bindGroup);
         sk.gfx.draw(0, 6 * batchDrawCount, 1);

@@ -1,7 +1,7 @@
 @vs vs
 layout(binding=0) uniform vs_params {
     mat4 viewMatrix;
-    mat4 textureMatrix;
+    vec4 textureVec;
 };
 
 in vec4 position0;
@@ -9,12 +9,12 @@ in vec4 color0;
 in vec4 texcoord0;
 
 out vec4 color;
-out vec2 uv;
+out vec4 uv;
 
 void main() {
     gl_Position = viewMatrix * position0;
     color = color0;
-    uv = (texcoord0 * textureMatrix).xy;
+    uv = texcoord0 / textureVec;
 }
 @end
 
