@@ -212,11 +212,16 @@ fn renderPopup() void {
     if (dialog) |d| {
         camera.draw(Dialog.background, .init(0, 415));
         if (d.left) {
-            camera.drawText(
+            const text =
                 \\主角夏山如碧，绿树成荫，总会令人怡然自乐。
                 \\此地山清水秀，我十分喜爱。我们便约好了，
                 \\闲暇时，便来此地，彻茶共饮。
-            , .init(305, 455));
+            ;
+            camera.drawTextOptions(.{
+                .text = text,
+                .position = .init(305, 455),
+                .color = .{ .r = 1, .a = 1 },
+            });
             camera.draw(d.face, .init(0, 245));
         } else {
             camera.draw(d.npc.face.?, .init(486, 245));

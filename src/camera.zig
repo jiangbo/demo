@@ -125,13 +125,24 @@ pub fn drawOptions(options: DrawOptions) void {
 }
 
 pub fn drawText(text: []const u8, position: math.Vector) void {
-    var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
+    drawTextOptions(.{ .text = text, .position = position });
+}
 
-    var pos = position;
+const TextOptions = struct {
+    text: []const u8,
+    position: math.Vector,
+    color: gpu.Color = .{ .r = 1, .g = 1, .b = 1, .a = 1 },
+};
+
+pub fn drawTextOptions(options: TextOptions) void {
+    const Utf8View = std.unicode.Utf8View;
+    var iterator = Utf8View.initUnchecked(options.text).iterator();
+
+    var pos = options.position;
     var line: f32 = 1;
     while (iterator.nextCodepoint()) |code| {
         if (code == '\n') {
-            pos = position.addY(line * window.lineHeight);
+            pos = options.position.addY(line * window.lineHeight);
             line += 1;
             continue;
         }
@@ -140,7 +151,12 @@ pub fn drawText(text: []const u8, position: math.Vector) void {
         const size = math.Vector.init(char.width, char.height);
         const area = math.Rectangle.init(.init(char.x, char.y), size);
         const tex = window.fontTexture.subTexture(area);
-        draw(tex, pos.add(.init(char.xOffset, char.yOffset)));
+        drawOptions(.{
+            .texture = tex,
+            .source = area,
+            .target = .init(pos.add(.init(char.xOffset, char.yOffset)), size),
+            .color = options.color,
+        });
         pos = pos.addX(char.xAdvance);
     }
 }
