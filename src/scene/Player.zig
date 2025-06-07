@@ -3,6 +3,7 @@ const std = @import("std");
 const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 const world = @import("world.zig");
+const bag = @import("bag.zig");
 const camera = @import("../camera.zig");
 
 const Player = @This();
@@ -24,9 +25,9 @@ leftAnimation: FrameAnimation = undefined,
 rightAnimation: FrameAnimation = undefined,
 
 statusTexture: gfx.Texture = undefined,
-attackItem: ?world.Item = null,
-defendItem: ?world.Item = null,
-totalItem: world.Item = .{ .texture = undefined },
+attackItem: ?bag.Item = null,
+defendItem: ?bag.Item = null,
+totalItem: bag.Item = .{ .texture = undefined },
 
 battleTexture: gfx.Texture = undefined,
 attackTexture: gfx.Texture = undefined,
@@ -82,7 +83,7 @@ fn initPlayer1() Player {
 
     // .attack = window.loadTexture("assets/item/item3.png", .init(66, 66)),
     // .defend = window.loadTexture("assets/item/item5.png", .init(66, 66)),
-    player.useItem(world.items[2]);
+    player.useItem(bag.items[2]);
     return player;
 }
 
@@ -109,7 +110,7 @@ fn initPlayer3() Player {
     };
 }
 
-pub fn useItem(self: *Player, item: world.Item) void {
+pub fn useItem(self: *Player, item: bag.Item) void {
     // 1 表示武器，2 表示防具
     if (1 == item.value1) {
         self.attackItem = item;

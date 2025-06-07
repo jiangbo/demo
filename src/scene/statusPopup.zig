@@ -4,6 +4,7 @@ const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 const world = @import("world.zig");
 const camera = @import("../camera.zig");
+const bag = @import("bag.zig");
 
 pub const MenuType = enum { item, skill };
 
@@ -50,13 +51,13 @@ pub fn render() void {
 
     renderStatus();
 
-    var items: []world.Item = undefined;
+    var items: []bag.Item = undefined;
 
     if (menuType == .item) {
-        items = &world.items;
+        items = &bag.items;
         camera.draw(itemTexture, position.add(.init(629, 51)));
     } else {
-        items = &world.skills;
+        items = &bag.skills;
         camera.draw(skillTexture, position.add(.init(629, 51)));
     }
 
@@ -75,6 +76,9 @@ pub fn render() void {
         showItemCount += 1;
         if (showItemCount >= 3) break;
     }
+
+    var buffer: [32]u8 = undefined;
+    drawText(&buffer, .{bag.money}, .init(525, 445));
 }
 
 fn renderStatus() void {

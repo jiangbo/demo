@@ -9,32 +9,12 @@ pub const map = @import("map.zig");
 const dialog = @import("dialog.zig");
 const statusPopup = @import("statusPopup.zig");
 const scene = @import("../scene.zig");
+const bag = @import("bag.zig");
 
 const Tip = struct {
     var background: gfx.Texture = undefined;
     content: []const u8,
 };
-
-pub const Item = struct {
-    name: []const u8 = &.{},
-    count: u32 = 0,
-    texture: gfx.Texture,
-    tip: []const u8 = &.{},
-    value1: u32 = 0,
-    value2: u32 = 0,
-    value3: u32 = 0,
-    value4: u32 = 0,
-    value5: u32 = 0,
-
-    pub fn addValue(self: *Item, other: *const Item) void {
-        self.value2 += other.value2;
-        self.value3 += other.value3;
-        self.value4 += other.value4;
-        self.value5 += other.value5;
-    }
-};
-pub var items: [10]Item = undefined;
-pub var skills: [10]Item = undefined;
 
 pub var players: [3]Player = undefined;
 pub var currentPlayer: *Player = &players[0];
@@ -48,7 +28,7 @@ var moveTimer: window.Timer = .init(0.4);
 var moveDisplay: bool = true;
 
 pub fn init() void {
-    initItems();
+    bag.init();
 
     players[0] = Player.init(0);
     players[1] = Player.init(1);
@@ -56,61 +36,11 @@ pub fn init() void {
 
     Tip.background = gfx.loadTexture("assets/msgtip.png", .init(291, 42));
     targetTexture = gfx.loadTexture("assets/move_flag.png", .init(33, 37));
-
     talkTexture = gfx.loadTexture("assets/mc_2.png", .init(30, 30));
 
     statusPopup.init();
     dialog.init();
-
     map.init();
-
-    initSkills();
-}
-
-fn initItems() void {
-    for (&items) |*item| item.count = 0;
-
-    items[0] = .{
-        .name = "红药水",
-        .texture = gfx.loadTexture("assets/item/item1.png", .init(66, 66)),
-        .tip = "恢复少量 HP",
-        .count = 2,
-    };
-
-    items[1] = .{
-        .name = "蓝药水",
-        .texture = gfx.loadTexture("assets/item/item2.png", .init(66, 66)),
-        .tip = "恢复少量 MP",
-        .count = 3,
-    };
-
-    items[2] = .{
-        .name = "短剑",
-        .texture = gfx.loadTexture("assets/item/item3.png", .init(66, 66)),
-        .tip = "一把钢制短剑",
-        .count = 2,
-        .value1 = 1,
-        .value2 = 5,
-        .value4 = 1,
-    };
-}
-
-fn initSkills() void {
-    for (&skills) |*skill| skill.count = 0;
-
-    skills[0] = .{
-        .name = "治疗术",
-        .texture = gfx.loadTexture("assets/item/skill1.png", .init(66, 66)),
-        .tip = "恢复少量 HP",
-        .count = 20,
-    };
-
-    skills[1] = .{
-        .name = "黑洞漩涡",
-        .texture = gfx.loadTexture("assets/item/skill2.png", .init(66, 66)),
-        .tip = "攻击型技能，将敌人吸入漩涡",
-        .count = 20,
-    };
 }
 
 pub fn enter() void {
