@@ -59,7 +59,7 @@ fn npc1Action() void {
 }
 
 fn npc2Action() void {
-    world.showTip();
+    world.openShop();
 }
 
 fn map2npc1Action() void {

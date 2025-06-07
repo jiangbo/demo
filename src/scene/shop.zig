@@ -6,12 +6,21 @@ const world = @import("world.zig");
 const camera = @import("../camera.zig");
 const bag = @import("bag.zig");
 
-pub var active: bool = true;
+pub var active: bool = false;
 var background: gfx.Texture = undefined;
+const position = gfx.Vector.init(190, 70);
 
 var items: [6]bag.Item = undefined;
 var selected: usize = 0;
 var selectedTexture: gfx.Texture = undefined;
+
+var closeTexture: gfx.Texture = undefined;
+var closeHover: gfx.Texture = undefined;
+var prePageHover: gfx.Texture = undefined;
+var buyHover: gfx.Texture = undefined;
+var nextPageHover: gfx.Texture = undefined;
+var buttons: [7]gfx.Rectangle = undefined;
+var hover: [buttons.len]bool = undefined;
 
 pub fn init() void {
     items[0] = bag.Item{ .info = &bag.infos[0], .count = 1 };
@@ -22,10 +31,26 @@ pub fn init() void {
 
     background = gfx.loadTexture("assets/item/shop_bg.png", .init(367, 437));
     selectedTexture = gfx.loadTexture("assets/item/sbt7_2.png", .init(273, 90));
+
+    closeTexture = gfx.loadTexture("assets/item/sbt6_1.png", .init(30, 31));
+    closeHover = gfx.loadTexture("assets/item/sbt6_2.png", .init(30, 31));
+
+    prePageHover = gfx.loadTexture("assets/item/sbt3_2.png", .init(67, 28));
+    buyHover = gfx.loadTexture("assets/item/sbt8_2.png", .init(67, 28));
+    nextPageHover = gfx.loadTexture("assets/item/sbt5_2.png", .init(67, 28));
+
+    buttons[0] = .init(position.add(.init(62, 55)), .init(250, 70));
+    buttons[1] = .init(position.add(.init(62, 150)), .init(250, 70));
+    buttons[2] = .init(position.add(.init(62, 245)), .init(250, 70));
+    buttons[3] = .init(position.add(.init(79, 335)), .init(67, 28));
+    buttons[4] = .init(position.add(.init(154, 335)), .init(67, 28));
+    buttons[5] = .init(position.add(.init(230, 335)), .init(67, 28));
+    buttons[6] = .init(position.add(.init(328, 16)), .init(30, 31));
 }
 
 pub fn update(delta: f32) void {
     _ = delta;
+    @memset(&hover, false);
 
     if (window.isAnyKeyRelease(&.{ .Q, .ESCAPE })) active = false;
 
@@ -34,21 +59,63 @@ pub fn update(delta: f32) void {
         selected -= 1;
     }
 
+    if (window.isAnyKeyRelease(&.{ .A, .LEFT })) prePage();
+    if (window.isAnyKeyRelease(&.{ .D, .RIGHT })) nextPage();
+
     if (window.isAnyKeyRelease(&.{ .S, .DOWN })) {
         selected += 1;
         selected = selected % items.len;
     }
 
-    if (window.isAnyKeyRelease(&.{ .SPACE, .ENTER, .F })) {
-        if (items[selected].info.price <= bag.money) {
-            bag.addItem(items[selected].info);
-            bag.money -= items[selected].info.price;
+    if (window.isAnyKeyRelease(&.{ .SPACE, .ENTER, .F })) buyItem();
+
+    for (&buttons, 0..) |area, index| {
+        if (area.contains(window.mousePosition)) {
+            if (window.isButtonRelease(.LEFT))
+                leftClickButton(index)
+            else if (window.isButtonRelease(.RIGHT)) {
+                rightClickButton(index);
+            } else hover[index] = true;
+            break;
         }
     }
 }
 
+fn buyItem() void {
+    if (items[selected].info.price <= bag.money) {
+        bag.addItem(items[selected].info);
+        bag.money -= items[selected].info.price;
+    }
+}
+
+fn prePage() void {
+    if (selected / 3 == 0) selected += items.len;
+    selected -= 3;
+}
+
+fn nextPage() void {
+    selected = (selected + 3) % items.len;
+}
+
+fn leftClickButton(index: usize) void {
+    if (index == 0 or index == 1 or index == 2) {
+        selected = selected / 3 * 3 + index;
+    }
+
+    if (index == 3) prePage();
+    if (index == 4) buyItem();
+    if (index == 5) nextPage();
+    if (index == 6) active = false;
+}
+
+fn rightClickButton(index: usize) void {
+    if (index == 0 or index == 1 or index == 2) {
+        selected = selected / 3 * 3 + index;
+        buyItem();
+    }
+}
+
 pub fn render() void {
-    const position = gfx.Vector.init(190, 70);
     camera.draw(background, position);
 
     const page = selected / 3;
@@ -67,6 +134,15 @@ pub fn render() void {
     }
 
     drawMoneyText(.{bag.money}, position.add(.init(180, 382)));
+
+    if (hover[3]) camera.draw(prePageHover, buttons[3].min);
+    if (hover[4]) camera.draw(buyHover, buttons[4].min);
+    if (hover[5]) camera.draw(nextPageHover, buttons[5].min);
+
+    const close = if (hover[6]) closeHover else closeTexture;
+    camera.draw(close, buttons[6].min);
+
+    for (&buttons) |button| camera.debugDraw(button);
 }
 
 fn drawPriceText(args: anytype, pos: gfx.Vector) void {

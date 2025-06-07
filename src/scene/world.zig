@@ -157,6 +157,10 @@ pub fn showDialog(npc: *map.NPC) void {
     dialog.show(npc);
 }
 
+pub fn openShop() void {
+    shop.active = true;
+}
+
 pub fn showTip() void {
     tip = Tip{ .content = "遇到一个人" };
 }
