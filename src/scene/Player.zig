@@ -73,18 +73,15 @@ pub fn init(index: u8) Player {
 
 fn initPlayer1() Player {
     const role = window.loadTexture("assets/r1.png", .init(960, 960));
-    var player = Player{
+    return Player{
         .index = 0,
         .roleTexture = role,
         .statusTexture = window.loadTexture("assets/item/face1.png", .init(357, 317)),
         .battleTexture = window.loadTexture("assets/fight/p1.png", .init(960, 240)),
         .battleFace = window.loadTexture("assets/fight/fm_face1.png", .init(319, 216)),
+        .health = 20,
+        .mana = 20,
     };
-
-    // .attack = window.loadTexture("assets/item/item3.png", .init(66, 66)),
-    // .defend = window.loadTexture("assets/item/item5.png", .init(66, 66)),
-    player.useItem(bag.items[2]);
-    return player;
 }
 
 fn initPlayer2() Player {
@@ -110,14 +107,45 @@ fn initPlayer3() Player {
     };
 }
 
-pub fn useItem(self: *Player, item: bag.Item) void {
+pub fn useItem(self: *Player, item: *bag.Item) void {
+    if (item.count == 0) return;
     // 1 表示武器，2 表示防具
     if (1 == item.info.value1) {
+        if (self.attackItem != null) self.removeItem(1);
         self.attackItem = item.info;
+        self.computeTotalItem();
     } else if (2 == item.info.value1) {
+        if (self.defendItem != null) self.removeItem(2);
         self.defendItem = item.info;
+        self.computeTotalItem();
+    } else if (3 == item.info.value1) {
+        if (self.health == self.maxHealth) return;
+        self.health += item.info.value2;
+        self.health = std.math.clamp(self.health, 0, self.maxHealth);
+    } else if (4 == item.info.value1) {
+        if (self.mana == self.maxMana) return;
+        self.mana += item.info.value2;
+        self.mana = std.math.clamp(self.mana, 0, self.maxMana);
     }
+    item.count -= 1;
+}
 
+pub fn removeItem(self: *Player, itemType: u32) void {
+    if (itemType == 1) {
+        if (self.attackItem) |attackItem| {
+            bag.addItem(attackItem);
+            self.attackItem = null;
+        }
+    } else if (itemType == 2) {
+        if (self.defendItem) |defendItem| {
+            bag.addItem(defendItem);
+            self.defendItem = null;
+        }
+    }
+    self.computeTotalItem();
+}
+
+fn computeTotalItem(self: *Player) void {
     self.totalItem = .{ .texture = undefined };
     if (self.attackItem) |i| self.totalItem.addValue(i);
     if (self.defendItem) |i| self.totalItem.addValue(i);

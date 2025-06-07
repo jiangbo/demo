@@ -39,6 +39,21 @@ pub fn update(delta: f32) void {
 
     if (window.isKeyRelease(.TAB)) {
         menuType = if (menuType == .item) .skill else .item;
+        selectedItem = 0;
+    }
+
+    if (window.isAnyKeyRelease(&.{ .W, .UP })) {
+        if (selectedItem == 0) selectedItem = bag.items.len;
+        selectedItem -= 1;
+    }
+
+    if (window.isAnyKeyRelease(&.{ .S, .DOWN })) {
+        selectedItem += 1;
+        selectedItem = selectedItem % bag.items.len;
+    }
+
+    if (window.isAnyKeyRelease(&.{ .SPACE, .F, .ENTER })) {
+        world.players[selectedPlayer].useItem(&bag.items[selectedItem]);
     }
 
     _ = delta;
@@ -61,23 +76,19 @@ pub fn render() void {
         camera.draw(skillTexture, position.add(.init(629, 51)));
     }
 
-    var showItemCount: usize = 0;
-    for (items) |item| {
-        if (item.count == 0) continue;
-
+    const page = selectedItem / 3;
+    for (items[page * 3 ..][0..3], 0..) |item, index| {
         const offset = position.add(.init(360, 48));
-        const pos = offset.addY(@floatFromInt(96 * showItemCount));
-        camera.draw(item.info.texture, pos);
-        drawItemInfo(.{item.info.name}, pos.addX(80));
-        drawItemInfo(.{item.info.tip}, pos.add(.init(90, 27)));
-        drawCount(.{item.count}, pos.addX(160));
-
-        if (selectedItem == showItemCount) {
+        const pos = offset.addY(@floatFromInt(96 * index));
+        if (selectedItem == index + page * 3) {
             camera.draw(selected, pos.sub(.init(10, 10)));
         }
+        if (item.count == 0) continue;
 
-        showItemCount += 1;
-        if (showItemCount >= 3) break;
+        camera.draw(item.info.texture, pos);
+        drawItemInfo(.{item.info.name}, pos.addX(80));
+        drawItemInfo(.{item.info.tip}, pos.add(.init(80, 25)));
+        drawCount(.{item.count}, pos.addX(160));
     }
 
     drawStatusText(.{bag.money}, .init(525, 445));
