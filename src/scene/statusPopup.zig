@@ -48,16 +48,7 @@ pub fn render() void {
 
     camera.draw(background, position);
 
-    const player = &world.players[selectedPlayer];
-    camera.draw(player.statusTexture, position);
-
-    if (player.attack) |attack| {
-        camera.draw(attack, position.add(.init(41, 55)));
-    }
-
-    if (player.defend) |defend| {
-        camera.draw(defend, position.add(.init(41, 136)));
-    }
+    renderStatus();
 
     var items: []world.Item = undefined;
 
@@ -84,4 +75,35 @@ pub fn render() void {
         showItemCount += 1;
         if (showItemCount >= 3) break;
     }
+}
+
+fn renderStatus() void {
+    const player = &world.players[selectedPlayer];
+    camera.draw(player.statusTexture, position);
+
+    if (player.attack) |attack| {
+        camera.draw(attack, position.add(.init(41, 55)));
+    }
+
+    if (player.defend) |defend| {
+        camera.draw(defend, position.add(.init(41, 136)));
+    }
+
+    var buffer: [32]u8 = undefined;
+
+    drawText(&buffer, .{player.health}, .init(155, 411));
+    drawText(&buffer, .{player.mana}, .init(290, 411));
+    drawText(&buffer, .{player.maxAttack}, .init(155, 431));
+    drawText(&buffer, .{player.maxDefend}, .init(290, 431));
+    drawText(&buffer, .{player.maxSpeed}, .init(155, 451));
+    drawText(&buffer, .{player.maxLuck}, .init(290, 451));
+}
+
+fn drawText(buffer: []u8, args: anytype, pos: gfx.Vector) void {
+    const text = std.fmt.bufPrint(buffer, "{}", args);
+    camera.drawTextOptions(.{
+        .text = text catch unreachable,
+        .position = pos,
+        .color = .{ .r = 0.21, .g = 0.09, .b = 0.01, .a = 1 },
+    });
 }

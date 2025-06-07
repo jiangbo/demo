@@ -95,25 +95,3 @@ pub fn FixedFrameAnimation(maxSize: u8, time: f32) type {
         }
     };
 }
-
-const sk = @import("sokol");
-pub fn drawRectangleLine(rect: Rectangle) void {
-    sk.gl.beginLineStrip();
-
-    sk.gl.v2fC3b(rect.min.x, rect.min.y, 0, 255, 0);
-    sk.gl.v2fC3b(rect.max.x, rect.min.y, 0, 255, 0);
-    sk.gl.v2fC3b(rect.max.x, rect.max.y, 0, 255, 0);
-    sk.gl.v2fC3b(rect.min.x, rect.max.y, 0, 255, 0);
-    sk.gl.v2fC3b(rect.min.x, rect.min.y, 0, 255, 0);
-
-    sk.gl.end();
-}
-
-pub fn drawQuad() void {
-    sk.gl.beginQuads();
-    sk.gl.v2fC3b(100, 100, 255, 0, 0);
-    sk.gl.v2fC3b(200, 100, 0, 0, 255);
-    sk.gl.v2fC3b(200, 200, 0, 255, 255);
-    sk.gl.v2fC3b(100, 200, 0, 255, 0);
-    sk.gl.end();
-}

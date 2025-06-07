@@ -79,6 +79,14 @@ pub fn lookAt(pos: math.Vector) void {
     rect = .init(offset, rect.size());
 }
 
+pub fn toWorldPosition(position: math.Vector) math.Vector {
+    return position.add(rect.min);
+}
+
+pub fn toWindowPosition(position: math.Vector) math.Vector {
+    return position.sub(rect.min);
+}
+
 pub fn beginDraw(color: gpu.Color) void {
     renderPass = gpu.commandEncoder.beginRenderPass(color);
     totalDrawCount = 0;

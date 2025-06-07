@@ -109,10 +109,7 @@ pub fn update(delta: f32) void {
     const confirm = window.isAnyKeyRelease(&.{ .SPACE, .ENTER }) or
         window.isButtonRelease(.LEFT);
 
-    if (dialog.active) {
-        if (confirm) dialog.update(delta);
-        return;
-    }
+    if (dialog.active) return if (confirm) dialog.update(delta);
 
     if (tip) |_| {
         if (confirm) tip = null;
@@ -126,7 +123,7 @@ pub fn update(delta: f32) void {
     }
 
     if (window.isButtonRelease(.LEFT)) {
-        mouseTarget = camera.rect.min.add(window.mousePosition);
+        mouseTarget = camera.toWorldPosition(window.mousePosition);
     }
 
     if (mouseTarget != null) {

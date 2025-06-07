@@ -31,6 +31,15 @@ battleTexture: gfx.Texture = undefined,
 attackTexture: gfx.Texture = undefined,
 battleFace: gfx.Texture = undefined,
 
+maxHealth: u32 = 100,
+health: u32 = 100,
+maxMana: u32 = 100,
+mana: u32 = 100,
+maxAttack: u32 = 10,
+maxDefend: u32 = 10,
+maxSpeed: u32 = 10,
+maxLuck: u32 = 10,
+
 pub fn init(index: u8) Player {
     var player = switch (index) {
         0 => initPlayer1(),
