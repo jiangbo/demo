@@ -8,7 +8,7 @@ const bag = @import("bag.zig");
 
 pub const MenuType = enum { item, skill };
 
-pub var display: bool = true;
+pub var display: bool = false;
 var position: gfx.Vector = undefined;
 var background: gfx.Texture = undefined;
 var selected: gfx.Texture = undefined;
@@ -179,8 +179,6 @@ pub fn render() void {
 
     const close = if (hover[11]) closeHover else closeTexture;
     camera.draw(close, buttons[11].min);
-
-    for (&buttons) |value| camera.debugDraw(value);
 }
 
 fn renderStatus() void {

@@ -1,0 +1,104 @@
+const std = @import("std");
+
+const window = @import("../window.zig");
+const gfx = @import("../graphics.zig");
+const world = @import("world.zig");
+const camera = @import("../camera.zig");
+const bag = @import("bag.zig");
+
+pub var active: bool = true;
+var background: gfx.Texture = undefined;
+
+var items: [6]bag.Item = undefined;
+var selected: usize = 0;
+var selectedTexture: gfx.Texture = undefined;
+
+pub fn init() void {
+    items[0] = bag.Item{ .info = &bag.infos[0], .count = 1 };
+    items[1] = bag.Item{ .info = &bag.infos[1], .count = 1 };
+    items[2] = bag.Item{ .info = &bag.infos[2], .count = 1 };
+    items[3] = bag.Item{ .info = &bag.infos[3], .count = 1 };
+    items[4] = bag.Item{ .info = &bag.infos[4], .count = 1 };
+
+    background = gfx.loadTexture("assets/item/shop_bg.png", .init(367, 437));
+    selectedTexture = gfx.loadTexture("assets/item/sbt7_2.png", .init(273, 90));
+}
+
+pub fn update(delta: f32) void {
+    _ = delta;
+
+    if (window.isAnyKeyRelease(&.{ .Q, .ESCAPE })) active = false;
+
+    if (window.isAnyKeyRelease(&.{ .W, .UP })) {
+        if (selected == 0) selected = items.len;
+        selected -= 1;
+    }
+
+    if (window.isAnyKeyRelease(&.{ .S, .DOWN })) {
+        selected += 1;
+        selected = selected % items.len;
+    }
+
+    if (window.isAnyKeyRelease(&.{ .SPACE, .ENTER, .F })) {
+        if (items[selected].info.price <= bag.money) {
+            bag.addItem(items[selected].info);
+            bag.money -= items[selected].info.price;
+        }
+    }
+}
+
+pub fn render() void {
+    const position = gfx.Vector.init(190, 70);
+    camera.draw(background, position);
+
+    const page = selected / 3;
+    for (items[page * 3 ..][0..3], 0..) |item, index| {
+        const offset = position.add(.init(62, 54));
+        const pos = offset.addY(@floatFromInt(96 * index));
+        if (selected == index + page * 3) {
+            camera.draw(selectedTexture, pos.sub(.init(10, 10)));
+        }
+
+        if (item.count == 0) continue;
+        camera.draw(item.info.texture, pos);
+        drawItemInfo(.{item.info.name}, pos.addX(80));
+        drawItemInfo(.{item.info.tip}, pos.add(.init(80, 25)));
+        drawPriceText(.{item.info.price}, pos.add(.init(180, 0)));
+    }
+
+    drawMoneyText(.{bag.money}, position.add(.init(180, 382)));
+}
+
+fn drawPriceText(args: anytype, pos: gfx.Vector) void {
+    drawTextOptions("$ {}", .{
+        .args = args,
+        .position = pos,
+        .color = gfx.Color{ .r = 0.75, .g = 0.89, .b = 0.26, .a = 1 },
+    });
+}
+
+fn drawMoneyText(args: anytype, pos: gfx.Vector) void {
+    drawTextOptions("{}", .{
+        .args = args,
+        .position = pos,
+        .color = gfx.Color{ .r = 0.21, .g = 0.09, .b = 0.01, .a = 1 },
+    });
+}
+
+fn drawItemInfo(args: anytype, pos: gfx.Vector) void {
+    drawTextOptions("{s}", .{
+        .args = args,
+        .position = pos,
+        .color = gfx.Color{ .r = 0.75, .g = 0.89, .b = 0.26, .a = 1 },
+    });
+}
+
+fn drawTextOptions(comptime fmt: []const u8, options: anytype) void {
+    var buffer: [256]u8 = undefined;
+    const text = std.fmt.bufPrint(&buffer, fmt, options.args);
+    camera.drawTextOptions(.{
+        .text = text catch unreachable,
+        .position = options.position,
+        .color = options.color,
+    });
+}

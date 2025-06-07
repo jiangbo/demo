@@ -10,6 +10,7 @@ const dialog = @import("dialog.zig");
 const statusPopup = @import("statusPopup.zig");
 const scene = @import("../scene.zig");
 const bag = @import("bag.zig");
+const shop = @import("shop.zig");
 
 const Tip = struct {
     var background: gfx.Texture = undefined;
@@ -39,6 +40,7 @@ pub fn init() void {
     talkTexture = gfx.loadTexture("assets/mc_2.png", .init(30, 30));
 
     statusPopup.init();
+    shop.init();
     dialog.init();
     map.init();
 }
@@ -56,6 +58,7 @@ pub fn update(delta: f32) void {
         window.isButtonRelease(.LEFT);
 
     if (dialog.active) return if (confirm) dialog.update(delta);
+    if (shop.active) return shop.update(delta);
 
     if (tip) |_| {
         if (confirm) tip = null;
@@ -140,6 +143,7 @@ fn renderPopup() void {
     camera.lookAt(.zero);
 
     if (dialog.active) dialog.render();
+    if (shop.active) shop.render();
 
     if (tip) |t| {
         camera.draw(Tip.background, .init(251, 200));

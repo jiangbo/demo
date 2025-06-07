@@ -3,7 +3,7 @@ const std = @import("std");
 const gfx = @import("../graphics.zig");
 
 pub const Item = struct {
-    info: *ItemInfo,
+    info: *const ItemInfo,
     count: u32 = 0,
 };
 
@@ -49,7 +49,7 @@ pub fn init() void {
     skills[1] = .{ .info = &infos[7], .count = 20 };
 }
 
-pub fn addItem(itemInfo: *ItemInfo) void {
+pub fn addItem(itemInfo: *const ItemInfo) void {
     for (&items) |*item| {
         if (item.info == itemInfo) {
             item.count += 1;

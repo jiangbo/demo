@@ -25,8 +25,8 @@ leftAnimation: FrameAnimation = undefined,
 rightAnimation: FrameAnimation = undefined,
 
 statusTexture: gfx.Texture = undefined,
-attackItem: ?*bag.ItemInfo = null,
-defendItem: ?*bag.ItemInfo = null,
+attackItem: ?*const bag.ItemInfo = null,
+defendItem: ?*const bag.ItemInfo = null,
 totalItem: bag.ItemInfo = .{ .texture = undefined },
 
 battleTexture: gfx.Texture = undefined,
