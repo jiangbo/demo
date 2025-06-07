@@ -70,6 +70,6 @@ pub fn render() void {
             .position = .init(160, 440),
             .color = .{ .r = 0.7, .g = 0.5, .b = 0.3, .a = 1 },
         });
-        camera.drawText(content, .init(410, 455));
+        camera.drawText(content, .init(210, 455));
     }
 }

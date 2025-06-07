@@ -25,9 +25,9 @@ leftAnimation: FrameAnimation = undefined,
 rightAnimation: FrameAnimation = undefined,
 
 statusTexture: gfx.Texture = undefined,
-attackItem: ?bag.Item = null,
-defendItem: ?bag.Item = null,
-totalItem: bag.Item = .{ .texture = undefined },
+attackItem: ?*bag.ItemInfo = null,
+defendItem: ?*bag.ItemInfo = null,
+totalItem: bag.ItemInfo = .{ .texture = undefined },
 
 battleTexture: gfx.Texture = undefined,
 attackTexture: gfx.Texture = undefined,
@@ -112,15 +112,15 @@ fn initPlayer3() Player {
 
 pub fn useItem(self: *Player, item: bag.Item) void {
     // 1 表示武器，2 表示防具
-    if (1 == item.value1) {
-        self.attackItem = item;
-    } else if (2 == item.value1) {
-        self.defendItem = item;
+    if (1 == item.info.value1) {
+        self.attackItem = item.info;
+    } else if (2 == item.info.value1) {
+        self.defendItem = item.info;
     }
 
     self.totalItem = .{ .texture = undefined };
-    if (self.attackItem) |*i| self.totalItem.addValue(i);
-    if (self.defendItem) |*i| self.totalItem.addValue(i);
+    if (self.attackItem) |i| self.totalItem.addValue(i);
+    if (self.defendItem) |i| self.totalItem.addValue(i);
 }
 
 pub fn update(self: *Player, delta: f32) void {

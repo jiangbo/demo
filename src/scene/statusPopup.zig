@@ -67,7 +67,10 @@ pub fn render() void {
 
         const offset = position.add(.init(360, 48));
         const pos = offset.addY(@floatFromInt(96 * showItemCount));
-        camera.draw(item.texture, pos);
+        camera.draw(item.info.texture, pos);
+        drawItemInfo(.{item.info.name}, pos.addX(80));
+        drawItemInfo(.{item.info.tip}, pos.add(.init(90, 27)));
+        drawCount(.{item.count}, pos.addX(160));
 
         if (selectedItem == showItemCount) {
             camera.draw(selected, pos.sub(.init(10, 10)));
@@ -77,15 +80,13 @@ pub fn render() void {
         if (showItemCount >= 3) break;
     }
 
-    var buffer: [32]u8 = undefined;
-    drawText(&buffer, .{bag.money}, .init(525, 445));
+    drawStatusText(.{bag.money}, .init(525, 445));
 }
 
 fn renderStatus() void {
     const player = &world.players[selectedPlayer];
     camera.draw(player.statusTexture, position);
 
-    var buffer: [32]u8 = undefined;
     if (player.attackItem) |item| {
         camera.draw(item.texture, position.add(.init(41, 55)));
     }
@@ -94,35 +95,59 @@ fn renderStatus() void {
         camera.draw(item.texture, position.add(.init(41, 136)));
     }
 
-    drawText(&buffer, .{player.health}, .init(155, 411));
-    drawText(&buffer, .{player.mana}, .init(290, 411));
+    drawStatusText(.{player.health}, .init(155, 411));
+    drawStatusText(.{player.mana}, .init(290, 411));
 
     const item = &player.totalItem;
-    drawText(&buffer, .{player.attack}, .init(155, 431));
-    drawEffect(&buffer, .{item.value2}, .init(185, 431));
-    drawText(&buffer, .{player.defend}, .init(290, 431));
-    drawEffect(&buffer, .{item.value3}, .init(320, 431));
+    drawStatusText(.{player.attack}, .init(155, 431));
+    drawEffect(.{item.value2}, .init(185, 431));
+    drawStatusText(.{player.defend}, .init(290, 431));
+    drawEffect(.{item.value3}, .init(320, 431));
 
-    drawText(&buffer, .{player.speed}, .init(155, 451));
-    drawEffect(&buffer, .{item.value4}, .init(185, 451));
-    drawText(&buffer, .{player.luck}, .init(290, 451));
-    drawEffect(&buffer, .{item.value5}, .init(320, 451));
+    drawStatusText(.{player.speed}, .init(155, 451));
+    drawEffect(.{item.value4}, .init(185, 451));
+    drawStatusText(.{player.luck}, .init(290, 451));
+    drawEffect(.{item.value5}, .init(320, 451));
 }
 
-fn drawText(buffer: []u8, args: anytype, pos: gfx.Vector) void {
-    const text = std.fmt.bufPrint(buffer, "{}", args);
-    camera.drawTextOptions(.{
-        .text = text catch unreachable,
+fn drawStatusText(args: anytype, pos: gfx.Vector) void {
+    drawTextOptions("{}", .{
+        .args = args,
         .position = pos,
-        .color = .{ .r = 0.21, .g = 0.09, .b = 0.01, .a = 1 },
+        .color = gfx.Color{ .r = 0.21, .g = 0.09, .b = 0.01, .a = 1 },
     });
 }
 
-fn drawEffect(buffer: []u8, args: anytype, pos: gfx.Vector) void {
-    const text = std.fmt.bufPrint(buffer, "+{}", args);
+fn drawEffect(args: anytype, pos: gfx.Vector) void {
+    drawTextOptions("+{}", .{
+        .args = args,
+        .position = pos,
+        .color = gfx.Color{ .r = 1, .a = 1 },
+    });
+}
+
+fn drawItemInfo(args: anytype, pos: gfx.Vector) void {
+    drawTextOptions("{s}", .{
+        .args = args,
+        .position = pos,
+        .color = gfx.Color{ .r = 0.75, .g = 0.89, .b = 0.26, .a = 1 },
+    });
+}
+
+fn drawCount(args: anytype, pos: gfx.Vector) void {
+    drawTextOptions("X {}", .{
+        .args = args,
+        .position = pos,
+        .color = gfx.Color{ .r = 0.75, .g = 0.89, .b = 0.26, .a = 1 },
+    });
+}
+
+fn drawTextOptions(comptime fmt: []const u8, options: anytype) void {
+    var buffer: [256]u8 = undefined;
+    const text = std.fmt.bufPrint(&buffer, fmt, options.args);
     camera.drawTextOptions(.{
         .text = text catch unreachable,
-        .position = pos,
-        .color = .{ .r = 1, .a = 1 },
+        .position = options.position,
+        .color = options.color,
     });
 }
