@@ -8,6 +8,7 @@ const window = @import("window.zig");
 pub const camera = @import("camera.zig");
 
 pub const Texture = gpu.Texture;
+pub const Color = gpu.Color;
 pub const Vector = math.Vector;
 pub const FourDirection = math.FourDirection;
 pub const Rectangle = math.Rectangle;

@@ -24,8 +24,9 @@ leftAnimation: FrameAnimation = undefined,
 rightAnimation: FrameAnimation = undefined,
 
 statusTexture: gfx.Texture = undefined,
-attack: ?gfx.Texture = null,
-defend: ?gfx.Texture = null,
+attackItem: ?world.Item = null,
+defendItem: ?world.Item = null,
+totalItem: world.Item = .{ .texture = undefined },
 
 battleTexture: gfx.Texture = undefined,
 attackTexture: gfx.Texture = undefined,
@@ -35,10 +36,10 @@ maxHealth: u32 = 100,
 health: u32 = 100,
 maxMana: u32 = 100,
 mana: u32 = 100,
-maxAttack: u32 = 10,
-maxDefend: u32 = 10,
-maxSpeed: u32 = 10,
-maxLuck: u32 = 10,
+attack: u32 = 10,
+defend: u32 = 10,
+speed: u32 = 10,
+luck: u32 = 10,
 
 pub fn init(index: u8) Player {
     var player = switch (index) {
@@ -71,15 +72,18 @@ pub fn init(index: u8) Player {
 
 fn initPlayer1() Player {
     const role = window.loadTexture("assets/r1.png", .init(960, 960));
-    return Player{
+    var player = Player{
         .index = 0,
         .roleTexture = role,
         .statusTexture = window.loadTexture("assets/item/face1.png", .init(357, 317)),
-        .attack = window.loadTexture("assets/item/item3.png", .init(66, 66)),
-        .defend = window.loadTexture("assets/item/item5.png", .init(66, 66)),
         .battleTexture = window.loadTexture("assets/fight/p1.png", .init(960, 240)),
         .battleFace = window.loadTexture("assets/fight/fm_face1.png", .init(319, 216)),
     };
+
+    // .attack = window.loadTexture("assets/item/item3.png", .init(66, 66)),
+    // .defend = window.loadTexture("assets/item/item5.png", .init(66, 66)),
+    player.useItem(world.items[2]);
+    return player;
 }
 
 fn initPlayer2() Player {
@@ -103,6 +107,19 @@ fn initPlayer3() Player {
         .battleTexture = window.loadTexture("assets/fight/p3.png", .init(960, 240)),
         .battleFace = window.loadTexture("assets/fight/fm_face3.png", .init(319, 216)),
     };
+}
+
+pub fn useItem(self: *Player, item: world.Item) void {
+    // 1 表示武器，2 表示防具
+    if (1 == item.value1) {
+        self.attackItem = item;
+    } else if (2 == item.value1) {
+        self.defendItem = item;
+    }
+
+    self.totalItem = .{ .texture = undefined };
+    if (self.attackItem) |*i| self.totalItem.addValue(i);
+    if (self.defendItem) |*i| self.totalItem.addValue(i);
 }
 
 pub fn update(self: *Player, delta: f32) void {

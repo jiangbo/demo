@@ -16,10 +16,22 @@ const Tip = struct {
 };
 
 pub const Item = struct {
-    name: []const u8,
+    name: []const u8 = &.{},
     count: u32 = 0,
     texture: gfx.Texture,
-    tip: []const u8,
+    tip: []const u8 = &.{},
+    value1: u32 = 0,
+    value2: u32 = 0,
+    value3: u32 = 0,
+    value4: u32 = 0,
+    value5: u32 = 0,
+
+    pub fn addValue(self: *Item, other: *const Item) void {
+        self.value2 += other.value2;
+        self.value3 += other.value3;
+        self.value4 += other.value4;
+        self.value5 += other.value5;
+    }
 };
 pub var items: [10]Item = undefined;
 pub var skills: [10]Item = undefined;
@@ -36,6 +48,8 @@ var moveTimer: window.Timer = .init(0.4);
 var moveDisplay: bool = true;
 
 pub fn init() void {
+    initItems();
+
     players[0] = Player.init(0);
     players[1] = Player.init(1);
     players[2] = Player.init(2);
@@ -50,7 +64,6 @@ pub fn init() void {
 
     map.init();
 
-    initItems();
     initSkills();
 }
 
@@ -76,6 +89,9 @@ fn initItems() void {
         .texture = gfx.loadTexture("assets/item/item3.png", .init(66, 66)),
         .tip = "一把钢制短剑",
         .count = 2,
+        .value1 = 1,
+        .value2 = 5,
+        .value4 = 1,
     };
 }
 
