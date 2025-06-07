@@ -63,6 +63,7 @@ pub fn changeScene() void {
 }
 
 pub fn update(delta: f32) void {
+    if (window.isKeyRelease(.X)) camera.debug = !camera.debug;
     cursor = cursorTexture;
     sceneCall("update", .{delta});
 }

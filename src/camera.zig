@@ -24,6 +24,7 @@ var needDrawCount: u32 = 0;
 var totalDrawCount: u32 = 0;
 var texture: gpu.Texture = .{ .image = .{} };
 var debugTexture: gpu.Texture = undefined;
+pub var debug: bool = true;
 
 pub fn init(r: math.Rectangle, b: math.Vector, vertex: []Vertex, index: []u16) void {
     rect = r;
@@ -97,11 +98,12 @@ pub fn beginDraw(color: gpu.Color) void {
 }
 
 pub fn debugDraw(area: math.Rectangle) void {
+    if (!debug) return;
     drawOptions(.{
         .texture = debugTexture,
         .source = debugTexture.area,
         .target = area,
-        .color = .{ .r = 1, .b = 1, .a = 0.3 },
+        .color = .{ .r = 1, .b = 1, .a = 0.4 },
     });
 }
 

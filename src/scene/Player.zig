@@ -130,7 +130,7 @@ pub fn useItem(self: *Player, item: *bag.Item) void {
     item.count -= 1;
 }
 
-pub fn removeItem(self: *Player, itemType: u32) void {
+pub fn removeItem(self: *Player, itemType: usize) void {
     if (itemType == 1) {
         if (self.attackItem) |attackItem| {
             bag.addItem(attackItem);

@@ -8,7 +8,7 @@ const bag = @import("bag.zig");
 
 pub const MenuType = enum { item, skill };
 
-pub var display: bool = false;
+pub var display: bool = true;
 var position: gfx.Vector = undefined;
 var background: gfx.Texture = undefined;
 var selected: gfx.Texture = undefined;
@@ -19,7 +19,14 @@ var selectedPlayer: usize = 0;
 var selectedItem: usize = 0;
 var menuType: MenuType = .item;
 
-var buttons: [1]gfx.Rectangle = undefined;
+var closeTexture: gfx.Texture = undefined;
+var closeHover: gfx.Texture = undefined;
+var nextPlayerHover: gfx.Texture = undefined;
+var prePageHover: gfx.Texture = undefined;
+var useHover: gfx.Texture = undefined;
+var nextPageHover: gfx.Texture = undefined;
+var buttons: [12]gfx.Rectangle = undefined;
+var hover: [buttons.len]bool = undefined;
 
 pub fn init() void {
     position = .init(58, 71);
@@ -28,19 +35,31 @@ pub fn init() void {
     itemTexture = gfx.loadTexture("assets/item/sbt2_1.png", .init(62, 255));
     skillTexture = gfx.loadTexture("assets/item/sbt2_2.png", .init(62, 255));
 
-    buttons[0] = .init(.init(41, 55), .init(66, 66));
-    // buttons[1] = .init(.init(41, 136), .init(66, 66));
-    // buttons[2] = .init(.init(41, 55), .init(66, 66));
-    // buttons[3] = .init(.init(41, 136), .init(66, 66));
-    // buttons[4] = .init(.init(41, 55), .init(66, 66));
-    // buttons[5] = .init(.init(41, 136), .init(66, 66));
-    // buttons[6] = .init(.init(41, 55), .init(66, 66));
-    // buttons[7] = .init(.init(41, 136), .init(66, 66));
-    // buttons[8] = .init(.init(41, 136), .init(66, 66));
-    // buttons[9] = .init(.init(41, 55), .init(66, 66));
+    nextPlayerHover = gfx.loadTexture("assets/item/sbt1_2.png", .init(23, 27));
+    closeTexture = gfx.loadTexture("assets/item/sbt6_1.png", .init(30, 31));
+    closeHover = gfx.loadTexture("assets/item/sbt6_2.png", .init(30, 31));
+
+    prePageHover = gfx.loadTexture("assets/item/sbt3_2.png", .init(67, 28));
+    useHover = gfx.loadTexture("assets/item/sbt4_2.png", .init(67, 28));
+    nextPageHover = gfx.loadTexture("assets/item/sbt5_2.png", .init(67, 28));
+
+    buttons[0] = .init(.init(360, 363), .init(33, 33));
+    buttons[1] = .init(.init(99, 126), .init(66, 66));
+    buttons[2] = .init(.init(99, 208), .init(66, 66));
+    buttons[3] = .init(.init(419, 120), .init(250, 70));
+    buttons[4] = .init(.init(419, 215), .init(250, 70));
+    buttons[5] = .init(.init(419, 310), .init(250, 70));
+    buttons[6] = .init(.init(431, 397), .init(67, 28));
+    buttons[7] = .init(.init(505, 396), .init(67, 28));
+    buttons[8] = .init(.init(581, 396), .init(67, 28));
+    buttons[9] = .init(.init(693, 136), .init(40, 100));
+    buttons[10] = .init(.init(693, 252), .init(40, 100));
+    buttons[11] = .init(.init(685, 75), .init(30, 31));
 }
 
 pub fn update(delta: f32) void {
+    @memset(&hover, false);
+
     if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E })) display = false;
 
     if (window.isAnyKeyRelease(&.{ .LEFT, .A })) {
@@ -69,16 +88,55 @@ pub fn update(delta: f32) void {
         world.players[selectedPlayer].useItem(&bag.items[selectedItem]);
     }
 
-    // for (&buttons, 0..) |area, index| {
-    //     if (area.contains(window.mousePosition)) {
-    //         if (index == 0 or index == 1) {
-    //             world.players[selectedPlayer].useItem(&bag.items[index]);
-    //         }
-    //         break;
-    //     }
-    // }
+    for (&buttons, 0..) |area, index| {
+        if (area.contains(window.mousePosition)) {
+            if (window.isButtonRelease(.LEFT))
+                leftClickButton(index)
+            else if (window.isButtonRelease(.RIGHT)) {
+                rightClickButton(index);
+            } else hover[index] = true;
+            break;
+        }
+    }
 
     _ = delta;
+}
+
+fn leftClickButton(index: usize) void {
+    if (index == 0) {
+        selectedPlayer = (selectedPlayer + 1) % world.players.len;
+    }
+
+    if (index == 3 or index == 4 or index == 5) {
+        selectedItem = selectedItem / 3 * 3 + index % 3;
+    }
+
+    if (index == 6) {
+        if (selectedItem / 3 == 0) selectedItem += bag.items.len;
+        selectedItem -= 3;
+    }
+
+    if (index == 7) {
+        world.players[selectedPlayer].useItem(&bag.items[selectedItem]);
+    }
+
+    if (index == 8) selectedItem = (selectedItem + 3) % bag.items.len;
+
+    if (index == 9) menuType = .item;
+    if (index == 10) menuType = .skill;
+
+    if (index == 11) display = false;
+}
+
+fn rightClickButton(index: usize) void {
+    if (index == 1 or index == 2) {
+        world.players[selectedPlayer].removeItem(index);
+    }
+
+    if (index == 3 or index == 4 or index == 5) {
+        selectedItem = selectedItem / 3 * 3 + index % 3;
+        world.players[selectedPlayer].useItem(&bag.items[selectedItem]);
+    }
 }
 
 pub fn render() void {
@@ -115,10 +173,19 @@ pub fn render() void {
 
     drawStatusText(.{bag.money}, .init(525, 445));
 
+    if (hover[6]) camera.draw(prePageHover, buttons[6].min);
+    if (hover[7]) camera.draw(useHover, buttons[7].min);
+    if (hover[8]) camera.draw(nextPageHover, buttons[8].min);
+
+    const close = if (hover[11]) closeHover else closeTexture;
+    camera.draw(close, buttons[11].min);
+
     for (&buttons) |value| camera.debugDraw(value);
 }
 
 fn renderStatus() void {
+    if (hover[0]) camera.draw(nextPlayerHover, .init(362, 368));
+
     const player = &world.players[selectedPlayer];
     camera.draw(player.statusTexture, position);
 
