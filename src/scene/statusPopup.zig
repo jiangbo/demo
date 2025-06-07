@@ -19,12 +19,25 @@ var selectedPlayer: usize = 0;
 var selectedItem: usize = 0;
 var menuType: MenuType = .item;
 
+var buttons: [1]gfx.Rectangle = undefined;
+
 pub fn init() void {
     position = .init(58, 71);
     background = gfx.loadTexture("assets/item/status_bg.png", .init(677, 428));
     selected = gfx.loadTexture("assets/item/sbt7_2.png", .init(273, 90));
     itemTexture = gfx.loadTexture("assets/item/sbt2_1.png", .init(62, 255));
     skillTexture = gfx.loadTexture("assets/item/sbt2_2.png", .init(62, 255));
+
+    buttons[0] = .init(.init(41, 55), .init(66, 66));
+    // buttons[1] = .init(.init(41, 136), .init(66, 66));
+    // buttons[2] = .init(.init(41, 55), .init(66, 66));
+    // buttons[3] = .init(.init(41, 136), .init(66, 66));
+    // buttons[4] = .init(.init(41, 55), .init(66, 66));
+    // buttons[5] = .init(.init(41, 136), .init(66, 66));
+    // buttons[6] = .init(.init(41, 55), .init(66, 66));
+    // buttons[7] = .init(.init(41, 136), .init(66, 66));
+    // buttons[8] = .init(.init(41, 136), .init(66, 66));
+    // buttons[9] = .init(.init(41, 55), .init(66, 66));
 }
 
 pub fn update(delta: f32) void {
@@ -55,6 +68,15 @@ pub fn update(delta: f32) void {
     if (window.isAnyKeyRelease(&.{ .SPACE, .F, .ENTER })) {
         world.players[selectedPlayer].useItem(&bag.items[selectedItem]);
     }
+
+    // for (&buttons, 0..) |area, index| {
+    //     if (area.contains(window.mousePosition)) {
+    //         if (index == 0 or index == 1) {
+    //             world.players[selectedPlayer].useItem(&bag.items[index]);
+    //         }
+    //         break;
+    //     }
+    // }
 
     _ = delta;
 }
@@ -92,6 +114,8 @@ pub fn render() void {
     }
 
     drawStatusText(.{bag.money}, .init(525, 445));
+
+    for (&buttons) |value| camera.debugDraw(value);
 }
 
 fn renderStatus() void {

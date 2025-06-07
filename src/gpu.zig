@@ -52,6 +52,22 @@ pub const Sampler = sk.gfx.Sampler;
 pub const Shader = sk.gfx.Shader;
 pub const VertexLayout = sk.gfx.VertexLayoutState;
 
+pub fn createTexture(size: math.Vector, data: []const u8) Texture {
+    return Texture{
+        .image = sk.gfx.makeImage(.{
+            .data = init: {
+                var imageData = sk.gfx.ImageData{};
+                imageData.subimage[0][0] = sk.gfx.asRange(data);
+                break :init imageData;
+            },
+            .width = @intFromFloat(size.x),
+            .height = @intFromFloat(size.y),
+            .pixel_format = .RGBA8,
+        }),
+        .area = .init(.zero, size),
+    };
+}
+
 pub fn createBuffer(desc: sk.gfx.BufferDesc) Buffer {
     return sk.gfx.makeBuffer(desc);
 }

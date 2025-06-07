@@ -126,7 +126,7 @@ pub fn useItem(self: *Player, item: *bag.Item) void {
         if (self.mana == self.maxMana) return;
         self.mana += item.info.value2;
         self.mana = std.math.clamp(self.mana, 0, self.maxMana);
-    }
+    } else return;
     item.count -= 1;
 }
 

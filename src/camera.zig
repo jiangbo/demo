@@ -23,6 +23,7 @@ var buffer: gpu.Buffer = undefined;
 var needDrawCount: u32 = 0;
 var totalDrawCount: u32 = 0;
 var texture: gpu.Texture = .{ .image = .{} };
+var debugTexture: gpu.Texture = undefined;
 
 pub fn init(r: math.Rectangle, b: math.Vector, vertex: []Vertex, index: []u16) void {
     rect = r;
@@ -46,6 +47,9 @@ pub fn init(r: math.Rectangle, b: math.Vector, vertex: []Vertex, index: []u16) v
 
     bindGroup.setSampler(shader.SMP_smp, gpu.createSampler(.{}));
     pipeline = initPipeline();
+
+    const data: [64]u8 = [1]u8{0xFF} ** 64;
+    debugTexture = gpu.createTexture(.init(4, 4), &data);
 }
 
 fn initPipeline() gpu.RenderPipeline {
@@ -90,6 +94,15 @@ pub fn toWindowPosition(position: math.Vector) math.Vector {
 pub fn beginDraw(color: gpu.Color) void {
     renderPass = gpu.commandEncoder.beginRenderPass(color);
     totalDrawCount = 0;
+}
+
+pub fn debugDraw(area: math.Rectangle) void {
+    drawOptions(.{
+        .texture = debugTexture,
+        .source = debugTexture.area,
+        .target = area,
+        .color = .{ .r = 1, .b = 1, .a = 0.3 },
+    });
 }
 
 pub fn draw(tex: gpu.Texture, position: math.Vector) void {
