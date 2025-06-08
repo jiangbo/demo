@@ -30,9 +30,9 @@ defendItem: ?*const bag.ItemInfo = null,
 totalItem: bag.ItemInfo = .{ .texture = undefined },
 
 battleTexture: gfx.Texture = undefined,
-attackTexture: gfx.Texture = undefined,
 battleFace: gfx.Texture = undefined,
 
+name: []const u8,
 maxHealth: u32 = 100,
 health: u32 = 100,
 maxMana: u32 = 100,
@@ -50,7 +50,7 @@ pub fn init(index: u8) Player {
         else => unreachable,
     };
 
-    var size: gfx.Vector = .init(960, 240);
+    const size: gfx.Vector = .init(960, 240);
 
     var area = gfx.Rectangle.init(.{ .y = 720 }, size);
     player.upAnimation = .init(player.roleTexture.subTexture(area));
@@ -64,10 +64,6 @@ pub fn init(index: u8) Player {
     area = gfx.Rectangle.init(.{ .y = 480 }, size);
     player.rightAnimation = .init(player.roleTexture.subTexture(area));
 
-    size = .init(240, 240);
-    area = gfx.Rectangle.init(.{ .y = 0 }, size);
-    player.attackTexture = player.battleTexture.subTexture(area);
-
     return player;
 }
 
@@ -75,6 +71,7 @@ fn initPlayer1() Player {
     const role = window.loadTexture("assets/r1.png", .init(960, 960));
     return Player{
         .index = 0,
+        .name = "主角1",
         .roleTexture = role,
         .statusTexture = window.loadTexture("assets/item/face1.png", .init(357, 317)),
         .battleTexture = window.loadTexture("assets/fight/p1.png", .init(960, 240)),
@@ -89,6 +86,7 @@ fn initPlayer2() Player {
 
     return Player{
         .index = 1,
+        .name = "主角2",
         .roleTexture = role,
         .statusTexture = window.loadTexture("assets/item/face2.png", .init(357, 317)),
         .battleTexture = window.loadTexture("assets/fight/p2.png", .init(960, 240)),
@@ -100,6 +98,7 @@ fn initPlayer3() Player {
     const role = window.loadTexture("assets/r3.png", .init(960, 960));
     return Player{
         .index = 2,
+        .name = "主角3",
         .roleTexture = role,
         .statusTexture = window.loadTexture("assets/item/face3.png", .init(357, 317)),
         .battleTexture = window.loadTexture("assets/fight/p3.png", .init(960, 240)),

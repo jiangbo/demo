@@ -45,6 +45,10 @@ pub const Timer = struct {
         return self.elapsed < self.duration;
     }
 
+    pub fn stop(self: *Timer) void {
+        self.elapsed = self.duration;
+    }
+
     pub fn reset(self: *Timer) void {
         self.elapsed = 0;
     }
