@@ -42,12 +42,12 @@ pub fn update(_: f32) void {
     }
 
     if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
-        battle.startAttack(selectedPlayer);
+        battle.startAttack(selectedPlayer, 4);
     }
 
     if (window.isKeyRelease(.TAB)) {
         selectedPlayer = (selectedPlayer + 1) % 3;
-        battle.attackIndex = selectedPlayer;
+        battle.selected = selectedPlayer;
     }
 }
 
@@ -68,10 +68,27 @@ pub fn render() void {
     const player = &world.players[selectedPlayer];
     camera.draw(player.battleFace, offset);
 
-    // 状态条
     drawName(player.name, offset.add(.init(180, 114)));
-    camera.draw(health, offset.add(.init(141, 145)));
-    camera.draw(mana, offset.add(.init(141, 171)));
+    // 状态条
+    var percent = computePercent(player.health, player.maxHealth);
+    drawBar(percent, health, offset.add(.init(141, 145)));
+    percent = computePercent(player.mana, player.maxMana);
+    drawBar(percent, mana, offset.add(.init(141, 171)));
+}
+
+fn computePercent(current: usize, max: usize) f32 {
+    if (max == 0) return 0;
+    const cur: f32 = @floatFromInt(current);
+    return cur / @as(f32, @floatFromInt(max));
+}
+
+fn drawBar(percent: f32, tex: gfx.Texture, pos: gfx.Vector) void {
+    const width = tex.area.size().x * percent;
+    camera.drawOptions(.{
+        .texture = tex,
+        .source = .init(.zero, .init(width, tex.area.size().y)),
+        .target = .init(pos, .init(width, tex.area.size().y)),
+    });
 }
 
 fn drawName(name: []const u8, pos: gfx.Vector) void {

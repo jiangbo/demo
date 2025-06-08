@@ -11,27 +11,43 @@ pub const Enemy = struct {
     texture: gfx.Texture = undefined,
 };
 
+const statusEnum = enum { idle, attack, hurt, dead, none };
+
 var background: gfx.Texture = undefined;
 var enemyTexture: gfx.Texture = undefined;
 var enemies: [3]Enemy = undefined;
+var targetTexture: gfx.Texture = undefined;
 
 var attackTimer: window.Timer = .init(0.4);
-pub var attackIndex: usize = 0;
+pub var selected: usize = 0;
+
+var areas: [6]gfx.Rectangle = .{
+    .init(.init(497, 138), .init(240, 240)),
+    .init(.init(575, 241), .init(240, 240)),
+    .init(.init(468, 297), .init(240, 240)),
+    .init(.init(93, 130), .init(480, 240)),
+    .init(.init(19, 225), .init(480, 240)),
+    .init(.init(60, 321), .init(480, 240)),
+};
+var textures: [areas.len]gfx.Texture = undefined;
+pub var status = [1]statusEnum{.idle} ** areas.len;
 
 pub fn init() void {
     background = gfx.loadTexture("assets/fight/f_scene.png", .init(800, 600));
     enemyTexture = gfx.loadTexture("assets/fight/enemy.png", .init(1920, 240));
+    targetTexture = gfx.loadTexture("assets/fight/fm_b4_2.png", .init(190, 186));
     panel.init();
     attackTimer.stop();
+
+    textures[0] = gfx.loadTexture("assets/fight/p1.png", .init(960, 240));
+    textures[1] = gfx.loadTexture("assets/fight/p2.png", .init(960, 240));
+    textures[2] = gfx.loadTexture("assets/fight/p3.png", .init(960, 240));
+    textures[3] = gfx.loadTexture("assets/fight/enemy.png", .init(1920, 240));
+    textures[4] = textures[3];
+    textures[5] = textures[3];
 }
 
 pub fn enter() void {
-    for (&enemies) |*enemy| {
-        enemy.active = true;
-        const area = gfx.Rectangle.init(.zero, .init(480, 240));
-        enemy.texture = enemyTexture.subTexture(area);
-    }
-
     window.playMusic("assets/fight/fight.ogg");
 }
 
@@ -39,44 +55,40 @@ pub fn exit() void {
     window.stopMusic();
 }
 
-pub fn startAttack(index: usize) void {
+pub fn startAttack(attack: usize, hurt: usize) void {
     attackTimer.reset();
-    attackIndex = index;
+    status[attack] = .attack;
+    status[hurt] = .hurt;
 }
 
 pub fn update(delta: f32) void {
-    attackTimer.update(delta);
+    if (attackTimer.isFinishedAfterUpdate(delta)) {
+        for (&status) |*value| {
+            if (value.* == .attack or value.* == .hurt)
+                value.* = .idle;
+        }
+    }
     if (panel.active) panel.update(delta);
 }
 
 pub fn render() void {
     camera.draw(background, .init(0, 0));
 
-    var offset = gfx.Vector.init(120, 120).scale(-1);
+    for (areas, textures, status, 0..) |area, texture, s, index| {
+        if (s == .none) continue;
 
-    const player1 = &world.players[0];
-    renderAttack(0, player1.battleTexture, offset.add(.init(617, 258)));
+        const size = area.size();
+        const x: f32 = @floatFromInt(@intFromEnum(s));
+        const sub = gfx.Rectangle.init(.init(x * size.x, 0), size);
+        camera.draw(texture.subTexture(sub), area.min);
 
-    const player2 = &world.players[1];
-    renderAttack(1, player2.battleTexture, offset.add(.init(695, 361)));
-
-    const player3 = &world.players[2];
-    renderAttack(2, player3.battleTexture, offset.add(.init(588, 417)));
-
-    offset = gfx.Vector.init(-160, -120);
-    camera.draw(enemies[0].texture, offset.add(.init(253, 250)));
-    camera.draw(enemies[1].texture, offset.add(.init(179, 345)));
-    camera.draw(enemies[2].texture, offset.add(.init(220, 441)));
+        if (!attackTimer.isRunning() and index == selected) {
+            const offset = gfx.Vector.init(90 - size.x / 2, 40);
+            camera.draw(targetTexture, area.min.sub(offset));
+        }
+    }
 
     if (panel.active) panel.render();
-}
 
-fn renderAttack(index: usize, texture: gfx.Texture, pos: gfx.Vector) void {
-    const size = gfx.Vector.init(240, 240);
-
-    var area = gfx.Rectangle.init(.init(0, 0), size);
-    if (attackTimer.isRunning() and attackIndex == index) {
-        area = .init(.init(240, 0), size);
-    }
-    camera.draw(texture.subTexture(area), pos);
+    // for (areas) |area| camera.debugDraw(area);
 }
