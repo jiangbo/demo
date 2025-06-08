@@ -6,8 +6,6 @@ const world = @import("world.zig");
 const camera = @import("../camera.zig");
 const battle = @import("battle.zig");
 
-pub var active: bool = true;
-
 var attack: gfx.Texture = undefined;
 var attackHover: gfx.Texture = undefined;
 var item: gfx.Texture = undefined;
@@ -18,8 +16,8 @@ var background: gfx.Texture = undefined;
 var health: gfx.Texture = undefined;
 var mana: gfx.Texture = undefined;
 
-var selectedType: usize = 0;
-var selectedPlayer: usize = 0;
+var selected: enum { attack, item, skill } = .attack;
+pub var selectedPlayer: usize = 0;
 
 pub fn init() void {
     attack = gfx.loadTexture("assets/fight/fm_b1_1.png", .init(38, 36));
@@ -34,34 +32,86 @@ pub fn init() void {
 }
 
 pub fn update(_: f32) void {
-    if (window.isAnyKeyRelease(&.{ .LEFT, .A })) {
-        selectedType = (selectedType + 2) % 3;
+    if (battle.phase == .normal) return;
+
+    if (battle.phase == .prepare) {
+        if (window.isAnyKeyRelease(&.{ .LEFT, .A })) {
+            selected = prevEnum(selected);
+        }
+        if (window.isAnyKeyRelease(&.{ .RIGHT, .D })) {
+            selected = nextEnum(selected);
+        }
+
+        updatePrepare();
+    } else if (battle.phase == .select) {
+        switch (selected) {
+            .attack => updateSelectAttack(),
+            .skill => updateSelectSkill(),
+            .item => updateSelectItem(),
+        }
     }
-    if (window.isAnyKeyRelease(&.{ .RIGHT, .D })) {
-        selectedType = (selectedType + 1) % 3;
+}
+
+pub fn onPlayerTurn(index: usize) void {
+    battle.phase = .prepare;
+    selectedPlayer = index;
+    battle.selected = selectedPlayer;
+}
+
+fn updatePrepare() void {
+    switch (selected) {
+        .attack => {
+            if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
+                battle.phase = .select;
+                battle.selectFirstEnemy();
+            }
+        },
+        .item, .skill => {},
+    }
+}
+
+fn updateSelectAttack() void {
+    if (window.isAnyKeyRelease(&.{ .D, .S, .DOWN, .RIGHT })) {
+        battle.selectNextEnemy();
     }
 
-    if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
-        battle.startAttack(selectedPlayer, 4);
+    if (window.isAnyKeyRelease(&.{ .A, .W, .LEFT, .UP })) {
+        battle.selectPrevEnemy();
     }
 
-    if (window.isKeyRelease(.TAB)) {
-        selectedPlayer = (selectedPlayer + 1) % 3;
-        battle.selected = selectedPlayer;
+    if (window.isAnyKeyRelease(&.{ .ENTER, .SPACE, .F })) {
+        battle.startAttackSelected(selectedPlayer, 1);
     }
+}
+fn updateSelectSkill() void {}
+fn updateSelectItem() void {}
+
+fn prevEnum(value: anytype) @TypeOf(value) {
+    var number: usize = @intFromEnum(value);
+    if (number == 0) number += enumLength(value);
+    return @enumFromInt(number - 1);
+}
+
+fn nextEnum(value: anytype) @TypeOf(value) {
+    const number: usize = @intFromEnum(value) + 1;
+    return @enumFromInt(number % enumLength(value));
+}
+
+fn enumLength(value: anytype) usize {
+    return @typeInfo(@TypeOf(value)).@"enum".fields.len;
 }
 
 pub fn render() void {
     const offset = gfx.Vector.init(200, 385);
     camera.draw(background, offset);
 
-    var texture = if (selectedType == 0) attackHover else attack;
+    var texture = if (selected == .attack) attackHover else attack;
     camera.draw(texture, offset.add(.init(142, 68)));
 
-    texture = if (selectedType == 1) itemHover else item;
+    texture = if (selected == .item) itemHover else item;
     camera.draw(texture, offset.add(.init(192, 68)));
 
-    texture = if (selectedType == 2) skillHover else skill;
+    texture = if (selected == .skill) skillHover else skill;
     camera.draw(texture, offset.add(.init(242, 68)));
 
     // 头像
