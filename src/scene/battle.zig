@@ -4,39 +4,21 @@ const window = @import("../window.zig");
 const gfx = @import("../graphics.zig");
 const world = @import("world.zig");
 const camera = @import("../camera.zig");
+const panel = @import("panel.zig");
 
 pub const Enemy = struct {
     active: bool = false,
     texture: gfx.Texture = undefined,
 };
 
-pub const Panel = struct {
-    attack: gfx.Texture = undefined,
-    item: gfx.Texture = undefined,
-    skill: gfx.Texture = undefined,
-    background: gfx.Texture = undefined,
-    health: gfx.Texture = undefined,
-    mana: gfx.Texture = undefined,
-};
-
 var background: gfx.Texture = undefined;
 var enemyTexture: gfx.Texture = undefined;
 var enemies: [3]Enemy = undefined;
-var panel: Panel = undefined;
-var displayPanel: bool = true;
 
 pub fn init() void {
     background = gfx.loadTexture("assets/fight/f_scene.png", .init(800, 600));
     enemyTexture = gfx.loadTexture("assets/fight/enemy.png", .init(1920, 240));
-
-    panel = .{
-        .attack = gfx.loadTexture("assets/fight/fm_b1_1.png", .init(38, 36)),
-        .item = gfx.loadTexture("assets/fight/fm_b2_1.png", .init(38, 36)),
-        .skill = gfx.loadTexture("assets/fight/fm_b3_1.png", .init(38, 36)),
-        .background = gfx.loadTexture("assets/fight/fm_bg.png", .init(319, 216)),
-        .health = gfx.loadTexture("assets/fight/fm_s1.png", .init(129, 17)),
-        .mana = gfx.loadTexture("assets/fight/fm_s2.png", .init(129, 17)),
-    };
+    panel.init();
 }
 
 pub fn enter() void {
@@ -54,7 +36,7 @@ pub fn exit() void {
 }
 
 pub fn update(delta: f32) void {
-    _ = delta;
+    if (panel.active) panel.update(delta);
 }
 
 pub fn render() void {
@@ -76,19 +58,5 @@ pub fn render() void {
     camera.draw(enemies[1].texture, offset.add(.init(179, 345)));
     camera.draw(enemies[2].texture, offset.add(.init(220, 441)));
 
-    offset = gfx.Vector.init(200, 385);
-    if (displayPanel) {
-        camera.draw(panel.background, offset);
-        camera.draw(panel.attack, offset.add(.init(142, 68)));
-        camera.draw(panel.item, offset.add(.init(192, 68)));
-        camera.draw(panel.skill, offset.add(.init(242, 68)));
-
-        // 头像
-        const player = &world.players[0];
-        camera.draw(player.battleFace, offset);
-
-        // 状态条
-        camera.draw(panel.health, offset.add(.init(141, 145)));
-        camera.draw(panel.mana, offset.add(.init(141, 171)));
-    }
+    if (panel.active) panel.render();
 }
