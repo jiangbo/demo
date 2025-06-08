@@ -11,7 +11,7 @@ pub const Enemy = struct {
     active: bool = true,
     health: u32 = 100,
     maxHealth: u32 = 100,
-    attack: u32 = 10,
+    attack: u32 = 90,
     defend: u32 = 10,
     speed: f32 = 10,
     luck: u32 = 10,
@@ -36,16 +36,24 @@ var areas: [6]gfx.Rectangle = .{
     .init(.init(19, 225), .init(480, 240)),
     .init(.init(60, 321), .init(480, 240)),
 };
+
+var hurtAnimation: gfx.FixedFrameAnimation(5, 0.1) = undefined;
+
 var textures: [areas.len]gfx.Texture = undefined;
 pub var status = [1]statusEnum{.idle} ** areas.len;
 var actions: [areas.len]u8 = [1]u8{0} ** areas.len;
 var timers: [areas.len]window.Timer = undefined;
 var timerIndex: usize = 0;
 
+var hurtBlood: u32 = 0;
+
 pub fn init() void {
     background = gfx.loadTexture("assets/fight/f_scene.png", .init(800, 600));
     enemyTexture = gfx.loadTexture("assets/fight/enemy.png", .init(1920, 240));
     targetTexture = gfx.loadTexture("assets/fight/fm_b4_2.png", .init(190, 186));
+
+    hurtAnimation = createAnimation("assets/fight/anm_att.png");
+
     panel.init();
     attackTimer.stop();
 
@@ -65,7 +73,11 @@ pub fn enter() void {
         timers[index] = .init(SPEED_TIME / speed);
     }
 
-    const enemyArray: [3]Enemy = .{ .{}, .{ .active = false }, .{ .speed = 20 } };
+    const enemyArray: [3]Enemy = .{
+        .{},
+        .{ .active = false },
+        .{ .speed = 20 },
+    };
 
     @memset(status[3..], .none);
     for (enemyArray, 0..) |enemy, index| {
@@ -84,6 +96,14 @@ pub fn selectFirstEnemy() void {
         if (s == .idle) selected = index;
         break;
     }
+}
+
+pub fn selectAlivePlayer() usize {
+    var index = math.randU8(0, 2);
+    while (status[index] != .idle) {
+        index = math.randU8(0, 2);
+    }
+    return index;
 }
 
 pub fn selectPrevEnemy() void {
@@ -116,10 +136,35 @@ fn startAttack(attack: usize, hurt: usize, use: u8) void {
     timers[attack].reset();
     actions[attack] = use;
     status[hurt] = .hurt;
+    hurtAnimation.reset();
+
+    computeHurtBlood(attack, hurt);
     phase = .battle;
 }
 
+fn computeHurtBlood(attack: usize, hurt: usize) void {
+    if (attack == 0 or attack == 1 or attack == 2) {
+        const player = world.players[attack];
+        const atk = player.attack + player.totalItem.value2;
+        hurtBlood = atk -| enemies[hurt - 3].defend;
+        enemies[hurt - 3].health -|= hurtBlood;
+        if (enemies[hurt - 3].health == 0) status[hurt] = .dead;
+    } else {
+        const player = &world.players[hurt];
+        const def = player.defend + player.totalItem.value3;
+        hurtBlood = enemies[attack - 3].attack -| def;
+        player.health -|= hurtBlood;
+        if (player.health == 0) status[hurt] = .dead;
+    }
+
+    std.log.info("hurt blood: {d}", .{hurtBlood});
+}
+
 pub fn update(delta: f32) void {
+    hurtAnimation.update(delta);
+
+    if (win() or lost()) unreachable;
+
     if (phase == .prepare or phase == .select) {
         panel.update(delta);
         return;
@@ -143,13 +188,27 @@ pub fn update(delta: f32) void {
         if (timer.isRunningAfterUpdate(delta)) continue;
 
         if (index == 3 or index == 4 or index == 5) {
-            break startAttack(index, math.randU8(0, 2), 0);
+            break startAttack(index, selectAlivePlayer(), 0);
         }
 
         if (index == 0 or index == 1 or index == 2) {
             break panel.onPlayerTurn(index);
         }
     }
+}
+
+pub fn win() bool {
+    for (status[3..]) |value| {
+        if (value == .idle) return false;
+    }
+    return true;
+}
+
+pub fn lost() bool {
+    for (status[0..3]) |value| {
+        if (value == .idle) return false;
+    }
+    return true;
 }
 
 pub fn render() void {
@@ -162,6 +221,10 @@ pub fn render() void {
         const x: f32 = @floatFromInt(@intFromEnum(s));
         const sub = gfx.Rectangle.init(.init(x * size.x, 0), size);
         camera.draw(texture.subTexture(sub), area.min);
+
+        if (s == .hurt and !hurtAnimation.finished()) {
+            camera.draw(hurtAnimation.currentTexture(), area.min);
+        }
     }
 
     if (phase == .battle or phase == .normal) return;
@@ -178,4 +241,15 @@ fn renderTarget() void {
         if (attackTimer.isRunning() or index != selected) continue;
         camera.draw(targetTexture, area.min.add(.init(40, -40)));
     }
+}
+
+fn createAnimation(path: [:0]const u8) gfx.FixedFrameAnimation(5, 0.1) {
+    const animation = gfx.loadTexture(path, .init(960, 480));
+
+    const tex = animation.subTexture(.init(.zero, .init(960, 240)));
+    hurtAnimation = .initWithCount(tex, 4);
+    hurtAnimation.frames[4] = .init(.init(0, 240), .init(240, 240));
+    hurtAnimation.loop = false;
+    hurtAnimation.stop();
+    return hurtAnimation;
 }
