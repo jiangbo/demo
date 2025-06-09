@@ -83,8 +83,8 @@ fn updateSelectAttack() void {
         battle.startAttackSelected(selectedPlayer, 1);
     }
 }
-fn updateSelectSkill() void {}
 fn updateSelectItem() void {}
+fn updateSelectSkill() void {}
 
 fn prevEnum(value: anytype) @TypeOf(value) {
     var number: usize = @intFromEnum(value);
@@ -101,10 +101,13 @@ fn enumLength(value: anytype) usize {
     return @typeInfo(@TypeOf(value)).@"enum".fields.len;
 }
 
+const offset = gfx.Vector.init(200, 385);
 pub fn render() void {
-    const offset = gfx.Vector.init(200, 385);
     camera.draw(background, offset);
+    if (battle.selected < 3) renderPlayer() else renderEnemy();
+}
 
+fn renderPlayer() void {
     var texture = if (selected == .attack) attackHover else attack;
     camera.draw(texture, offset.add(.init(142, 68)));
 
@@ -113,17 +116,23 @@ pub fn render() void {
 
     texture = if (selected == .skill) skillHover else skill;
     camera.draw(texture, offset.add(.init(242, 68)));
-
-    // 头像
     const player = &world.players[selectedPlayer];
+    // 头像
     camera.draw(player.battleFace, offset);
-
     drawName(player.name, offset.add(.init(180, 114)));
     // 状态条
     var percent = computePercent(player.health, player.maxHealth);
     drawBar(percent, health, offset.add(.init(141, 145)));
     percent = computePercent(player.mana, player.maxMana);
     drawBar(percent, mana, offset.add(.init(141, 171)));
+}
+
+fn renderEnemy() void {
+    const enemy = battle.currentSelectEnemy();
+    drawName(enemy.name, offset.add(.init(180, 114)));
+    // 状态条
+    const percent = computePercent(enemy.health, enemy.maxHealth);
+    drawBar(percent, health, offset.add(.init(141, 145)));
 }
 
 fn computePercent(current: usize, max: usize) f32 {

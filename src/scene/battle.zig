@@ -6,9 +6,11 @@ const world = @import("world.zig");
 const camera = @import("../camera.zig");
 const panel = @import("panel.zig");
 const math = @import("../math.zig");
+const scene = @import("../scene.zig");
 
 pub const Enemy = struct {
     active: bool = true,
+    name: []const u8 = "老虎",
     health: u32 = 100,
     maxHealth: u32 = 100,
     attack: u32 = 90,
@@ -24,7 +26,7 @@ var enemyTexture: gfx.Texture = undefined;
 var enemies: [3]Enemy = undefined;
 var targetTexture: gfx.Texture = undefined;
 
-var attackTimer: window.Timer = .init(0.4);
+var attackTimer: window.Timer = .init(0.5);
 pub var selected: usize = 0;
 pub var phase: enum { normal, prepare, select, battle } = .normal;
 
@@ -45,12 +47,19 @@ var actions: [areas.len]u8 = [1]u8{0} ** areas.len;
 var timers: [areas.len]window.Timer = undefined;
 var timerIndex: usize = 0;
 
-var hurtBlood: u32 = 0;
+var hurtBlood: ?u32 = null;
+
+var delayTimer: ?window.Timer = null;
+var popupPosition: math.Vector = .init(200, 200);
+var winTexture: gfx.Texture = undefined;
+var loseTexture: gfx.Texture = undefined;
 
 pub fn init() void {
     background = gfx.loadTexture("assets/fight/f_scene.png", .init(800, 600));
     enemyTexture = gfx.loadTexture("assets/fight/enemy.png", .init(1920, 240));
     targetTexture = gfx.loadTexture("assets/fight/fm_b4_2.png", .init(190, 186));
+    winTexture = gfx.loadTexture("assets/fight/win.png", .init(341, 217));
+    loseTexture = gfx.loadTexture("assets/fight/lose1.png", .init(343, 217));
 
     hurtAnimation = createAnimation("assets/fight/anm_att.png");
 
@@ -106,6 +115,10 @@ pub fn selectAlivePlayer() usize {
     return index;
 }
 
+pub fn currentSelectEnemy() *Enemy {
+    return &enemies[selected - 3];
+}
+
 pub fn selectPrevEnemy() void {
     selected -= 1;
     while (selected > 2) : (selected -= 1) {
@@ -137,31 +150,48 @@ fn startAttack(attack: usize, hurt: usize, use: u8) void {
     actions[attack] = use;
     status[hurt] = .hurt;
     hurtAnimation.reset();
+    selected = hurt;
 
     computeHurtBlood(attack, hurt);
     phase = .battle;
 }
 
 fn computeHurtBlood(attack: usize, hurt: usize) void {
-    if (attack == 0 or attack == 1 or attack == 2) {
+    if (attack < 3) {
         const player = world.players[attack];
         const atk = player.attack + player.totalItem.value2;
         hurtBlood = atk -| enemies[hurt - 3].defend;
-        enemies[hurt - 3].health -|= hurtBlood;
+        enemies[hurt - 3].health -|= hurtBlood.?;
         if (enemies[hurt - 3].health == 0) status[hurt] = .dead;
     } else {
         const player = &world.players[hurt];
         const def = player.defend + player.totalItem.value3;
         hurtBlood = enemies[attack - 3].attack -| def;
-        player.health -|= hurtBlood;
+        player.health -|= hurtBlood.?;
         if (player.health == 0) status[hurt] = .dead;
     }
 
-    std.log.info("hurt blood: {d}", .{hurtBlood});
+    std.log.info("hurt blood: {?d}", .{hurtBlood});
 }
 
+var gameLost: bool = true;
 pub fn update(delta: f32) void {
     hurtAnimation.update(delta);
+
+    if (delayTimer) |*timer| {
+        if (timer.isFinishedAfterUpdate(delta)) {
+            delayTimer = null;
+            if (gameLost) window.exit();
+            return;
+        }
+        return;
+    }
+
+    if (lost()) {
+        delayTimer = .init(3);
+        gameLost = true;
+        return;
+    }
 
     if (win() or lost()) unreachable;
 
@@ -176,6 +206,7 @@ pub fn update(delta: f32) void {
                 value.* = .idle;
         }
         if (phase == .battle) phase = .normal;
+        hurtBlood = null;
     }
 
     if (phase == .battle) return;
@@ -187,7 +218,7 @@ pub fn update(delta: f32) void {
         timerIndex = index + 1;
         if (timer.isRunningAfterUpdate(delta)) continue;
 
-        if (index == 3 or index == 4 or index == 5) {
+        if (index >= 3) {
             break startAttack(index, selectAlivePlayer(), 0);
         }
 
@@ -206,7 +237,7 @@ pub fn win() bool {
 
 pub fn lost() bool {
     for (status[0..3]) |value| {
-        if (value == .idle) return false;
+        if (value != .dead) return false;
     }
     return true;
 }
@@ -225,6 +256,20 @@ pub fn render() void {
         if (s == .hurt and !hurtAnimation.finished()) {
             camera.draw(hurtAnimation.currentTexture(), area.min);
         }
+    }
+
+    if (hurtBlood) |blood| {
+        var buffer: [32]u8 = undefined;
+        const text = std.fmt.bufPrint(&buffer, "- {d}", .{blood});
+        camera.drawTextOptions(.{
+            .text = text catch unreachable,
+            .position = areas[selected].min.add(.init(100, 0)),
+            .color = .{ .r = 1, .a = 1 },
+        });
+    }
+
+    if (delayTimer != null and gameLost) {
+        camera.draw(loseTexture, popupPosition);
     }
 
     if (phase == .battle or phase == .normal) return;
