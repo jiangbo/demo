@@ -123,7 +123,6 @@ pub fn render() void {
             camera.draw(npc.animation.?.currentTexture(), npcPosition);
         } else if (npc.texture) |texture| {
             camera.draw(texture, npcPosition);
-            camera.debugDraw(.init(npcPosition, texture.area.size()));
         }
     }
 
