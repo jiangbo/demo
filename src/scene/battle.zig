@@ -7,6 +7,7 @@ const camera = @import("../camera.zig");
 const panel = @import("panel.zig");
 const math = @import("../math.zig");
 const scene = @import("../scene.zig");
+const bag = @import("bag.zig");
 
 pub const Enemy = struct {
     active: bool = true,
@@ -102,8 +103,10 @@ pub fn exit() void {
 
 pub fn selectFirstEnemy() void {
     for (status[3..], 3..) |s, index| {
-        if (s == .idle) selected = index;
-        break;
+        if (s == .idle) {
+            selected = index;
+            break;
+        }
     }
 }
 
@@ -181,8 +184,9 @@ pub fn update(delta: f32) void {
     if (delayTimer) |*timer| {
         if (timer.isFinishedAfterUpdate(delta)) {
             delayTimer = null;
-            if (gameLost) window.exit();
-            return;
+            if (gameLost) return window.exit();
+
+            scene.changeScene(.world);
         }
         return;
     }
@@ -193,7 +197,11 @@ pub fn update(delta: f32) void {
         return;
     }
 
-    if (win() or lost()) unreachable;
+    if (win()) {
+        delayTimer = .init(3);
+        gameLost = false;
+        bag.money += 100;
+    }
 
     if (phase == .prepare or phase == .select) {
         panel.update(delta);
@@ -270,6 +278,9 @@ pub fn render() void {
 
     if (delayTimer != null and gameLost) {
         camera.draw(loseTexture, popupPosition);
+    }
+    if (delayTimer != null and !gameLost) {
+        camera.draw(winTexture, popupPosition);
     }
 
     if (phase == .battle or phase == .normal) return;

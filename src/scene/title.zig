@@ -103,7 +103,7 @@ pub fn update(delta: f32) void {
 
     if (window.isAnyKeyRelease(&.{ .ENTER, .SPACE }) or mousePress) {
         switch (currentButton) {
-            0 => scene.changeScene(),
+            0 => scene.changeScene(.world),
             1 => std.log.info("load game", .{}),
             2 => displayPopup = true,
             else => unreachable,

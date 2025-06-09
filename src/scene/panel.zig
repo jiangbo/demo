@@ -63,6 +63,7 @@ fn updatePrepare() void {
         .attack => {
             if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
                 battle.phase = .select;
+                std.log.info("select first enemy", .{});
                 battle.selectFirstEnemy();
             }
         },

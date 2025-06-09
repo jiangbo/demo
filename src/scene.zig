@@ -54,11 +54,15 @@ pub fn exit() void {
     sceneCall("exit", .{});
 }
 
-pub fn changeScene() void {
-    exit();
+pub fn changeNextScene() void {
     const next: usize = @intFromEnum(currentSceneType);
     const len = std.enums.values(SceneType).len;
-    currentSceneType = @enumFromInt((next + 1) % len);
+    changeScene(@enumFromInt((next + 1) % len));
+}
+
+pub fn changeScene(sceneType: SceneType) void {
+    exit();
+    currentSceneType = sceneType;
     enter();
 }
 
