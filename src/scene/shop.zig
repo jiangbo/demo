@@ -141,8 +141,6 @@ pub fn render() void {
 
     const close = if (hover[6]) closeHover else closeTexture;
     camera.draw(close, buttons[6].min);
-
-    for (&buttons) |button| camera.debugDraw(button);
 }
 
 fn drawPriceText(args: anytype, pos: gfx.Vector) void {

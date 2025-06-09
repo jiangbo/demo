@@ -5,6 +5,7 @@ const gfx = @import("../graphics.zig");
 const c = @import("../c.zig");
 const world = @import("world.zig");
 const camera = @import("../camera.zig");
+const scene = @import("../scene.zig");
 
 pub const SIZE: gfx.Vector = .init(1000, 800);
 const PLAYER_OFFSET: gfx.Vector = .init(120, 220);
@@ -63,11 +64,7 @@ fn npc2Action() void {
 }
 
 fn map2npc1Action() void {
-    for (&maps[1].npcArray) |*npc| {
-        if (npc.animation != null and npc.type == .fixed) {
-            npc.animation.?.reset();
-        }
-    }
+    scene.changeScene(.battle);
 }
 
 pub fn init() void {
@@ -89,22 +86,22 @@ pub fn init() void {
     sortNPC(&maps[1].npcArray);
 
     // 地图二的具有动画的 NPC
-    const anim = window.loadTexture("assets/Anm1.png", .init(480, 480));
-    const animation = anim.subTexture(.init(.zero, .init(480, 240)));
-    var anim2 = FrameAnimation.initWithCount(animation, 2);
-    anim2.addFrame(.init(.init(0, 240), .init(240, 240)));
-    anim2.stop();
+    const tex = window.loadTexture("assets/fight/enemy.png", .init(1920, 240));
+    const subTexture = tex.subTexture(.init(.zero, .init(480, 240)));
+    // var anim2 = FrameAnimation.initWithCount(animation, 2);
+    // anim2.addFrame(.init(.init(0, 240), .init(240, 240)));
+    // anim2.stop();
 
     maps[1] = Map{
         .map = window.loadTexture("assets/map2.png", SIZE),
         .mapShade = window.loadTexture("assets/map2_shade.png", SIZE),
         .npcArray = .{
-            .init(700, 300, "assets/npc3.png", map2npc1Action),
+            .init(800, 300, "assets/npc3.png", map2npc1Action),
             .init(500, 280, null, npc2Action),
             .init(0, 0, null, changeMap1),
         },
     };
-    maps[1].npcArray[0].animation = anim2;
+    maps[1].npcArray[0].texture = subTexture;
 
     const npc4 = window.loadTexture("assets/npc4.png", .init(960, 960));
     const size: gfx.Vector = .init(960, 240);

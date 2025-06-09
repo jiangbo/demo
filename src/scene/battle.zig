@@ -198,7 +198,7 @@ pub fn update(delta: f32) void {
     }
 
     if (win()) {
-        delayTimer = .init(3);
+        delayTimer = .init(1.5);
         gameLost = false;
         bag.money += 100;
     }
@@ -287,9 +287,6 @@ pub fn render() void {
 
     renderTarget();
     panel.render();
-
-    // for (areas) |area| camera.debugDraw(area);
-    // camera.debugDraw(areas[3]);
 }
 
 fn renderTarget() void {

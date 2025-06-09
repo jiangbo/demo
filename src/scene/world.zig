@@ -51,6 +51,7 @@ pub fn enter() void {
 
 pub fn exit() void {
     window.stopMusic();
+    camera.lookAt(.zero);
 }
 
 pub fn update(delta: f32) void {
@@ -122,6 +123,7 @@ pub fn render() void {
             camera.draw(npc.animation.?.currentTexture(), npcPosition);
         } else if (npc.texture) |texture| {
             camera.draw(texture, npcPosition);
+            camera.debugDraw(.init(npcPosition, texture.area.size()));
         }
     }
 
