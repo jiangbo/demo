@@ -10,18 +10,34 @@ var background: gfx.Texture = undefined;
 const Menu = struct {
     position: gfx.Vector,
     names: [3][]const u8,
+    areas: [3]gfx.Rectangle = undefined,
     current: usize,
     const color = gfx.color(0.73, 0.72, 0.53, 1);
 };
 
 var menu: Menu = .{
-    .position = .{ .x = 16, .y = 380 },
+    .position = .{ .x = 11, .y = 380 },
     .names = .{ "新游戏", "读进度", "退　出" },
     .current = 0,
 };
 
 pub fn init() void {
     background = gfx.loadTexture("assets/pic/title.png", .init(640, 480));
+
+    for (&menu.areas, 0..) |*area, i| {
+        const offsetY: f32 = @floatFromInt(10 + i * 24);
+        area.* = .init(menu.position.addY(offsetY), .init(58, 25));
+    }
+}
+
+pub fn event(ev: *const window.Event) void {
+    if (ev.type != .MOUSE_MOVE) return;
+
+    for (&menu.areas, 0..) |area, i| {
+        if (area.contains(window.mousePosition)) {
+            menu.current = i;
+        }
+    }
 }
 
 pub fn enter() void {
@@ -42,28 +58,15 @@ pub fn update(delta: f32) void {
         menu.current += menu.names.len;
         menu.current = (menu.current - 1) % menu.names.len;
     }
-
-    if (window.isMouseMove()) {
-        std.log.info("is mouse move: {}", .{window.isMouseMove()});
-        for (0..menu.names.len) |i| {
-            const offsetY: f32 = @floatFromInt(10 + i * 24);
-            const size = gfx.Vector{ .x = 58, .y = 25 };
-            const offset = menu.position.addY(offsetY).addX(-5);
-            const area = gfx.Rectangle.init(offset, size);
-            if (area.contains(window.mousePosition)) menu.current = i;
-        }
-    }
 }
 
 pub fn render() void {
     camera.draw(background, .zero);
-    for (menu.names, 0..) |name, i| {
-        const offsetY: f32 = @floatFromInt(10 + i * 24);
-        const offset = menu.position.addY(offsetY);
+
+    for (&menu.areas, &menu.names, 0..) |area, name, i| {
         if (i == menu.current) {
-            const size = gfx.Vector{ .x = 58, .y = 25 };
-            camera.drawRectangle(.init(offset.addX(-5), size), Menu.color);
+            camera.drawRectangle(area, Menu.color);
         }
-        camera.drawText(name, offset);
+        camera.drawText(name, area.min.addX(5));
     }
 }
