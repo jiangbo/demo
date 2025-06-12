@@ -26,7 +26,7 @@ var texture: gpu.Texture = .{ .image = .{} };
 var debugTexture: gpu.Texture = undefined;
 pub var debug: bool = true;
 
-pub fn init(r: math.Rectangle, b: math.Vector, vertex: []Vertex, index: []u16) void {
+pub fn init(r: math.Rectangle, b: math.Vector, vertex: []Vertex) void {
     rect = r;
     border = b;
 
@@ -38,7 +38,7 @@ pub fn init(r: math.Rectangle, b: math.Vector, vertex: []Vertex, index: []u16) v
 
     bindGroup.setIndexBuffer(gpu.createBuffer(.{
         .type = .INDEXBUFFER,
-        .data = gpu.asRange(index),
+        .data = gpu.asRange(initIndexBuffer(vertex)),
     }));
 
     buffer = gpu.createBuffer(.{
@@ -51,6 +51,20 @@ pub fn init(r: math.Rectangle, b: math.Vector, vertex: []Vertex, index: []u16) v
 
     const data: [64]u8 = [1]u8{0xFF} ** 64;
     debugTexture = gpu.createTexture(.init(4, 4), &data);
+}
+
+fn initIndexBuffer(vertex: []Vertex) []u16 {
+    var indexBuffer: [*]u16 = @ptrCast(@alignCast(vertex.ptr));
+    var index: u16 = 0;
+    while (index < vertex.len) : (index += 1) {
+        indexBuffer[index * 6 + 0] = index * 4 + 0;
+        indexBuffer[index * 6 + 1] = index * 4 + 1;
+        indexBuffer[index * 6 + 2] = index * 4 + 2;
+        indexBuffer[index * 6 + 3] = index * 4 + 0;
+        indexBuffer[index * 6 + 4] = index * 4 + 2;
+        indexBuffer[index * 6 + 5] = index * 4 + 3;
+    }
+    return indexBuffer[0 .. vertex.len / 4 * 6];
 }
 
 fn initPipeline() gpu.RenderPipeline {
@@ -97,14 +111,18 @@ pub fn beginDraw(color: gpu.Color) void {
     totalDrawCount = 0;
 }
 
-pub fn debugDraw(area: math.Rectangle) void {
-    if (!debug) return;
+pub fn drawRectangle(area: math.Rectangle, color: gpu.Color) void {
     drawOptions(.{
         .texture = debugTexture,
         .source = debugTexture.area,
         .target = area,
-        .color = .{ .r = 1, .b = 1, .a = 0.4 },
+        .color = color,
     });
+}
+
+pub fn debugDraw(area: math.Rectangle) void {
+    if (!debug) return;
+    drawRectangle(area, .{ .r = 1, .b = 1, .a = 0.4 });
 }
 
 pub fn draw(tex: gpu.Texture, position: math.Vector) void {

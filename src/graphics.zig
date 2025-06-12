@@ -96,3 +96,7 @@ pub fn FixedFrameAnimation(maxSize: u8, time: f32) type {
         }
     };
 }
+
+pub fn color(r: f32, g: f32, b: f32, a: f32) Color {
+    return .{ .r = r, .g = g, .b = b, .a = a };
+}

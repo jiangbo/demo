@@ -94,15 +94,6 @@ pub fn update(delta: f32) void {
             } else npc.action();
         }
 
-        if (npc.texture != null) {
-            const area = npc.area.move(camera.rect.min.neg());
-            if (area.contains(window.mousePosition)) {
-                scene.cursor = talkTexture;
-                if (window.isButtonRelease(.LEFT) and contains) {
-                    npc.action();
-                }
-            }
-        }
         map.updateNpc(npc, delta);
     }
 }

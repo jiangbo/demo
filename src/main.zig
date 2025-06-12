@@ -9,7 +9,7 @@ var soundBuffer: [20]audio.Sound = undefined;
 pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
 
 pub fn init() void {
-    audio.init(44100 / 4, &soundBuffer);
+    audio.init(44100, &soundBuffer);
     scene.init();
 }
 
@@ -44,8 +44,8 @@ pub fn main() void {
     window.lineHeight = font.lineHeight;
 
     window.run(allocator, .{
-        .title = "教你制作RPG游戏",
-        .size = .{ .x = 800, .y = 600 },
+        .title = "英雄救美",
+        .size = .{ .x = 640, .y = 480 },
         .chars = font.chars,
     });
 }

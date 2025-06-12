@@ -158,6 +158,12 @@ pub const Vector3 = extern struct {
             std.math.approxEqAbs(f32, self.y, other.y, epsilon) and
             std.math.approxEqAbs(f32, self.z, other.z, epsilon);
     }
+
+    pub fn approxAbs(self: Vector3, other: Vector3, tolerance: f32) bool {
+        return std.math.approxEqAbs(f32, self.x, other.x, tolerance) and
+            std.math.approxEqAbs(f32, self.y, other.y, tolerance) and
+            std.math.approxEqAbs(f32, self.z, other.z, tolerance);
+    }
 };
 
 pub const Rectangle = struct {

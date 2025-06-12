@@ -156,6 +156,7 @@ export fn windowInit() void {
 pub var fonts: std.AutoHashMapUnmanaged(u32, Char) = .empty;
 pub var lineHeight: f32 = 0;
 pub var fontTexture: gfx.Texture = undefined;
+pub var lastMousePosition: math.Vector = .zero;
 pub var mousePosition: math.Vector = .zero;
 var lastButtonState: std.StaticBitSet(3) = .initEmpty();
 var buttonState: std.StaticBitSet(3) = .initEmpty();
@@ -180,6 +181,7 @@ export fn windowEvent(event: ?*const Event) void {
             .MOUSE_MOVE => {
                 var pos = math.Vector.init(ev.mouse_x, ev.mouse_y);
                 pos = pos.div(.init(sk.app.widthf(), sk.app.heightf()));
+                lastMousePosition = mousePosition;
                 mousePosition = pos.mul(size);
             },
             .MOUSE_DOWN => buttonState.set(buttonCode),
@@ -210,6 +212,12 @@ pub fn showFrameRate() void {
     text = fmt(&buffer, "logic frame rate: {d}", .{logicFrameRate});
     displayText(2, 4, text catch unreachable);
     endDisplayText();
+}
+
+pub fn isMouseMove() bool {
+    std.log.info("lastMousePosition: {}", .{lastMousePosition});
+    std.log.info("mousePosition: {}", .{mousePosition});
+    return !lastMousePosition.approxAbs(mousePosition, 10);
 }
 
 var frameRateTimer: Timer = .init(1);
