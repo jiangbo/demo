@@ -7,34 +7,47 @@ const camera = @import("../camera.zig");
 
 var background: gfx.Texture = undefined;
 
-const MainMenu = struct {
-    background: gfx.Texture = undefined,
+const Menu = struct {
+    background: ?gfx.Texture = null,
     position: gfx.Vector,
-    names: [3][]const u8,
-    areas: [3]gfx.Rectangle = undefined,
-    current: usize,
+    names: []const []const u8,
+    areas: []const gfx.Rectangle = undefined,
+    current: usize = 0,
     const color = gfx.color(0.73, 0.72, 0.53, 1);
 };
 
-var menu: MainMenu = .{
+var menu: *Menu = &mainMenu;
+
+var mainMenu: Menu = .{
     .position = .{ .x = 11, .y = 375 },
-    .names = .{ "新游戏", "读进度", "退　出" },
-    .current = 0,
+    .names = &.{ "新游戏", "读进度", "退　出" },
+    .areas = &createAreas(3, .{ .x = 11, .y = 375 }),
 };
+var loadMenu: Menu = .{
+    .position = .{ .x = 0, .y = 280 },
+    .names = &.{ "进度一", "进度二", "进度三", "进度四", "进度五", "取　消" },
+    .areas = &createAreas(6, .{ .x = 0 + 45, .y = 280 + 20 }),
+};
+
+fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
+    var areas: [num]gfx.Rectangle = undefined;
+    for (&areas, 0..) |*area, i| {
+        const offsetY: f32 = @floatFromInt(10 + i * 24);
+        area.* = .init(pos.addY(offsetY), .init(58, 25));
+    }
+    return areas;
+}
 
 pub fn init() void {
     background = gfx.loadTexture("assets/pic/title.png", .init(640, 480));
-
-    for (&menu.areas, 0..) |*area, i| {
-        const offsetY: f32 = @floatFromInt(10 + i * 24);
-        area.* = .init(menu.position.addY(offsetY), .init(58, 25));
-    }
+    const path = "assets/pic/mainmenu.png";
+    loadMenu.background = gfx.loadTexture(path, .init(150, 200));
 }
 
 pub fn event(ev: *const window.Event) void {
     if (ev.type != .MOUSE_MOVE) return;
 
-    for (&menu.areas, 0..) |area, i| {
+    for (menu.areas, 0..) |area, i| {
         if (area.contains(window.mousePosition)) {
             menu.current = i;
         }
@@ -62,7 +75,7 @@ pub fn update(delta: f32) void {
 
     var confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
     if (window.isButtonRelease(.LEFT)) {
-        for (&menu.areas, 0..) |area, i| {
+        for (menu.areas, 0..) |area, i| {
             if (area.contains(window.mousePosition)) {
                 menu.current = i;
                 confirm = true;
@@ -73,19 +86,25 @@ pub fn update(delta: f32) void {
     if (confirm) {
         switch (menu.current) {
             0 => scene.changeScene(.world),
-            1 => {},
+            1 => menu = &loadMenu,
             2 => window.exit(),
             else => unreachable(),
         }
+    }
+
+    if (window.isAnyKeyRelease(&.{ .Q, .ESCAPE })) {
+        menu = &mainMenu;
     }
 }
 
 pub fn render() void {
     camera.draw(background, .zero);
 
-    for (&menu.areas, &menu.names, 0..) |area, name, i| {
+    if (menu.background) |bg| camera.draw(bg, menu.position);
+
+    for (menu.areas, menu.names, 0..) |area, name, i| {
         if (i == menu.current) {
-            camera.drawRectangle(area, MainMenu.color);
+            camera.drawRectangle(area, Menu.color);
         }
         camera.drawText(name, area.min.addX(5));
     }
