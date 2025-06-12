@@ -7,7 +7,8 @@ const camera = @import("../camera.zig");
 
 var background: gfx.Texture = undefined;
 
-const Menu = struct {
+const MainMenu = struct {
+    background: gfx.Texture = undefined,
     position: gfx.Vector,
     names: [3][]const u8,
     areas: [3]gfx.Rectangle = undefined,
@@ -15,8 +16,8 @@ const Menu = struct {
     const color = gfx.color(0.73, 0.72, 0.53, 1);
 };
 
-var menu: Menu = .{
-    .position = .{ .x = 11, .y = 380 },
+var menu: MainMenu = .{
+    .position = .{ .x = 11, .y = 375 },
     .names = .{ "新游戏", "读进度", "退　出" },
     .current = 0,
 };
@@ -58,6 +59,25 @@ pub fn update(delta: f32) void {
         menu.current += menu.names.len;
         menu.current = (menu.current - 1) % menu.names.len;
     }
+
+    var confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
+    if (window.isButtonRelease(.LEFT)) {
+        for (&menu.areas, 0..) |area, i| {
+            if (area.contains(window.mousePosition)) {
+                menu.current = i;
+                confirm = true;
+            }
+        }
+    }
+
+    if (confirm) {
+        switch (menu.current) {
+            0 => scene.changeScene(.world),
+            1 => {},
+            2 => window.exit(),
+            else => unreachable(),
+        }
+    }
 }
 
 pub fn render() void {
@@ -65,7 +85,7 @@ pub fn render() void {
 
     for (&menu.areas, &menu.names, 0..) |area, name, i| {
         if (i == menu.current) {
-            camera.drawRectangle(area, Menu.color);
+            camera.drawRectangle(area, MainMenu.color);
         }
         camera.drawText(name, area.min.addX(5));
     }

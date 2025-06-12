@@ -54,7 +54,6 @@ pub fn changeScene(sceneType: SceneType) void {
 }
 
 pub fn update(delta: f32) void {
-    if (window.isKeyRelease(.X)) camera.debug = !camera.debug;
     sceneCall("update", .{delta});
 }
 
