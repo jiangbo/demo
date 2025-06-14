@@ -6,25 +6,21 @@ const camera = @import("camera.zig");
 
 const titleScene = @import("scene/title.zig");
 const worldScene = @import("scene/world.zig");
-const battleScene = @import("scene/battle.zig");
 
-const SceneType = enum { title, world, battle };
+const Talk = struct { content: []const u8 };
+pub const talks: []const Talk = @import("talk.zon");
+
+const SceneType = enum { title, world };
 var currentSceneType: SceneType = .title;
-
-const SIZE: gfx.Vector = .init(1000, 800);
 
 var vertexBuffer: [100 * 4]camera.Vertex = undefined;
 
-var texture: gfx.Texture = undefined;
-
 pub fn init() void {
-    camera.init(.init(.zero, window.size), SIZE, &vertexBuffer);
+    camera.init(.init(.zero, window.size), .init(1000, 800), &vertexBuffer);
 
     titleScene.init();
     worldScene.init();
-    battleScene.init();
-    texture = gfx.loadTexture("assets/fight/p1.png", .init(960, 240));
-    window.fontTexture = gfx.loadTexture("assets/4_0.png", .init(256, 256));
+    window.fontTexture = gfx.loadTexture("assets/4_0.png", .init(512, 512));
 
     enter();
 }
@@ -39,12 +35,6 @@ pub fn enter() void {
 
 pub fn exit() void {
     sceneCall("exit", .{});
-}
-
-pub fn changeNextScene() void {
-    const next: usize = @intFromEnum(currentSceneType);
-    const len = std.enums.values(SceneType).len;
-    changeScene(@enumFromInt((next + 1) % len));
 }
 
 pub fn changeScene(sceneType: SceneType) void {
@@ -68,6 +58,5 @@ fn sceneCall(comptime function: []const u8, args: anytype) void {
     switch (currentSceneType) {
         .title => window.call(titleScene, function, args),
         .world => window.call(worldScene, function, args),
-        .battle => window.call(battleScene, function, args),
     }
 }

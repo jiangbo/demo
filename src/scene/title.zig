@@ -17,6 +17,9 @@ const Menu = struct {
 };
 
 var menu: *Menu = &mainMenu;
+var displayHeader: bool = false;
+var displayTimer: window.Timer = .init(0.08);
+var textIndex: usize = 0;
 
 var mainMenu: Menu = .{
     .position = .{ .x = 11, .y = 375 },
@@ -57,6 +60,8 @@ pub fn event(ev: *const window.Event) void {
 pub fn enter() void {
     menu.current = 0;
     window.playMusic("assets/voc/title.ogg");
+    displayHeader = false;
+    textIndex = 0;
 }
 
 pub fn exit() void {
@@ -64,7 +69,8 @@ pub fn exit() void {
 }
 
 pub fn update(delta: f32) void {
-    _ = delta;
+    if (displayHeader) return updateHeader(delta);
+
     if (window.isAnyKeyRelease(&.{ .DOWN, .S })) {
         menu.current = (menu.current + 1) % menu.names.len;
     }
@@ -92,9 +98,25 @@ pub fn update(delta: f32) void {
     }
 }
 
+fn updateHeader(delta: f32) void {
+    if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
+        scene.changeScene(.world);
+        return;
+    }
+
+    if (displayTimer.isFinishedAfterUpdate(delta)) {
+        if (textIndex >= text.len) return;
+        const len = std.unicode.utf8ByteSequenceLength(text[textIndex]);
+        textIndex += len catch unreachable;
+        displayTimer.reset();
+    }
+}
+
+const text = scene.talks[0].content;
+
 fn mainMenuSelected() void {
     switch (menu.current) {
-        0 => scene.changeScene(.world),
+        0 => displayHeader = true,
         1 => menu = &loadMenu,
         2 => window.exit(),
         else => unreachable(),
@@ -110,6 +132,7 @@ fn loadMenuSelected() void {
 }
 
 pub fn render() void {
+    if (displayHeader) return renderHeader();
     camera.draw(background, .zero);
 
     if (menu.background) |bg| camera.draw(bg, menu.position);
@@ -120,4 +143,8 @@ pub fn render() void {
         }
         camera.drawText(name, area.min.addX(5));
     }
+}
+
+pub fn renderHeader() void {
+    camera.drawText(text[0..textIndex], .init(60, 100));
 }
