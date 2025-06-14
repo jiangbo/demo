@@ -84,16 +84,28 @@ pub fn update(delta: f32) void {
     }
 
     if (confirm) {
-        switch (menu.current) {
-            0 => scene.changeScene(.world),
-            1 => menu = &loadMenu,
-            2 => window.exit(),
-            else => unreachable(),
-        }
+        if (menu == &mainMenu) mainMenuSelected() else loadMenuSelected();
     }
 
     if (window.isAnyKeyRelease(&.{ .Q, .ESCAPE })) {
         menu = &mainMenu;
+    }
+}
+
+fn mainMenuSelected() void {
+    switch (menu.current) {
+        0 => scene.changeScene(.world),
+        1 => menu = &loadMenu,
+        2 => window.exit(),
+        else => unreachable(),
+    }
+}
+
+fn loadMenuSelected() void {
+    switch (menu.current) {
+        0, 1, 2, 3, 4 => scene.changeScene(.world),
+        5 => menu = &mainMenu,
+        else => unreachable(),
     }
 }
 
