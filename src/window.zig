@@ -4,9 +4,10 @@ const math = @import("math.zig");
 const assets = @import("assets.zig");
 const gfx = @import("graphics.zig");
 const audio = @import("audio.zig");
+const input = @import("input.zig");
 
 pub const Event = sk.app.Event;
-pub const KeyCode = sk.app.Keycode;
+
 pub const Char = struct {
     id: u32,
     x: f32,
@@ -57,38 +58,6 @@ pub const Timer = struct {
         self.elapsed = 0;
     }
 };
-
-pub var lastKeyState: std.StaticBitSet(512) = .initEmpty();
-pub var keyState: std.StaticBitSet(512) = .initEmpty();
-
-pub fn isKeyDown(keyCode: KeyCode) bool {
-    return keyState.isSet(@intCast(@intFromEnum(keyCode)));
-}
-
-pub fn isAnyKeyDown(keys: []const KeyCode) bool {
-    for (keys) |key| if (isKeyDown(key)) return true;
-    return false;
-}
-
-pub fn isKeyPress(keyCode: KeyCode) bool {
-    const key: usize = @intCast(@intFromEnum(keyCode));
-    return !lastKeyState.isSet(key) and keyState.isSet(key);
-}
-
-pub fn isAnyKeyPress(keys: []const KeyCode) bool {
-    for (keys) |key| if (isKeyPress(key)) return true;
-    return false;
-}
-
-pub fn isKeyRelease(keyCode: KeyCode) bool {
-    const key: usize = @intCast(@intFromEnum(keyCode));
-    return lastKeyState.isSet(key) and !keyState.isSet(key);
-}
-
-pub fn isAnyKeyRelease(keys: []const KeyCode) bool {
-    for (keys) |key| if (isKeyRelease(key)) return true;
-    return false;
-}
 
 pub fn showCursor(show: bool) void {
     sk.app.showMouse(show);
@@ -142,17 +111,6 @@ export fn windowInit() void {
         .logger = .{ .func = sk.log.func },
     });
 
-    sk.debugtext.setup(.{
-        .fonts = init: {
-            var f: [8]sk.debugtext.FontDesc = @splat(.{});
-            f[0] = sk.debugtext.fontKc854();
-            break :init f;
-        },
-        .logger = .{ .func = sk.log.func },
-    });
-
-    // gfx.init(size);
-
     math.setRandomSeed(timer.lap());
     call(root, "init", .{});
 }
@@ -161,35 +119,12 @@ pub var fonts: std.AutoHashMapUnmanaged(u32, Char) = .empty;
 pub var lineHeight: f32 = 0;
 pub var fontTexture: gfx.Texture = undefined;
 pub var mousePosition: math.Vector = .zero;
-var lastButtonState: std.StaticBitSet(3) = .initEmpty();
-var buttonState: std.StaticBitSet(3) = .initEmpty();
-
-pub fn isButtonPress(button: sk.app.Mousebutton) bool {
-    const code: usize = @intCast(@intFromEnum(button));
-    return !lastButtonState.isSet(code) and buttonState.isSet(code);
-}
-
-pub fn isButtonRelease(button: sk.app.Mousebutton) bool {
-    const code: usize = @intCast(@intFromEnum(button));
-    return lastButtonState.isSet(code) and !buttonState.isSet(code);
-}
 
 export fn windowEvent(event: ?*const Event) void {
     if (event) |ev| {
-        const keyCode: usize = @intCast(@intFromEnum(ev.key_code));
-        const buttonCode: usize = @intCast(@intFromEnum(ev.mouse_button));
-        switch (ev.type) {
-            .KEY_DOWN => keyState.set(keyCode),
-            .KEY_UP => keyState.unset(keyCode),
-            .MOUSE_MOVE => {
-                var pos = math.Vector.init(ev.mouse_x, ev.mouse_y);
-                pos = pos.div(.init(sk.app.widthf(), sk.app.heightf()));
-                mousePosition = pos.mul(size);
-            },
-            .MOUSE_DOWN => buttonState.set(buttonCode),
-            .MOUSE_UP => buttonState.unset(buttonCode),
-            else => {},
-        }
+        input.event(ev);
+        const ratio = size.div(.init(sk.app.widthf(), sk.app.heightf()));
+        mousePosition = input.mousePosition.mul(ratio);
         call(root, "event", .{ev});
     }
 }
@@ -210,14 +145,11 @@ export fn windowFrame() void {
     }
     sk.fetch.dowork();
     call(root, "frame", .{deltaNano / std.time.ns_per_s});
-
-    lastKeyState = keyState;
-    lastButtonState = buttonState;
+    input.frame();
 }
 
 export fn windowDeinit() void {
     call(root, "deinit", .{});
-    sk.debugtext.shutdown();
     fonts.deinit(allocator);
     sk.gfx.shutdown();
     assets.deinit();
@@ -233,3 +165,5 @@ pub const playSound = audio.playSound;
 pub const playMusic = audio.playMusic;
 pub const stopMusic = audio.stopMusic;
 pub const random = math.random;
+pub const isAnyKeyRelease = input.isAnyKeyRelease;
+pub const isButtonRelease = input.isButtonRelease;
