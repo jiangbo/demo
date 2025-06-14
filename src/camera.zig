@@ -12,7 +12,6 @@ pub const Vertex = extern struct {
 };
 
 pub var rect: math.Rectangle = undefined;
-var border: math.Vector = undefined;
 
 var viewMatrix: [16]f32 = undefined;
 var renderPass: gpu.RenderPassEncoder = undefined;
@@ -25,9 +24,8 @@ var totalDrawCount: u32 = 0;
 var texture: gpu.Texture = .{ .image = .{} };
 var debugTexture: gpu.Texture = undefined;
 
-pub fn init(r: math.Rectangle, b: math.Vector, vertex: []Vertex) void {
+pub fn init(r: math.Rectangle, vertex: []Vertex) void {
     rect = r;
-    border = b;
 
     const x, const y = .{ rect.size().x, rect.size().y };
     viewMatrix = .{
@@ -86,17 +84,6 @@ fn initPipeline() gpu.RenderPipeline {
     });
 }
 
-pub fn lookAt(pos: math.Vector) void {
-    if (needDrawCount != 0) doDraw();
-
-    const half = rect.size().scale(0.5);
-
-    const max = border.sub(rect.size());
-    const offset = pos.sub(half).clamp(.zero, max);
-
-    rect = .init(offset, rect.size());
-}
-
 pub fn toWorldPosition(position: math.Vector) math.Vector {
     return position.add(rect.min);
 }
@@ -151,6 +138,7 @@ pub fn drawOptions(options: DrawOptions) void {
     var vertexes = createVertexes(options.source, options.target);
     for (&vertexes) |*value| value.position.z = 0.5;
     for (&vertexes) |*value| value.color = options.color;
+
     gpu.appendBuffer(buffer, &vertexes);
 
     defer {

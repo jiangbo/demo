@@ -62,6 +62,7 @@ pub fn enter() void {
     window.playMusic("assets/voc/title.ogg");
     displayHeader = false;
     textIndex = 0;
+    scene.fadeIn();
 }
 
 pub fn exit() void {
@@ -116,7 +117,11 @@ const text = scene.talks[0].content;
 
 fn mainMenuSelected() void {
     switch (menu.current) {
-        0 => displayHeader = true,
+        0 => scene.fadeOut(struct {
+            fn call() void {
+                displayHeader = true;
+            }
+        }.call),
         1 => menu = &loadMenu,
         2 => window.exit(),
         else => unreachable(),

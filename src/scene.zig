@@ -12,11 +12,12 @@ pub const talks: []const Talk = @import("talk.zon");
 
 const SceneType = enum { title, world };
 var currentSceneType: SceneType = .title;
+var toSceneType: SceneType = .title;
 
 var vertexBuffer: [100 * 4]camera.Vertex = undefined;
 
 pub fn init() void {
-    camera.init(.init(.zero, window.size), .init(1000, 800), &vertexBuffer);
+    camera.init(.init(.zero, window.size), &vertexBuffer);
 
     titleScene.init();
     worldScene.init();
@@ -38,12 +39,28 @@ pub fn exit() void {
 }
 
 pub fn changeScene(sceneType: SceneType) void {
+    toSceneType = sceneType;
+    fadeOut(doChangeScene);
+}
+
+fn doChangeScene() void {
     exit();
-    currentSceneType = sceneType;
+    currentSceneType = toSceneType;
     enter();
 }
 
 pub fn update(delta: f32) void {
+    if (fadeTimer) |*timer| {
+        if (timer.isRunningAfterUpdate(delta)) return;
+        if (isFadeIn) {
+            fadeTimer = null;
+        } else {
+            if (fadeOutCallback) |callback| callback();
+            isFadeIn = true;
+            timer.restart();
+        }
+        return;
+    }
     sceneCall("update", .{delta});
 }
 
@@ -52,13 +69,35 @@ pub fn render() void {
     defer camera.endDraw();
 
     sceneCall("render", .{});
+
+    if (fadeTimer) |*timer| {
+        const percent = timer.elapsed / timer.duration;
+        const a = if (isFadeIn) 1 - percent else percent;
+        camera.drawRectangle(.init(.zero, window.size), .{ .a = a });
+    }
+
     var buffer: [20]u8 = undefined;
     const text = std.fmt.bufPrint(&buffer, "FPS: {}", .{window.frameRate});
     camera.drawTextOptions(.{
         .text = text catch unreachable,
-        .position = .init(20, 20),
+        .position = .init(10, 5),
         .color = .{ .r = 0, .g = 1, .b = 0, .a = 1 },
     });
+}
+
+var fadeTimer: ?window.Timer = null;
+var isFadeIn: bool = false;
+var fadeOutCallback: ?*const fn () void = null;
+
+pub fn fadeIn() void {
+    isFadeIn = true;
+    fadeTimer = .init(2);
+}
+
+pub fn fadeOut(callback: ?*const fn () void) void {
+    isFadeIn = false;
+    fadeTimer = .init(2);
+    fadeOutCallback = callback;
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {
