@@ -136,16 +136,16 @@ pub var frameRate: u32 = 0;
 export fn windowFrame() void {
     const deltaNano: f32 = @floatFromInt(timer.lap());
     const delta = deltaNano / std.time.ns_per_s;
-    if (frameRateTimer.isRunningAfterUpdate(delta)) {
-        frameRateCount += 1;
-    } else {
+
+    if (frameRateTimer.isFinishedAfterUpdate(delta)) {
         frameRateTimer.restart();
         frameRate = frameRateCount;
         frameRateCount = 1;
-    }
+    } else frameRateCount += 1;
+
     sk.fetch.dowork();
-    call(root, "frame", .{deltaNano / std.time.ns_per_s});
-    input.frame();
+    call(root, "frame", .{delta});
+    input.endFrame();
 }
 
 export fn windowDeinit() void {

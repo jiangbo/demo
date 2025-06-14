@@ -23,7 +23,7 @@ pub fn event(ev: *const sk.app.Event) void {
     }
 }
 
-pub fn frame() void {
+pub fn endFrame() void {
     lastKeyState = keyState;
     lastButtonState = buttonState;
 }
