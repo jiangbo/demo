@@ -52,6 +52,13 @@ pub fn render() void {
     defer camera.endDraw();
 
     sceneCall("render", .{});
+    var buffer: [20]u8 = undefined;
+    const text = std.fmt.bufPrint(&buffer, "FPS: {}", .{window.frameRate});
+    camera.drawTextOptions(.{
+        .text = text catch unreachable,
+        .position = .init(20, 20),
+        .color = .{ .r = 0, .g = 1, .b = 0, .a = 1 },
+    });
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {

@@ -45,6 +45,10 @@ pub const Timer = struct {
         return self.elapsed < self.duration;
     }
 
+    pub fn restart(self: *Timer) void {
+        self.elapsed = self.elapsed - self.duration;
+    }
+
     pub fn stop(self: *Timer) void {
         self.elapsed = self.duration;
     }
@@ -190,41 +194,22 @@ export fn windowEvent(event: ?*const Event) void {
     }
 }
 
-pub fn showFrameRate() void {
-    if (frameRateTimer.isRunningAfterUpdate(deltaSeconds)) {
-        frameRateCount += 1;
-        logicNanoSeconds += timer.read();
-    } else {
-        frameRateTimer.reset();
-        realFrameRate = frameRateCount;
-        frameRateCount = 1;
-        logicFrameRate = std.time.ns_per_s / logicNanoSeconds * realFrameRate;
-        logicNanoSeconds = 0;
-    }
-
-    var buffer: [64]u8 = undefined;
-    const fmt = std.fmt.bufPrintZ;
-    var text = fmt(&buffer, "real frame rate: {d}", .{realFrameRate});
-    displayText(2, 2, text catch unreachable);
-
-    text = fmt(&buffer, "logic frame rate: {d}", .{logicFrameRate});
-    displayText(2, 4, text catch unreachable);
-    endDisplayText();
-}
-
 var frameRateTimer: Timer = .init(1);
 var frameRateCount: u32 = 0;
-var realFrameRate: u32 = 0;
-var logicNanoSeconds: u64 = 0;
-var logicFrameRate: u64 = 0;
-var deltaSeconds: f32 = 0;
+pub var frameRate: u32 = 0;
 
 export fn windowFrame() void {
     const deltaNano: f32 = @floatFromInt(timer.lap());
-    deltaSeconds = deltaNano / std.time.ns_per_s;
-
+    const delta = deltaNano / std.time.ns_per_s;
+    if (frameRateTimer.isRunningAfterUpdate(delta)) {
+        frameRateCount += 1;
+    } else {
+        frameRateTimer.restart();
+        frameRate = frameRateCount;
+        frameRateCount = 1;
+    }
     sk.fetch.dowork();
-    call(root, "frame", .{deltaSeconds});
+    call(root, "frame", .{deltaNano / std.time.ns_per_s});
 
     lastKeyState = keyState;
     lastButtonState = buttonState;
@@ -236,20 +221,6 @@ export fn windowDeinit() void {
     fonts.deinit(allocator);
     sk.gfx.shutdown();
     assets.deinit();
-}
-
-pub fn displayText(x: f32, y: f32, text: [:0]const u8) void {
-    sk.debugtext.canvas(sk.app.widthf() * 0.4, sk.app.heightf() * 0.4);
-    sk.debugtext.origin(x, y);
-    sk.debugtext.home();
-
-    sk.debugtext.font(0);
-    sk.debugtext.color3b(0xff, 0xff, 0xff);
-    sk.debugtext.puts(text);
-}
-
-pub fn endDisplayText() void {
-    sk.debugtext.draw();
 }
 
 pub fn exit() void {

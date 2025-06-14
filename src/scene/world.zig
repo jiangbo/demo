@@ -19,5 +19,4 @@ pub fn update(delta: f32) void {
 
 pub fn render() void {
     camera.draw(playerTexture, .init(100, 100));
-    window.showFrameRate();
 }
