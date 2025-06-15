@@ -15,13 +15,21 @@ var currentSceneType: SceneType = .title;
 var toSceneType: SceneType = .title;
 
 var vertexBuffer: [100 * 4]camera.Vertex = undefined;
+var fontVertexBuffer: [100 * 4]window.FontVertex = undefined;
 
 pub fn init() void {
+    const fontTexture = gfx.loadTexture("assets/my.png", .init(832, 832));
+    window.initFont(.{
+        .font = &@import("zon/font.zon"),
+        .texture = fontTexture,
+        .size = window.size,
+        .vertex = &fontVertexBuffer,
+    });
+
     camera.init(.init(.zero, window.size), &vertexBuffer);
 
     titleScene.init();
     worldScene.init();
-    window.fontTexture = gfx.loadTexture("assets/4_0.png", .init(512, 512));
 
     enter();
 }

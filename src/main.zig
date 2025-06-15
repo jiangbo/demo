@@ -10,6 +10,7 @@ pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
 
 pub fn init() void {
     audio.init(44100, &soundBuffer);
+
     scene.init();
 }
 
@@ -42,14 +43,8 @@ pub fn main() void {
 
     _ = ImmDisableIME(-1);
 
-    const Font = struct { lineHeight: i32, chars: []const window.Char };
-
-    const font: Font = @import("font.zon");
-    window.lineHeight = font.lineHeight;
-
     window.run(allocator, .{
         .title = "英雄救美",
         .size = .{ .x = 640, .y = 480 },
-        .chars = font.chars,
     });
 }

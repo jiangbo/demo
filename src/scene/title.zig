@@ -42,7 +42,7 @@ fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
 }
 
 pub fn init() void {
-    background = gfx.loadTexture("assets/pic/title.png", .init(640, 480));
+    background = gfx.loadTexture("assets/pic/title.png", .init(320, 480));
     const path = "assets/pic/mainmenu.png";
     loadMenu.background = gfx.loadTexture(path, .init(150, 200));
 }

@@ -4,6 +4,7 @@ const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const shader = @import("shader/texture.glsl.zig");
 const window = @import("window.zig");
+const font = @import("font.zig");
 
 pub const Vertex = extern struct {
     position: math.Vector3, // 顶点坐标
@@ -14,6 +15,7 @@ pub const Vertex = extern struct {
 pub var rect: math.Rectangle = undefined;
 
 var viewMatrix: [16]f32 = undefined;
+var sampler: gpu.Sampler = undefined;
 var renderPass: gpu.RenderPassEncoder = undefined;
 var bindGroup: gpu.BindGroup = .{};
 var pipeline: gpu.RenderPipeline = undefined;
@@ -43,7 +45,7 @@ pub fn init(r: math.Rectangle, vertex: []Vertex) void {
         .usage = .STREAM,
     });
 
-    bindGroup.setSampler(shader.SMP_smp, gpu.createSampler(.{}));
+    sampler = gpu.createSampler(.{});
     pipeline = initPipeline();
 
     const data: [64]u8 = [1]u8{0xFF} ** 64;
@@ -151,46 +153,12 @@ pub fn drawOptions(options: DrawOptions) void {
     if (options.texture.image.id != texture.image.id) doDraw();
 }
 
-pub fn drawText(text: []const u8, position: math.Vector) void {
-    drawTextOptions(.{ .text = text, .position = position });
-}
-
-const TextOptions = struct {
-    text: []const u8,
-    position: math.Vector,
-    color: gpu.Color = .{ .r = 1, .g = 1, .b = 1, .a = 1 },
-};
-
-pub fn drawTextOptions(options: TextOptions) void {
-    const Utf8View = std.unicode.Utf8View;
-    var iterator = Utf8View.initUnchecked(options.text).iterator();
-
-    var pos = options.position;
-    var line: f32 = 1;
-    while (iterator.nextCodepoint()) |code| {
-        if (code == '\n') {
-            pos = options.position.addY(line * window.lineHeight);
-            line += 1;
-            continue;
-        }
-
-        const char = window.fonts.get(code) orelse
-            window.fonts.get(std.math.maxInt(u32)).?;
-        const size = math.Vector.init(char.width, char.height);
-        const area = math.Rectangle.init(.init(char.x, char.y), size);
-        const tex = window.fontTexture.subTexture(area);
-        drawOptions(.{
-            .texture = tex,
-            .source = area,
-            .target = .init(pos.add(.init(char.xOffset, char.yOffset)), size),
-            .color = options.color,
-        });
-        pos = pos.addX(char.xAdvance);
-    }
-}
+pub const drawText = font.drawText;
+pub const drawTextOptions = font.drawTextOptions;
 
 pub fn endDraw() void {
     if (needDrawCount != 0) doDraw();
+    font.draw(&renderPass, &bindGroup);
 
     renderPass.end();
     gpu.commandEncoder.submit();
@@ -230,6 +198,7 @@ fn doDraw() void {
     // 绑定组
     bindGroup.setTexture(shader.IMG_tex, texture);
     bindGroup.setVertexBuffer(buffer);
+    bindGroup.setSampler(shader.SMP_smp, sampler);
 
     const offset = totalDrawCount - needDrawCount;
     bindGroup.setIndexOffset(offset * 6 * @sizeOf(u16));

@@ -5,21 +5,9 @@ const assets = @import("assets.zig");
 const gfx = @import("graphics.zig");
 const audio = @import("audio.zig");
 const input = @import("input.zig");
+const font = @import("font.zig");
 
 pub const Event = sk.app.Event;
-
-pub const Char = struct {
-    id: u32,
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
-    xOffset: f32,
-    yOffset: f32,
-    xAdvance: f32,
-    page: u8,
-    chnl: u8,
-};
 
 pub const Timer = struct {
     duration: f32,
@@ -66,7 +54,6 @@ pub fn showCursor(show: bool) void {
 pub const WindowInfo = struct {
     title: [:0]const u8,
     size: math.Vector,
-    chars: []const Char = &.{},
 };
 
 pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
@@ -82,14 +69,6 @@ pub fn run(alloc: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
     size = info.size;
     allocator = alloc;
-
-    if (info.chars.len != 0) {
-        const len: u32 = @intCast(info.chars.len);
-        fonts.ensureTotalCapacity(alloc, len) catch unreachable;
-    }
-    for (info.chars) |char| {
-        fonts.putAssumeCapacity(char.id, char);
-    }
 
     sk.app.run(.{
         .window_title = info.title,
@@ -115,9 +94,6 @@ export fn windowInit() void {
     call(root, "init", .{});
 }
 
-pub var fonts: std.AutoHashMapUnmanaged(u32, Char) = .empty;
-pub var lineHeight: f32 = 0;
-pub var fontTexture: gfx.Texture = undefined;
 pub var mousePosition: math.Vector = .zero;
 
 export fn windowEvent(event: ?*const Event) void {
@@ -150,7 +126,6 @@ export fn windowFrame() void {
 
 export fn windowDeinit() void {
     call(root, "deinit", .{});
-    fonts.deinit(allocator);
     sk.gfx.shutdown();
     assets.deinit();
 }
@@ -167,3 +142,5 @@ pub const stopMusic = audio.stopMusic;
 pub const random = math.random;
 pub const isAnyKeyRelease = input.isAnyKeyRelease;
 pub const isButtonRelease = input.isButtonRelease;
+pub const initFont = font.init;
+pub const FontVertex = font.Vertex;
