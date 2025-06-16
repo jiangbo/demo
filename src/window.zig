@@ -99,14 +99,13 @@ pub var mousePosition: math.Vector = .zero;
 export fn windowEvent(event: ?*const Event) void {
     if (event) |ev| {
         input.event(ev);
-        const ratio = size.div(actualSize());
-        mousePosition = input.mousePosition.mul(ratio);
+        mousePosition = input.mousePosition.mul(size.div(actualSize()));
         call(root, "event", .{ev});
     }
 }
 
 pub fn actualSize() math.Vector {
-    return .init(sk.app.widthf(), sk.app.heightf());
+    return .{ .x = sk.app.widthf(), .y = sk.app.heightf() };
 }
 
 pub fn keepAspectRatio() void {

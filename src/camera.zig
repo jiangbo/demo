@@ -150,14 +150,15 @@ pub fn drawOptions(options: DrawOptions) void {
     }
 
     if (totalDrawCount == 0) return; // 第一次绘制
-    if (options.texture.image.id != texture.image.id) doDraw();
+    if (options.texture.image.id != texture.image.id)
+        drawCurrentCache();
 }
 
 pub const drawText = font.drawText;
 pub const drawTextOptions = font.drawTextOptions;
 
 pub fn endDraw() void {
-    if (needDrawCount != 0) doDraw();
+    if (needDrawCount != 0) drawCurrentCache();
     font.draw(&renderPass, &bindGroup);
 
     renderPass.end();
@@ -181,7 +182,13 @@ fn createVertexes(src: math.Rectangle, dst: math.Rectangle) [4]Vertex {
     return vertexes;
 }
 
-fn doDraw() void {
+const VertexOptions = struct {
+    texture: gpu.Texture,
+    vertexBuffer: gpu.Buffer,
+    indexOffset: u32 = 0,
+    count: u32,
+};
+pub fn drawVertex(options: VertexOptions) void {
 
     // 绑定流水线
     renderPass.setPipeline(pipeline);
@@ -189,22 +196,30 @@ fn doDraw() void {
     // 处理 uniform 变量
     viewMatrix[12] = -1 - rect.min.x * viewMatrix[0];
     viewMatrix[13] = 1 - rect.min.y * viewMatrix[5];
-    const size = gpu.queryTextureSize(texture.image);
+    const size = gpu.queryTextureSize(options.texture.image);
     renderPass.setUniform(shader.UB_vs_params, .{
         .viewMatrix = viewMatrix,
         .textureVec = [4]f32{ size.x, size.y, 1, 1 },
     });
 
     // 绑定组
-    bindGroup.setTexture(shader.IMG_tex, texture);
-    bindGroup.setVertexBuffer(buffer);
+    bindGroup.setTexture(shader.IMG_tex, options.texture);
+    bindGroup.setVertexBuffer(options.vertexBuffer);
     bindGroup.setSampler(shader.SMP_smp, sampler);
 
-    const offset = totalDrawCount - needDrawCount;
-    bindGroup.setIndexOffset(offset * 6 * @sizeOf(u16));
+    bindGroup.setIndexOffset(options.indexOffset * 6 * @sizeOf(u16));
     renderPass.setBindGroup(bindGroup);
 
     // 绘制
-    renderPass.draw(needDrawCount * 6);
+    renderPass.draw(options.count * 6);
+}
+
+fn drawCurrentCache() void {
+    drawVertex(.{
+        .texture = texture,
+        .vertexBuffer = buffer,
+        .indexOffset = totalDrawCount - needDrawCount,
+        .count = needDrawCount,
+    });
     needDrawCount = 0;
 }
