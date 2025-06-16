@@ -27,8 +27,15 @@ in vec4 color;
 in vec2 uv;
 out vec4 frag_color;
 
+float median(float r, float g, float b) {
+    return max(min(r, g), min(max(r, g), b));
+}
+
 void main() {
-     frag_color = texture(sampler2D(tex, smp), uv) * color;
+    vec3 msd = texture(sampler2D(tex, smp), uv).rgb;
+    float sd = median(msd.r, msd.g, msd.b) - 0.5;
+    float opacity = clamp(2 * sd + 0.5, 0.0, 1.0);
+    frag_color = vec4(color.rgb, opacity);
 }
 @end
 

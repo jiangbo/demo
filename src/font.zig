@@ -30,18 +30,22 @@ pub const Font = struct {
 const Glyph = struct {
     unicode: u32,
     advance: f32,
-    planeBounds: struct {
-        left: f32 = 0,
-        top: f32 = 0,
-        right: f32 = 0,
-        bottom: f32 = 0,
-    } = .{},
-    atlasBounds: struct {
-        left: f32 = 0,
-        top: f32 = 0,
-        right: f32 = 0,
-        bottom: f32 = 0,
-    } = .{},
+    planeBounds: Rect = .{},
+    atlasBounds: Rect = .{},
+};
+
+const Rect = struct {
+    left: f32 = 0,
+    top: f32 = 0,
+    right: f32 = 0,
+    bottom: f32 = 0,
+
+    fn toArea(self: Rect) math.Rectangle {
+        return .{
+            .min = .{ .x = self.left, .y = self.top },
+            .max = .{ .x = self.right, .y = self.bottom },
+        };
+    }
 };
 
 pub const Vertex = extern struct {
@@ -105,7 +109,6 @@ fn initPipeline() void {
             .dst_factor_rgb = .ONE_MINUS_SRC_ALPHA,
         } },
         .index_type = .UINT16,
-        .depth = .{ .compare = .LESS_EQUAL, .write_enabled = true },
     });
 }
 
@@ -141,6 +144,7 @@ pub fn drawText(text: []const u8, position: math.Vector) void {
 
 const TextOptions = struct {
     text: []const u8,
+    size: f32 = 18,
     position: math.Vector,
     color: gpu.Color = .{ .r = 1, .g = 1, .b = 1, .a = 1 },
 };
@@ -149,19 +153,24 @@ pub fn drawTextOptions(options: TextOptions) void {
     const Utf8View = std.unicode.Utf8View;
     var iterator = Utf8View.initUnchecked(options.text).iterator();
 
-    var pos = options.position;
+    const lineHeight = font.metrics.lineHeight * options.size;
+    var pos = options.position.addY(lineHeight);
     while (iterator.nextCodepoint()) |code| {
         const char = searchGlyph(code);
-        const area = math.Rectangle{
-            .min = .init(char.atlasBounds.left, char.atlasBounds.top),
-            .max = .init(char.atlasBounds.right, char.atlasBounds.bottom),
-        };
+
+        if (char.unicode == '\n') {
+            pos = pos.addY(lineHeight);
+            continue;
+        }
+
+        const target = char.planeBounds.toArea();
+        const offset = pos.add(target.min.scale(options.size));
         drawOptions(.{
-            .texture = texture.subTexture(area),
-            .target = .init(pos, area.size()),
+            .texture = texture.subTexture(char.atlasBounds.toArea()),
+            .target = .init(offset, target.size().scale(options.size)),
             .color = options.color,
         });
-        pos = pos.addX(char.advance);
+        pos = pos.addX(char.advance * options.size);
     }
 }
 

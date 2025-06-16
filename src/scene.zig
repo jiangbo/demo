@@ -15,7 +15,7 @@ var currentSceneType: SceneType = .title;
 var toSceneType: SceneType = .title;
 
 var vertexBuffer: [100 * 4]camera.Vertex = undefined;
-var fontVertexBuffer: [100 * 4]window.FontVertex = undefined;
+var fontVertexBuffer: [1000 * 4]window.FontVertex = undefined;
 
 pub fn init() void {
     const fontTexture = gfx.loadTexture("assets/my.png", .init(832, 832));
@@ -85,7 +85,7 @@ pub fn render() void {
     }
 
     var buffer: [20]u8 = undefined;
-    const text = std.fmt.bufPrint(&buffer, "FPS: {}", .{window.frameRate});
+    const text = std.fmt.bufPrint(&buffer, "FPS:{}", .{window.frameRate});
     camera.drawTextOptions(.{
         .text = text catch unreachable,
         .position = .init(10, 5),
