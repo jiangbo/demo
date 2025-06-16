@@ -82,7 +82,7 @@ pub fn init(options: initOptions) void {
 
     buffer = gpu.createBuffer(.{
         .size = @sizeOf(Vertex) * options.vertex.len,
-        .usage = .STREAM,
+        .usage = .{ .vertex_buffer = true, .stream_update = true },
     });
 
     sampler = gpu.createSampler(.{

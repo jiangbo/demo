@@ -36,13 +36,13 @@ pub fn init(r: math.Rectangle, vertex: []Vertex) void {
     };
 
     bindGroup.setIndexBuffer(gpu.createBuffer(.{
-        .type = .INDEXBUFFER,
+        .usage = .{ .index_buffer = true, .immutable = true },
         .data = gpu.asRange(initIndexBuffer(vertex)),
     }));
 
     buffer = gpu.createBuffer(.{
         .size = @sizeOf(Vertex) * vertex.len,
-        .usage = .STREAM,
+        .usage = .{ .vertex_buffer = true, .stream_update = true },
     });
 
     sampler = gpu.createSampler(.{});
