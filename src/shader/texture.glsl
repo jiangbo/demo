@@ -24,11 +24,11 @@ layout(binding=0) uniform texture2D tex;
 layout(binding=0) uniform sampler smp;
 
 in vec4 color;
-in vec2 uv;
+in vec4 uv;
 out vec4 frag_color;
 
 void main() {
-     frag_color = texture(sampler2D(tex, smp), uv) * color;
+     frag_color = texture(sampler2D(tex, smp), uv.xy) * color;
 }
 @end
 

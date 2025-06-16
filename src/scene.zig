@@ -18,7 +18,7 @@ var vertexBuffer: [100 * 4]camera.Vertex = undefined;
 var fontVertexBuffer: [1000 * 4]window.FontVertex = undefined;
 
 pub fn init() void {
-    const fontTexture = gfx.loadTexture("assets/my.png", .init(832, 832));
+    const fontTexture = gfx.loadTexture("assets/font.png", .init(504, 504));
     window.initFont(.{
         .font = &@import("zon/font.zon"),
         .texture = fontTexture,
@@ -75,6 +75,8 @@ pub fn update(delta: f32) void {
 pub fn render() void {
     camera.beginDraw(.{ .a = 1 });
     defer camera.endDraw();
+
+    window.keepAspectRatio();
 
     sceneCall("render", .{});
 

@@ -99,10 +99,20 @@ pub var mousePosition: math.Vector = .zero;
 export fn windowEvent(event: ?*const Event) void {
     if (event) |ev| {
         input.event(ev);
-        const ratio = size.div(.init(sk.app.widthf(), sk.app.heightf()));
+        const ratio = size.div(actualSize());
         mousePosition = input.mousePosition.mul(ratio);
         call(root, "event", .{ev});
     }
+}
+
+pub fn actualSize() math.Vector {
+    return .init(sk.app.widthf(), sk.app.heightf());
+}
+
+pub fn keepAspectRatio() void {
+    const ratio = actualSize().div(size);
+    const minSize = size.scale(@min(ratio.x, ratio.y));
+    sk.gfx.applyViewportf(0, 0, minSize.x, minSize.y, true);
 }
 
 var frameRateTimer: Timer = .init(1);
