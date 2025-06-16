@@ -24,7 +24,7 @@ var textIndex: usize = 0;
 var mainMenu: Menu = .{
     .position = .{ .x = 11, .y = 375 },
     .names = &.{ "新游戏", "读进度", "退　出" },
-    .areas = &createAreas(3, .{ .x = 11, .y = 375 }),
+    .areas = &createAreas(3, .{ .x = 16, .y = 375 }),
 };
 var loadMenu: Menu = .{
     .position = .{ .x = 0, .y = 280 },
@@ -36,7 +36,7 @@ fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
     var areas: [num]gfx.Rectangle = undefined;
     for (&areas, 0..) |*area, i| {
         const offsetY: f32 = @floatFromInt(10 + i * 24);
-        area.* = .init(pos.addY(offsetY), .init(58, 25));
+        area.* = .init(pos.addY(offsetY), .init(65, 25));
     }
     return areas;
 }
