@@ -122,13 +122,12 @@ fn compare(a: u32, b: Glyph) std.math.Order {
 
 const DrawOptions = struct {
     texture: gpu.Texture,
-    source: math.Rectangle,
     target: math.Rectangle,
     color: gpu.Color = .{ .r = 1, .g = 1, .b = 1, .a = 1 },
 };
 
 fn drawOptions(options: DrawOptions) void {
-    var vertexes = createVertexes(options.source, options.target);
+    var vertexes = createVertexes(options.texture.area, options.target);
     for (&vertexes) |*value| value.position.z = 0.5;
     for (&vertexes) |*value| value.color = options.color;
 
@@ -159,8 +158,7 @@ pub fn drawTextOptions(options: TextOptions) void {
         };
         drawOptions(.{
             .texture = texture.subTexture(area),
-            .source = area,
-            .target = area.move(options.position),
+            .target = .init(pos, area.size()),
             .color = options.color,
         });
         pos = pos.addX(char.advance);
