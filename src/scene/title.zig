@@ -151,5 +151,5 @@ pub fn render() void {
 }
 
 pub fn renderHeader() void {
-    camera.drawText(text[0..textIndex], .init(60, 100));
+    camera.drawText(text[0..textIndex], .init(40, 100));
 }

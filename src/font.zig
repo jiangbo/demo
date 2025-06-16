@@ -153,15 +153,16 @@ pub fn drawTextOptions(options: TextOptions) void {
     const Utf8View = std.unicode.Utf8View;
     var iterator = Utf8View.initUnchecked(options.text).iterator();
 
-    const lineHeight = font.metrics.lineHeight * options.size;
-    var pos = options.position.addY(lineHeight);
-    while (iterator.nextCodepoint()) |code| {
-        const char = searchGlyph(code);
+    const offsetY = -font.metrics.ascender * options.size;
+    var pos = options.position.addY(offsetY);
 
-        if (char.unicode == '\n') {
-            pos = pos.addY(lineHeight);
+    while (iterator.nextCodepoint()) |code| {
+        if (code == '\n') {
+            const height = font.metrics.lineHeight * options.size;
+            pos = .init(options.position.x, pos.y + height);
             continue;
         }
+        const char = searchGlyph(code);
 
         const target = char.planeBounds.toArea();
         const offset = pos.add(target.min.scale(options.size));

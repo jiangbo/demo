@@ -8,7 +8,7 @@ const titleScene = @import("scene/title.zig");
 const worldScene = @import("scene/world.zig");
 
 const Talk = struct { content: []const u8 };
-pub const talks: []const Talk = @import("talk.zon");
+pub const talks: []const Talk = @import("zon/talk.zon");
 
 const SceneType = enum { title, world };
 var currentSceneType: SceneType = .title;
