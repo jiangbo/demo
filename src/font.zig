@@ -54,7 +54,7 @@ pub const Vertex = extern struct {
     size: math.Vector2, // 大小
     pivot: math.Vector2 = .zero, // 旋转中心
     texture: math.Vector4, // 纹理坐标
-    color: gpu.Color = .{ .r = 1, .g = 1, .b = 1, .a = 1 }, // 顶点颜色
+    color: math.Vector4 = .one, // 顶点颜色
 };
 
 var font: Font = undefined;
@@ -130,19 +130,18 @@ fn compare(a: u32, b: Glyph) std.math.Order {
 }
 
 pub fn drawText(text: []const u8, position: math.Vector) void {
-    drawTextOptions(.{ .text = text, .position = position });
+    drawTextOptions(text, .{ .position = position });
 }
 
 const TextOptions = struct {
-    text: []const u8,
     size: f32 = 18,
     position: math.Vector,
-    color: gpu.Color = .{ .r = 1, .g = 1, .b = 1, .a = 1 },
+    color: math.Vector4 = .one,
 };
 
-pub fn drawTextOptions(options: TextOptions) void {
+pub fn drawTextOptions(text: []const u8, options: TextOptions) void {
     const Utf8View = std.unicode.Utf8View;
-    var iterator = Utf8View.initUnchecked(options.text).iterator();
+    var iterator = Utf8View.initUnchecked(text).iterator();
 
     const offsetY = -font.metrics.ascender * options.size;
     var pos = options.position.addY(offsetY);

@@ -6,14 +6,7 @@ const shader = @import("shader/quad.glsl.zig");
 const window = @import("window.zig");
 const font = @import("font.zig");
 
-pub const Vertex = extern struct {
-    position: math.Vector3, // 顶点坐标
-    rotation: f32 = 0, // 旋转角度
-    size: math.Vector2, // 大小
-    pivot: math.Vector2 = .zero, // 旋转中心
-    texture: math.Vector4, // 纹理坐标
-    color: gpu.Color = .{ .r = 1, .g = 1, .b = 1, .a = 1 }, // 顶点颜色
-};
+pub const Vertex = font.Vertex;
 
 pub var worldPosition: math.Vector3 = .zero;
 
@@ -77,7 +70,7 @@ pub fn beginDraw(color: gpu.Color) void {
     totalDrawCount = 0;
 }
 
-pub fn drawRectangle(area: math.Rectangle, color: gpu.Color) void {
+pub fn drawRectangle(area: math.Rectangle, color: math.Vector4) void {
     drawVertex(whiteTexture, .{
         .position = area.min,
         .size = area.size().toVector2(),

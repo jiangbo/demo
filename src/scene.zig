@@ -83,15 +83,14 @@ pub fn render() void {
     if (fadeTimer) |*timer| {
         const percent = timer.elapsed / timer.duration;
         const a = if (isFadeIn) 1 - percent else percent;
-        camera.drawRectangle(.init(.zero, window.size), .{ .a = a });
+        camera.drawRectangle(.init(.zero, window.size), .{ .w = a });
     }
 
     var buffer: [20]u8 = undefined;
     const text = std.fmt.bufPrint(&buffer, "FPS:{}", .{window.frameRate});
-    camera.drawTextOptions(.{
-        .text = text catch unreachable,
+    camera.drawTextOptions(text catch unreachable, .{
         .position = .init(10, 5),
-        .color = .{ .r = 0, .g = 1, .b = 0, .a = 1 },
+        .color = .{ .y = 1, .w = 1 },
     });
 }
 
