@@ -26,7 +26,7 @@ pub fn init() void {
         .vertex = &fontVertexBuffer,
     });
 
-    camera.init(.init(.zero, window.size), &vertexBuffer);
+    camera.init(&vertexBuffer);
 
     titleScene.init();
     worldScene.init();

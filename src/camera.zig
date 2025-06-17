@@ -15,9 +15,8 @@ pub const Vertex = extern struct {
     color: gpu.Color = .{ .r = 1, .g = 1, .b = 1, .a = 1 }, // 顶点颜色
 };
 
-pub var rect: math.Rectangle = undefined;
+pub var worldPosition: math.Vector3 = .zero;
 
-var viewMatrix: [16]f32 = undefined;
 var sampler: gpu.Sampler = undefined;
 var renderPass: gpu.RenderPassEncoder = undefined;
 var bindGroup: gpu.BindGroup = .{};
@@ -29,15 +28,7 @@ var totalDrawCount: u32 = 0;
 var usingTexture: gpu.Texture = .{ .image = .{} };
 var whiteTexture: gpu.Texture = undefined;
 
-pub fn init(r: math.Rectangle, vertex: []Vertex) void {
-    rect = r;
-
-    const x, const y = .{ rect.size().x, rect.size().y };
-    viewMatrix = .{
-        2 / x, 0, 0, 0, 0,  2 / -y, 0, 0,
-        0,     0, 1, 0, -1, 1,      0, 1,
-    };
-
+pub fn init(vertex: []Vertex) void {
     buffer = gpu.createBuffer(.{
         .size = @sizeOf(Vertex) * vertex.len,
         .usage = .{ .vertex_buffer = true, .stream_update = true },
@@ -74,11 +65,11 @@ fn initPipeline() gpu.RenderPipeline {
 }
 
 pub fn toWorldPosition(position: math.Vector) math.Vector {
-    return position.add(rect.min);
+    return position.add(worldPosition);
 }
 
 pub fn toWindowPosition(position: math.Vector) math.Vector {
-    return position.sub(rect.min);
+    return position.sub(worldPosition);
 }
 
 pub fn beginDraw(color: gpu.Color) void {
@@ -99,8 +90,8 @@ pub fn debugDraw(area: math.Rectangle) void {
     drawRectangle(area, .{ .r = 1, .b = 1, .a = 0.4 });
 }
 
-pub fn draw(tex: gpu.Texture, position: math.Vector) void {
-    drawFlipX(tex, position, false);
+pub fn draw(texture: gpu.Texture, position: math.Vector) void {
+    drawFlipX(texture, position, false);
 }
 
 pub fn drawFlipX(texture: gpu.Texture, pos: math.Vector, flipX: bool) void {
@@ -118,7 +109,7 @@ pub fn drawFlipX(texture: gpu.Texture, pos: math.Vector, flipX: bool) void {
 }
 
 pub fn drawVertex(texture: gpu.Texture, vertex: Vertex) void {
-    gpu.appendBuffer(buffer, &[1]Vertex{vertex});
+    gpu.appendBuffer(buffer, &.{vertex});
 
     defer {
         needDrawCount += 1;
@@ -142,29 +133,33 @@ pub fn endDraw() void {
 }
 
 const VertexOptions = struct {
-    texture: gpu.Texture,
     vertexBuffer: gpu.Buffer,
-    offset: u32 = 0,
+    vertexOffset: u32 = 0,
     count: u32,
 };
-pub fn drawVertexBuffer(options: VertexOptions) void {
+pub fn drawVertexBuffer(texture: gpu.Texture, options: VertexOptions) void {
 
     // 绑定流水线
     renderPass.setPipeline(pipeline);
 
     // 处理 uniform 变量
-    viewMatrix[12] = -1 - rect.min.x * viewMatrix[0];
-    viewMatrix[13] = 1 - rect.min.y * viewMatrix[5];
-    const size = gpu.queryTextureSize(options.texture.image);
+    const x, const y = .{ window.size.x, window.size.y };
+    var viewMatrix: [16]f32 = .{
+        2 / x, 0, 0, 0, 0,  2 / -y, 0, 0,
+        0,     0, 1, 0, -1, 1,      0, 1,
+    };
+    viewMatrix[12] = -1 - worldPosition.x * viewMatrix[0];
+    viewMatrix[13] = 1 - worldPosition.y * viewMatrix[5];
+    const size = gpu.queryTextureSize(texture.image);
     renderPass.setUniform(shader.UB_vs_params, .{
         .viewMatrix = viewMatrix,
         .textureVec = [4]f32{ size.x, size.y, 1, 1 },
     });
 
     // 绑定组
-    bindGroup.setTexture(shader.IMG_tex, options.texture);
+    bindGroup.setTexture(shader.IMG_tex, texture);
     bindGroup.setVertexBuffer(options.vertexBuffer);
-    bindGroup.setVertexOffset(options.offset * @sizeOf(Vertex));
+    bindGroup.setVertexOffset(options.vertexOffset * @sizeOf(Vertex));
     bindGroup.setSampler(shader.SMP_smp, sampler);
 
     renderPass.setBindGroup(bindGroup);
@@ -174,10 +169,9 @@ pub fn drawVertexBuffer(options: VertexOptions) void {
 }
 
 fn drawCurrentCache() void {
-    drawVertexBuffer(.{
-        .texture = usingTexture,
+    drawVertexBuffer(usingTexture, .{
         .vertexBuffer = buffer,
-        .offset = totalDrawCount - needDrawCount,
+        .vertexOffset = totalDrawCount - needDrawCount,
         .count = needDrawCount,
     });
     needDrawCount = 0;

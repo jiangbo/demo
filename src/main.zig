@@ -6,7 +6,7 @@ const scene = @import("scene.zig");
 
 var soundBuffer: [20]audio.Sound = undefined;
 
-// pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
+pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
 
 pub fn init() void {
     audio.init(44100, &soundBuffer);
@@ -41,7 +41,7 @@ pub fn main() void {
         _ = debugAllocator.deinit();
     };
 
-    // _ = ImmDisableIME(-1);
+    _ = ImmDisableIME(-1);
 
     window.run(allocator, .{
         .title = "英雄救美",
