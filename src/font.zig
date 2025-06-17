@@ -133,7 +133,7 @@ pub fn drawText(text: []const u8, position: math.Vector) void {
     drawTextOptions(text, .{ .position = position });
 }
 
-const TextOptions = struct {
+pub const TextOptions = struct {
     size: f32 = 18,
     position: math.Vector,
     color: math.Vector4 = .one,
@@ -155,7 +155,7 @@ pub fn drawTextOptions(text: []const u8, options: TextOptions) void {
         const char = searchGlyph(code);
 
         const target = char.planeBounds.toArea();
-        gpu.appendBuffer(buffer, &[1]Vertex{.{
+        gpu.appendBuffer(buffer, &.{Vertex{
             .position = pos.add(target.min.scale(options.size)),
             .size = target.size().scale(options.size).toVector2(),
             .texture = char.atlasBounds.toArea().toVector4(),
@@ -167,6 +167,7 @@ pub fn drawTextOptions(text: []const u8, options: TextOptions) void {
 }
 
 pub fn draw(renderPass: *gpu.RenderPassEncoder, bindGroup: *gpu.BindGroup) void {
+    if (drawCount == 0) return;
 
     // 绑定流水线
     renderPass.setPipeline(pipeline);

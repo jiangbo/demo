@@ -9,6 +9,7 @@ const font = @import("font.zig");
 pub const Vertex = font.Vertex;
 
 pub var worldPosition: math.Vector3 = .zero;
+pub var alpha: f32 = 1;
 
 var sampler: gpu.Sampler = undefined;
 var renderPass: gpu.RenderPassEncoder = undefined;
@@ -70,6 +71,16 @@ pub fn beginDraw(color: gpu.Color) void {
     totalDrawCount = 0;
 }
 
+pub fn drawText(text: []const u8, position: math.Vector) void {
+    drawTextOptions(text, .{ .position = position });
+}
+
+pub fn drawTextOptions(text: []const u8, options: font.TextOptions) void {
+    var alphaOptions = options;
+    alphaOptions.color.w *= alpha;
+    font.drawTextOptions(text, alphaOptions);
+}
+
 pub fn drawRectangle(area: math.Rectangle, color: math.Vector4) void {
     drawVertex(whiteTexture, .{
         .position = area.min,
@@ -102,7 +113,9 @@ pub fn drawFlipX(texture: gpu.Texture, pos: math.Vector, flipX: bool) void {
 }
 
 pub fn drawVertex(texture: gpu.Texture, vertex: Vertex) void {
-    gpu.appendBuffer(buffer, &.{vertex});
+    var alphaVertex = vertex;
+    alphaVertex.color.w *= alpha;
+    gpu.appendBuffer(buffer, &.{alphaVertex});
 
     defer {
         needDrawCount += 1;
@@ -114,13 +127,13 @@ pub fn drawVertex(texture: gpu.Texture, vertex: Vertex) void {
     if (texture.image.id != usingTexture.image.id) drawCurrentCache();
 }
 
-pub const drawText = font.drawText;
-pub const drawTextOptions = font.drawTextOptions;
-
-pub fn endDraw() void {
+pub fn flush() void {
     if (needDrawCount != 0) drawCurrentCache();
     font.draw(&renderPass, &bindGroup);
+}
 
+pub fn endDraw() void {
+    flush();
     renderPass.end();
     gpu.commandEncoder.submit();
 }

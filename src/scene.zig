@@ -80,10 +80,11 @@ pub fn render() void {
 
     sceneCall("render", .{});
 
+    camera.flush();
+
     if (fadeTimer) |*timer| {
         const percent = timer.elapsed / timer.duration;
-        const a = if (isFadeIn) 1 - percent else percent;
-        camera.drawRectangle(.init(.zero, window.size), .{ .w = a });
+        camera.alpha = if (isFadeIn) percent else 1 - percent;
     }
 
     var buffer: [20]u8 = undefined;

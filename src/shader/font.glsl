@@ -62,7 +62,7 @@ void main() {
     vec3 msd = texture(sampler2D(tex, smp), uv).rgb;
     float sd = median(msd.r, msd.g, msd.b) - 0.5;
     float opacity = clamp(2 * sd + 0.5, 0.0, 1.0);
-    frag_color = vec4(color.rgb, opacity);
+    frag_color = vec4(color.rgb, opacity * color.w);
 }
 @end
 
