@@ -50,8 +50,11 @@ const Rect = struct {
 
 pub const Vertex = extern struct {
     position: math.Vector3, // 顶点坐标
-    color: gpu.Color, // 顶点颜色
-    uv: math.Vector2 = .zero, // 纹理坐标
+    rotation: f32 = 0, // 旋转角度
+    size: math.Vector2, // 大小
+    pivot: math.Vector2 = .zero, // 旋转中心
+    texture: math.Vector4, // 纹理坐标
+    color: gpu.Color = .{ .r = 1, .g = 1, .b = 1, .a = 1 }, // 顶点颜色
 };
 
 var font: Font = undefined;
@@ -95,9 +98,13 @@ pub fn init(options: initOptions) void {
 
 fn initPipeline() void {
     var vertexLayout = gpu.VertexLayout{};
-    vertexLayout.attrs[shader.ATTR_font_position0].format = .FLOAT3;
-    vertexLayout.attrs[shader.ATTR_font_color0].format = .FLOAT4;
-    vertexLayout.attrs[shader.ATTR_font_texcoord0].format = .FLOAT2;
+    vertexLayout.attrs[shader.ATTR_font_vertex_position].format = .FLOAT3;
+    vertexLayout.attrs[shader.ATTR_font_vertex_rotation].format = .FLOAT;
+    vertexLayout.attrs[shader.ATTR_font_vertex_size].format = .FLOAT2;
+    vertexLayout.attrs[shader.ATTR_font_vertex_pivot].format = .FLOAT2;
+    vertexLayout.attrs[shader.ATTR_font_vertex_texture].format = .FLOAT4;
+    vertexLayout.attrs[shader.ATTR_font_vertex_color].format = .FLOAT4;
+    vertexLayout.buffers[0].step_func = .PER_INSTANCE;
 
     const shaderDesc = shader.fontShaderDesc(gpu.queryBackend());
     pipeline = gpu.createRenderPipeline(.{
@@ -108,7 +115,6 @@ fn initPipeline() void {
             .src_factor_rgb = .SRC_ALPHA,
             .dst_factor_rgb = .ONE_MINUS_SRC_ALPHA,
         } },
-        .index_type = .UINT16,
     });
 }
 
@@ -121,21 +127,6 @@ fn compare(a: u32, b: Glyph) std.math.Order {
     if (a < b.unicode) return .lt;
     if (a > b.unicode) return .gt;
     return .eq;
-}
-
-const DrawOptions = struct {
-    texture: gpu.Texture,
-    target: math.Rectangle,
-    color: gpu.Color = .{ .r = 1, .g = 1, .b = 1, .a = 1 },
-};
-
-fn drawOptions(options: DrawOptions) void {
-    var vertexes = createVertexes(options.texture.area, options.target);
-    for (&vertexes) |*value| value.position.z = 0.5;
-    for (&vertexes) |*value| value.color = options.color;
-
-    gpu.appendBuffer(buffer, &vertexes);
-    drawCount += 1;
 }
 
 pub fn drawText(text: []const u8, position: math.Vector) void {
@@ -165,31 +156,15 @@ pub fn drawTextOptions(options: TextOptions) void {
         const char = searchGlyph(code);
 
         const target = char.planeBounds.toArea();
-        const offset = pos.add(target.min.scale(options.size));
-        drawOptions(.{
-            .texture = texture.subTexture(char.atlasBounds.toArea()),
-            .target = .init(offset, target.size().scale(options.size)),
+        gpu.appendBuffer(buffer, &[1]Vertex{.{
+            .position = pos.add(target.min.scale(options.size)),
+            .size = target.size().scale(options.size).toVector2(),
+            .texture = char.atlasBounds.toArea().toVector4(),
             .color = options.color,
-        });
+        }});
+        drawCount += 1;
         pos = pos.addX(char.advance * options.size);
     }
-}
-
-fn createVertexes(src: math.Rectangle, dst: math.Rectangle) [4]Vertex {
-    var vertexes: [4]Vertex = undefined;
-
-    vertexes[0].position = dst.min.addY(dst.size().y);
-    vertexes[0].uv = .init(src.min.x, src.max.y);
-
-    vertexes[1].position = dst.max;
-    vertexes[1].uv = .init(src.max.x, src.max.y);
-
-    vertexes[2].position = dst.min.addX(dst.size().x);
-    vertexes[2].uv = .init(src.max.x, src.min.y);
-
-    vertexes[3].position = dst.min;
-    vertexes[3].uv = .init(src.min.x, src.min.y);
-    return vertexes;
 }
 
 pub fn draw(renderPass: *gpu.RenderPassEncoder, bindGroup: *gpu.BindGroup) void {
@@ -208,11 +183,11 @@ pub fn draw(renderPass: *gpu.RenderPassEncoder, bindGroup: *gpu.BindGroup) void 
     bindGroup.setSampler(shader.SMP_smp, sampler);
     bindGroup.setTexture(shader.IMG_tex, texture);
     bindGroup.setVertexBuffer(buffer);
+    bindGroup.setVertexOffset(0);
 
-    bindGroup.setIndexOffset(0);
     renderPass.setBindGroup(bindGroup.*);
 
     // 绘制
-    renderPass.draw(drawCount * 6);
+    renderPass.drawInstanced(drawCount);
     drawCount = 0;
 }

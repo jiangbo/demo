@@ -195,6 +195,15 @@ pub const Rectangle = struct {
         return point.x >= self.min.x and point.x <= self.max.x and
             point.y >= self.min.y and point.y <= self.max.y;
     }
+
+    pub fn toVector4(self: Rectangle) Vector4 {
+        return .{
+            .x = self.min.x,
+            .y = self.min.y,
+            .z = self.max.x,
+            .w = self.max.y,
+        };
+    }
 };
 
 pub var rand: std.Random.DefaultPrng = undefined;

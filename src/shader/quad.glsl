@@ -24,6 +24,7 @@ out vec4 color;
 out vec2 uv;
 
 void main() {
+
     uint vertexIndex = uint(gl_VertexIndex) % 6;
     // 顶点
     vec2 position = vertexArray[vertexIndex] * vertex_size;
@@ -54,16 +55,9 @@ in vec4 color;
 in vec2 uv;
 out vec4 frag_color;
 
-float median(float r, float g, float b) {
-    return max(min(r, g), min(max(r, g), b));
-}
-
 void main() {
-    vec3 msd = texture(sampler2D(tex, smp), uv).rgb;
-    float sd = median(msd.r, msd.g, msd.b) - 0.5;
-    float opacity = clamp(2 * sd + 0.5, 0.0, 1.0);
-    frag_color = vec4(color.rgb, opacity);
+     frag_color = texture(sampler2D(tex, smp), uv) * color;
 }
 @end
 
-@program font vs fs
+@program quad vs fs

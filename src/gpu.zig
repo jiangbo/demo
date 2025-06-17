@@ -91,7 +91,6 @@ pub fn createRenderPipeline(desc: RenderPipelineDesc) RenderPipeline {
             c[0] = desc.color;
             break :init c;
         },
-        .index_type = desc.index_type,
         .depth = desc.depth,
     }) };
 }
@@ -110,14 +109,6 @@ pub fn appendBuffer(buffer: Buffer, data: anytype) void {
 
 pub const BindGroup = struct {
     value: sk.gfx.Bindings = .{},
-
-    pub fn setIndexBuffer(self: *BindGroup, buffer: Buffer) void {
-        self.value.index_buffer = buffer;
-    }
-
-    pub fn setIndexOffset(self: *BindGroup, offset: u32) void {
-        self.value.index_buffer_offset = @intCast(offset);
-    }
 
     pub fn setVertexBuffer(self: *BindGroup, buffer: Buffer) void {
         self.value.vertex_buffers[0] = buffer;
@@ -166,9 +157,9 @@ pub const RenderPassEncoder = struct {
         sk.gfx.applyUniforms(index, sk.gfx.asRange(&uniform));
     }
 
-    pub fn draw(self: *RenderPassEncoder, number: u32) void {
+    pub fn drawInstanced(self: *RenderPassEncoder, number: u32) void {
         _ = self;
-        sk.gfx.draw(0, number, 1);
+        sk.gfx.draw(0, 6, number);
     }
 
     pub fn end(self: *RenderPassEncoder) void {
