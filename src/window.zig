@@ -2,10 +2,10 @@ const std = @import("std");
 const sk = @import("sokol");
 const math = @import("math.zig");
 const assets = @import("assets.zig");
-const gfx = @import("graphics.zig");
 const audio = @import("audio.zig");
 const input = @import("input.zig");
 const font = @import("font.zig");
+const gpu = @import("gpu.zig");
 
 pub const Event = sk.app.Event;
 
@@ -89,6 +89,7 @@ export fn windowInit() void {
         .environment = sk.glue.environment(),
         .logger = .{ .func = sk.log.func },
     });
+    gpu.init();
 
     math.setRandomSeed(timer.lap());
     call(root, "init", .{});
@@ -129,7 +130,9 @@ export fn windowFrame() void {
     } else frameRateCount += 1;
 
     sk.fetch.dowork();
+    gpu.begin(.{ .a = 1 });
     call(root, "frame", .{delta});
+    gpu.end();
     input.endFrame();
 }
 
@@ -152,4 +155,3 @@ pub const random = math.random;
 pub const isAnyKeyRelease = input.isAnyKeyRelease;
 pub const isButtonRelease = input.isButtonRelease;
 pub const initFont = font.init;
-pub const FontVertex = font.Vertex;

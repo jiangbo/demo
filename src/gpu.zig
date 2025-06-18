@@ -44,13 +44,48 @@ pub fn queryTextureSize(image: sk.gfx.Image) math.Vector {
     };
 }
 
+pub const RenderPipeline = sk.gfx.Pipeline;
 pub const asRange = sk.gfx.asRange;
 pub const queryBackend = sk.gfx.queryBackend;
 pub const Buffer = sk.gfx.Buffer;
 pub const Color = sk.gfx.Color;
-pub const Sampler = sk.gfx.Sampler;
-pub const Shader = sk.gfx.Shader;
-pub const VertexLayout = sk.gfx.VertexLayoutState;
+pub var nearestSampler: sk.gfx.Sampler = undefined;
+pub var linearSampler: sk.gfx.Sampler = undefined;
+
+pub fn init() void {
+    nearestSampler = sk.gfx.makeSampler(.{});
+    linearSampler = sk.gfx.makeSampler(.{
+        .min_filter = .LINEAR,
+        .mag_filter = .LINEAR,
+    });
+}
+
+pub fn begin(color: sk.gfx.Color) void {
+    var action = sk.gfx.PassAction{};
+    action.colors[0] = .{ .load_action = .CLEAR, .clear_value = color };
+    sk.gfx.beginPass(.{ .action = action, .swapchain = sk.glue.swapchain() });
+}
+
+pub fn setPipeline(pipeline: RenderPipeline) void {
+    sk.gfx.applyPipeline(pipeline);
+}
+
+pub fn setUniform(index: u32, uniform: anytype) void {
+    sk.gfx.applyUniforms(index, sk.gfx.asRange(&uniform));
+}
+
+pub fn setBindGroup(group: BindGroup) void {
+    sk.gfx.applyBindings(group.value);
+}
+
+pub fn drawInstanced(number: u32) void {
+    sk.gfx.draw(0, 6, number);
+}
+
+pub fn end() void {
+    sk.gfx.endPass();
+    sk.gfx.commit();
+}
 
 pub fn createTexture(size: math.Vector, data: []const u8) Texture {
     return Texture{
@@ -72,35 +107,38 @@ pub fn createBuffer(desc: sk.gfx.BufferDesc) Buffer {
     return sk.gfx.makeBuffer(desc);
 }
 
-pub const RenderPipelineDesc = struct {
-    shader: sk.gfx.Shader,
-    vertexLayout: VertexLayout,
-    primitive: sk.gfx.PrimitiveType = .TRIANGLES,
-    color: sk.gfx.ColorTargetState = .{},
-    index_type: sk.gfx.IndexType = .DEFAULT,
-    depth: sk.gfx.DepthState = .{},
+pub const QuadVertex = extern struct {
+    position: math.Vector3, // 顶点坐标
+    rotation: f32 = 0, // 旋转角度
+    size: math.Vector2, // 大小
+    pivot: math.Vector2 = .zero, // 旋转中心
+    texture: math.Vector4, // 纹理坐标
+    color: math.Vector4 = .one, // 顶点颜色
 };
 
-pub fn createRenderPipeline(desc: RenderPipelineDesc) RenderPipeline {
-    return .{ .value = sk.gfx.makePipeline(.{
-        .shader = desc.shader,
-        .layout = desc.vertexLayout,
-        .primitive_type = desc.primitive,
+pub fn createQuadPipeline(shaderDesc: sk.gfx.ShaderDesc) RenderPipeline {
+    var vertexLayout = sk.gfx.VertexLayoutState{};
+    vertexLayout.attrs[0].format = .FLOAT3;
+    vertexLayout.attrs[1].format = .FLOAT;
+    vertexLayout.attrs[2].format = .FLOAT2;
+    vertexLayout.attrs[3].format = .FLOAT2;
+    vertexLayout.attrs[4].format = .FLOAT4;
+    vertexLayout.attrs[5].format = .FLOAT4;
+    vertexLayout.buffers[0].step_func = .PER_INSTANCE;
+
+    return sk.gfx.makePipeline(.{
+        .shader = sk.gfx.makeShader(shaderDesc),
+        .layout = vertexLayout,
         .colors = init: {
             var c: [4]sk.gfx.ColorTargetState = @splat(.{});
-            c[0] = desc.color;
+            c[0] = .{ .blend = .{
+                .enabled = true,
+                .src_factor_rgb = .SRC_ALPHA,
+                .dst_factor_rgb = .ONE_MINUS_SRC_ALPHA,
+            } };
             break :init c;
         },
-        .depth = desc.depth,
-    }) };
-}
-
-pub fn createShaderModule(desc: sk.gfx.ShaderDesc) sk.gfx.Shader {
-    return sk.gfx.makeShader(desc);
-}
-
-pub fn createSampler(desc: sk.gfx.SamplerDesc) Sampler {
-    return sk.gfx.makeSampler(desc);
+    });
 }
 
 pub fn appendBuffer(buffer: Buffer, data: anytype) void {
@@ -118,56 +156,11 @@ pub const BindGroup = struct {
         self.value.vertex_buffer_offsets[0] = @intCast(offset);
     }
 
-    pub fn setTexture(self: *BindGroup, index: u32, texture: Texture) void {
-        self.value.images[index] = texture.image;
+    pub fn setTexture(self: *BindGroup, texture: Texture) void {
+        self.value.images[0] = texture.image;
     }
 
-    pub fn setSampler(self: *BindGroup, index: u32, sampler: Sampler) void {
-        self.value.samplers[index] = sampler;
+    pub fn setSampler(self: *BindGroup, sampler: sk.gfx.Sampler) void {
+        self.value.samplers[0] = sampler;
     }
-};
-
-pub var commandEncoder: CommandEncoder = .{};
-pub const CommandEncoder = struct {
-    pub fn beginRenderPass(_: CommandEncoder, color: Color) RenderPassEncoder {
-        var action = sk.gfx.PassAction{};
-        action.colors[0] = .{ .load_action = .CLEAR, .clear_value = color };
-        sk.gfx.beginPass(.{ .action = action, .swapchain = sk.glue.swapchain() });
-        return RenderPassEncoder{};
-    }
-
-    pub fn submit(_: *CommandEncoder) void {
-        sk.gfx.commit();
-    }
-};
-
-pub const RenderPassEncoder = struct {
-    pub fn setPipeline(self: *RenderPassEncoder, pipeline: RenderPipeline) void {
-        _ = self;
-        sk.gfx.applyPipeline(pipeline.value);
-    }
-
-    pub fn setBindGroup(self: *RenderPassEncoder, group: BindGroup) void {
-        _ = self;
-        sk.gfx.applyBindings(group.value);
-    }
-
-    pub fn setUniform(self: *RenderPassEncoder, index: u32, uniform: anytype) void {
-        _ = self;
-        sk.gfx.applyUniforms(index, sk.gfx.asRange(&uniform));
-    }
-
-    pub fn drawInstanced(self: *RenderPassEncoder, number: u32) void {
-        _ = self;
-        sk.gfx.draw(0, 6, number);
-    }
-
-    pub fn end(self: *RenderPassEncoder) void {
-        _ = self;
-        sk.gfx.endPass();
-    }
-};
-
-pub const RenderPipeline = struct {
-    value: sk.gfx.Pipeline,
 };

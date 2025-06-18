@@ -48,74 +48,31 @@ const Rect = struct {
     }
 };
 
-pub const Vertex = extern struct {
-    position: math.Vector3, // 顶点坐标
-    rotation: f32 = 0, // 旋转角度
-    size: math.Vector2, // 大小
-    pivot: math.Vector2 = .zero, // 旋转中心
-    texture: math.Vector4, // 纹理坐标
-    color: math.Vector4 = .one, // 顶点颜色
-};
-
 var font: Font = undefined;
 var texture: gpu.Texture = undefined;
 
-var viewMatrix: [16]f32 = undefined;
 var pipeline: gpu.RenderPipeline = undefined;
-var sampler: gpu.Sampler = undefined;
+var bindGroup: gpu.BindGroup = .{};
 var buffer: gpu.Buffer = undefined;
 var drawCount: u32 = 0;
 
 const initOptions = struct {
-    font: *const Font,
+    font: Font,
     texture: gpu.Texture,
-    size: math.Vector,
-    vertex: []Vertex,
+    vertex: []gpu.QuadVertex,
 };
 
 pub fn init(options: initOptions) void {
-    font = options.font.*;
+    font = options.font;
     texture = options.texture;
 
-    const x, const y = .{ options.size.x, options.size.y };
-    viewMatrix = .{
-        2 / x, 0, 0, 0, 0,  2 / -y, 0, 0,
-        0,     0, 1, 0, -1, 1,      0, 1,
-    };
-
     buffer = gpu.createBuffer(.{
-        .size = @sizeOf(Vertex) * options.vertex.len,
+        .size = @sizeOf(gpu.QuadVertex) * options.vertex.len,
         .usage = .{ .vertex_buffer = true, .stream_update = true },
     });
 
-    sampler = gpu.createSampler(.{
-        .min_filter = .LINEAR,
-        .mag_filter = .LINEAR,
-    });
-
-    initPipeline();
-}
-
-fn initPipeline() void {
-    var vertexLayout = gpu.VertexLayout{};
-    vertexLayout.attrs[shader.ATTR_font_vertex_position].format = .FLOAT3;
-    vertexLayout.attrs[shader.ATTR_font_vertex_rotation].format = .FLOAT;
-    vertexLayout.attrs[shader.ATTR_font_vertex_size].format = .FLOAT2;
-    vertexLayout.attrs[shader.ATTR_font_vertex_pivot].format = .FLOAT2;
-    vertexLayout.attrs[shader.ATTR_font_vertex_texture].format = .FLOAT4;
-    vertexLayout.attrs[shader.ATTR_font_vertex_color].format = .FLOAT4;
-    vertexLayout.buffers[0].step_func = .PER_INSTANCE;
-
     const shaderDesc = shader.fontShaderDesc(gpu.queryBackend());
-    pipeline = gpu.createRenderPipeline(.{
-        .shader = gpu.createShaderModule(shaderDesc),
-        .vertexLayout = vertexLayout,
-        .color = .{ .blend = .{
-            .enabled = true,
-            .src_factor_rgb = .SRC_ALPHA,
-            .dst_factor_rgb = .ONE_MINUS_SRC_ALPHA,
-        } },
-    });
+    pipeline = gpu.createQuadPipeline(shaderDesc);
 }
 
 fn searchGlyph(code: u32) *const Glyph {
@@ -155,7 +112,7 @@ pub fn drawTextOptions(text: []const u8, options: TextOptions) void {
         const char = searchGlyph(code);
 
         const target = char.planeBounds.toArea();
-        gpu.appendBuffer(buffer, &.{Vertex{
+        gpu.appendBuffer(buffer, &.{gpu.QuadVertex{
             .position = pos.add(target.min.scale(options.size)),
             .size = target.size().scale(options.size).toVector2(),
             .texture = char.atlasBounds.toArea().toVector4(),
@@ -166,28 +123,32 @@ pub fn drawTextOptions(text: []const u8, options: TextOptions) void {
     }
 }
 
-pub fn draw(renderPass: *gpu.RenderPassEncoder, bindGroup: *gpu.BindGroup) void {
+pub fn flush() void {
     if (drawCount == 0) return;
 
     // 绑定流水线
-    renderPass.setPipeline(pipeline);
+    gpu.setPipeline(pipeline);
 
     // 处理 uniform 变量
+    const x, const y = .{ window.size.x, window.size.y };
+    const viewMatrix = [16]f32{
+        2 / x, 0, 0, 0, 0,  2 / -y, 0, 0,
+        0,     0, 1, 0, -1, 1,      0, 1,
+    };
     const size = gpu.queryTextureSize(texture.image);
-    renderPass.setUniform(shader.UB_vs_params, .{
+    gpu.setUniform(shader.UB_vs_params, .{
         .viewMatrix = viewMatrix,
         .textureVec = [4]f32{ size.x, size.y, 1, 1 },
     });
 
     // 绑定组
-    bindGroup.setSampler(shader.SMP_smp, sampler);
-    bindGroup.setTexture(shader.IMG_tex, texture);
+    bindGroup.setSampler(gpu.linearSampler);
+    bindGroup.setTexture(texture);
     bindGroup.setVertexBuffer(buffer);
     bindGroup.setVertexOffset(0);
-
-    renderPass.setBindGroup(bindGroup.*);
+    gpu.setBindGroup(bindGroup);
 
     // 绘制
-    renderPass.drawInstanced(drawCount);
+    gpu.drawInstanced(drawCount);
     drawCount = 0;
 }

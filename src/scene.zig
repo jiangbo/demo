@@ -15,14 +15,13 @@ var currentSceneType: SceneType = .title;
 var toSceneType: SceneType = .title;
 
 var vertexBuffer: [100 * 4]camera.Vertex = undefined;
-var fontVertexBuffer: [1000 * 4]window.FontVertex = undefined;
+var fontVertexBuffer: [1000 * 4]camera.Vertex = undefined;
 
 pub fn init() void {
-    const fontTexture = gfx.loadTexture("assets/font.png", .init(504, 504));
+    const fontTexture = gfx.loadTexture("assets/font.png", .init(832, 832));
     window.initFont(.{
-        .font = &@import("zon/font.zon"),
+        .font = @import("zon/font.zon"),
         .texture = fontTexture,
-        .size = window.size,
         .vertex = &fontVertexBuffer,
     });
 
@@ -73,7 +72,7 @@ pub fn update(delta: f32) void {
 }
 
 pub fn render() void {
-    camera.beginDraw(.{ .a = 1 });
+    camera.beginDraw();
     defer camera.endDraw();
 
     window.keepAspectRatio();

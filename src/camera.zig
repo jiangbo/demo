@@ -6,12 +6,8 @@ const shader = @import("shader/quad.glsl.zig");
 const window = @import("window.zig");
 const font = @import("font.zig");
 
-pub const Vertex = font.Vertex;
-
 pub var worldPosition: math.Vector3 = .zero;
 
-var sampler: gpu.Sampler = undefined;
-var renderPass: gpu.RenderPassEncoder = undefined;
 var bindGroup: gpu.BindGroup = .{};
 var pipeline: gpu.RenderPipeline = undefined;
 
@@ -21,40 +17,17 @@ var totalDrawCount: u32 = 0;
 var usingTexture: gpu.Texture = .{ .image = .{} };
 var whiteTexture: gpu.Texture = undefined;
 
-pub fn init(vertex: []Vertex) void {
+pub fn init(vertex: []gpu.QuadVertex) void {
     buffer = gpu.createBuffer(.{
-        .size = @sizeOf(Vertex) * vertex.len,
+        .size = @sizeOf(gpu.QuadVertex) * vertex.len,
         .usage = .{ .vertex_buffer = true, .stream_update = true },
     });
 
-    sampler = gpu.createSampler(.{});
-    pipeline = initPipeline();
+    const shaderDesc = shader.quadShaderDesc(gpu.queryBackend());
+    pipeline = gpu.createQuadPipeline(shaderDesc);
 
     const data: [64]u8 = [1]u8{0xFF} ** 64;
     whiteTexture = gpu.createTexture(.init(4, 4), &data);
-}
-
-fn initPipeline() gpu.RenderPipeline {
-    var vertexLayout = gpu.VertexLayout{};
-    vertexLayout.attrs[shader.ATTR_quad_vertex_position].format = .FLOAT3;
-    vertexLayout.attrs[shader.ATTR_quad_vertex_rotation].format = .FLOAT;
-    vertexLayout.attrs[shader.ATTR_quad_vertex_size].format = .FLOAT2;
-    vertexLayout.attrs[shader.ATTR_quad_vertex_pivot].format = .FLOAT2;
-    vertexLayout.attrs[shader.ATTR_quad_vertex_texture].format = .FLOAT4;
-    vertexLayout.attrs[shader.ATTR_quad_vertex_color].format = .FLOAT4;
-    vertexLayout.buffers[0].step_func = .PER_INSTANCE;
-
-    const shaderDesc = shader.quadShaderDesc(gpu.queryBackend());
-    return gpu.createRenderPipeline(.{
-        .shader = gpu.createShaderModule(shaderDesc),
-        .vertexLayout = vertexLayout,
-        .color = .{ .blend = .{
-            .enabled = true,
-            .src_factor_rgb = .SRC_ALPHA,
-            .dst_factor_rgb = .ONE_MINUS_SRC_ALPHA,
-        } },
-        .depth = .{ .compare = .LESS_EQUAL, .write_enabled = true },
-    });
 }
 
 pub fn toWorldPosition(position: math.Vector) math.Vector {
@@ -65,17 +38,8 @@ pub fn toWindowPosition(position: math.Vector) math.Vector {
     return position.sub(worldPosition);
 }
 
-pub fn beginDraw(color: gpu.Color) void {
-    renderPass = gpu.commandEncoder.beginRenderPass(color);
+pub fn beginDraw() void {
     totalDrawCount = 0;
-}
-
-pub fn drawText(text: []const u8, position: math.Vector) void {
-    drawTextOptions(text, .{ .position = position });
-}
-
-pub fn drawTextOptions(text: []const u8, options: font.TextOptions) void {
-    font.drawTextOptions(text, options);
 }
 
 pub fn drawRectangle(area: math.Rectangle, color: math.Vector4) void {
@@ -109,7 +73,7 @@ pub fn drawFlipX(texture: gpu.Texture, pos: math.Vector, flipX: bool) void {
     });
 }
 
-pub fn drawVertex(texture: gpu.Texture, vertex: Vertex) void {
+pub fn drawVertex(texture: gpu.Texture, vertex: gpu.QuadVertex) void {
     gpu.appendBuffer(buffer, &.{vertex});
 
     defer {
@@ -124,15 +88,14 @@ pub fn drawVertex(texture: gpu.Texture, vertex: Vertex) void {
 
 pub fn flush() void {
     if (needDrawCount != 0) drawCurrentCache();
-    font.draw(&renderPass, &bindGroup);
+    font.flush();
 }
 
 pub fn endDraw() void {
     flush();
-    renderPass.end();
-    gpu.commandEncoder.submit();
 }
 
+pub const Vertex = gpu.QuadVertex;
 const VertexOptions = struct {
     vertexBuffer: gpu.Buffer,
     vertexOffset: u32 = 0,
@@ -141,7 +104,7 @@ const VertexOptions = struct {
 pub fn drawVertexBuffer(texture: gpu.Texture, options: VertexOptions) void {
 
     // 绑定流水线
-    renderPass.setPipeline(pipeline);
+    gpu.setPipeline(pipeline);
 
     // 处理 uniform 变量
     const x, const y = .{ window.size.x, window.size.y };
@@ -152,21 +115,21 @@ pub fn drawVertexBuffer(texture: gpu.Texture, options: VertexOptions) void {
     viewMatrix[12] = -1 - worldPosition.x * viewMatrix[0];
     viewMatrix[13] = 1 - worldPosition.y * viewMatrix[5];
     const size = gpu.queryTextureSize(texture.image);
-    renderPass.setUniform(shader.UB_vs_params, .{
+    gpu.setUniform(shader.UB_vs_params, .{
         .viewMatrix = viewMatrix,
         .textureVec = [4]f32{ size.x, size.y, 1, 1 },
     });
 
     // 绑定组
-    bindGroup.setTexture(shader.IMG_tex, texture);
+    bindGroup.setTexture(texture);
     bindGroup.setVertexBuffer(options.vertexBuffer);
     bindGroup.setVertexOffset(options.vertexOffset * @sizeOf(Vertex));
-    bindGroup.setSampler(shader.SMP_smp, sampler);
+    bindGroup.setSampler(gpu.nearestSampler);
 
-    renderPass.setBindGroup(bindGroup);
+    gpu.setBindGroup(bindGroup);
 
     // 绘制
-    renderPass.drawInstanced(options.count);
+    gpu.drawInstanced(options.count);
 }
 
 fn drawCurrentCache() void {
@@ -177,3 +140,6 @@ fn drawCurrentCache() void {
     });
     needDrawCount = 0;
 }
+
+pub const drawText = font.drawText;
+pub const drawTextOptions = font.drawTextOptions;
