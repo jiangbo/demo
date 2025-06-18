@@ -40,6 +40,7 @@ pub fn toWindowPosition(position: math.Vector) math.Vector {
 
 pub fn beginDraw() void {
     totalDrawCount = 0;
+    font.beginDraw();
 }
 
 pub fn drawRectangle(area: math.Rectangle, color: math.Vector4) void {
@@ -143,3 +144,4 @@ fn drawCurrentCache() void {
 
 pub const drawText = font.drawText;
 pub const drawTextOptions = font.drawTextOptions;
+pub const flushText = font.flush;

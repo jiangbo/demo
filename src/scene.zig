@@ -79,20 +79,20 @@ pub fn render() void {
 
     sceneCall("render", .{});
 
+    // 将文字先绘制上，后面的淡入淡出才会生效。
+    camera.flush();
+    if (fadeTimer) |*timer| {
+        const percent = timer.elapsed / timer.duration;
+        const alpha = if (isFadeIn) 1 - percent else percent;
+        camera.drawRectangle(.init(.zero, window.size), .{ .w = alpha });
+    }
+
     var buffer: [20]u8 = undefined;
     const text = std.fmt.bufPrint(&buffer, "FPS:{}", .{window.frameRate});
     camera.drawTextOptions(text catch unreachable, .{
         .position = .init(10, 5),
         .color = .{ .y = 1, .w = 1 },
     });
-
-    camera.flush();
-
-    if (fadeTimer) |*timer| {
-        const percent = timer.elapsed / timer.duration;
-        const alpha = if (isFadeIn) 1 - percent else percent;
-        camera.drawRectangle(.init(.zero, window.size), .{ .w = alpha });
-    }
 }
 
 var fadeTimer: ?window.Timer = null;

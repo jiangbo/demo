@@ -54,7 +54,8 @@ var texture: gpu.Texture = undefined;
 var pipeline: gpu.RenderPipeline = undefined;
 var bindGroup: gpu.BindGroup = .{};
 var buffer: gpu.Buffer = undefined;
-var drawCount: u32 = 0;
+var needDrawCount: u32 = 0;
+var totalDrawCount: u32 = 0;
 
 const initOptions = struct {
     font: Font,
@@ -84,6 +85,10 @@ fn compare(a: u32, b: Glyph) std.math.Order {
     if (a < b.unicode) return .lt;
     if (a > b.unicode) return .gt;
     return .eq;
+}
+
+pub fn beginDraw() void {
+    totalDrawCount = 0;
 }
 
 pub fn drawText(text: []const u8, position: math.Vector) void {
@@ -118,13 +123,14 @@ pub fn drawTextOptions(text: []const u8, options: TextOptions) void {
             .texture = char.atlasBounds.toArea().toVector4(),
             .color = options.color,
         }});
-        drawCount += 1;
+        needDrawCount += 1;
+        totalDrawCount += 1;
         pos = pos.addX(char.advance * options.size);
     }
 }
 
 pub fn flush() void {
-    if (drawCount == 0) return;
+    if (needDrawCount == 0) return;
 
     // 绑定流水线
     gpu.setPipeline(pipeline);
@@ -145,10 +151,11 @@ pub fn flush() void {
     bindGroup.setSampler(gpu.linearSampler);
     bindGroup.setTexture(texture);
     bindGroup.setVertexBuffer(buffer);
-    bindGroup.setVertexOffset(0);
+    const vertexOffset = totalDrawCount - needDrawCount;
+    bindGroup.setVertexOffset(vertexOffset * @sizeOf(gpu.QuadVertex));
     gpu.setBindGroup(bindGroup);
 
     // 绘制
-    gpu.drawInstanced(drawCount);
-    drawCount = 0;
+    gpu.drawInstanced(needDrawCount);
+    needDrawCount = 0;
 }
