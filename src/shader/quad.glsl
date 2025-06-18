@@ -26,10 +26,16 @@ out vec2 uv;
 void main() {
 
     uint vertexIndex = uint(gl_VertexIndex) % 6;
-    // 顶点
-    vec2 position = vertexArray[vertexIndex] * vertex_size;
-    vec4 depthPosition = vec4(position, 0, 0) + vertex_position;
-    gl_Position = viewMatrix * depthPosition;
+     // 缩放
+    vec2 scaled = vertexArray[vertexIndex] * vertex_size;
+    // 旋转
+    vec2 pivot = vertex_pivot * vertex_size;
+    float c = cos(vertex_rotation);
+    float s = sin(vertex_rotation);
+    vec2 rotated = mat2(c, s, -s, c) * (scaled - pivot);
+    // 平移
+    vec4 position = vec4(rotated + pivot, 0, 0);
+    gl_Position = viewMatrix * (position + vertex_position);
 
     // 纹理
     vec2 texcoord[6] = {
