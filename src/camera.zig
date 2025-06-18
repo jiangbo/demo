@@ -9,7 +9,6 @@ const font = @import("font.zig");
 pub const Vertex = font.Vertex;
 
 pub var worldPosition: math.Vector3 = .zero;
-pub var alpha: f32 = 1;
 
 var sampler: gpu.Sampler = undefined;
 var renderPass: gpu.RenderPassEncoder = undefined;
@@ -76,9 +75,7 @@ pub fn drawText(text: []const u8, position: math.Vector) void {
 }
 
 pub fn drawTextOptions(text: []const u8, options: font.TextOptions) void {
-    var alphaOptions = options;
-    alphaOptions.color.w *= alpha;
-    font.drawTextOptions(text, alphaOptions);
+    font.drawTextOptions(text, options);
 }
 
 pub fn drawRectangle(area: math.Rectangle, color: math.Vector4) void {
@@ -113,9 +110,7 @@ pub fn drawFlipX(texture: gpu.Texture, pos: math.Vector, flipX: bool) void {
 }
 
 pub fn drawVertex(texture: gpu.Texture, vertex: Vertex) void {
-    var alphaVertex = vertex;
-    alphaVertex.color.w *= alpha;
-    gpu.appendBuffer(buffer, &.{alphaVertex});
+    gpu.appendBuffer(buffer, &.{vertex});
 
     defer {
         needDrawCount += 1;

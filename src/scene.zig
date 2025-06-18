@@ -80,19 +80,20 @@ pub fn render() void {
 
     sceneCall("render", .{});
 
-    camera.flush();
-
-    if (fadeTimer) |*timer| {
-        const percent = timer.elapsed / timer.duration;
-        camera.alpha = if (isFadeIn) percent else 1 - percent;
-    }
-
     var buffer: [20]u8 = undefined;
     const text = std.fmt.bufPrint(&buffer, "FPS:{}", .{window.frameRate});
     camera.drawTextOptions(text catch unreachable, .{
         .position = .init(10, 5),
         .color = .{ .y = 1, .w = 1 },
     });
+
+    camera.flush();
+
+    if (fadeTimer) |*timer| {
+        const percent = timer.elapsed / timer.duration;
+        const alpha = if (isFadeIn) 1 - percent else percent;
+        camera.drawRectangle(.init(.zero, window.size), .{ .w = alpha });
+    }
 }
 
 var fadeTimer: ?window.Timer = null;
