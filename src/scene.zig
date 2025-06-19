@@ -11,7 +11,7 @@ const Talk = struct { content: []const u8 };
 pub const talks: []const Talk = @import("zon/talk.zon");
 
 const SceneType = enum { title, world };
-var currentSceneType: SceneType = .title;
+var currentSceneType: SceneType = .world;
 var toSceneType: SceneType = .title;
 
 var vertexBuffer: [100 * 4]camera.Vertex = undefined;
@@ -56,7 +56,10 @@ fn doChangeScene() void {
     enter();
 }
 
+var debug: bool = true;
 pub fn update(delta: f32) void {
+    if (window.isKeyRelease(.X)) debug = !debug;
+
     if (fadeTimer) |*timer| {
         if (timer.isRunningAfterUpdate(delta)) return;
         if (isFadeIn) {
@@ -87,6 +90,10 @@ pub fn render() void {
         camera.drawRectangle(.init(.zero, window.size), .{ .w = alpha });
     }
 
+    if (debug) drawDebugInfo();
+}
+
+fn drawDebugInfo() void {
     var buffer: [100]u8 = undefined;
     const format =
         \\帧率：{}
@@ -98,13 +105,17 @@ pub fn render() void {
     const text = std.fmt.bufPrint(&buffer, format, .{
         window.frameRate,
         camera.imageDrawCount(),
+        // Debug 信息本身的次数也应该统计进去
         camera.textDrawCount() + debutTextCount,
         camera.gpuDrawCount() + 1,
     }) catch unreachable;
 
     var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
     var count: u32 = 0;
-    while (iterator.nextCodepoint()) |_| count += 1;
+    while (iterator.nextCodepoint()) |code| {
+        if (code == '\n') continue;
+        count += 1;
+    }
     debutTextCount = count;
 
     camera.drawColorText(text, .init(10, 5), .green);

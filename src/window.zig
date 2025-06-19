@@ -152,6 +152,7 @@ pub const playSound = audio.playSound;
 pub const playMusic = audio.playMusic;
 pub const stopMusic = audio.stopMusic;
 pub const random = math.random;
+pub const isKeyRelease = input.isKeyRelease;
 pub const isAnyKeyRelease = input.isAnyKeyRelease;
 pub const isButtonRelease = input.isButtonRelease;
 pub const initFont = font.init;
