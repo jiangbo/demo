@@ -25,6 +25,8 @@ var playerAnimation: Animation = undefined;
 var playerDirection: math.FourDirection = .up;
 var playerPosition: math.Vector = .init(180, 164);
 
+var talkTexture: gfx.Texture = undefined;
+
 pub fn init() void {
     playerTexture = gfx.loadTexture("assets/pic/player.png", .init(96, 192));
     mapTexture = gfx.loadTexture("assets/pic/maps.png", .init(640, 1536));
@@ -54,6 +56,8 @@ pub fn init() void {
     }
 
     playerAnimation = createAnimation("assets/pic/player.png");
+
+    talkTexture = gfx.loadTexture("assets/pic/talkbar.png", .init(640, 96));
 
     // window.playMusic("assets/voc/back.ogg");
 }
@@ -95,4 +99,15 @@ pub fn render() void {
 
     const animation = playerAnimation.get(playerDirection);
     camera.draw(animation.currentTexture(), playerPosition);
+
+    camera.draw(talkTexture, .init(0, 384));
+    const downAnimation = playerAnimation.get(.down);
+    const tex = downAnimation.texture.mapTexture(downAnimation.frames[0]);
+    camera.draw(tex, .init(30, 396));
+
+    const nameColor = gfx.color(1, 1, 0, 1);
+    camera.drawColorText("小飞刀", .init(18, 445), nameColor);
+
+    // camera.drawColorText("小飞刀", .init(123, 403), .{ .w = 1 });
+    // camera.drawColorText("小飞刀", .init(120, 400), .one);
 }
