@@ -56,9 +56,13 @@ fn doChangeScene() void {
     enter();
 }
 
-var debug: bool = true;
+var isDebug: bool = true;
+var isCamera: bool = false;
 pub fn update(delta: f32) void {
-    if (window.isKeyRelease(.X)) debug = !debug;
+    if (window.isKeyRelease(.X)) isDebug = !isDebug;
+    if (window.isKeyRelease(.C)) isCamera = !isCamera;
+
+    if (isCamera) controlCamera(delta);
 
     if (fadeTimer) |*timer| {
         if (timer.isRunningAfterUpdate(delta)) return;
@@ -72,6 +76,27 @@ pub fn update(delta: f32) void {
         return;
     }
     sceneCall("update", .{delta});
+}
+
+const SPEED: f32 = 250;
+pub fn controlCamera(delta: f32) void {
+    const speed = SPEED * delta;
+
+    if (window.isKeyDown(.W)) {
+        camera.worldPosition = camera.worldPosition.addY(-speed);
+    }
+
+    if (window.isKeyDown(.S)) {
+        camera.worldPosition = camera.worldPosition.addY(speed);
+    }
+
+    if (window.isKeyDown(.A)) {
+        camera.worldPosition = camera.worldPosition.addX(-speed);
+    }
+
+    if (window.isKeyDown(.D)) {
+        camera.worldPosition = camera.worldPosition.addX(speed);
+    }
 }
 
 pub fn render() void {
@@ -90,7 +115,7 @@ pub fn render() void {
         camera.drawRectangle(.init(.zero, window.size), .{ .w = alpha });
     }
 
-    if (debug) drawDebugInfo();
+    if (isDebug) drawDebugInfo();
 }
 
 fn drawDebugInfo() void {
@@ -100,6 +125,7 @@ fn drawDebugInfo() void {
         \\图片：{}
         \\文字：{}
         \\绘制：{}
+        \\相机移动：{s}
     ;
 
     const text = std.fmt.bufPrint(&buffer, format, .{
@@ -108,6 +134,7 @@ fn drawDebugInfo() void {
         // Debug 信息本身的次数也应该统计进去
         camera.textDrawCount() + debutTextCount,
         camera.gpuDrawCount() + 1,
+        if (isCamera) "开" else "关",
     }) catch unreachable;
 
     var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
