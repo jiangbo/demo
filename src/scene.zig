@@ -14,18 +14,14 @@ const SceneType = enum { title, world };
 var currentSceneType: SceneType = .world;
 var toSceneType: SceneType = .title;
 
-var vertexBuffer: [100 * 4]camera.Vertex = undefined;
-var fontVertexBuffer: [1000 * 4]camera.Vertex = undefined;
-
 pub fn init() void {
     const fontTexture = gfx.loadTexture("assets/font.png", .init(832, 832));
     window.initFont(.{
         .font = @import("zon/font.zon"),
         .texture = fontTexture,
-        .vertex = &fontVertexBuffer,
     });
 
-    camera.init(&vertexBuffer);
+    camera.init(1000);
 
     titleScene.init();
     worldScene.init();
@@ -125,7 +121,6 @@ fn drawDebugInfo() void {
         \\图片：{}
         \\文字：{}
         \\绘制：{}
-        \\相机移动：{s}
     ;
 
     const text = std.fmt.bufPrint(&buffer, format, .{
@@ -134,7 +129,6 @@ fn drawDebugInfo() void {
         // Debug 信息本身的次数也应该统计进去
         camera.textDrawCount() + debutTextCount,
         camera.gpuDrawCount() + 1,
-        if (isCamera) "开" else "关",
     }) catch unreachable;
 
     var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();

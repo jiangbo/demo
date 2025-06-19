@@ -52,7 +52,7 @@ pub const Color = sk.gfx.Color;
 pub var nearestSampler: sk.gfx.Sampler = undefined;
 pub var linearSampler: sk.gfx.Sampler = undefined;
 
-pub var drawCount: u32 = 0;
+pub var drawCount: usize = 0;
 
 pub fn init() void {
     nearestSampler = sk.gfx.makeSampler(.{});
@@ -81,8 +81,8 @@ pub fn setBindGroup(group: BindGroup) void {
     sk.gfx.applyBindings(group.value);
 }
 
-pub fn drawInstanced(number: u32) void {
-    sk.gfx.draw(0, 6, number);
+pub fn drawInstanced(number: usize) void {
+    sk.gfx.draw(0, 6, @intCast(number));
     drawCount += 1;
 }
 
@@ -156,7 +156,7 @@ pub const BindGroup = struct {
         self.value.vertex_buffers[0] = buffer;
     }
 
-    pub fn setVertexOffset(self: *BindGroup, offset: u32) void {
+    pub fn setVertexOffset(self: *BindGroup, offset: usize) void {
         self.value.vertex_buffer_offsets[0] = @intCast(offset);
     }
 

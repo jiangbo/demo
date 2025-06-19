@@ -12,14 +12,14 @@ var bindGroup: gpu.BindGroup = .{};
 var pipeline: gpu.RenderPipeline = undefined;
 
 var buffer: gpu.Buffer = undefined;
-var needDrawCount: u32 = 0;
-var totalDrawCount: u32 = 0;
+var needDrawCount: usize = 0;
+var totalDrawCount: usize = 0;
 var usingTexture: gpu.Texture = .{ .image = .{} };
 var whiteTexture: gpu.Texture = undefined;
 
-pub fn init(vertex: []gpu.QuadVertex) void {
+pub fn init(vertexCount: usize) void {
     buffer = gpu.createBuffer(.{
-        .size = @sizeOf(gpu.QuadVertex) * vertex.len,
+        .size = @sizeOf(gpu.QuadVertex) * vertexCount,
         .usage = .{ .vertex_buffer = true, .stream_update = true },
     });
 
@@ -44,12 +44,12 @@ pub fn beginDraw() void {
 }
 
 pub fn drawRectangle(area: math.Rectangle, color: math.Vector4) void {
-    drawVertex(whiteTexture, .{
+    drawVertex(whiteTexture, &.{gpu.QuadVertex{
         .position = area.min,
         .size = area.size().toVector2(),
         .texture = whiteTexture.area.toVector4(),
         .color = color,
-    });
+    }});
 }
 
 pub fn debugDraw(area: math.Rectangle) void {
@@ -67,19 +67,19 @@ pub fn drawFlipX(texture: gpu.Texture, pos: math.Vector, flipX: bool) void {
         textureArea.max.x = texture.area.min.x;
     }
 
-    drawVertex(texture, .{
+    drawVertex(texture, &.{gpu.QuadVertex{
         .position = pos,
         .size = texture.size().toVector2(),
         .texture = textureArea.toVector4(),
-    });
+    }});
 }
 
-pub fn drawVertex(texture: gpu.Texture, vertex: gpu.QuadVertex) void {
-    gpu.appendBuffer(buffer, &.{vertex});
+pub fn drawVertex(texture: gpu.Texture, vertex: []const gpu.QuadVertex) void {
+    gpu.appendBuffer(buffer, vertex);
 
     defer {
-        needDrawCount += 1;
-        totalDrawCount += 1;
+        needDrawCount += vertex.len;
+        totalDrawCount += vertex.len;
         usingTexture = texture;
     }
 
@@ -99,8 +99,8 @@ pub fn endDraw() void {
 pub const Vertex = gpu.QuadVertex;
 const VertexOptions = struct {
     vertexBuffer: gpu.Buffer,
-    vertexOffset: u32 = 0,
-    count: u32,
+    vertexOffset: usize = 0,
+    count: usize,
 };
 pub fn drawVertexBuffer(texture: gpu.Texture, options: VertexOptions) void {
 
@@ -147,14 +147,14 @@ pub const drawColorText = font.drawColorText;
 pub const drawTextOptions = font.drawTextOptions;
 pub const flushText = font.flush;
 
-pub fn imageDrawCount() u32 {
+pub fn imageDrawCount() usize {
     return totalDrawCount;
 }
 
-pub fn textDrawCount() u32 {
+pub fn textDrawCount() usize {
     return font.totalDrawCount;
 }
 
-pub fn gpuDrawCount() u32 {
+pub fn gpuDrawCount() usize {
     return gpu.drawCount;
 }

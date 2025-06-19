@@ -62,7 +62,7 @@ pub var totalDrawCount: u32 = 0;
 const initOptions = struct {
     font: Font,
     texture: gpu.Texture,
-    vertex: []gpu.QuadVertex,
+    vertexCount: usize = 100,
 };
 
 fn binarySearch(unicode: u32) ?usize {
@@ -75,7 +75,7 @@ pub fn init(options: initOptions) void {
     texture = options.texture;
 
     buffer = gpu.createBuffer(.{
-        .size = @sizeOf(gpu.QuadVertex) * options.vertex.len,
+        .size = @sizeOf(gpu.QuadVertex) * options.vertexCount,
         .usage = .{ .vertex_buffer = true, .stream_update = true },
     });
 
