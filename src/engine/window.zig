@@ -112,7 +112,8 @@ pub fn actualSize() math.Vector {
 pub fn keepAspectRatio() void {
     const ratio = actualSize().div(size);
     const minSize = size.scale(@min(ratio.x, ratio.y));
-    sk.gfx.applyViewportf(0, 0, minSize.x, minSize.y, true);
+    const pos = actualSize().sub(minSize).scale(0.5);
+    sk.gfx.applyViewportf(pos.x, pos.y, minSize.x, minSize.y, true);
 }
 
 var frameRateTimer: Timer = .init(1);
