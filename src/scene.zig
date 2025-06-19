@@ -87,13 +87,30 @@ pub fn render() void {
         camera.drawRectangle(.init(.zero, window.size), .{ .w = alpha });
     }
 
-    var buffer: [20]u8 = undefined;
-    const text = std.fmt.bufPrint(&buffer, "FPS:{}", .{window.frameRate});
-    camera.drawTextOptions(text catch unreachable, .{
-        .position = .init(10, 5),
-        .color = .{ .y = 1, .w = 1 },
-    });
+    var buffer: [100]u8 = undefined;
+    const format =
+        \\帧率：{}
+        \\图片：{}
+        \\文字：{}
+        \\绘制：{}
+    ;
+
+    const text = std.fmt.bufPrint(&buffer, format, .{
+        window.frameRate,
+        camera.imageDrawCount(),
+        camera.textDrawCount() + debutTextCount,
+        camera.gpuDrawCount() + 1,
+    }) catch unreachable;
+
+    var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
+    var count: u32 = 0;
+    while (iterator.nextCodepoint()) |_| count += 1;
+    debutTextCount = count;
+
+    camera.drawColorText(text, .init(10, 5), .green);
 }
+
+var debutTextCount: u32 = 0;
 
 var fadeTimer: ?window.Timer = null;
 var isFadeIn: bool = false;

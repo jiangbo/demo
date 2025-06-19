@@ -65,6 +65,9 @@ pub const Vector4 = extern struct {
     w: f32 = 0,
     pub const zero = Vector4{ .x = 0, .y = 0, .z = 0, .w = 0 };
     pub const one = Vector4{ .x = 1, .y = 1, .z = 1, .w = 1 };
+    pub const red = Vector4{ .x = 1, .w = 1 };
+    pub const green = Vector4{ .y = 1, .w = 1 };
+    pub const blue = Vector4{ .z = 1, .w = 1 };
 
     pub fn init(x: f32, y: f32, z: f32, w: f32) Vector4 {
         return .{ .x = x, .y = y, .z = z, .w = w };

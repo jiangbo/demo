@@ -52,6 +52,8 @@ pub const Color = sk.gfx.Color;
 pub var nearestSampler: sk.gfx.Sampler = undefined;
 pub var linearSampler: sk.gfx.Sampler = undefined;
 
+pub var drawCount: u32 = 0;
+
 pub fn init() void {
     nearestSampler = sk.gfx.makeSampler(.{});
     linearSampler = sk.gfx.makeSampler(.{
@@ -64,6 +66,7 @@ pub fn begin(color: sk.gfx.Color) void {
     var action = sk.gfx.PassAction{};
     action.colors[0] = .{ .load_action = .CLEAR, .clear_value = color };
     sk.gfx.beginPass(.{ .action = action, .swapchain = sk.glue.swapchain() });
+    drawCount = 0;
 }
 
 pub fn setPipeline(pipeline: RenderPipeline) void {
@@ -80,6 +83,7 @@ pub fn setBindGroup(group: BindGroup) void {
 
 pub fn drawInstanced(number: u32) void {
     sk.gfx.draw(0, 6, number);
+    drawCount += 1;
 }
 
 pub fn end() void {

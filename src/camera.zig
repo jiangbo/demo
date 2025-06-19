@@ -143,5 +143,18 @@ fn drawCurrentCache() void {
 }
 
 pub const drawText = font.drawText;
+pub const drawColorText = font.drawColorText;
 pub const drawTextOptions = font.drawTextOptions;
 pub const flushText = font.flush;
+
+pub fn imageDrawCount() u32 {
+    return totalDrawCount;
+}
+
+pub fn textDrawCount() u32 {
+    return font.totalDrawCount;
+}
+
+pub fn gpuDrawCount() u32 {
+    return gpu.drawCount;
+}

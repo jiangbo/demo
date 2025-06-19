@@ -50,12 +50,14 @@ const Rect = struct {
 
 var font: Font = undefined;
 var texture: gpu.Texture = undefined;
+var invalidUnicode: u32 = 0x25A0;
+var invalidIndex: usize = 0;
 
 var pipeline: gpu.RenderPipeline = undefined;
 var bindGroup: gpu.BindGroup = .{};
 var buffer: gpu.Buffer = undefined;
 var needDrawCount: u32 = 0;
-var totalDrawCount: u32 = 0;
+pub var totalDrawCount: u32 = 0;
 
 const initOptions = struct {
     font: Font,
@@ -63,8 +65,13 @@ const initOptions = struct {
     vertex: []gpu.QuadVertex,
 };
 
+fn binarySearch(unicode: u32) ?usize {
+    return std.sort.binarySearch(Glyph, font.glyphs, unicode, compare);
+}
+
 pub fn init(options: initOptions) void {
     font = options.font;
+    invalidIndex = binarySearch(invalidUnicode).?;
     texture = options.texture;
 
     buffer = gpu.createBuffer(.{
@@ -77,8 +84,7 @@ pub fn init(options: initOptions) void {
 }
 
 fn searchGlyph(code: u32) *const Glyph {
-    const i = std.sort.binarySearch(Glyph, font.glyphs, code, compare);
-    return &font.glyphs[i.?];
+    return &font.glyphs[binarySearch(code) orelse invalidIndex];
 }
 
 fn compare(a: u32, b: Glyph) std.math.Order {
@@ -100,6 +106,11 @@ pub const TextOptions = struct {
     position: math.Vector,
     color: math.Vector4 = .one,
 };
+
+const Color = math.Vector4;
+pub fn drawColorText(text: []const u8, pos: math.Vector, color: Color) void {
+    drawTextOptions(text, .{ .position = pos, .color = color });
+}
 
 pub fn drawTextOptions(text: []const u8, options: TextOptions) void {
     const Utf8View = std.unicode.Utf8View;
