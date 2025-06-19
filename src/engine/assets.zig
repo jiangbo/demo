@@ -131,7 +131,7 @@ const Music = struct {
     }
 };
 
-var loadingBuffer: [1.5 * 1024 * 1024]u8 = undefined;
+var loadingBuffer: [5 * 1024 * 1024]u8 = undefined;
 
 const SkCallback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
 pub const Response = struct {

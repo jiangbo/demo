@@ -1,8 +1,8 @@
 const std = @import("std");
 
-const window = @import("../window.zig");
-const gfx = @import("../graphics.zig");
-const camera = @import("../camera.zig");
+const window = @import("zhu").window;
+const gfx = @import("zhu").gfx;
+const camera = @import("zhu").camera;
 
 var playerTexture: gfx.Texture = undefined;
 var mapTexture: gfx.Texture = undefined;
@@ -12,7 +12,7 @@ const Map = struct {
     items: []const struct { index: u16, item: u16 },
 };
 
-const map: Map = @import("../zon/map.zon");
+const map: Map = @import("zon/map.zon");
 
 var tiles: [500]camera.Vertex = undefined;
 var tileIndex: usize = 0;
@@ -44,6 +44,8 @@ pub fn init() void {
         };
         tileIndex += 1;
     }
+
+    // window.playMusic("assets/voc/back.ogg");
 }
 
 fn getAreaFromIndex(index: usize) gfx.Rectangle {

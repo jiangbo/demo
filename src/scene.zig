@@ -1,11 +1,11 @@
 const std = @import("std");
 
-const window = @import("window.zig");
-const gfx = @import("graphics.zig");
-const camera = @import("camera.zig");
+const window = @import("zhu").window;
+const gfx = @import("zhu").gfx;
+const camera = @import("zhu").camera;
 
-const titleScene = @import("scene/title.zig");
-const worldScene = @import("scene/world.zig");
+const titleScene = @import("title.zig");
+const worldScene = @import("world.zig");
 
 const Talk = struct { content: []const u8 };
 pub const talks: []const Talk = @import("zon/talk.zon");

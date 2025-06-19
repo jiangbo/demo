@@ -19,23 +19,31 @@ fn buildNative(b: *std.Build, target: std.Build.ResolvedTarget) !void {
         .optimize = optimize,
     });
 
+    const zhuModule = b.createModule(.{
+        .root_source_file = b.path("src/engine/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    exe.root_module.addImport("zhu", zhuModule);
+
     if (optimize != .Debug) exe.subsystem = .Windows;
 
     b.installArtifact(exe);
 
     const sokol = b.dependency("sokol", .{ .target = target, .optimize = optimize });
-    exe.root_module.addImport("sokol", sokol.module("sokol"));
+    zhuModule.addImport("sokol", sokol.module("sokol"));
 
     const writeFiles = b.addWriteFiles();
     exe.step.dependOn(&writeFiles.step);
 
     const stb = b.dependency("stb", .{ .target = target, .optimize = optimize });
-    exe.root_module.addIncludePath(stb.path("."));
+    zhuModule.addIncludePath(stb.path("."));
     const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
-    exe.root_module.addCSourceFile(.{ .file = stbImagePath, .flags = &.{"-O2"} });
+    zhuModule.addCSourceFile(.{ .file = stbImagePath, .flags = &.{"-O2"} });
 
     const stbAudioPath = writeFiles.add("stb_audio.c", stbAudioSource);
-    exe.root_module.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{"-O2"} });
+    zhuModule.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{"-O2"} });
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -55,23 +63,31 @@ fn buildWeb(b: *std.Build, target: std.Build.ResolvedTarget) !void {
         .root_source_file = b.path("src/main.zig"),
     });
 
+    const zhuModule = b.createModule(.{
+        .root_source_file = b.path("src/engine/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    exe.root_module.addImport("zhu", zhuModule);
+
     const sokol = b.dependency("sokol", .{ .target = target, .optimize = optimize });
-    exe.root_module.addImport("sokol", sokol.module("sokol"));
+    zhuModule.addImport("sokol", sokol.module("sokol"));
 
     const emsdk = sokol.builder.dependency("emsdk", .{});
     const include = emsdk.path(b.pathJoin(&.{ "upstream", "emscripten", "cache", "sysroot", "include" }));
-    exe.addSystemIncludePath(include);
+    zhuModule.addSystemIncludePath(include);
 
     const writeFiles = b.addWriteFiles();
     exe.step.dependOn(&writeFiles.step);
 
     const stbAudioPath = writeFiles.add("stb_audio.c", stbAudioSource);
-    exe.root_module.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{ "-O2", "-fno-sanitize=undefined" } });
+    zhuModule.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{ "-O2", "-fno-sanitize=undefined" } });
 
     const stb = b.dependency("stb", .{ .target = target, .optimize = optimize });
-    exe.root_module.addIncludePath(stb.path("."));
+    zhuModule.addIncludePath(stb.path("."));
     const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
-    exe.root_module.addCSourceFile(.{ .file = stbImagePath, .flags = &.{ "-O2", "-fno-sanitize=undefined" } });
+    zhuModule.addCSourceFile(.{ .file = stbImagePath, .flags = &.{ "-O2", "-fno-sanitize=undefined" } });
 
     const link_step = try sk.emLinkStep(b, .{
         .lib_main = exe,

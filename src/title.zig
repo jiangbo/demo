@@ -1,9 +1,9 @@
 const std = @import("std");
 
-const window = @import("../window.zig");
-const gfx = @import("../graphics.zig");
-const scene = @import("../scene.zig");
-const camera = @import("../camera.zig");
+const window = @import("zhu").window;
+const gfx = @import("zhu").gfx;
+const camera = @import("zhu").camera;
+const scene = @import("scene.zig");
 
 var background: gfx.Texture = undefined;
 
