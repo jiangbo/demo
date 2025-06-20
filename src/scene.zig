@@ -12,10 +12,9 @@ var currentSceneType: SceneType = .world;
 var toSceneType: SceneType = .title;
 
 pub fn init() void {
-    const fontTexture = gfx.loadTexture("assets/font.png", .init(832, 832));
     window.initFont(.{
         .font = @import("zon/font.zon"),
-        .texture = fontTexture,
+        .texture = gfx.loadTexture("assets/font.png", .init(844, 844)),
     });
 
     camera.init(1000);
@@ -50,12 +49,8 @@ fn doChangeScene() void {
 }
 
 var isDebug: bool = true;
-var isCamera: bool = false;
 pub fn update(delta: f32) void {
     if (window.isKeyRelease(.X)) isDebug = !isDebug;
-    if (window.isKeyRelease(.C)) isCamera = !isCamera;
-
-    if (isCamera) controlCamera(delta);
 
     if (fadeTimer) |*timer| {
         if (timer.isRunningAfterUpdate(delta)) return;
@@ -69,27 +64,6 @@ pub fn update(delta: f32) void {
         return;
     }
     sceneCall("update", .{delta});
-}
-
-const SPEED: f32 = 250;
-pub fn controlCamera(delta: f32) void {
-    const speed = SPEED * delta;
-
-    if (window.isKeyDown(.W)) {
-        camera.worldPosition = camera.worldPosition.addY(-speed);
-    }
-
-    if (window.isKeyDown(.S)) {
-        camera.worldPosition = camera.worldPosition.addY(speed);
-    }
-
-    if (window.isKeyDown(.A)) {
-        camera.worldPosition = camera.worldPosition.addX(-speed);
-    }
-
-    if (window.isKeyDown(.D)) {
-        camera.worldPosition = camera.worldPosition.addX(speed);
-    }
 }
 
 pub fn render() void {

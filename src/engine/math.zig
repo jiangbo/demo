@@ -157,7 +157,7 @@ pub const Vector3 = extern struct {
         return std.math.atan2(self.y, self.x);
     }
 
-    pub fn approx(self: Vector3, other: Vector3) bool {
+    pub fn approxEqual(self: Vector3, other: Vector3) bool {
         return std.math.approxEqAbs(f32, self.x, other.x, epsilon) and
             std.math.approxEqAbs(f32, self.y, other.y, epsilon) and
             std.math.approxEqAbs(f32, self.z, other.z, epsilon);

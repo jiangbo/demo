@@ -3,9 +3,8 @@ const std = @import("std");
 const window = @import("zhu").window;
 const gfx = @import("zhu").gfx;
 const camera = @import("zhu").camera;
-const math = @import("zhu").math;
 
-const actor = @import("actor.zig");
+const player = @import("player.zig");
 
 var mapTexture: gfx.Texture = undefined;
 
@@ -22,12 +21,11 @@ const Status = union(enum) { normal, talk: usize };
 var status: Status = .normal;
 
 const Talk = struct {
-    name: []const u8,
+    actor: u8 = 0,
     content: []const u8,
     next: usize = 0,
 };
 const talks: []const Talk = @import("zon/talk.zon");
-
 var talkTexture: gfx.Texture = undefined;
 
 pub fn init() void {
@@ -58,10 +56,8 @@ pub fn init() void {
     }
 
     talkTexture = gfx.loadTexture("assets/pic/talkbar.png", .init(640, 96));
-
     status = .{ .talk = 1 };
-
-    actor.init();
+    player.init();
 
     // window.playMusic("assets/voc/back.ogg");
 }
@@ -73,12 +69,12 @@ fn getAreaFromIndex(index: usize) gfx.Rectangle {
 }
 
 pub fn update(delta: f32) void {
-    _ = delta;
-
     switch (status) {
         .normal => {},
-        .talk => |talkId| updateTalk(talkId),
+        .talk => |talkId| return updateTalk(talkId),
     }
+
+    player.update(delta);
 }
 
 fn updateTalk(talkId: usize) void {
@@ -98,9 +94,7 @@ pub fn exit() void {}
 
 pub fn render() void {
     camera.drawVertex(mapTexture, tiles[0..tileIndex]);
-
-    const animation = actor.playerAnimation.get(actor.playerDirection);
-    camera.draw(animation.currentTexture(), actor.playerPosition);
+    player.render();
 
     switch (status) {
         .normal => {},
@@ -111,13 +105,8 @@ pub fn render() void {
 fn renderTalk(talkId: usize) void {
     camera.draw(talkTexture, .init(0, 384));
 
-    const downAnimation = actor.playerAnimation.get(.down);
-    const tex = downAnimation.texture.mapTexture(downAnimation.frames[0]);
-    camera.draw(tex, .init(30, 396));
-
     const talk = talks[talkId];
-    const nameColor = gfx.color(1, 1, 0, 1);
-    camera.drawColorText(talk.name, .init(18, 445), nameColor);
+    if (talk.actor == 0) player.renderTalk();
 
     camera.drawColorText(talk.content, .init(123, 403), .{ .w = 1 });
     camera.drawColorText(talk.content, .init(120, 400), .one);

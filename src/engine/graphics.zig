@@ -53,7 +53,7 @@ pub fn FixedFrameAnimation(maxSize: u8, time: f32) type {
         }
 
         pub fn currentTexture(self: *const Animation) Texture {
-            return self.texture.mapTexture(self.frames[self.index]);
+            return self.texture.subTexture(self.frames[self.index]);
         }
 
         pub fn update(self: *Animation, delta: f32) void {

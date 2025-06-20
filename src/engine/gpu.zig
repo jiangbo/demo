@@ -22,13 +22,6 @@ pub const Texture = struct {
     }
 
     pub fn subTexture(self: *const Texture, area: Rectangle) Texture {
-        return Texture{ .image = self.image, .area = .{
-            .min = self.area.min.add(area.min),
-            .max = self.area.min.add(area.max),
-        } };
-    }
-
-    pub fn mapTexture(self: *const Texture, area: Rectangle) Texture {
         return Texture{ .image = self.image, .area = area };
     }
 
