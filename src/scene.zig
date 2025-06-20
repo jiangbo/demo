@@ -52,6 +52,10 @@ var isDebug: bool = true;
 pub fn update(delta: f32) void {
     if (window.isKeyRelease(.X)) isDebug = !isDebug;
 
+    if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
+        window.toggleFullScreen();
+    }
+
     if (fadeTimer) |*timer| {
         if (timer.isRunningAfterUpdate(delta)) return;
         if (isFadeIn) {

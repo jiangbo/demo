@@ -51,6 +51,10 @@ pub fn showCursor(show: bool) void {
     sk.app.showMouse(show);
 }
 
+pub fn toggleFullScreen() void {
+    sk.app.toggleFullscreen();
+}
+
 pub const WindowInfo = struct {
     title: [:0]const u8,
     size: math.Vector,
