@@ -5,18 +5,8 @@ const gfx = @import("zhu").gfx;
 const camera = @import("zhu").camera;
 
 const player = @import("player.zig");
+const map = @import("map.zig");
 
-var mapTexture: gfx.Texture = undefined;
-
-const Map = struct {
-    indexes: []const u16,
-    items: []const struct { index: u16, item: u16 },
-};
-
-const map: Map = @import("zon/map.zon");
-
-var tiles: [500]camera.Vertex = undefined;
-var tileIndex: usize = 0;
 const Status = union(enum) { normal, talk: usize };
 var status: Status = .normal;
 
@@ -29,43 +19,12 @@ const talks: []const Talk = @import("zon/talk.zon");
 var talkTexture: gfx.Texture = undefined;
 
 pub fn init() void {
-    mapTexture = gfx.loadTexture("assets/pic/maps.png", .init(640, 1536));
-
-    // 背景
-    for (map.indexes, 0..) |mapIndex, index| {
-        if (mapIndex == std.math.maxInt(u16)) continue;
-
-        const tile = mapTexture.subTexture(getAreaFromIndex(mapIndex));
-        tiles[tileIndex] = .{
-            .position = getAreaFromIndex(index).min,
-            .size = .init(32, 32),
-            .texture = tile.area.toVector4(),
-        };
-        tileIndex += 1;
-    }
-
-    // 装饰
-    for (map.items) |item| {
-        const tile = mapTexture.subTexture(getAreaFromIndex(item.item));
-        tiles[tileIndex] = .{
-            .position = getAreaFromIndex(item.index).min,
-            .size = .init(32, 32),
-            .texture = tile.area.toVector4(),
-        };
-        tileIndex += 1;
-    }
-
     talkTexture = gfx.loadTexture("assets/pic/talkbar.png", .init(640, 96));
-    status = .{ .talk = 1 };
+    // status = .{ .talk = 1 };
+    map.init();
     player.init();
 
     // window.playMusic("assets/voc/back.ogg");
-}
-
-fn getAreaFromIndex(index: usize) gfx.Rectangle {
-    const row: f32 = @floatFromInt(index / 20);
-    const col: f32 = @floatFromInt(index % 20);
-    return .init(.init(col * 32, row * 32), .init(32, 32));
 }
 
 pub fn update(delta: f32) void {
@@ -93,7 +52,7 @@ pub fn enter() void {}
 pub fn exit() void {}
 
 pub fn render() void {
-    camera.drawVertex(mapTexture, tiles[0..tileIndex]);
+    map.render();
     player.render();
 
     switch (status) {

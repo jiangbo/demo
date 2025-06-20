@@ -5,6 +5,8 @@ const gfx = @import("zhu").gfx;
 const camera = @import("zhu").camera;
 const math = @import("zhu").math;
 
+const map = @import("map.zig");
+
 const FrameAnimation = gfx.FixedFrameAnimation(3, 0.15);
 const Animation = std.EnumArray(math.FourDirection, FrameAnimation);
 
@@ -15,11 +17,13 @@ var animation: Animation = undefined;
 
 var moving: bool = false;
 var direction: math.Vector = .zero;
+var offset: math.Vector = .zero;
 var position: math.Vector = .init(180, 164);
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/pic/player.png", .init(96, 192));
 
+    offset = math.Vector{ .x = -16, .y = -45 };
     animation = Animation.initUndefined();
 
     var tex = texture.subTexture(.init(.zero, .init(96, 48)));
@@ -53,13 +57,18 @@ fn move(delta: f32) void {
     } else {
         moving = true;
         direction = dir.normalize().scale(speed);
-        position = position.add(direction.scale(delta));
+        const pos = position.add(direction.scale(delta));
+        if (map.canWalk(pos.addXY(-8, -12)) and
+            map.canWalk(pos.addXY(-8, 2)) and
+            map.canWalk(pos.addXY(8, -12)) and
+            map.canWalk(pos.addXY(8, 2)))
+            position = pos;
     }
 }
 
 pub fn render() void {
     const current = animation.get(facing());
-    camera.draw(current.currentTexture(), position);
+    camera.draw(current.currentTexture(), position.add(offset));
 }
 
 fn facing() math.FourDirection {

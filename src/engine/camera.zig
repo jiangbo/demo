@@ -53,7 +53,7 @@ pub fn drawRectangle(area: math.Rectangle, color: math.Vector4) void {
 }
 
 pub fn debugDraw(area: math.Rectangle) void {
-    drawRectangle(area, .{ .r = 1, .b = 1, .a = 0.4 });
+    drawRectangle(area, .{ .x = 1, .z = 1, .w = 0.4 });
 }
 
 pub fn draw(texture: gpu.Texture, position: math.Vector) void {

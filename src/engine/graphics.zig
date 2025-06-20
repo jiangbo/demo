@@ -24,7 +24,6 @@ pub fn FixedFrameAnimation(maxSize: u8, time: f32) type {
         texture: Texture,
         frames: [maxSize]math.Rectangle,
         count: u8 = maxSize,
-        offset: math.Vector = .zero,
 
         const Animation = @This();
 
@@ -65,19 +64,6 @@ pub fn FixedFrameAnimation(maxSize: u8, time: f32) type {
                 self.timer.reset();
                 self.index += 1;
             }
-        }
-
-        pub fn anchor(self: *Animation, direction: math.EightDirection) void {
-            const tex = self.texture;
-            self.offset = switch (direction) {
-                .down => .{ .x = -tex.width() / 2, .y = -tex.height() },
-                else => unreachable,
-            };
-        }
-
-        pub fn anchorCenter(self: *Animation) void {
-            self.offset.x = -self.texture.width() / 2;
-            self.offset.y = -self.texture.height() / 2;
         }
 
         pub fn reset(self: *Animation) void {

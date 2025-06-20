@@ -110,6 +110,10 @@ pub const Vector3 = extern struct {
         return .{ .x = self.x, .y = self.y + y, .z = self.z };
     }
 
+    pub fn addXY(self: Vector3, x: f32, y: f32) Vector3 {
+        return .{ .x = self.x + x, .y = self.y + y, .z = self.z };
+    }
+
     pub fn sub(self: Vector3, other: Vector3) Vector3 {
         return .{ .x = self.x - other.x, .y = self.y - other.y, .z = self.z - other.z };
     }
