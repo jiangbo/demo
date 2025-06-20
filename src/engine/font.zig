@@ -62,7 +62,7 @@ pub var totalDrawCount: u32 = 0;
 const initOptions = struct {
     font: Font,
     texture: gpu.Texture,
-    vertexCount: usize = 100,
+    vertexCount: usize = 1000,
 };
 
 fn binarySearch(unicode: u32) ?usize {

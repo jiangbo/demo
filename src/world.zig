@@ -4,6 +4,7 @@ const window = @import("zhu").window;
 const gfx = @import("zhu").gfx;
 const camera = @import("zhu").camera;
 const math = @import("zhu").math;
+const scene = @import("scene.zig");
 
 var playerTexture: gfx.Texture = undefined;
 var mapTexture: gfx.Texture = undefined;
@@ -17,6 +18,11 @@ const map: Map = @import("zon/map.zon");
 
 var tiles: [500]camera.Vertex = undefined;
 var tileIndex: usize = 0;
+const Status = union(enum) {
+    normal,
+    talk: usize,
+};
+var status: Status = .normal;
 
 const FrameAnimation = gfx.FixedFrameAnimation(3, 0.1);
 const Animation = std.EnumArray(math.FourDirection, FrameAnimation);
@@ -59,6 +65,8 @@ pub fn init() void {
 
     talkTexture = gfx.loadTexture("assets/pic/talkbar.png", .init(640, 96));
 
+    status = .{ .talk = 1 };
+
     // window.playMusic("assets/voc/back.ogg");
 }
 
@@ -88,6 +96,22 @@ fn createAnimation(path: [:0]const u8) Animation {
 
 pub fn update(delta: f32) void {
     _ = delta;
+
+    switch (status) {
+        .normal => {},
+        .talk => |talkId| updateTalk(talkId),
+    }
+}
+
+fn updateTalk(talkId: usize) void {
+    if (!confirm()) return;
+
+    const next = scene.talks[talkId].next;
+    status = if (next == 0) .normal else .{ .talk = next };
+}
+
+fn confirm() bool {
+    return window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
 }
 
 pub fn enter() void {}
@@ -100,14 +124,23 @@ pub fn render() void {
     const animation = playerAnimation.get(playerDirection);
     camera.draw(animation.currentTexture(), playerPosition);
 
+    switch (status) {
+        .normal => {},
+        .talk => |talkId| renderTalk(talkId),
+    }
+}
+
+fn renderTalk(talkId: usize) void {
     camera.draw(talkTexture, .init(0, 384));
+
     const downAnimation = playerAnimation.get(.down);
     const tex = downAnimation.texture.mapTexture(downAnimation.frames[0]);
     camera.draw(tex, .init(30, 396));
 
+    const talk = scene.talks[talkId];
     const nameColor = gfx.color(1, 1, 0, 1);
-    camera.drawColorText("小飞刀", .init(18, 445), nameColor);
+    camera.drawColorText(talk.name, .init(18, 445), nameColor);
 
-    // camera.drawColorText("小飞刀", .init(123, 403), .{ .w = 1 });
-    // camera.drawColorText("小飞刀", .init(120, 400), .one);
+    camera.drawColorText(talk.content, .init(123, 403), .{ .w = 1 });
+    camera.drawColorText(talk.content, .init(120, 400), .one);
 }
