@@ -7,13 +7,6 @@ const camera = @import("zhu").camera;
 const titleScene = @import("title.zig");
 const worldScene = @import("world.zig");
 
-const Talk = struct {
-    name: []const u8,
-    content: []const u8,
-    next: usize = 0,
-};
-pub const talks: []const Talk = @import("zon/talk.zon");
-
 const SceneType = enum { title, world };
 var currentSceneType: SceneType = .world;
 var toSceneType: SceneType = .title;

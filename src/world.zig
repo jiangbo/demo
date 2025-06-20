@@ -4,9 +4,9 @@ const window = @import("zhu").window;
 const gfx = @import("zhu").gfx;
 const camera = @import("zhu").camera;
 const math = @import("zhu").math;
-const scene = @import("scene.zig");
 
-var playerTexture: gfx.Texture = undefined;
+const actor = @import("actor.zig");
+
 var mapTexture: gfx.Texture = undefined;
 
 const Map = struct {
@@ -18,23 +18,19 @@ const map: Map = @import("zon/map.zon");
 
 var tiles: [500]camera.Vertex = undefined;
 var tileIndex: usize = 0;
-const Status = union(enum) {
-    normal,
-    talk: usize,
-};
+const Status = union(enum) { normal, talk: usize };
 var status: Status = .normal;
 
-const FrameAnimation = gfx.FixedFrameAnimation(3, 0.1);
-const Animation = std.EnumArray(math.FourDirection, FrameAnimation);
-
-var playerAnimation: Animation = undefined;
-var playerDirection: math.FourDirection = .up;
-var playerPosition: math.Vector = .init(180, 164);
+const Talk = struct {
+    name: []const u8,
+    content: []const u8,
+    next: usize = 0,
+};
+const talks: []const Talk = @import("zon/talk.zon");
 
 var talkTexture: gfx.Texture = undefined;
 
 pub fn init() void {
-    playerTexture = gfx.loadTexture("assets/pic/player.png", .init(96, 192));
     mapTexture = gfx.loadTexture("assets/pic/maps.png", .init(640, 1536));
 
     // 背景
@@ -61,11 +57,11 @@ pub fn init() void {
         tileIndex += 1;
     }
 
-    playerAnimation = createAnimation("assets/pic/player.png");
-
     talkTexture = gfx.loadTexture("assets/pic/talkbar.png", .init(640, 96));
 
     status = .{ .talk = 1 };
+
+    actor.init();
 
     // window.playMusic("assets/voc/back.ogg");
 }
@@ -74,24 +70,6 @@ fn getAreaFromIndex(index: usize) gfx.Rectangle {
     const row: f32 = @floatFromInt(index / 20);
     const col: f32 = @floatFromInt(index % 20);
     return .init(.init(col * 32, row * 32), .init(32, 32));
-}
-
-fn createAnimation(path: [:0]const u8) Animation {
-    var animation = Animation.initUndefined();
-
-    const texture = gfx.loadTexture(path, .init(96, 192));
-    var tex = texture.subTexture(.init(.zero, .init(96, 48)));
-    animation.set(.down, FrameAnimation.init(tex));
-
-    tex = texture.subTexture(.init(.init(0, 48), .init(96, 48)));
-    animation.set(.left, FrameAnimation.init(tex));
-
-    tex = texture.subTexture(.init(.init(0, 96), .init(96, 48)));
-    animation.set(.right, FrameAnimation.init(tex));
-
-    tex = texture.subTexture(.init(.init(0, 144), .init(96, 48)));
-    animation.set(.up, FrameAnimation.init(tex));
-    return animation;
 }
 
 pub fn update(delta: f32) void {
@@ -106,7 +84,7 @@ pub fn update(delta: f32) void {
 fn updateTalk(talkId: usize) void {
     if (!confirm()) return;
 
-    const next = scene.talks[talkId].next;
+    const next = talks[talkId].next;
     status = if (next == 0) .normal else .{ .talk = next };
 }
 
@@ -121,8 +99,8 @@ pub fn exit() void {}
 pub fn render() void {
     camera.drawVertex(mapTexture, tiles[0..tileIndex]);
 
-    const animation = playerAnimation.get(playerDirection);
-    camera.draw(animation.currentTexture(), playerPosition);
+    const animation = actor.playerAnimation.get(actor.playerDirection);
+    camera.draw(animation.currentTexture(), actor.playerPosition);
 
     switch (status) {
         .normal => {},
@@ -133,11 +111,11 @@ pub fn render() void {
 fn renderTalk(talkId: usize) void {
     camera.draw(talkTexture, .init(0, 384));
 
-    const downAnimation = playerAnimation.get(.down);
+    const downAnimation = actor.playerAnimation.get(.down);
     const tex = downAnimation.texture.mapTexture(downAnimation.frames[0]);
     camera.draw(tex, .init(30, 396));
 
-    const talk = scene.talks[talkId];
+    const talk = talks[talkId];
     const nameColor = gfx.color(1, 1, 0, 1);
     camera.drawColorText(talk.name, .init(18, 445), nameColor);
 

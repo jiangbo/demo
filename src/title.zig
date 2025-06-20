@@ -113,7 +113,12 @@ fn updateHeader(delta: f32) void {
     }
 }
 
-const text = scene.talks[0].content;
+const text =
+    \\　　在很久很久以前，白云城的居民过着富足而安定的生活。不过
+    \\一场巨大的灾难即将降临到这里……
+    \\　　一天，我们故事的主人翁'小飞刀'一觉醒来，故事就从这里开
+    \\始……　　[按回车键继续]
+;
 
 fn mainMenuSelected() void {
     switch (menu.current) {
