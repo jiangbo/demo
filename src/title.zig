@@ -43,7 +43,7 @@ fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
 
 pub fn init() void {
     background = gfx.loadTexture("assets/pic/title.png", .init(640, 480));
-    const path = "assets/pic/mainmenu.png";
+    const path = "assets/pic/mainmenu2.png";
     loadMenu.background = gfx.loadTexture(path, .init(150, 200));
 }
 
@@ -151,7 +151,7 @@ pub fn render() void {
         if (i == menu.current) {
             camera.drawRectangle(area, Menu.color);
         }
-        camera.drawText(name, area.min.addX(5));
+        camera.drawText(name, area.min.addXY(5, -2));
     }
 }
 

@@ -7,7 +7,7 @@ const camera = @import("zhu").camera;
 const player = @import("player.zig");
 const map = @import("map.zig");
 
-const Status = union(enum) { normal, talk: usize };
+const Status = union(enum) { normal, talk: usize, menu };
 var status: Status = .normal;
 
 const Talk = struct {
@@ -22,8 +22,35 @@ var talkNumber: usize = 0;
 var buffer: [256]u8 = undefined;
 var bufferIndex: usize = 0;
 
+const Menu = struct {
+    names: []const []const u8,
+    areas: []const gfx.Rectangle = undefined,
+    current: usize = 0,
+    const color = gfx.Color{ .w = 1 };
+};
+
+var menu: Menu = .{
+    .names = &.{
+        "状　　态", "物　　品", "读取进度", "存储进度", //
+        "关于游戏", "退　　出", "返回游戏",
+    },
+    .areas = &createAreas(7, .{ .x = 0 + 33, .y = 288 }),
+};
+
+fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
+    var areas: [num]gfx.Rectangle = undefined;
+    for (&areas, 0..) |*area, i| {
+        const offsetY: f32 = @floatFromInt(10 + i * 24);
+        area.* = .init(pos.addY(offsetY), .init(85, 25));
+    }
+    return areas;
+}
+
+var menuTexture: gfx.Texture = undefined;
+
 pub fn init() void {
     talkTexture = gfx.loadTexture("assets/pic/talkbar.png", .init(640, 96));
+    menuTexture = gfx.loadTexture("assets/pic/mainmenu1.png", .init(150, 200));
     // status = .{ .talk = 1 };
     map.init();
     player.init();
@@ -31,10 +58,21 @@ pub fn init() void {
     // window.playMusic("assets/voc/back.ogg");
 }
 
+pub fn event(ev: *const window.Event) void {
+    if (ev.type != .MOUSE_MOVE) return;
+
+    for (menu.areas, 0..) |area, i| {
+        if (area.contains(window.mousePosition)) {
+            menu.current = i;
+        }
+    }
+}
+
 pub fn update(delta: f32) void {
     switch (status) {
         .normal => {},
         .talk => |talkId| return updateTalk(talkId),
+        .menu => return updateMenu(),
     }
 
     // 角色移动和碰撞检测
@@ -48,10 +86,13 @@ pub fn update(delta: f32) void {
     }
 
     // 交互检测
-    if (confirm()) {
+    if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
         const object = map.talk(player.position, player.facing());
         if (object != 0) handleObject(object);
     }
+
+    // 打开菜单
+    if (window.isAnyKeyRelease(&.{ .ESCAPE, .E })) status = .menu;
 
     player.update(delta);
 }
@@ -72,15 +113,33 @@ fn handleChest(object: u16) void {
 }
 
 fn updateTalk(talkId: usize) void {
-    if (!confirm()) return;
+    if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return;
 
     bufferIndex = 0;
     const next = talks[talkId].next;
     status = if (next == 0) .normal else .{ .talk = next };
 }
 
-fn confirm() bool {
-    return window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
+fn updateMenu() void {
+    if (window.isAnyKeyRelease(&.{ .ESCAPE, .E })) status = .normal;
+
+    if (window.isAnyKeyRelease(&.{ .DOWN, .S })) {
+        menu.current = (menu.current + 1) % menu.names.len;
+    }
+    if (window.isAnyKeyRelease(&.{ .UP, .W })) {
+        menu.current += menu.names.len;
+        menu.current = (menu.current - 1) % menu.names.len;
+    }
+
+    var confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
+    if (window.isButtonRelease(.LEFT)) {
+        for (menu.areas, 0..) |area, i| {
+            if (area.contains(window.mousePosition)) {
+                menu.current = i;
+                confirm = true;
+            }
+        }
+    }
 }
 
 pub fn enter() void {}
@@ -94,6 +153,7 @@ pub fn render() void {
     switch (status) {
         .normal => {},
         .talk => |talkId| renderTalk(talkId),
+        .menu => renderMenu(),
     }
 }
 
@@ -124,4 +184,15 @@ fn formatInt(content: []const u8) []const u8 {
 
     bufferIndex = content.len - 2 + text.len;
     return buffer[0..bufferIndex];
+}
+
+fn renderMenu() void {
+    camera.draw(menuTexture, .init(0, 280));
+
+    for (menu.areas, menu.names, 0..) |area, name, i| {
+        if (i == menu.current) {
+            camera.drawRectangle(area, Menu.color);
+        }
+        camera.drawText(name, area.min.addXY(5, -2));
+    }
 }

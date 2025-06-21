@@ -26,7 +26,7 @@ pub fn init() void {
 }
 
 pub fn event(ev: *const window.Event) void {
-    titleScene.event(ev);
+    sceneCall("event", .{ev});
 }
 
 pub fn enter() void {
