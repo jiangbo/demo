@@ -155,6 +155,8 @@ fn drawCurrentCache() void {
     needDrawCount = 0;
 }
 
+pub const drawNumber = font.drawNumber;
+pub const drawColorNumber = font.drawColorNumber;
 pub const drawText = font.drawText;
 pub const drawColorText = font.drawColorText;
 pub const drawTextOptions = font.drawTextOptions;

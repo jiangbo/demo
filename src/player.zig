@@ -1,15 +1,16 @@
 const std = @import("std");
 
-const window = @import("zhu").window;
-const gfx = @import("zhu").gfx;
-const camera = @import("zhu").camera;
-const math = @import("zhu").math;
+const zhu = @import("zhu");
+const window = zhu.window;
+const gfx = zhu.gfx;
+const camera = zhu.camera;
+const math = zhu.math;
 
 const FrameAnimation = gfx.FixedFrameAnimation(3, 0.15);
 const Animation = std.EnumArray(math.FourDirection, FrameAnimation);
 
 const name = "小飞刀";
-const speed = 100;
+const MOVE_SPEED = 100;
 var texture: gfx.Texture = undefined;
 var animation: Animation = undefined;
 
@@ -17,10 +18,22 @@ var moving: bool = false;
 var direction: math.Vector = .zero;
 var offset: math.Vector = .zero;
 pub var position: math.Vector = .init(180, 164);
-pub var money: usize = 0;
+
+pub var money: usize = 50; // 金钱
+var level: usize = 1; //等级
+var exp: usize = 0; //经验
+var maxExp: usize = 100; //经验最大值
+var health: usize = 50; //生命
+var maxHealth: usize = 50; //生命最大值
+var attack: usize = 10; //攻击
+var defend: usize = 10; //防御
+var speed: usize = 8; //速度
+
+var statusTexture: gfx.Texture = undefined;
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/pic/player.png", .init(96, 192));
+    statusTexture = gfx.loadTexture("assets/pic/sbar.png", .init(420, 320));
 
     offset = math.Vector{ .x = -16, .y = -45 };
     animation = Animation.initUndefined();
@@ -51,7 +64,7 @@ pub fn toMove(delta: f32) ?math.Vector {
 
     moving = !dir.approxEqual(.zero);
     if (moving) {
-        direction = dir.normalize().scale(speed);
+        direction = dir.normalize().scale(MOVE_SPEED);
         return position.add(direction.scale(delta));
     } else return null;
 }
@@ -78,4 +91,60 @@ pub fn renderTalk() void {
     // 名字
     const nameColor = gfx.color(1, 1, 0, 1);
     camera.drawColorText(name, .init(18, 445), nameColor);
+}
+
+pub fn renderStatus() void {
+    const pos = gfx.Vector.init(120, 90);
+    // 背景
+    camera.draw(statusTexture, pos.addXY(-10, -10));
+
+    // 头像
+    const down = animation.get(.down);
+    const tex = down.texture.subTexture(down.frames[0]);
+    camera.draw(tex, pos.addXY(10, 10));
+
+    // 等级
+    camera.drawColorText("等级：", pos.addXY(122, 52), .{ .w = 1 });
+    camera.drawText("等级：", pos.addXY(120, 50));
+    camera.drawColorNumber(level, pos.addXY(232, 52), .{ .w = 1 });
+    camera.drawNumber(level, pos.addXY(230, 50));
+
+    // 经验
+    camera.drawColorText("经验：", pos.addXY(122, 82), .{ .w = 1 });
+    camera.drawText("经验：", pos.addXY(120, 80));
+    var buffer: [30]u8 = undefined;
+    const expStr = zhu.format(&buffer, "{d}/{d}", .{ exp, maxExp });
+    camera.drawColorText(expStr, pos.addXY(232, 82), .{ .w = 1 });
+    camera.drawText(expStr, pos.addXY(230, 80));
+
+    // 生命
+    camera.drawColorText("生命：", pos.addXY(122, 112), .{ .w = 1 });
+    camera.drawText("生命：", pos.addXY(120, 110));
+    const healthStr = zhu.format(&buffer, "{d}/{d}", .{ health, maxHealth });
+    camera.drawColorText(healthStr, pos.addXY(232, 112), .{ .w = 1 });
+    camera.drawText(healthStr, pos.addXY(230, 110));
+
+    // 攻击
+    camera.drawColorText("攻击：", pos.addXY(122, 142), .{ .w = 1 });
+    camera.drawText("攻击：", pos.addXY(120, 140));
+    camera.drawColorNumber(attack, pos.addXY(232, 142), .{ .w = 1 });
+    camera.drawNumber(attack, pos.addXY(230, 140));
+
+    // 防御
+    camera.drawColorText("防御：", pos.addXY(122, 172), .{ .w = 1 });
+    camera.drawText("防御：", pos.addXY(120, 170));
+    camera.drawColorNumber(defend, pos.addXY(232, 172), .{ .w = 1 });
+    camera.drawNumber(defend, pos.addXY(230, 170));
+
+    // 速度
+    camera.drawColorText("速度：", pos.addXY(122, 202), .{ .w = 1 });
+    camera.drawText("速度：", pos.addXY(120, 200));
+    camera.drawColorNumber(speed, pos.addXY(232, 202), .{ .w = 1 });
+    camera.drawNumber(speed, pos.addXY(230, 200));
+
+    // 金币
+    camera.drawColorText("金币：", pos.addXY(122, 232), .{ .w = 1 });
+    camera.drawColorText("金币：", pos.addXY(122, 232), gfx.color(1, 1, 0, 1));
+    camera.drawColorNumber(money, pos.addXY(232, 230), .{ .w = 1 });
+    camera.drawColorNumber(money, pos.addXY(230, 230), gfx.color(1, 1, 0, 1));
 }

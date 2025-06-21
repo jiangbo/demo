@@ -9,7 +9,7 @@ const map = @import("map.zig");
 const talk = @import("talk.zig");
 const about = @import("about.zig");
 
-const Status = union(enum) { normal, talk: usize, menu, about };
+const Status = union(enum) { normal, talk: usize, menu, about, status };
 var status: Status = .normal;
 
 const Menu = struct {
@@ -65,6 +65,13 @@ pub fn update(delta: f32) void {
     switch (status) {
         .normal => {},
         .talk => |talkId| updateTalk(talkId),
+        .status => {
+            if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }) or
+                window.isButtonRelease(.LEFT))
+            {
+                status = .normal;
+            }
+        },
         .menu => return updateMenu(),
         .about => return updateAbout(delta),
     }
@@ -97,7 +104,9 @@ fn updateTalk(talkId: usize) void {
 }
 
 fn updateAbout(delta: f32) void {
-    if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q })) {
+    if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q }) or
+        window.isButtonRelease(.RIGHT))
+    {
         status = .normal;
         return;
     }
@@ -105,7 +114,9 @@ fn updateAbout(delta: f32) void {
     if (about.roll) {
         about.update(delta);
     } else {
-        if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
+        if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER }) or
+            window.isButtonRelease(.LEFT))
+        {
             about.roll = true;
         }
     }
@@ -152,7 +163,8 @@ fn updateMenu() void {
 
 fn menuSelected() void {
     switch (menu.current) {
-        0...3 => status = .normal,
+        0 => status = .status,
+        1...3 => status = .normal,
         4 => {
             status = .about;
             about.resetRoll();
@@ -174,6 +186,7 @@ pub fn render() void {
     switch (status) {
         .normal => {},
         .talk => |talkId| talk.render(talkId),
+        .status => player.renderStatus(),
         .menu => renderMenu(),
         .about => about.render(),
     }
