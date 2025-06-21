@@ -144,7 +144,7 @@ pub fn renderStatus() void {
 
     // 金币
     camera.drawColorText("金币：", pos.addXY(122, 232), .{ .w = 1 });
-    camera.drawColorText("金币：", pos.addXY(122, 232), gfx.color(1, 1, 0, 1));
+    camera.drawColorText("金币：", pos.addXY(120, 230), gfx.color(1, 1, 0, 1));
     camera.drawColorNumber(money, pos.addXY(232, 230), .{ .w = 1 });
     camera.drawColorNumber(money, pos.addXY(230, 230), gfx.color(1, 1, 0, 1));
 }
