@@ -1,21 +1,24 @@
 const std = @import("std");
+const zhu = @import("zhu");
 
-const window = @import("zhu").window;
-const gfx = @import("zhu").gfx;
-const camera = @import("zhu").camera;
+const window = zhu.window;
+const gfx = zhu.gfx;
+const camera = zhu.camera;
 
 const player = @import("player.zig");
 
 const Talk = struct {
     actor: u8 = 0,
     content: []const u8,
-    format: enum { none, int } = .none,
+    format: enum { none, int, str } = .none,
     next: usize = 0,
 };
 const talks: []const Talk = @import("zon/talk.zon");
 var talkTexture: gfx.Texture = undefined;
 
 pub var talkNumber: usize = 0;
+pub var talkText: [50]u8 = undefined;
+
 var buffer: [256]u8 = undefined;
 var bufferIndex: usize = 0;
 
@@ -37,9 +40,15 @@ pub fn render(talkId: usize) void {
     if (talk.actor == 0) player.renderTalk();
 
     var content = talk.content;
+
     if (talk.format == .int) {
         content = if (bufferIndex == 0)
             formatInt(content)
+        else
+            buffer[0..bufferIndex];
+    } else if (talk.format == .str) {
+        content = if (bufferIndex == 0)
+            formatStr(content)
         else
             buffer[0..bufferIndex];
     }
@@ -49,9 +58,13 @@ pub fn render(talkId: usize) void {
 }
 
 fn formatInt(content: []const u8) []const u8 {
-    const index = std.fmt.bufPrint(buffer[240..], "{d}", .{talkNumber});
-    const text = index catch unreachable;
+    const text = zhu.format(&talkText, comptime "{d}", .{talkNumber});
+    talkNumber = text.len;
+    return formatStr(content);
+}
 
+fn formatStr(content: []const u8) []const u8 {
+    const text = talkText[0..talkNumber];
     const times = std.mem.replace(u8, content, "{}", text, &buffer);
     std.debug.assert(times == 1);
 

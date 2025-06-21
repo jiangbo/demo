@@ -8,8 +8,16 @@ const player = @import("player.zig");
 const map = @import("map.zig");
 const talk = @import("talk.zig");
 const about = @import("about.zig");
+const item = @import("item.zig");
 
-const Status = union(enum) { normal, talk: usize, menu, about, status };
+const Status = union(enum) {
+    normal,
+    talk: usize,
+    menu,
+    about,
+    status,
+    item,
+};
 var status: Status = .normal;
 
 const Menu = struct {
@@ -47,8 +55,7 @@ pub fn init() void {
 
     // window.playMusic("assets/voc/back.ogg");
     // status = .{ .talk = 1 };
-    // status = .about;
-    // about.roll = true;
+    // status = .item;
 }
 
 pub fn event(ev: *const window.Event) void {
@@ -64,13 +71,15 @@ pub fn event(ev: *const window.Event) void {
 pub fn update(delta: f32) void {
     switch (status) {
         .normal => {},
-        .talk => |talkId| updateTalk(talkId),
+        .talk => |talkId| return updateTalk(talkId),
+        .item => return updateItem(),
         .status => {
             if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }) or
                 window.isButtonRelease(.LEFT))
             {
                 status = .normal;
             }
+            return;
         },
         .menu => return updateMenu(),
         .about => return updateAbout(delta),
@@ -103,6 +112,14 @@ fn updateTalk(talkId: usize) void {
     status = if (next == 0) .normal else .{ .talk = next };
 }
 
+fn updateItem() void {
+    if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E })) {
+        status = .normal;
+        return;
+    }
+    player.updateItem();
+}
+
 fn updateAbout(delta: f32) void {
     if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q }) or
         window.isButtonRelease(.RIGHT))
@@ -133,6 +150,10 @@ fn handleChest(object: u16) void {
         status = .{ .talk = 3 };
         talk.talkNumber = gold;
     } else {
+        player.addItem(object & 0xFF);
+        const name = item.items[(object & 0xFF)].name;
+        talk.talkNumber = name.len;
+        @memcpy(talk.talkText[0..name.len], name);
         status = .{ .talk = 4 };
     }
 }
@@ -164,7 +185,8 @@ fn updateMenu() void {
 fn menuSelected() void {
     switch (menu.current) {
         0 => status = .status,
-        1...3 => status = .normal,
+        1 => status = .item,
+        2...3 => status = .normal,
         4 => {
             status = .about;
             about.resetRoll();
@@ -187,6 +209,7 @@ pub fn render() void {
         .normal => {},
         .talk => |talkId| talk.render(talkId),
         .status => player.renderStatus(),
+        .item => player.renderItem(),
         .menu => renderMenu(),
         .about => about.render(),
     }

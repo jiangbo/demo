@@ -97,11 +97,11 @@ pub fn beginDraw() void {
     totalDrawCount = 0;
 }
 
-pub fn drawNumber(number: usize, position: math.Vector) void {
+pub fn drawNumber(number: anytype, position: math.Vector) void {
     drawColorNumber(number, position, .one);
 }
 
-pub fn drawColorNumber(number: usize, pos: math.Vector, color: Color) void {
+pub fn drawColorNumber(number: anytype, pos: math.Vector, color: Color) void {
     var textBuffer: [15]u8 = undefined;
     const text = std.fmt.bufPrint(textBuffer[0..], "{d}", .{number});
     const t = text catch unreachable;
