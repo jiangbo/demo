@@ -3,6 +3,7 @@ const std = @import("std");
 const window = @import("zhu").window;
 const gfx = @import("zhu").gfx;
 const camera = @import("zhu").camera;
+const math = @import("zhu").math;
 
 var texture: gfx.Texture = undefined;
 
@@ -57,18 +58,46 @@ fn appendVertex(tileIndex: usize, index: usize) void {
 }
 
 fn getAreaFromIndex(index: usize) gfx.Rectangle {
-    const row: f32 = @floatFromInt(index / 20);
-    const col: f32 = @floatFromInt(index % 20);
+    const row: f32 = @floatFromInt(index / map.width);
+    const col: f32 = @floatFromInt(index % map.width);
     return .init(.init(col * 32, row * 32), .init(32, 32));
 }
 
-pub fn canWalk(position: gfx.Vector) bool {
+pub fn talk(position: gfx.Vector, direction: math.FourDirection) u16 {
+    const index: i32 = @intCast(positionIndex(position));
+    const talkIndex: i32 = switch (direction) {
+        .down => index + map.width,
+        .left => index - 1,
+        .right => index + 1,
+        .up => index - map.width,
+    };
+
+    if (talkIndex < 0 or talkIndex > map.object.len) return 0;
+    const talkObject = objectArray[@intCast(talkIndex)];
+    if (talkObject == 0 or talkObject == 1) return 0;
+
+    changeObjectIfNeed(@intCast(talkIndex), talkObject);
+    return talkObject;
+}
+
+fn changeObjectIfNeed(index: usize, object: u16) void {
+    objectArray[index] = switch (object) {
+        301 => 302,
+        else => return,
+    };
+    buildObjectBuffer();
+}
+
+pub fn positionIndex(position: gfx.Vector) usize {
     const x = @floor(position.x / 32);
     const y = @floor(position.y / 32);
+    return @intFromFloat(x + y * map.width);
+}
 
-    const index: usize = @intFromFloat(x + y * map.width);
+pub fn canWalk(position: gfx.Vector) bool {
+    const index = positionIndex(position);
     if (index > map.object.len) return false;
-    return map.object[index] == 0;
+    return objectArray[index] == 0;
 }
 
 pub fn render() void {

@@ -5,8 +5,6 @@ const gfx = @import("zhu").gfx;
 const camera = @import("zhu").camera;
 const math = @import("zhu").math;
 
-const map = @import("map.zig");
-
 const FrameAnimation = gfx.FixedFrameAnimation(3, 0.15);
 const Animation = std.EnumArray(math.FourDirection, FrameAnimation);
 
@@ -18,7 +16,8 @@ var animation: Animation = undefined;
 var moving: bool = false;
 var direction: math.Vector = .zero;
 var offset: math.Vector = .zero;
-var position: math.Vector = .init(180, 164);
+pub var position: math.Vector = .init(180, 164);
+pub var money: usize = 0;
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/pic/player.png", .init(96, 192));
@@ -40,30 +39,21 @@ pub fn init() void {
 }
 
 pub fn update(delta: f32) void {
-    move(delta);
-
     if (moving) animation.getPtr(facing()).update(delta);
 }
 
-fn move(delta: f32) void {
+pub fn toMove(delta: f32) ?math.Vector {
     var dir = math.Vector.zero;
     if (window.isAnyKeyDown(&.{ .UP, .W })) dir.y -= 1;
     if (window.isAnyKeyDown(&.{ .DOWN, .S })) dir.y += 1;
     if (window.isAnyKeyDown(&.{ .LEFT, .A })) dir.x -= 1;
     if (window.isAnyKeyDown(&.{ .RIGHT, .D })) dir.x += 1;
 
-    if (dir.approxEqual(.zero)) {
-        moving = false;
-    } else {
-        moving = true;
+    moving = !dir.approxEqual(.zero);
+    if (moving) {
         direction = dir.normalize().scale(speed);
-        const pos = position.add(direction.scale(delta));
-        if (map.canWalk(pos.addXY(-8, -12)) and
-            map.canWalk(pos.addXY(-8, 2)) and
-            map.canWalk(pos.addXY(8, -12)) and
-            map.canWalk(pos.addXY(8, 2)))
-            position = pos;
-    }
+        return position.add(direction.scale(delta));
+    } else return null;
 }
 
 pub fn render() void {
@@ -71,7 +61,7 @@ pub fn render() void {
     camera.draw(current.currentTexture(), position.add(offset));
 }
 
-fn facing() math.FourDirection {
+pub fn facing() math.FourDirection {
     if (@abs(direction.x) > @abs(direction.y))
         return if (direction.x < 0) .left else .right
     else
