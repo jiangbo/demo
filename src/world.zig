@@ -6,21 +6,11 @@ const camera = @import("zhu").camera;
 
 const player = @import("player.zig");
 const map = @import("map.zig");
+const talk = @import("talk.zig");
+const about = @import("about.zig");
 
-const Status = union(enum) { normal, talk: usize, menu };
+const Status = union(enum) { normal, talk: usize, menu, about };
 var status: Status = .normal;
-
-const Talk = struct {
-    actor: u8 = 0,
-    content: []const u8,
-    format: enum { none, int } = .none,
-    next: usize = 0,
-};
-const talks: []const Talk = @import("zon/talk.zon");
-var talkTexture: gfx.Texture = undefined;
-var talkNumber: usize = 0;
-var buffer: [256]u8 = undefined;
-var bufferIndex: usize = 0;
 
 const Menu = struct {
     names: []const []const u8,
@@ -49,13 +39,16 @@ fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
 var menuTexture: gfx.Texture = undefined;
 
 pub fn init() void {
-    talkTexture = gfx.loadTexture("assets/pic/talkbar.png", .init(640, 96));
     menuTexture = gfx.loadTexture("assets/pic/mainmenu1.png", .init(150, 200));
-    // status = .{ .talk = 1 };
+    talk.init();
+    about.init();
     map.init();
     player.init();
 
     // window.playMusic("assets/voc/back.ogg");
+    // status = .{ .talk = 1 };
+    // status = .about;
+    // about.roll = true;
 }
 
 pub fn event(ev: *const window.Event) void {
@@ -71,8 +64,9 @@ pub fn event(ev: *const window.Event) void {
 pub fn update(delta: f32) void {
     switch (status) {
         .normal => {},
-        .talk => |talkId| return updateTalk(talkId),
+        .talk => |talkId| updateTalk(talkId),
         .menu => return updateMenu(),
+        .about => return updateAbout(delta),
     }
 
     // 角色移动和碰撞检测
@@ -97,6 +91,26 @@ pub fn update(delta: f32) void {
     player.update(delta);
 }
 
+fn updateTalk(talkId: usize) void {
+    const next = talk.update(talkId);
+    status = if (next == 0) .normal else .{ .talk = next };
+}
+
+fn updateAbout(delta: f32) void {
+    if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q })) {
+        status = .normal;
+        return;
+    }
+
+    if (about.roll) {
+        about.update(delta);
+    } else {
+        if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
+            about.roll = true;
+        }
+    }
+}
+
 fn handleObject(object: u16) void {
     if (object & 0x1000 != 0) handleChest(object);
 }
@@ -106,22 +120,14 @@ fn handleChest(object: u16) void {
         const gold = window.random().intRangeLessThanBiased(u8, 10, 100);
         player.money += gold;
         status = .{ .talk = 3 };
-        talkNumber = gold;
+        talk.talkNumber = gold;
     } else {
         status = .{ .talk = 4 };
     }
 }
 
-fn updateTalk(talkId: usize) void {
-    if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return;
-
-    bufferIndex = 0;
-    const next = talks[talkId].next;
-    status = if (next == 0) .normal else .{ .talk = next };
-}
-
 fn updateMenu() void {
-    if (window.isAnyKeyRelease(&.{ .ESCAPE, .E })) status = .normal;
+    if (window.isAnyKeyRelease(&.{ .ESCAPE, .E, .Q })) status = .normal;
 
     if (window.isAnyKeyRelease(&.{ .DOWN, .S })) {
         menu.current = (menu.current + 1) % menu.names.len;
@@ -140,6 +146,21 @@ fn updateMenu() void {
             }
         }
     }
+
+    if (confirm) menuSelected();
+}
+
+fn menuSelected() void {
+    switch (menu.current) {
+        0...3 => status = .normal,
+        4 => {
+            status = .about;
+            about.resetRoll();
+        },
+        5 => window.exit(),
+        6 => status = .normal,
+        else => {},
+    }
 }
 
 pub fn enter() void {}
@@ -152,38 +173,10 @@ pub fn render() void {
 
     switch (status) {
         .normal => {},
-        .talk => |talkId| renderTalk(talkId),
+        .talk => |talkId| talk.render(talkId),
         .menu => renderMenu(),
+        .about => about.render(),
     }
-}
-
-fn renderTalk(talkId: usize) void {
-    camera.draw(talkTexture, .init(0, 384));
-
-    const talk = talks[talkId];
-    if (talk.actor == 0) player.renderTalk();
-
-    var content = talk.content;
-    if (talk.format == .int) {
-        content = if (bufferIndex == 0)
-            formatInt(content)
-        else
-            buffer[0..bufferIndex];
-    }
-
-    camera.drawColorText(content, .init(123, 403), .{ .w = 1 });
-    camera.drawColorText(content, .init(120, 400), .one);
-}
-
-fn formatInt(content: []const u8) []const u8 {
-    const index = std.fmt.bufPrint(buffer[240..], "{d}", .{talkNumber});
-    const text = index catch unreachable;
-
-    const times = std.mem.replace(u8, content, "{}", text, &buffer);
-    std.debug.assert(times == 1);
-
-    bufferIndex = content.len - 2 + text.len;
-    return buffer[0..bufferIndex];
 }
 
 fn renderMenu() void {

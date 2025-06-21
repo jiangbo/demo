@@ -96,6 +96,19 @@ pub fn endDraw() void {
     flush();
 }
 
+pub fn scissor(area: math.Rectangle) void {
+    flush();
+    const ratio = window.actualSize().div(window.size);
+    gpu.scissor(.{
+        .min = area.min.scale(ratio.x),
+        .max = area.max.scale(ratio.x),
+    });
+}
+
+pub fn resetScissor() void {
+    flush();
+    gpu.scissor(.{ .min = .zero, .max = window.actualSize() });
+}
 pub const Vertex = gpu.QuadVertex;
 const VertexOptions = struct {
     vertexBuffer: gpu.Buffer,

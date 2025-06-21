@@ -84,6 +84,12 @@ pub fn end() void {
     sk.gfx.commit();
 }
 
+pub fn scissor(area: math.Rectangle) void {
+    const size = area.size();
+    const x, const y = .{ area.min.x, area.min.y };
+    sk.gfx.applyScissorRectf(x, y, size.x, size.y, true);
+}
+
 pub fn createTexture(size: math.Vector, data: []const u8) Texture {
     return Texture{
         .image = sk.gfx.makeImage(.{
