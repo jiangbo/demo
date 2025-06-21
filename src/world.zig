@@ -57,11 +57,17 @@ pub fn update(delta: f32) void {
 }
 
 fn handleObject(object: u16) void {
-    if (object == 301) {
+    if (object & 0x1000 != 0) handleChest(object);
+}
+
+fn handleChest(object: u16) void {
+    if (object == 0x1000) {
         const gold = window.random().intRangeLessThanBiased(u8, 10, 100);
         player.money += gold;
         status = .{ .talk = 3 };
         talkNumber = gold;
+    } else {
+        status = .{ .talk = 4 };
     }
 }
 

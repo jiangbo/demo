@@ -43,7 +43,11 @@ fn buildVertexBuffer(tiles: []const u16) void {
 fn buildObjectBuffer() void {
     vertexIndex = objectOffset;
     for (objectArray[0..map.object.len], 0..) |tileIndex, index| {
-        if (tileIndex > 256) appendVertex(tileIndex, index);
+        switch (tileIndex) {
+            0xFF...0xFFF => appendVertex(tileIndex, index),
+            0x1000...0x1FFF => appendVertex(301, index),
+            else => {},
+        }
     }
 }
 
@@ -82,7 +86,7 @@ pub fn talk(position: gfx.Vector, direction: math.FourDirection) u16 {
 
 fn changeObjectIfNeed(index: usize, object: u16) void {
     objectArray[index] = switch (object) {
-        301 => 302,
+        0x1000...0x1FFF => 302,
         else => return,
     };
     buildObjectBuffer();
