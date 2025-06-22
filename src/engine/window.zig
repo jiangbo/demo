@@ -65,6 +65,7 @@ pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
 }
 
 pub var size: math.Vector = .zero;
+pub var displayArea: math.Rectangle = undefined;
 pub var allocator: std.mem.Allocator = undefined;
 var timer: std.time.Timer = undefined;
 
@@ -72,6 +73,7 @@ const root = @import("root");
 pub fn run(alloc: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
     size = info.size;
+    displayArea = .init(.zero, size);
     allocator = alloc;
 
     sk.app.run(.{
@@ -104,19 +106,20 @@ pub var mousePosition: math.Vector = .zero;
 export fn windowEvent(event: ?*const Event) void {
     if (event) |ev| {
         input.event(ev);
-        mousePosition = input.mousePosition.mul(size.div(actualSize()));
+        mousePosition = input.mousePosition.mul(size.div(screenSize()));
         call(root, "event", .{ev});
     }
 }
 
-pub fn actualSize() math.Vector {
+pub fn screenSize() math.Vector {
     return .{ .x = sk.app.widthf(), .y = sk.app.heightf() };
 }
 
 pub fn keepAspectRatio() void {
-    const ratio = actualSize().div(size);
+    const ratio = screenSize().div(size);
     const minSize = size.scale(@min(ratio.x, ratio.y));
-    const pos = actualSize().sub(minSize).scale(0.5);
+    const pos = screenSize().sub(minSize).scale(0.5);
+    displayArea = .init(pos, minSize);
     sk.gfx.applyViewportf(pos.x, pos.y, minSize.x, minSize.y, true);
 }
 

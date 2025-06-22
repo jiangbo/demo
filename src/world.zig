@@ -102,7 +102,10 @@ pub fn update(delta: f32) void {
     }
 
     // 打开菜单
-    if (window.isAnyKeyRelease(&.{ .ESCAPE, .E })) status = .menu;
+    if (window.isAnyKeyRelease(&.{ .ESCAPE, .E })) {
+        status = .menu;
+        menu.current = 0;
+    }
 
     player.update(delta);
 }
