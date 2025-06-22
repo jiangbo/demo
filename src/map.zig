@@ -28,8 +28,12 @@ var objectArray: [884]u16 = undefined;
 pub fn init() void {
     texture = gfx.loadTexture("assets/pic/maps.png", .init(640, 1536));
     rowTiles = @intFromFloat(@divExact(texture.size().x, 32));
+}
 
-    map = maps[1];
+pub fn enter(mapId: u16) void {
+    map = maps[mapId];
+    vertexIndex = 0;
+
     buildVertexBuffer(map.ground1);
     buildVertexBuffer(map.ground2);
     objectOffset = vertexIndex;
@@ -57,8 +61,13 @@ fn buildObjectBuffer() void {
 
 fn appendVertex(tileIndex: usize, index: usize) void {
     const tile = texture.subTexture(getAreaFromIndex(tileIndex));
+
+    const row: f32 = @floatFromInt(index / map.width);
+    const col: f32 = @floatFromInt(index % map.width);
+    const position = math.Vector.init(col * 32, row * 32);
+
     vertexBuffer[vertexIndex] = .{
-        .position = getPositionFromIndex(index),
+        .position = position,
         .size = .init(32, 32),
         .texture = tile.area.toVector4(),
     };
@@ -69,12 +78,6 @@ fn getAreaFromIndex(index: usize) gfx.Rectangle {
     const row: f32 = @floatFromInt(index / rowTiles);
     const col: f32 = @floatFromInt(index % rowTiles);
     return .init(.init(col * 32, row * 32), .init(32, 32));
-}
-
-fn getPositionFromIndex(index: usize) gfx.Vector {
-    const row: f32 = @floatFromInt(index / map.width);
-    const col: f32 = @floatFromInt(index % map.width);
-    return .init(col * 32, row * 32);
 }
 
 pub fn talk(position: gfx.Vector, direction: math.FourDirection) u16 {
@@ -110,18 +113,6 @@ pub fn positionIndex(position: gfx.Vector) usize {
 
 pub fn getObject(index: usize) u16 {
     return objectArray[index];
-}
-
-pub fn changeMap(mapId: usize) void {
-    map = maps[mapId];
-    vertexIndex = 0;
-    buildVertexBuffer(map.ground1);
-    buildVertexBuffer(map.ground2);
-
-    objectOffset = vertexIndex;
-
-    @memcpy(objectArray[0..map.object.len], map.object);
-    buildObjectBuffer();
 }
 
 pub fn canWalk(position: gfx.Vector) bool {

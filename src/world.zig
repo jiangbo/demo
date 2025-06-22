@@ -4,6 +4,7 @@ const window = @import("zhu").window;
 const gfx = @import("zhu").gfx;
 const camera = @import("zhu").camera;
 
+const scene = @import("scene.zig");
 const player = @import("player.zig");
 const map = @import("map.zig");
 const talk = @import("talk.zig");
@@ -34,6 +35,7 @@ var menu: Menu = .{
     },
     .areas = &createAreas(7, .{ .x = 0 + 33, .y = 288 }),
 };
+var toChangeMapId: u16 = 2;
 
 fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
     var areas: [num]gfx.Rectangle = undefined;
@@ -113,7 +115,8 @@ fn playerMove(delta: f32) void {
         {
             player.position = position;
             // 检测是否需要切换场景
-            const object = map.getObject(map.positionIndex(position));
+            const offset = position.addY(-16);
+            const object = map.getObject(map.positionIndex(offset));
             if (object > 0x1FFF) handleObject(object);
         }
     }
@@ -172,7 +175,8 @@ fn handleChest(object: u16) void {
 }
 
 fn handleChange(object: u16) void {
-    map.changeMap(object & 0x0FFF);
+    toChangeMapId = object & 0x0FFF;
+    scene.changeScene(.world);
 }
 
 fn updateMenu() void {
@@ -214,13 +218,25 @@ fn menuSelected() void {
     }
 }
 
-pub fn enter() void {}
+pub fn enter() void {
+    map.enter(toChangeMapId);
+
+    if (toChangeMapId == 1) {
+        player.enter(.init(180, 164));
+    } else if (toChangeMapId == 2) {
+        camera.worldPosition = .init(14 * 32, 0);
+        player.enter(camera.worldPosition.addXY(400, 90));
+    }
+}
 
 pub fn exit() void {}
 
 pub fn render() void {
     map.render();
     player.render();
+
+    camera.mode = .local;
+    defer camera.mode = .world;
 
     switch (status) {
         .normal => {},

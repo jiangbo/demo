@@ -19,7 +19,7 @@ var animation: Animation = undefined;
 var moving: bool = false;
 var direction: math.Vector = .zero;
 var playerOffset: math.Vector = .zero;
-pub var position: math.Vector = .init(180, 164);
+pub var position: math.Vector = undefined;
 
 pub var money: usize = 50; // 金钱
 pub var items: [16]u16 = undefined;
@@ -58,6 +58,10 @@ pub fn init() void {
     animation.set(.up, FrameAnimation.init(tex));
 
     @memset(&items, 0);
+}
+
+pub fn enter(toChangePosition: math.Vector) void {
+    position = toChangePosition;
 }
 
 pub fn update(delta: f32) void {

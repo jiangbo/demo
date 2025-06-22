@@ -6,6 +6,7 @@ const shader = @import("shader/quad.glsl.zig");
 const window = @import("window.zig");
 const font = @import("font.zig");
 
+pub var mode: enum { world, local } = .world;
 pub var worldPosition: math.Vector3 = .zero;
 
 var bindGroup: gpu.BindGroup = .{};
@@ -44,8 +45,11 @@ pub fn beginDraw() void {
 }
 
 pub fn drawRectangle(area: math.Rectangle, color: math.Vector4) void {
+    const position = if (mode == .world) area.min else //
+        worldPosition.addXY(area.min.x, area.min.y);
+
     drawVertex(whiteTexture, &.{gpu.QuadVertex{
-        .position = area.min,
+        .position = position,
         .size = area.size().toVector2(),
         .texture = whiteTexture.area.toVector4(),
         .color = color,
@@ -67,8 +71,11 @@ pub fn drawFlipX(texture: gpu.Texture, pos: math.Vector, flipX: bool) void {
         textureArea.max.x = texture.area.min.x;
     }
 
+    const position = if (mode == .world) pos else //
+        worldPosition.addXY(pos.x, pos.y);
+
     drawVertex(texture, &.{gpu.QuadVertex{
-        .position = pos,
+        .position = position,
         .size = texture.size().toVector2(),
         .texture = textureArea.toVector4(),
     }});
