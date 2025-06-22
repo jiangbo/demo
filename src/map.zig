@@ -62,12 +62,8 @@ fn buildObjectBuffer() void {
 fn appendVertex(tileIndex: usize, index: usize) void {
     const tile = texture.subTexture(getAreaFromIndex(tileIndex));
 
-    const row: f32 = @floatFromInt(index / map.width);
-    const col: f32 = @floatFromInt(index % map.width);
-    const position = math.Vector.init(col * 32, row * 32);
-
     vertexBuffer[vertexIndex] = .{
-        .position = position,
+        .position = getPositionFromIndex(index),
         .size = .init(32, 32),
         .texture = tile.area.toVector4(),
     };
@@ -78,6 +74,12 @@ fn getAreaFromIndex(index: usize) gfx.Rectangle {
     const row: f32 = @floatFromInt(index / rowTiles);
     const col: f32 = @floatFromInt(index % rowTiles);
     return .init(.init(col * 32, row * 32), .init(32, 32));
+}
+
+fn getPositionFromIndex(index: usize) gfx.Vector {
+    const row: f32 = @floatFromInt(index / map.width);
+    const col: f32 = @floatFromInt(index % map.width);
+    return math.Vector.init(col * 32, row * 32);
 }
 
 pub fn talk(position: gfx.Vector, direction: math.FourDirection) u16 {
@@ -109,6 +111,12 @@ pub fn positionIndex(position: gfx.Vector) usize {
     const x: u16 = @intFromFloat(@floor(position.x / 32));
     const y: u16 = @intFromFloat(@floor(position.y / 32));
     return x + y * map.width;
+}
+
+pub fn tileCenterContains(position: gfx.Vector) bool {
+    const pos = getPositionFromIndex(positionIndex(position));
+    const area = gfx.Rectangle.init(pos.addXY(0, 16), .init(16, 16));
+    return area.contains(position);
 }
 
 pub fn size() gfx.Vector {

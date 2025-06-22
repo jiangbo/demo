@@ -113,14 +113,15 @@ fn playerMove(delta: f32) void {
             map.canWalk(position.addXY(8, -12)) and
             map.canWalk(position.addXY(8, 2)))
         {
-            const offset = position.addY(-16);
-            if (offset.x < 0 or offset.y < 0) return;
             player.position = position;
             // 相机跟踪
             cameraLookAt(position);
+
             // 检测是否需要切换场景
-            const object = map.getObject(map.positionIndex(offset));
-            if (object > 0x1FFF) handleObject(object);
+            const object = map.getObject(map.positionIndex(position));
+            if (object > 0x1FFF and map.tileCenterContains(position)) {
+                handleObject(object);
+            }
         }
     }
 }
@@ -249,6 +250,7 @@ pub fn exit() void {}
 
 pub fn render() void {
     map.render();
+
     player.render();
 
     camera.mode = .local;
