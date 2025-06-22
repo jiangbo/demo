@@ -17,7 +17,7 @@ pub fn init() void {
         .texture = gfx.loadTexture("assets/font.png", .init(940, 940)),
     });
 
-    camera.init(1000);
+    camera.init(2000);
 
     titleScene.init();
     worldScene.init();

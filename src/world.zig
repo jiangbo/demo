@@ -85,15 +85,7 @@ pub fn update(delta: f32) void {
         .about => return updateAbout(delta),
     }
 
-    // 角色移动和碰撞检测
-    const toPosition = player.toMove(delta);
-    if (toPosition) |position| {
-        if (map.canWalk(position.addXY(-8, -12)) and
-            map.canWalk(position.addXY(-8, 2)) and
-            map.canWalk(position.addXY(8, -12)) and
-            map.canWalk(position.addXY(8, 2)))
-            player.position = position;
-    }
+    playerMove(delta);
 
     // 交互检测
     if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
@@ -108,6 +100,23 @@ pub fn update(delta: f32) void {
     }
 
     player.update(delta);
+}
+
+fn playerMove(delta: f32) void {
+    // 角色移动和碰撞检测
+    const toPosition = player.toMove(delta);
+    if (toPosition) |position| {
+        if (map.canWalk(position.addXY(-8, -12)) and
+            map.canWalk(position.addXY(-8, 2)) and
+            map.canWalk(position.addXY(8, -12)) and
+            map.canWalk(position.addXY(8, 2)))
+        {
+            player.position = position;
+            // 检测是否需要切换场景
+            const object = map.getObject(map.positionIndex(position));
+            if (object > 0x1FFF) handleObject(object);
+        }
+    }
 }
 
 fn updateTalk(talkId: usize) void {
@@ -144,6 +153,7 @@ fn updateAbout(delta: f32) void {
 
 fn handleObject(object: u16) void {
     if (object & 0x1000 != 0) handleChest(object);
+    if (object > 0x1FFF) handleChange(object);
 }
 
 fn handleChest(object: u16) void {
@@ -159,6 +169,10 @@ fn handleChest(object: u16) void {
         @memcpy(talk.talkText[0..name.len], name);
         status = .{ .talk = 4 };
     }
+}
+
+fn handleChange(object: u16) void {
+    map.changeMap(object & 0x0FFF);
 }
 
 fn updateMenu() void {

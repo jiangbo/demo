@@ -6,6 +6,7 @@ const camera = @import("zhu").camera;
 const math = @import("zhu").math;
 
 var texture: gfx.Texture = undefined;
+var rowTiles: usize = 0;
 
 const Map = struct {
     width: u16,
@@ -15,17 +16,20 @@ const Map = struct {
     object: []const u16,
 };
 
-const map: Map = @import("zon/map.zon");
+const maps: []const Map = @import("zon/map.zon");
+var map: Map = undefined;
 
-var vertexBuffer: [500]camera.Vertex = undefined;
+var vertexBuffer: [1300]camera.Vertex = undefined;
 var vertexIndex: usize = 0;
 
 var objectOffset: usize = 0;
-var objectArray: [1000]u16 = undefined;
+var objectArray: [884]u16 = undefined;
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/pic/maps.png", .init(640, 1536));
+    rowTiles = @intFromFloat(@divExact(texture.size().x, 32));
 
+    map = maps[1];
     buildVertexBuffer(map.ground1);
     buildVertexBuffer(map.ground2);
     objectOffset = vertexIndex;
@@ -54,7 +58,7 @@ fn buildObjectBuffer() void {
 fn appendVertex(tileIndex: usize, index: usize) void {
     const tile = texture.subTexture(getAreaFromIndex(tileIndex));
     vertexBuffer[vertexIndex] = .{
-        .position = getAreaFromIndex(index).min,
+        .position = getPositionFromIndex(index),
         .size = .init(32, 32),
         .texture = tile.area.toVector4(),
     };
@@ -62,9 +66,15 @@ fn appendVertex(tileIndex: usize, index: usize) void {
 }
 
 fn getAreaFromIndex(index: usize) gfx.Rectangle {
+    const row: f32 = @floatFromInt(index / rowTiles);
+    const col: f32 = @floatFromInt(index % rowTiles);
+    return .init(.init(col * 32, row * 32), .init(32, 32));
+}
+
+fn getPositionFromIndex(index: usize) gfx.Vector {
     const row: f32 = @floatFromInt(index / map.width);
     const col: f32 = @floatFromInt(index % map.width);
-    return .init(.init(col * 32, row * 32), .init(32, 32));
+    return .init(col * 32, row * 32);
 }
 
 pub fn talk(position: gfx.Vector, direction: math.FourDirection) u16 {
@@ -93,15 +103,34 @@ fn changeObjectIfNeed(index: usize, object: u16) void {
 }
 
 pub fn positionIndex(position: gfx.Vector) usize {
-    const x = @floor(position.x / 32);
-    const y = @floor(position.y / 32);
-    return @intFromFloat(x + y * map.width);
+    const x: u16 = @intFromFloat(@floor(position.x / 32));
+    const y: u16 = @intFromFloat(@floor(position.y / 32));
+    return x + y * map.width;
+}
+
+pub fn getObject(index: usize) u16 {
+    return objectArray[index];
+}
+
+pub fn changeMap(mapId: usize) void {
+    map = maps[mapId];
+    vertexIndex = 0;
+    buildVertexBuffer(map.ground1);
+    buildVertexBuffer(map.ground2);
+
+    objectOffset = vertexIndex;
+
+    @memcpy(objectArray[0..map.object.len], map.object);
+    buildObjectBuffer();
 }
 
 pub fn canWalk(position: gfx.Vector) bool {
+    if (position.x < 0 or position.y < 0) return false;
+
     const index = positionIndex(position);
     if (index > map.object.len) return false;
-    return objectArray[index] == 0;
+    // 场景切换的图块也应该能通过
+    return objectArray[index] == 0 or objectArray[index] > 0x1FFF;
 }
 
 pub fn render() void {
