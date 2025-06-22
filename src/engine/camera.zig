@@ -7,7 +7,7 @@ const window = @import("window.zig");
 const font = @import("font.zig");
 
 pub var mode: enum { world, local } = .world;
-pub var worldPosition: math.Vector3 = .zero;
+pub var position: math.Vector3 = .zero;
 
 var bindGroup: gpu.BindGroup = .{};
 var pipeline: gpu.RenderPipeline = undefined;
@@ -31,12 +31,12 @@ pub fn init(vertexCount: usize) void {
     whiteTexture = gpu.createTexture(.init(4, 4), &data);
 }
 
-pub fn toWorldPosition(position: math.Vector) math.Vector {
-    return position.add(worldPosition);
+pub fn toWorldPosition(pos: math.Vector) math.Vector {
+    return pos.add(position);
 }
 
-pub fn toWindowPosition(position: math.Vector) math.Vector {
-    return position.sub(worldPosition);
+pub fn toWindowPosition(pos: math.Vector) math.Vector {
+    return pos.sub(position);
 }
 
 pub fn beginDraw() void {
@@ -45,11 +45,11 @@ pub fn beginDraw() void {
 }
 
 pub fn drawRectangle(area: math.Rectangle, color: math.Vector4) void {
-    const position = if (mode == .world) area.min else //
-        worldPosition.addXY(area.min.x, area.min.y);
+    const pos = if (mode == .world) area.min else //
+        position.addXY(area.min.x, area.min.y);
 
     drawVertex(whiteTexture, &.{gpu.QuadVertex{
-        .position = position,
+        .position = pos,
         .size = area.size().toVector2(),
         .texture = whiteTexture.area.toVector4(),
         .color = color,
@@ -60,8 +60,8 @@ pub fn debugDraw(area: math.Rectangle) void {
     drawRectangle(area, .{ .x = 1, .z = 1, .w = 0.4 });
 }
 
-pub fn draw(texture: gpu.Texture, position: math.Vector) void {
-    drawFlipX(texture, position, false);
+pub fn draw(texture: gpu.Texture, pos: math.Vector) void {
+    drawFlipX(texture, pos, false);
 }
 
 pub fn drawFlipX(texture: gpu.Texture, pos: math.Vector, flipX: bool) void {
@@ -71,11 +71,11 @@ pub fn drawFlipX(texture: gpu.Texture, pos: math.Vector, flipX: bool) void {
         textureArea.max.x = texture.area.min.x;
     }
 
-    const position = if (mode == .world) pos else //
-        worldPosition.addXY(pos.x, pos.y);
+    const worldPosition = if (mode == .world) pos else //
+        position.addXY(pos.x, pos.y);
 
     drawVertex(texture, &.{gpu.QuadVertex{
-        .position = position,
+        .position = worldPosition,
         .size = texture.size().toVector2(),
         .texture = textureArea.toVector4(),
     }});
@@ -133,8 +133,8 @@ pub fn drawVertexBuffer(texture: gpu.Texture, options: VertexOptions) void {
         2 / x, 0, 0, 0, 0,  2 / -y, 0, 0,
         0,     0, 1, 0, -1, 1,      0, 1,
     };
-    viewMatrix[12] = -1 - worldPosition.x * viewMatrix[0];
-    viewMatrix[13] = 1 - worldPosition.y * viewMatrix[5];
+    viewMatrix[12] = -1 - position.x * viewMatrix[0];
+    viewMatrix[13] = 1 - position.y * viewMatrix[5];
     const size = gpu.queryTextureSize(texture.image);
     gpu.setUniform(shader.UB_vs_params, .{
         .viewMatrix = viewMatrix,

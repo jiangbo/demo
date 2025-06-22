@@ -113,13 +113,22 @@ fn playerMove(delta: f32) void {
             map.canWalk(position.addXY(8, -12)) and
             map.canWalk(position.addXY(8, 2)))
         {
-            player.position = position;
-            // 检测是否需要切换场景
             const offset = position.addY(-16);
+            if (offset.x < 0 or offset.y < 0) return;
+            player.position = position;
+            // 相机跟踪
+            cameraLookAt(position);
+            // 检测是否需要切换场景
             const object = map.getObject(map.positionIndex(offset));
             if (object > 0x1FFF) handleObject(object);
         }
     }
+}
+
+fn cameraLookAt(position: gfx.Vector) void {
+    const half = window.size.scale(0.5);
+    const max = map.size().sub(window.size);
+    camera.position = position.sub(half).clamp(.zero, max);
 }
 
 fn updateTalk(talkId: usize) void {
@@ -219,13 +228,20 @@ fn menuSelected() void {
 }
 
 pub fn enter() void {
-    map.enter(toChangeMapId);
-
-    if (toChangeMapId == 1) {
+    if (toChangeMapId == 0) {
+        // 开始游戏
+        map.enter(toChangeMapId + 1);
         player.enter(.init(180, 164));
+        camera.position = .zero;
+    }
+
+    map.enter(toChangeMapId);
+    if (toChangeMapId == 1) {
+        player.enter(.init(430, 410));
+        camera.position = .zero;
     } else if (toChangeMapId == 2) {
-        camera.worldPosition = .init(14 * 32, 0);
-        player.enter(camera.worldPosition.addXY(400, 90));
+        camera.position = .init(14 * 32, 0);
+        player.enter(camera.position.addXY(400, 90));
     }
 }
 

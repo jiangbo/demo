@@ -111,6 +111,12 @@ pub fn positionIndex(position: gfx.Vector) usize {
     return x + y * map.width;
 }
 
+pub fn size() gfx.Vector {
+    const x: f32 = @floatFromInt(map.width * 32);
+    const y: f32 = @floatFromInt(map.height * 32);
+    return .init(x, y);
+}
+
 pub fn getObject(index: usize) u16 {
     return objectArray[index];
 }

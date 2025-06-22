@@ -81,6 +81,8 @@ pub fn render() void {
     // 将文字先绘制上，后面的淡入淡出才会生效。
     camera.flush();
     if (fadeTimer) |*timer| {
+        camera.mode = .local;
+        defer camera.mode = .world;
         const percent = timer.elapsed / timer.duration;
         const alpha = if (isFadeIn) 1 - percent else percent;
         camera.drawRectangle(.init(.zero, window.size), .{ .w = alpha });

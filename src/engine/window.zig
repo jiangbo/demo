@@ -139,6 +139,7 @@ export fn windowFrame() void {
 
     sk.fetch.dowork();
     gpu.begin(.{ .a = 1 });
+    // gpu.begin(.{ .r = 1, .b = 1, .a = 1 });
     call(root, "frame", .{delta});
     gpu.end();
     input.endFrame();
