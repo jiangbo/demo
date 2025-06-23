@@ -1,8 +1,9 @@
 const std = @import("std");
+const zhu = @import("zhu");
 
-const window = @import("zhu").window;
-const gfx = @import("zhu").gfx;
-const camera = @import("zhu").camera;
+const window = zhu.window;
+const gfx = zhu.gfx;
+const camera = zhu.camera;
 
 const titleScene = @import("title.zig");
 const worldScene = @import("world.zig");
@@ -14,7 +15,7 @@ var toSceneType: SceneType = .title;
 pub fn init() void {
     window.initFont(.{
         .font = @import("zon/font.zon"),
-        .texture = gfx.loadTexture("assets/font.png", .init(940, 940)),
+        .texture = gfx.loadTexture("assets/font.png", .init(944, 944)),
     });
 
     camera.init(2000);
@@ -95,18 +96,22 @@ fn drawDebugInfo() void {
     var buffer: [100]u8 = undefined;
     const format =
         \\帧率：{}
+        \\帧时：{d:.2}
+        \\用时：{d:.2}
         \\图片：{}
         \\文字：{}
         \\绘制：{}
     ;
 
-    const text = std.fmt.bufPrint(&buffer, format, .{
+    const text = zhu.format(&buffer, format, .{
         window.frameRate,
+        window.frameDeltaPerSecond,
+        window.usedDeltaPerSecond,
         camera.imageDrawCount(),
         // Debug 信息本身的次数也应该统计进去
         camera.textDrawCount() + debutTextCount,
         camera.gpuDrawCount() + 1,
-    }) catch unreachable;
+    });
 
     var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
     var count: u32 = 0;

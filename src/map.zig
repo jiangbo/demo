@@ -115,7 +115,7 @@ pub fn positionIndex(position: gfx.Vector) usize {
 
 pub fn tileCenterContains(position: gfx.Vector) bool {
     const pos = getPositionFromIndex(positionIndex(position));
-    const area = gfx.Rectangle.init(pos.addXY(0, 16), .init(16, 16));
+    const area = gfx.Rectangle.init(pos.addXY(0, 16), .init(32, 16));
     return area.contains(position);
 }
 

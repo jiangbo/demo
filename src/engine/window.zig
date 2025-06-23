@@ -125,16 +125,23 @@ pub fn keepAspectRatio() void {
 
 var frameRateTimer: Timer = .init(1);
 var frameRateCount: u32 = 0;
+var usedDelta: u64 = 0;
 pub var frameRate: u32 = 0;
+pub var frameDeltaPerSecond: f32 = 0;
+pub var usedDeltaPerSecond: f32 = 0;
 
 export fn windowFrame() void {
     const deltaNano: f32 = @floatFromInt(timer.lap());
     const delta = deltaNano / std.time.ns_per_s;
+    defer usedDelta = timer.read();
 
     if (frameRateTimer.isFinishedAfterUpdate(delta)) {
         frameRateTimer.restart();
         frameRate = frameRateCount;
         frameRateCount = 1;
+        frameDeltaPerSecond = delta * 1000;
+        const deltaUsed: f32 = @floatFromInt(usedDelta);
+        usedDeltaPerSecond = deltaUsed / std.time.ns_per_ms;
     } else frameRateCount += 1;
 
     sk.fetch.dowork();
