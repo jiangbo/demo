@@ -1,8 +1,9 @@
 const std = @import("std");
+const zhu = @import("zhu");
 
-const window = @import("zhu").window;
-const gfx = @import("zhu").gfx;
-const camera = @import("zhu").camera;
+const window = zhu.window;
+const gfx = zhu.gfx;
+const camera = zhu.camera;
 
 const scene = @import("scene.zig");
 const player = @import("player.zig");
@@ -60,6 +61,26 @@ pub fn init() void {
     // status = .item;
 }
 
+pub fn enter() void {
+    if (toChangeMapId == 0) {
+        // 开始游戏
+        map.enter(toChangeMapId + 1);
+        player.enter(.init(180, 164));
+        camera.position = .zero;
+    }
+
+    map.enter(toChangeMapId);
+    if (toChangeMapId == 1) {
+        player.enter(.init(430, 410));
+        camera.position = .zero;
+    } else if (toChangeMapId == 2) {
+        camera.position = .init(14 * 32, 0);
+        player.enter(camera.position.addXY(400, 90));
+    }
+}
+
+pub fn exit() void {}
+
 pub fn event(ev: *const window.Event) void {
     if (ev.type != .MOUSE_MOVE) return;
 
@@ -71,17 +92,23 @@ pub fn event(ev: *const window.Event) void {
 }
 
 pub fn update(delta: f32) void {
+    if (status != .menu and (window.pressedButton(.RIGHT) or
+        window.pressedAny(&.{ .ESCAPE, .E })))
+    {
+        status = .menu;
+        return;
+    }
+
     switch (status) {
         .normal => {},
         .talk => |talkId| return updateTalk(talkId),
         .item => return updateItem(),
         .status => {
-            if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }) or
-                window.isButtonRelease(.LEFT))
+            return if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }) or
+                window.isButtonRelease(.RIGHT))
             {
                 status = .normal;
-            }
-            return;
+            };
         },
         .menu => return updateMenu(),
         .about => return updateAbout(delta),
@@ -96,7 +123,9 @@ pub fn update(delta: f32) void {
     }
 
     // 打开菜单
-    if (window.isAnyKeyRelease(&.{ .ESCAPE, .E })) {
+    if (window.pressedAny(&.{ .ESCAPE, .E }) or
+        window.isButtonRelease(.MIDDLE))
+    {
         status = .menu;
         menu.current = 0;
     }
@@ -190,7 +219,9 @@ fn handleChange(object: u16) void {
 }
 
 fn updateMenu() void {
-    if (window.isAnyKeyRelease(&.{ .ESCAPE, .E, .Q })) status = .normal;
+    if (window.pressedAny(&.{ .ESCAPE, .E, .Q }) or
+        window.pressedAnyButton(&.{ .RIGHT, .MIDDLE }))
+        status = .normal;
 
     if (window.isAnyKeyRelease(&.{ .DOWN, .S })) {
         menu.current = (menu.current + 1) % menu.names.len;
@@ -227,26 +258,6 @@ fn menuSelected() void {
         else => {},
     }
 }
-
-pub fn enter() void {
-    if (toChangeMapId == 0) {
-        // 开始游戏
-        map.enter(toChangeMapId + 1);
-        player.enter(.init(180, 164));
-        camera.position = .zero;
-    }
-
-    map.enter(toChangeMapId);
-    if (toChangeMapId == 1) {
-        player.enter(.init(430, 410));
-        camera.position = .zero;
-    } else if (toChangeMapId == 2) {
-        camera.position = .init(14 * 32, 0);
-        player.enter(camera.position.addXY(400, 90));
-    }
-}
-
-pub fn exit() void {}
 
 pub fn render() void {
     map.render();

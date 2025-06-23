@@ -31,11 +31,11 @@ pub fn init(vertexCount: usize) void {
     whiteTexture = gpu.createTexture(.init(4, 4), &data);
 }
 
-pub fn toWorldPosition(pos: math.Vector) math.Vector {
+pub fn toWorld(pos: math.Vector) math.Vector {
     return pos.add(position);
 }
 
-pub fn toWindowPosition(pos: math.Vector) math.Vector {
+pub fn toWindow(pos: math.Vector) math.Vector {
     return pos.sub(position);
 }
 

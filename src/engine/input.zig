@@ -42,6 +42,11 @@ pub fn isButtonRelease(button: sk.app.Mousebutton) bool {
     return lastButtonState.isSet(code) and !buttonState.isSet(code);
 }
 
+pub fn isAnyButtonRelease(buttons: []const sk.app.Mousebutton) bool {
+    for (buttons) |button| if (isButtonRelease(button)) return true;
+    return false;
+}
+
 pub fn isKeyDown(keyCode: KeyCode) bool {
     return keyState.isSet(@intCast(@intFromEnum(keyCode)));
 }
