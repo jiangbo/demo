@@ -58,11 +58,12 @@ pub fn update(delta: f32) void {
     }
 
     if (fadeTimer) |*timer| {
+        // 存在淡入淡出效果，地图和角色暂时不更新。
         if (timer.isRunningAfterUpdate(delta)) return;
         if (isFadeIn) {
             fadeTimer = null;
         } else {
-            if (fadeOutCallback) |callback| callback();
+            if (fadeOutEndCallback) |callback| callback();
             isFadeIn = true;
             timer.restart();
         }
@@ -92,6 +93,7 @@ pub fn render() void {
     if (isDebug) drawDebugInfo();
 }
 
+var debutTextCount: u32 = 0;
 fn drawDebugInfo() void {
     var buffer: [100]u8 = undefined;
     const format =
@@ -124,11 +126,9 @@ fn drawDebugInfo() void {
     camera.drawColorText(text, .init(10, 5), .green);
 }
 
-var debutTextCount: u32 = 0;
-
 var fadeTimer: ?window.Timer = null;
 var isFadeIn: bool = false;
-var fadeOutCallback: ?*const fn () void = null;
+var fadeOutEndCallback: ?*const fn () void = null;
 
 pub fn fadeIn() void {
     isFadeIn = true;
@@ -138,7 +138,7 @@ pub fn fadeIn() void {
 pub fn fadeOut(callback: ?*const fn () void) void {
     isFadeIn = false;
     fadeTimer = .init(2);
-    fadeOutCallback = callback;
+    fadeOutEndCallback = callback;
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {
