@@ -106,7 +106,10 @@ pub var mousePosition: math.Vector = .zero;
 export fn windowEvent(event: ?*const Event) void {
     if (event) |ev| {
         input.event(ev);
-        mousePosition = input.mousePosition.mul(size.div(screenSize()));
+        if (ev.type == .MOUSE_MOVE) {
+            const pos = input.mousePosition.sub(displayArea.min);
+            mousePosition = pos.mul(size).div(displayArea.size());
+        }
         call(root, "event", .{ev});
     }
 }
