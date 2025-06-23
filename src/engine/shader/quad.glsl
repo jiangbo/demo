@@ -25,30 +25,25 @@ out vec2 uv;
 
 void main() {
 
-    uint vertexIndex = uint(gl_VertexIndex) % 6;
-     // 缩放
-    vec2 scaled = vertexArray[vertexIndex] * vertex_size;
-    // 旋转
-    vec2 pivot = vertex_pivot * vertex_size;
+    // 索引
+    uint idx = uint(gl_VertexIndex) % 6;
+
+    // 顶点
+    vec2 P = vertex_pivot * vertex_size;
     float c = cos(vertex_rotation);
     float s = sin(vertex_rotation);
-    vec2 rotated = mat2(c, s, -s, c) * (scaled - pivot);
-    // 平移
-    vec4 position = vec4(rotated + pivot, 0, 0);
-    gl_Position = viewMatrix * (position + vertex_position);
+    mat2 R = mat2(c, s, -s, c);
+
+    vec2 pos = R * (vertexArray[idx] * vertex_size - P) + P;
+    gl_Position = viewMatrix * vec4(pos + vertex_position.xy, 0, 1);
+
+    // 颜色
+    color = vertex_color;
 
     // 纹理
-    vec2 texcoord[6] = {
-        {vertex_texture.x, vertex_texture.y},
-        {vertex_texture.z, vertex_texture.y},
-        {vertex_texture.x, vertex_texture.w},
-        {vertex_texture.x, vertex_texture.w},
-        {vertex_texture.z, vertex_texture.y},
-        {vertex_texture.z, vertex_texture.w},
-    };
-
-    color = vertex_color;
-    uv = texcoord[vertexIndex] / textureVec.xy;
+    vec2 minPix = vertex_texture.xy + vec2(0.5);
+    vec2 maxPix = vertex_texture.zw - vec2(0.5);
+    uv = mix(minPix, maxPix, vertexArray[idx]) * textureVec.xy;
 }
 @end
 

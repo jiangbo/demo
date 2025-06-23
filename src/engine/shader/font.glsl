@@ -41,7 +41,7 @@ void main() {
     };
 
     color = vertex_color;
-    uv = texcoord[vertexIndex] / textureVec.xy;
+    uv = texcoord[vertexIndex] * textureVec.xy;
 }
 @end
 
