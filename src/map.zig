@@ -139,5 +139,5 @@ pub fn canWalk(position: gfx.Vector) bool {
 }
 
 pub fn render() void {
-    camera.drawVertex(texture, vertexBuffer[0..vertexIndex]);
+    camera.drawVertices(texture, vertexBuffer[0..vertexIndex]);
 }

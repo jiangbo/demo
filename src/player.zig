@@ -18,7 +18,6 @@ var animation: Animation = undefined;
 
 var moving: bool = false;
 var direction: math.Vector = .zero;
-var playerOffset: math.Vector = .zero;
 pub var position: math.Vector = undefined;
 
 pub var money: usize = 50; // 金钱
@@ -42,7 +41,6 @@ pub fn init() void {
     bgTexture = gfx.loadTexture("assets/pic/sbar.png", .init(420, 320));
     itemTexture = gfx.loadTexture("assets/pic/goods.png", .init(384, 192));
 
-    playerOffset = math.Vector{ .x = -16, .y = -45 };
     animation = Animation.initUndefined();
 
     var tex = texture.subTexture(.init(.zero, .init(96, 48)));
@@ -112,7 +110,10 @@ pub fn addItem(itemId: u16) void {
 
 pub fn render() void {
     const current = animation.get(facing());
-    camera.draw(current.currentTexture(), position.add(playerOffset));
+    camera.drawOption(current.currentTexture(), position, .{
+        .pivot = .init(0.5, 0.9),
+    });
+    camera.debugDraw(.init(position, .init(100, 100)));
 }
 
 pub fn facing() math.FourDirection {

@@ -81,7 +81,7 @@ pub fn render() void {
     sceneCall("render", .{});
 
     // 将文字先绘制上，后面的淡入淡出才会生效。
-    camera.flush();
+    camera.flushTextureAndText();
     if (fadeTimer) |*timer| {
         camera.mode = .local;
         defer camera.mode = .world;

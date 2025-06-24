@@ -34,7 +34,7 @@ void main() {
     float s = sin(vertex_rotation);
     mat2 R = mat2(c, s, -s, c);
 
-    vec2 pos = R * (vertexArray[idx] * vertex_size - P) + P;
+    vec2 pos = R * (vertexArray[idx] * vertex_size - P) ;
     gl_Position = viewMatrix * vec4(pos + vertex_position.xy, 0, 1);
 
     // 颜色

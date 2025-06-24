@@ -6,6 +6,10 @@ const shader = @import("shader/quad.glsl.zig");
 const window = @import("window.zig");
 const font = @import("font.zig");
 
+const Texture = gpu.Texture;
+const Vector = math.Vector;
+pub const Vertex = gpu.QuadVertex;
+
 pub var mode: enum { world, local } = .world;
 pub var position: math.Vector3 = .zero;
 
@@ -20,8 +24,8 @@ var whiteTexture: gpu.Texture = undefined;
 
 pub fn init(vertexCount: usize) void {
     buffer = gpu.createBuffer(.{
-        .size = @sizeOf(gpu.QuadVertex) * vertexCount,
-        .usage = .{ .vertex_buffer = true, .stream_update = true },
+        .size = @sizeOf(Vertex) * vertexCount,
+        .usage = .{ .stream_update = true },
     });
 
     const shaderDesc = shader.quadShaderDesc(gpu.queryBackend());
@@ -31,12 +35,12 @@ pub fn init(vertexCount: usize) void {
     whiteTexture = gpu.createTexture(.init(4, 4), &data);
 }
 
-pub fn toWorld(pos: math.Vector) math.Vector {
-    return pos.add(position);
+pub fn toWorld(windowPosition: Vector) Vector {
+    return windowPosition.add(position);
 }
 
-pub fn toWindow(pos: math.Vector) math.Vector {
-    return pos.sub(position);
+pub fn toWindow(worldPosition: Vector) Vector {
+    return worldPosition.sub(position);
 }
 
 pub fn beginDraw() void {
@@ -44,44 +48,53 @@ pub fn beginDraw() void {
     font.beginDraw();
 }
 
-pub fn drawRectangle(area: math.Rectangle, color: math.Vector4) void {
-    const pos = if (mode == .world) area.min else //
-        position.addXY(area.min.x, area.min.y);
-
-    drawVertex(whiteTexture, &.{gpu.QuadVertex{
-        .position = pos,
-        .size = area.size().toVector2(),
-        .texture = whiteTexture.area.toVector4(),
-        .color = color,
-    }});
-}
-
 pub fn debugDraw(area: math.Rectangle) void {
     drawRectangle(area, .{ .x = 1, .z = 1, .w = 0.4 });
 }
 
 pub fn draw(texture: gpu.Texture, pos: math.Vector) void {
-    drawFlipX(texture, pos, false);
+    drawOption(texture, pos, .{});
 }
 
-pub fn drawFlipX(texture: gpu.Texture, pos: math.Vector, flipX: bool) void {
+pub fn drawFlipX(texture: Texture, pos: Vector, flipX: bool) void {
+    drawOption(texture, pos, .{ .flipX = flipX });
+}
+
+pub fn drawRectangle(area: math.Rectangle, color: math.Vector4) void {
+    drawOption(whiteTexture, area.min, .{
+        .size = area.size().toVector2(),
+        .color = color,
+    });
+}
+
+pub const Option = struct {
+    rotation: f32 = 0, // 旋转角度
+    size: ?math.Vector2 = null, // 大小
+    pivot: math.Vector2 = .zero, // 旋转中心
+    color: math.Vector4 = .one, // 颜色
+    flipX: bool = false, // 是否水平翻转
+};
+pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
+    const worldPosition = if (mode == .world) pos else //
+        position.addXY(pos.x, pos.y);
+
     var textureArea = texture.area;
-    if (flipX) {
+    if (option.flipX) {
         textureArea.min.x = texture.area.max.x;
         textureArea.max.x = texture.area.min.x;
     }
 
-    const worldPosition = if (mode == .world) pos else //
-        position.addXY(pos.x, pos.y);
-
-    drawVertex(texture, &.{gpu.QuadVertex{
+    drawVertices(texture, &.{Vertex{
         .position = worldPosition,
-        .size = texture.size().toVector2(),
+        .rotation = option.rotation,
+        .size = option.size orelse texture.size(),
+        .pivot = option.pivot,
         .texture = textureArea.toVector4(),
+        .color = option.color,
     }});
 }
 
-pub fn drawVertex(texture: gpu.Texture, vertex: []const gpu.QuadVertex) void {
+pub fn drawVertices(texture: Texture, vertex: []const Vertex) void {
     gpu.appendBuffer(buffer, vertex);
 
     defer {
@@ -91,38 +104,47 @@ pub fn drawVertex(texture: gpu.Texture, vertex: []const gpu.QuadVertex) void {
     }
 
     if (totalDrawCount == 0) return; // 第一次绘制
-    if (texture.image.id != usingTexture.image.id) drawCurrentCache();
+    if (texture.image.id != usingTexture.image.id) flushTexture();
 }
 
-pub fn flush() void {
-    if (needDrawCount != 0) drawCurrentCache();
+pub fn flushTexture() void {
+    if (needDrawCount == 0) return;
+    drawInstanced(usingTexture, .{
+        .vertexBuffer = buffer,
+        .vertexOffset = totalDrawCount - needDrawCount,
+        .count = needDrawCount,
+    });
+    needDrawCount = 0;
+}
+
+pub fn flushTextureAndText() void {
+    flushTexture();
     font.flush();
 }
 
 pub fn endDraw() void {
-    flush();
+    flushTextureAndText();
 }
 
 pub fn scissor(area: math.Rectangle) void {
-    flush();
+    flushTextureAndText();
     const ratio = window.displayArea.size().div(window.size);
     gpu.scissor(math.Rectangle{
         .min = area.min.scale(ratio.x).add(window.displayArea.min),
         .max = area.max.scale(ratio.x).add(window.displayArea.min),
     });
 }
-
 pub fn resetScissor() void {
-    flush();
+    flushTextureAndText();
     gpu.scissor(.{ .min = .zero, .max = window.screenSize() });
 }
-pub const Vertex = gpu.QuadVertex;
+
 const VertexOptions = struct {
     vertexBuffer: gpu.Buffer,
     vertexOffset: usize = 0,
     count: usize,
 };
-pub fn drawVertexBuffer(texture: gpu.Texture, options: VertexOptions) void {
+fn drawInstanced(texture: gpu.Texture, options: VertexOptions) void {
 
     // 绑定流水线
     gpu.setPipeline(pipeline);
@@ -151,15 +173,6 @@ pub fn drawVertexBuffer(texture: gpu.Texture, options: VertexOptions) void {
 
     // 绘制
     gpu.drawInstanced(options.count);
-}
-
-fn drawCurrentCache() void {
-    drawVertexBuffer(usingTexture, .{
-        .vertexBuffer = buffer,
-        .vertexOffset = totalDrawCount - needDrawCount,
-        .count = needDrawCount,
-    });
-    needDrawCount = 0;
 }
 
 pub const drawNumber = font.drawNumber;
