@@ -18,7 +18,7 @@ pub const Texture = struct {
     }
 
     pub fn size(self: *const Texture) math.Vector2 {
-        return self.area.size().toVector2();
+        return self.area.size();
     }
 
     pub fn subTexture(self: *const Texture, area: Rectangle) Texture {

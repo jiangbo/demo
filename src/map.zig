@@ -63,7 +63,7 @@ fn appendVertex(tileIndex: usize, index: usize) void {
     const tile = texture.subTexture(getAreaFromIndex(tileIndex));
 
     vertexBuffer[vertexIndex] = .{
-        .position = getPositionFromIndex(index),
+        .position = getPositionFromIndex(index).toVector3(0),
         .size = .init(32, 32),
         .texture = tile.area.toVector4(),
     };

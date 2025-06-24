@@ -11,7 +11,7 @@ const Vector = math.Vector;
 pub const Vertex = gpu.QuadVertex;
 
 pub var mode: enum { world, local } = .world;
-pub var position: math.Vector3 = .zero;
+pub var position: math.Vector = .zero;
 
 var bindGroup: gpu.BindGroup = .{};
 var pipeline: gpu.RenderPipeline = undefined;
@@ -62,7 +62,7 @@ pub fn drawFlipX(texture: Texture, pos: Vector, flipX: bool) void {
 
 pub fn drawRectangle(area: math.Rectangle, color: math.Vector4) void {
     drawOption(whiteTexture, area.min, .{
-        .size = area.size().toVector2(),
+        .size = area.size(),
         .color = color,
     });
 }
@@ -85,7 +85,7 @@ pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
     }
 
     drawVertices(texture, &.{Vertex{
-        .position = worldPosition,
+        .position = worldPosition.toVector3(0),
         .rotation = option.rotation,
         .size = option.size orelse texture.size(),
         .pivot = option.pivot,

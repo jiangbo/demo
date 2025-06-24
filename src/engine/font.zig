@@ -140,8 +140,8 @@ pub fn drawTextOptions(text: []const u8, options: TextOptions) void {
 
         const target = char.planeBounds.toArea();
         gpu.appendBuffer(buffer, &.{gpu.QuadVertex{
-            .position = pos.add(target.min.scale(options.size)),
-            .size = target.size().scale(options.size).toVector2(),
+            .position = pos.add(target.min.scale(options.size)).toVector3(0),
+            .size = target.size().scale(options.size),
             .texture = char.atlasBounds.toArea().toVector4(),
             .color = options.color,
         }});
