@@ -113,7 +113,8 @@ pub fn render() void {
     camera.drawOption(current.currentTexture(), position, .{
         .pivot = .init(0.5, 0.9),
     });
-    camera.debugDraw(.init(position, .init(100, 100)));
+
+    // camera.debugDraw(.init(position.addXY(-8, -12), .init(16, 14)));
 }
 
 pub fn facing() math.FourDirection {
