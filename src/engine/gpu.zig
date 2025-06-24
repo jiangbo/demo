@@ -3,10 +3,11 @@ const std = @import("std");
 const sk = @import("sokol");
 const math = @import("math.zig");
 
+const gfx = sk.gfx;
 pub const Rectangle = math.Rectangle;
 
 pub const Texture = struct {
-    image: sk.gfx.Image,
+    image: gfx.Image,
     area: Rectangle = .{},
 
     pub fn width(self: *const Texture) f32 {
@@ -30,72 +31,68 @@ pub const Texture = struct {
     }
 };
 
-pub fn queryTextureSize(image: sk.gfx.Image) math.Vector {
+pub fn queryTextureSize(image: gfx.Image) math.Vector {
     return math.Vector{
-        .x = @floatFromInt(sk.gfx.queryImageWidth(image)),
-        .y = @floatFromInt(sk.gfx.queryImageHeight(image)),
+        .x = @floatFromInt(gfx.queryImageWidth(image)),
+        .y = @floatFromInt(gfx.queryImageHeight(image)),
     };
 }
 
-pub const RenderPipeline = sk.gfx.Pipeline;
-pub const asRange = sk.gfx.asRange;
-pub const queryBackend = sk.gfx.queryBackend;
-pub const Buffer = sk.gfx.Buffer;
-pub const Color = sk.gfx.Color;
-pub var nearestSampler: sk.gfx.Sampler = undefined;
-pub var linearSampler: sk.gfx.Sampler = undefined;
-
-pub var drawCount: usize = 0;
+pub const RenderPipeline = gfx.Pipeline;
+pub const asRange = gfx.asRange;
+pub const queryBackend = gfx.queryBackend;
+pub const Buffer = gfx.Buffer;
+pub const Color = gfx.Color;
+pub var nearestSampler: gfx.Sampler = undefined;
+pub var linearSampler: gfx.Sampler = undefined;
 
 pub fn init() void {
-    nearestSampler = sk.gfx.makeSampler(.{});
-    linearSampler = sk.gfx.makeSampler(.{
+    nearestSampler = gfx.makeSampler(.{});
+    linearSampler = gfx.makeSampler(.{
         .min_filter = .LINEAR,
         .mag_filter = .LINEAR,
     });
 }
 
-pub fn begin(color: sk.gfx.Color) void {
-    var action = sk.gfx.PassAction{};
+pub fn begin(color: gfx.Color) void {
+    var action = gfx.PassAction{};
     action.colors[0] = .{ .load_action = .CLEAR, .clear_value = color };
-    sk.gfx.beginPass(.{ .action = action, .swapchain = sk.glue.swapchain() });
-    drawCount = 0;
+    gfx.beginPass(.{ .action = action, .swapchain = sk.glue.swapchain() });
 }
 
 pub fn setPipeline(pipeline: RenderPipeline) void {
-    sk.gfx.applyPipeline(pipeline);
+    gfx.applyPipeline(pipeline);
 }
 
 pub fn setUniform(index: u32, uniform: anytype) void {
-    sk.gfx.applyUniforms(index, sk.gfx.asRange(&uniform));
+    gfx.applyUniforms(index, gfx.asRange(&uniform));
 }
 
 pub fn setBindGroup(group: BindGroup) void {
-    sk.gfx.applyBindings(group.value);
+    gfx.applyBindings(group.value);
 }
 
 pub fn drawInstanced(number: usize) void {
-    sk.gfx.draw(0, 6, @intCast(number));
-    drawCount += 1;
+    gfx.draw(0, 6, @intCast(number));
 }
 
 pub fn end() void {
-    sk.gfx.endPass();
-    sk.gfx.commit();
+    gfx.endPass();
+    gfx.commit();
 }
 
 pub fn scissor(area: math.Rectangle) void {
     const size = area.size();
     const x, const y = .{ area.min.x, area.min.y };
-    sk.gfx.applyScissorRectf(x, y, size.x, size.y, true);
+    gfx.applyScissorRectf(x, y, size.x, size.y, true);
 }
 
 pub fn createTexture(size: math.Vector, data: []const u8) Texture {
     return Texture{
-        .image = sk.gfx.makeImage(.{
+        .image = gfx.makeImage(.{
             .data = init: {
-                var imageData = sk.gfx.ImageData{};
-                imageData.subimage[0][0] = sk.gfx.asRange(data);
+                var imageData = gfx.ImageData{};
+                imageData.subimage[0][0] = gfx.asRange(data);
                 break :init imageData;
             },
             .width = @intFromFloat(size.x),
@@ -106,8 +103,8 @@ pub fn createTexture(size: math.Vector, data: []const u8) Texture {
     };
 }
 
-pub fn createBuffer(desc: sk.gfx.BufferDesc) Buffer {
-    return sk.gfx.makeBuffer(desc);
+pub fn createBuffer(desc: gfx.BufferDesc) Buffer {
+    return gfx.makeBuffer(desc);
 }
 
 pub const QuadVertex = extern struct {
@@ -119,8 +116,8 @@ pub const QuadVertex = extern struct {
     color: math.Vector4 = .one, // 顶点颜色
 };
 
-pub fn createQuadPipeline(shaderDesc: sk.gfx.ShaderDesc) RenderPipeline {
-    var vertexLayout = sk.gfx.VertexLayoutState{};
+pub fn createQuadPipeline(shaderDesc: gfx.ShaderDesc) RenderPipeline {
+    var vertexLayout = gfx.VertexLayoutState{};
     vertexLayout.attrs[0].format = .FLOAT3;
     vertexLayout.attrs[1].format = .FLOAT;
     vertexLayout.attrs[2].format = .FLOAT2;
@@ -129,11 +126,11 @@ pub fn createQuadPipeline(shaderDesc: sk.gfx.ShaderDesc) RenderPipeline {
     vertexLayout.attrs[5].format = .FLOAT4;
     vertexLayout.buffers[0].step_func = .PER_INSTANCE;
 
-    return sk.gfx.makePipeline(.{
-        .shader = sk.gfx.makeShader(shaderDesc),
+    return gfx.makePipeline(.{
+        .shader = gfx.makeShader(shaderDesc),
         .layout = vertexLayout,
         .colors = init: {
-            var c: [4]sk.gfx.ColorTargetState = @splat(.{});
+            var c: [4]gfx.ColorTargetState = @splat(.{});
             c[0] = .{ .blend = .{
                 .enabled = true,
                 .src_factor_rgb = .SRC_ALPHA,
@@ -145,11 +142,19 @@ pub fn createQuadPipeline(shaderDesc: sk.gfx.ShaderDesc) RenderPipeline {
 }
 
 pub fn appendBuffer(buffer: Buffer, data: anytype) void {
-    _ = sk.gfx.appendBuffer(buffer, sk.gfx.asRange(data));
+    _ = gfx.appendBuffer(buffer, gfx.asRange(data));
+}
+
+pub fn frameStats(enable: bool) void {
+    if (enable) gfx.enableFrameStats() else gfx.disableFrameStats();
+}
+
+pub fn queryFrameStats() gfx.FrameStats {
+    return gfx.queryFrameStats();
 }
 
 pub const BindGroup = struct {
-    value: sk.gfx.Bindings = .{},
+    value: gfx.Bindings = .{},
 
     pub fn setVertexBuffer(self: *BindGroup, buffer: Buffer) void {
         self.value.vertex_buffers[0] = buffer;

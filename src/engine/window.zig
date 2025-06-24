@@ -47,6 +47,64 @@ pub const Timer = struct {
     }
 };
 
+const CountingAllocator = struct {
+    child: std.mem.Allocator,
+    used: u64 = 0,
+    count: u64 = 0,
+
+    pub fn init(child: std.mem.Allocator) CountingAllocator {
+        return .{ .child = child };
+    }
+
+    pub fn allocator(self: *CountingAllocator) std.mem.Allocator {
+        return .{
+            .ptr = self,
+            .vtable = &.{
+                .alloc = alloc,
+                .resize = resize,
+                .remap = remap,
+                .free = free,
+            },
+        };
+    }
+
+    const A = std.mem.Alignment;
+    fn alloc(c: *anyopaque, len: usize, a: A, r: usize) ?[*]u8 {
+        var self: *CountingAllocator = @ptrCast(@alignCast(c));
+        const p = self.child.rawAlloc(len, a, r) orelse return null;
+        self.count += 1;
+        self.used += len;
+        return p;
+    }
+
+    fn resize(c: *anyopaque, b: []u8, a: A, len: usize, r: usize) bool {
+        var self: *CountingAllocator = @ptrCast(@alignCast(c));
+        const stable = self.child.rawResize(b, a, len, r);
+        if (stable) {
+            self.count += 1;
+            self.used += len;
+            self.used -= b.len;
+        }
+        return stable;
+    }
+
+    fn remap(c: *anyopaque, m: []u8, a: A, len: usize, r: usize) ?[*]u8 {
+        var self: *CountingAllocator = @ptrCast(@alignCast(c));
+        const n = self.child.rawRemap(m, a, len, r) orelse return null;
+        if (n != m.ptr) {
+            self.used -= m.len;
+            self.used += len;
+        }
+        return n;
+    }
+
+    fn free(c: *anyopaque, buf: []u8, a: A, r: usize) void {
+        var self: *CountingAllocator = @ptrCast(@alignCast(c));
+        self.used -= buf.len;
+        return self.child.rawFree(buf, a, r);
+    }
+};
+
 pub fn showCursor(show: bool) void {
     sk.app.showMouse(show);
 }
@@ -67,6 +125,7 @@ pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
 pub var size: math.Vector = .zero;
 pub var displayArea: math.Rectangle = undefined;
 pub var allocator: std.mem.Allocator = undefined;
+pub var countingAllocator: CountingAllocator = undefined;
 var timer: std.time.Timer = undefined;
 
 const root = @import("root");
@@ -74,7 +133,8 @@ pub fn run(alloc: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
     size = info.size;
     displayArea = .init(.zero, size);
-    allocator = alloc;
+    countingAllocator = CountingAllocator.init(alloc);
+    allocator = countingAllocator.allocator();
 
     sk.app.run(.{
         .window_title = info.title,

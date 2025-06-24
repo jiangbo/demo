@@ -175,6 +175,8 @@ fn drawInstanced(texture: gpu.Texture, options: VertexOptions) void {
     gpu.drawInstanced(options.count);
 }
 
+pub const frameStats = gpu.frameStats;
+pub const queryFrameStats = gpu.queryFrameStats;
 pub const drawNumber = font.drawNumber;
 pub const drawColorNumber = font.drawColorNumber;
 pub const drawText = font.drawText;
@@ -188,8 +190,4 @@ pub fn imageDrawCount() usize {
 
 pub fn textDrawCount() usize {
     return font.totalDrawCount;
-}
-
-pub fn gpuDrawCount() usize {
-    return gpu.drawCount;
 }

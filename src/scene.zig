@@ -15,8 +15,10 @@ var toSceneType: SceneType = .title;
 pub fn init() void {
     window.initFont(.{
         .font = @import("zon/font.zon"),
-        .texture = gfx.loadTexture("assets/font.png", .init(944, 944)),
+        .texture = gfx.loadTexture("assets/font.png", .init(948, 948)),
     });
+
+    camera.frameStats(true);
 
     camera.init(2000);
 
@@ -95,24 +97,31 @@ pub fn render() void {
 
 var debutTextCount: u32 = 0;
 fn drawDebugInfo() void {
-    var buffer: [100]u8 = undefined;
+    var buffer: [200]u8 = undefined;
     const format =
         \\帧率：{}
         \\帧时：{d:.2}
         \\用时：{d:.2}
+        \\显存：{}
+        \\常量：{}
+        \\绘制：{}
         \\图片：{}
         \\文字：{}
-        \\绘制：{}
+        \\内存：{}
     ;
 
+    const stats = camera.queryFrameStats();
     const text = zhu.format(&buffer, format, .{
         window.frameRate,
         window.frameDeltaPerSecond,
         window.usedDeltaPerSecond,
+        stats.size_append_buffer + stats.size_update_buffer,
+        stats.size_apply_uniforms,
+        stats.num_draw,
         camera.imageDrawCount(),
         // Debug 信息本身的次数也应该统计进去
         camera.textDrawCount() + debutTextCount,
-        camera.gpuDrawCount() + 1,
+        window.countingAllocator.used,
     });
 
     var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
