@@ -50,11 +50,10 @@ fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
 var menuTexture: gfx.Texture = undefined;
 const ChangedMap = struct {
     id: u8,
-    camera: gfx.Vector = .zero,
     player: gfx.Vector,
     mapId: u8,
 };
-const changeMaps: []const ChangedMap = @import("zon/change.zon");
+var changeMaps: []const ChangedMap = @import("zon/change.zon");
 
 pub fn init() void {
     menuTexture = gfx.loadTexture("assets/pic/mainmenu1.png", .init(150, 200));
@@ -71,13 +70,23 @@ pub fn init() void {
 pub fn enter() void {
     for (changeMaps) |value| {
         if (value.id == toChangeMapId) {
-            camera.position = value.camera;
-            player.position = camera.position.add(value.player);
             map.enter(value.mapId);
+            player.position = value.player;
+            cameraLookAt(player.position);
             return;
         }
     }
     std.debug.panic("change map id: {} not found", .{toChangeMapId});
+}
+
+const parseZon = std.zon.parse.fromSlice;
+pub fn reload(allocator: std.mem.Allocator) void {
+    std.log.info("reload", .{});
+
+    const content = window.readAll(allocator, "src/zon/change.zon");
+    defer allocator.free(content);
+    const zon = parseZon([]ChangedMap, allocator, content, null, .{});
+    changeMaps = zon catch @panic("error parse zon");
 }
 
 pub fn exit() void {}

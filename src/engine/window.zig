@@ -221,6 +221,20 @@ export fn windowDeinit() void {
     assets.deinit();
 }
 
+pub fn readAll(alloc: std.mem.Allocator, path: []const u8) [:0]u8 {
+    return doReadAll(alloc, path) catch @panic("file error");
+}
+fn doReadAll(alloc: std.mem.Allocator, path: []const u8) ![:0]u8 {
+    const file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
+
+    const endPos = try file.getEndPos();
+    const content = try alloc.allocSentinel(u8, endPos, 0);
+    const bytes = try file.readAll(content);
+    std.debug.assert(bytes == endPos);
+    return content;
+}
+
 pub fn exit() void {
     sk.app.requestQuit();
 }

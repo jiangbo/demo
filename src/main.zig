@@ -24,6 +24,7 @@ pub fn frame(delta: f32) void {
 }
 
 pub fn deinit() void {
+    scene.deinit();
     audio.deinit();
 }
 

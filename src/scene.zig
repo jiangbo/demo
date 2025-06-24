@@ -11,8 +11,10 @@ const worldScene = @import("world.zig");
 const SceneType = enum { title, world };
 var currentSceneType: SceneType = .world;
 var toSceneType: SceneType = .title;
+var arenaAllocator: std.heap.ArenaAllocator = undefined;
 
 pub fn init() void {
+    arenaAllocator = std.heap.ArenaAllocator.init(window.allocator);
     window.initFont(.{
         .font = @import("zon/font.zon"),
         .texture = gfx.loadTexture("assets/font.png", .init(948, 948)),
@@ -25,19 +27,16 @@ pub fn init() void {
     titleScene.init();
     worldScene.init();
 
-    enter();
+    sceneCall("enter", .{});
 }
 
 pub fn event(ev: *const window.Event) void {
     sceneCall("event", .{ev});
 }
 
-pub fn enter() void {
-    sceneCall("enter", .{});
-}
-
-pub fn exit() void {
-    sceneCall("exit", .{});
+pub fn reload() void {
+    _ = arenaAllocator.reset(.free_all);
+    sceneCall("reload", .{arenaAllocator.allocator()});
 }
 
 pub fn changeScene(sceneType: SceneType) void {
@@ -46,9 +45,9 @@ pub fn changeScene(sceneType: SceneType) void {
 }
 
 fn doChangeScene() void {
-    exit();
+    sceneCall("exit", .{});
     currentSceneType = toSceneType;
-    enter();
+    sceneCall("enter", .{});
 }
 
 var isDebug: bool = true;
@@ -58,6 +57,8 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
         return window.toggleFullScreen();
     }
+
+    if (window.isKeyRelease(.Z)) reload();
 
     if (fadeTimer) |*timer| {
         // 存在淡入淡出效果，地图和角色暂时不更新。
@@ -148,6 +149,11 @@ pub fn fadeOut(callback: ?*const fn () void) void {
     isFadeIn = false;
     fadeTimer = .init(2);
     fadeOutEndCallback = callback;
+}
+
+pub fn deinit() void {
+    sceneCall("deinit", .{});
+    arenaAllocator.deinit();
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {
