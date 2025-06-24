@@ -48,6 +48,13 @@ fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
 }
 
 var menuTexture: gfx.Texture = undefined;
+const ChangedMap = struct {
+    id: u8,
+    camera: gfx.Vector = .zero,
+    player: gfx.Vector,
+    mapId: u8,
+};
+const changeMaps: []const ChangedMap = @import("zon/change.zon");
 
 pub fn init() void {
     menuTexture = gfx.loadTexture("assets/pic/mainmenu1.png", .init(150, 200));
@@ -62,21 +69,15 @@ pub fn init() void {
 }
 
 pub fn enter() void {
-    if (toChangeMapId == 0) {
-        // 开始游戏
-        map.enter(toChangeMapId + 1);
-        player.enter(.init(180, 164));
-        camera.position = .zero;
+    for (changeMaps) |value| {
+        if (value.id == toChangeMapId) {
+            camera.position = value.camera;
+            player.position = camera.position.add(value.player);
+            map.enter(value.mapId);
+            return;
+        }
     }
-
-    map.enter(toChangeMapId);
-    if (toChangeMapId == 1) {
-        player.enter(.init(430, 410));
-        camera.position = .zero;
-    } else if (toChangeMapId == 2) {
-        camera.position = .init(14 * 32, 0);
-        player.enter(camera.position.addXY(400, 90));
-    }
+    std.debug.panic("change map id: {} not found", .{toChangeMapId});
 }
 
 pub fn exit() void {}
@@ -215,6 +216,7 @@ fn handleChest(object: u16) void {
 
 fn handleChange(object: u16) void {
     toChangeMapId = object & 0x0FFF;
+    std.log.info("change scene id: {d}", .{toChangeMapId});
     scene.changeScene(.world);
 }
 

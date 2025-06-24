@@ -54,7 +54,7 @@ pub fn update(delta: f32) void {
     if (window.isKeyRelease(.X)) isDebug = !isDebug;
 
     if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
-        window.toggleFullScreen();
+        return window.toggleFullScreen();
     }
 
     if (fadeTimer) |*timer| {

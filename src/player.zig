@@ -58,10 +58,6 @@ pub fn init() void {
     @memset(&items, 0);
 }
 
-pub fn enter(toChangePosition: math.Vector) void {
-    position = toChangePosition;
-}
-
 pub fn update(delta: f32) void {
     if (moving) animation.getPtr(facing()).update(delta);
 }
