@@ -47,16 +47,6 @@ pub fn init() void {
     loadMenu.background = gfx.loadTexture(path, .init(150, 200));
 }
 
-pub fn event(ev: *const window.Event) void {
-    if (ev.type != .MOUSE_MOVE) return;
-
-    for (menu.areas, 0..) |area, i| {
-        if (area.contains(window.mousePosition)) {
-            menu.current = i;
-        }
-    }
-}
-
 pub fn enter() void {
     menu.current = 0;
     window.playMusic("assets/voc/title.ogg");
@@ -80,6 +70,14 @@ pub fn update(delta: f32) void {
         menu.current = (menu.current - 1) % menu.names.len;
     }
 
+    if (window.mouseMoved) {
+        for (menu.areas, 0..) |area, i| {
+            if (area.contains(window.mousePosition)) {
+                menu.current = i;
+            }
+        }
+    }
+
     var confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
     if (window.isButtonRelease(.LEFT)) {
         for (menu.areas, 0..) |area, i| {
@@ -100,7 +98,9 @@ pub fn update(delta: f32) void {
 }
 
 fn updateHeader(delta: f32) void {
-    if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
+    if (window.pressedAny(&.{ .F, .SPACE, .ENTER }) or
+        window.pressedButton(.LEFT))
+    {
         scene.changeScene(.world);
         return;
     }

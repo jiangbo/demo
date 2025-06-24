@@ -161,12 +161,14 @@ export fn windowInit() void {
     call(root, "init", .{});
 }
 
+pub var mouseMoved: bool = false;
 pub var mousePosition: math.Vector = .zero;
 
 export fn windowEvent(event: ?*const Event) void {
     if (event) |ev| {
         input.event(ev);
         if (ev.type == .MOUSE_MOVE) {
+            mouseMoved = true;
             const pos = input.mousePosition.sub(displayArea.min);
             mousePosition = pos.mul(size).div(displayArea.size());
         }
@@ -213,6 +215,7 @@ export fn windowFrame() void {
     call(root, "frame", .{delta});
     gpu.end();
     input.endFrame();
+    mouseMoved = false;
 }
 
 export fn windowDeinit() void {

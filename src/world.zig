@@ -91,16 +91,6 @@ pub fn reload(allocator: std.mem.Allocator) void {
 
 pub fn exit() void {}
 
-pub fn event(ev: *const window.Event) void {
-    if (ev.type != .MOUSE_MOVE) return;
-
-    for (menu.areas, 0..) |area, i| {
-        if (area.contains(window.mousePosition)) {
-            menu.current = i;
-        }
-    }
-}
-
 pub fn update(delta: f32) void {
     if (status != .menu and (window.pressedButton(.RIGHT) or
         window.pressedAny(&.{ .ESCAPE, .E })))
@@ -233,6 +223,14 @@ fn updateMenu() void {
     if (window.pressedAny(&.{ .ESCAPE, .E, .Q }) or
         window.pressedAnyButton(&.{ .RIGHT, .MIDDLE }))
         status = .normal;
+
+    if (window.mouseMoved) {
+        for (menu.areas, 0..) |area, i| {
+            if (area.contains(window.mousePosition)) {
+                menu.current = i;
+            }
+        }
+    }
 
     if (window.isAnyKeyRelease(&.{ .DOWN, .S })) {
         menu.current = (menu.current + 1) % menu.names.len;

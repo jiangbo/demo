@@ -30,10 +30,6 @@ pub fn init() void {
     sceneCall("enter", .{});
 }
 
-pub fn event(ev: *const window.Event) void {
-    sceneCall("event", .{ev});
-}
-
 pub fn reload() void {
     _ = arenaAllocator.reset(.free_all);
     sceneCall("reload", .{arenaAllocator.allocator()});

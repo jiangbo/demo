@@ -14,10 +14,6 @@ pub fn init() void {
     scene.init();
 }
 
-pub fn event(ev: *const window.Event) void {
-    scene.event(ev);
-}
-
 pub fn frame(delta: f32) void {
     scene.update(delta);
     scene.render();
