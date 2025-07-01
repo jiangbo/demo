@@ -24,7 +24,7 @@ out vec2 uv;
 void main() {
 
     // 索引
-    uint idx = uint(gl_VertexIndex) % 4;
+    uint vertexIndex = uint(gl_VertexIndex) % 4;
 
     // 顶点
     vec2 P = vertex_pivot * vertex_size;
@@ -32,16 +32,20 @@ void main() {
     float s = sin(vertex_rotation);
     mat2 R = mat2(c, s, -s, c);
 
-    vec2 pos = R * (vertexArray[idx] * vertex_size - P) ;
+    vec2 pos = R * (vertexArray[vertexIndex] * vertex_size - P) ;
     gl_Position = viewMatrix * vec4(pos + vertex_position.xy, 0, 1);
 
     // 颜色
     color = vertex_color;
 
     // 纹理
-    vec2 minPix = vertex_texture.xy + vec2(0.5);
-    vec2 maxPix = vertex_texture.zw - vec2(0.5);
-    uv = mix(minPix, maxPix, vertexArray[idx]) * textureVec.xy;
+    vec2 texcoord[4] = {
+        {vertex_texture.x, vertex_texture.y},
+        {vertex_texture.z, vertex_texture.y},
+        {vertex_texture.x, vertex_texture.w},
+        {vertex_texture.z, vertex_texture.w},
+    };
+    uv = texcoord[vertexIndex] * textureVec.xy;
 }
 @end
 
