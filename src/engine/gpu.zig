@@ -73,7 +73,7 @@ pub fn setBindGroup(group: BindGroup) void {
 }
 
 pub fn drawInstanced(number: usize) void {
-    gfx.draw(0, 6, @intCast(number));
+    gfx.draw(0, 4, @intCast(number));
 }
 
 pub fn end() void {
@@ -129,6 +129,7 @@ pub fn createQuadPipeline(shaderDesc: gfx.ShaderDesc) RenderPipeline {
     return gfx.makePipeline(.{
         .shader = gfx.makeShader(shaderDesc),
         .layout = vertexLayout,
+        .primitive_type = .TRIANGLE_STRIP,
         .colors = init: {
             var c: [4]gfx.ColorTargetState = @splat(.{});
             c[0] = .{ .blend = .{

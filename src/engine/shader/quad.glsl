@@ -11,12 +11,10 @@ in vec2 vertex_pivot;
 in vec4 vertex_texture;
 in vec4 vertex_color;
 
-const vec2 vertexArray[6] = {
+const vec2 vertexArray[4] = {
     {0.0f, 0.0f},
     {1.0f, 0.0f},
     {0.0f, 1.0f},
-    {0.0f, 1.0f},
-    {1.0f, 0.0f},
     {1.0f, 1.0f},
 };
 
@@ -26,7 +24,7 @@ out vec2 uv;
 void main() {
 
     // 索引
-    uint idx = uint(gl_VertexIndex) % 6;
+    uint idx = uint(gl_VertexIndex) % 4;
 
     // 顶点
     vec2 P = vertex_pivot * vertex_size;
