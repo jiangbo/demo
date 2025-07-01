@@ -62,6 +62,14 @@ pub const Vector2 = extern struct {
         return .{ .x = self.x / self.length(), .y = self.y / self.length() };
     }
 
+    pub fn round(self: Vector2) Vector2 {
+        return .{ .x = @round(self.x), .y = @round(self.y) };
+    }
+
+    pub fn floor(self: Vector2) Vector2 {
+        return .{ .x = @floor(self.x), .y = @floor(self.y) };
+    }
+
     pub fn clamp(self: Vector2, min: Vector2, max: Vector2) Vector2 {
         return .{
             .x = std.math.clamp(self.x, min.x, max.x),

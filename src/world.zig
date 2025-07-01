@@ -11,6 +11,7 @@ const map = @import("map.zig");
 const talk = @import("talk.zig");
 const about = @import("about.zig");
 const item = @import("item.zig");
+const npc = @import("npc.zig");
 
 const Status = union(enum) {
     normal,
@@ -61,6 +62,8 @@ pub fn init() void {
     about.init();
     map.init();
     player.init();
+
+    npc.init();
 
     // window.playMusic("assets/voc/back.ogg");
     // status = .{ .talk = 1 };
@@ -142,9 +145,10 @@ fn playerMove(delta: f32) void {
             map.canWalk(position.addXY(8, -12)) and
             map.canWalk(position.addXY(8, 2)))
         {
-            player.position = position;
+            // 有抖动，不清楚原因，加 round 先解决
+            player.position = position.round();
             // 相机跟踪
-            cameraLookAt(position);
+            cameraLookAt(player.position);
 
             // 检测是否需要切换场景
             const object = map.getObject(map.positionIndex(position));
@@ -270,7 +274,7 @@ fn menuSelected() void {
 
 pub fn render() void {
     map.render();
-
+    npc.render();
     player.render();
 
     camera.mode = .local;
