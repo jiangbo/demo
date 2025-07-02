@@ -146,7 +146,7 @@ fn playerMove(delta: f32) void {
             map.canWalk(position.addXY(8, 2)))
         {
             // 有抖动，不清楚原因，加 round 先解决
-            player.position = position.round();
+            player.position = position;
             // 相机跟踪
             cameraLookAt(player.position);
 

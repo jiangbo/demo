@@ -75,9 +75,6 @@ pub const Option = struct {
     flipX: bool = false, // 是否水平翻转
 };
 pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
-    const worldPosition = if (mode == .world) pos else //
-        position.addXY(pos.x, pos.y);
-
     var textureArea = texture.area;
     if (option.flipX) {
         textureArea.min.x = texture.area.max.x;
@@ -85,7 +82,7 @@ pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
     }
 
     drawVertices(texture, &.{Vertex{
-        .position = worldPosition.toVector3(0),
+        .position = pos.toVector3(0),
         .rotation = option.rotation,
         .size = option.size orelse texture.size(),
         .pivot = option.pivot,
@@ -155,8 +152,10 @@ fn drawInstanced(texture: gpu.Texture, options: VertexOptions) void {
         2 / x, 0, 0, 0, 0,  2 / -y, 0, 0,
         0,     0, 1, 0, -1, 1,      0, 1,
     };
-    viewMatrix[12] = -1 - position.x * viewMatrix[0];
-    viewMatrix[13] = 1 - position.y * viewMatrix[5];
+    if (mode == .world) {
+        viewMatrix[12] = -1 - position.x * viewMatrix[0];
+        viewMatrix[13] = 1 - position.y * viewMatrix[5];
+    }
     const size = gpu.queryTextureSize(texture.image);
     gpu.setUniform(shader.UB_vs_params, .{
         .viewMatrix = viewMatrix,
