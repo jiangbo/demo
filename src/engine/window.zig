@@ -214,7 +214,8 @@ export fn windowFrame() void {
     // gpu.begin(.{ .r = 1, .b = 1, .a = 1 });
     call(root, "frame", .{delta});
     gpu.end();
-    input.endFrame();
+    input.lastKeyState = input.keyState;
+    input.lastButtonState = input.buttonState;
     mouseMoved = false;
 }
 

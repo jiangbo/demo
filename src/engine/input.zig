@@ -1,14 +1,16 @@
 const std = @import("std");
 const sk = @import("sokol");
 const math = @import("math.zig");
-const assets = @import("assets.zig");
-const gfx = @import("graphics.zig");
-const audio = @import("audio.zig");
 
 pub const KeyCode = sk.app.Keycode;
 
 pub var lastKeyState: std.StaticBitSet(512) = .initEmpty();
 pub var keyState: std.StaticBitSet(512) = .initEmpty();
+
+pub var mousePosition: math.Vector = .zero;
+
+pub var lastButtonState: std.StaticBitSet(3) = .initEmpty();
+pub var buttonState: std.StaticBitSet(3) = .initEmpty();
 
 pub fn event(ev: *const sk.app.Event) void {
     const keyCode: usize = @intCast(@intFromEnum(ev.key_code));
@@ -22,15 +24,6 @@ pub fn event(ev: *const sk.app.Event) void {
         else => {},
     }
 }
-
-pub fn endFrame() void {
-    lastKeyState = keyState;
-    lastButtonState = buttonState;
-}
-
-pub var mousePosition: math.Vector = .zero;
-var lastButtonState: std.StaticBitSet(3) = .initEmpty();
-var buttonState: std.StaticBitSet(3) = .initEmpty();
 
 pub fn isButtonPress(button: sk.app.Mousebutton) bool {
     const code: usize = @intCast(@intFromEnum(button));
