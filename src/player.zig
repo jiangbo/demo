@@ -88,7 +88,7 @@ pub fn toMove(delta: f32) ?math.Vector {
     if (window.isAnyKeyDown(&.{ .LEFT, .A })) dir.x -= 1;
     if (window.isAnyKeyDown(&.{ .RIGHT, .D })) dir.x += 1;
 
-    moving = !dir.approxEqual(.zero);
+    moving = dir.x != 0 or dir.y != 0;
     if (moving) {
         direction = dir.normalize().scale(MOVE_SPEED);
         return position.add(direction.scale(delta));

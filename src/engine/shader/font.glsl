@@ -5,9 +5,7 @@ layout(binding=0) uniform vs_params {
 };
 
 in vec4 vertex_position;
-in float vertex_rotation;
 in vec2 vertex_size;
-in vec2 vertex_pivot;
 in vec4 vertex_texture;
 in vec4 vertex_color;
 

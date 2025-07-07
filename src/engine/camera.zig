@@ -81,11 +81,10 @@ pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
         textureArea.max.x = texture.area.min.x;
     }
 
+    const size = option.size orelse texture.size();
     drawVertices(texture, &.{Vertex{
-        .position = pos.toVector3(0),
-        .rotation = option.rotation,
-        .size = option.size orelse texture.size(),
-        .pivot = option.pivot,
+        .position = pos.sub(size.mul(option.pivot)).toVector3(0),
+        .size = size,
         .texture = textureArea.toVector4(),
         .color = option.color,
     }});

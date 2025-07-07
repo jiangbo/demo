@@ -5,9 +5,7 @@ layout(binding=0) uniform vs_params {
 };
 
 in vec4 vertex_position;
-in float vertex_rotation;
 in vec2 vertex_size;
-in vec2 vertex_pivot;
 in vec4 vertex_texture;
 in vec4 vertex_color;
 
@@ -27,13 +25,9 @@ void main() {
     uint vertexIndex = uint(gl_VertexIndex) % 4;
 
     // 顶点
-    vec2 P = vertex_pivot * vertex_size;
-    float c = cos(vertex_rotation);
-    float s = sin(vertex_rotation);
-    mat2 R = mat2(c, s, -s, c);
-
-    vec2 pos = R * (vertexArray[vertexIndex] * vertex_size - P) ;
-    gl_Position = viewMatrix * vec4(pos + vertex_position.xy, 0, 1);
+    vec2 position = vertexArray[vertexIndex] * vertex_size;
+    vec4 depthPosition = vec4(position, 0, 0) + vertex_position;
+    gl_Position = viewMatrix * depthPosition;
 
     // 颜色
     color = vertex_color;

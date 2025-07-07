@@ -87,6 +87,7 @@ pub fn render() void {
         const percent = timer.elapsed / timer.duration;
         const alpha = if (isFadeIn) 1 - percent else percent;
         camera.drawRectangle(.init(.zero, window.size), .{ .w = alpha });
+        camera.flushTexture();
     }
 
     if (isDebug) drawDebugInfo();
