@@ -173,3 +173,7 @@ pub fn randF32(min: f32, max: f32) f32 {
 pub fn randU8(min: u8, max: u8) u8 {
     return random().intRangeAtMostBiased(u8, min, max);
 }
+
+pub fn randEnum(comptime EnumType: type) EnumType {
+    return random().enumValue(EnumType);
+}

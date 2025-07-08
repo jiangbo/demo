@@ -9,3 +9,6 @@ const std = @import("std");
 pub fn format(buffer: []u8, comptime fmt: []const u8, args: anytype) []u8 {
     return std.fmt.bufPrint(buffer, fmt, args) catch unreachable;
 }
+
+pub const randU8 = math.randU8;
+pub const randEnum = math.randEnum;

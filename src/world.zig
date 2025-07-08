@@ -117,6 +117,7 @@ pub fn update(delta: f32) void {
         .about => return updateAbout(delta),
     }
 
+    npc.update();
     playerMove(delta);
 
     // 交互检测
