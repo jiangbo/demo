@@ -8,7 +8,7 @@ const math = zhu.math;
 
 const imageNames: []const [:0]const u8 = @import("zon/npcTex.zon");
 pub var npcTextures: [imageNames.len]gfx.Texture = undefined;
-pub var npcs: [10]Character = @import("zon/npc.zon");
+pub var npcs: [7]Character = @import("zon/npc.zon");
 
 pub fn init() void {
     for (imageNames, &npcTextures) |name, *texture| {

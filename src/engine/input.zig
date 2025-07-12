@@ -21,6 +21,10 @@ pub fn event(ev: *const sk.app.Event) void {
         .MOUSE_MOVE => mousePosition = .init(ev.mouse_x, ev.mouse_y),
         .MOUSE_DOWN => buttonState.set(buttonCode),
         .MOUSE_UP => buttonState.unset(buttonCode),
+        .ICONIFIED, .UNFOCUSED => {
+            keyState = .initEmpty();
+            buttonState = .initEmpty();
+        },
         else => {},
     }
 }
