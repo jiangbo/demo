@@ -150,13 +150,7 @@ pub fn run(alloc: std.mem.Allocator, info: WindowInfo) void {
 
 export fn windowInit() void {
     assets.init(allocator);
-
-    sk.gfx.setup(.{
-        .environment = sk.glue.environment(),
-        .logger = .{ .func = sk.log.func },
-    });
     gpu.init();
-
     math.setRandomSeed(timer.lap());
     call(root, "init", .{});
 }

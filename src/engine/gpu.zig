@@ -47,6 +47,10 @@ pub var nearestSampler: gfx.Sampler = undefined;
 pub var linearSampler: gfx.Sampler = undefined;
 
 pub fn init() void {
+    sk.gfx.setup(.{
+        .environment = sk.glue.environment(),
+        .logger = .{ .func = sk.log.func },
+    });
     nearestSampler = gfx.makeSampler(.{});
     linearSampler = gfx.makeSampler(.{
         .min_filter = .LINEAR,
