@@ -106,6 +106,7 @@ fn drawDebugInfo() void {
         \\图片：{}
         \\文字：{}
         \\内存：{}
+        \\鼠标：{d:.2}，{d:.2}
     ;
 
     const stats = camera.queryFrameStats();
@@ -120,6 +121,8 @@ fn drawDebugInfo() void {
         // Debug 信息本身的次数也应该统计进去
         camera.textDrawCount() + debutTextCount,
         window.countingAllocator.used,
+        window.mousePosition.x,
+        window.mousePosition.y,
     });
 
     var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
