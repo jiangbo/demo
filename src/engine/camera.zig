@@ -175,6 +175,7 @@ fn drawInstanced(texture: gpu.Texture, options: VertexOptions) void {
 
 pub const frameStats = gpu.frameStats;
 pub const queryFrameStats = gpu.queryFrameStats;
+pub const queryBackend = gpu.queryBackend;
 pub const drawNumber = font.drawNumber;
 pub const drawColorNumber = font.drawColorNumber;
 pub const drawText = font.drawText;

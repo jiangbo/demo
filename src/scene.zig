@@ -97,6 +97,7 @@ var debutTextCount: u32 = 0;
 fn drawDebugInfo() void {
     var buffer: [200]u8 = undefined;
     const format =
+        \\后端：{s}
         \\帧率：{}
         \\帧时：{d:.2}
         \\用时：{d:.2}
@@ -111,6 +112,7 @@ fn drawDebugInfo() void {
 
     const stats = camera.queryFrameStats();
     const text = zhu.format(&buffer, format, .{
+        @tagName(camera.queryBackend()),
         window.frameRate,
         window.frameDeltaPerSecond,
         window.usedDeltaPerSecond,
