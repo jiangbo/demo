@@ -82,8 +82,11 @@ pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
     }
 
     const size = option.size orelse texture.size();
+    var temp = pos.sub(size.mul(option.pivot));
+    if (mode == .local) temp = temp.add(position);
+
     drawVertices(texture, &.{Vertex{
-        .position = pos.sub(size.mul(option.pivot)).toVector3(0),
+        .position = temp.toVector3(0),
         .size = size,
         .texture = textureArea.toVector4(),
         .color = option.color,
@@ -150,10 +153,8 @@ fn drawInstanced(texture: gpu.Texture, options: VertexOptions) void {
         2 / x, 0, 0, 0, 0,  2 / -y, 0, 0,
         0,     0, 1, 0, -1, 1,      0, 1,
     };
-    if (mode == .world) {
-        viewMatrix[12] = -1 - position.x * viewMatrix[0];
-        viewMatrix[13] = 1 - position.y * viewMatrix[5];
-    }
+    viewMatrix[12] = -1 - position.x * viewMatrix[0];
+    viewMatrix[13] = 1 - position.y * viewMatrix[5];
     const size = gpu.queryTextureSize(texture.image);
     gpu.setUniform(shader.UB_vs_params, .{
         .viewMatrix = viewMatrix,

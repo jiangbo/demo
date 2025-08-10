@@ -108,12 +108,10 @@ fn drawDebugInfo() void {
         \\鼠标：{d:.2}，{d:.2}
         \\角色：{d:.2}，{d:.2}
         \\相机：{d:.2}，{d:.2}
-        \\输入：{d:.2}，{d:.2}
     ;
 
     const stats = camera.queryFrameStats();
     const player = @import("player.zig");
-    const input = @import("zhu").input;
     const text = zhu.format(&buffer, format, .{
         @tagName(camera.queryBackend()),
         window.frameRate,
@@ -132,8 +130,6 @@ fn drawDebugInfo() void {
         player.position.y,
         camera.position.x,
         camera.position.y,
-        input.mousePosition.x,
-        input.mousePosition.y,
     });
 
     var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
