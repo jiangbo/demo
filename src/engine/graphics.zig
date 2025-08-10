@@ -18,7 +18,7 @@ pub const Frame = struct { area: Rectangle, interval: f32 = 0.1 };
 
 pub const FrameAnimation = struct {
     elapsed: f32 = 0,
-    index: usize = 0,
+    index: u8 = 0,
     loop: bool = true,
     texture: Texture,
     frames: []const Frame,
@@ -38,16 +38,9 @@ pub const FrameAnimation = struct {
         if (self.elapsed < self.frames[self.index].interval) return;
 
         self.index += 1;
-        if (self.index == self.frames.len) {
-            if (self.loop) self.reset();
-        } else {
-            self.elapsed -= self.frames[self.index].interval;
-        }
-    }
-
-    pub fn reset(self: *FrameAnimation) void {
-        self.elapsed = 0;
-        self.index = 0;
+        if (!self.loop) return;
+        if (self.index == self.frames.len) self.index = 0;
+        self.elapsed -= self.frames[self.index].interval;
     }
 
     pub fn stop(self: *FrameAnimation) void {
