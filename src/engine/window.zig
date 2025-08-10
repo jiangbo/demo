@@ -116,6 +116,7 @@ pub fn toggleFullScreen() void {
 pub const WindowInfo = struct {
     title: [:0]const u8,
     logicSize: math.Vector,
+    scale: f32 = 1,
 };
 
 pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
@@ -124,7 +125,8 @@ pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
 
 pub var logicSize: math.Vector = .zero;
 pub var clientSize: math.Vector = .zero;
-pub var displayArea: math.Rectangle = undefined;
+pub var ratio: math.Vector = .init(1, 1);
+// pub var displayArea: math.Rectangle = undefined;
 pub var allocator: std.mem.Allocator = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
 var timer: std.time.Timer = undefined;
@@ -133,19 +135,20 @@ const root = @import("root");
 pub fn run(alloc: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
     logicSize = info.logicSize;
-    displayArea = .init(.zero, logicSize);
+    // displayArea = .init(.zero, logicSize);
     countingAllocator = CountingAllocator.init(alloc);
     allocator = countingAllocator.allocator();
 
+    const size = logicSize.scale(info.scale);
     sk.app.run(.{
         .window_title = info.title,
-        .width = @as(i32, @intFromFloat(logicSize.x)),
-        .height = @as(i32, @intFromFloat(logicSize.y)),
-        .high_dpi = true,
+        .width = @as(i32, @intFromFloat(size.x)),
+        .height = @as(i32, @intFromFloat(size.y)),
         .init_cb = windowInit,
         .event_cb = windowEvent,
         .frame_cb = windowFrame,
         .cleanup_cb = windowDeinit,
+        .high_dpi = true,
     });
 }
 
@@ -165,22 +168,22 @@ export fn windowEvent(event: ?*const Event) void {
         input.event(ev);
         if (ev.type == .MOUSE_MOVE) {
             mouseMoved = true;
-            const pos = input.mousePosition.sub(displayArea.min);
-            mousePosition = pos.mul(logicSize).div(displayArea.size());
+            mousePosition = input.mousePosition.div(ratio);
         } else if (ev.type == .RESIZED) {
             clientSize = .init(sk.app.widthf(), sk.app.heightf());
+            ratio = clientSize.div(logicSize);
         }
         call(root, "event", .{ev});
     }
 }
 
-pub fn keepAspectRatio() void {
-    const ratio = clientSize.div(logicSize);
-    const minSize = logicSize.scale(@min(ratio.x, ratio.y));
-    const pos = clientSize.sub(minSize).scale(0.5);
-    displayArea = .init(pos, minSize);
-    sk.gfx.applyViewportf(pos.x, pos.y, minSize.x, minSize.y, true);
-}
+// pub fn keepAspectRatio() void {
+//     const ratio = clientSize.div(logicSize);
+//     const minSize = logicSize.scale(@min(ratio.x, ratio.y));
+//     const pos = clientSize.sub(minSize).scale(0.5);
+//     displayArea = .init(pos, minSize);
+//     sk.gfx.applyViewportf(pos.x, pos.y, minSize.x, minSize.y, true);
+// }
 
 var frameRateTimer: Timer = .init(1);
 var frameRateCount: u32 = 0;
@@ -193,8 +196,6 @@ export fn windowFrame() void {
     const deltaNano: f32 = @floatFromInt(timer.lap());
     const delta = deltaNano / std.time.ns_per_s;
     defer usedDelta = timer.read();
-
-    std.log.info("screen size: {}, dpi: {}", .{ clientSize, sk.app.dpiScale() });
 
     if (frameRateTimer.isFinishedAfterUpdate(delta)) {
         frameRateTimer.restart();

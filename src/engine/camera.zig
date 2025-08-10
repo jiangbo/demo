@@ -124,10 +124,9 @@ pub fn endDraw() void {
 
 pub fn scissor(area: math.Rectangle) void {
     flushTextureAndText();
-    const ratio = window.displayArea.size().div(window.logicSize);
     gpu.scissor(math.Rectangle{
-        .min = area.min.scale(ratio.x).add(window.displayArea.min),
-        .max = area.max.scale(ratio.x).add(window.displayArea.min),
+        .min = area.min.scale(window.ratio.x),
+        .max = area.max.scale(window.ratio.y),
     });
 }
 pub fn resetScissor() void {
