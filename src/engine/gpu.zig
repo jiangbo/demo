@@ -23,6 +23,10 @@ pub const Texture = struct {
     }
 
     pub fn subTexture(self: *const Texture, area: Rectangle) Texture {
+        return .{ .image = self.image, .area = self.area.sub(area) };
+    }
+
+    pub fn mapTexture(self: *const Texture, area: Rectangle) Texture {
         return Texture{ .image = self.image, .area = area };
     }
 

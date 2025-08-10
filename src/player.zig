@@ -8,8 +8,7 @@ const math = zhu.math;
 
 const item = @import("item.zig");
 
-const FrameAnimation = gfx.FixedFrameAnimation(3, 0.15);
-const Animation = std.EnumArray(math.FourDirection, FrameAnimation);
+const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
 
 const name = "小飞刀";
 const MOVE_SPEED = 100;
@@ -35,6 +34,11 @@ var speed: usize = 8; //速度
 
 var bgTexture: gfx.Texture = undefined;
 var itemTexture: gfx.Texture = undefined;
+const frames: [3]gfx.Frame = .{
+    .{ .area = .init(.init(0, 0), .init(32, 48)), .interval = 0.15 },
+    .{ .area = .init(.init(32, 0), .init(32, 48)), .interval = 0.15 },
+    .{ .area = .init(.init(64, 0), .init(32, 48)), .interval = 0.15 },
+};
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/pic/player.png", .init(96, 192));
@@ -44,16 +48,16 @@ pub fn init() void {
     animation = Animation.initUndefined();
 
     var tex = texture.subTexture(.init(.zero, .init(96, 48)));
-    animation.set(.down, FrameAnimation.init(tex));
+    animation.set(.down, gfx.FrameAnimation.init(tex, &frames));
 
     tex = texture.subTexture(tex.area.move(.init(0, 48)));
-    animation.set(.left, FrameAnimation.init(tex));
+    animation.set(.left, gfx.FrameAnimation.init(tex, &frames));
 
     tex = texture.subTexture(tex.area.move(.init(0, 48)));
-    animation.set(.right, FrameAnimation.init(tex));
+    animation.set(.right, gfx.FrameAnimation.init(tex, &frames));
 
     tex = texture.subTexture(tex.area.move(.init(0, 48)));
-    animation.set(.up, FrameAnimation.init(tex));
+    animation.set(.up, gfx.FrameAnimation.init(tex, &frames));
 
     @memset(&items, 0);
 }
@@ -124,7 +128,7 @@ pub fn renderTalk() void {
 
     // 头像
     const down = animation.get(.down);
-    const tex = down.texture.subTexture(down.frames[0]);
+    const tex = down.texture.subTexture(down.frames[0].area);
     camera.draw(tex, .init(30, 396));
 
     // 名字
@@ -139,7 +143,7 @@ pub fn renderStatus() void {
 
     // 头像
     const down = animation.get(.down);
-    const tex = down.texture.subTexture(down.frames[0]);
+    const tex = down.texture.subTexture(down.frames[0].area);
     camera.draw(tex, pos.addXY(10, 10));
 
     // 等级

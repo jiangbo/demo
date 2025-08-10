@@ -146,6 +146,10 @@ pub const Rectangle = struct {
             point.y >= self.min.y and point.y <= self.max.y;
     }
 
+    pub fn sub(self: Rectangle, area: Rectangle) Rectangle {
+        return .init(self.min.add(area.min), area.size());
+    }
+
     pub fn toVector4(self: Rectangle) Vector4 {
         return .{
             .x = self.min.x,
