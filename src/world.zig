@@ -161,8 +161,8 @@ fn playerMove(delta: f32) void {
 }
 
 fn cameraLookAt(position: gfx.Vector) void {
-    const half = window.size.scale(0.5);
-    const max = map.size().sub(window.size);
+    const half = window.logicSize.scale(0.5);
+    const max = map.size().sub(window.logicSize);
     camera.position = position.sub(half).clamp(.zero, max);
 }
 

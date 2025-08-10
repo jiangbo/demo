@@ -42,6 +42,6 @@ pub fn main() void {
 
     window.run(allocator, .{
         .title = "英雄救美",
-        .size = .{ .x = 640, .y = 480 },
+        .logicSize = .{ .x = 640, .y = 480 },
     });
 }

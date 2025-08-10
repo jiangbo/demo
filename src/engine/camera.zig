@@ -124,7 +124,7 @@ pub fn endDraw() void {
 
 pub fn scissor(area: math.Rectangle) void {
     flushTextureAndText();
-    const ratio = window.displayArea.size().div(window.size);
+    const ratio = window.displayArea.size().div(window.logicSize);
     gpu.scissor(math.Rectangle{
         .min = area.min.scale(ratio.x).add(window.displayArea.min),
         .max = area.max.scale(ratio.x).add(window.displayArea.min),
@@ -132,7 +132,7 @@ pub fn scissor(area: math.Rectangle) void {
 }
 pub fn resetScissor() void {
     flushTextureAndText();
-    gpu.scissor(.{ .min = .zero, .max = window.screenSize() });
+    gpu.scissor(.{ .min = .zero, .max = window.clientSize });
 }
 
 const VertexOptions = struct {
@@ -146,7 +146,7 @@ fn drawInstanced(texture: gpu.Texture, options: VertexOptions) void {
     gpu.setPipeline(pipeline);
 
     // 处理 uniform 变量
-    const x, const y = .{ window.size.x, window.size.y };
+    const x, const y = .{ window.logicSize.x, window.logicSize.y };
     var viewMatrix: [16]f32 = .{
         2 / x, 0, 0, 0, 0,  2 / -y, 0, 0,
         0,     0, 1, 0, -1, 1,      0, 1,

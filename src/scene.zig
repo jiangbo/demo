@@ -86,7 +86,7 @@ pub fn render() void {
         defer camera.mode = .world;
         const percent = timer.elapsed / timer.duration;
         const alpha = if (isFadeIn) 1 - percent else percent;
-        camera.drawRectangle(.init(.zero, window.size), .{ .w = alpha });
+        camera.drawRectangle(.init(.zero, window.logicSize), .{ .w = alpha });
         camera.flushTexture();
     }
 
@@ -95,7 +95,7 @@ pub fn render() void {
 
 var debutTextCount: u32 = 0;
 fn drawDebugInfo() void {
-    var buffer: [200]u8 = undefined;
+    var buffer: [1024]u8 = undefined;
     const format =
         \\后端：{s}
         \\帧率：{}
@@ -108,9 +108,12 @@ fn drawDebugInfo() void {
         \\文字：{}
         \\内存：{}
         \\鼠标：{d:.2}，{d:.2}
+        \\角色：{d:.2}，{d:.2}
+        \\相机：{d:.2}，{d:.2}
     ;
 
     const stats = camera.queryFrameStats();
+    const player = @import("player.zig");
     const text = zhu.format(&buffer, format, .{
         @tagName(camera.queryBackend()),
         window.frameRate,
@@ -125,6 +128,10 @@ fn drawDebugInfo() void {
         window.countingAllocator.used,
         window.mousePosition.x,
         window.mousePosition.y,
+        player.position.x,
+        player.position.y,
+        camera.position.x,
+        camera.position.y,
     });
 
     var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();

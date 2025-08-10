@@ -158,7 +158,7 @@ pub fn flush() void {
     gpu.setPipeline(pipeline);
 
     // 处理 uniform 变量
-    const x, const y = .{ window.size.x, window.size.y };
+    const x, const y = .{ window.logicSize.x, window.logicSize.y };
     const viewMatrix = [16]f32{
         2 / x, 0, 0, 0, 0,  2 / -y, 0, 0,
         0,     0, 1, 0, -1, 1,      0, 1,
