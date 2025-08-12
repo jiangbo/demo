@@ -1,0 +1,10 @@
+.{
+    .{},
+    .{},
+    .{},
+    .{},
+    .{ .tileIndex = 33, .pickupIndex = 4 },
+    .{ .tileIndex = 70, .pickupIndex = 5 },
+    .{ .tileIndex = 476, .pickupIndex = 8 },
+    .{ .tileIndex = 747, .pickupIndex = 4 },
+}

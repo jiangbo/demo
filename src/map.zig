@@ -8,12 +8,15 @@ const math = @import("zhu").math;
 var texture: gfx.Texture = undefined;
 var rowTiles: usize = 0;
 
+const Chest = struct { tileIndex: u16, pickupIndex: u16 };
+
 const Map = struct {
     width: u16,
     height: u16,
     ground1: []const u16,
     ground2: []const u16,
     object: []const u16,
+    chests: []const Chest = &.{},
 };
 
 const maps: []const Map = @import("zon/map.zon");
