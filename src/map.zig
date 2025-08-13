@@ -6,6 +6,8 @@ const camera = @import("zhu").camera;
 const math = @import("zhu").math;
 const item = @import("item.zig");
 
+const TILE_SIZE: math.Vector2 = .init(32, 32);
+
 var texture: gfx.Texture = undefined;
 var rowTiles: usize = 0;
 
@@ -51,38 +53,27 @@ fn buildVertexBuffer(tiles: []const u16) void {
     }
 }
 
-// fn buildObjectBuffer() void {
-//     for (objectArray[0..map.object.len], 0..) |tileIndex, index| {
-//         switch (tileIndex) {
-//             0xFF...0xFFF => appendVertex(tileIndex, index),
-//             0x1000...0x1FFF => appendVertex(301, index),
-//             else => {},
-//         }
-//     }
-// }
 fn appendVertex(tileIndex: usize, index: usize) void {
     vertexArray.appendAssumeCapacity(buildVertex(tileIndex, index));
 }
 
 fn buildVertex(tileIndex: usize, index: usize) camera.Vertex {
-    const tile = texture.subTexture(getAreaFromIndex(tileIndex));
+    const row: f32 = @floatFromInt(tileIndex / rowTiles);
+    const col: f32 = @floatFromInt(tileIndex % rowTiles);
+    const pos = math.Vector2.init(col, row).mul(TILE_SIZE);
+
+    const tile = texture.subTexture(.init(pos, TILE_SIZE));
     return camera.Vertex{
         .position = getPositionFromIndex(index).toVector3(0),
-        .size = .init(32, 32),
+        .size = TILE_SIZE,
         .texture = tile.area.toVector4(),
     };
-}
-
-fn getAreaFromIndex(index: usize) gfx.Rectangle {
-    const row: f32 = @floatFromInt(index / rowTiles);
-    const col: f32 = @floatFromInt(index % rowTiles);
-    return .init(.init(col * 32, row * 32), .init(32, 32));
 }
 
 fn getPositionFromIndex(index: usize) gfx.Vector {
     const row: f32 = @floatFromInt(index / map.width);
     const col: f32 = @floatFromInt(index % map.width);
-    return math.Vector.init(col * 32, row * 32);
+    return math.Vector.init(col, row).mul(TILE_SIZE);
 }
 
 pub fn talk(position: gfx.Vector, direction: math.FourDirection) u16 {
@@ -98,16 +89,11 @@ pub fn talk(position: gfx.Vector, direction: math.FourDirection) u16 {
     const talkObject = map.object[@intCast(talkIndex)];
     if (talkObject == 0 or talkObject == 1) return 0;
 
-    changeObjectIfNeed(@intCast(talkIndex), talkObject);
+    openChestIfNeed(@intCast(talkIndex), talkObject);
     return talkObject;
 }
 
-fn changeObjectIfNeed(talkIndex: usize, object: u16) void {
-    // objectArray[index] = switch (object) {
-    //     0x1000...0x1FFF => 302,
-    //     else => return,
-    // };
-    // buildObjectBuffer();
+fn openChestIfNeed(talkIndex: usize, object: u16) void {
     // back 和 ground 已经填充的顶点不需要修改，修改宝箱的顶点
     _ = object;
 
@@ -137,10 +123,10 @@ pub fn tileCenterContains(position: gfx.Vector) bool {
     return area.contains(position);
 }
 
-pub fn size() gfx.Vector {
-    const x: f32 = @floatFromInt(map.width * 32);
-    const y: f32 = @floatFromInt(map.height * 32);
-    return .init(x, y);
+pub fn size() math.Vector2 {
+    const x: f32 = @floatFromInt(map.width);
+    const y: f32 = @floatFromInt(map.height);
+    return math.Vector2.init(x, y).mul(TILE_SIZE);
 }
 
 pub fn getObject(index: usize) u16 {
