@@ -13,8 +13,8 @@ const Chest = struct { tileIndex: u16, pickupIndex: u16 };
 const Map = struct {
     width: u16,
     height: u16,
-    ground1: []const u16,
-    ground2: []const u16,
+    back: []const u16,
+    ground: []const u16,
     object: []const u16,
     chests: []const Chest = &.{},
 };
@@ -25,7 +25,6 @@ var map: Map = undefined;
 var vertexBuffer: [1300]camera.Vertex = undefined;
 var vertexIndex: usize = 0;
 
-var objectOffset: usize = 0;
 var objectArray: [884]u16 = undefined;
 
 pub fn init() void {
@@ -37,12 +36,14 @@ pub fn enter(mapId: u16) void {
     map = maps[mapId];
     vertexIndex = 0;
 
-    buildVertexBuffer(map.ground1);
-    buildVertexBuffer(map.ground2);
-    objectOffset = vertexIndex;
+    buildVertexBuffer(map.back);
+    buildVertexBuffer(map.ground);
+    for (map.chests) |chest| {
+        appendVertex(301, chest.tileIndex);
+    }
 
     @memcpy(objectArray[0..map.object.len], map.object);
-    buildObjectBuffer();
+    // buildObjectBuffer();
 }
 
 fn buildVertexBuffer(tiles: []const u16) void {
@@ -51,16 +52,15 @@ fn buildVertexBuffer(tiles: []const u16) void {
     }
 }
 
-fn buildObjectBuffer() void {
-    vertexIndex = objectOffset;
-    for (objectArray[0..map.object.len], 0..) |tileIndex, index| {
-        switch (tileIndex) {
-            0xFF...0xFFF => appendVertex(tileIndex, index),
-            0x1000...0x1FFF => appendVertex(301, index),
-            else => {},
-        }
-    }
-}
+// fn buildObjectBuffer() void {
+//     for (objectArray[0..map.object.len], 0..) |tileIndex, index| {
+//         switch (tileIndex) {
+//             0xFF...0xFFF => appendVertex(tileIndex, index),
+//             0x1000...0x1FFF => appendVertex(301, index),
+//             else => {},
+//         }
+//     }
+// }
 
 fn appendVertex(tileIndex: usize, index: usize) void {
     const tile = texture.subTexture(getAreaFromIndex(tileIndex));
@@ -107,7 +107,7 @@ fn changeObjectIfNeed(index: usize, object: u16) void {
         0x1000...0x1FFF => 302,
         else => return,
     };
-    buildObjectBuffer();
+    // buildObjectBuffer();
 }
 
 pub fn positionIndex(position: gfx.Vector) usize {

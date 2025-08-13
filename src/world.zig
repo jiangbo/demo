@@ -37,7 +37,7 @@ var menu: Menu = .{
     },
     .areas = &createAreas(7, .{ .x = 0 + 33, .y = 288 }),
 };
-var toChangeMapId: u16 = 2;
+var toChangeMapId: u16 = 1;
 
 fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
     var areas: [num]gfx.Rectangle = undefined;
@@ -146,7 +146,6 @@ fn playerMove(delta: f32) void {
             map.canWalk(position.addXY(8, -12)) and
             map.canWalk(position.addXY(8, 2)))
         {
-            // 有抖动，不清楚原因，加 round 先解决
             player.position = position;
             // 相机跟踪
             cameraLookAt(player.position);

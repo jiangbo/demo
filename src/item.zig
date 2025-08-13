@@ -16,4 +16,9 @@ pub const Item = struct {
     defend: i32 = 0,
 };
 
+pub const Pickup = struct { itemIndex: u8, count: u8 };
+
 pub const items: []const Item = @import("zon/item.zon");
+pub const pickup: []const Item = @import("zon/pickup.zon");
+
+pub var picked: std.StaticBitSet(64) = .initEmpty();
