@@ -24,27 +24,25 @@ const maps: []const Map = @import("zon/map.zon");
 var map: Map = undefined;
 
 var vertexBuffer: [1300]camera.Vertex = undefined;
-var vertexIndex: usize = 0;
-
-var objectArray: [884]u16 = undefined;
+var vertexArray: std.ArrayListUnmanaged(camera.Vertex) = undefined;
+var backgroundIndex: usize = undefined;
 
 pub fn init() void {
+    vertexArray = .initBuffer(&vertexBuffer);
     texture = gfx.loadTexture("assets/pic/maps.png", .init(640, 1536));
     rowTiles = @intFromFloat(@divExact(texture.size().x, 32));
 }
 
 pub fn enter(mapId: u16) void {
     map = maps[mapId];
-    vertexIndex = 0;
+    vertexArray.clearRetainingCapacity();
 
     buildVertexBuffer(map.back);
     buildVertexBuffer(map.ground);
+    backgroundIndex = vertexArray.items.len;
     for (map.chests) |chest| {
         appendVertex(301, chest.tileIndex);
     }
-
-    @memcpy(objectArray[0..map.object.len], map.object);
-    // buildObjectBuffer();
 }
 
 fn buildVertexBuffer(tiles: []const u16) void {
@@ -62,16 +60,17 @@ fn buildVertexBuffer(tiles: []const u16) void {
 //         }
 //     }
 // }
-
 fn appendVertex(tileIndex: usize, index: usize) void {
-    const tile = texture.subTexture(getAreaFromIndex(tileIndex));
+    vertexArray.appendAssumeCapacity(buildVertex(tileIndex, index));
+}
 
-    vertexBuffer[vertexIndex] = .{
+fn buildVertex(tileIndex: usize, index: usize) camera.Vertex {
+    const tile = texture.subTexture(getAreaFromIndex(tileIndex));
+    return camera.Vertex{
         .position = getPositionFromIndex(index).toVector3(0),
         .size = .init(32, 32),
         .texture = tile.area.toVector4(),
     };
-    vertexIndex += 1;
 }
 
 fn getAreaFromIndex(index: usize) gfx.Rectangle {
@@ -96,14 +95,14 @@ pub fn talk(position: gfx.Vector, direction: math.FourDirection) u16 {
     };
 
     if (talkIndex < 0 or talkIndex > map.object.len) return 0;
-    const talkObject = objectArray[@intCast(talkIndex)];
+    const talkObject = map.object[@intCast(talkIndex)];
     if (talkObject == 0 or talkObject == 1) return 0;
 
     changeObjectIfNeed(@intCast(talkIndex), talkObject);
     return talkObject;
 }
 
-fn changeObjectIfNeed(index: usize, object: u16) void {
+fn changeObjectIfNeed(talkIndex: usize, object: u16) void {
     // objectArray[index] = switch (object) {
     //     0x1000...0x1FFF => 302,
     //     else => return,
@@ -112,20 +111,16 @@ fn changeObjectIfNeed(index: usize, object: u16) void {
     // back 和 ground 已经填充的顶点不需要修改，修改宝箱的顶点
     _ = object;
 
-    vertexIndex = map.width * map.height * 2;
-    for (map.chests) |chest| {
-        if (item.picked.isSet(chest.pickupIndex)) {
-            appendVertex(302, chest.tileIndex);
-            continue;
-        }
+    for (map.chests, 0..) |chest, index| {
+        if (talkIndex == chest.tileIndex) {
+            // 宝箱已经被打开，不需要处理任何东西
+            if (item.picked.isSet(chest.pickupIndex)) break;
 
-        if (index == chest.tileIndex) {
-            // 宝箱打开
+            // 宝箱还没有打开，修改状态
             item.picked.set(chest.pickupIndex);
-            objectArray[chest.tileIndex] = 1;
-            appendVertex(302, chest.tileIndex);
-        } else {
-            appendVertex(301, chest.tileIndex);
+            const vertex = buildVertex(302, chest.tileIndex);
+            vertexArray.items[backgroundIndex + index] = vertex;
+            break;
         }
     }
 }
@@ -149,7 +144,7 @@ pub fn size() gfx.Vector {
 }
 
 pub fn getObject(index: usize) u16 {
-    return objectArray[index];
+    return map.object[index];
 }
 
 pub fn canWalk(position: gfx.Vector) bool {
@@ -158,9 +153,9 @@ pub fn canWalk(position: gfx.Vector) bool {
     const index = positionIndex(position);
     if (index > map.object.len) return false;
     // 场景切换的图块也应该能通过
-    return objectArray[index] == 0 or objectArray[index] > 0x1FFF;
+    return map.object[index] == 0 or map.object[index] > 0x1FFF;
 }
 
 pub fn render() void {
-    camera.drawVertices(texture, vertexBuffer[0..vertexIndex]);
+    camera.drawVertices(texture, vertexArray.items);
 }
