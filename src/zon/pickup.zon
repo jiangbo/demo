@@ -1,8 +1,8 @@
 .{
-    .{},
-    .{},
-    .{},
-    .{},
+    .{ .itemIndex = 0, .count = 0 },
+    .{ .itemIndex = 0, .count = 0 },
+    .{ .itemIndex = 0, .count = 0 },
+    .{ .itemIndex = 0, .count = 0 },
     .{ .itemIndex = 0, .count = 0 },
     .{ .itemIndex = 0, .count = 0 },
     .{ .itemIndex = 6, .count = 1 },

@@ -43,7 +43,10 @@ pub fn enter(mapId: u16) void {
     buildVertexBuffer(map.ground);
     backgroundIndex = vertexArray.items.len;
     for (map.chests) |chest| {
-        appendVertex(301, chest.tileIndex);
+        if (item.picked.isSet(chest.pickupIndex))
+            appendVertex(302, chest.tileIndex)
+        else
+            appendVertex(301, chest.tileIndex);
     }
 }
 
@@ -76,7 +79,7 @@ fn getPositionFromIndex(index: usize) gfx.Vector {
     return math.Vector.init(col, row).mul(TILE_SIZE);
 }
 
-pub fn talk(position: gfx.Vector, direction: math.FourDirection) u16 {
+pub fn openChest(position: gfx.Vector, direction: math.FourDirection) u16 {
     const index: i32 = @intCast(positionIndex(position));
     const talkIndex: i32 = switch (direction) {
         .down => index + map.width,
@@ -89,26 +92,25 @@ pub fn talk(position: gfx.Vector, direction: math.FourDirection) u16 {
     const talkObject = map.object[@intCast(talkIndex)];
     if (talkObject == 0 or talkObject == 1) return 0;
 
-    openChestIfNeed(@intCast(talkIndex), talkObject);
-    return talkObject;
+    return openChestIfNeed(@intCast(talkIndex));
 }
 
-fn openChestIfNeed(talkIndex: usize, object: u16) void {
+fn openChestIfNeed(talkIndex: usize) u16 {
     // back 和 ground 已经填充的顶点不需要修改，修改宝箱的顶点
-    _ = object;
 
     for (map.chests, 0..) |chest, index| {
-        if (talkIndex == chest.tileIndex) {
-            // 宝箱已经被打开，不需要处理任何东西
-            if (item.picked.isSet(chest.pickupIndex)) break;
+        if (talkIndex != chest.tileIndex) continue;
 
-            // 宝箱还没有打开，修改状态
-            item.picked.set(chest.pickupIndex);
-            const vertex = buildVertex(302, chest.tileIndex);
-            vertexArray.items[backgroundIndex + index] = vertex;
-            break;
-        }
+        // 宝箱已经被打开，不需要处理任何东西
+        if (item.picked.isSet(chest.pickupIndex)) return 0;
+
+        // 宝箱还没有打开，修改状态
+        item.picked.set(chest.pickupIndex);
+        const vertex = buildVertex(302, chest.tileIndex);
+        vertexArray.items[backgroundIndex + index] = vertex;
+        return chest.pickupIndex;
     }
+    unreachable;
 }
 
 pub fn positionIndex(position: gfx.Vector) usize {

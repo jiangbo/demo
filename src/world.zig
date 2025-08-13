@@ -122,8 +122,8 @@ pub fn update(delta: f32) void {
 
     // 交互检测
     if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
-        const object = map.talk(player.position, player.facing());
-        if (object != 0) handleObject(object);
+        const object = map.openChest(player.position, player.facing());
+        if (object != 0) openChest(object);
     }
 
     // 打开菜单
@@ -153,7 +153,7 @@ fn playerMove(delta: f32) void {
             // 检测是否需要切换场景
             const object = map.getObject(map.positionIndex(position));
             if (object > 0x1FFF and map.tileCenterContains(position)) {
-                handleObject(object);
+                handleChange(object);
             }
         }
     }
@@ -197,20 +197,17 @@ fn updateAbout(delta: f32) void {
     }
 }
 
-fn handleObject(object: u16) void {
-    if (object & 0x1000 != 0) handleChest(object);
-    if (object > 0x1FFF) handleChange(object);
-}
+fn openChest(pickIndex: u16) void {
+    const object = item.pickup[pickIndex];
 
-fn handleChest(object: u16) void {
-    if (object == 0x1000) {
+    if (object.itemIndex == 0 and object.count == 0) {
         const gold = window.random().intRangeLessThanBiased(u8, 10, 100);
         player.money += gold;
         status = .{ .talk = 3 };
         talk.talkNumber = gold;
     } else {
-        player.addItem(object & 0xFF);
-        const name = item.items[(object & 0xFF)].name;
+        player.addItem(object.itemIndex);
+        const name = item.items[object.itemIndex].name;
         talk.talkNumber = name.len;
         @memcpy(talk.talkText[0..name.len], name);
         status = .{ .talk = 4 };

@@ -239,7 +239,7 @@ pub fn renderItem() void {
             defer if (itemIndex == index) camera.draw(itemSelected, itemPos);
             if (items[index] == 0) continue;
 
-            camera.draw(getItemIconFromIndex(items[index]), itemPos);
+            camera.draw(getItemIconFromIndex(items[index] - 2), itemPos);
         }
     }
     // 金币，操作说明
