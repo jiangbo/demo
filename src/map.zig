@@ -4,6 +4,7 @@ const window = @import("zhu").window;
 const gfx = @import("zhu").gfx;
 const camera = @import("zhu").camera;
 const math = @import("zhu").math;
+const item = @import("item.zig");
 
 var texture: gfx.Texture = undefined;
 var rowTiles: usize = 0;
@@ -103,11 +104,30 @@ pub fn talk(position: gfx.Vector, direction: math.FourDirection) u16 {
 }
 
 fn changeObjectIfNeed(index: usize, object: u16) void {
-    objectArray[index] = switch (object) {
-        0x1000...0x1FFF => 302,
-        else => return,
-    };
+    // objectArray[index] = switch (object) {
+    //     0x1000...0x1FFF => 302,
+    //     else => return,
+    // };
     // buildObjectBuffer();
+    // back 和 ground 已经填充的顶点不需要修改，修改宝箱的顶点
+    _ = object;
+
+    vertexIndex = map.width * map.height * 2;
+    for (map.chests) |chest| {
+        if (item.picked.isSet(chest.pickupIndex)) {
+            appendVertex(302, chest.tileIndex);
+            continue;
+        }
+
+        if (index == chest.tileIndex) {
+            // 宝箱打开
+            item.picked.set(chest.pickupIndex);
+            objectArray[chest.tileIndex] = 1;
+            appendVertex(302, chest.tileIndex);
+        } else {
+            appendVertex(301, chest.tileIndex);
+        }
+    }
 }
 
 pub fn positionIndex(position: gfx.Vector) usize {
