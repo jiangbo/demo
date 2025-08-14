@@ -1,10 +1,13 @@
 const std = @import("std");
+const zhu = @import("zhu");
 
-const window = @import("zhu").window;
-const gfx = @import("zhu").gfx;
-const camera = @import("zhu").camera;
-const math = @import("zhu").math;
+const window = zhu.window;
+const gfx = zhu.gfx;
+const camera = zhu.camera;
+const math = zhu.math;
+
 const item = @import("item.zig");
+const npc = @import("npc.zig");
 
 const TILE_SIZE: math.Vector2 = .init(32, 32);
 
@@ -12,6 +15,7 @@ var texture: gfx.Texture = undefined;
 var rowTiles: usize = 0;
 
 const Chest = struct { tileIndex: u16, pickupIndex: u16 };
+const Npc = struct { tileIndex: u16, pickupIndex: u8 };
 
 const Map = struct {
     width: u16,
@@ -20,6 +24,7 @@ const Map = struct {
     ground: []const u16,
     object: []const u16,
     chests: []const Chest = &.{},
+    npcs: []const Npc = &.{},
 };
 
 const maps: []const Map = @import("zon/map.zon");

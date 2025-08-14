@@ -11,7 +11,7 @@ const map = @import("map.zig");
 const talk = @import("talk.zig");
 const about = @import("about.zig");
 const item = @import("item.zig");
-const npc = @import("npc.zig");
+// const npc = @import("npc.zig");
 
 const Status = union(enum) {
     normal,
@@ -37,7 +37,7 @@ var menu: Menu = .{
     },
     .areas = &createAreas(7, .{ .x = 0 + 33, .y = 288 }),
 };
-var toChangeMapId: u16 = 1;
+var toChangeMapId: u16 = 2;
 
 fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
     var areas: [num]gfx.Rectangle = undefined;
@@ -63,7 +63,7 @@ pub fn init() void {
     map.init();
     player.init();
 
-    npc.init();
+    // npc.init();
 
     // window.playMusic("assets/voc/back.ogg");
     // status = .{ .talk = 1 };
@@ -117,7 +117,7 @@ pub fn update(delta: f32) void {
         .about => return updateAbout(delta),
     }
 
-    npc.update();
+    // npc.update();
     playerMove(delta);
 
     // 交互检测
@@ -271,7 +271,7 @@ fn menuSelected() void {
 
 pub fn render() void {
     map.render();
-    npc.render();
+    // npc.render();
     player.render();
 
     camera.mode = .local;
