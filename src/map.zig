@@ -95,7 +95,7 @@ pub fn openChest(position: gfx.Vector, direction: math.FourDirection) u16 {
 
     if (talkIndex < 0 or talkIndex > map.object.len) return 0;
     const talkObject = map.object[@intCast(talkIndex)];
-    if (talkObject == 0 or talkObject == 1) return 0;
+    if (talkObject != 2) return 0;
 
     return openChestIfNeed(@intCast(talkIndex));
 }
