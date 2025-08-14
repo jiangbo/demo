@@ -37,7 +37,7 @@ var menu: Menu = .{
     },
     .areas = &createAreas(7, .{ .x = 0 + 33, .y = 288 }),
 };
-var toChangeMapId: u16 = 2;
+var toChangeMapId: u16 = 6;
 
 fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
     var areas: [num]gfx.Rectangle = undefined;
@@ -49,11 +49,7 @@ fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
 }
 
 var menuTexture: gfx.Texture = undefined;
-const ChangedMap = struct {
-    id: u8,
-    player: gfx.Vector,
-    mapId: u8,
-};
+const ChangedMap = struct { player: gfx.Vector = .zero, mapId: u8 = 0, id: u8 = 0 };
 var changeMaps: []const ChangedMap = @import("zon/change.zon");
 
 pub fn init() void {
@@ -71,15 +67,11 @@ pub fn init() void {
 }
 
 pub fn enter() void {
-    for (changeMaps) |value| {
-        if (value.id == toChangeMapId) {
-            map.enter(value.mapId);
-            player.position = value.player;
-            cameraLookAt(player.position);
-            return;
-        }
-    }
-    std.debug.panic("change map id: {} not found", .{toChangeMapId});
+    const toChangeMap = changeMaps[toChangeMapId];
+    map.enter(toChangeMap.mapId);
+    player.position = toChangeMap.player;
+    cameraLookAt(player.position);
+    return;
 }
 
 const parseZon = std.zon.parse.fromSlice;
@@ -152,7 +144,7 @@ fn playerMove(delta: f32) void {
 
             // 检测是否需要切换场景
             const object = map.getObject(map.positionIndex(position));
-            if (object > 0x1FFF and map.tileCenterContains(position)) {
+            if (object > 4 and map.tileCenterContains(position)) {
                 handleChange(object);
             }
         }
@@ -215,7 +207,7 @@ fn openChest(pickIndex: u16) void {
 }
 
 fn handleChange(object: u16) void {
-    toChangeMapId = object & 0x0FFF;
+    toChangeMapId = object;
     std.log.info("change scene id: {d}", .{toChangeMapId});
     scene.changeScene(.world);
 }

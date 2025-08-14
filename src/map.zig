@@ -146,7 +146,7 @@ pub fn canWalk(position: gfx.Vector) bool {
     const index = positionIndex(position);
     if (index > map.object.len) return false;
     // 场景切换的图块也应该能通过
-    return map.object[index] == 0 or map.object[index] > 0x1FFF;
+    return map.object[index] == 0 or map.object[index] > 4;
 }
 
 pub fn render() void {
