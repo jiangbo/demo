@@ -1,6 +1,15 @@
 const std = @import("std");
 
-pub const FourDirection = enum { up, down, left, right };
+pub const FourDirection = enum {
+    up,
+    down,
+    left,
+    right,
+
+    pub fn random() FourDirection {
+        return randEnum(FourDirection);
+    }
+};
 // zig fmt: off
 pub const EightDirection =enum { up, down, left, right,
                     leftUp, leftDown, rightUp, rightDown };

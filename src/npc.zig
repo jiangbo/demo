@@ -20,6 +20,7 @@ const Info = struct {
     position: math.Vector2,
     facing: gfx.FourDirection = .down,
     animation: Animation,
+    timer: window.Timer = .init(5),
 };
 
 var buffer: [10]Info = undefined;
@@ -52,15 +53,20 @@ fn buildAnimation(texture: gfx.Texture) Animation {
     tex = texture.subTexture(tex.area.move(.init(0, 32)));
     animation.set(.left, gfx.FrameAnimation.init(tex, &frames));
     tex = texture.subTexture(tex.area.move(.init(0, 32)));
-    animation.set(.right, gfx.FrameAnimation.init(tex, &frames));
-    tex = texture.subTexture(tex.area.move(.init(0, 32)));
     animation.set(.up, gfx.FrameAnimation.init(tex, &frames));
+    tex = texture.subTexture(tex.area.move(.init(0, 32)));
+    animation.set(.right, gfx.FrameAnimation.init(tex, &frames));
 
     return animation;
 }
 
 pub fn update(delta: f32) void {
     for (npcArray.items) |*npc| {
+        if (npc.timer.isFinishedAfterUpdate(delta)) {
+            npc.facing = .random();
+            npc.timer.reset();
+        }
+
         npc.animation.getPtr(npc.facing).update(delta);
         const distance = zon[npc.index].speed * delta;
         switch (npc.facing) {
