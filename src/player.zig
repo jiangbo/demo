@@ -199,7 +199,7 @@ pub fn renderItem() void {
     // 当前选中物品
     var buffer: [32]u8 = undefined;
     if (items[itemIndex] != 0) {
-        const current = item.items[items[itemIndex]];
+        const current = item.zon[items[itemIndex]];
 
         camera.drawText(current.name, pos.addXY(70, 20));
         camera.drawText(" (价值：", pos.addXY(180, 20));

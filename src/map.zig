@@ -27,8 +27,8 @@ const Map = struct {
     npcs: []const Npc = &.{},
 };
 
-const maps: []const Map = @import("zon/map.zon");
-var map: Map = undefined;
+const zon: []const Map = @import("zon/map.zon");
+var map: *const Map = undefined;
 
 var vertexBuffer: [1300]camera.Vertex = undefined;
 var vertexArray: std.ArrayListUnmanaged(camera.Vertex) = undefined;
@@ -41,7 +41,7 @@ pub fn init() void {
 }
 
 pub fn enter(mapId: u16) void {
-    map = maps[mapId];
+    map = &zon[mapId];
     vertexArray.clearRetainingCapacity();
 
     buildVertexBuffer(map.back);

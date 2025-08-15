@@ -13,7 +13,7 @@ const Talk = struct {
     format: enum { none, int, str } = .none,
     next: usize = 0,
 };
-const talks: []const Talk = @import("zon/talk.zon");
+const zon: []const Talk = @import("zon/talk.zon");
 var talkTexture: gfx.Texture = undefined;
 
 pub var talkNumber: usize = 0;
@@ -30,13 +30,13 @@ pub fn update(talkId: usize) usize {
     if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return talkId;
 
     bufferIndex = 0;
-    return talks[talkId].next;
+    return zon[talkId].next;
 }
 
 pub fn render(talkId: usize) void {
     camera.draw(talkTexture, .init(0, 384));
 
-    const talk = talks[talkId];
+    const talk = zon[talkId];
     if (talk.actor == 0) player.renderTalk();
 
     var content = talk.content;

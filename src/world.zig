@@ -190,7 +190,7 @@ fn updateAbout(delta: f32) void {
 }
 
 fn openChest(pickIndex: u16) void {
-    const object = item.pickup[pickIndex];
+    const object = item.pickupZon[pickIndex];
 
     if (object.itemIndex == 0 and object.count == 0) {
         const gold = window.random().intRangeLessThanBiased(u8, 10, 100);
@@ -199,7 +199,7 @@ fn openChest(pickIndex: u16) void {
         talk.talkNumber = gold;
     } else {
         player.addItem(object.itemIndex);
-        const name = item.items[object.itemIndex].name;
+        const name = item.zon[object.itemIndex].name;
         talk.talkNumber = name.len;
         @memcpy(talk.talkText[0..name.len], name);
         status = .{ .talk = 4 };
