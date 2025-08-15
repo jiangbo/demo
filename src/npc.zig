@@ -6,18 +6,39 @@ const gfx = zhu.gfx;
 const camera = zhu.camera;
 const math = zhu.math;
 
+const zon: []const Character = @import("zon/npc.zon");
 const imageNames: []const [:0]const u8 = @import("zon/npcTex.zon");
 pub var npcTextures: [imageNames.len]gfx.Texture = undefined;
-pub var npcs: [7]Character = @import("zon/npc.zon");
+
+const Info = struct {
+    index: u8,
+    position: math.Vector2,
+    facing: gfx.FourDirection = .down,
+};
+
+var buffer: [10]Info = undefined;
+var npcArray: std.ArrayListUnmanaged(Info) = undefined;
 
 pub fn init() void {
     for (imageNames, &npcTextures) |name, *texture| {
         texture.* = gfx.loadTexture(name, .init(64, 128));
     }
+    npcArray = .initBuffer(&buffer);
+}
+
+pub fn enter(npcIds: []const u8) void {
+    npcArray.clearRetainingCapacity();
+
+    for (npcIds) |id| {
+        npcArray.appendAssumeCapacity(.{
+            .index = id,
+            .position = .init(zon[id].x, zon[id].y),
+        });
+    }
 }
 
 pub fn update() void {
-    for (&npcs) |*npc| {
+    for (npcArray.items) |*npc| {
         if (zhu.randU8(0, 100) > 80) {
             npc.facing = zhu.randEnum(gfx.FourDirection);
         }
@@ -25,9 +46,7 @@ pub fn update() void {
 }
 
 pub fn render() void {
-    for (&npcs) |npc| {
-        if (!npc.show) continue;
-
+    for (npcArray.items) |npc| {
         const pos: gfx.Vector = switch (npc.facing) {
             .up => .{ .x = 0, .y = 64 },
             .down => .{ .x = 0, .y = 0 },
@@ -35,8 +54,8 @@ pub fn render() void {
             .right => .{ .x = 96, .y = 0 },
         };
         const area = gfx.Rectangle.init(pos, .init(32, 32));
-        const texture = npcTextures[npc.pic].subTexture(area);
-        camera.draw(texture, .init(npc.x, npc.y));
+        const texture = npcTextures[npc.index].subTexture(area);
+        camera.draw(texture, npc.position);
     }
 }
 

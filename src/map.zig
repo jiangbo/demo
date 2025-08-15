@@ -15,7 +15,6 @@ var texture: gfx.Texture = undefined;
 var rowTiles: usize = 0;
 
 const Chest = struct { tileIndex: u16, pickupIndex: u16 };
-const Npc = struct { tileIndex: u16, pickupIndex: u8 };
 
 const Map = struct {
     width: u16,
@@ -24,7 +23,7 @@ const Map = struct {
     ground: []const u16,
     object: []const u16,
     chests: []const Chest = &.{},
-    npcs: []const Npc = &.{},
+    npcs: []const u8 = &.{},
 };
 
 const zon: []const Map = @import("zon/map.zon");
@@ -38,6 +37,8 @@ pub fn init() void {
     vertexArray = .initBuffer(&vertexBuffer);
     texture = gfx.loadTexture("assets/pic/maps.png", .init(640, 1536));
     rowTiles = @intFromFloat(@divExact(texture.size().x, 32));
+
+    npc.init();
 }
 
 pub fn enter(mapId: u16) void {
@@ -53,6 +54,8 @@ pub fn enter(mapId: u16) void {
         else
             appendVertex(301, chest.tileIndex);
     }
+
+    npc.enter(map.npcs);
 }
 
 fn buildVertexBuffer(tiles: []const u16) void {
@@ -149,6 +152,11 @@ pub fn canWalk(position: gfx.Vector) bool {
     return map.object[index] == 0 or map.object[index] > 4;
 }
 
+pub fn update() void {
+    npc.update();
+}
+
 pub fn render() void {
     camera.drawVertices(texture, vertexArray.items);
+    npc.render();
 }

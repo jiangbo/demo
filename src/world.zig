@@ -95,7 +95,7 @@ pub fn update(delta: f32) void {
     }
 
     switch (status) {
-        .normal => {},
+        .normal => map.update(),
         .talk => |talkId| return updateTalk(talkId),
         .item => return updateItem(),
         .status => {
