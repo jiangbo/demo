@@ -27,7 +27,7 @@ const Map = struct {
 };
 
 const zon: []const Map = @import("zon/map.zon");
-var map: *const Map = undefined;
+pub var current: *const Map = undefined;
 
 var vertexBuffer: [1300]camera.Vertex = undefined;
 var vertexArray: std.ArrayListUnmanaged(camera.Vertex) = undefined;
@@ -37,25 +37,21 @@ pub fn init() void {
     vertexArray = .initBuffer(&vertexBuffer);
     texture = gfx.loadTexture("assets/pic/maps.png", .init(640, 1536));
     rowTiles = @intFromFloat(@divExact(texture.size().x, 32));
-
-    npc.init();
 }
 
 pub fn enter(mapId: u16) void {
-    map = &zon[mapId];
+    current = &zon[mapId];
     vertexArray.clearRetainingCapacity();
 
-    buildVertexBuffer(map.back);
-    buildVertexBuffer(map.ground);
+    buildVertexBuffer(current.back);
+    buildVertexBuffer(current.ground);
     backgroundIndex = vertexArray.items.len;
-    for (map.chests) |chest| {
+    for (current.chests) |chest| {
         if (item.picked.isSet(chest.pickupIndex))
             appendVertex(302, chest.tileIndex)
         else
             appendVertex(301, chest.tileIndex);
     }
-
-    npc.enter(map.npcs);
 }
 
 fn buildVertexBuffer(tiles: []const u16) void {
@@ -82,22 +78,22 @@ fn buildVertex(tileIndex: usize, index: usize) camera.Vertex {
 }
 
 fn getPositionFromIndex(index: usize) gfx.Vector {
-    const row: f32 = @floatFromInt(index / map.width);
-    const col: f32 = @floatFromInt(index % map.width);
+    const row: f32 = @floatFromInt(index / current.width);
+    const col: f32 = @floatFromInt(index % current.width);
     return math.Vector.init(col, row).mul(TILE_SIZE);
 }
 
 pub fn openChest(position: gfx.Vector, direction: math.FourDirection) u16 {
     const index: i32 = @intCast(positionIndex(position));
     const talkIndex: i32 = switch (direction) {
-        .down => index + map.width,
+        .down => index + current.width,
         .left => index - 1,
         .right => index + 1,
-        .up => index - map.width,
+        .up => index - current.width,
     };
 
-    if (talkIndex < 0 or talkIndex > map.object.len) return 0;
-    const talkObject = map.object[@intCast(talkIndex)];
+    if (talkIndex < 0 or talkIndex > current.object.len) return 0;
+    const talkObject = current.object[@intCast(talkIndex)];
     if (talkObject != 2) return 0;
 
     return openChestIfNeed(@intCast(talkIndex));
@@ -106,7 +102,7 @@ pub fn openChest(position: gfx.Vector, direction: math.FourDirection) u16 {
 fn openChestIfNeed(talkIndex: usize) u16 {
     // back 和 ground 已经填充的顶点不需要修改，修改宝箱的顶点
 
-    for (map.chests, 0..) |chest, index| {
+    for (current.chests, 0..) |chest, index| {
         if (talkIndex != chest.tileIndex) continue;
 
         // 宝箱已经被打开，不需要处理任何东西
@@ -124,7 +120,7 @@ fn openChestIfNeed(talkIndex: usize) u16 {
 pub fn positionIndex(position: gfx.Vector) usize {
     const x: u16 = @intFromFloat(@floor(position.x / 32));
     const y: u16 = @intFromFloat(@floor(position.y / 32));
-    return x + y * map.width;
+    return x + y * current.width;
 }
 
 pub fn tileCenterContains(position: gfx.Vector) bool {
@@ -134,29 +130,24 @@ pub fn tileCenterContains(position: gfx.Vector) bool {
 }
 
 pub fn size() math.Vector2 {
-    const x: f32 = @floatFromInt(map.width);
-    const y: f32 = @floatFromInt(map.height);
+    const x: f32 = @floatFromInt(current.width);
+    const y: f32 = @floatFromInt(current.height);
     return math.Vector2.init(x, y).mul(TILE_SIZE);
 }
 
 pub fn getObject(index: usize) u16 {
-    return map.object[index];
+    return current.object[index];
 }
 
 pub fn canWalk(position: gfx.Vector) bool {
     if (position.x < 0 or position.y < 0) return false;
 
     const index = positionIndex(position);
-    if (index > map.object.len) return false;
+    if (index > current.object.len) return false;
     // 场景切换的图块也应该能通过
-    return map.object[index] == 0 or map.object[index] > 4;
-}
-
-pub fn update() void {
-    npc.update();
+    return current.object[index] == 0 or current.object[index] > 4;
 }
 
 pub fn draw() void {
     camera.drawVertices(texture, vertexArray.items);
-    npc.draw();
 }

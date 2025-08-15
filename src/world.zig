@@ -11,7 +11,7 @@ const map = @import("map.zig");
 const talk = @import("talk.zig");
 const about = @import("about.zig");
 const item = @import("item.zig");
-// const npc = @import("npc.zig");
+const npc = @import("npc.zig");
 
 const Status = union(enum) {
     normal,
@@ -59,7 +59,7 @@ pub fn init() void {
     map.init();
     player.init();
 
-    // npc.init();
+    npc.init();
 
     // window.playMusic("assets/voc/back.ogg");
     // status = .{ .talk = 1 };
@@ -71,6 +71,7 @@ pub fn enter() void {
     map.enter(toChangeMap.mapId);
     player.position = toChangeMap.player;
     cameraLookAt(player.position);
+    npc.enter(map.current.npcs);
     return;
 }
 
@@ -95,7 +96,7 @@ pub fn update(delta: f32) void {
     }
 
     switch (status) {
-        .normal => map.update(),
+        .normal => npc.update(),
         .talk => |talkId| return updateTalk(talkId),
         .item => return updateItem(),
         .status => {
@@ -263,7 +264,7 @@ fn menuSelected() void {
 
 pub fn draw() void {
     map.draw();
-    // npc.draw();
+    npc.draw();
     player.draw();
 
     camera.mode = .local;
