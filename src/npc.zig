@@ -6,14 +6,20 @@ const gfx = zhu.gfx;
 const camera = zhu.camera;
 const math = zhu.math;
 
+const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
 const zon: []const Character = @import("zon/npc.zon");
 const imageNames: []const [:0]const u8 = @import("zon/npcTex.zon");
-pub var npcTextures: [imageNames.len]gfx.Texture = undefined;
+var npcTextures: [imageNames.len]gfx.Texture = undefined;
+const frames: [2]gfx.Frame = .{
+    .{ .area = .init(.init(0, 0), .init(32, 32)), .interval = 0.5 },
+    .{ .area = .init(.init(32, 0), .init(32, 32)), .interval = 0.5 },
+};
 
 const Info = struct {
     index: u8,
     position: math.Vector2,
     facing: gfx.FourDirection = .down,
+    animation: Animation,
 };
 
 var buffer: [10]Info = undefined;
@@ -33,29 +39,39 @@ pub fn enter(npcIds: []const u8) void {
         npcArray.appendAssumeCapacity(.{
             .index = id,
             .position = .init(zon[id].x, zon[id].y),
+            .animation = buildAnimation(npcTextures[id]),
         });
     }
 }
 
-pub fn update() void {
+fn buildAnimation(texture: gfx.Texture) Animation {
+    var animation = Animation.initUndefined();
+
+    var tex = texture.subTexture(.init(.zero, .init(64, 32)));
+    animation.set(.down, gfx.FrameAnimation.init(tex, &frames));
+    tex = texture.subTexture(tex.area.move(.init(0, 32)));
+    animation.set(.left, gfx.FrameAnimation.init(tex, &frames));
+    tex = texture.subTexture(tex.area.move(.init(0, 32)));
+    animation.set(.right, gfx.FrameAnimation.init(tex, &frames));
+    tex = texture.subTexture(tex.area.move(.init(0, 32)));
+    animation.set(.up, gfx.FrameAnimation.init(tex, &frames));
+
+    return animation;
+}
+
+pub fn update(delta: f32) void {
     for (npcArray.items) |*npc| {
-        if (zhu.randU8(0, 100) > 80) {
-            npc.facing = zhu.randEnum(gfx.FourDirection);
-        }
+        // if (zhu.randU8(0, 100) > 80) {
+        //     npc.facing = zhu.randEnum(gfx.FourDirection);
+        // }
+        npc.animation.getPtr(npc.facing).update(delta);
     }
 }
 
 pub fn draw() void {
     for (npcArray.items) |npc| {
-        const pos: gfx.Vector = switch (npc.facing) {
-            .up => .{ .x = 0, .y = 64 },
-            .down => .{ .x = 0, .y = 0 },
-            .left => .{ .x = 32, .y = 0 },
-            .right => .{ .x = 96, .y = 0 },
-        };
-        const area = gfx.Rectangle.init(pos, .init(32, 32));
-        const texture = npcTextures[npc.index].subTexture(area);
-        camera.draw(texture, npc.position);
+        const animation = npc.animation.getPtrConst(npc.facing);
+        camera.draw(animation.currentTexture(), npc.position);
     }
 }
 

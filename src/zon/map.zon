@@ -27,7 +27,7 @@
             .{ .tileIndex = 476, .pickupIndex = 10 },
             .{ .tileIndex = 747, .pickupIndex = 11 },
         },
-        .npcs = .{ 0, 1, 2 },
+        .npcs = .{ 0, 1, 2, 3, 4, 5, 6 },
     },
     .{
         .width = 20,

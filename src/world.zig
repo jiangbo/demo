@@ -96,7 +96,7 @@ pub fn update(delta: f32) void {
     }
 
     switch (status) {
-        .normal => npc.update(),
+        .normal => npc.update(delta),
         .talk => |talkId| return updateTalk(talkId),
         .item => return updateItem(),
         .status => {
