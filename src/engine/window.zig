@@ -154,6 +154,7 @@ pub fn run(alloc: std.mem.Allocator, info: WindowInfo) void {
 
 export fn windowInit() void {
     clientSize = .init(sk.app.widthf(), sk.app.heightf());
+    ratio = clientSize.div(logicSize);
     assets.init(allocator);
     gpu.init();
     math.setRandomSeed(timer.lap());
