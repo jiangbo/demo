@@ -6,6 +6,8 @@ const gfx = zhu.gfx;
 const camera = zhu.camera;
 const math = zhu.math;
 
+const map = @import("map.zig");
+
 const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
 const zon: []const Character = @import("zon/npc.zon");
 const imageNames: []const [:0]const u8 = @import("zon/npcTex.zon");
@@ -69,11 +71,21 @@ pub fn update(delta: f32) void {
 
         npc.animation.getPtr(npc.facing).update(delta);
         const distance = zon[npc.index].speed * delta;
+        var newPosition = npc.position;
         switch (npc.facing) {
-            .down => npc.position.y += distance,
-            .left => npc.position.x -= distance,
-            .right => npc.position.x += distance,
-            .up => npc.position.y -= distance,
+            .down => newPosition.y += distance,
+            .left => newPosition.x -= distance,
+            .right => newPosition.x += distance,
+            .up => newPosition.y -= distance,
+        }
+
+        const max = newPosition.add(.init(32, 32));
+        if (map.canWalk(newPosition) and map.canWalk(max)) {
+            npc.position = newPosition;
+        } else {
+            const old = npc.facing;
+            while (old == npc.facing) npc.facing = .random();
+            npc.timer.reset();
         }
     }
 }
