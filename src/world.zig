@@ -261,25 +261,25 @@ fn menuSelected() void {
     }
 }
 
-pub fn render() void {
-    map.render();
-    // npc.render();
-    player.render();
+pub fn draw() void {
+    map.draw();
+    // npc.draw();
+    player.draw();
 
     camera.mode = .local;
     defer camera.mode = .world;
 
     switch (status) {
         .normal => {},
-        .talk => |talkId| talk.render(talkId),
-        .status => player.renderStatus(),
-        .item => player.renderItem(),
-        .menu => renderMenu(),
-        .about => about.render(),
+        .talk => |talkId| talk.draw(talkId),
+        .status => player.drawStatus(),
+        .item => player.drawItem(),
+        .menu => drawMenu(),
+        .about => about.draw(),
     }
 }
 
-fn renderMenu() void {
+fn drawMenu() void {
     camera.draw(menuTexture, .init(0, 280));
 
     for (menu.areas, menu.names, 0..) |area, name, i| {

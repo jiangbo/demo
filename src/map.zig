@@ -156,7 +156,7 @@ pub fn update() void {
     npc.update();
 }
 
-pub fn render() void {
+pub fn draw() void {
     camera.drawVertices(texture, vertexArray.items);
-    npc.render();
+    npc.draw();
 }

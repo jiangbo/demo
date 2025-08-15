@@ -71,11 +71,11 @@ pub fn update(delta: f32) void {
     sceneCall("update", .{delta});
 }
 
-pub fn render() void {
+pub fn draw() void {
     camera.beginDraw();
     defer camera.endDraw();
 
-    sceneCall("render", .{});
+    sceneCall("draw", .{});
 
     // 将文字先绘制上，后面的淡入淡出才会生效。
     camera.flushTextureAndText();

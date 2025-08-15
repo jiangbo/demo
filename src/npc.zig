@@ -45,7 +45,7 @@ pub fn update() void {
     }
 }
 
-pub fn render() void {
+pub fn draw() void {
     for (npcArray.items) |npc| {
         const pos: gfx.Vector = switch (npc.facing) {
             .up => .{ .x = 0, .y = 64 },

@@ -33,11 +33,11 @@ pub fn update(talkId: usize) usize {
     return zon[talkId].next;
 }
 
-pub fn render(talkId: usize) void {
+pub fn draw(talkId: usize) void {
     camera.draw(talkTexture, .init(0, 384));
 
     const talk = zon[talkId];
-    if (talk.actor == 0) player.renderTalk();
+    if (talk.actor == 0) player.drawTalk();
 
     var content = talk.content;
 

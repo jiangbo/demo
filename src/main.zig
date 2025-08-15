@@ -16,7 +16,7 @@ pub fn init() void {
 
 pub fn frame(delta: f32) void {
     scene.update(delta);
-    scene.render();
+    scene.draw();
 }
 
 pub fn deinit() void {

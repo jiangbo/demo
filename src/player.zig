@@ -108,7 +108,7 @@ pub fn addItem(itemId: u16) void {
     }
 }
 
-pub fn render() void {
+pub fn draw() void {
     const current = animation.get(facing());
     camera.drawOption(current.currentTexture(), position, .{
         .pivot = .init(0.5, 0.9),
@@ -124,7 +124,7 @@ pub fn facing() math.FourDirection {
         return if (direction.y < 0) .up else .down;
 }
 
-pub fn renderTalk() void {
+pub fn drawTalk() void {
 
     // 头像
     const down = animation.get(.down);
@@ -136,7 +136,7 @@ pub fn renderTalk() void {
     camera.drawColorText(name, .init(18, 445), nameColor);
 }
 
-pub fn renderStatus() void {
+pub fn drawStatus() void {
     const pos = gfx.Vector.init(120, 90);
     // 背景
     camera.draw(bgTexture, pos.addXY(-10, -10));
@@ -192,7 +192,7 @@ pub fn renderStatus() void {
     camera.drawColorNumber(money, pos.addXY(230, 230), gfx.color(1, 1, 0, 1));
 }
 
-pub fn renderItem() void {
+pub fn drawItem() void {
     const pos = gfx.Vector.init(120, 90);
     camera.draw(bgTexture, pos.addXY(-10, -10));
 

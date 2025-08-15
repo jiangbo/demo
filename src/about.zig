@@ -23,11 +23,11 @@ pub fn update(delta: f32) void {
     }
 }
 
-pub fn render() void {
+pub fn draw() void {
     const position = gfx.Vector.init(120, 90);
     camera.draw(texture, position.addXY(-10, -10));
 
-    if (roll) return renderRoll(position);
+    if (roll) return drawRoll(position);
 
     var text: []const u8 = "圣剑英雄传--英雄救美（测试版）";
     camera.drawColorText(text, position.addXY(62, 17), .{ .w = 1 });
@@ -151,7 +151,7 @@ pub fn resetRoll() void {
     timer.reset();
 }
 
-fn renderRoll(position: gfx.Vector) void {
+fn drawRoll(position: gfx.Vector) void {
     defer camera.resetScissor();
 
     const size = gfx.Vector.init(380, 280);
