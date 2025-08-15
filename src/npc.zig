@@ -61,10 +61,14 @@ fn buildAnimation(texture: gfx.Texture) Animation {
 
 pub fn update(delta: f32) void {
     for (npcArray.items) |*npc| {
-        // if (zhu.randU8(0, 100) > 80) {
-        //     npc.facing = zhu.randEnum(gfx.FourDirection);
-        // }
         npc.animation.getPtr(npc.facing).update(delta);
+        const distance = zon[npc.index].speed * delta;
+        switch (npc.facing) {
+            .down => npc.position.y += distance,
+            .left => npc.position.x -= distance,
+            .right => npc.position.x += distance,
+            .up => npc.position.y -= distance,
+        }
     }
 }
 
@@ -97,7 +101,7 @@ pub const Character = struct {
     maxLift: u16,
     attack: u16,
     defend: u16,
-    speed: u8,
+    speed: f32,
     goods: [1]u32,
     money: u32,
 };
