@@ -35,10 +35,10 @@ pub fn init() void {
     npcArray = .initBuffer(&buffer);
 }
 
-pub fn enter(npcIds: []const u8) void {
+pub fn enter() void {
     npcArray.clearRetainingCapacity();
 
-    for (npcIds) |id| {
+    for (map.current.npcs) |id| {
         npcArray.appendAssumeCapacity(.{
             .index = id,
             .position = .init(zon[id].x, zon[id].y),

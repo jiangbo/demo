@@ -6,17 +6,19 @@ const gfx = zhu.gfx;
 const camera = zhu.camera;
 const math = zhu.math;
 
+const scene = @import("scene.zig");
 const item = @import("item.zig");
+const map = @import("map.zig");
 
 const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
 
 const name = "小飞刀";
 const MOVE_SPEED = 100;
+const SIZE: math.Vector = .init(20, 24);
 var texture: gfx.Texture = undefined;
 var animation: Animation = undefined;
 
-var moving: bool = false;
-var direction: math.Vector = .zero;
+var velocity: math.Vector = .zero;
 pub var position: math.Vector = undefined;
 
 pub var money: usize = 50; // 金钱
@@ -62,8 +64,46 @@ pub fn init() void {
     @memset(&items, 0);
 }
 
+pub fn enter(playerPosition: math.Vector2) void {
+    position = playerPosition;
+    cameraLookAt();
+}
+
+pub fn exit() void {}
+
 pub fn update(delta: f32) void {
-    if (moving) animation.getPtr(facing()).update(delta);
+
+    // 角色移动和碰撞检测
+
+    var dir = math.Vector.zero;
+    if (window.isAnyKeyDown(&.{ .UP, .W })) dir.y -= 1;
+    if (window.isAnyKeyDown(&.{ .DOWN, .S })) dir.y += 1;
+    if (window.isAnyKeyDown(&.{ .LEFT, .A })) dir.x -= 1;
+    if (window.isAnyKeyDown(&.{ .RIGHT, .D })) dir.x += 1;
+
+    if (dir.x == 0 and dir.y == 0) return; // 没有移动
+    animation.getPtr(facing()).update(delta);
+
+    velocity = dir.normalize().scale(MOVE_SPEED).scale(delta);
+
+    const area = math.Rectangle.init(position, SIZE);
+    position = map.walkTo(area, velocity);
+    // 相机跟踪
+    cameraLookAt();
+
+    // 检测是否需要切换场景
+    const object = map.getObject(map.positionIndex(position));
+    if (object > 4 and map.tileCenterContains(position)) {
+        std.log.info("change scene id: {d}", .{object});
+        map.linkIndex = object;
+        scene.changeScene(.world);
+    }
+}
+
+fn cameraLookAt() void {
+    const half = window.logicSize.scale(0.5);
+    const max = map.size().sub(window.logicSize);
+    camera.position = position.sub(half).clamp(.zero, max);
 }
 
 pub fn updateItem() void {
@@ -85,20 +125,6 @@ pub fn updateItem() void {
     }
 }
 
-pub fn toMove(delta: f32) ?math.Vector {
-    var dir = math.Vector.zero;
-    if (window.isAnyKeyDown(&.{ .UP, .W })) dir.y -= 1;
-    if (window.isAnyKeyDown(&.{ .DOWN, .S })) dir.y += 1;
-    if (window.isAnyKeyDown(&.{ .LEFT, .A })) dir.x -= 1;
-    if (window.isAnyKeyDown(&.{ .RIGHT, .D })) dir.x += 1;
-
-    moving = dir.x != 0 or dir.y != 0;
-    if (moving) {
-        direction = dir.normalize().scale(MOVE_SPEED);
-        return position.add(direction.scale(delta));
-    } else return null;
-}
-
 pub fn addItem(itemId: u16) void {
     for (&items) |*value| {
         if (value.* == 0) {
@@ -110,18 +136,16 @@ pub fn addItem(itemId: u16) void {
 
 pub fn draw() void {
     const current = animation.get(facing());
-    camera.drawOption(current.currentTexture(), position, .{
-        .pivot = .init(0.5, 0.9),
-    });
+    camera.draw(current.currentTexture(), position.addXY(-8, -20));
 
-    // camera.debugDraw(.init(position.addXY(-8, -12), .init(16, 14)));
+    camera.debugDraw(.init(position, SIZE));
 }
 
 pub fn facing() math.FourDirection {
-    if (@abs(direction.x) > @abs(direction.y))
-        return if (direction.x < 0) .left else .right
+    if (@abs(velocity.x) > @abs(velocity.y))
+        return if (velocity.x < 0) .left else .right
     else
-        return if (direction.y < 0) .up else .down;
+        return if (velocity.y < 0) .up else .down;
 }
 
 pub fn drawTalk() void {

@@ -5,7 +5,6 @@ const window = zhu.window;
 const gfx = zhu.gfx;
 const camera = zhu.camera;
 
-const scene = @import("scene.zig");
 const player = @import("player.zig");
 const map = @import("map.zig");
 const talk = @import("talk.zig");
@@ -37,7 +36,6 @@ var menu: Menu = .{
     },
     .areas = &createAreas(7, .{ .x = 0 + 33, .y = 288 }),
 };
-var toChangeMapId: u16 = 6;
 
 fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
     var areas: [num]gfx.Rectangle = undefined;
@@ -49,8 +47,6 @@ fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
 }
 
 var menuTexture: gfx.Texture = undefined;
-const ChangedMap = struct { player: gfx.Vector = .zero, mapId: u8 = 0, id: u8 = 0 };
-var changeMaps: []const ChangedMap = @import("zon/change.zon");
 
 pub fn init() void {
     menuTexture = gfx.loadTexture("assets/pic/mainmenu1.png", .init(150, 200));
@@ -67,23 +63,20 @@ pub fn init() void {
 }
 
 pub fn enter() void {
-    const toChangeMap = changeMaps[toChangeMapId];
-    map.enter(toChangeMap.mapId);
-    player.position = toChangeMap.player;
-    cameraLookAt(player.position);
-    npc.enter(map.current.npcs);
-    return;
+    const playerPosition = map.enter();
+    player.enter(playerPosition);
+    npc.enter();
 }
 
-const parseZon = std.zon.parse.fromSlice;
-pub fn reload(allocator: std.mem.Allocator) void {
-    std.log.info("reload", .{});
+// const parseZon = std.zon.parse.fromSlice;
+// pub fn reload(allocator: std.mem.Allocator) void {
+//     std.log.info("reload", .{});
 
-    const content = window.readAll(allocator, "src/zon/change.zon");
-    defer allocator.free(content);
-    const zon = parseZon([]ChangedMap, allocator, content, null, .{});
-    changeMaps = zon catch @panic("error parse zon");
-}
+//     const content = window.readAll(allocator, "src/zon/change.zon");
+//     defer allocator.free(content);
+//     const zon = parseZon([]ChangedMap, allocator, content, null, .{});
+//     changeMaps = zon catch @panic("error parse zon");
+// }
 
 pub fn exit() void {}
 
@@ -96,7 +89,10 @@ pub fn update(delta: f32) void {
     }
 
     switch (status) {
-        .normal => npc.update(delta),
+        .normal => {
+            npc.update(delta);
+            player.update(delta);
+        },
         .talk => |talkId| return updateTalk(talkId),
         .item => return updateItem(),
         .status => {
@@ -109,9 +105,6 @@ pub fn update(delta: f32) void {
         .menu => return updateMenu(),
         .about => return updateAbout(delta),
     }
-
-    // npc.update();
-    playerMove(delta);
 
     // 交互检测
     if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
@@ -126,36 +119,6 @@ pub fn update(delta: f32) void {
         status = .menu;
         menu.current = 0;
     }
-
-    player.update(delta);
-}
-
-fn playerMove(delta: f32) void {
-    // 角色移动和碰撞检测
-    const toPosition = player.toMove(delta);
-    if (toPosition) |position| {
-        if (map.canWalk(position.addXY(-8, -12)) and
-            map.canWalk(position.addXY(-8, 2)) and
-            map.canWalk(position.addXY(8, -12)) and
-            map.canWalk(position.addXY(8, 2)))
-        {
-            player.position = position;
-            // 相机跟踪
-            cameraLookAt(player.position);
-
-            // 检测是否需要切换场景
-            const object = map.getObject(map.positionIndex(position));
-            if (object > 4 and map.tileCenterContains(position)) {
-                handleChange(object);
-            }
-        }
-    }
-}
-
-fn cameraLookAt(position: gfx.Vector) void {
-    const half = window.logicSize.scale(0.5);
-    const max = map.size().sub(window.logicSize);
-    camera.position = position.sub(half).clamp(.zero, max);
 }
 
 fn updateTalk(talkId: usize) void {
@@ -205,12 +168,6 @@ fn openChest(pickIndex: u16) void {
         @memcpy(talk.talkText[0..name.len], name);
         status = .{ .talk = 4 };
     }
-}
-
-fn handleChange(object: u16) void {
-    toChangeMapId = object;
-    std.log.info("change scene id: {d}", .{toChangeMapId});
-    scene.changeScene(.world);
 }
 
 fn updateMenu() void {

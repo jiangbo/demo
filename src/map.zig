@@ -9,7 +9,8 @@ const math = zhu.math;
 const item = @import("item.zig");
 const npc = @import("npc.zig");
 
-const TILE_SIZE: math.Vector2 = .init(32, 32);
+const SIZE = 32;
+const TILE_SIZE: math.Vector2 = .init(SIZE, SIZE);
 
 var texture: gfx.Texture = undefined;
 var rowTiles: usize = 0;
@@ -26,7 +27,10 @@ const Map = struct {
     npcs: []const u8 = &.{},
 };
 
+const Link = struct { player: gfx.Vector = .zero, mapId: u8 = 0, id: u8 = 0 };
 const zon: []const Map = @import("zon/map.zon");
+var links: []const Link = @import("zon/change.zon");
+pub var linkIndex: u16 = 6;
 pub var current: *const Map = undefined;
 
 var vertexBuffer: [1300]camera.Vertex = undefined;
@@ -39,8 +43,10 @@ pub fn init() void {
     rowTiles = @intFromFloat(@divExact(texture.size().x, 32));
 }
 
-pub fn enter(mapId: u16) void {
-    current = &zon[mapId];
+pub fn enter() math.Vector2 {
+    const link = links[linkIndex];
+    current = &zon[link.mapId];
+
     vertexArray.clearRetainingCapacity();
 
     buildVertexBuffer(current.back);
@@ -52,6 +58,8 @@ pub fn enter(mapId: u16) void {
         else
             appendVertex(301, chest.tileIndex);
     }
+
+    return link.player;
 }
 
 fn buildVertexBuffer(tiles: []const u16) void {
@@ -139,9 +147,51 @@ pub fn getObject(index: usize) u16 {
     return current.object[index];
 }
 
-pub fn canWalk(position: gfx.Vector) bool {
-    if (position.x < 0 or position.y < 0) return false;
+pub fn walkTo(area: math.Rectangle, velocity: math.Vector2) math.Vector2 {
+    if (velocity.x == 0 and velocity.y == 0) return area.min;
 
+    const target = area.move(velocity);
+    var toPosition = target.min;
+
+    if (velocity.x > 0) {
+        const topRight = canWalk(.init(target.max.x, target.min.y));
+        const bottomRight = canWalk(target.max);
+
+        if (!topRight or !bottomRight) {
+            const index = positionIndex(target.max) / current.width;
+            toPosition.x = @floatFromInt(index * SIZE);
+        }
+    } else if (velocity.x < 0) {
+        const topLeft = canWalk(target.min);
+        const bottomLeft = canWalk(.init(target.min.x, target.max.y));
+
+        if (!topLeft or !bottomLeft) {
+            const index = 1 + positionIndex(target.max) / current.width;
+            toPosition.x = @floatFromInt(index * SIZE);
+        }
+    } else if (velocity.y > 0) {
+        const bottomLeft = canWalk(.init(target.min.x, target.max.y));
+        const bottomRight = canWalk(target.max);
+
+        if (!bottomLeft or !bottomRight) {
+            const index = positionIndex(target.max) % current.width;
+            toPosition.y = @floatFromInt(index * SIZE);
+        }
+    } else if (velocity.y < 0) {
+        const topLeft = canWalk(target.min);
+        const topRight = canWalk(.init(target.max.x, target.min.y));
+
+        if (!topLeft or !topRight) {
+            const index = 1 + positionIndex(target.max) % current.width;
+            toPosition.y = @floatFromInt(index * SIZE);
+        }
+    }
+
+    return toPosition;
+}
+
+pub fn canWalk(position: math.Vector2) bool {
+    if (position.x < 0 or position.y < 0) return false;
     const index = positionIndex(position);
     if (index > current.object.len) return false;
     // 场景切换的图块也应该能通过
