@@ -81,13 +81,13 @@ var modifyTime: i64 = 0;
 pub fn update(delta: f32) void {
     const time = window.statFileTime("src/zon/change.zon");
     if (time != modifyTime) {
-        arenaAllocator.reset(.retain_capacity);
+        _ = arenaAllocator.reset(.retain_capacity);
         player.position = map.reload(arenaAllocator.allocator());
         modifyTime = time;
     }
 
-    if (status != .menu and (window.pressedButton(.RIGHT) or
-        window.pressedAny(&.{ .ESCAPE, .E })))
+    if (status != .menu and (window.isMouseRelease(.RIGHT) or
+        window.isAnyKeyRelease(&.{ .ESCAPE, .E })))
     {
         status = .menu;
         return;
@@ -102,7 +102,7 @@ pub fn update(delta: f32) void {
         .item => return updateItem(),
         .status => {
             return if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }) or
-                window.isButtonRelease(.RIGHT))
+                window.isMouseRelease(.RIGHT))
             {
                 status = .normal;
             };
@@ -113,13 +113,13 @@ pub fn update(delta: f32) void {
 
     // 交互检测
     if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
-        const object = map.openChest(player.position, player.facing());
+        const object = map.openChest(player.position, player.facing);
         if (object != 0) openChest(object);
     }
 
     // 打开菜单
-    if (window.pressedAny(&.{ .ESCAPE, .E }) or
-        window.isButtonRelease(.MIDDLE))
+    if (window.isAnyKeyRelease(&.{ .ESCAPE, .E }) or
+        window.isMouseRelease(.MIDDLE))
     {
         status = .menu;
         menu.current = 0;
@@ -141,7 +141,7 @@ fn updateItem() void {
 
 fn updateAbout(delta: f32) void {
     if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q }) or
-        window.isButtonRelease(.RIGHT))
+        window.isMouseRelease(.RIGHT))
     {
         status = .normal;
         return;
@@ -151,7 +151,7 @@ fn updateAbout(delta: f32) void {
         about.update(delta);
     } else {
         if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER }) or
-            window.isButtonRelease(.LEFT))
+            window.isMouseRelease(.LEFT))
         {
             about.roll = true;
         }
@@ -176,8 +176,8 @@ fn openChest(pickIndex: u16) void {
 }
 
 fn updateMenu() void {
-    if (window.pressedAny(&.{ .ESCAPE, .E, .Q }) or
-        window.pressedAnyButton(&.{ .RIGHT, .MIDDLE }))
+    if (window.isAnyKeyRelease(&.{ .ESCAPE, .E, .Q }) or
+        window.isAnyMouseRelease(&.{ .RIGHT, .MIDDLE }))
         status = .normal;
 
     if (window.mouseMoved) {
@@ -197,7 +197,7 @@ fn updateMenu() void {
     }
 
     var confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
-    if (window.isButtonRelease(.LEFT)) {
+    if (window.isMouseRelease(.LEFT)) {
         for (menu.areas, 0..) |area, i| {
             if (area.contains(window.mousePosition)) {
                 menu.current = i;

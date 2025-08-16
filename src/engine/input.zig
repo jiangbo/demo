@@ -9,8 +9,8 @@ pub var keyState: std.StaticBitSet(512) = .initEmpty();
 
 pub var mousePosition: math.Vector = .zero;
 
-pub var lastButtonState: std.StaticBitSet(3) = .initEmpty();
-pub var buttonState: std.StaticBitSet(3) = .initEmpty();
+pub var lastMouseState: std.StaticBitSet(3) = .initEmpty();
+pub var mouseState: std.StaticBitSet(3) = .initEmpty();
 
 pub fn event(ev: *const sk.app.Event) void {
     const keyCode: usize = @intCast(@intFromEnum(ev.key_code));
@@ -19,28 +19,33 @@ pub fn event(ev: *const sk.app.Event) void {
         .KEY_DOWN => keyState.set(keyCode),
         .KEY_UP => keyState.unset(keyCode),
         .MOUSE_MOVE => mousePosition = .init(ev.mouse_x, ev.mouse_y),
-        .MOUSE_DOWN => buttonState.set(buttonCode),
-        .MOUSE_UP => buttonState.unset(buttonCode),
+        .MOUSE_DOWN => mouseState.set(buttonCode),
+        .MOUSE_UP => mouseState.unset(buttonCode),
         .ICONIFIED, .UNFOCUSED => {
             keyState = .initEmpty();
-            buttonState = .initEmpty();
+            mouseState = .initEmpty();
         },
         else => {},
     }
 }
 
-pub fn isButtonPress(button: sk.app.Mousebutton) bool {
+pub fn isMouseDown(button: sk.app.Mousebutton) bool {
     const code: usize = @intCast(@intFromEnum(button));
-    return !lastButtonState.isSet(code) and buttonState.isSet(code);
+    return mouseState.isSet(code);
 }
 
-pub fn isButtonRelease(button: sk.app.Mousebutton) bool {
+pub fn isMousePress(button: sk.app.Mousebutton) bool {
     const code: usize = @intCast(@intFromEnum(button));
-    return lastButtonState.isSet(code) and !buttonState.isSet(code);
+    return !lastMouseState.isSet(code) and mouseState.isSet(code);
 }
 
-pub fn isAnyButtonRelease(buttons: []const sk.app.Mousebutton) bool {
-    for (buttons) |button| if (isButtonRelease(button)) return true;
+pub fn isMouseRelease(button: sk.app.Mousebutton) bool {
+    const code: usize = @intCast(@intFromEnum(button));
+    return lastMouseState.isSet(code) and !mouseState.isSet(code);
+}
+
+pub fn isAnyMouseRelease(buttons: []const sk.app.Mousebutton) bool {
+    for (buttons) |button| if (isMouseRelease(button)) return true;
     return false;
 }
 

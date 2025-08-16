@@ -18,7 +18,8 @@ const SIZE: math.Vector = .init(20, 24);
 var texture: gfx.Texture = undefined;
 var animation: Animation = undefined;
 
-var velocity: math.Vector = .zero;
+var facingArray: std.EnumArray(math.FourDirection, u64) = undefined;
+pub var facing: math.FourDirection = .down;
 pub var position: math.Vector = undefined;
 
 pub var money: usize = 50; // 金钱
@@ -81,10 +82,12 @@ pub fn update(delta: f32) void {
     if (window.isAnyKeyDown(&.{ .LEFT, .A })) dir.x -= 1;
     if (window.isAnyKeyDown(&.{ .RIGHT, .D })) dir.x += 1;
 
-    if (dir.x == 0 and dir.y == 0) return; // 没有移动
-    animation.getPtr(facing()).update(delta);
+    updateFacing();
 
-    velocity = dir.normalize().scale(MOVE_SPEED).scale(delta);
+    if (dir.x == 0 and dir.y == 0) return; // 没有移动
+    animation.getPtr(facing).update(delta);
+
+    const velocity = dir.normalize().scale(MOVE_SPEED).scale(delta);
 
     const area = math.Rectangle.init(position, SIZE);
     position = map.walkTo(area, velocity);
@@ -97,6 +100,32 @@ pub fn update(delta: f32) void {
         std.log.info("change scene id: {d}", .{object});
         map.linkIndex = object;
         scene.changeScene(.world);
+    }
+}
+
+fn updateFacing() void {
+    const press = window.isAnyKeyPress;
+
+    // 以最新按键的方向为准
+    const frameCount = window.frameCount();
+    if (press(&.{ .UP, .W })) facingArray.set(.up, frameCount);
+    if (press(&.{ .DOWN, .S })) facingArray.set(.down, frameCount);
+    if (press(&.{ .LEFT, .A })) facingArray.set(.left, frameCount);
+    if (press(&.{ .RIGHT, .D })) facingArray.set(.right, frameCount);
+
+    const release = window.isAnyKeyRelease;
+    if (release(&.{ .UP, .W })) facingArray.set(.up, 0);
+    if (release(&.{ .DOWN, .S })) facingArray.set(.down, 0);
+    if (release(&.{ .LEFT, .A })) facingArray.set(.left, 0);
+    if (release(&.{ .RIGHT, .D })) facingArray.set(.right, 0);
+
+    var max: u64 = 0;
+    var iterator = facingArray.iterator();
+    while (iterator.next()) |entry| {
+        if (entry.value.* > max) {
+            max = entry.value.*;
+            facing = entry.key;
+        }
     }
 }
 
@@ -135,18 +164,18 @@ pub fn addItem(itemId: u16) void {
 }
 
 pub fn draw() void {
-    const current = animation.get(facing());
+    const current = animation.get(facing);
     camera.draw(current.currentTexture(), position.addXY(-8, -20));
 
     camera.debugDraw(.init(position, SIZE));
 }
 
-pub fn facing() math.FourDirection {
-    if (@abs(velocity.x) > @abs(velocity.y))
-        return if (velocity.x < 0) .left else .right
-    else
-        return if (velocity.y < 0) .up else .down;
-}
+// pub fn facing() math.FourDirection {
+//     if (@abs(velocity.x) > @abs(velocity.y))
+//         return if (velocity.x < 0) .left else .right
+//     else
+//         return if (velocity.y < 0) .up else .down;
+// }
 
 pub fn drawTalk() void {
 

@@ -79,7 +79,7 @@ pub fn update(delta: f32) void {
     }
 
     var confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
-    if (window.isButtonRelease(.LEFT)) {
+    if (window.isMouseRelease(.LEFT)) {
         for (menu.areas, 0..) |area, i| {
             if (area.contains(window.mousePosition)) {
                 menu.current = i;
@@ -98,8 +98,8 @@ pub fn update(delta: f32) void {
 }
 
 fn updateHeader(delta: f32) void {
-    if (window.pressedAny(&.{ .F, .SPACE, .ENTER }) or
-        window.pressedButton(.LEFT))
+    if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER }) or
+        window.isMouseRelease(.LEFT))
     {
         scene.changeScene(.world);
         return;

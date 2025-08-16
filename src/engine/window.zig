@@ -213,7 +213,7 @@ export fn windowFrame() void {
     call(root, "frame", .{delta});
     gpu.end();
     input.lastKeyState = input.keyState;
-    input.lastButtonState = input.buttonState;
+    input.lastMouseState = input.mouseState;
     mouseMoved = false;
 }
 
@@ -221,6 +221,10 @@ export fn windowDeinit() void {
     call(root, "deinit", .{});
     sk.gfx.shutdown();
     assets.deinit();
+}
+
+pub fn frameCount() u64 {
+    return sk.app.frameCount();
 }
 
 pub fn statFileTime(path: [:0]const u8) i64 {
@@ -255,13 +259,17 @@ pub const playSound = audio.playSound;
 pub const playMusic = audio.playMusic;
 pub const stopMusic = audio.stopMusic;
 pub const random = math.random;
+
 pub const isKeyDown = input.isKeyDown;
 pub const isAnyKeyDown = input.isAnyKeyDown;
+pub const isKeyPress = input.isKeyPress;
+pub const isAnyKeyPress = input.isAnyKeyPress;
 pub const isKeyRelease = input.isKeyRelease;
 pub const isAnyKeyRelease = input.isAnyKeyRelease;
-pub const isButtonRelease = input.isButtonRelease;
-pub const pressed = isKeyRelease;
-pub const pressedAny = isAnyKeyRelease;
-pub const pressedButton = isButtonRelease;
-pub const pressedAnyButton = input.isAnyButtonRelease;
+
+pub const isMouseDown = input.isMouseDown;
+pub const isMousePress = input.isMousePress;
+pub const isMouseRelease = input.isMouseRelease;
+pub const isAnyMouseRelease = input.isAnyMouseRelease;
+
 pub const initFont = font.init;
