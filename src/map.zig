@@ -182,7 +182,7 @@ fn walkToY(area: math.Rectangle, velocity: f32) f32 {
     }
 }
 
-pub fn canWalk(position: math.Vector2) bool {
+fn canWalk(position: math.Vector2) bool {
     if (position.x < 0 or position.y < 0) return false;
     if (position.x > size.x or position.y > size.y) return false;
     const index = positionIndex(position);

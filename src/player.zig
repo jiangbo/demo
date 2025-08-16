@@ -9,6 +9,7 @@ const math = zhu.math;
 const scene = @import("scene.zig");
 const item = @import("item.zig");
 const map = @import("map.zig");
+const npc = @import("npc.zig");
 
 const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
 
@@ -82,6 +83,8 @@ pub fn update(delta: f32) void {
     const velocity = dir.normalize().scale(MOVE_SPEED).scale(delta);
 
     const area = math.Rectangle.init(position, SIZE);
+    if (npc.isCollision(area.move(velocity))) return;
+
     position = map.walkTo(area, velocity);
     // 相机跟踪
     cameraLookAt();
@@ -155,6 +158,10 @@ pub fn updateItem() void {
     }
 }
 
+pub fn collider() math.Rectangle {
+    return math.Rectangle.init(position, SIZE);
+}
+
 pub fn addItem(itemId: u16) void {
     for (&items) |*value| {
         if (value.* == 0) {
@@ -166,7 +173,7 @@ pub fn addItem(itemId: u16) void {
 
 pub fn draw() void {
     const current = animation.get(facing);
-    camera.draw(current.currentTexture(), position.addXY(-10, -30));
+    camera.draw(current.currentTexture(), position.addXY(-10, -28));
 
     camera.debugDraw(.init(position, SIZE));
 }

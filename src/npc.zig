@@ -6,7 +6,9 @@ const gfx = zhu.gfx;
 const camera = zhu.camera;
 const math = zhu.math;
 
+const SIZE: math.Vector2 = .init(32, 32);
 const map = @import("map.zig");
+const player = @import("player.zig");
 
 const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
 const zon: []const Character = @import("zon/npc.zon");
@@ -50,13 +52,13 @@ pub fn enter() void {
 fn buildAnimation(texture: gfx.Texture) Animation {
     var animation = Animation.initUndefined();
 
-    var tex = texture.subTexture(.init(.zero, .init(64, 32)));
+    var tex = texture.subTexture(.init(.zero, .init(64, SIZE.x)));
     animation.set(.down, gfx.FrameAnimation.init(tex, &frames));
-    tex = texture.subTexture(tex.area.move(.init(0, 32)));
+    tex = texture.subTexture(tex.area.move(.init(0, SIZE.x)));
     animation.set(.left, gfx.FrameAnimation.init(tex, &frames));
-    tex = texture.subTexture(tex.area.move(.init(0, 32)));
+    tex = texture.subTexture(tex.area.move(.init(0, SIZE.x)));
     animation.set(.up, gfx.FrameAnimation.init(tex, &frames));
-    tex = texture.subTexture(tex.area.move(.init(0, 32)));
+    tex = texture.subTexture(tex.area.move(.init(0, SIZE.x)));
     animation.set(.right, gfx.FrameAnimation.init(tex, &frames));
 
     return animation;
@@ -70,24 +72,37 @@ pub fn update(delta: f32) void {
         }
 
         npc.animation.getPtr(npc.facing).update(delta);
-        const distance = zon[npc.index].speed * delta;
-        var newPosition = npc.position;
-        switch (npc.facing) {
-            .down => newPosition.y += distance,
-            .left => newPosition.x -= distance,
-            .right => newPosition.x += distance,
-            .up => newPosition.y -= distance,
-        }
+        const speed = zon[npc.index].speed * delta;
+        const velocity: math.Vector2 = switch (npc.facing) {
+            .down => .init(0, speed),
+            .left => .init(-speed, 0),
+            .up => .init(0, -speed),
+            .right => .init(speed, 0),
+        };
 
-        const max = newPosition.add(.init(32, 32));
-        if (map.canWalk(newPosition) and map.canWalk(max)) {
-            npc.position = newPosition;
-        } else {
+        const area = math.Rectangle.init(npc.position, SIZE);
+        const newPosition = map.walkTo(area, velocity);
+        if (newPosition.approxEqual(npc.position)) {
             const old = npc.facing;
             while (old == npc.facing) npc.facing = .random();
             npc.timer.reset();
+            return;
+        }
+
+        // 检测和角色的碰撞
+        const collider = math.Rectangle.init(newPosition, SIZE);
+        if (!collider.intersect(player.collider())) {
+            npc.position = newPosition;
         }
     }
+}
+
+pub fn isCollision(collider: math.Rectangle) bool {
+    for (npcArray.items) |npc| {
+        const npcCollider = math.Rectangle.init(npc.position, SIZE);
+        if (collider.intersect(npcCollider)) return true;
+    }
+    return false;
 }
 
 pub fn draw() void {
