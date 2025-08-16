@@ -7,20 +7,26 @@ const math = zhu.math;
 const camera = zhu.camera;
 
 pub const Menu = struct {
+    background: bool = false,
     position: gfx.Vector = .zero,
     size: gfx.Vector = .zero,
     color: gfx.Color = .one,
     names: []const []const u8 = &.{},
     areas: []const gfx.Rect = &.{},
+    events: []const u8 = &.{},
 };
 
 const State = struct {
     current: usize = 0,
 };
 
-pub var zon: []const Menu = @import("zon/menu.zon");
-pub var states: [7]State = [_]State{.{}} ** 7;
+var zon: []const Menu = @import("zon/menu.zon");
+var states: [7]State = [_]State{.{}} ** 7;
 pub var active: u8 = 0;
+
+pub fn current() *const Menu {
+    return &zon[active];
+}
 
 const parseZon = std.zon.parse.fromSlice;
 pub fn reload(allocator: std.mem.Allocator) void {
@@ -32,7 +38,7 @@ pub fn reload(allocator: std.mem.Allocator) void {
     zon = menu catch @panic("error parse zon");
 }
 
-pub fn update() ?usize {
+pub fn update() ?u8 {
     const menu = zon[active];
     const state = &states[active];
 
@@ -61,7 +67,7 @@ pub fn update() ?usize {
             }
         }
     }
-    return if (confirm) state.current else null;
+    return if (confirm) menu.events[state.current] else null;
 }
 
 pub fn draw() void {

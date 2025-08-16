@@ -59,11 +59,14 @@ pub fn exit() void {}
 pub fn update(delta: f32) void {
     reloadIfChanged();
 
-    if (status != .menu and (window.isMouseRelease(.RIGHT) or
-        window.isAnyKeyRelease(&.{ .ESCAPE, .E })))
-    {
-        status = .menu;
-        return;
+    if (status != .menu) {
+        if (window.isMouseRelease(.RIGHT) or
+            window.isAnyKeyRelease(&.{ .ESCAPE, .E }))
+        {
+            status = .menu;
+            menu.active = 6;
+            return;
+        }
     }
 
     switch (status) {
@@ -88,14 +91,6 @@ pub fn update(delta: f32) void {
     if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
         const object = map.openChest(player.position, player.facing);
         if (object != 0) openChest(object);
-    }
-
-    // 打开菜单
-    if (window.isAnyKeyRelease(&.{ .ESCAPE, .E }) or
-        window.isMouseRelease(.MIDDLE))
-    {
-        status = .menu;
-        menu.active = 6;
     }
 }
 
@@ -163,8 +158,14 @@ fn openChest(pickIndex: u16) void {
 }
 
 fn updateMenu() void {
-    const menuIndex = menu.update();
-    if (menuIndex) |index| menuSelected(index);
+    const menuEvent = menu.update();
+    if (menuEvent) |event| menuSelected(event);
+
+    if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
+        window.isMouseRelease(.RIGHT))
+    {
+        status = .normal;
+    }
 }
 
 fn menuSelected(index: usize) void {
@@ -178,7 +179,7 @@ fn menuSelected(index: usize) void {
         },
         5 => window.exit(),
         6 => status = .normal,
-        else => {},
+        else => unreachable,
     }
 }
 

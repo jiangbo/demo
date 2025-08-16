@@ -175,7 +175,7 @@ pub fn draw() void {
     const current = animation.get(facing);
     camera.draw(current.currentTexture(), position.addXY(-10, -28));
 
-    camera.debugDraw(.init(position, SIZE));
+    // camera.debugDraw(.init(position, SIZE));
 }
 
 pub fn drawTalk() void {

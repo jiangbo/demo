@@ -6,61 +6,23 @@ const gfx = zhu.gfx;
 const camera = zhu.camera;
 
 const scene = @import("scene.zig");
+const menu = @import("menu.zig");
 
 var background: gfx.Texture = undefined;
-const color = gfx.color(0.73, 0.72, 0.53, 1);
+var menuBackground: gfx.Texture = undefined;
 
-const ZonMenu = struct {
-    background: bool = false,
-    position: gfx.Vector = .zero,
-    names: []const []const u8 = &.{},
-    offsets: []const gfx.Vector = &.{},
-};
-
-const main: ZonMenu = @import("zon/menu.zon")[5];
-
-const Menu = struct {
-    background: ?gfx.Texture = null,
-    position: gfx.Vector,
-    names: []const []const u8,
-    areas: []const gfx.Rect = undefined,
-    current: usize = 0,
-    const color = gfx.color(0.73, 0.72, 0.53, 1);
-};
-
-var menu: *Menu = &mainMenu;
 var displayHeader: bool = false;
 var displayTimer: window.Timer = .init(0.08);
 var textIndex: usize = 0;
 
-var mainMenu: Menu = .{
-    .position = .{ .x = 11, .y = 375 },
-    .names = &.{ "新游戏", "读进度", "退　出" },
-    .areas = &createAreas(3, .{ .x = 16, .y = 375 }),
-};
-var loadMenu: Menu = .{
-    .position = .{ .x = 0, .y = 280 },
-    .names = &.{ "进度一", "进度二", "进度三", "进度四", "进度五", "取　消" },
-    .areas = &createAreas(6, .{ .x = 0 + 45, .y = 280 + 20 }),
-};
-
-fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rect {
-    var areas: [num]gfx.Rect = undefined;
-    for (&areas, 0..) |*area, i| {
-        const offsetY: f32 = @floatFromInt(10 + i * 24);
-        area.* = .init(pos.addY(offsetY), .init(65, 25));
-    }
-    return areas;
-}
-
 pub fn init() void {
     background = gfx.loadTexture("assets/pic/title.png", .init(640, 480));
     const path = "assets/pic/mainmenu2.png";
-    loadMenu.background = gfx.loadTexture(path, .init(150, 200));
+    menuBackground = gfx.loadTexture(path, .init(150, 200));
 }
 
 pub fn enter() void {
-    menu.current = 0;
+    menu.active = 4;
     window.playMusic("assets/voc/title.ogg");
     displayHeader = false;
     textIndex = 0;
@@ -74,39 +36,37 @@ pub fn exit() void {
 pub fn update(delta: f32) void {
     if (displayHeader) return updateHeader(delta);
 
-    if (window.isAnyKeyRelease(&.{ .DOWN, .S })) {
-        menu.current = (menu.current + 1) % menu.names.len;
-    }
-    if (window.isAnyKeyRelease(&.{ .UP, .W })) {
-        menu.current += menu.names.len;
-        menu.current = (menu.current - 1) % menu.names.len;
-    }
-
-    if (window.mouseMoved) {
-        for (menu.areas, 0..) |area, i| {
-            if (area.contains(window.mousePosition)) {
-                menu.current = i;
-            }
-        }
-    }
-
-    var confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
-    if (window.isMouseRelease(.LEFT)) {
-        for (menu.areas, 0..) |area, i| {
-            if (area.contains(window.mousePosition)) {
-                menu.current = i;
-                confirm = true;
-            }
-        }
-    }
-
-    if (confirm) {
-        if (menu == &mainMenu) mainMenuSelected() else loadMenuSelected();
-    }
+    const menuEvent = menu.update();
+    if (menuEvent) |event| menuSelected(event);
 
     if (window.isAnyKeyRelease(&.{ .Q, .ESCAPE })) {
-        menu = &mainMenu;
+        menu.active = 4;
     }
+}
+
+fn menuSelected(index: u8) void {
+    switch (index) {
+        0 => scene.fadeOut(struct {
+            fn call() void {
+                displayHeader = true;
+            }
+        }.call),
+        1 => menu.active = 5,
+        2 => window.exit(),
+        3, 4, 5, 6, 7 => scene.changeScene(.world),
+        8 => menu.active = 4,
+        else => unreachable(),
+    }
+}
+
+pub fn draw() void {
+    if (displayHeader) return drawHeader();
+    camera.draw(background, .zero);
+
+    if (menu.current().background) {
+        camera.draw(menuBackground, menu.current().position);
+    }
+    menu.draw();
 }
 
 fn updateHeader(delta: f32) void {
@@ -132,41 +92,6 @@ const text =
     \\始……　　[按回车键继续]
 ;
 
-fn mainMenuSelected() void {
-    switch (menu.current) {
-        0 => scene.fadeOut(struct {
-            fn call() void {
-                displayHeader = true;
-            }
-        }.call),
-        1 => menu = &loadMenu,
-        2 => window.exit(),
-        else => unreachable(),
-    }
-}
-
-fn loadMenuSelected() void {
-    switch (menu.current) {
-        0, 1, 2, 3, 4 => scene.changeScene(.world),
-        5 => menu = &mainMenu,
-        else => unreachable(),
-    }
-}
-
-pub fn draw() void {
-    if (displayHeader) return renderHeader();
-    camera.draw(background, .zero);
-
-    if (menu.background) |bg| camera.draw(bg, menu.position);
-
-    for (menu.areas, menu.names, 0..) |area, name, i| {
-        if (i == menu.current) {
-            camera.drawRect(area, Menu.color);
-        }
-        camera.drawText(name, area.min.addXY(5, -2));
-    }
-}
-
-pub fn renderHeader() void {
+pub fn drawHeader() void {
     camera.drawText(text[0..textIndex], .init(40, 100));
 }

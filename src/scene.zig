@@ -9,7 +9,7 @@ const titleScene = @import("title.zig");
 const worldScene = @import("world.zig");
 
 const SceneType = enum { title, world };
-var currentSceneType: SceneType = .world;
+var currentSceneType: SceneType = .title;
 var toSceneType: SceneType = .title;
 
 pub fn init() void {
