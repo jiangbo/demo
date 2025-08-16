@@ -29,7 +29,7 @@ const Map = struct {
 
 const Link = struct { player: gfx.Vector = .zero, mapId: u8 = 0, id: u8 = 0 };
 const zon: []const Map = @import("zon/map.zon");
-var links: []const Link = @import("zon/change.zon");
+var links: []const Link = @import("zon/link.zon");
 pub var linkIndex: u16 = 6;
 pub var current: *const Map = undefined;
 pub var size: math.Vector2 = undefined;
@@ -195,7 +195,7 @@ const parseZon = std.zon.parse.fromSlice;
 pub fn reload(allocator: std.mem.Allocator) math.Vector2 {
     std.log.info("map reload", .{});
 
-    const content = window.readAll(allocator, "src/zon/change.zon");
+    const content = window.readAll(allocator, "src/zon/link.zon");
     defer allocator.free(content);
     const link = parseZon([]Link, allocator, content, null, .{});
     links = link catch @panic("error parse zon");

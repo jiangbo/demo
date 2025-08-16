@@ -79,7 +79,7 @@ pub fn exit() void {}
 
 var modifyTime: i64 = 0;
 pub fn update(delta: f32) void {
-    const time = window.statFileTime("src/zon/change.zon");
+    const time = window.statFileTime("src/zon/link.zon");
     if (time != modifyTime) {
         _ = arenaAllocator.reset(.retain_capacity);
         player.position = map.reload(arenaAllocator.allocator());
