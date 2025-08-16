@@ -18,7 +18,7 @@ const SIZE: math.Vector = .init(20, 24);
 var texture: gfx.Texture = undefined;
 var animation: Animation = undefined;
 
-var facingArray: std.EnumArray(math.FourDirection, u64) = undefined;
+var facings: std.EnumArray(math.FourDirection, u64) = undefined;
 pub var facing: math.FourDirection = .down;
 pub var position: math.Vector = undefined;
 
@@ -75,15 +75,7 @@ pub fn exit() void {}
 pub fn update(delta: f32) void {
 
     // 角色移动和碰撞检测
-
-    var dir = math.Vector.zero;
-    if (window.isAnyKeyDown(&.{ .UP, .W })) dir.y -= 1;
-    if (window.isAnyKeyDown(&.{ .DOWN, .S })) dir.y += 1;
-    if (window.isAnyKeyDown(&.{ .LEFT, .A })) dir.x -= 1;
-    if (window.isAnyKeyDown(&.{ .RIGHT, .D })) dir.x += 1;
-
-    updateFacing();
-
+    const dir = updateFacing();
     if (dir.x == 0 and dir.y == 0) return; // 没有移动
     animation.getPtr(facing).update(delta);
 
@@ -95,38 +87,47 @@ pub fn update(delta: f32) void {
     cameraLookAt();
 
     // 检测是否需要切换场景
-    const object = map.getObject(map.positionIndex(position));
-    if (object > 4 and map.tileCenterContains(position)) {
+    const object = map.getObject(map.positionIndex(area.center()));
+    if (object > 4) {
         std.log.info("change scene id: {d}", .{object});
         map.linkIndex = object;
         scene.changeScene(.world);
     }
 }
 
-fn updateFacing() void {
-    const press = window.isAnyKeyPress;
+fn updateFacing() math.Vector2 {
+    const count = window.frameCount();
+    var dir = math.Vector.zero;
 
-    // 以最新按键的方向为准
-    const frameCount = window.frameCount();
-    if (press(&.{ .UP, .W })) facingArray.set(.up, frameCount);
-    if (press(&.{ .DOWN, .S })) facingArray.set(.down, frameCount);
-    if (press(&.{ .LEFT, .A })) facingArray.set(.left, frameCount);
-    if (press(&.{ .RIGHT, .D })) facingArray.set(.right, frameCount);
+    if (window.isAnyKeyDown(&.{ .UP, .W })) {
+        dir.y -= 1;
+        if (facings.get(.up) == 0) facings.set(.up, count);
+    } else facings.set(.up, 0);
 
-    const release = window.isAnyKeyRelease;
-    if (release(&.{ .UP, .W })) facingArray.set(.up, 0);
-    if (release(&.{ .DOWN, .S })) facingArray.set(.down, 0);
-    if (release(&.{ .LEFT, .A })) facingArray.set(.left, 0);
-    if (release(&.{ .RIGHT, .D })) facingArray.set(.right, 0);
+    if (window.isAnyKeyDown(&.{ .DOWN, .S })) {
+        dir.y += 1;
+        if (facings.get(.down) == 0) facings.set(.down, count);
+    } else facings.set(.down, 0);
+
+    if (window.isAnyKeyDown(&.{ .LEFT, .A })) {
+        dir.x -= 1;
+        if (facings.get(.left) == 0) facings.set(.left, count);
+    } else facings.set(.left, 0);
+
+    if (window.isAnyKeyDown(&.{ .RIGHT, .D })) {
+        dir.x += 1;
+        if (facings.get(.right) == 0) facings.set(.right, count);
+    } else facings.set(.right, 0);
 
     var max: u64 = 0;
-    var iterator = facingArray.iterator();
+    var iterator = facings.iterator();
     while (iterator.next()) |entry| {
         if (entry.value.* > max) {
             max = entry.value.*;
             facing = entry.key;
         }
     }
+    return dir;
 }
 
 fn cameraLookAt() void {
@@ -169,13 +170,6 @@ pub fn draw() void {
 
     camera.debugDraw(.init(position, SIZE));
 }
-
-// pub fn facing() math.FourDirection {
-//     if (@abs(velocity.x) > @abs(velocity.y))
-//         return if (velocity.x < 0) .left else .right
-//     else
-//         return if (velocity.y < 0) .up else .down;
-// }
 
 pub fn drawTalk() void {
 
