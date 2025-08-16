@@ -14,7 +14,7 @@ const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
 
 const name = "小飞刀";
 const MOVE_SPEED = 100;
-const SIZE: math.Vector = .init(20, 24);
+const SIZE: math.Vector = .init(16, 16);
 var texture: gfx.Texture = undefined;
 var animation: Animation = undefined;
 
@@ -132,7 +132,7 @@ fn updateFacing() math.Vector2 {
 
 fn cameraLookAt() void {
     const half = window.logicSize.scale(0.5);
-    const max = map.size().sub(window.logicSize);
+    const max = map.size.sub(window.logicSize);
     camera.position = position.sub(half).clamp(.zero, max);
 }
 
@@ -166,7 +166,7 @@ pub fn addItem(itemId: u16) void {
 
 pub fn draw() void {
     const current = animation.get(facing);
-    camera.draw(current.currentTexture(), position.addXY(-8, -20));
+    camera.draw(current.currentTexture(), position.addXY(-10, -30));
 
     camera.debugDraw(.init(position, SIZE));
 }

@@ -30,8 +30,9 @@ const Map = struct {
 const Link = struct { player: gfx.Vector = .zero, mapId: u8 = 0, id: u8 = 0 };
 const zon: []const Map = @import("zon/map.zon");
 var links: []const Link = @import("zon/change.zon");
-pub var linkIndex: u16 = 5;
+pub var linkIndex: u16 = 6;
 pub var current: *const Map = undefined;
+pub var size: math.Vector2 = undefined;
 
 var vertexBuffer: [1300]camera.Vertex = undefined;
 var vertexArray: std.ArrayListUnmanaged(camera.Vertex) = undefined;
@@ -46,6 +47,9 @@ pub fn init() void {
 pub fn enter() math.Vector2 {
     const link = links[linkIndex];
     current = &zon[link.mapId];
+    const x: f32 = @floatFromInt(current.width);
+    const y: f32 = @floatFromInt(current.height);
+    size = math.Vector2.init(x, y).scale(SIZE);
 
     vertexArray.clearRetainingCapacity();
 
@@ -131,57 +135,56 @@ pub fn positionIndex(position: gfx.Vector) usize {
     return x + y * current.width;
 }
 
-pub fn size() math.Vector2 {
-    const x: f32 = @floatFromInt(current.width);
-    const y: f32 = @floatFromInt(current.height);
-    return math.Vector2.init(x, y).mul(TILE_SIZE);
-}
-
 pub fn getObject(index: usize) u16 {
     return current.object[index];
 }
 
 pub fn walkTo(area: math.Rectangle, velocity: math.Vector2) math.Vector2 {
     if (velocity.x == 0 and velocity.y == 0) return area.min;
+    return .init(walkToX(area, velocity.x), walkToY(area, velocity.y));
+}
 
-    var min = area.min.addX(velocity.x);
-    var max = area.max.addX(velocity.x);
+fn walkToX(area: math.Rectangle, velocity: f32) f32 {
+    const min = area.min.addX(velocity);
+    if (min.x < 0) return 0;
+    const max = area.max.addX(velocity);
+    if (max.x > size.x) return size.x - 0.1 - area.size().x;
 
-    if (velocity.x > 0) {
-        if (canWalk(.init(max.x, min.y)) and canWalk(max)) {} else {
-            const index = positionIndex(max) % current.width;
-            // 把左上角的位置放到图块的左边缘
-            min.x = @floatFromInt(index * SIZE);
-            // 平移加容忍，将右边放到图块的左边缘
-            min.x -= area.size().x + 0.1;
-        }
-    } else if (velocity.x < 0) {
-        if (canWalk(min) and canWalk(.init(min.x, max.y))) {} else {
-            const index = 1 + positionIndex(min) % current.width;
-            min.x = @floatFromInt(index * SIZE);
-        }
+    if (velocity > 0) {
+        if (canWalk(.init(max.x, min.y)) and canWalk(max)) return min.x;
+        const index = positionIndex(max) % current.width;
+        // 把左上角的位置放到图块的左边缘
+        const x: f32 = @floatFromInt(index * SIZE);
+        // 平移加容忍，将右边放到图块的左边缘
+        return x - area.size().x - 0.1;
+    } else {
+        if (canWalk(min) and canWalk(.init(min.x, max.y))) return min.x;
+        const index = 1 + positionIndex(min) % current.width;
+        return @floatFromInt(index * SIZE);
     }
+}
 
-    min = min.addY(velocity.y); // 保留上面修改的值，该值一定不会碰撞X
-    max = area.max.addY(velocity.y); // 不能用上面的 max，可能会错误碰撞
-    if (velocity.y > 0) {
-        if (canWalk(.init(min.x, max.y)) and canWalk(max)) {} else {
-            const index = positionIndex(max) / current.width;
-            min.y = @floatFromInt(index * SIZE);
-            min.y -= area.size().y + 0.1;
-        }
-    } else if (velocity.y < 0) {
-        if (canWalk(min) and canWalk(.init(max.x, min.y))) {} else {
-            const index = 1 + positionIndex(min) / current.width;
-            min.y = @floatFromInt(index * SIZE);
-        }
+fn walkToY(area: math.Rectangle, velocity: f32) f32 {
+    const min = area.min.addY(velocity);
+    if (min.y < 0) return 0;
+    const max = area.max.addY(velocity);
+    if (max.y > size.y) return size.y - 0.1 - area.size().y;
+
+    if (velocity > 0) {
+        if (canWalk(.init(min.x, max.y)) and canWalk(max)) return min.y;
+        const index = positionIndex(max) / current.width;
+        const y: f32 = @floatFromInt(index * SIZE);
+        return y - area.size().y - 0.1;
+    } else {
+        if (canWalk(min) and canWalk(.init(max.x, min.y))) return min.y;
+        const index = 1 + positionIndex(min) / current.width;
+        return @floatFromInt(index * SIZE);
     }
-
-    return min;
 }
 
 pub fn canWalk(position: math.Vector2) bool {
     if (position.x < 0 or position.y < 0) return false;
+    if (position.x > size.x or position.y > size.y) return false;
     const index = positionIndex(position);
     if (index > current.object.len) return false;
     // 场景切换的图块也应该能通过
