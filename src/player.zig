@@ -89,12 +89,12 @@ pub fn update(delta: f32) void {
     // 相机跟踪
     cameraLookAt();
 
-    // 检测是否需要切换场景
+    // 检测是否需要切换地图
     const object = map.getObject(map.positionIndex(area.center()));
     if (object > 4) {
-        std.log.info("change scene id: {d}", .{object});
+        std.log.info("change map: {d}", .{object});
         map.linkIndex = object;
-        scene.changeScene(.world);
+        scene.changeMap();
     }
 }
 

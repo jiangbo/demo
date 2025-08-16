@@ -13,15 +13,8 @@ const about = @import("about.zig");
 const item = @import("item.zig");
 const npc = @import("npc.zig");
 
-const Status = union(enum) {
-    normal,
-    talk: usize,
-    menu,
-    about,
-    status,
-    item,
-};
-var status: Status = .normal;
+const Status = union(enum) { talk: usize, menu, about, status, item };
+var status: ?Status = null;
 
 var menuTexture: gfx.Texture = undefined;
 var arenaAllocator: std.heap.ArenaAllocator = undefined;
@@ -34,11 +27,8 @@ pub fn init() void {
     about.init();
     map.init();
     player.init();
-
     npc.init();
-    menu.active = 6;
 
-    // window.playMusic("assets/voc/back.ogg");
     // status = .{ .talk = 1 };
     // status = .item;
 }
@@ -52,6 +42,14 @@ pub fn enter() void {
     const playerPosition = map.enter();
     player.enter(playerPosition);
     npc.enter();
+    menu.active = 6;
+    window.playMusic("assets/voc/back.ogg");
+}
+
+pub fn changeMap() void {
+    const playerPosition = map.enter();
+    player.enter(playerPosition);
+    npc.enter();
 }
 
 pub fn exit() void {}
@@ -59,7 +57,7 @@ pub fn exit() void {}
 pub fn update(delta: f32) void {
     reloadIfChanged();
 
-    if (status != .menu) {
+    if (status == null or status.? != .menu) {
         if (window.isMouseRelease(.RIGHT) or
             window.isAnyKeyRelease(&.{ .ESCAPE, .E }))
         {
@@ -69,23 +67,24 @@ pub fn update(delta: f32) void {
         }
     }
 
-    switch (status) {
-        .normal => {
-            npc.update(delta);
-            player.update(delta);
-        },
-        .talk => |talkId| return updateTalk(talkId),
-        .item => return updateItem(),
-        .status => {
-            return if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }) or
-                window.isMouseRelease(.RIGHT))
-            {
-                status = .normal;
-            };
-        },
-        .menu => return updateMenu(),
-        .about => return updateAbout(delta),
+    if (status) |pop| {
+        switch (pop) {
+            .talk => |talkId| return updateTalk(talkId),
+            .item => return updateItem(),
+            .status => {
+                return if (window.isMouseRelease(.RIGHT) or
+                    window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }))
+                {
+                    status = null;
+                };
+            },
+            .menu => return updateMenu(),
+            .about => return updateAbout(delta),
+        }
     }
+
+    npc.update(delta);
+    player.update(delta);
 
     // 交互检测
     if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
@@ -110,12 +109,12 @@ fn reloadIfChanged() void {
 
 fn updateTalk(talkId: usize) void {
     const next = talk.update(talkId);
-    status = if (next == 0) .normal else .{ .talk = next };
+    status = if (next == 0) null else .{ .talk = next };
 }
 
 fn updateItem() void {
     if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E })) {
-        status = .normal;
+        status = null;
         return;
     }
     player.updateItem();
@@ -125,7 +124,7 @@ fn updateAbout(delta: f32) void {
     if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q }) or
         window.isMouseRelease(.RIGHT))
     {
-        status = .normal;
+        status = null;
         return;
     }
 
@@ -164,7 +163,7 @@ fn updateMenu() void {
     if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
         window.isMouseRelease(.RIGHT))
     {
-        status = .normal;
+        status = null;
     }
 }
 
@@ -172,13 +171,13 @@ fn menuSelected(index: usize) void {
     switch (index) {
         0 => status = .status,
         1 => status = .item,
-        2...3 => status = .normal,
+        2...3 => status = null,
         4 => {
             status = .about;
             about.resetRoll();
         },
         5 => window.exit(),
-        6 => status = .normal,
+        6 => status = null,
         else => unreachable,
     }
 }
@@ -188,20 +187,18 @@ pub fn draw() void {
     npc.draw();
     player.draw();
 
+    if (status == null) return;
+
     camera.mode = .local;
     defer camera.mode = .world;
-
-    switch (status) {
-        .normal => {},
+    switch (status.?) {
         .talk => |talkId| talk.draw(talkId),
         .status => player.drawStatus(),
         .item => player.drawItem(),
-        .menu => drawMenu(),
+        .menu => {
+            camera.draw(menuTexture, .init(0, 280));
+            menu.draw();
+        },
         .about => about.draw(),
     }
-}
-
-fn drawMenu() void {
-    camera.draw(menuTexture, .init(0, 280));
-    menu.draw();
 }

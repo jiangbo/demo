@@ -9,7 +9,7 @@ const titleScene = @import("title.zig");
 const worldScene = @import("world.zig");
 
 const SceneType = enum { title, world };
-var currentSceneType: SceneType = .title;
+var currentSceneType: SceneType = .world;
 var toSceneType: SceneType = .title;
 
 pub fn init() void {
@@ -31,6 +31,10 @@ pub fn init() void {
 pub fn changeScene(sceneType: SceneType) void {
     toSceneType = sceneType;
     fadeOut(doChangeScene);
+}
+
+pub fn changeMap() void {
+    fadeOut(worldScene.changeMap);
 }
 
 fn doChangeScene() void {
