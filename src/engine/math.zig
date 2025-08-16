@@ -22,6 +22,7 @@ pub const Vector2 = extern struct {
     y: f32 = 0,
 
     pub const zero = Vector2{ .x = 0, .y = 0 };
+    pub const one = Vector2{ .x = 1, .y = 1 };
 
     pub fn init(x: f32, y: f32) Vector2 {
         return .{ .x = x, .y = y };
@@ -125,49 +126,88 @@ pub const Vector3 = extern struct {
     }
 };
 
-pub const Rectangle = struct {
+pub const Rect = struct {
     min: Vector2 = .zero,
-    max: Vector2 = .zero,
+    size: Vector2 = .one,
 
-    pub fn init(position: Vector2, sizeV: Vector2) Rectangle {
-        return Rectangle{ .min = position, .max = position.add(sizeV) };
+    pub fn init(position: Vector2, sizeV: Vector2) Rect {
+        return Rect{ .min = position, .size = sizeV };
     }
 
-    pub fn size(self: Rectangle) Vector2 {
-        return self.max.sub(self.min);
+    pub fn fromMax(minV: Vector2, maxV: Vector2) Rect {
+        return Rect{ .min = minV, .size = maxV.sub(minV) };
     }
 
-    pub fn center(self: Rectangle) Vector2 {
-        return self.min.add(self.size().scale(0.5));
+    pub fn max(self: Rect) Vector2 {
+        return self.min.add(self.size);
     }
 
-    pub fn move(self: Rectangle, offset: Vector2) Rectangle {
-        return .{ .min = self.min.add(offset), .max = self.max.add(offset) };
+    pub fn move(self: Rect, offset: Vector2) Rect {
+        return .{ .min = self.min.add(offset), .size = self.size };
     }
 
-    pub fn intersect(self: Rectangle, other: Rectangle) bool {
-        return self.min.x < other.max.x and self.max.x > other.min.x and
-            self.min.y < other.max.y and self.max.y > other.min.y;
+    pub fn center(self: Rect) Vector2 {
+        return self.min.add(self.size.scale(0.5));
     }
 
-    pub fn contains(self: Rectangle, point: Vector2) bool {
-        return point.x >= self.min.x and point.x <= self.max.x and
-            point.y >= self.min.y and point.y <= self.max.y;
+    pub fn contains(self: Rect, point: Vector2) bool {
+        return point.x >= self.min.x and point.x <= self.max().x and
+            point.y >= self.min.y and point.y <= self.max().y;
     }
 
-    pub fn sub(self: Rectangle, area: Rectangle) Rectangle {
-        return .init(self.min.add(area.min), area.size());
+    pub fn intersect(self: Rect, other: Rect) bool {
+        return self.min.x < other.max().x and self.max().x > other.min.x and
+            self.min.y < other.max().y and self.max().y > other.min.y;
     }
 
-    pub fn toVector4(self: Rectangle) Vector4 {
-        return .{
-            .x = self.min.x,
-            .y = self.min.y,
-            .z = self.max.x,
-            .w = self.max.y,
-        };
+    pub fn toVector4(self: Rect) Vector4 {
+        return .init(self.min.x, self.min.y, self.max().x, self.max().y);
     }
 };
+
+// pub const Rectangle1 = struct {
+//     min: Vector2 = .zero,
+//     max: Vector2 = .zero,
+
+//     pub fn init(position: Vector2, sizeV: Vector2) Rectangle {
+//         return Rectangle{ .min = position, .max = position.add(sizeV) };
+//     }
+
+//     pub fn size(self: Rectangle) Vector2 {
+//         return self.max.sub(self.min);
+//     }
+
+//     pub fn center(self: Rectangle) Vector2 {
+//         return self.min.add(self.size().scale(0.5));
+//     }
+
+//     pub fn move(self: Rectangle, offset: Vector2) Rectangle {
+//         return .{ .min = self.min.add(offset), .max = self.max.add(offset) };
+//     }
+
+//     pub fn intersect(self: Rectangle, other: Rectangle) bool {
+//         return self.min.x < other.max.x and self.max.x > other.min.x and
+//             self.min.y < other.max.y and self.max.y > other.min.y;
+//     }
+
+//     pub fn contains(self: Rectangle, point: Vector2) bool {
+//         return point.x >= self.min.x and point.x <= self.max.x and
+//             point.y >= self.min.y and point.y <= self.max.y;
+//     }
+
+//     pub fn sub(self: Rectangle, area: Rectangle) Rectangle {
+//         return .init(self.min.add(area.min), area.size());
+//     }
+
+//     pub fn toVector4(self: Rectangle) Vector4 {
+//         return .{
+//             .x = self.min.x,
+//             .y = self.min.y,
+//             .z = self.max.x,
+//             .w = self.max.y,
+//         };
+//     }
+// };
 
 pub var rand: std.Random.DefaultPrng = undefined;
 

@@ -5,6 +5,7 @@ const window = zhu.window;
 const gfx = zhu.gfx;
 const camera = zhu.camera;
 
+const menu = @import("menu.zig");
 const player = @import("player.zig");
 const map = @import("map.zig");
 const talk = @import("talk.zig");
@@ -22,30 +23,6 @@ const Status = union(enum) {
 };
 var status: Status = .normal;
 
-const Menu = struct {
-    names: []const []const u8,
-    areas: []const gfx.Rectangle = undefined,
-    current: usize = 0,
-    const color = gfx.Color{ .w = 1 };
-};
-
-var menu: Menu = .{
-    .names = &.{
-        "状　　态", "物　　品", "读取进度", "存储进度", //
-        "关于游戏", "退　　出", "返回游戏",
-    },
-    .areas = &createAreas(7, .{ .x = 0 + 33, .y = 288 }),
-};
-
-fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
-    var areas: [num]gfx.Rectangle = undefined;
-    for (&areas, 0..) |*area, i| {
-        const offsetY: f32 = @floatFromInt(10 + i * 24);
-        area.* = .init(pos.addY(offsetY), .init(85, 25));
-    }
-    return areas;
-}
-
 var menuTexture: gfx.Texture = undefined;
 var arenaAllocator: std.heap.ArenaAllocator = undefined;
 
@@ -59,6 +36,7 @@ pub fn init() void {
     player.init();
 
     npc.init();
+    menu.active = 6;
 
     // window.playMusic("assets/voc/back.ogg");
     // status = .{ .talk = 1 };
@@ -67,6 +45,7 @@ pub fn init() void {
 
 pub fn deinit() void {
     arenaAllocator.deinit();
+    window.stopMusic();
 }
 
 pub fn enter() void {
@@ -77,14 +56,8 @@ pub fn enter() void {
 
 pub fn exit() void {}
 
-var modifyTime: i64 = 0;
 pub fn update(delta: f32) void {
-    const time = window.statFileTime("src/zon/link.zon");
-    if (time != modifyTime) {
-        _ = arenaAllocator.reset(.retain_capacity);
-        player.position = map.reload(arenaAllocator.allocator());
-        modifyTime = time;
-    }
+    reloadIfChanged();
 
     if (status != .menu and (window.isMouseRelease(.RIGHT) or
         window.isAnyKeyRelease(&.{ .ESCAPE, .E })))
@@ -122,7 +95,21 @@ pub fn update(delta: f32) void {
         window.isMouseRelease(.MIDDLE))
     {
         status = .menu;
-        menu.current = 0;
+        menu.active = 6;
+    }
+}
+
+var modifyTime: i64 = 0;
+fn reloadIfChanged() void {
+    const menuTime = window.statFileTime("src/zon/menu.zon");
+    const linkTime = window.statFileTime("src/zon/link.zon");
+    const time = @max(menuTime, linkTime);
+
+    if (time > modifyTime) {
+        _ = arenaAllocator.reset(.retain_capacity);
+        menu.reload(arenaAllocator.allocator());
+        player.position = map.reload(arenaAllocator.allocator());
+        modifyTime = time;
     }
 }
 
@@ -176,41 +163,12 @@ fn openChest(pickIndex: u16) void {
 }
 
 fn updateMenu() void {
-    if (window.isAnyKeyRelease(&.{ .ESCAPE, .E, .Q }) or
-        window.isAnyMouseRelease(&.{ .RIGHT, .MIDDLE }))
-        status = .normal;
-
-    if (window.mouseMoved) {
-        for (menu.areas, 0..) |area, i| {
-            if (area.contains(window.mousePosition)) {
-                menu.current = i;
-            }
-        }
-    }
-
-    if (window.isAnyKeyRelease(&.{ .DOWN, .S })) {
-        menu.current = (menu.current + 1) % menu.names.len;
-    }
-    if (window.isAnyKeyRelease(&.{ .UP, .W })) {
-        menu.current += menu.names.len;
-        menu.current = (menu.current - 1) % menu.names.len;
-    }
-
-    var confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
-    if (window.isMouseRelease(.LEFT)) {
-        for (menu.areas, 0..) |area, i| {
-            if (area.contains(window.mousePosition)) {
-                menu.current = i;
-                confirm = true;
-            }
-        }
-    }
-
-    if (confirm) menuSelected();
+    const menuIndex = menu.update();
+    if (menuIndex) |index| menuSelected(index);
 }
 
-fn menuSelected() void {
-    switch (menu.current) {
+fn menuSelected(index: usize) void {
+    switch (index) {
         0 => status = .status,
         1 => status = .item,
         2...3 => status = .normal,
@@ -244,11 +202,5 @@ pub fn draw() void {
 
 fn drawMenu() void {
     camera.draw(menuTexture, .init(0, 280));
-
-    for (menu.areas, menu.names, 0..) |area, name, i| {
-        if (i == menu.current) {
-            camera.drawRectangle(area, Menu.color);
-        }
-        camera.drawText(name, area.min.addXY(5, -2));
-    }
+    menu.draw();
 }

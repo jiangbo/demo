@@ -4,11 +4,10 @@ const sk = @import("sokol");
 const math = @import("math.zig");
 
 const gfx = sk.gfx;
-pub const Rectangle = math.Rectangle;
 
 pub const Texture = struct {
     image: gfx.Image,
-    area: Rectangle = .{},
+    area: math.Rect = .{},
 
     pub fn width(self: *const Texture) f32 {
         return self.size().x;
@@ -19,14 +18,14 @@ pub const Texture = struct {
     }
 
     pub fn size(self: *const Texture) math.Vector2 {
-        return self.area.size();
+        return self.area.size;
     }
 
-    pub fn subTexture(self: *const Texture, area: Rectangle) Texture {
-        return .{ .image = self.image, .area = self.area.sub(area) };
+    pub fn subTexture(self: *const Texture, area: math.Rect) Texture {
+        return .{ .image = self.image, .area = area.move(self.area.min) };
     }
 
-    pub fn mapTexture(self: *const Texture, area: Rectangle) Texture {
+    pub fn mapTexture(self: *const Texture, area: math.Rect) Texture {
         return Texture{ .image = self.image, .area = area };
     }
 
@@ -89,10 +88,9 @@ pub fn end() void {
     gfx.commit();
 }
 
-pub fn scissor(area: math.Rectangle) void {
-    const size = area.size();
+pub fn scissor(area: math.Rect) void {
     const x, const y = .{ area.min.x, area.min.y };
-    gfx.applyScissorRectf(x, y, size.x, size.y, true);
+    gfx.applyScissorRectf(x, y, area.size.x, area.size.y, true);
 }
 
 pub fn createTexture(size: math.Vector, data: []const u8) Texture {

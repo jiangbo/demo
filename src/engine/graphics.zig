@@ -11,10 +11,10 @@ pub const Texture = gpu.Texture;
 pub const Color = math.Vector4;
 pub const Vector = math.Vector;
 pub const FourDirection = math.FourDirection;
-pub const Rectangle = math.Rectangle;
+pub const Rect = math.Rect;
 pub const loadTexture = assets.loadTexture;
 
-pub const Frame = struct { area: Rectangle, interval: f32 = 0.1 };
+pub const Frame = struct { area: Rect, interval: f32 = 0.1 };
 
 pub const FrameAnimation = struct {
     elapsed: f32 = 0,

@@ -75,7 +75,7 @@ pub fn draw() void {
         defer camera.mode = .world;
         const percent = timer.elapsed / timer.duration;
         const alpha = if (isFadeIn) 1 - percent else percent;
-        camera.drawRectangle(.init(.zero, window.logicSize), .{ .w = alpha });
+        camera.drawRect(.init(.zero, window.logicSize), .{ .w = alpha });
         camera.flushTexture();
     }
 

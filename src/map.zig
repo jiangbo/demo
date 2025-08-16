@@ -139,16 +139,16 @@ pub fn getObject(index: usize) u16 {
     return current.object[index];
 }
 
-pub fn walkTo(area: math.Rectangle, velocity: math.Vector2) math.Vector2 {
+pub fn walkTo(area: math.Rect, velocity: math.Vector2) math.Vector2 {
     if (velocity.x == 0 and velocity.y == 0) return area.min;
     return .init(walkToX(area, velocity.x), walkToY(area, velocity.y));
 }
 
-fn walkToX(area: math.Rectangle, velocity: f32) f32 {
+fn walkToX(area: math.Rect, velocity: f32) f32 {
     const min = area.min.addX(velocity);
     if (min.x < 0) return 0;
-    const max = area.max.addX(velocity);
-    if (max.x > size.x) return size.x - 0.1 - area.size().x;
+    const max = area.max().addX(velocity);
+    if (max.x > size.x) return size.x - 0.1 - area.size.x;
 
     if (velocity > 0) {
         if (canWalk(.init(max.x, min.y)) and canWalk(max)) return min.x;
@@ -156,7 +156,7 @@ fn walkToX(area: math.Rectangle, velocity: f32) f32 {
         // 把左上角的位置放到图块的左边缘
         const x: f32 = @floatFromInt(index * SIZE);
         // 平移加容忍，将右边放到图块的左边缘
-        return x - area.size().x - 0.1;
+        return x - area.size.x - 0.1;
     } else {
         if (canWalk(min) and canWalk(.init(min.x, max.y))) return min.x;
         const index = 1 + positionIndex(min) % current.width;
@@ -164,17 +164,17 @@ fn walkToX(area: math.Rectangle, velocity: f32) f32 {
     }
 }
 
-fn walkToY(area: math.Rectangle, velocity: f32) f32 {
+fn walkToY(area: math.Rect, velocity: f32) f32 {
     const min = area.min.addY(velocity);
     if (min.y < 0) return 0;
-    const max = area.max.addY(velocity);
-    if (max.y > size.y) return size.y - 0.1 - area.size().y;
+    const max = area.max().addY(velocity);
+    if (max.y > size.y) return size.y - 0.1 - area.size.y;
 
     if (velocity > 0) {
         if (canWalk(.init(min.x, max.y)) and canWalk(max)) return min.y;
         const index = positionIndex(max) / current.width;
         const y: f32 = @floatFromInt(index * SIZE);
-        return y - area.size().y - 0.1;
+        return y - area.size.y - 0.1;
     } else {
         if (canWalk(min) and canWalk(.init(max.x, min.y))) return min.y;
         const index = 1 + positionIndex(min) / current.width;

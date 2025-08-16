@@ -80,7 +80,7 @@ pub fn update(delta: f32) void {
             .right => .init(speed, 0),
         };
 
-        const area = math.Rectangle.init(npc.position, SIZE);
+        const area = math.Rect.init(npc.position, SIZE);
         const newPosition = map.walkTo(area, velocity);
         if (newPosition.approxEqual(npc.position)) {
             const old = npc.facing;
@@ -90,16 +90,16 @@ pub fn update(delta: f32) void {
         }
 
         // 检测和角色的碰撞
-        const collider = math.Rectangle.init(newPosition, SIZE);
+        const collider = math.Rect.init(newPosition, SIZE);
         if (!collider.intersect(player.collider())) {
             npc.position = newPosition;
         }
     }
 }
 
-pub fn isCollision(collider: math.Rectangle) bool {
+pub fn isCollision(collider: math.Rect) bool {
     for (npcArray.items) |npc| {
-        const npcCollider = math.Rectangle.init(npc.position, SIZE);
+        const npcCollider = math.Rect.init(npc.position, SIZE);
         if (collider.intersect(npcCollider)) return true;
     }
     return false;

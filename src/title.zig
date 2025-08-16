@@ -1,17 +1,29 @@
 const std = @import("std");
+const zhu = @import("zhu");
 
-const window = @import("zhu").window;
-const gfx = @import("zhu").gfx;
-const camera = @import("zhu").camera;
+const window = zhu.window;
+const gfx = zhu.gfx;
+const camera = zhu.camera;
+
 const scene = @import("scene.zig");
 
 var background: gfx.Texture = undefined;
+const color = gfx.color(0.73, 0.72, 0.53, 1);
+
+const ZonMenu = struct {
+    background: bool = false,
+    position: gfx.Vector = .zero,
+    names: []const []const u8 = &.{},
+    offsets: []const gfx.Vector = &.{},
+};
+
+const main: ZonMenu = @import("zon/menu.zon")[5];
 
 const Menu = struct {
     background: ?gfx.Texture = null,
     position: gfx.Vector,
     names: []const []const u8,
-    areas: []const gfx.Rectangle = undefined,
+    areas: []const gfx.Rect = undefined,
     current: usize = 0,
     const color = gfx.color(0.73, 0.72, 0.53, 1);
 };
@@ -32,8 +44,8 @@ var loadMenu: Menu = .{
     .areas = &createAreas(6, .{ .x = 0 + 45, .y = 280 + 20 }),
 };
 
-fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
-    var areas: [num]gfx.Rectangle = undefined;
+fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rect {
+    var areas: [num]gfx.Rect = undefined;
     for (&areas, 0..) |*area, i| {
         const offsetY: f32 = @floatFromInt(10 + i * 24);
         area.* = .init(pos.addY(offsetY), .init(65, 25));
@@ -141,7 +153,7 @@ fn loadMenuSelected() void {
     }
 }
 
-pub fn render() void {
+pub fn draw() void {
     if (displayHeader) return renderHeader();
     camera.draw(background, .zero);
 
@@ -149,7 +161,7 @@ pub fn render() void {
 
     for (menu.areas, menu.names, 0..) |area, name, i| {
         if (i == menu.current) {
-            camera.drawRectangle(area, Menu.color);
+            camera.drawRect(area, Menu.color);
         }
         camera.drawText(name, area.min.addXY(5, -2));
     }

@@ -82,7 +82,7 @@ pub fn update(delta: f32) void {
 
     const velocity = dir.normalize().scale(MOVE_SPEED).scale(delta);
 
-    const area = math.Rectangle.init(position, SIZE);
+    const area = math.Rect.init(position, SIZE);
     if (npc.isCollision(area.move(velocity))) return;
 
     position = map.walkTo(area, velocity);
@@ -158,8 +158,8 @@ pub fn updateItem() void {
     }
 }
 
-pub fn collider() math.Rectangle {
-    return math.Rectangle.init(position, SIZE);
+pub fn collider() math.Rect {
+    return math.Rect.init(position, SIZE);
 }
 
 pub fn addItem(itemId: u16) void {

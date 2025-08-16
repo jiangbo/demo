@@ -40,11 +40,9 @@ const Rect = struct {
     right: f32 = 0,
     bottom: f32 = 0,
 
-    fn toArea(self: Rect) math.Rectangle {
-        return .{
-            .min = .{ .x = self.left, .y = self.top },
-            .max = .{ .x = self.right, .y = self.bottom },
-        };
+    fn toArea(self: Rect) math.Rect {
+        const min = math.Vector2{ .x = self.left, .y = self.top };
+        return .fromMax(min, .{ .x = self.right, .y = self.bottom });
     }
 };
 
@@ -141,7 +139,7 @@ pub fn drawTextOptions(text: []const u8, options: TextOptions) void {
         const target = char.planeBounds.toArea();
         gpu.appendBuffer(buffer, &.{gpu.QuadVertex{
             .position = pos.add(target.min.scale(options.size)).toVector3(0),
-            .size = target.size().scale(options.size),
+            .size = target.size.scale(options.size),
             .texture = char.atlasBounds.toArea().toVector4(),
             .color = options.color,
         }});

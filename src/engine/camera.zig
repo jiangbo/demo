@@ -48,8 +48,8 @@ pub fn beginDraw() void {
     font.beginDraw();
 }
 
-pub fn debugDraw(area: math.Rectangle) void {
-    drawRectangle(area, .{ .x = 1, .z = 1, .w = 0.4 });
+pub fn debugDraw(area: math.Rect) void {
+    drawRect(area, .{ .x = 1, .z = 1, .w = 0.4 });
 }
 
 pub fn draw(texture: gpu.Texture, pos: math.Vector) void {
@@ -60,9 +60,9 @@ pub fn drawFlipX(texture: Texture, pos: Vector, flipX: bool) void {
     drawOption(texture, pos, .{ .flipX = flipX });
 }
 
-pub fn drawRectangle(area: math.Rectangle, color: math.Vector4) void {
+pub fn drawRect(area: math.Rect, color: math.Vector4) void {
     drawOption(whiteTexture, area.min, .{
-        .size = area.size(),
+        .size = area.size,
         .color = color,
     });
 }
@@ -75,10 +75,9 @@ pub const Option = struct {
     flipX: bool = false, // 是否水平翻转
 };
 pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
-    var textureArea = texture.area;
+    var textureVector: math.Vector4 = texture.area.toVector4();
     if (option.flipX) {
-        textureArea.min.x = texture.area.max.x;
-        textureArea.max.x = texture.area.min.x;
+        std.mem.swap(f32, &textureVector.x, &textureVector.z);
     }
 
     const size = option.size orelse texture.size();
@@ -88,7 +87,7 @@ pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
     drawVertices(texture, &.{Vertex{
         .position = temp.toVector3(0),
         .size = size,
-        .texture = textureArea.toVector4(),
+        .texture = textureVector,
         .color = option.color,
     }});
 }
@@ -125,16 +124,16 @@ pub fn endDraw() void {
     flushTextureAndText();
 }
 
-pub fn scissor(area: math.Rectangle) void {
+pub fn scissor(area: math.Rect) void {
     flushTextureAndText();
-    gpu.scissor(math.Rectangle{
-        .min = area.min.scale(window.ratio.x),
-        .max = area.max.scale(window.ratio.y),
+    gpu.scissor(math.Rect{
+        .min = area.min.mul(window.ratio),
+        .size = area.size.mul(window.ratio),
     });
 }
 pub fn resetScissor() void {
     flushTextureAndText();
-    gpu.scissor(.{ .min = .zero, .max = window.clientSize });
+    gpu.scissor(.fromMax(.zero, window.clientSize));
 }
 
 const VertexOptions = struct {
