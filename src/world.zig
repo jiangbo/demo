@@ -47,9 +47,12 @@ fn createAreas(comptime num: u8, pos: gfx.Vector) [num]gfx.Rectangle {
 }
 
 var menuTexture: gfx.Texture = undefined;
+var arenaAllocator: std.heap.ArenaAllocator = undefined;
 
 pub fn init() void {
+    arenaAllocator = std.heap.ArenaAllocator.init(window.allocator);
     menuTexture = gfx.loadTexture("assets/pic/mainmenu1.png", .init(150, 200));
+
     talk.init();
     about.init();
     map.init();
@@ -62,25 +65,27 @@ pub fn init() void {
     // status = .item;
 }
 
+pub fn deinit() void {
+    arenaAllocator.deinit();
+}
+
 pub fn enter() void {
     const playerPosition = map.enter();
     player.enter(playerPosition);
     npc.enter();
 }
 
-// const parseZon = std.zon.parse.fromSlice;
-// pub fn reload(allocator: std.mem.Allocator) void {
-//     std.log.info("reload", .{});
-
-//     const content = window.readAll(allocator, "src/zon/change.zon");
-//     defer allocator.free(content);
-//     const zon = parseZon([]ChangedMap, allocator, content, null, .{});
-//     changeMaps = zon catch @panic("error parse zon");
-// }
-
 pub fn exit() void {}
 
+var modifyTime: i64 = 0;
 pub fn update(delta: f32) void {
+    const time = window.statFileTime("src/zon/change.zon");
+    if (time != modifyTime) {
+        arenaAllocator.reset(.retain_capacity);
+        player.position = map.reload(arenaAllocator.allocator());
+        modifyTime = time;
+    }
+
     if (status != .menu and (window.pressedButton(.RIGHT) or
         window.pressedAny(&.{ .ESCAPE, .E })))
     {

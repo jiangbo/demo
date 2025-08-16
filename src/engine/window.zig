@@ -223,6 +223,14 @@ export fn windowDeinit() void {
     assets.deinit();
 }
 
+pub fn statFileTime(path: [:0]const u8) i64 {
+    const file = std.fs.cwd().openFile(path, .{}) catch return 0;
+    defer file.close();
+
+    const stat = file.stat() catch return 0;
+    return @intCast(stat.mtime);
+}
+
 pub fn readAll(alloc: std.mem.Allocator, path: []const u8) [:0]u8 {
     return doReadAll(alloc, path) catch @panic("file error");
 }

@@ -194,6 +194,18 @@ pub fn canWalk(position: math.Vector2) bool {
     return current.object[index] == 0 or current.object[index] > 4;
 }
 
+const parseZon = std.zon.parse.fromSlice;
+pub fn reload(allocator: std.mem.Allocator) math.Vector2 {
+    std.log.info("map reload", .{});
+
+    const content = window.readAll(allocator, "src/zon/change.zon");
+    defer allocator.free(content);
+    const link = parseZon([]Link, allocator, content, null, .{});
+    links = link catch @panic("error parse zon");
+    return links[linkIndex].player;
+}
+
+var modifyTime: i64 = 0;
 pub fn draw() void {
     camera.drawVertices(texture, vertexArray.items);
 }

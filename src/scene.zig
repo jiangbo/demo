@@ -11,10 +11,8 @@ const worldScene = @import("world.zig");
 const SceneType = enum { title, world };
 var currentSceneType: SceneType = .world;
 var toSceneType: SceneType = .title;
-var arenaAllocator: std.heap.ArenaAllocator = undefined;
 
 pub fn init() void {
-    arenaAllocator = std.heap.ArenaAllocator.init(window.allocator);
     window.initFont(.{
         .font = @import("zon/font.zon"),
         .texture = gfx.loadTexture("assets/font.png", .init(948, 948)),
@@ -28,11 +26,6 @@ pub fn init() void {
     worldScene.init();
 
     sceneCall("enter", .{});
-}
-
-pub fn reload() void {
-    _ = arenaAllocator.reset(.free_all);
-    sceneCall("reload", .{arenaAllocator.allocator()});
 }
 
 pub fn changeScene(sceneType: SceneType) void {
@@ -53,8 +46,6 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
         return window.toggleFullScreen();
     }
-
-    if (window.isKeyRelease(.Z)) reload();
 
     if (fadeTimer) |*timer| {
         // 存在淡入淡出效果，地图和角色暂时不更新。
@@ -160,7 +151,6 @@ pub fn fadeOut(callback: ?*const fn () void) void {
 
 pub fn deinit() void {
     sceneCall("deinit", .{});
-    arenaAllocator.deinit();
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {
