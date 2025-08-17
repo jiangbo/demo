@@ -157,14 +157,14 @@ fn openChest(pickIndex: u16) void {
     if (object.itemIndex == 0 and object.count == 0) {
         const gold = window.random().intRangeLessThanBiased(u8, 10, 100);
         player.money += gold;
-        status = .{ .talk = 3 };
+        status = .{ .talk = 2 };
         talk.talkNumber = gold;
     } else {
         player.addItem(object.itemIndex);
         const name = item.zon[object.itemIndex].name;
         talk.talkNumber = name.len;
         @memcpy(talk.talkText[0..name.len], name);
-        status = .{ .talk = 4 };
+        status = .{ .talk = 3 };
     }
 }
 
