@@ -35,8 +35,8 @@ pub fn init() void {
     bgTexture = gfx.loadTexture("assets/pic/sbar.png", .init(420, 320));
 }
 
-pub fn update(len: usize, index: usize) usize {
-    var itemIndex: usize = index;
+pub fn update(len: u8, index: u8) u8 {
+    var itemIndex = index;
 
     if (window.isAnyKeyRelease(&.{ .LEFT, .A })) {
         itemIndex = (itemIndex + len - 1) % len;
@@ -56,7 +56,7 @@ pub fn update(len: usize, index: usize) usize {
     return itemIndex;
 }
 
-pub fn draw(items: []u16, itemIndex: usize) void {
+pub fn draw(items: []u8, itemIndex: usize) void {
     camera.draw(bgTexture, position.addXY(-10, -10));
 
     // 当前选中物品

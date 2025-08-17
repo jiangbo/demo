@@ -13,11 +13,19 @@ const about = @import("about.zig");
 const item = @import("item.zig");
 const npc = @import("npc.zig");
 
-const Status = union(enum) { talk, menu, about, status, item };
+const Status = union(enum) { talk, menu, about, status, item, shop };
 var status: ?Status = null;
 
 var menuTexture: gfx.Texture = undefined;
 var arenaAllocator: std.heap.ArenaAllocator = undefined;
+
+const Shop = struct { items: [16]u8, current: u8 = 0 };
+var weaponShop: Shop = .{
+    .items = .{
+        12, 12, 13, 13, 14, 14, 9, 9, //
+        10, 10, 8,  8,  16, 16, 0, 0,
+    },
+};
 
 pub fn init() void {
     arenaAllocator = std.heap.ArenaAllocator.init(window.allocator);
@@ -75,6 +83,7 @@ pub fn update(delta: f32) void {
         switch (pop) {
             .talk => return updateTalk(),
             .item => return updateItem(),
+            .shop => return updateShop(),
             .status => {
                 return if (window.isMouseRelease(.RIGHT) or
                     window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }))
@@ -126,14 +135,15 @@ fn updateTalk() void {
     if (talkEvent) |event| {
         switch (event) {
             0 => status = null,
-            4 => updateShop(),
+            4 => status = .shop,
             else => unreachable,
         }
     }
 }
 
 fn updateShop() void {
-    item.draw(&.{}, 0);
+    weaponShop.current = item.update(weaponShop.items.len, weaponShop.current);
+    // item.draw(&weaponShop.items, weaponShop.current);
     // // 金币，操作说明
     // camera.drawText("（金=", pos.addXY(10, 270));
     // const moneyStr = zhu.format(&buffer, "{d}）", .{money});
@@ -222,10 +232,22 @@ pub fn draw() void {
         .talk => talk.draw(),
         .status => player.drawStatus(),
         .item => player.drawItem(),
+        .shop => drawShop(),
         .menu => {
             camera.draw(menuTexture, .init(0, 280));
             menu.draw();
         },
         .about => about.draw(),
     }
+}
+
+fn drawShop() void {
+    item.draw(&weaponShop.items, weaponShop.current);
+    var buffer: [20]u8 = undefined;
+    // 金币，操作说明
+    camera.drawText("（金=", item.position.addXY(10, 270));
+    const moneyStr = zhu.format(&buffer, "{d}）", .{player.money});
+    camera.drawText(moneyStr, item.position.addXY(60, 270));
+    const text = "CTRL=购买　　ESC=退出";
+    camera.drawText(text, item.position.addXY(118, 270));
 }

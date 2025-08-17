@@ -24,8 +24,8 @@ pub var facing: math.FourDirection = .down;
 pub var position: math.Vector = undefined;
 
 pub var money: usize = 50; // 金钱
-pub var items: [16]u16 = undefined;
-var itemIndex: usize = 0;
+pub var items: [16]u8 = undefined;
+var itemIndex: u8 = 0;
 
 var level: usize = 1; //等级
 var exp: usize = 0; //经验
@@ -155,7 +155,7 @@ pub fn talkCollider() math.Rect {
     };
 }
 
-pub fn addItem(itemId: u16) void {
+pub fn addItem(itemId: u8) void {
     for (&items) |*value| {
         if (value.* == 0) {
             value.* = itemId;
