@@ -92,7 +92,7 @@ pub fn update(delta: f32) void {
     // 检测是否需要切换地图
     const object = map.getObject(map.positionIndex(area.center()));
     if (object > 4) {
-        std.log.info("change map: {d}", .{object});
+        std.log.info("change map link index: {d}", .{object});
         map.linkIndex = object;
         scene.changeMap();
     }

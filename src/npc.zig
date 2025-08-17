@@ -19,7 +19,7 @@ const frames: [2]gfx.Frame = .{
     .{ .area = .init(.init(32, 0), .init(32, 32)), .interval = 0.5 },
 };
 
-const Info = struct {
+const State = struct {
     index: u8,
     position: math.Vector2,
     facing: gfx.FourDirection = .down,
@@ -27,8 +27,8 @@ const Info = struct {
     timer: window.Timer = .init(5),
 };
 
-var npcBuffer: [10]Info = undefined;
-var npcArray: std.ArrayListUnmanaged(Info) = undefined;
+var npcBuffer: [10]State = undefined;
+var npcArray: std.ArrayListUnmanaged(State) = undefined;
 
 pub fn init() void {
     for (&npcTextures, &npcPictures, 1..) |*texture, *picture, i| {
