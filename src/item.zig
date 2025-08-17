@@ -35,6 +35,27 @@ pub fn init() void {
     bgTexture = gfx.loadTexture("assets/pic/sbar.png", .init(420, 320));
 }
 
+pub fn update(len: usize, index: usize) usize {
+    var itemIndex: usize = index;
+
+    if (window.isAnyKeyRelease(&.{ .LEFT, .A })) {
+        itemIndex = (itemIndex + len - 1) % len;
+    }
+
+    if (window.isAnyKeyRelease(&.{ .RIGHT, .D })) {
+        itemIndex = (itemIndex + 1) % len;
+    }
+
+    if (window.isAnyKeyRelease(&.{ .DOWN, .S })) {
+        itemIndex = (itemIndex + len / 2) % len;
+    }
+
+    if (window.isAnyKeyRelease(&.{ .UP, .W })) {
+        itemIndex = (itemIndex + len / 2 * 3) % len;
+    }
+    return itemIndex;
+}
+
 pub fn draw(items: []u16, itemIndex: usize) void {
     camera.draw(bgTexture, position.addXY(-10, -10));
 

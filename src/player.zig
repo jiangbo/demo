@@ -132,29 +132,14 @@ fn updateFacing() math.Vector2 {
     return dir;
 }
 
+pub fn updateItem() void {
+    itemIndex = item.update(items.len, itemIndex);
+}
+
 fn cameraLookAt() void {
     const half = window.logicSize.scale(0.5);
     const max = map.size.sub(window.logicSize);
     camera.position = position.sub(half).clamp(.zero, max);
-}
-
-pub fn updateItem() void {
-    if (window.isAnyKeyRelease(&.{ .LEFT, .A })) {
-        itemIndex -|= 1;
-    }
-
-    if (window.isAnyKeyRelease(&.{ .RIGHT, .D })) {
-        itemIndex += 1;
-        if (itemIndex >= items.len) itemIndex = items.len - 1;
-    }
-
-    if (window.isAnyKeyRelease(&.{ .DOWN, .S })) {
-        itemIndex = (itemIndex + items.len / 2) % items.len;
-    }
-
-    if (window.isAnyKeyRelease(&.{ .UP, .W })) {
-        itemIndex = (itemIndex + items.len / 2 * 3) % items.len;
-    }
 }
 
 pub fn collider() math.Rect {
