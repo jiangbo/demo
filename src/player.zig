@@ -23,7 +23,7 @@ var facings: std.EnumArray(math.FourDirection, u64) = undefined;
 pub var facing: math.FourDirection = .down;
 pub var position: math.Vector = undefined;
 
-pub var money: usize = 5400; // 金钱
+pub var money: usize = 5000; // 金钱
 pub var items: [16]u8 = undefined;
 var itemIndex: u8 = 0;
 

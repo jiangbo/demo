@@ -95,7 +95,7 @@ fn getPositionFromIndex(index: usize) gfx.Vector {
     return math.Vector.init(col, row).mul(TILE_SIZE);
 }
 
-pub fn openChest(position: gfx.Vector, direction: math.FourDirection) u16 {
+pub fn talk(position: gfx.Vector, direction: math.FourDirection) ?u16 {
     const index: i32 = @intCast(positionIndex(position));
     const talkIndex: i32 = switch (direction) {
         .down => index + current.width,
@@ -104,27 +104,32 @@ pub fn openChest(position: gfx.Vector, direction: math.FourDirection) u16 {
         .up => index - current.width,
     };
 
-    if (talkIndex < 0 or talkIndex > current.object.len) return 0;
+    if (talkIndex < 0 or talkIndex > current.object.len) return null;
     const talkObject = current.object[@intCast(talkIndex)];
-    if (talkObject != 2) return 0;
+    if (talkObject != 2) return null;
 
-    return openChestIfNeed(@intCast(talkIndex));
+    for (current.chests) |chest| {
+        if (talkIndex != chest.tileIndex) continue;
+        // 宝箱已经被打开，不需要处理任何东西
+        if (item.picked.isSet(chest.pickupIndex)) return null;
+        return @intCast(talkIndex);
+    }
+    unreachable;
 }
 
-fn openChestIfNeed(talkIndex: usize) u16 {
+pub fn openChest(chestIndex: usize) void {
     // back 和 ground 已经填充的顶点不需要修改，修改宝箱的顶点
 
     for (current.chests, 0..) |chest, index| {
-        if (talkIndex != chest.tileIndex) continue;
+        if (chestIndex != chest.tileIndex) continue;
 
         // 宝箱已经被打开，不需要处理任何东西
-        if (item.picked.isSet(chest.pickupIndex)) return 0;
+        if (item.picked.isSet(chest.pickupIndex)) return;
 
         // 宝箱还没有打开，修改状态
         item.picked.set(chest.pickupIndex);
         const vertex = buildVertex(302, chest.tileIndex);
         vertexArray.items[backgroundIndex + index] = vertex;
-        return chest.pickupIndex;
     }
     unreachable;
 }

@@ -12,15 +12,23 @@ pub var mousePosition: math.Vector = .zero;
 pub var lastMouseState: std.StaticBitSet(3) = .initEmpty();
 pub var mouseState: std.StaticBitSet(3) = .initEmpty();
 
+pub var anyRelease: bool = false;
+
 pub fn event(ev: *const sk.app.Event) void {
     const keyCode: usize = @intCast(@intFromEnum(ev.key_code));
     const buttonCode: usize = @intCast(@intFromEnum(ev.mouse_button));
     switch (ev.type) {
         .KEY_DOWN => keyState.set(keyCode),
-        .KEY_UP => keyState.unset(keyCode),
+        .KEY_UP => {
+            keyState.unset(keyCode);
+            anyRelease = true;
+        },
         .MOUSE_MOVE => mousePosition = .init(ev.mouse_x, ev.mouse_y),
         .MOUSE_DOWN => mouseState.set(buttonCode),
-        .MOUSE_UP => mouseState.unset(buttonCode),
+        .MOUSE_UP => {
+            mouseState.unset(buttonCode);
+            anyRelease = true;
+        },
         .ICONIFIED, .UNFOCUSED => {
             keyState = .initEmpty();
             mouseState = .initEmpty();

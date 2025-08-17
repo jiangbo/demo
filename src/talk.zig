@@ -30,7 +30,7 @@ pub fn init() void {
 }
 
 pub fn activeNumber(talkId: u16, number: anytype) void {
-    const content = zhu.format(&text, "{d}", .{number});
+    const content = zhu.format(text[20..], "{d}", .{number});
     activeText(talkId, content);
 }
 

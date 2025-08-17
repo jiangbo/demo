@@ -37,12 +37,16 @@ const Shop = struct {
     fn buy(itemIndex: u8) void {
         const buyItem = item.zon[itemIndex];
 
-        // TODO 金币不够
-        if (buyItem.money > player.money) @panic("money not enough");
+        if (buyItem.money > player.money) {
+            tip = "兄弟，你的钱不够！";
+            return;
+        }
 
         const bagEnough = player.addItem(itemIndex);
-        //  TODO 背包不够
-        if (!bagEnough) @panic("bag not enough");
+        if (!bagEnough) {
+            tip = "你已经带满了！";
+            return;
+        }
         player.money -= buyItem.money;
     }
 
@@ -63,6 +67,8 @@ var weaponShop: Shop = .{
         10, 10, 8,  8,  16, 16, 0, 0,
     },
 };
+
+var tip: []const u8 = &.{};
 
 pub fn init() void {
     arenaAllocator = std.heap.ArenaAllocator.init(window.allocator);
@@ -93,6 +99,7 @@ pub fn enter() void {
 
     // talk.active = 4;
     // status = .talk;
+
 }
 
 pub fn changeMap() void {
@@ -105,6 +112,11 @@ pub fn exit() void {}
 
 pub fn update(delta: f32) void {
     reloadIfChanged();
+
+    if (tip.len != 0) {
+        if (window.isAnyRelease()) tip = &.{};
+        return;
+    }
 
     if (status == null or status.? != .menu) {
         if (window.isMouseRelease(.RIGHT) or
@@ -140,8 +152,8 @@ pub fn update(delta: f32) void {
     const confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
     if (confirm) {
         // 开启宝箱
-        const object = map.openChest(player.position, player.facing);
-        if (object != 0) openChest(object);
+        const object = map.talk(player.position, player.facing);
+        if (object) |chestIndex| openChest(chestIndex);
     }
 
     if (confirm) {
@@ -178,8 +190,6 @@ fn updateTalk() void {
     }
 }
 
-fn updateShop() void {}
-
 fn updateItem() void {
     if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E })) {
         status = null;
@@ -207,7 +217,8 @@ fn updateAbout(delta: f32) void {
     }
 }
 
-fn openChest(pickIndex: u16) void {
+fn openChest(chestIndex: u16) void {
+    const pickIndex = map.current.object[chestIndex];
     const object = item.pickupZon[pickIndex];
 
     if (object.itemIndex == 0 and object.count == 0) {
@@ -216,10 +227,14 @@ fn openChest(pickIndex: u16) void {
         talk.activeNumber(2, gold);
         status = .talk;
     } else {
-        // TODO 背包物品放不下
-        _ = player.addItem(object.itemIndex);
+        const added = player.addItem(object.itemIndex);
+        if (!added) {
+            tip = "你已经带满了！";
+            return;
+        }
         talk.activeText(3, item.zon[object.itemIndex].name);
         status = .talk;
+        map.openChest(chestIndex);
     }
 }
 
@@ -268,5 +283,10 @@ pub fn draw() void {
             menu.draw();
         },
         .about => about.draw(),
+    }
+
+    if (tip.len != 0) {
+        camera.drawColorText(tip, .init(242, 442), .black);
+        camera.drawColorText(tip, .init(240, 440), .yellow);
     }
 }

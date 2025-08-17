@@ -214,6 +214,7 @@ export fn windowFrame() void {
     gpu.end();
     input.lastKeyState = input.keyState;
     input.lastMouseState = input.mouseState;
+    input.anyRelease = false;
     mouseMoved = false;
 }
 
@@ -251,6 +252,10 @@ fn doReadAll(alloc: std.mem.Allocator, path: []const u8) ![:0]u8 {
 
 pub fn exit() void {
     sk.app.requestQuit();
+}
+
+pub fn isAnyRelease() bool {
+    return input.anyRelease;
 }
 
 pub const File = assets.File;
