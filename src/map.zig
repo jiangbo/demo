@@ -30,7 +30,7 @@ const Map = struct {
 const Link = struct { player: gfx.Vector = .zero, mapId: u8 = 0 };
 const zon: []const Map = @import("zon/map.zon");
 var links: []const Link = @import("zon/link.zon");
-pub var linkIndex: u16 = 7;
+pub var linkIndex: u16 = 8;
 pub var current: *const Map = undefined;
 pub var size: math.Vector2 = undefined;
 
@@ -112,24 +112,21 @@ pub fn talk(position: gfx.Vector, direction: math.FourDirection) ?u16 {
         if (talkIndex != chest.tileIndex) continue;
         // 宝箱已经被打开，不需要处理任何东西
         if (item.picked.isSet(chest.pickupIndex)) return null;
-        return @intCast(talkIndex);
+        return @intCast(chest.pickupIndex);
     }
     unreachable;
 }
 
-pub fn openChest(chestIndex: usize) void {
+pub fn openChest(pickIndex: usize) void {
     // back 和 ground 已经填充的顶点不需要修改，修改宝箱的顶点
 
     for (current.chests, 0..) |chest, index| {
-        if (chestIndex != chest.tileIndex) continue;
+        if (pickIndex != chest.pickupIndex) continue;
 
-        // 宝箱已经被打开，不需要处理任何东西
-        if (item.picked.isSet(chest.pickupIndex)) return;
-
-        // 宝箱还没有打开，修改状态
-        item.picked.set(chest.pickupIndex);
+        item.picked.set(pickIndex);
         const vertex = buildVertex(302, chest.tileIndex);
         vertexArray.items[backgroundIndex + index] = vertex;
+        return;
     }
     unreachable;
 }

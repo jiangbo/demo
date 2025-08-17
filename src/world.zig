@@ -153,7 +153,7 @@ pub fn update(delta: f32) void {
     if (confirm) {
         // 开启宝箱
         const object = map.talk(player.position, player.facing);
-        if (object) |chestIndex| openChest(chestIndex);
+        if (object) |pickupIndex| openChest(pickupIndex);
     }
 
     if (confirm) {
@@ -217,8 +217,7 @@ fn updateAbout(delta: f32) void {
     }
 }
 
-fn openChest(chestIndex: u16) void {
-    const pickIndex = map.current.object[chestIndex];
+fn openChest(pickIndex: u16) void {
     const object = item.pickupZon[pickIndex];
 
     if (object.itemIndex == 0 and object.count == 0) {
@@ -234,7 +233,7 @@ fn openChest(chestIndex: u16) void {
         }
         talk.activeText(3, item.zon[object.itemIndex].name);
         status = .talk;
-        map.openChest(chestIndex);
+        map.openChest(pickIndex);
     }
 }
 
@@ -269,20 +268,21 @@ pub fn draw() void {
     npc.draw();
     player.draw();
 
-    if (status == null) return;
-
     camera.mode = .local;
     defer camera.mode = .world;
-    switch (status.?) {
-        .talk => talk.draw(),
-        .status => player.drawStatus(),
-        .item => player.drawItem(),
-        .shop => weaponShop.draw(),
-        .menu => {
-            camera.draw(menuTexture, .init(0, 280));
-            menu.draw();
-        },
-        .about => about.draw(),
+
+    if (status) |pop| {
+        switch (pop) {
+            .talk => talk.draw(),
+            .status => player.drawStatus(),
+            .item => player.drawItem(),
+            .shop => weaponShop.draw(),
+            .menu => {
+                camera.draw(menuTexture, .init(0, 280));
+                menu.draw();
+            },
+            .about => about.draw(),
+        }
     }
 
     if (tip.len != 0) {
