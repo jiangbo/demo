@@ -114,6 +114,7 @@ pub const TextOptions = struct {
     size: f32 = 18,
     position: math.Vector,
     color: math.Vector4 = .one,
+    width: f32 = std.math.floatMax(f32),
 };
 
 const Color = math.Vector4;
@@ -133,6 +134,10 @@ pub fn drawTextOptions(text: []const u8, options: TextOptions) void {
             const height = font.metrics.lineHeight * options.size;
             pos = .init(options.position.x, pos.y + height);
             continue;
+        }
+        if (pos.x > options.width) {
+            const height = font.metrics.lineHeight * options.size;
+            pos = .init(options.position.x, pos.y + height);
         }
         const char = searchGlyph(code);
 

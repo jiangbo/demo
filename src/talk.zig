@@ -57,8 +57,16 @@ pub fn draw(talkId: usize) void {
             buffer[0..bufferIndex];
     }
 
-    camera.drawColorText(content, .init(123, 403), .{ .w = 1 });
-    camera.drawColorText(content, .init(120, 400), .one);
+    camera.drawTextOptions(content, .{
+        .color = .{ .w = 1 },
+        .position = .init(123, 403),
+        .width = 593,
+    });
+    camera.drawTextOptions(content, .{
+        .color = .one,
+        .position = .init(120, 400),
+        .width = 590,
+    });
 }
 
 fn formatInt(content: []const u8) []const u8 {
