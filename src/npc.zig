@@ -15,8 +15,8 @@ const zon: []const Character = @import("zon/npc.zon");
 var npcPictures: [15][:0]const u8 = undefined;
 var npcTextures: [npcPictures.len]gfx.Texture = undefined;
 const frames: [2]gfx.Frame = .{
-    .{ .area = .init(.init(0, 0), .init(32, 32)), .interval = 0.5 },
-    .{ .area = .init(.init(32, 0), .init(32, 32)), .interval = 0.5 },
+    .{ .area = .init(.init(0, 0), SIZE), .interval = 0.5 },
+    .{ .area = .init(.init(32, 0), SIZE), .interval = 0.5 },
 };
 
 const State = struct {
@@ -88,9 +88,14 @@ pub fn update(delta: f32) void {
             .right => .init(speed, 0),
         };
 
-        const area = math.Rect.init(npc.position, SIZE);
-        const newPosition = map.walkTo(area, velocity);
-        if (newPosition.approxEqual(npc.position)) {
+        // NPC 和地图的碰撞检测，只检测一半大小
+        const offset = math.Vector2.init(8, 16);
+
+        const pos = npc.position.add(offset);
+        const area = math.Rect.init(pos, SIZE.scale(0.5));
+        var newPosition = map.walkTo(area, velocity);
+        if (newPosition.approxEqual(pos)) {
+            // 坐标相等，表示没有移动，撞墙了。
             const old = npc.facing;
             while (old == npc.facing) npc.facing = .random();
             npc.timer.reset();
@@ -98,6 +103,7 @@ pub fn update(delta: f32) void {
         }
 
         // 检测和角色的碰撞
+        newPosition = newPosition.sub(offset);
         const collider = math.Rect.init(newPosition, SIZE);
         if (!collider.intersect(player.collider())) {
             npc.position = newPosition;

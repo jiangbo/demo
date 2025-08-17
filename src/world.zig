@@ -44,8 +44,9 @@ pub fn enter() void {
     npc.enter();
     menu.active = 6;
     window.playMusic("assets/voc/back.ogg");
-    talk.active = 4;
-    status = .talk;
+
+    // talk.active = 4;
+    // status = .talk;
 }
 
 pub fn changeMap() void {
