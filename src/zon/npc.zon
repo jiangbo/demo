@@ -3,12 +3,13 @@
     .{},
     .{},
     .{},
-    .{ .talk = 2, .name = "小春春", .picture = 2, .x = 500, .y = 500, .speed = 20 },
+    .{ .talk = 6, .name = "小春春", .picture = 2, .x = 500, .y = 500, .speed = 20 },
+    // 5
     .{ .talk = 0, .name = "大　友", .picture = 1, .x = 200, .y = 140, .speed = 25 },
-    // 6
     .{ .talk = 0, .name = "巫　二", .picture = 1, .x = 200, .y = 300, .speed = 20 },
     .{ .talk = 31, .name = "密　儿", .picture = 2, .x = 920, .y = 260, .speed = 20 },
     .{ .talk = 38, .name = "小　璐", .picture = 0, .x = 400, .y = 400, .speed = 25 },
     .{ .talk = 50, .name = "小　田", .picture = 1, .x = 800, .y = 500, .speed = 20 },
+    // 10
     .{ .talk = 8, .name = "小　芳", .picture = 3, .x = 300, .y = 700, .speed = 20 },
 }
