@@ -43,6 +43,7 @@ pub fn enter() void {
     for (map.current.npcs) |id| {
         npcArray.appendAssumeCapacity(.{
             .index = id,
+            .facing = .random(),
             .position = .init(zon[id].x, zon[id].y),
             .animation = buildAnimation(npcTextures[zon[id].picture]),
         });
@@ -105,10 +106,12 @@ pub fn isCollision(collider: math.Rect) bool {
     return false;
 }
 
-pub fn talk(collider: math.Rect) ?u8 {
-    for (npcArray.items) |npc| {
+pub fn talk(collider: math.Rect, facing: math.FourDirection) ?u8 {
+    for (npcArray.items) |*npc| {
         const npcCollider = math.Rect.init(npc.position, SIZE);
         if (collider.intersect(npcCollider)) {
+            // 将 NPC 的面向调整到角色的反方向
+            npc.facing = facing.opposite();
             return zon[npc.index].talk;
         }
     }

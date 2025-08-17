@@ -96,9 +96,8 @@ pub fn update(delta: f32) void {
 
     if (confirm) {
         // 和 NPC 对话
-        if (npc.talk(player.talkCollider())) |talkId| {
+        if (npc.talk(player.talkCollider(), player.facing)) |talkId| {
             status = .{ .talk = talkId };
-            std.log.info("talkId: {}", .{talkId});
         }
     }
 }

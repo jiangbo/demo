@@ -9,6 +9,15 @@ pub const FourDirection = enum {
     pub fn random() FourDirection {
         return randEnum(FourDirection);
     }
+
+    pub fn opposite(self: FourDirection) FourDirection {
+        return switch (self) {
+            .up => .down,
+            .down => .up,
+            .left => .right,
+            .right => .left,
+        };
+    }
 };
 // zig fmt: off
 pub const EightDirection =enum { up, down, left, right,
