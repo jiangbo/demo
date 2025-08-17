@@ -23,7 +23,7 @@ var facings: std.EnumArray(math.FourDirection, u64) = undefined;
 pub var facing: math.FourDirection = .down;
 pub var position: math.Vector = undefined;
 
-pub var money: usize = 50; // 金钱
+pub var money: usize = 5400; // 金钱
 pub var items: [16]u8 = undefined;
 var itemIndex: u8 = 0;
 
@@ -155,13 +155,14 @@ pub fn talkCollider() math.Rect {
     };
 }
 
-pub fn addItem(itemId: u8) void {
+pub fn addItem(itemId: u8) bool {
     for (&items) |*value| {
         if (value.* == 0) {
             value.* = itemId;
-            return;
+            return true;
         }
     }
+    return false;
 }
 
 pub fn draw() void {

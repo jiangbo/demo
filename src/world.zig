@@ -19,7 +19,44 @@ var status: ?Status = null;
 var menuTexture: gfx.Texture = undefined;
 var arenaAllocator: std.heap.ArenaAllocator = undefined;
 
-const Shop = struct { items: [16]u8, current: u8 = 0 };
+const Shop = struct {
+    items: [16]u8,
+    current: u8 = 0,
+
+    pub fn update(self: *Shop) void {
+        self.current = item.update(self.items.len, self.current);
+
+        if (window.isAnyKeyRelease(&.{ .LEFT_CONTROL, .F, .ENTER })) {
+            const itemIndex = self.items[self.current];
+            if (itemIndex != 0) buy(itemIndex);
+        }
+
+        if (window.isKeyRelease(.Q)) status = null;
+    }
+
+    fn buy(itemIndex: u8) void {
+        const buyItem = item.zon[itemIndex];
+
+        // TODO 金币不够
+        if (buyItem.money > player.money) @panic("money not enough");
+
+        const bagEnough = player.addItem(itemIndex);
+        //  TODO 背包不够
+        if (!bagEnough) @panic("bag not enough");
+        player.money -= buyItem.money;
+    }
+
+    pub fn draw(self: *const Shop) void {
+        item.draw(&self.items, self.current);
+        var buffer: [20]u8 = undefined;
+        // 金币，操作说明
+        camera.drawText("（金=", item.position.addXY(10, 270));
+        const moneyStr = zhu.format(&buffer, "{d}）", .{player.money});
+        camera.drawText(moneyStr, item.position.addXY(60, 270));
+        const text = "CTRL=购买　　ESC=退出";
+        camera.drawText(text, item.position.addXY(118, 270));
+    }
+};
 var weaponShop: Shop = .{
     .items = .{
         12, 12, 13, 13, 14, 14, 9, 9, //
@@ -83,7 +120,7 @@ pub fn update(delta: f32) void {
         switch (pop) {
             .talk => return updateTalk(),
             .item => return updateItem(),
-            .shop => return updateShop(),
+            .shop => return weaponShop.update(),
             .status => {
                 return if (window.isMouseRelease(.RIGHT) or
                     window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }))
@@ -141,15 +178,7 @@ fn updateTalk() void {
     }
 }
 
-fn updateShop() void {
-    weaponShop.current = item.update(weaponShop.items.len, weaponShop.current);
-    // item.draw(&weaponShop.items, weaponShop.current);
-    // // 金币，操作说明
-    // camera.drawText("（金=", pos.addXY(10, 270));
-    // const moneyStr = zhu.format(&buffer, "{d}）", .{money});
-    // camera.drawText(moneyStr, pos.addXY(60, 270));
-    // camera.drawText("CTRL=使用‘A’=丢弃 ESC=退出", pos.addXY(118, 270));
-}
+fn updateShop() void {}
 
 fn updateItem() void {
     if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E })) {
@@ -187,7 +216,8 @@ fn openChest(pickIndex: u16) void {
         talk.activeNumber(2, gold);
         status = .talk;
     } else {
-        player.addItem(object.itemIndex);
+        // TODO 背包物品放不下
+        _ = player.addItem(object.itemIndex);
         talk.activeText(3, item.zon[object.itemIndex].name);
         status = .talk;
     }
@@ -232,22 +262,11 @@ pub fn draw() void {
         .talk => talk.draw(),
         .status => player.drawStatus(),
         .item => player.drawItem(),
-        .shop => drawShop(),
+        .shop => weaponShop.draw(),
         .menu => {
             camera.draw(menuTexture, .init(0, 280));
             menu.draw();
         },
         .about => about.draw(),
     }
-}
-
-fn drawShop() void {
-    item.draw(&weaponShop.items, weaponShop.current);
-    var buffer: [20]u8 = undefined;
-    // 金币，操作说明
-    camera.drawText("（金=", item.position.addXY(10, 270));
-    const moneyStr = zhu.format(&buffer, "{d}）", .{player.money});
-    camera.drawText(moneyStr, item.position.addXY(60, 270));
-    const text = "CTRL=购买　　ESC=退出";
-    camera.drawText(text, item.position.addXY(118, 270));
 }

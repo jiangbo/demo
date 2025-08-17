@@ -56,7 +56,7 @@ pub fn update(len: u8, index: u8) u8 {
     return itemIndex;
 }
 
-pub fn draw(items: []u8, itemIndex: usize) void {
+pub fn draw(items: []const u8, itemIndex: usize) void {
     camera.draw(bgTexture, position.addXY(-10, -10));
 
     // 当前选中物品
