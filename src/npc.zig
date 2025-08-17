@@ -12,8 +12,8 @@ const player = @import("player.zig");
 
 const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
 const zon: []const Character = @import("zon/npc.zon");
-const imageNames: []const [:0]const u8 = @import("zon/npcTex.zon");
-var npcTextures: [imageNames.len]gfx.Texture = undefined;
+var npcPictures: [15][:0]const u8 = undefined;
+var npcTextures: [npcPictures.len]gfx.Texture = undefined;
 const frames: [2]gfx.Frame = .{
     .{ .area = .init(.init(0, 0), .init(32, 32)), .interval = 0.5 },
     .{ .area = .init(.init(32, 0), .init(32, 32)), .interval = 0.5 },
@@ -27,14 +27,21 @@ const Info = struct {
     timer: window.Timer = .init(5),
 };
 
-var buffer: [10]Info = undefined;
+var npcBuffer: [10]Info = undefined;
 var npcArray: std.ArrayListUnmanaged(Info) = undefined;
 
 pub fn init() void {
-    for (imageNames, &npcTextures) |name, *texture| {
-        texture.* = gfx.loadTexture(name, .init(64, 128));
+    for (&npcTextures, &npcPictures, 1..) |*texture, *picture, i| {
+        const path = std.fmt.allocPrintZ(window.allocator, //
+            "assets/pic/npc{:02}.png", .{i}) catch unreachable;
+        picture.* = path;
+        texture.* = gfx.loadTexture(path, .init(64, 128));
     }
-    npcArray = .initBuffer(&buffer);
+    npcArray = .initBuffer(&npcBuffer);
+}
+
+pub fn deinit() void {
+    for (&npcPictures) |value| window.allocator.free(value);
 }
 
 pub fn enter() void {
