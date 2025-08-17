@@ -94,13 +94,13 @@ pub fn update(delta: f32) void {
         const pos = npc.position.add(offset);
         const area = math.Rect.init(pos, SIZE.scale(0.5));
         var newPosition = map.walkTo(area, velocity);
-        if (newPosition.approxEqual(pos)) {
-            // 坐标相等，表示没有移动，撞墙了。
-            const old = npc.facing;
-            while (old == npc.facing) npc.facing = .random();
-            npc.timer.reset();
-            return;
-        }
+        // if (newPosition.approxEqual(pos)) {
+        //     // 坐标相等，表示没有移动，撞墙了。
+        //     const old = npc.facing;
+        //     while (old == npc.facing) npc.facing = .random();
+        //     npc.timer.reset();
+        //     return;
+        // }
 
         // 检测和角色的碰撞
         newPosition = newPosition.sub(offset);

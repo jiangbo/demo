@@ -23,6 +23,7 @@ pub fn init() void {
     arenaAllocator = std.heap.ArenaAllocator.init(window.allocator);
     menuTexture = gfx.loadTexture("assets/pic/mainmenu1.png", .init(150, 200));
 
+    item.init();
     talk.init();
     about.init();
     map.init();
@@ -125,9 +126,20 @@ fn updateTalk() void {
     if (talkEvent) |event| {
         switch (event) {
             0 => status = null,
+            4 => updateShop(),
             else => unreachable,
         }
     }
+}
+
+fn updateShop() void {
+    const pos = gfx.Vector.init(120, 90);
+    item.draw(pos, &.{}, 0);
+    // // 金币，操作说明
+    // camera.drawText("（金=", pos.addXY(10, 270));
+    // const moneyStr = zhu.format(&buffer, "{d}）", .{money});
+    // camera.drawText(moneyStr, pos.addXY(60, 270));
+    // camera.drawText("CTRL=使用‘A’=丢弃 ESC=退出", pos.addXY(118, 270));
 }
 
 fn updateItem() void {

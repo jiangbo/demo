@@ -22,3 +22,72 @@ pub const zon: []const Item = @import("zon/item.zon");
 pub const pickupZon: []const Pickup = @import("zon/pickup.zon");
 
 pub var picked: std.StaticBitSet(64) = .initEmpty();
+
+// pub var itemIndex: usize = 0;
+// pub var items: []u8 = &.{};
+
+var texture: gfx.Texture = undefined;
+var bgTexture: gfx.Texture = undefined;
+
+pub fn init() void {
+    texture = gfx.loadTexture("assets/pic/goods.png", .init(384, 192));
+    bgTexture = gfx.loadTexture("assets/pic/sbar.png", .init(420, 320));
+}
+
+pub fn draw(pos: gfx.Vector, items: []u16, itemIndex: usize) void {
+    camera.draw(bgTexture, pos.addXY(-10, -10));
+
+    // 当前选中物品
+    var buffer: [32]u8 = undefined;
+    if (items[itemIndex] != 0) {
+        const current = zon[items[itemIndex]];
+
+        camera.drawText(current.name, pos.addXY(70, 20));
+        camera.drawText(" (价值：", pos.addXY(180, 20));
+        const text = zhu.format(&buffer, "{d}）", .{current.money});
+        camera.drawText(text, pos.addXY(260, 20));
+
+        camera.drawText("经验：", pos.addXY(20, 60));
+        camera.drawNumber(current.exp, pos.addXY(100, 60));
+
+        camera.drawText("生命：", pos.addXY(20, 86));
+        camera.drawNumber(current.health, pos.addXY(100, 86));
+
+        camera.drawText("攻击：", pos.addXY(20, 112));
+        camera.drawNumber(current.attack, pos.addXY(100, 112));
+
+        camera.drawText("防御：", pos.addXY(20, 134));
+        camera.drawNumber(current.defend, pos.addXY(100, 134));
+
+        // 描述
+        const color = gfx.color(1, 1, 0, 1);
+        camera.drawColorText(current.about, pos.addXY(170, 60), color);
+    }
+
+    const itemBg = getIconFromIndex(0);
+    const itemSelected = getIconFromIndex(1);
+
+    const offset = pos.addXY(5, 170);
+
+    for (0..2) |i| {
+        const row: f32 = @floatFromInt(i);
+        for (0..8) |j| {
+            const col: f32 = @floatFromInt(j);
+            const itemPos = offset.addXY(col * 49, row * 49);
+            camera.draw(itemBg, itemPos);
+
+            const index = j + 8 * i;
+            defer if (itemIndex == index) camera.draw(itemSelected, itemPos);
+            if (items[index] == 0) continue;
+
+            camera.draw(getIconFromIndex(items[index] - 2), itemPos);
+        }
+    }
+}
+
+fn getIconFromIndex(index: usize) gfx.Texture {
+    const row: f32 = @floatFromInt(index / 8);
+    const col: f32 = @floatFromInt(index % 8);
+    const pos = gfx.Vector.init(col * 48, row * 48);
+    return texture.subTexture(.init(pos, .init(48, 48)));
+}
