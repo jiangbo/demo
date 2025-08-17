@@ -12,4 +12,5 @@
     .{ .talk = 51, .name = "小　田", .picture = 1, .x = 800, .y = 500, .speed = 12 },
     // 10
     .{ .talk = 69, .name = "小　芳", .picture = 3, .x = 300, .y = 700, .speed = 12 },
+    .{ .talk = 69, .name = "小　芳", .picture = 3, .x = 300, .y = 700, .speed = 12 },
 }

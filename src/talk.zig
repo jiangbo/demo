@@ -11,52 +11,67 @@ const npc = @import("npc.zig");
 const Talk = struct {
     actor: u8 = 0,
     content: []const u8 = &.{},
-    format: enum { none, int, str } = .none,
-    next: usize = 1, // 0：表示结束，1：表示下一条
+    next: u16 = 1, // 0：表示结束，1：表示下一条
+    event: u8 = 0,
 };
 const zon: []const Talk = @import("zon/talk.zon");
-var talkTexture: gfx.Texture = undefined;
+var texture: gfx.Texture = undefined;
 
-pub var talkNumber: usize = 0;
-pub var talkText: [50]u8 = undefined;
+pub var active: u16 = 0;
+var textIndex: usize = 0;
+var text: [50]u8 = undefined;
+var plainText: bool = true;
 
 var buffer: [256]u8 = undefined;
 var bufferIndex: usize = 0;
 
 pub fn init() void {
-    talkTexture = gfx.loadTexture("assets/pic/talkbar.png", .init(640, 96));
+    texture = gfx.loadTexture("assets/pic/talkbar.png", .init(640, 96));
 }
 
-pub fn update(talkId: usize) usize {
-    if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return talkId;
+pub fn activeNumber(talkId: u16, number: anytype) void {
+    const content = zhu.format(&text, "{d}", .{number});
+    activeText(talkId, content);
+}
 
+pub fn activeText(talkId: u16, content: []const u8) void {
+    active = talkId;
+    @memcpy(text[0..content.len], content);
+    textIndex = content.len;
     bufferIndex = 0;
-    return zon[talkId].next;
+    plainText = false;
 }
 
-pub fn draw(talkId: usize) void {
-    camera.draw(talkTexture, .init(0, 384));
+pub fn update() ?u8 {
+    if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return null;
 
-    const talk = zon[talkId];
+    if (zon[active].event != 0 or zon[active].next == 0) {
+        plainText = true;
+        return zon[active].event;
+    }
+    active += zon[active].next;
+    return null;
+}
+
+pub fn draw() void {
+    camera.draw(texture, .init(0, 384));
+
+    const talk = zon[active];
     if (talk.actor == 0)
         player.drawTalk()
     else if (talk.actor < 200)
         npc.drawTalk(talk.actor);
 
-    var content = talk.content;
+    if (plainText) return drawText(talk.content);
 
-    if (talk.format == .int) {
-        content = if (bufferIndex == 0)
-            formatInt(content)
-        else
-            buffer[0..bufferIndex];
-    } else if (talk.format == .str) {
-        content = if (bufferIndex == 0)
-            formatStr(content)
-        else
-            buffer[0..bufferIndex];
+    if (bufferIndex != 0) {
+        drawText(buffer[0..bufferIndex]);
+    } else {
+        drawText(formatStr(talk.content));
     }
+}
 
+pub fn drawText(content: []const u8) void {
     camera.drawTextOptions(content, .{
         .color = .{ .w = 1 },
         .position = .init(123, 403),
@@ -69,17 +84,11 @@ pub fn draw(talkId: usize) void {
     });
 }
 
-fn formatInt(content: []const u8) []const u8 {
-    const text = zhu.format(&talkText, comptime "{d}", .{talkNumber});
-    talkNumber = text.len;
-    return formatStr(content);
-}
-
 fn formatStr(content: []const u8) []const u8 {
-    const text = talkText[0..talkNumber];
-    const times = std.mem.replace(u8, content, "{}", text, &buffer);
+    const str = text[0..textIndex];
+    const times = std.mem.replace(u8, content, "{}", str, &buffer);
     std.debug.assert(times == 1);
 
-    bufferIndex = content.len - 2 + text.len;
+    bufferIndex = content.len - 2 + str.len;
     return buffer[0..bufferIndex];
 }

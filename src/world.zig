@@ -13,7 +13,7 @@ const about = @import("about.zig");
 const item = @import("item.zig");
 const npc = @import("npc.zig");
 
-const Status = union(enum) { talk: usize, menu, about, status, item };
+const Status = union(enum) { talk, menu, about, status, item };
 var status: ?Status = null;
 
 var menuTexture: gfx.Texture = undefined;
@@ -44,7 +44,8 @@ pub fn enter() void {
     npc.enter();
     menu.active = 6;
     window.playMusic("assets/voc/back.ogg");
-    // status = .{ .talk = 4 };
+    talk.active = 4;
+    status = .talk;
 }
 
 pub fn changeMap() void {
@@ -70,7 +71,7 @@ pub fn update(delta: f32) void {
 
     if (status) |pop| {
         switch (pop) {
-            .talk => |talkId| return updateTalk(talkId),
+            .talk => return updateTalk(),
             .item => return updateItem(),
             .status => {
                 return if (window.isMouseRelease(.RIGHT) or
@@ -98,7 +99,8 @@ pub fn update(delta: f32) void {
     if (confirm) {
         // 和 NPC 对话
         if (npc.talk(player.talkCollider(), player.facing)) |talkId| {
-            status = .{ .talk = talkId };
+            talk.active = talkId;
+            status = .talk;
         }
     }
 }
@@ -117,12 +119,14 @@ fn reloadIfChanged() void {
     }
 }
 
-fn updateTalk(talkId: usize) void {
-    const next = talk.update(talkId);
-    status = if (next == 0) null else if (next == 1)
-        .{ .talk = talkId + next }
-    else
-        .{ .talk = talkId };
+fn updateTalk() void {
+    const talkEvent = talk.update();
+    if (talkEvent) |event| {
+        switch (event) {
+            0 => status = null,
+            else => unreachable,
+        }
+    }
 }
 
 fn updateItem() void {
@@ -158,14 +162,12 @@ fn openChest(pickIndex: u16) void {
     if (object.itemIndex == 0 and object.count == 0) {
         const gold = window.random().intRangeLessThanBiased(u8, 10, 100);
         player.money += gold;
-        status = .{ .talk = 2 };
-        talk.talkNumber = gold;
+        talk.activeNumber(2, gold);
+        status = .talk;
     } else {
         player.addItem(object.itemIndex);
-        const name = item.zon[object.itemIndex].name;
-        talk.talkNumber = name.len;
-        @memcpy(talk.talkText[0..name.len], name);
-        status = .{ .talk = 3 };
+        talk.activeText(3, item.zon[object.itemIndex].name);
+        status = .talk;
     }
 }
 
@@ -205,7 +207,7 @@ pub fn draw() void {
     camera.mode = .local;
     defer camera.mode = .world;
     switch (status.?) {
-        .talk => |talkId| talk.draw(talkId),
+        .talk => talk.draw(),
         .status => player.drawStatus(),
         .item => player.drawItem(),
         .menu => {
