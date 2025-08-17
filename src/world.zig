@@ -44,7 +44,7 @@ pub fn enter() void {
     player.enter(playerPosition);
     npc.enter();
     menu.active = 6;
-    window.playMusic("assets/voc/back.ogg");
+    // window.playMusic("assets/voc/back.ogg");
 
     // talk.active = 4;
     // status = .talk;
@@ -133,8 +133,7 @@ fn updateTalk() void {
 }
 
 fn updateShop() void {
-    const pos = gfx.Vector.init(120, 90);
-    item.draw(pos, &.{}, 0);
+    item.draw(&.{}, 0);
     // // 金币，操作说明
     // camera.drawText("（金=", pos.addXY(10, 270));
     // const moneyStr = zhu.format(&buffer, "{d}）", .{money});

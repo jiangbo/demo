@@ -255,13 +255,13 @@ pub fn drawStatus() void {
 }
 
 pub fn drawItem() void {
-    const pos = math.Vector.init(120, 90);
-    item.draw(pos, &items, itemIndex);
+    item.draw(&items, itemIndex);
 
     var buffer: [20]u8 = undefined;
     // 金币，操作说明
-    camera.drawText("（金=", pos.addXY(10, 270));
+    camera.drawText("（金=", item.position.addXY(10, 270));
     const moneyStr = zhu.format(&buffer, "{d}）", .{money});
-    camera.drawText(moneyStr, pos.addXY(60, 270));
-    camera.drawText("CTRL=使用‘A’=丢弃 ESC=退出", pos.addXY(118, 270));
+    camera.drawText(moneyStr, item.position.addXY(60, 270));
+    const text = "CTRL=使用‘A’=丢弃 ESC=退出";
+    camera.drawText(text, item.position.addXY(118, 270));
 }
