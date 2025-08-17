@@ -6,12 +6,13 @@ const gfx = zhu.gfx;
 const camera = zhu.camera;
 
 const player = @import("player.zig");
+const npc = @import("npc.zig");
 
 const Talk = struct {
     actor: u8 = 0,
-    content: []const u8,
+    content: []const u8 = &.{},
     format: enum { none, int, str } = .none,
-    next: usize = 0,
+    next: usize = 1, // 0：表示结束，1：表示下一条
 };
 const zon: []const Talk = @import("zon/talk.zon");
 var talkTexture: gfx.Texture = undefined;
@@ -37,7 +38,10 @@ pub fn draw(talkId: usize) void {
     camera.draw(talkTexture, .init(0, 384));
 
     const talk = zon[talkId];
-    if (talk.actor == 0) player.drawTalk();
+    if (talk.actor == 0)
+        player.drawTalk()
+    else if (talk.actor < 200)
+        npc.drawTalk(talk.actor);
 
     var content = talk.content;
 

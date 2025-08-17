@@ -29,7 +29,6 @@ pub fn init() void {
     player.init();
     npc.init();
 
-    // status = .{ .talk = 1 };
     // status = .item;
 }
 
@@ -44,6 +43,7 @@ pub fn enter() void {
     npc.enter();
     menu.active = 6;
     window.playMusic("assets/voc/back.ogg");
+    // status = .{ .talk = 4 };
 }
 
 pub fn changeMap() void {
@@ -87,9 +87,19 @@ pub fn update(delta: f32) void {
     player.update(delta);
 
     // 交互检测
-    if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) {
+    const confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
+    if (confirm) {
+        // 开启宝箱
         const object = map.openChest(player.position, player.facing);
         if (object != 0) openChest(object);
+    }
+
+    if (confirm) {
+        // 和 NPC 对话
+        if (npc.talk(player.talkCollider())) |talkId| {
+            status = .{ .talk = talkId };
+            std.log.info("talkId: {}", .{talkId});
+        }
     }
 }
 
@@ -109,7 +119,10 @@ fn reloadIfChanged() void {
 
 fn updateTalk(talkId: usize) void {
     const next = talk.update(talkId);
-    status = if (next == 0) null else .{ .talk = next };
+    status = if (next == 0) null else if (next == 1)
+        .{ .talk = talkId + next }
+    else
+        .{ .talk = talkId };
 }
 
 fn updateItem() void {

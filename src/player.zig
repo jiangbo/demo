@@ -162,6 +162,15 @@ pub fn collider() math.Rect {
     return math.Rect.init(position, SIZE);
 }
 
+pub fn talkCollider() math.Rect {
+    return switch (facing) {
+        .up => .init(position.addXY(-3, -28), .init(20, 20)),
+        .down => .init(position.addXY(-3, 20), .init(20, 20)),
+        .left => .init(position.addXY(-28, -10), .init(20, 20)),
+        .right => .init(position.addXY(20, -10), .init(20, 20)),
+    };
+}
+
 pub fn addItem(itemId: u16) void {
     for (&items) |*value| {
         if (value.* == 0) {
@@ -183,11 +192,11 @@ pub fn drawTalk() void {
     // 头像
     const down = animation.get(.down);
     const tex = down.texture.subTexture(down.frames[0].area);
-    camera.draw(tex, .init(30, 396));
+    camera.draw(tex, .init(35, 396));
 
     // 名字
     const nameColor = gfx.color(1, 1, 0, 1);
-    camera.drawColorText(name, .init(18, 445), nameColor);
+    camera.drawColorText(name, .init(25, 445), nameColor);
 }
 
 pub fn drawStatus() void {

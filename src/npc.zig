@@ -44,7 +44,7 @@ pub fn enter() void {
         npcArray.appendAssumeCapacity(.{
             .index = id,
             .position = .init(zon[id].x, zon[id].y),
-            .animation = buildAnimation(npcTextures[id]),
+            .animation = buildAnimation(npcTextures[zon[id].picture]),
         });
     }
 }
@@ -105,6 +105,16 @@ pub fn isCollision(collider: math.Rect) bool {
     return false;
 }
 
+pub fn talk(collider: math.Rect) ?u8 {
+    for (npcArray.items) |npc| {
+        const npcCollider = math.Rect.init(npc.position, SIZE);
+        if (collider.intersect(npcCollider)) {
+            return zon[npc.index].talk;
+        }
+    }
+    return null;
+}
+
 pub fn draw() void {
     for (npcArray.items) |npc| {
         const animation = npc.animation.getPtrConst(npc.facing);
@@ -112,29 +122,34 @@ pub fn draw() void {
     }
 }
 
+pub fn drawTalk(actor: u8) void {
+
+    // 头像
+    const texture = npcTextures[zon[actor].picture];
+    camera.draw(texture.subTexture(.init(.zero, SIZE)), .init(40, 400));
+
+    // 名字
+    const name = zon[actor].name;
+    const nameColor = gfx.color(1, 1, 0, 1);
+    camera.drawColorText(name, .init(25, 445), nameColor);
+}
+
 pub const Character = struct {
-    id: u32,
-    pic: u8,
-    enemy: bool,
-    talkNum: u8,
-    active: bool,
-    show: bool,
-    name: []const u8,
-    width: u16,
-    height: u16,
-    x: f32,
-    y: f32,
-    oldX: u16,
-    oldY: u16,
+    enemy: bool = false,
+    talk: u8 = 0,
+    name: []const u8 = &.{},
+    x: f32 = 0,
+    y: f32 = 0,
+    picture: u8 = 0,
     facing: gfx.FourDirection = .down,
-    stats: u8,
-    level: u8,
-    exp: u32,
-    lift: u16,
-    maxLift: u16,
-    attack: u16,
-    defend: u16,
-    speed: f32,
-    goods: [1]u32,
-    money: u32,
+    // stats: u8,
+    // level: u8,
+    // exp: u32,
+    // lift: u16,
+    // maxLift: u16,
+    // attack: u16,
+    // defend: u16,
+    speed: f32 = 20,
+    // goods: [1]u32,
+    // money: u32,
 };

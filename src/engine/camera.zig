@@ -13,6 +13,8 @@ pub const Vertex = gpu.QuadVertex;
 pub var mode: enum { world, local } = .world;
 pub var position: math.Vector = .zero;
 
+var startDraw: bool = false;
+
 var bindGroup: gpu.BindGroup = .{};
 var pipeline: gpu.RenderPipeline = undefined;
 
@@ -44,6 +46,7 @@ pub fn toWindow(worldPosition: Vector) Vector {
 }
 
 pub fn beginDraw() void {
+    startDraw = true;
     totalDrawCount = 0;
     font.beginDraw();
 }
@@ -93,6 +96,7 @@ pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
 }
 
 pub fn drawVertices(texture: Texture, vertex: []const Vertex) void {
+    if (!startDraw) @panic("need begin draw");
     gpu.appendBuffer(buffer, vertex);
 
     defer {
@@ -107,6 +111,7 @@ pub fn drawVertices(texture: Texture, vertex: []const Vertex) void {
 
 pub fn flushTexture() void {
     if (needDrawCount == 0) return;
+
     drawInstanced(usingTexture, .{
         .vertexBuffer = buffer,
         .vertexOffset = totalDrawCount - needDrawCount,
@@ -122,6 +127,7 @@ pub fn flushTextureAndText() void {
 
 pub fn endDraw() void {
     flushTextureAndText();
+    startDraw = false;
 }
 
 pub fn scissor(area: math.Rect) void {
