@@ -31,7 +31,7 @@ const Shop = struct {
             if (itemIndex != 0) buy(itemIndex);
         }
 
-        if (window.isKeyRelease(.Q)) status = null;
+        if (window.isAnyKeyRelease(&.{ .Q, .E, .ESCAPE })) status = null;
     }
 
     fn buy(itemIndex: u8) void {
@@ -118,16 +118,6 @@ pub fn update(delta: f32) void {
         return;
     }
 
-    if (status == null or status.? != .menu) {
-        if (window.isMouseRelease(.RIGHT) or
-            window.isAnyKeyRelease(&.{ .ESCAPE, .E }))
-        {
-            status = .menu;
-            menu.active = 6;
-            return;
-        }
-    }
-
     if (status) |pop| {
         switch (pop) {
             .talk => return updateTalk(),
@@ -161,6 +151,14 @@ pub fn update(delta: f32) void {
         if (npc.talk(player.talkCollider(), player.facing)) |talkId| {
             talk.active = talkId;
             status = .talk;
+        }
+    }
+
+    if (status == null) {
+        if (window.isMouseRelease(.RIGHT) or
+            window.isAnyKeyRelease(&.{ .ESCAPE, .E }))
+        {
+            status = .menu;
         }
     }
 }
