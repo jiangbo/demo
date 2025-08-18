@@ -14,6 +14,6 @@
     .{ .talk = 69, .name = "小　芳", .picture = 3, .x = 300, .y = 700, .speed = 12 },
     .{ .talk = 121, .name = "干小石", .picture = 12, .x = 322, .y = 288, .speed = 8 },
     .{ .talk = 112, .name = "老　板", .picture = 1, .x = 400, .y = 159, .speed = 8 },
-    .{ .talk = 112, .name = "老板娘", .picture = 3, .x = 200, .y = 180, .speed = 8 },
-    .{ .talk = 112, .name = "蝴　蝶", .picture = 2, .x = 322, .y = 288, .speed = 8 },
+    .{ .talk = 124, .name = "老板娘", .picture = 3, .x = 200, .y = 159, .speed = 8 },
+    .{ .talk = 133, .name = "蝴　蝶", .picture = 2, .x = 322, .y = 288, .speed = 8 },
 }
