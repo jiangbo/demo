@@ -67,6 +67,13 @@ var weaponShop: Shop = .{
         10, 10, 8,  8,  16, 16, 0, 0,
     },
 };
+var potionShop: Shop = .{
+    .items = .{
+        5,  5,  6,  6,  7, 7, 4, 4, //
+        17, 17, 18, 18, 0, 0, 0, 0,
+    },
+};
+var shop: *Shop = undefined;
 
 var tip: []const u8 = &.{};
 
@@ -122,7 +129,7 @@ pub fn update(delta: f32) void {
         switch (pop) {
             .talk => return updateTalk(),
             .item => return updateItem(),
-            .shop => return weaponShop.update(),
+            .shop => return shop.update(),
             .status => {
                 return if (window.isMouseRelease(.RIGHT) or
                     window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }))
@@ -180,9 +187,12 @@ fn reloadIfChanged() void {
 fn updateTalk() void {
     const talkEvent = talk.update();
     if (talkEvent) |event| {
+        if (event != 0) status = .shop;
+
         switch (event) {
             0 => status = null,
-            4 => status = .shop,
+            4 => shop = &weaponShop,
+            5 => shop = &potionShop,
             else => unreachable,
         }
     }
@@ -274,7 +284,7 @@ pub fn draw() void {
             .talk => talk.draw(),
             .status => player.drawStatus(),
             .item => player.drawItem(),
-            .shop => weaponShop.draw(),
+            .shop => shop.draw(),
             .menu => {
                 camera.draw(menuTexture, .init(0, 280));
                 menu.draw();
