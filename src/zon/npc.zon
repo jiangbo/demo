@@ -16,4 +16,10 @@
     .{ .talk = 112, .name = "老　板", .picture = 1, .x = 400, .y = 159, .speed = 8 },
     .{ .talk = 124, .name = "老板娘", .picture = 3, .x = 200, .y = 159, .speed = 8 },
     .{ .talk = 133, .name = "蝴　蝶", .picture = 2, .x = 322, .y = 288, .speed = 8 },
+    // 15
+    .{ .talk = 133, .name = "收荒匠", .picture = 1, .x = 180, .y = 280, .speed = 8 },
+    .{ .talk = 133, .name = "小　月", .picture = 3, .x = 122, .y = 188, .speed = 8 },
+    .{ .talk = 133, .name = "柔  儿", .picture = 0, .x = 480, .y = 128, .speed = 0 },
+    .{ .talk = 133, .name = "刀　疤", .picture = 7, .x = 448, .y = 128, .speed = 0 },
+    .{ .talk = 133, .name = "秃　鹰", .picture = 6, .x = 480, .y = 160, .speed = 0 },
 }
