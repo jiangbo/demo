@@ -48,9 +48,10 @@ pub fn enter() void {
     npcArray.clearRetainingCapacity();
 
     for (map.current.npcs) |id| {
+        const stop = zon[id].speed == 0;
         npcArray.appendAssumeCapacity(.{
             .index = id,
-            .facing = .random(),
+            .facing = if (stop) zon[id].facing else .random(),
             .position = .init(zon[id].x, zon[id].y),
             .animation = buildAnimation(npcTextures[zon[id].picture]),
         });
@@ -74,13 +75,13 @@ fn buildAnimation(texture: gfx.Texture) Animation {
 
 pub fn update(delta: f32) void {
     for (npcArray.items) |*npc| {
-        if (npc.timer.isFinishedAfterUpdate(delta)) {
+        const speed = zon[npc.index].speed * delta;
+        if (npc.timer.isFinishedAfterUpdate(delta) and speed > 0) {
             npc.facing = .random();
             npc.timer.reset();
         }
 
         npc.animation.getPtr(npc.facing).update(delta);
-        const speed = zon[npc.index].speed * delta;
         const velocity: math.Vector2 = switch (npc.facing) {
             .down => .init(0, speed),
             .left => .init(-speed, 0),
@@ -165,7 +166,7 @@ pub const Character = struct {
     // maxLift: u16,
     // attack: u16,
     // defend: u16,
-    speed: f32 = 20,
+    speed: f32 = 0,
     // goods: [1]u32,
     // money: u32,
 };
