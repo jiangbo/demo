@@ -5,6 +5,7 @@ const window = zhu.window;
 const gfx = zhu.gfx;
 const camera = zhu.camera;
 
+const scene = @import("scene.zig");
 const menu = @import("menu.zig");
 const player = @import("player.zig");
 const map = @import("map.zig");
@@ -13,7 +14,7 @@ const about = @import("about.zig");
 const item = @import("item.zig");
 const npc = @import("npc.zig");
 
-const State = enum { none, talk, menu, about, status, item, shop, sale };
+const State = enum { none, talk, menu, about, status, item, shop, sale, battle };
 var state: State = .none;
 
 var menuTexture: gfx.Texture = undefined;
@@ -142,6 +143,7 @@ pub fn update(delta: f32) void {
         .menu => return updateMenu(),
         .about => return updateAbout(delta),
         .sale => return updateSale(),
+        .battle => return {},
     }
 
     npc.update(delta);
@@ -196,6 +198,11 @@ fn updateTalk() void {
             4 => shop = &weaponShop,
             5 => shop = &potionShop,
             6 => state = .sale,
+            7 => {
+                map.linkIndex = 13;
+                state = .battle;
+                scene.changeMap();
+            },
             else => unreachable,
         }
     }
@@ -285,6 +292,7 @@ fn menuSelected(index: usize) void {
 }
 
 pub fn draw() void {
+    std.log.info("draw", .{});
     map.draw();
     npc.draw();
     player.draw();
@@ -309,5 +317,6 @@ pub fn draw() void {
         },
         .about => about.draw(),
         .sale => player.drawSellItem(),
+        .battle => {},
     }
 }
