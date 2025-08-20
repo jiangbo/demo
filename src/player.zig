@@ -25,7 +25,7 @@ pub var position: math.Vector = undefined;
 
 pub var money: usize = 5000; // 金钱
 pub var items: [16]u8 = undefined;
-var itemIndex: u8 = 0;
+pub var itemIndex: u8 = 0;
 
 var level: usize = 1; //等级
 var exp: usize = 0; //经验
@@ -132,7 +132,7 @@ fn updateFacing() math.Vector2 {
     return dir;
 }
 
-pub fn updateItem() void {
+pub fn openItem() void {
     itemIndex = item.update(items.len, itemIndex);
 
     if (items[itemIndex] == 0) return;
@@ -143,6 +143,19 @@ pub fn updateItem() void {
         _ = usedItem;
     } else if (window.isKeyRelease(.EQUAL)) {
         // 丢弃物品
+        items[itemIndex] = 0;
+    }
+}
+
+pub fn sellItem() void {
+    itemIndex = item.update(items.len, itemIndex);
+
+    if (items[itemIndex] == 0) return;
+
+    if (window.isKeyRelease(.LEFT_CONTROL)) {
+        // 卖出物品
+        const usedItem = item.zon[items[itemIndex]];
+        money += usedItem.money / 2;
         items[itemIndex] = 0;
     }
 }
@@ -251,7 +264,7 @@ pub fn drawStatus() void {
     camera.drawColorNumber(money, pos.addXY(230, 230), gfx.color(1, 1, 0, 1));
 }
 
-pub fn drawItem() void {
+pub fn drawOpenItem() void {
     item.draw(&items, itemIndex);
 
     var buffer: [20]u8 = undefined;
@@ -260,5 +273,16 @@ pub fn drawItem() void {
     const moneyStr = zhu.format(&buffer, "{d}）", .{money});
     camera.drawText(moneyStr, item.position.addXY(60, 270));
     const text = "CTRL=使用‘A’=丢弃 ESC=退出";
+    camera.drawText(text, item.position.addXY(118, 270));
+}
+
+pub fn drawSellItem() void {
+    item.draw(&items, itemIndex);
+
+    var buffer: [20]u8 = undefined;
+    camera.drawText("（金=", item.position.addXY(10, 270));
+    const moneyStr = zhu.format(&buffer, "{d}）", .{money});
+    camera.drawText(moneyStr, item.position.addXY(60, 270));
+    const text = "CTRL=卖出  ESC=退出";
     camera.drawText(text, item.position.addXY(118, 270));
 }
