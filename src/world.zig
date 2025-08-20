@@ -88,6 +88,8 @@ pub fn init() void {
     player.init();
     npc.init();
 
+    player.items[4] = 8;
+
     // status = .item;
 }
 

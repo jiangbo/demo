@@ -147,14 +147,21 @@ pub fn openItem() void {
     }
 }
 
+var sellItemIndex: u16 = 0;
 pub fn sellItem() void {
+    if (sellItemIndex != 0) {
+        if (window.isAnyRelease()) sellItemIndex = 0;
+        return;
+    }
+
     itemIndex = item.update(items.len, itemIndex);
 
     if (items[itemIndex] == 0) return;
 
     if (window.isKeyRelease(.LEFT_CONTROL)) {
         // 卖出物品
-        const usedItem = item.zon[items[itemIndex]];
+        sellItemIndex = items[itemIndex];
+        const usedItem = item.zon[sellItemIndex];
         money += usedItem.money / 2;
         items[itemIndex] = 0;
     }
@@ -279,7 +286,17 @@ pub fn drawOpenItem() void {
 pub fn drawSellItem() void {
     item.draw(&items, itemIndex);
 
-    var buffer: [20]u8 = undefined;
+    var buffer: [50]u8 = undefined;
+    if (sellItemIndex != 0) {
+        const itemInfo = item.zon[sellItemIndex];
+        const sellTip = zhu.format(&buffer, "卖掉[{s}]得到：{d}", .{
+            itemInfo.name,
+            itemInfo.money / 2,
+        });
+        camera.drawColorText(sellTip, item.position.addXY(102, 110), .black);
+        camera.drawText(sellTip, item.position.addXY(100, 108));
+    }
+
     camera.drawText("（金=", item.position.addXY(10, 270));
     const moneyStr = zhu.format(&buffer, "{d}）", .{money});
     camera.drawText(moneyStr, item.position.addXY(60, 270));
