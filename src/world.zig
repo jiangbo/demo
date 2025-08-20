@@ -13,8 +13,8 @@ const about = @import("about.zig");
 const item = @import("item.zig");
 const npc = @import("npc.zig");
 
-const Status = union(enum) { talk, menu, about, status, item, shop };
-var status: ?Status = null;
+const State = enum { none, talk, menu, about, status, item, shop };
+var state: State = .none;
 
 var menuTexture: gfx.Texture = undefined;
 var arenaAllocator: std.heap.ArenaAllocator = undefined;
@@ -31,7 +31,7 @@ const Shop = struct {
             if (itemIndex != 0) buy(itemIndex);
         }
 
-        if (window.isAnyKeyRelease(&.{ .Q, .E, .ESCAPE })) status = null;
+        if (window.isAnyKeyRelease(&.{ .Q, .E, .ESCAPE })) state = .none;
     }
 
     fn buy(itemIndex: u8) void {
@@ -125,21 +125,20 @@ pub fn update(delta: f32) void {
         return;
     }
 
-    if (status) |pop| {
-        switch (pop) {
-            .talk => return updateTalk(),
-            .item => return updateItem(),
-            .shop => return shop.update(),
-            .status => {
-                return if (window.isMouseRelease(.RIGHT) or
-                    window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }))
-                {
-                    status = null;
-                };
-            },
-            .menu => return updateMenu(),
-            .about => return updateAbout(delta),
-        }
+    switch (state) {
+        .none => {},
+        .talk => return updateTalk(),
+        .item => return updateItem(),
+        .shop => return shop.update(),
+        .status => {
+            return if (window.isMouseRelease(.RIGHT) or
+                window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }))
+            {
+                state = .none;
+            };
+        },
+        .menu => return updateMenu(),
+        .about => return updateAbout(delta),
     }
 
     npc.update(delta);
@@ -157,15 +156,15 @@ pub fn update(delta: f32) void {
         // 和 NPC 对话
         if (npc.talk(player.talkCollider(), player.facing)) |talkId| {
             talk.active = talkId;
-            status = .talk;
+            state = .talk;
         }
     }
 
-    if (status == null) {
+    if (state == .none) {
         if (window.isMouseRelease(.RIGHT) or
             window.isAnyKeyRelease(&.{ .ESCAPE, .E }))
         {
-            status = .menu;
+            state = .menu;
         }
     }
 }
@@ -187,10 +186,10 @@ fn reloadIfChanged() void {
 fn updateTalk() void {
     const talkEvent = talk.update();
     if (talkEvent) |event| {
-        if (event != 0) status = .shop;
+        if (event != 0) state = .shop;
 
         switch (event) {
-            0 => status = null,
+            0 => state = .none,
             4 => shop = &weaponShop,
             5 => shop = &potionShop,
             else => unreachable,
@@ -200,7 +199,7 @@ fn updateTalk() void {
 
 fn updateItem() void {
     if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E })) {
-        status = null;
+        state = .none;
         return;
     }
     player.updateItem();
@@ -210,7 +209,7 @@ fn updateAbout(delta: f32) void {
     if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q }) or
         window.isMouseRelease(.RIGHT))
     {
-        status = null;
+        state = .none;
         return;
     }
 
@@ -232,7 +231,7 @@ fn openChest(pickIndex: u16) void {
         const gold = window.random().intRangeLessThanBiased(u8, 10, 100);
         player.money += gold;
         talk.activeNumber(2, gold);
-        status = .talk;
+        state = .talk;
     } else {
         const added = player.addItem(object.itemIndex);
         if (!added) {
@@ -240,7 +239,7 @@ fn openChest(pickIndex: u16) void {
             return;
         }
         talk.activeText(3, item.zon[object.itemIndex].name);
-        status = .talk;
+        state = .talk;
         map.openChest(pickIndex);
     }
 }
@@ -252,21 +251,21 @@ fn updateMenu() void {
     if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
         window.isMouseRelease(.RIGHT))
     {
-        status = null;
+        state = .none;
     }
 }
 
 fn menuSelected(index: usize) void {
     switch (index) {
-        0 => status = .status,
-        1 => status = .item,
-        2...3 => status = null,
+        0 => state = .status,
+        1 => state = .item,
+        2...3 => state = .none,
         4 => {
-            status = .about;
+            state = .about;
             about.resetRoll();
         },
         5 => window.exit(),
-        6 => status = null,
+        6 => state = .none,
         else => unreachable,
     }
 }
@@ -279,22 +278,21 @@ pub fn draw() void {
     camera.mode = .local;
     defer camera.mode = .world;
 
-    if (status) |pop| {
-        switch (pop) {
-            .talk => talk.draw(),
-            .status => player.drawStatus(),
-            .item => player.drawItem(),
-            .shop => shop.draw(),
-            .menu => {
-                camera.draw(menuTexture, .init(0, 280));
-                menu.draw();
-            },
-            .about => about.draw(),
-        }
-    }
-
     if (tip.len != 0) {
         camera.drawColorText(tip, .init(242, 442), .black);
         camera.drawColorText(tip, .init(240, 440), .yellow);
+    }
+
+    switch (state) {
+        .none => {},
+        .talk => talk.draw(),
+        .status => player.drawStatus(),
+        .item => player.drawItem(),
+        .shop => shop.draw(),
+        .menu => {
+            camera.draw(menuTexture, .init(0, 280));
+            menu.draw();
+        },
+        .about => about.draw(),
     }
 }
