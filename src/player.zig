@@ -134,6 +134,17 @@ fn updateFacing() math.Vector2 {
 
 pub fn updateItem() void {
     itemIndex = item.update(items.len, itemIndex);
+
+    if (items[itemIndex] == 0) return;
+
+    if (window.isKeyRelease(.LEFT_CONTROL)) {
+        // TODO 使用物品
+        const usedItem = item.zon[items[itemIndex]];
+        _ = usedItem;
+    } else if (window.isKeyRelease(.EQUAL)) {
+        // 丢弃物品
+        items[itemIndex] = 0;
+    }
 }
 
 fn cameraLookAt() void {
