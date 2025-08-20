@@ -13,6 +13,7 @@ const talk = @import("talk.zig");
 const about = @import("about.zig");
 const item = @import("item.zig");
 const npc = @import("npc.zig");
+const battle = @import("battle.zig");
 
 const State = enum { none, talk, menu, about, status, item, shop, sale, battle };
 var state: State = .none;
@@ -89,8 +90,6 @@ pub fn init() void {
     player.init();
     npc.init();
 
-    player.items[4] = 8;
-
     // status = .item;
 }
 
@@ -143,7 +142,7 @@ pub fn update(delta: f32) void {
         .menu => return updateMenu(),
         .about => return updateAbout(delta),
         .sale => return updateSale(),
-        .battle => return {},
+        .battle => return battle.update(),
     }
 
     npc.update(delta);
@@ -199,9 +198,8 @@ fn updateTalk() void {
             5 => shop = &potionShop,
             6 => state = .sale,
             7 => {
-                map.linkIndex = 13;
                 state = .battle;
-                scene.changeMap();
+                battle.enter(map.linkIndex, talk.active);
             },
             else => unreachable,
         }
@@ -292,7 +290,8 @@ fn menuSelected(index: usize) void {
 }
 
 pub fn draw() void {
-    std.log.info("draw", .{});
+    if (state == .battle) return battle.draw();
+
     map.draw();
     npc.draw();
     player.draw();
