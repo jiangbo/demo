@@ -155,6 +155,11 @@ pub fn photo(npcIndex: u16) gfx.Texture {
     return texture.subTexture(.init(.zero, SIZE));
 }
 
+pub fn battleTexture(npcIndex: u16) gfx.Texture {
+    const texture = npcTextures[zon[npcIndex].picture];
+    return texture.subTexture(.init(.init(0, SIZE.x), SIZE));
+}
+
 pub const Character = struct {
     enemy: bool = false,
     talk: u8 = 0,

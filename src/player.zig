@@ -218,6 +218,11 @@ pub fn photo() gfx.Texture {
     return down.texture.subTexture(down.frames[0].area);
 }
 
+pub fn battleTexture() gfx.Texture {
+    const right = animation.get(.right);
+    return right.texture.subTexture(right.frames[0].area);
+}
+
 pub fn drawStatus() void {
     const pos = gfx.Vector.init(120, 90);
     // 背景

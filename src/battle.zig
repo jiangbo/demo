@@ -45,6 +45,11 @@ pub fn draw() void {
     camera.mode = .local;
     defer camera.mode = .world;
 
+    // 战斗人物
+    camera.draw(player.battleTexture(), .init(130, 220));
+    // 战斗 NPC
+    camera.draw(npc.battleTexture(enemy), .init(465, 237));
+
     const position = gfx.Vector.init(96, 304);
 
     // 状态栏背景
