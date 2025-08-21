@@ -7,24 +7,29 @@ const camera = zhu.camera;
 
 const scene = @import("scene.zig");
 const map = @import("map.zig");
+const context = @import("context.zig");
+const npc = @import("npc.zig");
 
-var oldLink: u16 = 0;
 var enemy: u16 = 0;
 
-pub fn enter(old: u16, npc: u16) void {
-    oldLink = old;
-    enemy = npc;
+pub fn enter() void {
+    enemy = context.battleNpcIndex;
     map.linkIndex = 13;
-    scene.changeMap();
+    _ = map.enter();
 }
 
-pub fn update() void {
+pub fn update(delta: f32) void {
     if (window.isKeyRelease(.ESCAPE)) {
-        map.linkIndex = oldLink;
-        scene.changeMap();
+        scene.changeScene(.world);
     }
+
+    _ = delta;
 }
 
 pub fn draw() void {
     map.draw();
+}
+
+pub fn deinit() void {
+    npc.deinit();
 }

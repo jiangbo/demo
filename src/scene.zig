@@ -7,9 +7,10 @@ const camera = zhu.camera;
 
 const titleScene = @import("title.zig");
 const worldScene = @import("world.zig");
+const battleScene = @import("battle.zig");
 
-const SceneType = enum { title, world };
-var currentSceneType: SceneType = .world;
+const SceneType = enum { title, world, battle };
+var currentSceneType: SceneType = .battle;
 var toSceneType: SceneType = .title;
 
 pub fn init() void {
@@ -161,5 +162,6 @@ fn sceneCall(comptime function: []const u8, args: anytype) void {
     switch (currentSceneType) {
         .title => window.call(titleScene, function, args),
         .world => window.call(worldScene, function, args),
+        .battle => window.call(battleScene, function, args),
     }
 }

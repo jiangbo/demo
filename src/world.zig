@@ -13,9 +13,9 @@ const talk = @import("talk.zig");
 const about = @import("about.zig");
 const item = @import("item.zig");
 const npc = @import("npc.zig");
-const battle = @import("battle.zig");
+const context = @import("context.zig");
 
-const State = enum { none, talk, menu, about, status, item, shop, sale, battle };
+const State = enum { none, talk, menu, about, status, item, shop, sale };
 var state: State = .none;
 
 var menuTexture: gfx.Texture = undefined;
@@ -100,6 +100,13 @@ pub fn deinit() void {
 }
 
 pub fn enter() void {
+    if (context.oldMapIndex != 0) {
+        // 从战斗中退出，不需要改变角色的位置信息
+        map.linkIndex = context.oldMapIndex;
+        _ = map.enter();
+        return;
+    }
+
     const playerPosition = map.enter();
     player.enter(playerPosition);
     npc.enter();
@@ -142,7 +149,6 @@ pub fn update(delta: f32) void {
         .menu => return updateMenu(),
         .about => return updateAbout(delta),
         .sale => return updateSale(),
-        .battle => return battle.update(),
     }
 
     npc.update(delta);
@@ -198,8 +204,10 @@ fn updateTalk() void {
             5 => shop = &potionShop,
             6 => state = .sale,
             7 => {
-                state = .battle;
-                battle.enter(map.linkIndex, talk.active);
+                context.oldMapIndex = map.linkIndex;
+                context.battleNpcIndex = talk.active;
+                state = .none;
+                scene.changeScene(.battle);
             },
             else => unreachable,
         }
@@ -290,8 +298,6 @@ fn menuSelected(index: usize) void {
 }
 
 pub fn draw() void {
-    if (state == .battle) return battle.draw();
-
     map.draw();
     npc.draw();
     player.draw();
@@ -316,6 +322,5 @@ pub fn draw() void {
         },
         .about => about.draw(),
         .sale => player.drawSellItem(),
-        .battle => {},
     }
 }
