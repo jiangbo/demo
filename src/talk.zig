@@ -18,6 +18,7 @@ const zon: []const Talk = @import("zon/talk.zon");
 var texture: gfx.Texture = undefined;
 
 pub var active: u16 = 0;
+pub var actor: u16 = 0;
 var textIndex: usize = 0;
 var text: [50]u8 = undefined;
 var plainText: bool = true;
@@ -50,6 +51,7 @@ pub fn update() ?u8 {
         return zon[active].event;
     }
     active += zon[active].next;
+    actor = zon[active].actor;
     return null;
 }
 

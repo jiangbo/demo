@@ -11,7 +11,7 @@ const map = @import("map.zig");
 const player = @import("player.zig");
 
 const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
-const zon: []const Character = @import("zon/npc.zon");
+pub const zon: []const Character = @import("zon/npc.zon");
 var npcPictures: [15][:0]const u8 = undefined;
 var npcTextures: [npcPictures.len]gfx.Texture = undefined;
 const frames: [2]gfx.Frame = .{
@@ -142,13 +142,17 @@ pub fn draw() void {
 pub fn drawTalk(actor: u8) void {
 
     // 头像
-    const texture = npcTextures[zon[actor].picture];
-    camera.draw(texture.subTexture(.init(.zero, SIZE)), .init(40, 400));
+    camera.draw(photo(actor), .init(40, 400));
 
     // 名字
     const name = zon[actor].name;
     const nameColor = gfx.color(1, 1, 0, 1);
     camera.drawColorText(name, .init(25, 445), nameColor);
+}
+
+pub fn photo(npcIndex: u16) gfx.Texture {
+    const texture = npcTextures[zon[npcIndex].picture];
+    return texture.subTexture(.init(.zero, SIZE));
 }
 
 pub const Character = struct {
@@ -160,12 +164,12 @@ pub const Character = struct {
     picture: u8 = 0,
     facing: gfx.FourDirection = .down,
     // stats: u8,
-    // level: u8,
+    level: u8 = 1,
     // exp: u32,
-    // lift: u16,
+    health: u16 = 0,
     // maxLift: u16,
-    // attack: u16,
-    // defend: u16,
+    attack: u16 = 0,
+    defend: u16 = 0,
     speed: f32 = 0,
     // goods: [1]u32,
     // money: u32,

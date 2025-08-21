@@ -27,13 +27,13 @@ pub var money: usize = 5000; // 金钱
 pub var items: [16]u8 = undefined;
 pub var itemIndex: u8 = 0;
 
-var level: usize = 1; //等级
+pub var level: usize = 1; //等级
 var exp: usize = 0; //经验
 var maxExp: usize = 100; //经验最大值
-var health: usize = 50; //生命
+pub var health: usize = 50; //生命
 var maxHealth: usize = 50; //生命最大值
-var attack: usize = 10; //攻击
-var defend: usize = 10; //防御
+pub var attack: usize = 10; //攻击
+pub var defend: usize = 10; //防御
 var speed: usize = 8; //速度
 
 var bgTexture: gfx.Texture = undefined;
@@ -206,9 +206,7 @@ pub fn draw() void {
 pub fn drawTalk() void {
 
     // 头像
-    const down = animation.get(.down);
-    const tex = down.texture.subTexture(down.frames[0].area);
-    camera.draw(tex, .init(35, 396));
+    camera.draw(photo(), .init(35, 396));
 
     // 名字
     const nameColor = gfx.color(1, 1, 0, 1);
