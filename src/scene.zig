@@ -25,6 +25,7 @@ pub fn init() void {
 
     titleScene.init();
     worldScene.init();
+    battleScene.init();
 
     sceneCall("enter", .{});
 }

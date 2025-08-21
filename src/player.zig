@@ -215,6 +215,11 @@ pub fn drawTalk() void {
     camera.drawColorText(name, .init(25, 445), nameColor);
 }
 
+pub fn photo() gfx.Texture {
+    const down = animation.get(.down);
+    return down.texture.subTexture(down.frames[0].area);
+}
+
 pub fn drawStatus() void {
     const pos = gfx.Vector.init(120, 90);
     // 背景
