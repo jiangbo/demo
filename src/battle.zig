@@ -10,9 +10,12 @@ const map = @import("map.zig");
 const context = @import("context.zig");
 const npc = @import("npc.zig");
 const player = @import("player.zig");
+const menu = @import("menu.zig");
 
 var enemy: u16 = 0;
 var texture: gfx.Texture = undefined;
+var menuNames: [4][]const u8 = .{ "攻击", "状态", "物品", "逃走" };
+var menuIndex: u8 = 0;
 
 pub fn init() void {
     std.log.info("battle init", .{});
@@ -23,12 +26,15 @@ pub fn enter() void {
     enemy = context.battleNpcIndex;
     map.linkIndex = 13;
     _ = map.enter();
+    menu.active = 7;
 }
 
 pub fn update(delta: f32) void {
     if (window.isKeyRelease(.ESCAPE)) {
         scene.changeScene(.world);
     }
+
+    _ = menu.update();
 
     _ = delta;
 }
@@ -67,6 +73,8 @@ pub fn draw() void {
         npc.zon[enemy].level,
     });
     camera.drawColorText(text, position.addXY(305, 5), .black);
+
+    menu.draw();
 }
 
 pub fn deinit() void {

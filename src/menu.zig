@@ -11,6 +11,7 @@ pub const Menu = struct {
     position: gfx.Vector = .zero,
     size: gfx.Vector = .zero,
     color: gfx.Color = .one,
+    textColor: gfx.Color = .one,
     names: []const []const u8 = &.{},
     areas: []const gfx.Rect = &.{},
     events: []const u8 = &.{},
@@ -21,7 +22,7 @@ const State = struct {
 };
 
 var zon: []const Menu = @import("zon/menu.zon");
-var states: [7]State = [_]State{.{}} ** 7;
+var states: [8]State = [_]State{.{}} ** 8;
 pub var active: u8 = 0;
 
 pub fn current() *const Menu {
@@ -78,6 +79,6 @@ pub fn draw() void {
         if (i == state.current) {
             camera.drawRect(area, menu.color);
         }
-        camera.drawText(name, area.min.addXY(5, -2));
+        camera.drawColorText(name, area.min.addXY(5, -2), menu.textColor);
     }
 }
