@@ -34,6 +34,10 @@ pub const Timer = struct {
         return self.elapsed < self.duration;
     }
 
+    pub fn progress(self: *const Timer) f32 {
+        return self.elapsed / self.duration;
+    }
+
     pub fn restart(self: *Timer) void {
         self.elapsed = self.elapsed - self.duration;
     }

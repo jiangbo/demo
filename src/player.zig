@@ -32,7 +32,7 @@ var exp: usize = 0; //经验
 var maxExp: usize = 100; //经验最大值
 pub var health: usize = 50; //生命
 var maxHealth: usize = 50; //生命最大值
-pub var attack: usize = 10; //攻击
+pub var attack: u16 = 10; //攻击
 pub var defend: usize = 10; //防御
 var speed: usize = 8; //速度
 
