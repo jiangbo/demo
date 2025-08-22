@@ -90,9 +90,9 @@ pub fn draw() void {
 
     // 如果有伤害
     if (damage != 0) {
-        const y = std.math.lerp(190, 230, 1 - damageTimer.progress());
+        const y = std.math.lerp(230, 190, damageTimer.progress());
         const text = zhu.format(&buffer, "-{}", .{damage});
-        camera.drawText(text, .init(470, y));
+        camera.drawText(text, .init(465, y));
     }
 
     // 战斗 NPC

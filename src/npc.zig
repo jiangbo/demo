@@ -171,7 +171,7 @@ pub const Character = struct {
     // stats: u8,
     level: u8 = 1,
     // exp: u32,
-    health: i32 = 0,
+    health: u16 = 0,
     // maxLift: u16,
     attack: u16 = 0,
     defend: u16 = 0,
