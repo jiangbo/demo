@@ -24,7 +24,7 @@ const State = union(enum) {
     about: AboutState,
     talk: TalkState,
     // shop,
-    // sale,
+    sale: SaleState,
 
     pub fn update(self: State, delta: f32) void {
         switch (self) {
@@ -41,6 +41,7 @@ const State = union(enum) {
             .item => player.drawOpenItem(),
             .about => about.draw(),
             .talk => talk.draw(),
+            .sale => player.drawSellItem(),
             inline else => |case| @TypeOf(case).draw(),
         }
     }
@@ -158,7 +159,12 @@ pub fn exit() void {}
 pub fn update(delta: f32) void {
     reloadIfChanged();
 
-    if (state != .menu) {
+    if (tip.len != 0) {
+        if (window.isAnyRelease()) tip = &.{};
+        return;
+    }
+
+    if (state != .menu and state != .sale) {
         if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
             window.isMouseRelease(.RIGHT))
         {
@@ -168,11 +174,6 @@ pub fn update(delta: f32) void {
     }
 
     state.update(delta);
-
-    // if (tip.len != 0) {
-    //     if (window.isAnyRelease()) tip = &.{};
-    //     return;
-    // }
 
     // switch (state) {
     //     .none => {},
@@ -198,15 +199,6 @@ fn reloadIfChanged() void {
     }
 }
 
-fn updateSale() void {
-    if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E })) {
-        state = .none;
-        player.itemIndex = 0;
-        return;
-    }
-    player.sellItem();
-}
-
 pub fn draw() void {
     map.draw();
     npc.draw();
@@ -214,19 +206,17 @@ pub fn draw() void {
 
     camera.mode = .local;
     defer camera.mode = .world;
+    if (tip.len != 0) {
+        camera.drawColorText(tip, .init(242, 442), .black);
+        camera.drawColorText(tip, .init(240, 440), .yellow);
+    }
     state.draw();
-
-    // if (tip.len != 0) {
-    //     camera.drawColorText(tip, .init(242, 442), .black);
-    //     camera.drawColorText(tip, .init(240, 440), .yellow);
-    // }
 
     // switch (state) {
     //     .none => {},
 
     //     .shop => shop.draw(),
 
-    //     .sale => player.drawSellItem(),
     // }
 }
 
@@ -307,32 +297,37 @@ const TalkState = struct {
             0 => state = .map,
             //     4 => shop = &weaponShop,
             //     5 => shop = &potionShop,
-            //     6 => state = .sale,
-            //     7 => {
-            //         context.oldMapIndex = map.linkIndex;
-            //         context.battleNpcIndex = talk.actor;
-            //         state = .none;
-            //         scene.changeScene(.battle);
-            //     },
+            6 => state = .sale,
+            // 7 => {
+            //     context.oldMapIndex = map.linkIndex;
+            //     context.battleNpcIndex = talk.actor;
+            //     state = .none;
+            //     scene.changeScene(.battle);
+            // },
             else => unreachable,
         };
     }
 };
 
-const SaleState = struct {
-    fn update(_: f32) void {
-        updateSale();
+const AboutState = struct {
+    fn update(delta: f32) void {
+        if (about.roll) about.update(delta) //
+        else if (window.isMouseRelease(.LEFT) or
+            window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER }))
+        {
+            about.roll = true;
+        }
     }
 };
 
-const AboutState = struct {
-    fn update(delta: f32) void {
-        if (about.roll) about.update(delta) else {
-            if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER }) or
-                window.isMouseRelease(.LEFT))
-            {
-                about.roll = true;
-            }
+const SaleState = struct {
+    fn update(_: f32) void {
+        player.sellItem();
+
+        if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
+            window.isMouseRelease(.RIGHT))
+        {
+            state = .map;
         }
     }
 };
