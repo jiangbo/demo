@@ -21,7 +21,7 @@ const State = union(enum) {
     status,
     item,
     about: AboutState,
-    // talk,
+    talk: TalkState,
     // shop,
     // sale,
 
@@ -39,13 +39,13 @@ const State = union(enum) {
             .status => player.drawStatus(),
             .item => player.drawOpenItem(),
             .about => about.draw(),
+            .talk => talk.draw(),
             inline else => |case| @TypeOf(case).draw(),
         }
     }
 };
 var state: State = .map;
 
-var menuTexture: gfx.Texture = undefined;
 var arenaAllocator: std.heap.ArenaAllocator = undefined;
 
 const Shop = struct {
@@ -108,7 +108,7 @@ var tip: []const u8 = &.{};
 
 pub fn init() void {
     arenaAllocator = std.heap.ArenaAllocator.init(window.allocator);
-    menuTexture = gfx.loadTexture("assets/pic/mainmenu1.png", .init(150, 200));
+    MenuState.texture = gfx.loadTexture("assets/pic/mainmenu1.png", .init(150, 200));
 
     item.init();
     talk.init();
@@ -178,8 +178,6 @@ pub fn update(delta: f32) void {
     //     .talk => return updateTalk(),
 
     //     .shop => return shop.update(),
-    //     .menu => return updateMenu(),
-
     //     .sale => return updateSale(),
     // }
 
@@ -196,27 +194,6 @@ fn reloadIfChanged() void {
         menu.reload(arenaAllocator.allocator());
         player.position = map.reload(arenaAllocator.allocator());
         modifyTime = time;
-    }
-}
-
-fn updateTalk() void {
-    const talkEvent = talk.update();
-    if (talkEvent) |event| {
-        if (event != 0) state = .shop;
-
-        switch (event) {
-            0 => state = .none,
-            4 => shop = &weaponShop,
-            5 => shop = &potionShop,
-            6 => state = .sale,
-            7 => {
-                context.oldMapIndex = map.linkIndex;
-                context.battleNpcIndex = talk.actor;
-                state = .none;
-                scene.changeScene(.battle);
-            },
-            else => unreachable,
-        }
     }
 }
 
@@ -265,7 +242,6 @@ pub fn draw() void {
 
     // switch (state) {
     //     .none => {},
-    //     .talk => talk.draw(),
 
     //     .shop => shop.draw(),
 
@@ -279,25 +255,24 @@ const MapState = struct {
         player.update(delta);
 
         // 交互检测
-        // const confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
+        if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return;
         // if (confirm) {
         //     // 开启宝箱
         //     const object = map.talk(player.position, player.facing);
         //     if (object) |pickupIndex| openChest(pickupIndex);
         // }
 
-        // if (confirm) {
-        //     // 和 NPC 对话
-        //     if (npc.talk(player.talkCollider(), player.facing)) |talkId| {
-        //         talk.active = talkId;
-        //         state = .talk;
-        //     }
-        // }
-
+        // 和 NPC 对话
+        if (npc.talk(player.talkCollider(), player.facing)) |talkId| {
+            talk.active = talkId;
+            state = .talk;
+        }
     }
 };
 
 const MenuState = struct {
+    var texture: gfx.Texture = undefined;
+
     fn update(_: f32) void {
         const menuEvent = menu.update();
         if (menuEvent) |event| switch (event) {
@@ -321,14 +296,27 @@ const MenuState = struct {
     }
 
     fn draw() void {
-        camera.draw(menuTexture, .init(0, 280));
+        camera.draw(texture, .init(0, 280));
         menu.draw();
     }
 };
 
 const TalkState = struct {
     fn update(_: f32) void {
-        updateTalk();
+        const talkEvent = talk.update();
+        if (talkEvent) |event| switch (event) {
+            0 => state = .map,
+            //     4 => shop = &weaponShop,
+            //     5 => shop = &potionShop,
+            //     6 => state = .sale,
+            //     7 => {
+            //         context.oldMapIndex = map.linkIndex;
+            //         context.battleNpcIndex = talk.actor;
+            //         state = .none;
+            //         scene.changeScene(.battle);
+            //     },
+            else => unreachable,
+        };
     }
 };
 
