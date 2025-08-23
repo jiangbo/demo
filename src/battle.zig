@@ -94,10 +94,6 @@ pub fn init() void {
     bombAnimation.loop = false;
 }
 
-pub fn deinit() void {
-    npc.deinit();
-}
-
 pub fn enter() void {
     enemyIndex = context.battleNpcIndex;
     enemy = npc.zon[enemyIndex];

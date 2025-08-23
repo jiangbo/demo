@@ -68,7 +68,6 @@ pub fn init() void {
 }
 
 pub fn deinit() void {
-    npc.deinit();
     arenaAllocator.deinit();
     window.stopMusic();
 }
