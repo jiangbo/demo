@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const window = zhu.window;
 const gfx = zhu.gfx;
 const camera = zhu.camera;
+const math = zhu.math;
 
 const scene = @import("scene.zig");
 const menu = @import("menu.zig");
@@ -206,26 +207,6 @@ fn updateSale() void {
     player.sellItem();
 }
 
-fn openChest(pickIndex: u16) void {
-    const object = item.pickupZon[pickIndex];
-
-    if (object.itemIndex == 0 and object.count == 0) {
-        const gold = window.random().intRangeLessThanBiased(u8, 10, 100);
-        player.money += gold;
-        talk.activeNumber(2, gold);
-        state = .talk;
-    } else {
-        const added = player.addItem(object.itemIndex);
-        if (!added) {
-            tip = "你已经带满了！";
-            return;
-        }
-        talk.activeText(3, item.zon[object.itemIndex].name);
-        state = .talk;
-    }
-    map.openChest(pickIndex);
-}
-
 pub fn draw() void {
     map.draw();
     npc.draw();
@@ -256,17 +237,35 @@ const MapState = struct {
 
         // 交互检测
         if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return;
-        // if (confirm) {
-        //     // 开启宝箱
-        //     const object = map.talk(player.position, player.facing);
-        //     if (object) |pickupIndex| openChest(pickupIndex);
-        // }
+        // 开启宝箱
+        const object = map.talk(player.position, player.facing);
+        if (object) |pickupIndex| openChest(pickupIndex);
 
         // 和 NPC 对话
         if (npc.talk(player.talkCollider(), player.facing)) |talkId| {
             talk.active = talkId;
             state = .talk;
         }
+    }
+
+    fn openChest(pickIndex: u16) void {
+        const object = item.pickupZon[pickIndex];
+
+        if (object.itemIndex == 0 and object.count == 0) {
+            const gold = math.randU8(10, 100);
+            player.money += gold;
+            talk.activeNumber(2, gold);
+            state = .talk;
+        } else {
+            const added = player.addItem(object.itemIndex);
+            if (!added) {
+                tip = "你已经带满了！";
+                return;
+            }
+            talk.activeText(3, item.zon[object.itemIndex].name);
+            state = .talk;
+        }
+        map.openChest(pickIndex);
     }
 };
 
