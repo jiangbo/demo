@@ -131,8 +131,10 @@ pub fn draw() void {
     // 战斗人物
     camera.draw(player.battleTexture(), .init(130, 220));
 
-    // 战斗 NPC
-    camera.draw(npc.battleTexture(enemyIndex), .init(465, 237));
+    if (phase != .enemyHurt) {
+        // 战斗 NPC
+        camera.draw(npc.battleTexture(enemyIndex), .init(465, 237));
+    }
 
     const position = gfx.Vector.init(96, 304);
 
@@ -189,18 +191,14 @@ const MenuPhase = struct {
 };
 
 const PlayerAttackPhase = struct {
-    const sound: [:0]const u8 = attackSoundNames[0];
-
     fn enter() void {
-        audio.playSound(sound);
+        audio.playSound(attackSoundNames[0]);
         bombAnimation.reset();
     }
 
     fn update(delta: f32) void {
-        if (bombAnimation.isFinishedAfterUpdate(delta)) {
-            std.log.info("change phase enemy hurt", .{});
+        if (bombAnimation.isFinishedAfterUpdate(delta))
             changePhase(.enemyHurt);
-        }
     }
 
     fn draw() void {
@@ -211,6 +209,7 @@ const PlayerAttackPhase = struct {
 const EnemyHurtPhase = struct {
     var damage: u16 = 0;
     var timer: window.Timer = .init(0.5);
+    var offset: f32 = 5;
 
     fn enter() void {
         audio.playSound(hurtSoundNames[hurtSounds[enemy.picture]]);
@@ -228,9 +227,15 @@ const EnemyHurtPhase = struct {
         if (timer.isFinishedAfterUpdate(delta)) {
             changePhase(.menu);
         }
+
+        const period: u8 = @intFromFloat(@trunc(timer.elapsed / 0.05));
+        offset = if (period % 2 == 0) 5 else -5;
     }
 
     fn draw() void {
+        const pos = math.Vector2.init(465, 237).addX(offset);
+        camera.draw(npc.battleTexture(enemyIndex), pos);
+
         var buffer: [10]u8 = undefined;
         const y = std.math.lerp(230, 190, timer.progress());
         const text = zhu.format(&buffer, "-{}", .{damage});
