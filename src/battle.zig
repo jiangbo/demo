@@ -332,6 +332,7 @@ const EnemyDeathPhase = struct {
             step += 1;
             player.exp += enemy.level * 20;
             player.money += enemy.money;
+            for (enemy.goods) |index| _ = player.addItem(index);
             return;
         }
 

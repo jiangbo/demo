@@ -28,11 +28,11 @@ pub var items: [16]u8 = undefined;
 pub var itemIndex: u8 = 0;
 
 pub var level: u16 = 1; //等级
-pub var exp: u16 = 765; //经验
-var maxExp: u16 = 100; //经验最大值
+pub var exp: u16 = 0; //经验
+const maxExp: u16 = 100; //经验最大值
 pub var health: u16 = 50; //生命
 var maxHealth: u16 = 50; //生命最大值
-pub var attack: u16 = 40; //攻击
+pub var attack: u16 = 10; //攻击
 pub var defend: u16 = 10; //防御
 var speed: u16 = 8; //速度
 
@@ -211,12 +211,12 @@ pub fn addItem(itemId: u8) bool {
 }
 
 pub fn levelUp() void {
-    level += exp / 100;
-    maxHealth += exp / 100 * 30;
-    attack += exp / 100 * 1;
-    defend += exp / 100 * 1;
+    level += exp / maxExp;
+    maxHealth += exp / maxExp * 30;
+    attack += exp / maxExp * 1;
+    defend += exp / maxExp * 1;
     health += (maxHealth - health) / 2;
-    exp %= 100;
+    exp %= maxExp;
 }
 
 pub fn draw() void {
