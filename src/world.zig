@@ -268,8 +268,8 @@ fn openChest(pickIndex: u16) void {
         }
         talk.activeText(3, item.zon[object.itemIndex].name);
         state = .talk;
-        map.openChest(pickIndex);
     }
+    map.openChest(pickIndex);
 }
 
 fn updateMenu() void {

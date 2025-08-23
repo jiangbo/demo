@@ -146,6 +146,7 @@ pub fn openItem() bool {
         addStatusValue(&attack, usedItem.attack);
         addStatusValue(&defend, usedItem.defend);
         if (health > maxHealth) health = maxHealth;
+        items[itemIndex] = 0;
 
         return true;
     } else if (window.isKeyRelease(.G)) {

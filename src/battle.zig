@@ -306,6 +306,8 @@ const PlayerHurtPhase = struct {
 const PlayerDeathPhase = struct {
     fn enter() void {
         audio.playSound(deadSounds[0]);
+        context.battleNpcIndex = 0;
+        context.oldMapIndex = 0;
     }
 
     fn update(_: f32) void {
