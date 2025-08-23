@@ -13,6 +13,7 @@ const context = @import("context.zig");
 const npc = @import("npc.zig");
 const player = @import("player.zig");
 const menu = @import("menu.zig");
+const item = @import("item.zig");
 
 var enemyIndex: u16 = 0;
 var enemy: npc.Character = undefined;
@@ -327,25 +328,51 @@ const EnemyDeathPhase = struct {
     }
 
     fn update(_: f32) void {
+        if (step == 0 and window.isAnyRelease()) {
+            step += 1;
+            player.exp += enemy.level * 20;
+            player.money += enemy.money;
+            return;
+        }
 
-        // if (step == .end) scene.changeScene(.world);
+        if (step == 1 and window.isAnyRelease()) {
+            if (player.exp < 100) return scene.changeScene(.world);
 
-        if (window.isAnyRelease()) step += 1;
+            step += 1;
+            player.levelUp();
+            return;
+        }
 
-        // if (step) {}
+        if (step == 2 and window.isAnyRelease()) {
+            scene.changeScene(.world);
+        }
     }
 
     fn draw() void {
-        camera.drawText("胜利了！", .init(285, 180));
+        camera.drawText("胜利了！", .init(285, 175));
         if (step < 1) return;
 
         var buffer: [100]u8 = undefined;
-        const format = "获得：经验=[{}] 金钱=[{}]";
-        const text = zhu.format(&buffer, format, .{
+        var text = zhu.format(&buffer, "获得：经验=[{}] 金钱=[{}]", .{
             enemy.level * 20,
             enemy.money,
         });
-        camera.drawText(text, .init(220, 215));
+        camera.drawText(text, .init(220, 210));
+
+        if (enemy.goods.len != 0) {
+            camera.drawText("缴获物品：", .init(220, 240));
+
+            for (enemy.goods) |index| {
+                const name = item.zon[index].name;
+                camera.drawColorText(name, .init(310, 240), .yellow);
+            }
+
+            std.debug.assert(enemy.goods.len == 1);
+        }
+        if (step == 2) {
+            text = zhu.format(&buffer, "等级升为({})^_^", .{player.level});
+            camera.drawColorText(text, .init(260, 270), .yellow);
+        }
     }
 };
 
