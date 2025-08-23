@@ -10,9 +10,9 @@ pub const Item = struct {
     name: []const u8 = &.{},
     about: []const u8 = &.{},
     money: usize = 0,
-    exp: usize = 0,
+    exp: i32 = 0,
     health: i32 = 0,
-    attack: usize = 0,
+    attack: i32 = 0,
     defend: i32 = 0,
 };
 

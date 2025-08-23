@@ -27,14 +27,14 @@ pub var money: usize = 5000; // 金钱
 pub var items: [16]u8 = undefined;
 pub var itemIndex: u8 = 0;
 
-pub var level: usize = 1; //等级
-var exp: usize = 0; //经验
-var maxExp: usize = 100; //经验最大值
+pub var level: u16 = 1; //等级
+var exp: u16 = 0; //经验
+var maxExp: u16 = 100; //经验最大值
 pub var health: u16 = 50; //生命
-var maxHealth: usize = 50; //生命最大值
+var maxHealth: u16 = 50; //生命最大值
 pub var attack: u16 = 10; //攻击
-pub var defend: usize = 10; //防御
-var speed: usize = 8; //速度
+pub var defend: u16 = 10; //防御
+var speed: u16 = 8; //速度
 
 var bgTexture: gfx.Texture = undefined;
 
@@ -137,17 +137,28 @@ pub fn openItem() bool {
 
     if (items[itemIndex] == 0) return false;
 
-    if (window.isKeyRelease(.LEFT_CONTROL)) {
-        // TODO 使用物品
+    if (window.isAnyKeyRelease(&.{ .LEFT_CONTROL, .F })) {
+        //  使用物品
         const usedItem = item.zon[items[itemIndex]];
-        _ = usedItem;
+
+        addStatusValue(&exp, usedItem.exp);
+        addStatusValue(&health, usedItem.health);
+        addStatusValue(&attack, usedItem.attack);
+        addStatusValue(&defend, usedItem.defend);
+        if (health > maxHealth) health = maxHealth;
+
         return true;
-    } else if (window.isKeyRelease(.EQUAL)) {
+    } else if (window.isKeyRelease(.G)) {
         // 丢弃物品
         items[itemIndex] = 0;
     }
 
     return false;
+}
+
+fn addStatusValue(value: *u16, add: i32) void {
+    const tmp = @as(i32, @intCast(value.*)) + add;
+    value.* = if (tmp < 0) 0 else @intCast(tmp);
 }
 
 var sellItemIndex: u16 = 0;
@@ -290,7 +301,7 @@ pub fn drawOpenItem() void {
     camera.drawText("（金=", item.position.addXY(10, 270));
     const moneyStr = zhu.format(&buffer, "{d}）", .{money});
     camera.drawText(moneyStr, item.position.addXY(60, 270));
-    const text = "CTRL=使用‘A’=丢弃 ESC=退出";
+    const text = " F=使用  G=丢弃  ESC=退出";
     camera.drawText(text, item.position.addXY(118, 270));
 }
 
