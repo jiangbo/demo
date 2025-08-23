@@ -5,6 +5,7 @@ const window = zhu.window;
 const gfx = zhu.gfx;
 const camera = zhu.camera;
 const math = zhu.math;
+const audio = zhu.audio;
 
 const scene = @import("scene.zig");
 const map = @import("map.zig");
@@ -20,13 +21,48 @@ var texture: gfx.Texture = undefined;
 var menuNames: [4][]const u8 = .{ "攻击", "状态", "物品", "逃走" };
 var menuIndex: u8 = 0;
 
+const bombArray: [10]gfx.Frame = blk: {
+    var array: [10]gfx.Frame = undefined;
+    const size = math.Vector2.init(54, 50);
+    for (&array, 0..) |*value, i| {
+        value.* = .{
+            .area = .init(.init(@floatFromInt(54 * i), 0), size),
+            .interval = 0.06,
+        };
+    }
+    break :blk array;
+};
+var bombAnimation: gfx.FrameAnimation = undefined;
+
 var playerTurn: bool = true;
 var damage: u16 = 0;
 var damageTimer: window.Timer = .init(0.5);
 
+const attackSoundNames: [3][:0]const u8 = .{
+    "assets/voc/ack_00.ogg",
+    "assets/voc/ack_01.ogg",
+    "assets/voc/ack_02.ogg",
+};
+
+const hurtSoundNames: [3][:0]const u8 = .{
+    "assets/voc/ao_00.ogg",
+    "assets/voc/ao_01.ogg",
+    "assets/voc/ao_02.ogg",
+};
+
+const deadSoundNames: [3][:0]const u8 = .{
+    "assets/voc/dead_00.ogg",
+    "assets/voc/dead_01.ogg",
+    "assets/voc/dead_02.ogg",
+};
+
 pub fn init() void {
     std.log.info("battle init", .{});
     texture = gfx.loadTexture("assets/pic/fightbar.png", .init(448, 112));
+    const bombTexture = gfx.loadTexture("assets/pic/bomb.png", .init(540, 50));
+    bombAnimation = .init(bombTexture, &bombArray);
+    bombAnimation.stop();
+
     damageTimer.stop();
 }
 
@@ -44,6 +80,8 @@ pub fn update(delta: f32) void {
     if (damage != 0) {
         if (damageTimer.isFinishedAfterUpdate(delta)) damage = 0;
     }
+
+    bombAnimation.update(delta);
 
     const menuEvent = menu.update();
     if (menuEvent) |event| updateMenuEvent(event);
@@ -67,10 +105,14 @@ pub fn updateMenuEvent(event: u8) void {
 }
 
 pub fn updateAttack() void {
+    audio.playSound(attackSoundNames[0]);
+    bombAnimation.reset();
+
     damage = player.attack * 2 - enemy.defend;
     if (damage <= 10) damage = randomU16(0, 10) else {
         damage += randomU16(0, damage);
     }
+    enemy.health -|= damage;
     damageTimer.reset();
 }
 
@@ -97,6 +139,9 @@ pub fn draw() void {
 
     // 战斗 NPC
     camera.draw(npc.battleTexture(enemyIndex), .init(465, 237));
+    if (!bombAnimation.finished()) {
+        camera.draw(bombAnimation.currentTexture(), .init(452, 230));
+    }
 
     const position = gfx.Vector.init(96, 304);
 

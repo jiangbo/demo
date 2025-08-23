@@ -37,19 +37,23 @@ pub const FrameAnimation = struct {
         self.elapsed += delta;
         if (self.elapsed < self.frames[self.index].interval) return;
 
-        self.index += 1;
-        if (!self.loop) return;
-        if (self.index == self.frames.len) self.index = 0;
+        if (self.loop and self.index == self.frames.len) self.index = 0;
         self.elapsed -= self.frames[self.index].interval;
+        self.index += 1;
     }
 
     pub fn stop(self: *FrameAnimation) void {
-        self.index = self.frames.len;
+        self.index = @intCast(self.frames.len);
         self.loop = false;
     }
 
     pub fn finished(self: *const FrameAnimation) bool {
         return !self.loop and self.index == self.frames.len;
+    }
+
+    pub fn reset(self: *FrameAnimation) void {
+        self.index = 0;
+        self.elapsed = 0;
     }
 };
 
