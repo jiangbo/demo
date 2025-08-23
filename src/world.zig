@@ -19,15 +19,16 @@ const State = union(enum) {
     map: MapState,
     menu: MenuState,
     status,
+    item,
     // talk,
     // about,
-    // item,
     // shop,
     // sale,
 
     pub fn update(self: State, delta: f32) void {
         switch (self) {
             .status => {},
+            .item => _ = player.openItem(),
             inline else => |case| @TypeOf(case).update(delta),
         }
     }
@@ -36,6 +37,7 @@ const State = union(enum) {
         switch (self) {
             .map => {},
             .status => player.drawStatus(),
+            .item => player.drawOpenItem(),
             inline else => |case| @TypeOf(case).draw(),
         }
     }
@@ -173,7 +175,7 @@ pub fn update(delta: f32) void {
     // switch (state) {
     //     .none => {},
     //     .talk => return updateTalk(),
-    //     .item => return updateItem(),
+
     //     .shop => return shop.update(),
     //     .status => {
     //         return if (window.isMouseRelease(.RIGHT) or
@@ -222,15 +224,6 @@ fn updateTalk() void {
             else => unreachable,
         }
     }
-}
-
-fn updateItem() void {
-    if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E })) {
-        state = .none;
-        player.itemIndex = 0;
-        return;
-    }
-    _ = player.openItem();
 }
 
 fn updateSale() void {
@@ -298,7 +291,7 @@ pub fn draw() void {
     // switch (state) {
     //     .none => {},
     //     .talk => talk.draw(),
-    //     .item => player.drawOpenItem(),
+
     //     .shop => shop.draw(),
     //     .about => about.draw(),
     //     .sale => player.drawSellItem(),
@@ -334,7 +327,7 @@ const MenuState = struct {
         const menuEvent = menu.update();
         if (menuEvent) |event| switch (event) {
             0 => state = .status,
-            // 1 => state = .item,
+            1 => state = .item,
             // 2...3 => state = .none,
             // 4 => {
             //     state = .about;
@@ -361,12 +354,6 @@ const MenuState = struct {
 const TalkState = struct {
     fn update(_: f32) void {
         updateTalk();
-    }
-};
-
-const ItemState = struct {
-    fn update(_: f32) void {
-        updateItem();
     }
 };
 
