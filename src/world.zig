@@ -104,6 +104,7 @@ pub fn enter() void {
         // 从战斗中退出，不需要改变角色的位置信息
         map.linkIndex = context.oldMapIndex;
         _ = map.enter();
+
         return;
     }
 
@@ -205,7 +206,7 @@ fn updateTalk() void {
             6 => state = .sale,
             7 => {
                 context.oldMapIndex = map.linkIndex;
-                context.battleNpcIndex = talk.active;
+                context.battleNpcIndex = talk.actor;
                 state = .none;
                 scene.changeScene(.battle);
             },

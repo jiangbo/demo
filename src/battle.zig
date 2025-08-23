@@ -59,6 +59,8 @@ const Phase = union(enum) {
     wait: WaitPhase,
     enemyAttack: EnemyAttackPhase,
     playerHurt: PlayerHurtPhase,
+    playerDeath: PlayerDeathPhase,
+    enemyDeath: EnemyDeathPhase,
     status: StatusPhase,
     item: ItemPhase,
 
@@ -121,12 +123,12 @@ pub fn draw() void {
     defer camera.mode = .world;
     var buffer: [100]u8 = undefined;
 
-    if (phase != .playerHurt) {
+    if (phase != .playerHurt and phase != .playerDeath) {
         // 战斗人物
         camera.draw(player.battleTexture(), .init(130, 220));
     }
 
-    if (phase != .enemyHurt) {
+    if (phase != .enemyHurt and phase != .enemyDeath) {
         // 战斗 NPC
         camera.draw(npc.battleTexture(enemyIndex), .init(465, 237));
     }
@@ -221,11 +223,12 @@ const EnemyHurtPhase = struct {
 
     fn update(delta: f32) void {
         if (timer.isFinishedAfterUpdate(delta)) {
+            if (enemy.health == 0) return changePhase(.enemyDeath);
             WaitPhase.next = .enemyAttack;
             changePhase(.wait);
         }
 
-        const period: u8 = @intFromFloat(@trunc(timer.elapsed / 0.05));
+        const period: u8 = @intFromFloat(@trunc(timer.elapsed / 0.08));
         offset = if (period % 2 == 0) -5 else 5;
     }
 
@@ -276,16 +279,18 @@ const PlayerHurtPhase = struct {
     fn enter() void {
         audio.playSound(hurtSounds[0]);
 
-        damage = computeDamage(player.attack, enemy.defend);
+        damage = computeDamage(enemy.attack, player.defend);
         player.health -|= damage;
 
         timer.reset();
     }
 
     fn update(delta: f32) void {
-        if (timer.isFinishedAfterUpdate(delta)) changePhase(.menu);
+        if (timer.isFinishedAfterUpdate(delta)) {
+            changePhase(if (player.health == 0) .playerDeath else .menu);
+        }
 
-        const period: u8 = @intFromFloat(@trunc(timer.elapsed / 0.05));
+        const period: u8 = @intFromFloat(@trunc(timer.elapsed / 0.08));
         offset = if (period % 2 == 0) -5 else 5;
     }
 
@@ -297,6 +302,50 @@ const PlayerHurtPhase = struct {
         const y = std.math.lerp(230, 190, timer.progress());
         const text = zhu.format(&buffer, "-{}", .{damage});
         camera.drawText(text, .init(130, y));
+    }
+};
+
+const PlayerDeathPhase = struct {
+    fn enter() void {
+        audio.playSound(deadSounds[0]);
+    }
+
+    fn update(_: f32) void {
+        if (window.isAnyRelease()) scene.changeScene(.title);
+    }
+
+    fn draw() void {
+        camera.drawText("你死了！", .init(285, 200));
+    }
+};
+
+const EnemyDeathPhase = struct {
+    var step: u8 = 0;
+
+    fn enter() void {
+        audio.playSound(deadSounds[enemySounds[enemy.picture]]);
+    }
+
+    fn update(_: f32) void {
+
+        // if (step == .end) scene.changeScene(.world);
+
+        if (window.isAnyRelease()) step += 1;
+
+        // if (step) {}
+    }
+
+    fn draw() void {
+        camera.drawText("胜利了！", .init(285, 180));
+        if (step < 1) return;
+
+        var buffer: [100]u8 = undefined;
+        const format = "获得：经验=[{}] 金钱=[{}]";
+        const text = zhu.format(&buffer, format, .{
+            enemy.level * 20,
+            enemy.money,
+        });
+        camera.drawText(text, .init(220, 215));
     }
 };
 

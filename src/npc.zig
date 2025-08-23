@@ -176,6 +176,6 @@ pub const Character = struct {
     attack: u16 = 0,
     defend: u16 = 0,
     speed: f32 = 0,
-    // goods: [1]u32,
-    // money: u32,
+    goods: []u16 = &.{},
+    money: u16 = 0,
 };

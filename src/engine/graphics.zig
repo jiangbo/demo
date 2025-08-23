@@ -41,9 +41,9 @@ pub const FrameAnimation = struct {
         self.elapsed += delta;
         if (self.elapsed < self.frames[self.index].interval) return false;
 
-        if (self.loop and self.index == self.frames.len) self.index = 0;
         self.elapsed -= self.frames[self.index].interval;
         self.index += 1;
+        if (self.loop and self.index == self.frames.len) self.index = 0;
 
         return !self.loop and self.index == self.frames.len;
     }
