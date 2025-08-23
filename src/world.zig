@@ -15,8 +15,30 @@ const item = @import("item.zig");
 const npc = @import("npc.zig");
 const context = @import("context.zig");
 
-const State = enum { none, talk, menu, about, status, item, shop, sale };
-var state: State = .none;
+const State = union(enum) {
+    map: MapState,
+    menu: MenuState,
+    // talk,
+    // about,
+    // status,
+    // item,
+    // shop,
+    // sale,
+
+    pub fn update(self: State, delta: f32) void {
+        switch (self) {
+            inline else => |case| @TypeOf(case).update(delta),
+        }
+    }
+
+    pub fn draw(self: State) void {
+        switch (self) {
+            .map => {},
+            inline else => |case| @TypeOf(case).draw(),
+        }
+    }
+};
+var state: State = .map;
 
 var menuTexture: gfx.Texture = undefined;
 var arenaAllocator: std.heap.ArenaAllocator = undefined;
@@ -130,54 +152,30 @@ pub fn exit() void {}
 pub fn update(delta: f32) void {
     reloadIfChanged();
 
-    if (tip.len != 0) {
-        if (window.isAnyRelease()) tip = &.{};
-        return;
-    }
+    state.update(delta);
 
-    switch (state) {
-        .none => {},
-        .talk => return updateTalk(),
-        .item => return updateItem(),
-        .shop => return shop.update(),
-        .status => {
-            return if (window.isMouseRelease(.RIGHT) or
-                window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }))
-            {
-                state = .none;
-            };
-        },
-        .menu => return updateMenu(),
-        .about => return updateAbout(delta),
-        .sale => return updateSale(),
-    }
+    // if (tip.len != 0) {
+    //     if (window.isAnyRelease()) tip = &.{};
+    //     return;
+    // }
 
-    npc.update(delta);
-    player.update(delta);
+    // switch (state) {
+    //     .none => {},
+    //     .talk => return updateTalk(),
+    //     .item => return updateItem(),
+    //     .shop => return shop.update(),
+    //     .status => {
+    //         return if (window.isMouseRelease(.RIGHT) or
+    //             window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }))
+    //         {
+    //             state = .none;
+    //         };
+    //     },
+    //     .menu => return updateMenu(),
+    //     .about => return updateAbout(delta),
+    //     .sale => return updateSale(),
+    // }
 
-    // 交互检测
-    const confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
-    if (confirm) {
-        // 开启宝箱
-        const object = map.talk(player.position, player.facing);
-        if (object) |pickupIndex| openChest(pickupIndex);
-    }
-
-    if (confirm) {
-        // 和 NPC 对话
-        if (npc.talk(player.talkCollider(), player.facing)) |talkId| {
-            talk.active = talkId;
-            state = .talk;
-        }
-    }
-
-    if (state == .none) {
-        if (window.isMouseRelease(.RIGHT) or
-            window.isAnyKeyRelease(&.{ .ESCAPE, .E }))
-        {
-            state = .menu;
-        }
-    }
 }
 
 var modifyTime: i64 = 0;
@@ -272,56 +270,110 @@ fn openChest(pickIndex: u16) void {
     map.openChest(pickIndex);
 }
 
-fn updateMenu() void {
-    const menuEvent = menu.update();
-    if (menuEvent) |event| menuSelected(event);
-
-    if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
-        window.isMouseRelease(.RIGHT))
-    {
-        state = .none;
-    }
-}
-
-fn menuSelected(index: usize) void {
-    switch (index) {
-        0 => state = .status,
-        1 => state = .item,
-        2...3 => state = .none,
-        4 => {
-            state = .about;
-            about.resetRoll();
-        },
-        5 => window.exit(),
-        6 => state = .none,
-        else => unreachable,
-    }
-}
-
 pub fn draw() void {
     map.draw();
     npc.draw();
     player.draw();
 
-    camera.mode = .local;
-    defer camera.mode = .world;
+    state.draw();
 
-    if (tip.len != 0) {
-        camera.drawColorText(tip, .init(242, 442), .black);
-        camera.drawColorText(tip, .init(240, 440), .yellow);
-    }
+    // camera.mode = .local;
+    // defer camera.mode = .world;
 
-    switch (state) {
-        .none => {},
-        .talk => talk.draw(),
-        .status => player.drawStatus(),
-        .item => player.drawOpenItem(),
-        .shop => shop.draw(),
-        .menu => {
-            camera.draw(menuTexture, .init(0, 280));
-            menu.draw();
-        },
-        .about => about.draw(),
-        .sale => player.drawSellItem(),
-    }
+    // if (tip.len != 0) {
+    //     camera.drawColorText(tip, .init(242, 442), .black);
+    //     camera.drawColorText(tip, .init(240, 440), .yellow);
+    // }
+
+    // switch (state) {
+    //     .none => {},
+    //     .talk => talk.draw(),
+    //     .status => player.drawStatus(),
+    //     .item => player.drawOpenItem(),
+    //     .shop => shop.draw(),
+    //     .about => about.draw(),
+    //     .sale => player.drawSellItem(),
+    // }
 }
+
+const MapState = struct {
+    fn update(delta: f32) void {
+        npc.update(delta);
+        player.update(delta);
+
+        // 交互检测
+        // const confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
+        // if (confirm) {
+        //     // 开启宝箱
+        //     const object = map.talk(player.position, player.facing);
+        //     if (object) |pickupIndex| openChest(pickupIndex);
+        // }
+
+        // if (confirm) {
+        //     // 和 NPC 对话
+        //     if (npc.talk(player.talkCollider(), player.facing)) |talkId| {
+        //         talk.active = talkId;
+        //         state = .talk;
+        //     }
+        // }
+
+        if (window.isMouseRelease(.RIGHT) or
+            window.isAnyKeyRelease(&.{ .ESCAPE, .E }))
+        {
+            state = .menu;
+        }
+    }
+};
+
+const MenuState = struct {
+    fn update(_: f32) void {
+        const menuEvent = menu.update();
+        if (menuEvent) |event| switch (event) {
+            // 0 => state = .status,
+            // 1 => state = .item,
+            // 2...3 => state = .none,
+            // 4 => {
+            //     state = .about;
+            //     about.resetRoll();
+            // },
+            // 5 => window.exit(),
+            6 => state = .map,
+            else => unreachable,
+        };
+
+        if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
+            window.isMouseRelease(.RIGHT))
+        {
+            state = .map;
+        }
+    }
+
+    fn draw() void {
+        camera.draw(menuTexture, .init(0, 280));
+        menu.draw();
+    }
+};
+
+const TalkState = struct {
+    fn update(_: f32) void {
+        updateTalk();
+    }
+};
+
+const ItemState = struct {
+    fn update(_: f32) void {
+        updateItem();
+    }
+};
+
+const SaleState = struct {
+    fn update(_: f32) void {
+        updateSale();
+    }
+};
+
+const AboutState = struct {
+    fn update(delta: f32) void {
+        updateAbout(delta);
+    }
+};
