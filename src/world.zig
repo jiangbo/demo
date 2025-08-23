@@ -220,7 +220,7 @@ fn updateItem() void {
         player.itemIndex = 0;
         return;
     }
-    player.openItem();
+    _ = player.openItem();
 }
 
 fn updateSale() void {

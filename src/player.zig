@@ -132,19 +132,22 @@ fn updateFacing() math.Vector2 {
     return dir;
 }
 
-pub fn openItem() void {
+pub fn openItem() bool {
     itemIndex = item.update(items.len, itemIndex);
 
-    if (items[itemIndex] == 0) return;
+    if (items[itemIndex] == 0) return false;
 
     if (window.isKeyRelease(.LEFT_CONTROL)) {
         // TODO 使用物品
         const usedItem = item.zon[items[itemIndex]];
         _ = usedItem;
+        return true;
     } else if (window.isKeyRelease(.EQUAL)) {
         // 丢弃物品
         items[itemIndex] = 0;
     }
+
+    return false;
 }
 
 var sellItemIndex: u16 = 0;

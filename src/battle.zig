@@ -59,11 +59,12 @@ const Phase = union(enum) {
     wait: WaitPhase,
     enemyAttack: EnemyAttackPhase,
     playerHurt: PlayerHurtPhase,
-    // Finished,
+    status: StatusPhase,
+    item: ItemPhase,
 
     fn enter(self: Phase) void {
         switch (self) {
-            .menu => {},
+            .menu, .status, .item => {},
             inline else => |case| @TypeOf(case).enter(),
         }
     }
@@ -100,6 +101,7 @@ pub fn enter() void {
     map.linkIndex = 13;
     _ = map.enter();
     menu.active = 7;
+    changePhase(.menu);
 }
 
 fn changePhase(newPhase: Phase) void {
@@ -109,8 +111,6 @@ fn changePhase(newPhase: Phase) void {
 }
 
 pub fn update(delta: f32) void {
-    if (window.isKeyRelease(.ESCAPE)) scene.changeScene(.world);
-
     phase.update(delta);
 }
 
@@ -181,16 +181,9 @@ const MenuPhase = struct {
         const optionalEvent = menu.update();
         if (optionalEvent) |event| switch (event) {
             0 => changePhase(.playerAttack),
-            1 => {
-                // 状态
-            },
-            2 => {
-                // 物品
-            },
-            3 => {
-                // 逃走
-                scene.changeScene(.world);
-            },
+            1 => changePhase(.status),
+            2 => changePhase(.item),
+            3 => scene.changeScene(.world),
             else => unreachable,
         };
     }
@@ -304,5 +297,30 @@ const PlayerHurtPhase = struct {
         const y = std.math.lerp(230, 190, timer.progress());
         const text = zhu.format(&buffer, "-{}", .{damage});
         camera.drawText(text, .init(130, y));
+    }
+};
+
+const StatusPhase = struct {
+    fn update(_: f32) void {
+        if (window.isAnyRelease()) changePhase(.menu);
+    }
+
+    fn draw() void {
+        camera.flushText();
+        player.drawStatus();
+    }
+};
+
+const ItemPhase = struct {
+    fn update(_: f32) void {
+        const used = player.openItem();
+        if (used) changePhase(.enemyAttack);
+
+        if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q })) changePhase(.menu);
+    }
+
+    fn draw() void {
+        camera.flushText();
+        player.drawOpenItem();
     }
 };
