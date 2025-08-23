@@ -20,8 +20,8 @@ const State = union(enum) {
     menu: MenuState,
     status,
     item,
+    about: AboutState,
     // talk,
-    // about,
     // shop,
     // sale,
 
@@ -38,6 +38,7 @@ const State = union(enum) {
             .map => {},
             .status => player.drawStatus(),
             .item => player.drawOpenItem(),
+            .about => about.draw(),
             inline else => |case| @TypeOf(case).draw(),
         }
     }
@@ -177,15 +178,8 @@ pub fn update(delta: f32) void {
     //     .talk => return updateTalk(),
 
     //     .shop => return shop.update(),
-    //     .status => {
-    //         return if (window.isMouseRelease(.RIGHT) or
-    //             window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .SPACE }))
-    //         {
-    //             state = .none;
-    //         };
-    //     },
     //     .menu => return updateMenu(),
-    //     .about => return updateAbout(delta),
+
     //     .sale => return updateSale(),
     // }
 
@@ -235,25 +229,6 @@ fn updateSale() void {
     player.sellItem();
 }
 
-fn updateAbout(delta: f32) void {
-    if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q }) or
-        window.isMouseRelease(.RIGHT))
-    {
-        state = .none;
-        return;
-    }
-
-    if (about.roll) {
-        about.update(delta);
-    } else {
-        if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER }) or
-            window.isMouseRelease(.LEFT))
-        {
-            about.roll = true;
-        }
-    }
-}
-
 fn openChest(pickIndex: u16) void {
     const object = item.pickupZon[pickIndex];
 
@@ -293,7 +268,7 @@ pub fn draw() void {
     //     .talk => talk.draw(),
 
     //     .shop => shop.draw(),
-    //     .about => about.draw(),
+
     //     .sale => player.drawSellItem(),
     // }
 }
@@ -328,12 +303,12 @@ const MenuState = struct {
         if (menuEvent) |event| switch (event) {
             0 => state = .status,
             1 => state = .item,
-            // 2...3 => state = .none,
-            // 4 => {
-            //     state = .about;
-            //     about.resetRoll();
-            // },
-            // 5 => window.exit(),
+            2...3 => state = .map,
+            4 => {
+                about.resetRoll();
+                state = .about;
+            },
+            5 => window.exit(),
             6 => state = .map,
             else => unreachable,
         };
@@ -365,6 +340,12 @@ const SaleState = struct {
 
 const AboutState = struct {
     fn update(delta: f32) void {
-        updateAbout(delta);
+        if (about.roll) about.update(delta) else {
+            if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER }) or
+                window.isMouseRelease(.LEFT))
+            {
+                about.roll = true;
+            }
+        }
     }
 };
