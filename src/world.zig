@@ -23,13 +23,14 @@ const State = union(enum) {
     item,
     about: AboutState,
     talk: TalkState,
-    // shop,
+    shop,
     sale: SaleState,
 
     pub fn update(self: State, delta: f32) void {
         switch (self) {
             .status => {},
             .item => _ = player.openItem(),
+            .shop => shop.update(),
             inline else => |case| @TypeOf(case).update(delta),
         }
     }
@@ -42,70 +43,14 @@ const State = union(enum) {
             .about => about.draw(),
             .talk => talk.draw(),
             .sale => player.drawSellItem(),
+            .shop => shop.draw(),
             inline else => |case| @TypeOf(case).draw(),
         }
     }
 };
+
 var state: State = .map;
-
 var arenaAllocator: std.heap.ArenaAllocator = undefined;
-
-const Shop = struct {
-    items: [16]u8,
-    current: u8 = 0,
-
-    pub fn update(self: *Shop) void {
-        self.current = item.update(self.items.len, self.current);
-
-        if (window.isAnyKeyRelease(&.{ .LEFT_CONTROL, .F, .ENTER })) {
-            const itemIndex = self.items[self.current];
-            if (itemIndex != 0) buy(itemIndex);
-        }
-
-        if (window.isAnyKeyRelease(&.{ .Q, .E, .ESCAPE })) state = .none;
-    }
-
-    fn buy(itemIndex: u8) void {
-        const buyItem = item.zon[itemIndex];
-
-        if (buyItem.money > player.money) {
-            tip = "兄弟，你的钱不够！";
-            return;
-        }
-
-        const bagEnough = player.addItem(itemIndex);
-        if (!bagEnough) {
-            tip = "你已经带满了！";
-            return;
-        }
-        player.money -= buyItem.money;
-    }
-
-    pub fn draw(self: *const Shop) void {
-        item.draw(&self.items, self.current);
-        var buffer: [20]u8 = undefined;
-        // 金币，操作说明
-        camera.drawText("（金=", item.position.addXY(10, 270));
-        const moneyStr = zhu.format(&buffer, "{d}）", .{player.money});
-        camera.drawText(moneyStr, item.position.addXY(60, 270));
-        const text = "CTRL=购买　　ESC=退出";
-        camera.drawText(text, item.position.addXY(118, 270));
-    }
-};
-var weaponShop: Shop = .{
-    .items = .{
-        12, 12, 13, 13, 14, 14, 9, 9, //
-        10, 10, 8,  8,  16, 16, 0, 0,
-    },
-};
-var potionShop: Shop = .{
-    .items = .{
-        5,  5,  6,  6,  7, 7, 4, 4, //
-        17, 17, 18, 18, 0, 0, 0, 0,
-    },
-};
-var shop: *Shop = undefined;
-
 var tip: []const u8 = &.{};
 
 pub fn init() void {
@@ -164,7 +109,7 @@ pub fn update(delta: f32) void {
         return;
     }
 
-    if (state != .menu and state != .sale) {
+    if (state != .menu and state != .sale and state != .shop) {
         if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
             window.isMouseRelease(.RIGHT))
         {
@@ -174,15 +119,6 @@ pub fn update(delta: f32) void {
     }
 
     state.update(delta);
-
-    // switch (state) {
-    //     .none => {},
-    //     .talk => return updateTalk(),
-
-    //     .shop => return shop.update(),
-    //     .sale => return updateSale(),
-    // }
-
 }
 
 var modifyTime: i64 = 0;
@@ -211,13 +147,6 @@ pub fn draw() void {
         camera.drawColorText(tip, .init(240, 440), .yellow);
     }
     state.draw();
-
-    // switch (state) {
-    //     .none => {},
-
-    //     .shop => shop.draw(),
-
-    // }
 }
 
 const MapState = struct {
@@ -295,8 +224,10 @@ const TalkState = struct {
         const talkEvent = talk.update();
         if (talkEvent) |event| switch (event) {
             0 => state = .map,
-            //     4 => shop = &weaponShop,
-            //     5 => shop = &potionShop,
+            4, 5 => |t| {
+                state = .shop;
+                shop = if (t == 4) &weaponShop else &potionShop;
+            },
             6 => state = .sale,
             // 7 => {
             //     context.oldMapIndex = map.linkIndex;
@@ -331,3 +262,59 @@ const SaleState = struct {
         }
     }
 };
+
+const Shop = struct {
+    items: [16]u8,
+    current: u8 = 0,
+
+    pub fn update(self: *Shop) void {
+        self.current = item.update(self.items.len, self.current);
+
+        if (window.isAnyKeyRelease(&.{ .LEFT_CONTROL, .F, .ENTER })) {
+            const itemIndex = self.items[self.current];
+            if (itemIndex != 0) buy(itemIndex);
+        }
+
+        if (window.isAnyKeyRelease(&.{ .Q, .E, .ESCAPE })) state = .map;
+    }
+
+    fn buy(itemIndex: u8) void {
+        const buyItem = item.zon[itemIndex];
+
+        if (buyItem.money > player.money) {
+            tip = "兄弟，你的钱不够！";
+            return;
+        }
+
+        const bagEnough = player.addItem(itemIndex);
+        if (!bagEnough) {
+            tip = "你已经带满了！";
+            return;
+        }
+        player.money -= buyItem.money;
+    }
+
+    pub fn draw(self: *const Shop) void {
+        item.draw(&self.items, self.current);
+        var buffer: [20]u8 = undefined;
+        // 金币，操作说明
+        camera.drawText("（金=", item.position.addXY(10, 270));
+        const moneyStr = zhu.format(&buffer, "{d}）", .{player.money});
+        camera.drawText(moneyStr, item.position.addXY(60, 270));
+        const text = "CTRL=购买　　ESC=退出";
+        camera.drawText(text, item.position.addXY(118, 270));
+    }
+};
+var weaponShop: Shop = .{
+    .items = .{
+        12, 12, 13, 13, 14, 14, 9, 9, //
+        10, 10, 8,  8,  16, 16, 0, 0,
+    },
+};
+var potionShop: Shop = .{
+    .items = .{
+        5,  5,  6,  6,  7, 7, 4, 4, //
+        17, 17, 18, 18, 0, 0, 0, 0,
+    },
+};
+var shop: *Shop = undefined;
