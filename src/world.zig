@@ -18,15 +18,16 @@ const context = @import("context.zig");
 const State = union(enum) {
     map: MapState,
     menu: MenuState,
+    status,
     // talk,
     // about,
-    // status,
     // item,
     // shop,
     // sale,
 
     pub fn update(self: State, delta: f32) void {
         switch (self) {
+            .status => {},
             inline else => |case| @TypeOf(case).update(delta),
         }
     }
@@ -34,6 +35,7 @@ const State = union(enum) {
     pub fn draw(self: State) void {
         switch (self) {
             .map => {},
+            .status => player.drawStatus(),
             inline else => |case| @TypeOf(case).draw(),
         }
     }
@@ -151,6 +153,15 @@ pub fn exit() void {}
 
 pub fn update(delta: f32) void {
     reloadIfChanged();
+
+    if (state != .menu) {
+        if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
+            window.isMouseRelease(.RIGHT))
+        {
+            state = .menu;
+            return;
+        }
+    }
 
     state.update(delta);
 
@@ -275,10 +286,9 @@ pub fn draw() void {
     npc.draw();
     player.draw();
 
+    camera.mode = .local;
+    defer camera.mode = .world;
     state.draw();
-
-    // camera.mode = .local;
-    // defer camera.mode = .world;
 
     // if (tip.len != 0) {
     //     camera.drawColorText(tip, .init(242, 442), .black);
@@ -288,7 +298,6 @@ pub fn draw() void {
     // switch (state) {
     //     .none => {},
     //     .talk => talk.draw(),
-    //     .status => player.drawStatus(),
     //     .item => player.drawOpenItem(),
     //     .shop => shop.draw(),
     //     .about => about.draw(),
@@ -317,11 +326,6 @@ const MapState = struct {
         //     }
         // }
 
-        if (window.isMouseRelease(.RIGHT) or
-            window.isAnyKeyRelease(&.{ .ESCAPE, .E }))
-        {
-            state = .menu;
-        }
     }
 };
 
@@ -329,7 +333,7 @@ const MenuState = struct {
     fn update(_: f32) void {
         const menuEvent = menu.update();
         if (menuEvent) |event| switch (event) {
-            // 0 => state = .status,
+            0 => state = .status,
             // 1 => state = .item,
             // 2...3 => state = .none,
             // 4 => {
