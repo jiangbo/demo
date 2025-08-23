@@ -210,6 +210,10 @@ pub fn addItem(itemId: u8) bool {
     return false;
 }
 
+pub fn isLevelUp() bool {
+    return exp >= maxExp;
+}
+
 pub fn levelUp() void {
     level += exp / maxExp;
     maxHealth += exp / maxExp * 30;

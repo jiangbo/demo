@@ -36,7 +36,7 @@ pub const FrameAnimation = struct {
     }
 
     pub fn isFinishedAfterUpdate(self: *FrameAnimation, delta: f32) bool {
-        if (self.finished()) return false;
+        if (self.finished()) return true;
 
         self.elapsed += delta;
         if (self.elapsed < self.frames[self.index].interval) return false;

@@ -110,7 +110,6 @@ pub fn enter() void {
 fn changePhase(newPhase: Phase) void {
     phase = newPhase;
     phase.enter();
-    std.log.info("change phase: {}", .{newPhase});
 }
 
 pub fn update(delta: f32) void {
@@ -178,9 +177,7 @@ fn computeDamage(attack: u16, defend: u16) u16 {
 }
 
 const MenuPhase = struct {
-    fn update(delta: f32) void {
-        _ = delta;
-
+    fn update(_: f32) void {
         const optionalEvent = menu.update();
         if (optionalEvent) |event| switch (event) {
             0 => changePhase(.playerAttack),
@@ -226,7 +223,7 @@ const EnemyHurtPhase = struct {
         if (timer.isFinishedAfterUpdate(delta)) {
             if (enemy.health == 0) return changePhase(.enemyDeath);
             WaitPhase.next = .enemyAttack;
-            changePhase(.wait);
+            return changePhase(.wait);
         }
 
         const period: u8 = @intFromFloat(@trunc(timer.elapsed / 0.08));
@@ -253,7 +250,7 @@ const WaitPhase = struct {
     }
 
     fn update(delta: f32) void {
-        if (timer.isFinishedAfterUpdate(delta)) changePhase(.enemyAttack);
+        if (timer.isFinishedAfterUpdate(delta)) changePhase(next);
     }
 };
 
@@ -337,16 +334,13 @@ const EnemyDeathPhase = struct {
         }
 
         if (step == 1 and window.isAnyRelease()) {
-            if (player.exp < 100) return scene.changeScene(.world);
-
-            step += 1;
-            player.levelUp();
-            return;
+            if (player.isLevelUp()) {
+                step += 1;
+                return player.levelUp();
+            }
         }
 
-        if (step == 2 and window.isAnyRelease()) {
-            scene.changeScene(.world);
-        }
+        if (window.isAnyRelease()) scene.changeScene(.world);
     }
 
     fn draw() void {
