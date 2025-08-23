@@ -18,8 +18,6 @@ var enemyIndex: u16 = 0;
 var enemy: npc.Character = undefined;
 
 var texture: gfx.Texture = undefined;
-var menuNames: [4][]const u8 = .{ "攻击", "状态", "物品", "逃走" };
-var menuIndex: u8 = 0;
 
 const bombArray: [10]gfx.Frame = blk: {
     var array: [10]gfx.Frame = undefined;
@@ -33,10 +31,6 @@ const bombArray: [10]gfx.Frame = blk: {
     break :blk array;
 };
 var bombAnimation: gfx.FrameAnimation = undefined;
-
-var playerTurn: bool = true;
-var damage: u16 = 0;
-var damageTimer: window.Timer = .init(0.5);
 
 const attackSoundNames: [3][:0]const u8 = .{
     "assets/voc/ack_00.ogg",
@@ -56,14 +50,52 @@ const deadSoundNames: [3][:0]const u8 = .{
     "assets/voc/dead_02.ogg",
 };
 
+const hurtSounds: [15]u8 = .{ 2, 1, 2, 2, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 2 };
+
+const Phase = union(enum) {
+    menu: MenuPhase,
+    playerAttack: PlayerAttackPhase,
+    enemyHurt: EnemyHurtPhase,
+    // PlayerAttackStart,
+    // PlayerAttackEnd,
+    // EnemyHurt,
+    // EnemyTurnStart,
+    // EnemyAttackStart,
+    // EnemyAttackEnd,
+    // PlayerHurt,
+    // Finished,
+
+    fn enter(self: Phase) void {
+        switch (self) {
+            .menu => {},
+            inline else => |case| @TypeOf(case).enter(),
+        }
+    }
+
+    fn update(self: Phase, delta: f32) void {
+        switch (self) {
+            inline else => |case| @TypeOf(case).update(delta),
+        }
+    }
+
+    fn draw(self: Phase) void {
+        switch (self) {
+            .menu => {},
+            inline else => |case| @TypeOf(case).draw(),
+        }
+    }
+};
+var phase: Phase = .menu;
+
 pub fn init() void {
-    std.log.info("battle init", .{});
     texture = gfx.loadTexture("assets/pic/fightbar.png", .init(448, 112));
     const bombTexture = gfx.loadTexture("assets/pic/bomb.png", .init(540, 50));
     bombAnimation = .init(bombTexture, &bombArray);
-    bombAnimation.stop();
+    bombAnimation.loop = false;
+}
 
-    damageTimer.stop();
+pub fn deinit() void {
+    npc.deinit();
 }
 
 pub fn enter() void {
@@ -74,46 +106,15 @@ pub fn enter() void {
     menu.active = 7;
 }
 
+fn changePhase(newPhase: Phase) void {
+    phase = newPhase;
+    phase.enter();
+}
+
 pub fn update(delta: f32) void {
     if (window.isKeyRelease(.ESCAPE)) scene.changeScene(.world);
 
-    if (damage != 0) {
-        if (damageTimer.isFinishedAfterUpdate(delta)) damage = 0;
-    }
-
-    bombAnimation.update(delta);
-
-    const menuEvent = menu.update();
-    if (menuEvent) |event| updateMenuEvent(event);
-}
-
-pub fn updateMenuEvent(event: u8) void {
-    switch (event) {
-        0 => updateAttack(),
-        1 => {
-            // 状态
-        },
-        2 => {
-            // 物品
-        },
-        3 => {
-            // 逃走
-            scene.changeScene(.world);
-        },
-        else => unreachable,
-    }
-}
-
-pub fn updateAttack() void {
-    audio.playSound(attackSoundNames[0]);
-    bombAnimation.reset();
-
-    damage = player.attack * 2 - enemy.defend;
-    if (damage <= 10) damage = randomU16(0, 10) else {
-        damage += randomU16(0, damage);
-    }
-    enemy.health -|= damage;
-    damageTimer.reset();
+    phase.update(delta);
 }
 
 fn randomU16(min: u16, max: u16) u16 {
@@ -130,18 +131,8 @@ pub fn draw() void {
     // 战斗人物
     camera.draw(player.battleTexture(), .init(130, 220));
 
-    // 如果有伤害
-    if (damage != 0) {
-        const y = std.math.lerp(230, 190, damageTimer.progress());
-        const text = zhu.format(&buffer, "-{}", .{damage});
-        camera.drawText(text, .init(465, y));
-    }
-
     // 战斗 NPC
     camera.draw(npc.battleTexture(enemyIndex), .init(465, 237));
-    if (!bombAnimation.finished()) {
-        camera.draw(bombAnimation.currentTexture(), .init(452, 230));
-    }
 
     const position = gfx.Vector.init(96, 304);
 
@@ -172,8 +163,77 @@ pub fn draw() void {
     camera.drawColorText(text, position.addXY(305, 5), .black);
 
     menu.draw();
+    phase.draw();
 }
 
-pub fn deinit() void {
-    npc.deinit();
-}
+const MenuPhase = struct {
+    fn update(delta: f32) void {
+        _ = delta;
+
+        const optionalEvent = menu.update();
+        if (optionalEvent) |event| switch (event) {
+            0 => changePhase(.playerAttack),
+            1 => {
+                // 状态
+            },
+            2 => {
+                // 物品
+            },
+            3 => {
+                // 逃走
+                scene.changeScene(.world);
+            },
+            else => unreachable,
+        };
+    }
+};
+
+const PlayerAttackPhase = struct {
+    const sound: [:0]const u8 = attackSoundNames[0];
+
+    fn enter() void {
+        audio.playSound(sound);
+        bombAnimation.reset();
+    }
+
+    fn update(delta: f32) void {
+        if (bombAnimation.isFinishedAfterUpdate(delta)) {
+            std.log.info("change phase enemy hurt", .{});
+            changePhase(.enemyHurt);
+        }
+    }
+
+    fn draw() void {
+        camera.draw(bombAnimation.currentTexture(), .init(452, 230));
+    }
+};
+
+const EnemyHurtPhase = struct {
+    var damage: u16 = 0;
+    var timer: window.Timer = .init(0.5);
+
+    fn enter() void {
+        audio.playSound(hurtSoundNames[hurtSounds[enemy.picture]]);
+
+        damage = player.attack * 2 - enemy.defend;
+        if (damage <= 10) damage = randomU16(0, 10) else {
+            damage += randomU16(0, damage);
+        }
+        enemy.health -|= damage;
+
+        timer.reset();
+    }
+
+    fn update(delta: f32) void {
+        if (timer.isFinishedAfterUpdate(delta)) {
+            changePhase(.menu);
+        }
+    }
+
+    fn draw() void {
+        var buffer: [10]u8 = undefined;
+        const y = std.math.lerp(230, 190, timer.progress());
+        const text = zhu.format(&buffer, "-{}", .{damage});
+        camera.drawText(text, .init(465, y));
+    }
+};

@@ -32,14 +32,20 @@ pub const FrameAnimation = struct {
     }
 
     pub fn update(self: *FrameAnimation, delta: f32) void {
-        if (self.finished()) return;
+        _ = self.isFinishedAfterUpdate(delta);
+    }
+
+    pub fn isFinishedAfterUpdate(self: *FrameAnimation, delta: f32) bool {
+        if (self.finished()) return false;
 
         self.elapsed += delta;
-        if (self.elapsed < self.frames[self.index].interval) return;
+        if (self.elapsed < self.frames[self.index].interval) return false;
 
         if (self.loop and self.index == self.frames.len) self.index = 0;
         self.elapsed -= self.frames[self.index].interval;
         self.index += 1;
+
+        return !self.loop and self.index == self.frames.len;
     }
 
     pub fn stop(self: *FrameAnimation) void {
