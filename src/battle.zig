@@ -32,37 +32,33 @@ const bombArray: [10]gfx.Frame = blk: {
 };
 var bombAnimation: gfx.FrameAnimation = undefined;
 
-const attackSoundNames: [3][:0]const u8 = .{
+const attackSounds: [3][:0]const u8 = .{
     "assets/voc/ack_00.ogg",
     "assets/voc/ack_01.ogg",
     "assets/voc/ack_02.ogg",
 };
 
-const hurtSoundNames: [3][:0]const u8 = .{
+const hurtSounds: [3][:0]const u8 = .{
     "assets/voc/ao_00.ogg",
     "assets/voc/ao_01.ogg",
     "assets/voc/ao_02.ogg",
 };
 
-const deadSoundNames: [3][:0]const u8 = .{
+const deadSounds: [3][:0]const u8 = .{
     "assets/voc/dead_00.ogg",
     "assets/voc/dead_01.ogg",
     "assets/voc/dead_02.ogg",
 };
 
-const hurtSounds: [15]u8 = .{ 2, 1, 2, 2, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 2 };
+const enemySounds: [15]u8 = .{ 2, 1, 2, 2, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 2 };
 
 const Phase = union(enum) {
     menu: MenuPhase,
     playerAttack: PlayerAttackPhase,
     enemyHurt: EnemyHurtPhase,
-    // PlayerAttackStart,
-    // PlayerAttackEnd,
-    // EnemyHurt,
-    // EnemyTurnStart,
-    // EnemyAttackStart,
-    // EnemyAttackEnd,
-    // PlayerHurt,
+    wait: WaitPhase,
+    enemyAttack: EnemyAttackPhase,
+    playerHurt: PlayerHurtPhase,
     // Finished,
 
     fn enter(self: Phase) void {
@@ -80,7 +76,7 @@ const Phase = union(enum) {
 
     fn draw(self: Phase) void {
         switch (self) {
-            .menu => {},
+            .menu, .wait => {},
             inline else => |case| @TypeOf(case).draw(),
         }
     }
@@ -109,16 +105,13 @@ pub fn enter() void {
 fn changePhase(newPhase: Phase) void {
     phase = newPhase;
     phase.enter();
+    std.log.info("change phase: {}", .{newPhase});
 }
 
 pub fn update(delta: f32) void {
     if (window.isKeyRelease(.ESCAPE)) scene.changeScene(.world);
 
     phase.update(delta);
-}
-
-fn randomU16(min: u16, max: u16) u16 {
-    return math.random().intRangeLessThanBiased(u16, min, max);
 }
 
 pub fn draw() void {
@@ -128,8 +121,10 @@ pub fn draw() void {
     defer camera.mode = .world;
     var buffer: [100]u8 = undefined;
 
-    // 战斗人物
-    camera.draw(player.battleTexture(), .init(130, 220));
+    if (phase != .playerHurt) {
+        // 战斗人物
+        camera.draw(player.battleTexture(), .init(130, 220));
+    }
 
     if (phase != .enemyHurt) {
         // 战斗 NPC
@@ -168,6 +163,17 @@ pub fn draw() void {
     phase.draw();
 }
 
+fn computeDamage(attack: u16, defend: u16) u16 {
+    var damage = attack * 2 - defend;
+
+    if (damage <= 10)
+        damage = math.random().intRangeLessThanBiased(u16, 0, 10)
+    else {
+        damage += math.random().intRangeLessThanBiased(u16, 0, damage);
+    }
+    return damage;
+}
+
 const MenuPhase = struct {
     fn update(delta: f32) void {
         _ = delta;
@@ -192,7 +198,7 @@ const MenuPhase = struct {
 
 const PlayerAttackPhase = struct {
     fn enter() void {
-        audio.playSound(attackSoundNames[0]);
+        audio.playSound(attackSounds[0]);
         bombAnimation.reset();
     }
 
@@ -212,12 +218,9 @@ const EnemyHurtPhase = struct {
     var offset: f32 = 5;
 
     fn enter() void {
-        audio.playSound(hurtSoundNames[hurtSounds[enemy.picture]]);
+        audio.playSound(hurtSounds[enemySounds[enemy.picture]]);
 
-        damage = player.attack * 2 - enemy.defend;
-        if (damage <= 10) damage = randomU16(0, 10) else {
-            damage += randomU16(0, damage);
-        }
+        damage = computeDamage(player.attack, enemy.defend);
         enemy.health -|= damage;
 
         timer.reset();
@@ -225,11 +228,12 @@ const EnemyHurtPhase = struct {
 
     fn update(delta: f32) void {
         if (timer.isFinishedAfterUpdate(delta)) {
-            changePhase(.menu);
+            WaitPhase.next = .enemyAttack;
+            changePhase(.wait);
         }
 
         const period: u8 = @intFromFloat(@trunc(timer.elapsed / 0.05));
-        offset = if (period % 2 == 0) 5 else -5;
+        offset = if (period % 2 == 0) -5 else 5;
     }
 
     fn draw() void {
@@ -240,5 +244,65 @@ const EnemyHurtPhase = struct {
         const y = std.math.lerp(230, 190, timer.progress());
         const text = zhu.format(&buffer, "-{}", .{damage});
         camera.drawText(text, .init(465, y));
+    }
+};
+
+const WaitPhase = struct {
+    var timer: window.Timer = .init(0.5);
+    var next: Phase = .menu;
+
+    fn enter() void {
+        timer.reset();
+    }
+
+    fn update(delta: f32) void {
+        if (timer.isFinishedAfterUpdate(delta)) changePhase(.enemyAttack);
+    }
+};
+
+const EnemyAttackPhase = struct {
+    fn enter() void {
+        audio.playSound(attackSounds[enemySounds[enemy.picture]]);
+        bombAnimation.reset();
+    }
+
+    fn update(delta: f32) void {
+        if (bombAnimation.isFinishedAfterUpdate(delta)) changePhase(.playerHurt);
+    }
+
+    fn draw() void {
+        camera.draw(bombAnimation.currentTexture(), .init(120, 220));
+    }
+};
+
+const PlayerHurtPhase = struct {
+    var damage: u16 = 0;
+    var timer: window.Timer = .init(0.5);
+    var offset: f32 = 5;
+
+    fn enter() void {
+        audio.playSound(hurtSounds[0]);
+
+        damage = computeDamage(player.attack, enemy.defend);
+        player.health -|= damage;
+
+        timer.reset();
+    }
+
+    fn update(delta: f32) void {
+        if (timer.isFinishedAfterUpdate(delta)) changePhase(.menu);
+
+        const period: u8 = @intFromFloat(@trunc(timer.elapsed / 0.05));
+        offset = if (period % 2 == 0) -5 else 5;
+    }
+
+    fn draw() void {
+        const pos = math.Vector2.init(130, 220).addX(offset);
+        camera.draw(player.battleTexture(), pos);
+
+        var buffer: [10]u8 = undefined;
+        const y = std.math.lerp(230, 190, timer.progress());
+        const text = zhu.format(&buffer, "-{}", .{damage});
+        camera.drawText(text, .init(130, y));
     }
 };
