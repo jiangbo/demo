@@ -43,6 +43,11 @@ pub fn activeText(talkId: u16, content: []const u8) void {
     plainText = false;
 }
 
+pub fn activeNext() void {
+    active += zon[active].next;
+    actor = zon[active].actor;
+}
+
 pub fn update() ?u8 {
     if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return null;
 

@@ -78,6 +78,7 @@ pub fn enter() void {
         // 从战斗中退出，不需要改变角色的位置信息
         map.linkIndex = context.oldMapIndex;
         _ = map.enter();
+        if (state == .talk) talk.activeNext();
 
         return;
     }
@@ -229,12 +230,11 @@ const TalkState = struct {
                 shop = if (t == 4) &weaponShop else &potionShop;
             },
             6 => state = .sale,
-            // 7 => {
-            //     context.oldMapIndex = map.linkIndex;
-            //     context.battleNpcIndex = talk.actor;
-            //     state = .none;
-            //     scene.changeScene(.battle);
-            // },
+            7 => {
+                context.oldMapIndex = map.linkIndex;
+                context.battleNpcIndex = talk.actor;
+                scene.changeScene(.battle);
+            },
             else => unreachable,
         };
     }
