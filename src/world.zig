@@ -244,13 +244,19 @@ const AboutState = struct {
 };
 
 const SaleState = struct {
+    var sell: bool = false;
+
     fn update(_: f32) void {
-        player.sellItem();
+        const playerSell = player.sellItem();
+        if (!sell) sell = playerSell;
 
         if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
             window.isMouseRelease(.RIGHT))
         {
-            state = .map;
+            talk.activeNext();
+            if (sell) talk.activeNext();
+            state = .talk;
+            sell = false;
         }
     }
 };

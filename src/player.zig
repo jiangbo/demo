@@ -163,15 +163,15 @@ fn addStatusValue(value: *u16, add: i32) void {
 }
 
 var sellItemIndex: u16 = 0;
-pub fn sellItem() void {
+pub fn sellItem() bool {
     if (sellItemIndex != 0) {
         if (window.isAnyRelease()) sellItemIndex = 0;
-        return;
+        return false;
     }
 
     itemIndex = item.update(items.len, itemIndex);
 
-    if (items[itemIndex] == 0) return;
+    if (items[itemIndex] == 0) return false;
 
     if (window.isKeyRelease(.LEFT_CONTROL)) {
         // 卖出物品
@@ -179,7 +179,9 @@ pub fn sellItem() void {
         const usedItem = item.zon[sellItemIndex];
         money += usedItem.money / 2;
         items[itemIndex] = 0;
+        return true;
     }
+    return false;
 }
 
 fn cameraLookAt() void {

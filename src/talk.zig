@@ -44,7 +44,7 @@ pub fn activeText(talkId: u16, content: []const u8) void {
 }
 
 pub fn activeNext() void {
-    active += zon[active].next;
+    active += 1;
     actor = zon[active].actor;
 }
 
