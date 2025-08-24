@@ -9,7 +9,7 @@
     .{ .talks = .{ 30, 174 }, .name = "巫　二", .picture = 1, .x = 200, .y = 300, .speed = 12 },
     .{ .talks = .{ 32, 35 }, .name = "密　儿", .picture = 2, .x = 920, .y = 260, .speed = 12 },
     .{ .talks = .{ 39, 45 }, .name = "小　璐", .picture = 0, .x = 400, .y = 400, .speed = 14 },
-    .{ .talks = .{ 51, 64 }, .name = "小　田", .picture = 1, .x = 800, .y = 500, .speed = 12 },
+    .{ .talks = .{ 49, 64 }, .name = "小　田", .picture = 1, .x = 800, .y = 500, .speed = 12 },
     // 10
     .{ .talks = .{ 69, 74 }, .name = "小　芳", .picture = 3, .x = 300, .y = 700, .speed = 12 },
     .{ .talks = .{ 121, 121 }, .name = "干小石", .picture = 12, .x = 322, .y = 288, .speed = 8 },
