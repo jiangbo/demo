@@ -262,34 +262,45 @@ const SaleState = struct {
 };
 
 const Shop = struct {
+    var bought: bool = false;
     items: [16]u8,
     current: u8 = 0,
+    notBuyId: u16,
+    buyId: u16,
 
     pub fn update(self: *Shop) void {
         self.current = item.update(self.items.len, self.current);
 
         if (window.isAnyKeyRelease(&.{ .LEFT_CONTROL, .F, .ENTER })) {
             const itemIndex = self.items[self.current];
-            if (itemIndex != 0) buy(itemIndex);
+            if (itemIndex != 0) {
+                const playerBuy = buy(itemIndex);
+                if (!bought) bought = playerBuy;
+            }
         }
 
-        if (window.isAnyKeyRelease(&.{ .Q, .E, .ESCAPE })) state = .map;
+        if (window.isAnyKeyRelease(&.{ .Q, .E, .ESCAPE })) {
+            talk.active = if (bought) self.buyId else self.notBuyId;
+            state = .talk;
+            bought = false;
+        }
     }
 
-    fn buy(itemIndex: u8) void {
+    fn buy(itemIndex: u8) bool {
         const buyItem = item.zon[itemIndex];
 
         if (buyItem.money > player.money) {
             tip = "兄弟，你的钱不够！";
-            return;
+            return false;
         }
 
         const bagEnough = player.addItem(itemIndex);
         if (!bagEnough) {
             tip = "你已经带满了！";
-            return;
+            return false;
         }
         player.money -= buyItem.money;
+        return true;
     }
 
     pub fn draw(self: *const Shop) void {
@@ -308,11 +319,15 @@ var weaponShop: Shop = .{
         12, 12, 13, 13, 14, 14, 9, 9, //
         10, 10, 8,  8,  16, 16, 0, 0,
     },
+    .notBuyId = 117,
+    .buyId = 119,
 };
 var potionShop: Shop = .{
     .items = .{
         5,  5,  6,  6,  7, 7, 4, 4, //
         17, 17, 18, 18, 0, 0, 0, 0,
     },
+    .notBuyId = 130,
+    .buyId = 132,
 };
 var shop: *Shop = undefined;

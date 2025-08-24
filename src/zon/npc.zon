@@ -15,11 +15,11 @@
     .{ .talk = 121, .name = "干小石", .picture = 12, .x = 322, .y = 288, .speed = 8 },
     .{ .talk = 112, .name = "老　板", .picture = 1, .x = 400, .y = 159, .speed = 8 },
     .{ .talk = 124, .name = "老板娘", .picture = 3, .x = 200, .y = 159, .speed = 8 },
-    .{ .talk = 133, .name = "蝴　蝶", .picture = 2, .x = 322, .y = 288, .speed = 8 },
+    .{ .talk = 134, .name = "蝴　蝶", .picture = 2, .x = 322, .y = 288, .speed = 8 },
     // 15
-    .{ .talk = 136, .name = "收荒匠", .picture = 1, .x = 180, .y = 280, .speed = 8 },
-    .{ .talk = 142, .name = "小　月", .picture = 3, .x = 125, .y = 155, .speed = 8 },
-    .{ .talk = 146, .name = "柔  儿", .picture = 0, .x = 480, .y = 95, .facing = .left },
-    .{ .talk = 146, .name = "刀　疤", .picture = 7, .x = 450, .y = 95, .money = 30, .goods = .{}, .facing = .right, .health = 60, .attack = 12, .defend = 7 },
-    .{ .talk = 146, .name = "秃　鹰", .picture = 6, .x = 480, .y = 125, .money = 20, .goods = .{16}, .facing = .up, .health = 50, .attack = 8, .defend = 10 },
+    .{ .talk = 137, .name = "收荒匠", .picture = 1, .x = 180, .y = 280, .speed = 8 },
+    .{ .talk = 143, .name = "小　月", .picture = 3, .x = 125, .y = 155, .speed = 8 },
+    .{ .talk = 147, .name = "柔  儿", .picture = 0, .x = 480, .y = 95, .facing = .left },
+    .{ .talk = 147, .name = "刀　疤", .picture = 7, .x = 450, .y = 95, .money = 30, .goods = .{}, .facing = .right, .health = 60, .attack = 12, .defend = 7 },
+    .{ .talk = 147, .name = "秃　鹰", .picture = 6, .x = 480, .y = 125, .money = 20, .goods = .{16}, .facing = .up, .health = 50, .attack = 8, .defend = 10 },
 }
