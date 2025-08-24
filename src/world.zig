@@ -150,7 +150,9 @@ const MapState = struct {
         // 检测是否需要切换地图
         const area = math.Rect.init(player.position, player.SIZE);
         const object = map.getObject(map.positionIndex(area.center()));
-        if (object > 4) return changeMapIfNeed(object) else warn = false;
+        if (object > 4) {
+            if (!warn) return changeMapIfNeed(object);
+        } else warn = false;
 
         // 交互检测
         if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return;
@@ -166,8 +168,6 @@ const MapState = struct {
     }
 
     fn changeMapIfNeed(object: u16) void {
-        // 切换场景，检查是否有进度要求
-
         const link = map.links[object];
         if (player.progress > link.progress) {
             std.log.info("change map link index: {d}", .{object});
@@ -176,7 +176,7 @@ const MapState = struct {
             return;
         }
 
-        if (!warn and player.progress == 0) {
+        if (player.progress == 0) {
             warn = true;
             talk.active = 17;
             state = .talk;
@@ -184,7 +184,7 @@ const MapState = struct {
 
         if (player.progress == 4) {
             player.progress += 1;
-            talk.active = 18;
+            talk.active = 177;
             state = .talk;
         }
     }
