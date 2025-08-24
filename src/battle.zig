@@ -185,7 +185,11 @@ const MenuPhase = struct {
             0 => changePhase(.playerAttack),
             1 => changePhase(.status),
             2 => changePhase(.item),
-            3 => scene.changeScene(.world),
+            3 => {
+                if (enemy.escape > zhu.randU8(0, 100)) {
+                    scene.changeScene(.world);
+                } else changePhase(.enemyAttack);
+            },
             else => unreachable,
         };
     }

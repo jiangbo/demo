@@ -180,4 +180,5 @@ pub const Character = struct {
     goods: []const u8 = &.{},
     money: u16 = 0,
     progress: u8 = 0xFF,
+    escape: u8 = 50, // 逃跑成功率
 };
