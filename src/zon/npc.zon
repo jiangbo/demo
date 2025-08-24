@@ -22,4 +22,14 @@
     .{ .talks = .{ 147, 173 }, .name = "柔  儿", .picture = 0, .x = 480, .y = 95, .facing = .left },
     .{ .talks = .{147}, .name = "刀　疤", .picture = 7, .x = 450, .y = 95, .money = 30, .goods = .{12}, .facing = .right, .health = 60, .attack = 12, .defend = 7, .progress = 3 },
     .{ .talks = .{147}, .name = "秃　鹰", .picture = 6, .x = 480, .y = 125, .money = 20, .goods = .{16}, .facing = .up, .health = 50, .attack = 8, .defend = 10, .progress = 3 },
+    // 20 森林
+    .{ .talks = .{0}, .name = "飞将军", .picture = 12, .x = 100, .y = 400, .money = 30, .goods = .{3}, .health = 80, .attack = 12, .defend = 8, .speed = 8, .level = 1 },
+    .{ .talks = .{0}, .name = "旋　风", .picture = 8, .x = 32, .y = 288, .money = 20, .goods = .{2}, .health = 60, .attack = 12, .defend = 5, .speed = 4, .level = 1 },
+    .{ .talks = .{0}, .name = "无　敌", .picture = 6, .x = 400, .y = 224, .money = 50, .goods = .{7}, .health = 50, .attack = 13, .defend = 16, .speed = 8, .level = 3 },
+    .{ .talks = .{0}, .name = "巫凌云", .picture = 7, .x = 860, .y = 288, .money = 0, .goods = .{8}, .health = 100, .attack = 15, .defend = 15, .speed = 4, .level = 2 },
+    .{ .talks = .{0}, .name = "全无敌", .picture = 5, .x = 600, .y = 124, .money = 30, .goods = .{4}, .health = 80, .attack = 15, .defend = 10, .speed = 2, .level = 2 },
+    .{ .talks = .{0}, .name = "巫　批", .picture = 4, .x = 890, .y = 478, .money = 300, .goods = .{9}, .health = 200, .attack = 25, .defend = 25, .speed = 16, .level = 5 },
+    .{ .talks = .{0}, .name = "飞将军", .picture = 8, .x = 400, .y = 400, .money = 20, .goods = .{5}, .health = 100, .attack = 13, .defend = 8, .speed = 12, .level = 1 },
+    .{ .talks = .{0}, .name = "旋　风", .picture = 6, .x = 532, .y = 288, .money = 80, .goods = .{0}, .health = 100, .attack = 10, .defend = 16, .speed = 4, .level = 1 },
+    .{ .talks = .{0}, .name = "无　敌", .picture = 7, .x = 300, .y = 824, .money = 100, .goods = .{}, .health = 80, .attack = 15, .defend = 10, .speed = 8, .level = 3 },
 }

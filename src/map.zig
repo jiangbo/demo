@@ -34,7 +34,7 @@ const Link = struct {
 };
 const zon: []const Map = @import("zon/map.zon");
 pub var links: []const Link = @import("zon/link.zon");
-pub var linkIndex: u16 = 14;
+pub var linkIndex: u16 = 13;
 pub var current: *const Map = undefined;
 pub var size: math.Vector2 = undefined;
 
