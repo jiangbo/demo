@@ -126,7 +126,8 @@ pub fn talk(collider: math.Rect, facing: math.FourDirection) ?u8 {
         if (collider.intersect(npcCollider)) {
             // 将 NPC 的面向调整到角色的反方向
             npc.facing = facing.opposite();
-            return zon[npc.index].talk;
+            const index: u8 = if (player.progress > 4) 1 else 0;
+            return zon[npc.index].talks[index];
         }
     }
     return null;
@@ -162,7 +163,7 @@ pub fn battleTexture(npcIndex: u16) gfx.Texture {
 
 pub const Character = struct {
     enemy: bool = false,
-    talk: u8 = 0,
+    talks: []const u8 = &.{},
     name: []const u8 = &.{},
     x: f32 = 0,
     y: f32 = 0,
