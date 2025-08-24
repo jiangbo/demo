@@ -27,14 +27,18 @@ const Map = struct {
     npcs: []const u8 = &.{},
 };
 
-const Link = struct { player: gfx.Vector = .zero, mapId: u8 = 0 };
+const Link = struct {
+    player: gfx.Vector = .zero,
+    mapId: u8 = 0,
+    progress: u8 = 0,
+};
 const zon: []const Map = @import("zon/map.zon");
-var links: []const Link = @import("zon/link.zon");
-pub var linkIndex: u16 = 8;
+pub var links: []const Link = @import("zon/link.zon");
+pub var linkIndex: u16 = 14;
 pub var current: *const Map = undefined;
 pub var size: math.Vector2 = undefined;
 
-var vertexBuffer: [1300]camera.Vertex = undefined;
+var vertexBuffer: [2000]camera.Vertex = undefined;
 var vertexArray: std.ArrayListUnmanaged(camera.Vertex) = undefined;
 var backgroundIndex: usize = undefined;
 
@@ -204,7 +208,6 @@ pub fn reload(allocator: std.mem.Allocator) math.Vector2 {
     return links[linkIndex].player;
 }
 
-var modifyTime: i64 = 0;
 pub fn draw() void {
     camera.drawVertices(texture, vertexArray.items);
 }

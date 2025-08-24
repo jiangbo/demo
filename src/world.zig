@@ -145,17 +145,30 @@ const MapState = struct {
         npc.update(delta);
         player.update(delta);
 
+        // 检测是否需要切换地图
+        const area = math.Rect.init(player.position, player.SIZE);
+        const object = map.getObject(map.positionIndex(area.center()));
+        if (object > 4) return changeMapIfNeed(object);
+
         // 交互检测
         if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return;
         // 开启宝箱
-        const object = map.talk(player.position, player.facing);
-        if (object) |pickupIndex| openChest(pickupIndex);
+        const talkObject = map.talk(player.position, player.facing);
+        if (talkObject) |pickupIndex| openChest(pickupIndex);
 
         // 和 NPC 对话
         if (npc.talk(player.talkCollider(), player.facing)) |talkId| {
             talk.active = talkId;
             state = .talk;
         }
+    }
+
+    fn changeMapIfNeed(object: u16) void {
+        // 切换场景，检查是否有进度要求
+
+        std.log.info("change map link index: {d}", .{object});
+        map.linkIndex = object;
+        scene.changeMap();
     }
 
     fn openChest(pickIndex: u16) void {

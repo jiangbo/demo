@@ -6,7 +6,6 @@ const gfx = zhu.gfx;
 const camera = zhu.camera;
 const math = zhu.math;
 
-const scene = @import("scene.zig");
 const item = @import("item.zig");
 const map = @import("map.zig");
 const npc = @import("npc.zig");
@@ -15,7 +14,7 @@ const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
 
 const name = "小飞刀";
 const MOVE_SPEED = 100;
-const SIZE: math.Vector = .init(16, 16);
+pub const SIZE: math.Vector = .init(16, 16);
 var texture: gfx.Texture = undefined;
 var animation: Animation = undefined;
 
@@ -88,14 +87,6 @@ pub fn update(delta: f32) void {
     position = map.walkTo(area, velocity);
     // 相机跟踪
     cameraLookAt();
-
-    // 检测是否需要切换地图
-    const object = map.getObject(map.positionIndex(area.center()));
-    if (object > 4) {
-        std.log.info("change map link index: {d}", .{object});
-        map.linkIndex = object;
-        scene.changeMap();
-    }
 }
 
 fn updateFacing() math.Vector2 {
