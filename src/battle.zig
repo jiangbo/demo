@@ -103,6 +103,11 @@ pub fn enter() void {
     changePhase(.menu);
 }
 
+pub fn exit() void {
+    map.linkIndex = context.oldMapIndex;
+    _ = map.enter();
+}
+
 fn changePhase(newPhase: Phase) void {
     phase = newPhase;
     phase.enter();

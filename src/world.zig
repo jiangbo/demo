@@ -50,6 +50,7 @@ const State = union(enum) {
 };
 
 var state: State = .map;
+var back: enum { none, talk } = .none;
 var arenaAllocator: std.heap.ArenaAllocator = undefined;
 var tip: []const u8 = &.{};
 
@@ -63,8 +64,6 @@ pub fn init() void {
     map.init();
     player.init();
     npc.init();
-
-    // status = .item;
 }
 
 pub fn deinit() void {
@@ -73,24 +72,17 @@ pub fn deinit() void {
 }
 
 pub fn enter() void {
-    if (context.oldMapIndex != 0) {
-        // 从战斗中退出，不需要改变角色的位置信息
-        map.linkIndex = context.oldMapIndex;
-        _ = map.enter();
-        if (state == .talk) talk.activeNext();
-
-        return;
-    }
-
-    const playerPosition = map.enter();
-    player.enter(playerPosition);
-    npc.enter();
     menu.active = 6;
-    // window.playMusic("assets/voc/back.ogg");
 
-    // talk.active = 4;
-    // status = .talk;
-
+    switch (back) {
+        .none => {
+            const playerPosition = map.enter();
+            player.enter(playerPosition);
+            npc.enter();
+            window.playMusic("assets/voc/back.ogg");
+        },
+        .talk => talk.activeNext(),
+    }
 }
 
 pub fn changeMap() void {
@@ -232,6 +224,7 @@ const TalkState = struct {
             7 => {
                 context.oldMapIndex = map.linkIndex;
                 context.battleNpcIndex = talk.actor;
+                back = .talk;
                 scene.changeScene(.battle);
             },
             else => unreachable,

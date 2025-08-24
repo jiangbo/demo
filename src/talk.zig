@@ -80,12 +80,12 @@ pub fn draw() void {
 
 pub fn drawText(content: []const u8) void {
     camera.drawTextOptions(content, .{
-        .color = .{ .w = 1 },
+        .color = .black,
         .position = .init(123, 403),
         .width = 593,
     });
     camera.drawTextOptions(content, .{
-        .color = .one,
+        .color = .white,
         .position = .init(120, 400),
         .width = 590,
     });
