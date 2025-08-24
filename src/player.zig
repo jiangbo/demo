@@ -176,7 +176,7 @@ pub fn sellItem() bool {
     return false;
 }
 
-fn cameraLookAt() void {
+pub fn cameraLookAt() void {
     const half = window.logicSize.scale(0.5);
     const max = map.size.sub(window.logicSize);
     camera.position = position.sub(half).clamp(.zero, max);

@@ -48,6 +48,14 @@ pub fn activeNext() void {
     actor = zon[active].actor;
 }
 
+pub fn recentNpc() u16 {
+    var npcIndex = active;
+    while (zon[npcIndex].actor == 0) {
+        npcIndex -= 1;
+    }
+    return zon[npcIndex].actor;
+}
+
 pub fn update() ?u8 {
     if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return null;
 

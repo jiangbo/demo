@@ -50,7 +50,7 @@ const State = union(enum) {
 };
 
 var state: State = .map;
-var back: enum { none, talk } = .none;
+var back: enum { none, talk, battle } = .none;
 var arenaAllocator: std.heap.ArenaAllocator = undefined;
 var tip: []const u8 = &.{};
 
@@ -72,14 +72,18 @@ pub fn deinit() void {
 }
 
 pub fn enter() void {
+    const playerPosition = map.enter();
     switch (back) {
         .none => {
-            const playerPosition = map.enter();
             player.enter(playerPosition);
+            context.battleNpcIndex = 0;
+            context.oldMapIndex = 0;
             window.playMusic("assets/voc/back.ogg");
         },
         .talk => talk.activeNext(),
+        .battle => state = .map,
     }
+    player.cameraLookAt();
     npc.enter();
     menu.active = 6;
 }
@@ -251,10 +255,10 @@ const TalkState = struct {
                 shop = if (t == 4) &weaponShop else &potionShop;
             },
             6 => state = .sale,
-            7 => {
+            7, 8 => |e| {
                 context.oldMapIndex = map.linkIndex;
-                context.battleNpcIndex = talk.actor;
-                back = .talk;
+                context.battleNpcIndex = talk.recentNpc();
+                back = if (e == 7) .talk else .battle;
                 scene.changeScene(.battle);
             },
             else => unreachable,

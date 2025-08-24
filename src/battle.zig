@@ -97,16 +97,15 @@ pub fn init() void {
 pub fn enter() void {
     enemyIndex = context.battleNpcIndex;
     enemy = npc.zon[enemyIndex];
-    map.linkIndex = 13;
+    map.linkIndex = 15;
     _ = map.enter();
     menu.active = 7;
     changePhase(.menu);
+    camera.position = .zero;
 }
 
 pub fn exit() void {
     map.linkIndex = context.oldMapIndex;
-    _ = map.enter();
-    if (enemy.progress != 0xFF) player.progress = enemy.progress + 1;
 }
 
 fn changePhase(newPhase: Phase) void {
@@ -168,7 +167,7 @@ pub fn draw() void {
 }
 
 fn computeDamage(attack: u16, defend: u16) u16 {
-    var damage = attack * 2 - defend;
+    var damage = attack * 2 -| defend;
 
     if (damage <= 10)
         damage = math.random().intRangeLessThanBiased(u16, 0, 10)
@@ -312,8 +311,6 @@ const PlayerHurtPhase = struct {
 const PlayerDeathPhase = struct {
     fn enter() void {
         audio.playSound(deadSounds[0]);
-        context.battleNpcIndex = 0;
-        context.oldMapIndex = 0;
     }
 
     fn update(_: f32) void {
@@ -331,6 +328,7 @@ const EnemyDeathPhase = struct {
     fn enter() void {
         audio.playSound(deadSounds[enemySounds[enemy.picture]]);
         step = 0;
+        if (enemy.progress != 0xFF) player.progress = enemy.progress + 1;
     }
 
     fn update(_: f32) void {
