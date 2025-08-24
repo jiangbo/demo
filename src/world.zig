@@ -72,17 +72,16 @@ pub fn deinit() void {
 }
 
 pub fn enter() void {
-    menu.active = 6;
-
     switch (back) {
         .none => {
             const playerPosition = map.enter();
             player.enter(playerPosition);
-            npc.enter();
             window.playMusic("assets/voc/back.ogg");
         },
         .talk => talk.activeNext(),
     }
+    npc.enter();
+    menu.active = 6;
 }
 
 pub fn changeMap() void {

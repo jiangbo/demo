@@ -48,6 +48,7 @@ pub fn enter() void {
 
     for (map.current.npcs) |id| {
         const stop = zon[id].speed == 0;
+        if (zon[id].progress < player.progress) continue;
         npcArray.appendAssumeCapacity(.{
             .index = id,
             .facing = if (stop) zon[id].facing else .random(),
@@ -177,4 +178,5 @@ pub const Character = struct {
     speed: f32 = 0,
     goods: []const u8 = &.{},
     money: u16 = 0,
+    progress: u8 = 0xFF,
 };

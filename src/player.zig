@@ -35,6 +35,7 @@ var maxHealth: u16 = 50; //生命最大值
 pub var attack: u16 = 10; //攻击
 pub var defend: u16 = 10; //防御
 var speed: u16 = 8; //速度
+pub var progress: u8 = 0; //进度
 
 var bgTexture: gfx.Texture = undefined;
 

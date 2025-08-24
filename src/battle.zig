@@ -106,6 +106,7 @@ pub fn enter() void {
 pub fn exit() void {
     map.linkIndex = context.oldMapIndex;
     _ = map.enter();
+    if (enemy.progress != 0xFF) player.progress = enemy.progress + 1;
 }
 
 fn changePhase(newPhase: Phase) void {
@@ -325,6 +326,7 @@ const EnemyDeathPhase = struct {
 
     fn enter() void {
         audio.playSound(deadSounds[enemySounds[enemy.picture]]);
+        step = 0;
     }
 
     fn update(_: f32) void {
