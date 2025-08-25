@@ -11,7 +11,7 @@ const map = @import("map.zig");
 const player = @import("player.zig");
 
 const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
-pub const zon: []const Character = @import("zon/npc.zon");
+pub var zon: []const Character = @import("zon/npc.zon");
 var npcPaths: [15][:0]const u8 = blk: {
     var list: [15][:0]const u8 = undefined;
     for (&list, 1..) |*value, i| {
@@ -30,7 +30,7 @@ const State = struct {
     position: math.Vector2,
     facing: gfx.FourDirection = .down,
     animation: Animation,
-    timer: window.Timer = .init(5),
+    timer: window.Timer,
 };
 
 var npcBuffer: [10]State = undefined;
@@ -54,8 +54,20 @@ pub fn enter() void {
             .facing = if (stop) zon[id].facing else .random(),
             .position = .init(zon[id].x, zon[id].y),
             .animation = buildAnimation(npcTextures[zon[id].picture]),
+            .timer = .init(math.randF32(3, 5)),
         });
     }
+}
+
+const parseZon = std.zon.parse.fromSlice;
+pub fn reload(allocator: std.mem.Allocator) void {
+    std.log.info("npc reload", .{});
+
+    const content = window.readAll(allocator, "src/zon/npc.zon");
+    defer allocator.free(content);
+    const npc = parseZon([]Character, allocator, content, null, .{});
+    zon = npc catch @panic("error parse zon");
+    enter();
 }
 
 fn buildAnimation(texture: gfx.Texture) Animation {
@@ -78,7 +90,7 @@ pub fn update(delta: f32) void {
         const speed = zon[npc.index].speed * delta;
         if (npc.timer.isFinishedAfterUpdate(delta) and speed > 0) {
             npc.facing = .random();
-            npc.timer.reset();
+            npc.timer = .init(math.randF32(3, 5));
         }
 
         npc.animation.getPtr(npc.facing).update(delta);

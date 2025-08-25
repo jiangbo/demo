@@ -120,12 +120,14 @@ var modifyTime: i64 = 0;
 fn reloadIfChanged() void {
     const menuTime = window.statFileTime("src/zon/menu.zon");
     const linkTime = window.statFileTime("src/zon/link.zon");
-    const time = @max(menuTime, linkTime);
+    const npcTime = window.statFileTime("src/zon/npc.zon");
+    const time = @max(@max(menuTime, linkTime), npcTime);
 
     if (time > modifyTime) {
         _ = arenaAllocator.reset(.retain_capacity);
         menu.reload(arenaAllocator.allocator());
         player.position = map.reload(arenaAllocator.allocator());
+        npc.reload(arenaAllocator.allocator());
         modifyTime = time;
     }
 }
