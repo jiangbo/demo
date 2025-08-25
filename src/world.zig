@@ -166,7 +166,13 @@ const MapState = struct {
             if (npc.zon[npcIndex].talks.len != 0) {
                 talk.active = npc.zon[npcIndex].talks[0];
                 state = .talk;
+            } else {
+                context.oldMapIndex = map.linkIndex;
+                context.battleNpcIndex = npcIndex;
+                back = .battle;
+                scene.changeScene(.battle);
             }
+            return;
         }
 
         // 交互检测

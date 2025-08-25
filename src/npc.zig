@@ -24,6 +24,7 @@ const frames: [2]gfx.Frame = .{
     .{ .area = .init(.init(0, 0), SIZE), .interval = 0.5 },
     .{ .area = .init(.init(32, 0), SIZE), .interval = 0.5 },
 };
+pub var dead: std.StaticBitSet(64) = .initEmpty();
 
 const State = struct {
     index: u8,
@@ -130,6 +131,11 @@ pub fn isCollision(collider: math.Rect) bool {
         if (collider.intersect(npcCollider)) return true;
     }
     return false;
+}
+
+pub fn death(index: u16) void {
+    dead.set(index);
+    _ = npcArray.swapRemove(index);
 }
 
 pub fn talk(collider: math.Rect, facing: math.FourDirection) ?u8 {

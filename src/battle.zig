@@ -328,6 +328,7 @@ const EnemyDeathPhase = struct {
     fn enter() void {
         audio.playSound(deadSounds[enemySounds[enemy.picture]]);
         step = 0;
+        npc.death(enemyIndex);
         if (enemy.progress != 0xFF) player.progress = enemy.progress + 1;
     }
 

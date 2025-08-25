@@ -26,7 +26,7 @@
     // [20001]
     .{ .talks = .{ 189, 189 }, .name = "飞将军", .picture = 12, .x = 110, .y = 400, .money = 30, .goods = .{3}, .health = 80, .attack = 12, .defend = 8, .speed = 8, .level = 1, .enemy = true },
     // [20002]
-    .{ .name = "旋　风", .picture = 8, .x = 32, .y = 228, .money = 20, .goods = .{2}, .health = 60, .attack = 12, .defend = 5, .speed = 4, .level = 1 },
+    .{ .name = "旋　风", .picture = 8, .x = 32, .y = 228, .money = 20, .goods = .{2}, .health = 60, .attack = 12, .defend = 5, .speed = 4, .level = 1, .enemy = true },
     // [20003]
     .{ .talks = .{0}, .name = "无　敌", .picture = 6, .x = 400, .y = 224, .money = 50, .goods = .{7}, .health = 50, .attack = 13, .defend = 16, .speed = 8, .level = 3 },
     // [20004]
