@@ -48,6 +48,7 @@ pub fn enter() void {
     npcArray.clearRetainingCapacity();
 
     for (map.current.npcs) |id| {
+        if (dead.isSet(id)) continue;
         const stop = zon[id].speed == 0;
         if (zon[id].progress < player.progress) continue;
         npcArray.appendAssumeCapacity(.{
@@ -135,11 +136,18 @@ pub fn isCollision(collider: math.Rect) bool {
 
 pub fn death(index: u16) void {
     dead.set(index);
-    _ = npcArray.swapRemove(index);
+    for (npcArray.items, 0..) |npc, i| {
+        if (npc.index == index) {
+            _ = npcArray.swapRemove(i);
+            return;
+        }
+    }
 }
 
 pub fn talk(collider: math.Rect, facing: math.FourDirection) ?u8 {
     for (npcArray.items) |*npc| {
+        if (zon[npc.index].enemy) continue;
+
         const npcCollider = math.Rect.init(npc.position, SIZE);
         if (collider.intersect(npcCollider)) {
             // 将 NPC 的面向调整到角色的反方向
