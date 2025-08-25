@@ -163,8 +163,8 @@ pub fn battle(collider: math.Rect, facing: math.FourDirection) ?u8 {
     for (npcArray.items) |*npc| {
         if (!zon[npc.index].enemy) continue;
         // 战斗的时候，将敌人的碰撞范围扩大
-        const pos = npc.position.sub(SIZE.scale(0.4));
-        const area = math.Rect.init(pos, SIZE.scale(1.8));
+        const pos = npc.position.sub(SIZE.scale(0.25));
+        const area = math.Rect.init(pos, SIZE.scale(1.5));
         if (collider.intersect(area)) {
             // 将 NPC 的面向调整到角色的反方向
             npc.facing = facing.opposite();
