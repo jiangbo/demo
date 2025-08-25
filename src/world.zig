@@ -196,7 +196,7 @@ const MapState = struct {
             return;
         }
 
-        if (player.progress == 0) {
+        if (player.progress == 1) {
             warn = true;
             talk.active = 17;
             state = .talk;

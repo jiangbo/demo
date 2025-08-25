@@ -19,7 +19,7 @@
     // 15
     .{ .talks = .{ 137, 137 }, .name = "收荒匠", .picture = 1, .x = 180, .y = 280, .speed = 8 },
     .{ .talks = .{ 143, 143 }, .name = "小　月", .picture = 3, .x = 125, .y = 155, .speed = 8 },
-    .{ .talks = .{ 147, 173 }, .name = "柔  儿", .picture = 0, .x = 480, .y = 95, .facing = .left },
+    .{ .talks = .{ 173, 173 }, .name = "柔  儿", .picture = 0, .x = 480, .y = 95, .facing = .left },
     .{ .talks = .{147}, .name = "刀　疤", .picture = 7, .x = 450, .y = 95, .money = 30, .goods = .{12}, .facing = .right, .health = 60, .attack = 12, .defend = 7, .progress = 3, .escape = 0 },
     .{ .talks = .{147}, .name = "秃　鹰", .picture = 6, .x = 480, .y = 125, .money = 20, .goods = .{16}, .facing = .up, .health = 50, .attack = 8, .defend = 10, .progress = 3, .escape = 0 },
     // 20 森林
