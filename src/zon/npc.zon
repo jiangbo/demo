@@ -6,26 +6,26 @@
     .{ .talks = .{ 6, 15 }, .name = "小春春", .picture = 2, .x = 500, .y = 500, .speed = 12 },
     // 5
     .{ .talks = .{ 18, 21 }, .name = "大　友", .picture = 1, .x = 200, .y = 140, .speed = 14 },
-    .{ .talks = .{ 30, 174 }, .name = "巫　二", .picture = 1, .x = 200, .y = 300, .speed = 12 },
+    .{ .talks = .{ 30, 141 }, .name = "巫　二", .picture = 1, .x = 200, .y = 300, .speed = 12 },
     .{ .talks = .{ 32, 35 }, .name = "密　儿", .picture = 2, .x = 920, .y = 260, .speed = 12 },
     .{ .talks = .{ 39, 45 }, .name = "小　璐", .picture = 0, .x = 400, .y = 400, .speed = 14 },
     .{ .talks = .{ 49, 64 }, .name = "小　田", .picture = 1, .x = 800, .y = 500, .speed = 12 },
     // 10
     .{ .talks = .{ 69, 74 }, .name = "小　芳", .picture = 3, .x = 300, .y = 700, .speed = 12 },
-    .{ .talks = .{ 121, 121 }, .name = "干小石", .picture = 12, .x = 322, .y = 288, .speed = 8 },
-    .{ .talks = .{ 112, 112 }, .name = "老　板", .picture = 1, .x = 400, .y = 159, .speed = 8 },
-    .{ .talks = .{ 124, 124 }, .name = "老板娘", .picture = 3, .x = 200, .y = 159, .speed = 8 },
-    .{ .talks = .{ 134, 134 }, .name = "蝴　蝶", .picture = 2, .x = 322, .y = 288, .speed = 8 },
+    .{ .talks = .{ 87, 87 }, .name = "干小石", .picture = 12, .x = 322, .y = 288, .speed = 8 },
+    .{ .talks = .{ 78, 78 }, .name = "老　板", .picture = 1, .x = 400, .y = 159, .speed = 8 },
+    .{ .talks = .{ 90, 90 }, .name = "老板娘", .picture = 3, .x = 200, .y = 159, .speed = 8 },
+    .{ .talks = .{ 100, 100 }, .name = "蝴　蝶", .picture = 2, .x = 322, .y = 288, .speed = 8 },
     // 15
-    .{ .talks = .{ 137, 137 }, .name = "收荒匠", .picture = 1, .x = 180, .y = 280, .speed = 8 },
-    .{ .talks = .{ 143, 143 }, .name = "小　月", .picture = 3, .x = 125, .y = 155, .speed = 8 },
+    .{ .talks = .{ 103, 103 }, .name = "收荒匠", .picture = 1, .x = 180, .y = 280, .speed = 8 },
+    .{ .talks = .{ 109, 109 }, .name = "小　月", .picture = 3, .x = 125, .y = 155, .speed = 8 },
     .{ .talks = .{ 173, 173 }, .name = "柔  儿", .picture = 0, .x = 480, .y = 95, .facing = .left },
-    .{ .talks = .{147}, .name = "刀　疤", .picture = 7, .x = 450, .y = 95, .money = 30, .goods = .{12}, .facing = .right, .health = 60, .attack = 12, .defend = 7, .progress = 3, .escape = 0 },
-    .{ .talks = .{147}, .name = "秃　鹰", .picture = 6, .x = 480, .y = 125, .money = 20, .goods = .{16}, .facing = .up, .health = 50, .attack = 8, .defend = 10, .progress = 3, .escape = 0 },
+    .{ .talks = .{113}, .name = "刀　疤", .picture = 7, .x = 450, .y = 95, .money = 30, .goods = .{12}, .facing = .right, .health = 60, .attack = 12, .defend = 7, .progress = 3, .escape = 0 },
+    .{ .talks = .{113}, .name = "秃　鹰", .picture = 6, .x = 480, .y = 125, .money = 20, .goods = .{16}, .facing = .up, .health = 50, .attack = 8, .defend = 10, .progress = 3, .escape = 0 },
     // 20 森林
     // [20001]
     .{
-        .talks = .{189},
+        .talks = .{155},
         .name = "飞将军",
         .picture = 12,
         .x = 110,
@@ -56,7 +56,7 @@
     },
     // [20003]
     .{
-        .talks = .{195},
+        .talks = .{161},
         .name = "无　敌",
         .picture = 6,
         .x = 400,
@@ -72,7 +72,7 @@
     },
     // [20004]
     .{
-        .talks = .{191},
+        .talks = .{157},
         .name = "巫凌云",
         .picture = 7,
         .x = 860,
@@ -90,7 +90,7 @@
     .{ .name = "全无敌", .picture = 5, .x = 600, .y = 124, .money = 30, .goods = .{6}, .health = 80, .attack = 15, .defend = 10, .speed = 2, .level = 2, .enemy = true },
     // [20006]
     .{
-        .talks = .{197},
+        .talks = .{163},
         .name = "巫　批",
         .picture = 4,
         .x = 890,
@@ -128,8 +128,8 @@
     // 全无敌 ID:40005
     .{ .name = "全无敌", .picture = 11, .x = 600, .y = 124, .level = 2, .health = 100, .attack = 25, .defend = 60, .speed = 8, .goods = .{7}, .money = 100, .enemy = true },
 
-    // 大魔王 ID:40006
-    .{ .name = "大魔王", .picture = 13, .x = 90, .y = 80, .level = 10, .health = 500, .attack = 50, .defend = 50, .speed = 16, .money = 500, .enemy = true },
+    // 大魔王 ID:40006，34
+    .{ .talks = .{185}, .name = "大魔王", .picture = 13, .x = 90, .y = 80, .level = 10, .health = 500, .attack = 50, .defend = 50, .speed = 16, .money = 500, .enemy = true },
 
     // 飞将军 ID:40001
     .{ .name = "飞将军", .picture = 8, .x = 100, .y = 800, .level = 2, .health = 250, .attack = 30, .defend = 30, .speed = 8, .goods = .{5}, .money = 80, .enemy = true },
@@ -146,6 +146,6 @@
     // 全无敌 ID:40005
     .{ .name = "全无敌", .picture = 11, .x = 600, .y = 1124, .level = 2, .health = 100, .attack = 25, .defend = 50, .speed = 8, .goods = .{5}, .money = 20, .enemy = true },
 
-    // 公  主 ID:90001
-    .{ .name = "公  主", .picture = 14, .x = 300, .y = 64, .level = 1, .health = 100, .attack = 15, .defend = 40, .speed = 8, .goods = .{5}, .money = 20, .enemy = false },
+    // 公  主 ID:90001，40
+    .{ .talks = .{174}, .name = "公  主", .picture = 14, .x = 300, .y = 64, .level = 1, .health = 100, .attack = 15, .defend = 40, .speed = 0, .goods = .{5}, .money = 20, .enemy = false },
 }

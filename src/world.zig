@@ -207,13 +207,13 @@ const MapState = struct {
 
         if (player.progress == 4) {
             player.progress += 1;
-            talk.active = 177;
+            talk.active = 143;
             state = .talk;
         }
 
         if (player.progress == 10) {
             warn = true;
-            talk.active = 217;
+            talk.active = 172;
             state = .talk;
         }
     }
