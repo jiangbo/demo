@@ -211,7 +211,7 @@ pub const Character = struct {
     picture: u8 = 0,
     facing: gfx.FourDirection = .down,
     // stats: u8,
-    level: u8 = 1,
+    level: u16 = 1,
     // exp: u32,
     health: u16 = 0,
     // maxLift: u16,

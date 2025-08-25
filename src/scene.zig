@@ -146,12 +146,12 @@ var fadeOutEndCallback: ?*const fn () void = null;
 
 pub fn fadeIn() void {
     isFadeIn = true;
-    fadeTimer = .init(2);
+    fadeTimer = .init(1);
 }
 
 pub fn fadeOut(callback: ?*const fn () void) void {
     isFadeIn = false;
-    fadeTimer = .init(2);
+    fadeTimer = .init(1);
     fadeOutEndCallback = callback;
 }
 
