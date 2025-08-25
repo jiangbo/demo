@@ -103,7 +103,7 @@
         .speed = 16,
         .level = 5,
         .enemy = true,
-        .progress = 9,
+        .progress = 10,
     },
     // [20007]
     .{ .name = "飞将军", .picture = 8, .x = 415, .y = 370, .money = 20, .goods = .{7}, .health = 100, .attack = 13, .defend = 8, .speed = 12, .level = 1, .enemy = true },

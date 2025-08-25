@@ -91,6 +91,8 @@ pub fn enter() void {
 pub fn changeMap() void {
     const playerPosition = map.enter();
     player.enter(playerPosition);
+    if (map.linkIndex == 16) player.facing = .up;
+    if (map.linkIndex == 17) player.facing = .left;
     npc.enter();
 }
 
@@ -128,6 +130,7 @@ fn reloadIfChanged() void {
         player.position = map.reload(arenaAllocator.allocator());
         npc.reload(arenaAllocator.allocator());
         modifyTime = time;
+        player.cameraLookAt();
     }
 }
 
@@ -209,7 +212,7 @@ const MapState = struct {
         }
 
         if (player.progress == 10) {
-            player.progress += 1;
+            warn = true;
             talk.active = 217;
             state = .talk;
         }
