@@ -208,6 +208,12 @@ const MapState = struct {
             talk.active = 177;
             state = .talk;
         }
+
+        if (player.progress == 10) {
+            player.progress += 1;
+            talk.active = 217;
+            state = .talk;
+        }
     }
 
     fn openChest(pickIndex: u16) void {
