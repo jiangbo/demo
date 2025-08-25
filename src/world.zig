@@ -160,6 +160,15 @@ const MapState = struct {
             if (!warn) return changeMapIfNeed(object);
         } else warn = false;
 
+        // 遇敌
+        if (npc.battle(area, player.facing)) |npcIndex| {
+            // 是否需要对话
+            if (npc.zon[npcIndex].talks.len != 0) {
+                talk.active = npc.zon[npcIndex].talks[0];
+                state = .talk;
+            }
+        }
+
         // 交互检测
         if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return;
         // 开启宝箱
