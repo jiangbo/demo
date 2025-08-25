@@ -80,7 +80,7 @@ const Phase = union(enum) {
 
     fn draw(self: Phase) void {
         switch (self) {
-            .menu, .wait => {},
+            .menu => {},
             inline else => |case| @TypeOf(case).draw(),
         }
     }
@@ -187,7 +187,11 @@ const MenuPhase = struct {
             3 => {
                 if (enemy.escape > zhu.randU8(0, 100)) {
                     scene.changeScene(.world);
-                } else changePhase(.enemyAttack);
+                } else {
+                    WaitPhase.tip = "逃跑失败！";
+                    WaitPhase.next = .enemyAttack;
+                    changePhase(.wait);
+                }
             },
             else => unreachable,
         };
@@ -249,13 +253,22 @@ const EnemyHurtPhase = struct {
 const WaitPhase = struct {
     var timer: window.Timer = .init(0.5);
     var next: Phase = .menu;
+    var tip: []const u8 = &.{};
 
     fn enter() void {
         timer.reset();
     }
 
     fn update(delta: f32) void {
-        if (timer.isFinishedAfterUpdate(delta)) changePhase(next);
+        if (timer.isFinishedAfterUpdate(delta)) {
+            tip = &.{};
+            changePhase(next);
+        }
+    }
+
+    fn draw() void {
+        if (tip.len == 0) return;
+        camera.drawText(tip, .init(290, 210));
     }
 };
 
