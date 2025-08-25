@@ -111,4 +111,41 @@
     .{ .name = "旋　风", .picture = 6, .x = 532, .y = 288, .money = 80, .health = 100, .attack = 10, .defend = 16, .speed = 4, .level = 1, .enemy = true },
     // [20009]
     .{ .name = "无　敌", .picture = 7, .x = 300, .y = 824, .money = 100, .goods = .{12}, .health = 80, .attack = 15, .defend = 10, .speed = 8, .level = 3, .enemy = true },
+
+    // 宫殿
+    // 飞将军 ID:40001
+    .{ .name = "飞将军", .picture = 12, .x = 100, .y = 1370, .level = 2, .health = 150, .attack = 30, .defend = 30, .speed = 8, .goods = .{0}, .money = 50, .enemy = true },
+
+    // 旋　风 ID:40002
+    .{ .name = "旋　风", .picture = 11, .x = 432, .y = 1288, .level = 2, .health = 150, .attack = 40, .defend = 25, .speed = 4, .goods = .{6}, .money = 50, .enemy = true },
+
+    // 无　敌 ID:40003
+    .{ .name = "无　敌", .picture = 9, .x = 400, .y = 824, .level = 3, .health = 250, .attack = 45, .defend = 20, .speed = 8, .goods = .{4}, .money = 75, .enemy = true },
+
+    // 巫凌云 ID:40004
+    .{ .name = "巫凌云", .picture = 10, .x = 160, .y = 320, .level = 2, .health = 250, .attack = 60, .defend = 18, .speed = 0, .goods = .{0}, .money = 20, .enemy = true },
+
+    // 全无敌 ID:40005
+    .{ .name = "全无敌", .picture = 11, .x = 600, .y = 124, .level = 2, .health = 100, .attack = 25, .defend = 60, .speed = 8, .goods = .{5}, .money = 100, .enemy = true },
+
+    // 大魔王 ID:40006
+    .{ .name = "大魔王", .picture = 13, .x = 90, .y = 80, .level = 10, .health = 500, .attack = 50, .defend = 50, .speed = 16, .goods = .{0}, .money = 500, .enemy = true },
+
+    // 飞将军 ID:40001
+    .{ .name = "飞将军", .picture = 8, .x = 100, .y = 800, .level = 2, .health = 250, .attack = 30, .defend = 30, .speed = 8, .goods = .{3}, .money = 80, .enemy = true },
+
+    // 旋　风 ID:40002
+    .{ .name = "旋　风", .picture = 11, .x = 232, .y = 1088, .level = 1, .health = 100, .attack = 45, .defend = 35, .speed = 4, .goods = .{2}, .money = 50, .enemy = true },
+
+    // 无　敌 ID:40003
+    .{ .name = "无　敌", .picture = 9, .x = 100, .y = 624, .level = 3, .health = 200, .attack = 45, .defend = 30, .speed = 8, .goods = .{5}, .money = 45, .enemy = true },
+
+    // 巫凌云 ID:40004
+    .{ .name = "巫凌云", .picture = 10, .x = 448, .y = 320, .level = 3, .health = 200, .attack = 60, .defend = 0, .speed = 0, .goods = .{5}, .money = 100, .enemy = true },
+
+    // 全无敌 ID:40005
+    .{ .name = "全无敌", .picture = 11, .x = 600, .y = 1124, .level = 2, .health = 100, .attack = 25, .defend = 50, .speed = 8, .goods = .{3}, .money = 20, .enemy = true },
+
+    // 公  主 ID:90001
+    .{ .name = "公  主", .picture = 14, .x = 300, .y = 64, .level = 1, .health = 100, .attack = 15, .defend = 40, .speed = 8, .goods = .{3}, .money = 20, .enemy = false },
 }

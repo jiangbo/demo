@@ -34,7 +34,7 @@ const State = struct {
     timer: window.Timer,
 };
 
-var npcBuffer: [10]State = undefined;
+var npcBuffer: [12]State = undefined;
 var npcArray: std.ArrayListUnmanaged(State) = undefined;
 
 pub fn init() void {
