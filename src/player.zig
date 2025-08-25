@@ -9,6 +9,7 @@ const math = zhu.math;
 const item = @import("item.zig");
 const map = @import("map.zig");
 const npc = @import("npc.zig");
+const world = @import("world.zig");
 
 const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
 
@@ -34,7 +35,7 @@ var maxHealth: u16 = 50; //生命最大值
 pub var attack: u16 = 10; //攻击
 pub var defend: u16 = 10; //防御
 var speed: u16 = 8; //速度
-pub var progress: u8 = 0; //进度
+pub var progress: u8 = 1; //进度
 
 var bgTexture: gfx.Texture = undefined;
 
@@ -131,6 +132,7 @@ pub fn openItem() bool {
 
     if (window.isAnyKeyRelease(&.{ .LEFT_CONTROL, .F })) {
         //  使用物品
+        // TODO 绘制状态
         const usedItem = item.zon[items[itemIndex]];
 
         addStatusValue(&exp, usedItem.exp);
@@ -171,6 +173,7 @@ pub fn sellItem() bool {
         const usedItem = item.zon[sellItemIndex];
         money += usedItem.money / 2;
         items[itemIndex] = 0;
+        world.tip = "这东西归别人了！";
         return true;
     }
     return false;

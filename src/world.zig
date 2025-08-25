@@ -52,7 +52,7 @@ const State = union(enum) {
 var state: State = .map;
 var back: enum { none, talk, battle } = .none;
 var arenaAllocator: std.heap.ArenaAllocator = undefined;
-var tip: []const u8 = &.{};
+pub var tip: []const u8 = &.{};
 
 pub fn init() void {
     arenaAllocator = std.heap.ArenaAllocator.init(window.allocator);
@@ -100,8 +100,7 @@ pub fn update(delta: f32) void {
     reloadIfChanged();
 
     if (tip.len != 0) {
-        if (window.isAnyRelease()) tip = &.{};
-        return;
+        if (window.isAnyRelease()) tip = &.{} else return;
     }
 
     if (state != .menu and state != .sale and state != .shop) {
