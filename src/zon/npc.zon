@@ -87,7 +87,7 @@
         .enemy = true,
     },
     // [20005]
-    .{ .name = "全无敌", .picture = 5, .x = 600, .y = 124, .money = 30, .goods = .{4}, .health = 80, .attack = 15, .defend = 10, .speed = 2, .level = 25, .enemy = true },
+    .{ .name = "全无敌", .picture = 5, .x = 600, .y = 124, .money = 30, .goods = .{4}, .health = 80, .attack = 15, .defend = 10, .speed = 2, .level = 2, .enemy = true },
     // [20006]
     .{
         .talks = .{197},
@@ -105,9 +105,9 @@
         .enemy = true,
     },
     // [20007]
-    .{ .name = "飞将军", .picture = 8, .x = 415, .y = 370, .money = 20, .goods = .{5}, .health = 100, .attack = 13, .defend = 8, .speed = 12, .level = 15, .enemy = true },
+    .{ .name = "飞将军", .picture = 8, .x = 415, .y = 370, .money = 20, .goods = .{5}, .health = 100, .attack = 13, .defend = 8, .speed = 12, .level = 1, .enemy = true },
     // [20008]
-    .{ .name = "旋　风", .picture = 6, .x = 532, .y = 288, .money = 80, .goods = .{0}, .health = 100, .attack = 10, .defend = 16, .speed = 4, .level = 15, .enemy = true },
+    .{ .name = "旋　风", .picture = 6, .x = 532, .y = 288, .money = 80, .goods = .{0}, .health = 100, .attack = 10, .defend = 16, .speed = 4, .level = 1, .enemy = true },
     // [20009]
-    .{ .name = "无　敌", .picture = 7, .x = 300, .y = 824, .money = 100, .goods = .{}, .health = 80, .attack = 15, .defend = 10, .speed = 8, .level = 35, .enemy = true },
+    .{ .name = "无　敌", .picture = 7, .x = 300, .y = 824, .money = 100, .goods = .{}, .health = 80, .attack = 15, .defend = 10, .speed = 8, .level = 3, .enemy = true },
 }
