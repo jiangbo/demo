@@ -126,6 +126,7 @@ fn updateFacing() math.Vector2 {
 }
 
 pub fn openItem() bool {
+    if (needDrawInfo and window.isAnyRelease()) needDrawInfo = false;
     itemIndex = item.update(items.len, itemIndex);
 
     if (items[itemIndex] == 0) return false;
@@ -141,6 +142,7 @@ pub fn openItem() bool {
         addStatusValue(&defend, usedItem.defend);
         if (health > maxHealth) health = maxHealth;
         items[itemIndex] = 0;
+        needDrawInfo = true;
 
         return true;
     } else if (window.isKeyRelease(.G)) {
@@ -257,55 +259,72 @@ pub fn drawStatus() void {
     const down = animation.get(.down);
     const tex = down.texture.subTexture(down.frames[0].area);
     camera.draw(tex, pos.addXY(10, 10));
-
-    // 等级
-    camera.drawColorText("等级：", pos.addXY(122, 52), .{ .w = 1 });
-    camera.drawText("等级：", pos.addXY(120, 50));
-    camera.drawColorNumber(level, pos.addXY(232, 52), .{ .w = 1 });
-    camera.drawNumber(level, pos.addXY(230, 50));
-
-    // 经验
-    camera.drawColorText("经验：", pos.addXY(122, 82), .{ .w = 1 });
-    camera.drawText("经验：", pos.addXY(120, 80));
-    var buffer: [30]u8 = undefined;
-    const expStr = zhu.format(&buffer, "{d}/{d}", .{ exp, maxExp });
-    camera.drawColorText(expStr, pos.addXY(232, 82), .{ .w = 1 });
-    camera.drawText(expStr, pos.addXY(230, 80));
-
-    // 生命
-    camera.drawColorText("生命：", pos.addXY(122, 112), .{ .w = 1 });
-    camera.drawText("生命：", pos.addXY(120, 110));
-    const healthStr = zhu.format(&buffer, "{d}/{d}", .{ health, maxHealth });
-    camera.drawColorText(healthStr, pos.addXY(232, 112), .{ .w = 1 });
-    camera.drawText(healthStr, pos.addXY(230, 110));
-
-    // 攻击
-    camera.drawColorText("攻击：", pos.addXY(122, 142), .{ .w = 1 });
-    camera.drawText("攻击：", pos.addXY(120, 140));
-    camera.drawColorNumber(attack, pos.addXY(232, 142), .{ .w = 1 });
-    camera.drawNumber(attack, pos.addXY(230, 140));
-
-    // 防御
-    camera.drawColorText("防御：", pos.addXY(122, 172), .{ .w = 1 });
-    camera.drawText("防御：", pos.addXY(120, 170));
-    camera.drawColorNumber(defend, pos.addXY(232, 172), .{ .w = 1 });
-    camera.drawNumber(defend, pos.addXY(230, 170));
-
-    // 速度
-    camera.drawColorText("速度：", pos.addXY(122, 202), .{ .w = 1 });
-    camera.drawText("速度：", pos.addXY(120, 200));
-    camera.drawColorNumber(speed, pos.addXY(232, 202), .{ .w = 1 });
-    camera.drawNumber(speed, pos.addXY(230, 200));
-
-    // 金币
-    camera.drawColorText("金币：", pos.addXY(122, 232), .{ .w = 1 });
-    camera.drawColorText("金币：", pos.addXY(120, 230), gfx.color(1, 1, 0, 1));
-    camera.drawColorNumber(money, pos.addXY(232, 230), .{ .w = 1 });
-    camera.drawColorNumber(money, pos.addXY(230, 230), gfx.color(1, 1, 0, 1));
+    drawInfo(pos, 30);
 }
 
+fn drawInfo(pos: math.Vector2, offsetY: f32) void {
+    // 等级
+    var y = 22 + offsetY;
+    camera.drawColorText("等级：", pos.addXY(122, y), .black);
+    camera.drawText("等级：", pos.addXY(120, y - 2));
+    camera.drawColorNumber(level, pos.addXY(232, y), .black);
+    camera.drawNumber(level, pos.addXY(230, y - 2));
+
+    // 经验
+    y += offsetY;
+    camera.drawColorText("经验：", pos.addXY(122, y), .black);
+    camera.drawText("经验：", pos.addXY(120, y - 2));
+    var buffer: [30]u8 = undefined;
+    const expStr = zhu.format(&buffer, "{d}/{d}", .{ exp, maxExp });
+    camera.drawColorText(expStr, pos.addXY(232, y), .black);
+    camera.drawText(expStr, pos.addXY(230, y - 2));
+
+    // 生命
+    y += offsetY;
+    camera.drawColorText("生命：", pos.addXY(122, y), .black);
+    camera.drawText("生命：", pos.addXY(120, y - 2));
+    const healthStr = zhu.format(&buffer, "{d}/{d}", .{ health, maxHealth });
+    camera.drawColorText(healthStr, pos.addXY(232, y), .black);
+    camera.drawText(healthStr, pos.addXY(230, y - 2));
+
+    // 攻击
+    y += offsetY;
+    camera.drawColorText("攻击：", pos.addXY(122, y), .black);
+    camera.drawText("攻击：", pos.addXY(120, y - 2));
+    camera.drawColorNumber(attack, pos.addXY(232, y), .black);
+    camera.drawNumber(attack, pos.addXY(230, y - 2));
+
+    // 防御
+    y += offsetY;
+    camera.drawColorText("防御：", pos.addXY(122, y), .black);
+    camera.drawText("防御：", pos.addXY(120, y - 2));
+    camera.drawColorNumber(defend, pos.addXY(232, y), .black);
+    camera.drawNumber(defend, pos.addXY(230, y - 2));
+
+    // 速度
+    y += offsetY;
+    camera.drawColorText("速度：", pos.addXY(122, y), .black);
+    camera.drawText("速度：", pos.addXY(120, y - 2));
+    camera.drawColorNumber(speed, pos.addXY(232, y), .black);
+    camera.drawNumber(speed, pos.addXY(230, y - 2));
+
+    // 金币
+    y += offsetY;
+    camera.drawColorText("金币：", pos.addXY(122, y), .black);
+    camera.drawColorText("金币：", pos.addXY(120, y - 2), .yellow);
+    camera.drawColorNumber(money, pos.addXY(232, y), .black);
+    camera.drawColorNumber(money, pos.addXY(230, y - 2), .yellow);
+}
+
+var needDrawInfo: bool = false;
 pub fn drawOpenItem() void {
     item.draw(&items, itemIndex);
+
+    if (needDrawInfo) {
+        camera.drawColorText("现在的状态：", .init(272, 92), .black);
+        camera.drawColorText("现在的状态：", .init(270, 90), .yellow);
+        drawInfo(.init(120, 73), 20);
+    }
 
     var buffer: [20]u8 = undefined;
     // 金币，操作说明
