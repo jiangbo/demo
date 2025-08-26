@@ -9,7 +9,7 @@ pub const Item = struct {
     id: u16,
     name: []const u8 = &.{},
     about: []const u8 = &.{},
-    money: usize = 0,
+    money: u32 = 0,
     exp: i32 = 0,
     health: i32 = 0,
     attack: i32 = 0,
@@ -22,7 +22,7 @@ pub const zon: []const Item = @import("zon/item.zon");
 pub const pickupZon: []const Pickup = @import("zon/pickup.zon");
 pub const position: gfx.Vector = .init(120, 90);
 
-pub var picked: std.StaticBitSet(64) = .initEmpty();
+pub var picked: std.StaticBitSet(32) = .initEmpty();
 
 // pub var itemIndex: usize = 0;
 // pub var items: []u8 = &.{};

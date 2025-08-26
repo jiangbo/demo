@@ -23,13 +23,14 @@ var facings: std.EnumArray(math.FourDirection, u64) = undefined;
 pub var facing: math.FourDirection = .down;
 pub var position: math.Vector = undefined;
 
-pub var money: usize = 5000; // 金钱
+pub var money: u32 = 50; // 金钱
 pub var items: [16]u8 = undefined;
 pub var itemIndex: u8 = 0;
 
 pub var level: u16 = 1; //等级
 pub var exp: u16 = 0; //经验
-const maxExp: u16 = 100; //经验最大值
+pub var totalExp: u32 = 0; //总经验
+const maxExp = 100; //经验最大值
 pub var health: u16 = 50; //生命
 var maxHealth: u16 = 50; //生命最大值
 pub var attack: u16 = 10; //攻击

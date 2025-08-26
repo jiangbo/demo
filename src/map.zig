@@ -22,7 +22,7 @@ const Map = struct {
     height: u16,
     back: []const u16,
     ground: []const u16,
-    object: []const u16,
+    object: []const u8,
     chests: []const Chest = &.{},
     npcs: []const u8 = &.{},
 };
@@ -34,7 +34,7 @@ const Link = struct {
 };
 const zon: []const Map = @import("zon/map.zon");
 pub const links: []const Link = @import("zon/link.zon");
-pub var linkIndex: u16 = 4;
+pub var linkIndex: u8 = 4;
 pub var current: *const Map = undefined;
 pub var size: math.Vector2 = undefined;
 
@@ -141,7 +141,7 @@ pub fn positionIndex(position: gfx.Vector) usize {
     return x + y * current.width;
 }
 
-pub fn getObject(index: usize) u16 {
+pub fn getObject(index: usize) u8 {
     return current.object[index];
 }
 

@@ -22,7 +22,7 @@ const State = struct {
 };
 
 const zon: []const Menu = @import("zon/menu.zon");
-var states: [8]State = [_]State{.{}} ** 8;
+var states: [zon.len]State = [_]State{.{}} ** zon.len;
 pub var active: u8 = 0;
 
 pub fn current() *const Menu {

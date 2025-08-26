@@ -241,7 +241,7 @@ pub fn statFileTime(path: [:0]const u8) i64 {
 }
 
 pub fn readAll(alloc: std.mem.Allocator, path: []const u8) [:0]u8 {
-    return doReadAll(alloc, path) catch @panic("file error");
+    return doReadAll(alloc, path) catch @panic("read file error");
 }
 fn doReadAll(alloc: std.mem.Allocator, path: []const u8) ![:0]u8 {
     const file = try std.fs.cwd().openFile(path, .{});
@@ -252,6 +252,28 @@ fn doReadAll(alloc: std.mem.Allocator, path: []const u8) ![:0]u8 {
     const bytes = try file.readAll(content);
     std.debug.assert(bytes == endPos);
     return content;
+}
+
+pub fn saveAll(path: []const u8, content: []const u8) void {
+    doSaveAll(path, content) catch @panic("save file error");
+}
+fn doSaveAll(path: []const u8, content: []const u8) !void {
+    const cwd = std.fs.cwd();
+
+    if (std.fs.path.dirname(path)) |dir| {
+        try cwd.makePath(dir); // 确保目录存在
+    }
+
+    // 2. 再尝试打开文件，如果不存在就创建
+    var file = cwd.openFile(path, .{ .mode = .write_only }) //
+        catch |err| switch (err) {
+            error.FileNotFound => try cwd.createFile(path, .{}),
+            else => return err,
+        };
+    defer file.close();
+
+    // 3. 写内容
+    try file.writeAll(content);
 }
 
 pub fn exit() void {

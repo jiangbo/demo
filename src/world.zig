@@ -21,6 +21,7 @@ const State = union(enum) {
     menu: MenuState,
     status,
     item,
+    save: SaveState,
     about: AboutState,
     talk: TalkState,
     shop,
@@ -48,9 +49,9 @@ const State = union(enum) {
         }
     }
 };
-
+var texture: gfx.Texture = undefined;
 var state: State = .map;
-var back: enum { none, talk, battle } = .none;
+var back: enum { none, talk, battle, menu } = .none;
 pub var tip: []const u8 = &.{};
 var header: []const u8 = &.{};
 var headerIndex: usize = 0;
@@ -58,7 +59,7 @@ var headerTimer: window.Timer = .init(0.08);
 var headerColor: gfx.Color = .white;
 
 pub fn init() void {
-    MenuState.texture = gfx.loadTexture("assets/pic/mainmenu1.png", .init(150, 200));
+    texture = gfx.loadTexture("assets/pic/mainmenu1.png", .init(150, 200));
 
     item.init();
     talk.init();
@@ -85,6 +86,7 @@ pub fn enter() void {
         },
         .talk => talk.activeNext(),
         .battle => state = .map,
+        .menu => state = .menu,
     }
     player.cameraLookAt();
     npc.enter();
@@ -124,7 +126,9 @@ pub fn update(delta: f32) void {
         return;
     }
 
-    if (state != .menu and state != .sale and state != .shop) {
+    if (state != .menu and state != .sale and state != .shop and
+        state != .talk)
+    {
         if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
             window.isMouseRelease(.RIGHT))
         {
@@ -199,7 +203,7 @@ const MapState = struct {
         }
     }
 
-    fn changeMapIfNeed(object: u16) void {
+    fn changeMapIfNeed(object: u8) void {
         const link = map.links[object];
         if (player.progress > link.progress) {
             std.log.info("change map link index: {d}", .{object});
@@ -249,14 +253,16 @@ const MapState = struct {
 };
 
 const MenuState = struct {
-    var texture: gfx.Texture = undefined;
-
     fn update(_: f32) void {
         const menuEvent = menu.update();
         if (menuEvent) |event| switch (event) {
             0 => state = .status,
             1 => state = .item,
-            2...3 => state = .map,
+            2 => state = .map,
+            3 => {
+                menu.active = 5;
+                state = .save;
+            },
             4 => {
                 about.resetRoll();
                 state = .about;
@@ -274,6 +280,58 @@ const MenuState = struct {
     }
 
     fn draw() void {
+        camera.draw(texture, .init(0, 280));
+        menu.draw();
+    }
+};
+
+const SaveState = struct {
+    const magic = [2]u8{ 0xB0, 0x0B };
+    var buffer: [100]u8 = undefined;
+
+    pub fn update(_: f32) void {
+        const saveEvent = menu.update();
+        if (saveEvent) |event| switch (event) {
+            3...7 => |index| {
+                back = .menu;
+                scene.changeScene(.world);
+                save(index) catch @panic("save failed");
+            },
+            8 => {
+                menu.active = 6;
+                state = .menu;
+            },
+            else => unreachable,
+        };
+    }
+
+    fn save(index: u8) !void {
+        // 需要保存的数据：
+
+        var stream = std.io.fixedBufferStream(&buffer);
+        var writer = stream.writer();
+        try writer.writeAll(&magic);
+        // 1. 地图编号
+        try writer.writeByte(map.linkIndex);
+        // 2. 玩家进度
+        try writer.writeByte(player.progress);
+        // 3. 玩家坐标
+        try writer.writeAll(std.mem.asBytes(&player.position));
+        // 4. 玩家经验
+        try writer.writeAll(std.mem.asBytes(&player.totalExp));
+        // 5. 玩家金钱
+        try writer.writeAll(std.mem.asBytes(&player.money));
+        // 6. 玩家物品
+        try writer.writeAll(std.mem.asBytes(&player.items));
+        // 7. 宝箱状态
+        try writer.writeAll(&magic);
+
+        var buf: [20]u8 = undefined;
+        const path = zhu.format(&buf, "save/{d}.save", .{index});
+        window.saveAll(path, buffer[0..stream.pos]);
+    }
+
+    pub fn draw() void {
         camera.draw(texture, .init(0, 280));
         menu.draw();
     }
