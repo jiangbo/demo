@@ -94,8 +94,6 @@ pub fn enter() void {
 pub fn changeMap() void {
     const playerPosition = map.enter();
     player.enter(playerPosition);
-    if (map.linkIndex == 16) player.facing = .up;
-    if (map.linkIndex == 17) player.facing = .left;
     npc.enter();
 }
 
