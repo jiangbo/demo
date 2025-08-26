@@ -53,6 +53,9 @@ var state: State = .map;
 var back: enum { none, talk, battle } = .none;
 var arenaAllocator: std.heap.ArenaAllocator = undefined;
 pub var tip: []const u8 = &.{};
+var header: []const u8 = &.{};
+var headerIndex: usize = 0;
+var headerTimer: window.Timer = .init(0.08);
 
 pub fn init() void {
     arenaAllocator = std.heap.ArenaAllocator.init(window.allocator);
@@ -105,6 +108,21 @@ pub fn update(delta: f32) void {
         if (window.isAnyRelease()) tip = &.{} else return;
     }
 
+    if (header.len != 0) {
+        if (header.len == headerIndex) {
+            // 已经显示结束了，等待按键
+            if (window.isAnyRelease()) {
+                header = &.{};
+                state = .map;
+            }
+        } else if (headerTimer.isFinishedAfterUpdate(delta)) {
+            // 没有显示结束，继续显示
+            headerIndex = zhu.utf8NextIndex(header, headerIndex);
+            headerTimer.reset();
+        }
+        return;
+    }
+
     if (state != .menu and state != .sale and state != .shop) {
         if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
             window.isMouseRelease(.RIGHT))
@@ -146,6 +164,12 @@ pub fn draw() void {
         camera.drawColorText(tip, .init(240, 440), .yellow);
     }
     state.draw();
+    if (header.len != 0) {
+        camera.drawTextOptions(header[0..headerIndex], .{
+            .position = .init(80, 100),
+            .width = 520,
+        });
+    }
 }
 
 const MapState = struct {
@@ -285,6 +309,11 @@ const TalkState = struct {
                 context.battleNpcIndex = talk.recentNpc();
                 back = if (e == 7) .talk else .battle;
                 scene.changeScene(.battle);
+            },
+            9 => {
+                // 打败了巫批，对话完成
+                header = "　　太好了！终于找到了失落已久的“圣剑”，就用它的威力把大魔王彻底杀死吧！　";
+                headerTimer.reset();
             },
             else => unreachable,
         };
