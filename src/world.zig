@@ -56,6 +56,7 @@ pub var tip: []const u8 = &.{};
 var header: []const u8 = &.{};
 var headerIndex: usize = 0;
 var headerTimer: window.Timer = .init(0.08);
+var headerColor: gfx.Color = .white;
 
 pub fn init() void {
     arenaAllocator = std.heap.ArenaAllocator.init(window.allocator);
@@ -100,8 +101,6 @@ pub fn changeMap() void {
 pub fn exit() void {}
 
 pub fn update(delta: f32) void {
-    reloadIfChanged();
-
     if (tip.len != 0) {
         if (window.isAnyRelease()) tip = &.{} else return;
     }
@@ -110,8 +109,13 @@ pub fn update(delta: f32) void {
         if (header.len == headerIndex) {
             // 已经显示结束了，等待按键
             if (window.isAnyRelease()) {
-                header = &.{};
-                state = .map;
+                if (player.progress > 20)
+                    // 如果打败了大魔王，跳转到标题界面
+                    scene.changeScene(.title)
+                else {
+                    header = &.{};
+                    state = .map;
+                }
             }
         } else if (headerTimer.isFinishedAfterUpdate(delta)) {
             // 没有显示结束，继续显示
@@ -133,23 +137,6 @@ pub fn update(delta: f32) void {
     state.update(delta);
 }
 
-var modifyTime: i64 = 0;
-fn reloadIfChanged() void {
-    const menuTime = window.statFileTime("src/zon/menu.zon");
-    const linkTime = window.statFileTime("src/zon/link.zon");
-    const npcTime = window.statFileTime("src/zon/npc.zon");
-    const time = @max(@max(menuTime, linkTime), npcTime);
-
-    if (time > modifyTime) {
-        _ = arenaAllocator.reset(.retain_capacity);
-        menu.reload(arenaAllocator.allocator());
-        player.position = map.reload(arenaAllocator.allocator());
-        npc.reload(arenaAllocator.allocator());
-        modifyTime = time;
-        player.cameraLookAt();
-    }
-}
-
 pub fn draw() void {
     map.draw();
     npc.draw();
@@ -166,6 +153,7 @@ pub fn draw() void {
         camera.drawTextOptions(header[0..headerIndex], .{
             .position = .init(80, 100),
             .width = 520,
+            .color = headerColor,
         });
     }
 }
@@ -311,6 +299,19 @@ const TalkState = struct {
             9 => {
                 // 打败了巫批，对话完成
                 header = "　　太好了！终于找到了失落已久的“圣剑”，就用它的威力把大魔王彻底杀死吧！　";
+                headerColor = .white;
+                headerTimer.reset();
+            },
+            10 => {
+                // 打败了大魔王
+                header =
+                    \\　　祝贺你成功打爆试玩版！详细情况请看Readme.txt
+                    \\敬请关注该游戏的最新动态：
+                    \\　　http://goldpoint.126.com
+                    \\　　　　　　　　　　　　　成都金点工作组制作
+                    \\　　　　　　　　　　　　　[THE END]"
+                ;
+                headerColor = .red;
                 headerTimer.reset();
             },
             else => unreachable,

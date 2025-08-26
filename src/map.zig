@@ -33,8 +33,8 @@ const Link = struct {
     progress: u8 = 0,
 };
 const zon: []const Map = @import("zon/map.zon");
-pub var links: []const Link = @import("zon/link.zon");
-pub var linkIndex: u16 = 16;
+pub const links: []const Link = @import("zon/link.zon");
+pub var linkIndex: u16 = 4;
 pub var current: *const Map = undefined;
 pub var size: math.Vector2 = undefined;
 
@@ -195,17 +195,6 @@ fn canWalk(position: math.Vector2) bool {
     if (index > current.object.len) return false;
     // 场景切换的图块也应该能通过
     return current.object[index] == 0 or current.object[index] > 4;
-}
-
-const parseZon = std.zon.parse.fromSlice;
-pub fn reload(allocator: std.mem.Allocator) math.Vector2 {
-    std.log.info("map reload", .{});
-
-    const content = window.readAll(allocator, "src/zon/link.zon");
-    defer allocator.free(content);
-    const link = parseZon([]Link, allocator, content, null, .{});
-    links = link catch @panic("error parse zon");
-    return links[linkIndex].player;
 }
 
 pub fn draw() void {

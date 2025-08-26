@@ -129,7 +129,21 @@
     .{ .name = "全无敌", .picture = 11, .x = 600, .y = 124, .level = 2, .health = 100, .attack = 25, .defend = 60, .speed = 8, .goods = .{7}, .money = 100, .enemy = true },
 
     // 大魔王 ID:40006，34
-    .{ .talks = .{185}, .name = "大魔王", .picture = 13, .x = 90, .y = 80, .level = 10, .health = 500, .attack = 50, .defend = 50, .speed = 16, .money = 500, .enemy = true },
+    .{
+        .talks = .{185},
+        .name = "大魔王",
+        .picture = 13,
+        .x = 90,
+        .y = 80,
+        .level = 10,
+        .health = 500,
+        .attack = 50,
+        .defend = 50,
+        .speed = 16,
+        .money = 500,
+        .enemy = true,
+        .progress = 20,
+    },
 
     // 飞将军 ID:40001
     .{ .name = "飞将军", .picture = 8, .x = 100, .y = 800, .level = 2, .health = 250, .attack = 30, .defend = 30, .speed = 8, .goods = .{5}, .money = 80, .enemy = true },

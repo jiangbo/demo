@@ -11,7 +11,7 @@ const map = @import("map.zig");
 const player = @import("player.zig");
 
 const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
-pub var zon: []const Character = @import("zon/npc.zon");
+pub const zon: []const Character = @import("zon/npc.zon");
 var npcPaths: [15][:0]const u8 = blk: {
     var list: [15][:0]const u8 = undefined;
     for (&list, 1..) |*value, i| {
@@ -59,17 +59,6 @@ pub fn enter() void {
             .timer = .init(math.randF32(3, 5)),
         });
     }
-}
-
-const parseZon = std.zon.parse.fromSlice;
-pub fn reload(allocator: std.mem.Allocator) void {
-    std.log.info("npc reload", .{});
-
-    const content = window.readAll(allocator, "src/zon/npc.zon");
-    defer allocator.free(content);
-    const npc = parseZon([]Character, allocator, content, null, .{});
-    zon = npc catch @panic("error parse zon");
-    enter();
 }
 
 fn buildAnimation(texture: gfx.Texture) Animation {

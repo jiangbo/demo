@@ -21,22 +21,12 @@ const State = struct {
     current: usize = 0,
 };
 
-var zon: []const Menu = @import("zon/menu.zon");
+const zon: []const Menu = @import("zon/menu.zon");
 var states: [8]State = [_]State{.{}} ** 8;
 pub var active: u8 = 0;
 
 pub fn current() *const Menu {
     return &zon[active];
-}
-
-const parseZon = std.zon.parse.fromSlice;
-pub fn reload(allocator: std.mem.Allocator) void {
-    std.log.info("menu reload", .{});
-
-    const content = window.readAll(allocator, "src/zon/menu.zon");
-    defer allocator.free(content);
-    const menu = parseZon([]Menu, allocator, content, null, .{});
-    zon = menu catch @panic("error parse zon");
 }
 
 pub fn update() ?u8 {
