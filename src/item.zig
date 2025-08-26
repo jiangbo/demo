@@ -24,9 +24,6 @@ pub const position: gfx.Vector = .init(120, 90);
 
 pub var picked: std.StaticBitSet(32) = .initEmpty();
 
-// pub var itemIndex: usize = 0;
-// pub var items: []u8 = &.{};
-
 var texture: gfx.Texture = undefined;
 var bgTexture: gfx.Texture = undefined;
 

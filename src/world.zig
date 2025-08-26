@@ -311,6 +311,8 @@ const SaveState = struct {
         var stream = std.io.fixedBufferStream(&buffer);
         var writer = stream.writer();
         try writer.writeAll(&magic);
+        // 0. 游戏版本号
+        try writer.writeAll(&.{ 0x00, 0x00 });
         // 1. 地图编号
         try writer.writeByte(map.linkIndex);
         // 2. 玩家进度
@@ -324,10 +326,13 @@ const SaveState = struct {
         // 6. 玩家物品
         try writer.writeAll(std.mem.asBytes(&player.items));
         // 7. 宝箱状态
+        try writer.writeAll(std.mem.asBytes(&item.picked));
+        // 8. NPC 状态
+        try writer.writeAll(std.mem.asBytes(&npc.dead));
         try writer.writeAll(&magic);
 
         var buf: [20]u8 = undefined;
-        const path = zhu.format(&buf, "save/{d}.save", .{index});
+        const path = zhu.format(&buf, "save/{d}.save", .{index - 2});
         window.saveAll(path, buffer[0..stream.pos]);
     }
 
