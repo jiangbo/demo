@@ -51,7 +51,6 @@ const State = union(enum) {
 
 var state: State = .map;
 var back: enum { none, talk, battle } = .none;
-var arenaAllocator: std.heap.ArenaAllocator = undefined;
 pub var tip: []const u8 = &.{};
 var header: []const u8 = &.{};
 var headerIndex: usize = 0;
@@ -59,7 +58,6 @@ var headerTimer: window.Timer = .init(0.08);
 var headerColor: gfx.Color = .white;
 
 pub fn init() void {
-    arenaAllocator = std.heap.ArenaAllocator.init(window.allocator);
     MenuState.texture = gfx.loadTexture("assets/pic/mainmenu1.png", .init(150, 200));
 
     item.init();
@@ -71,7 +69,6 @@ pub fn init() void {
 }
 
 pub fn deinit() void {
-    arenaAllocator.deinit();
     window.stopMusic();
 }
 
@@ -83,6 +80,8 @@ pub fn enter() void {
             context.battleNpcIndex = 0;
             context.oldMapIndex = 0;
             window.playMusic("assets/voc/back.ogg");
+            talk.active = 4;
+            state = .talk;
         },
         .talk => talk.activeNext(),
         .battle => state = .map,
