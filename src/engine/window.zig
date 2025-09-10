@@ -240,15 +240,12 @@ pub fn statFileTime(path: [:0]const u8) i64 {
     return @intCast(stat.mtime);
 }
 
-pub fn readAll(alloc: std.mem.Allocator, path: []const u8) [:0]u8 {
-    return doReadAll(alloc, path) catch @panic("read file error");
-}
-fn doReadAll(alloc: std.mem.Allocator, path: []const u8) ![:0]u8 {
+pub fn readAll(alloc: std.mem.Allocator, path: []const u8) ![]u8 {
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
     const endPos = try file.getEndPos();
-    const content = try alloc.allocSentinel(u8, endPos, 0);
+    const content = try alloc.alloc(u8, endPos);
     const bytes = try file.readAll(content);
     std.debug.assert(bytes == endPos);
     return content;

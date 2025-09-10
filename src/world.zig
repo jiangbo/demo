@@ -21,6 +21,7 @@ const State = union(enum) {
     menu: MenuState,
     status,
     item,
+    load: LoadState,
     save: SaveState,
     about: AboutState,
     talk: TalkState,
@@ -51,7 +52,7 @@ const State = union(enum) {
 };
 var texture: gfx.Texture = undefined;
 var state: State = .map;
-var back: enum { none, talk, battle, menu } = .none;
+pub var back: enum { none, talk, battle, menu } = .none;
 pub var tip: []const u8 = &.{};
 var header: []const u8 = &.{};
 var headerIndex: usize = 0;
@@ -80,7 +81,6 @@ pub fn enter() void {
             player.enter(playerPosition);
             context.battleNpcIndex = 0;
             context.oldMapIndex = 0;
-            window.playMusic("assets/voc/back.ogg");
             talk.active = 4;
             state = .talk;
         },
@@ -88,9 +88,12 @@ pub fn enter() void {
         .battle => state = .map,
         .menu => state = .menu,
     }
+    if (loadPlayerPosition) |pos| player.position = pos;
+    loadPlayerPosition = null;
     player.cameraLookAt();
     npc.enter();
     menu.active = 6;
+    window.playMusic("assets/voc/back.ogg");
 }
 
 pub fn changeMap() void {
@@ -126,8 +129,19 @@ pub fn update(delta: f32) void {
         return;
     }
 
-    if (state != .menu and state != .sale and state != .shop and
-        state != .talk)
+    //  map: MapState,
+    // menu: MenuState,
+    // status,
+    // item,
+    // load: LoadState,
+    // save: SaveState,
+    // about: AboutState,
+    // talk: TalkState,
+    // shop,
+    // sale: SaleState,
+
+    if (state == .map or state == .status or state == .item or
+        state == .about)
     {
         if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
             window.isMouseRelease(.RIGHT))
@@ -258,7 +272,10 @@ const MenuState = struct {
         if (menuEvent) |event| switch (event) {
             0 => state = .status,
             1 => state = .item,
-            2 => state = .map,
+            2 => {
+                menu.active = 5;
+                state = .load;
+            },
             3 => {
                 menu.active = 5;
                 state = .save;
@@ -285,8 +302,96 @@ const MenuState = struct {
     }
 };
 
+var loadPlayerPosition: ?math.Vector2 = null;
+const LoadState = struct {
+    pub fn update(_: f32) void {
+        const loadEvent = menu.update();
+        if (loadEvent) |event| switch (event) {
+            3...7 => |index| {
+                back = .menu;
+                scene.changeScene(.world);
+                load(index) catch {
+                    menu.active = 6;
+                    state = .menu;
+                };
+            },
+            8 => {
+                menu.active = 6;
+                state = .menu;
+            },
+            else => unreachable,
+        };
+
+        if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
+            window.isMouseRelease(.RIGHT))
+        {
+            menu.active = 6;
+            state = .menu;
+        }
+    }
+
+    pub fn draw() void {
+        camera.draw(texture, .init(0, 280));
+        menu.draw();
+    }
+};
+
+const magic = [2]u8{ 0xB0, 0x0B };
+pub fn load(index: u8) !void {
+    var buffer: [100]u8 = undefined;
+    var alloc = std.heap.FixedBufferAllocator.init(&buffer);
+    var buf: [20]u8 = undefined;
+    const path = zhu.format(&buf, "save/{d}.save", .{index - 2});
+    const slice = try window.readAll(alloc.allocator(), path);
+    var stream = std.io.fixedBufferStream(slice);
+    var reader = stream.reader();
+
+    // 1. magic
+    var magic_buf: [magic.len]u8 = undefined;
+    try reader.readNoEof(&magic_buf);
+    if (!std.mem.eql(u8, &magic_buf, &magic)) return error.InvalidMagic;
+
+    // 2. 游戏版本号
+    var version: [2]u8 = undefined;
+    try reader.readNoEof(&version);
+
+    // 3. 地图编号
+    map.linkIndex = try reader.readByte();
+    // 4. 玩家进度
+    player.progress = try reader.readByte();
+    // 5. 玩家坐标
+    var pos = player.position;
+    try reader.readNoEof(std.mem.asBytes(&pos));
+    loadPlayerPosition = pos;
+    // 6. 玩家经验
+    try reader.readNoEof(std.mem.asBytes(&player.exp));
+    // 7. 玩家等级
+    try reader.readNoEof(std.mem.asBytes(&player.level));
+    // 8. 玩家生命
+    try reader.readNoEof(std.mem.asBytes(&player.health));
+    // 9. 玩家最大生命
+    try reader.readNoEof(std.mem.asBytes(&player.maxHealth));
+    // 10. 玩家攻击力
+    try reader.readNoEof(std.mem.asBytes(&player.attack));
+    // 11. 玩家防御力
+    try reader.readNoEof(std.mem.asBytes(&player.defend));
+    // 12. 玩家速度
+    try reader.readNoEof(std.mem.asBytes(&player.speed));
+    // 13. 玩家金钱
+    try reader.readNoEof(std.mem.asBytes(&player.money));
+    // 14. 玩家物品
+    try reader.readNoEof(std.mem.asBytes(&player.items));
+    // 15. 宝箱状态
+    try reader.readNoEof(std.mem.asBytes(&item.picked));
+    // 16. NPC 状态
+    try reader.readNoEof(std.mem.asBytes(&npc.dead));
+    // 17. magic 结尾
+    var magic_end: [magic.len]u8 = undefined;
+    try reader.readNoEof(&magic_end);
+    if (!std.mem.eql(u8, &magic_end, &magic)) return error.InvalidMagic;
+}
+
 const SaveState = struct {
-    const magic = [2]u8{ 0xB0, 0x0B };
     var buffer: [100]u8 = undefined;
 
     pub fn update(_: f32) void {
@@ -303,31 +408,48 @@ const SaveState = struct {
             },
             else => unreachable,
         };
+
+        if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
+            window.isMouseRelease(.RIGHT))
+        {
+            menu.active = 6;
+            state = .menu;
+        }
     }
 
     fn save(index: u8) !void {
-        // 需要保存的数据：
-
         var stream = std.io.fixedBufferStream(&buffer);
         var writer = stream.writer();
         try writer.writeAll(&magic);
-        // 0. 游戏版本号
+        //  游戏版本号
         try writer.writeAll(&.{ 0x00, 0x00 });
-        // 1. 地图编号
+        //  地图编号
         try writer.writeByte(map.linkIndex);
-        // 2. 玩家进度
+        //  玩家进度
         try writer.writeByte(player.progress);
-        // 3. 玩家坐标
+        //  玩家坐标
         try writer.writeAll(std.mem.asBytes(&player.position));
-        // 4. 玩家经验
-        try writer.writeAll(std.mem.asBytes(&player.totalExp));
-        // 5. 玩家金钱
+        //  玩家经验
+        try writer.writeAll(std.mem.asBytes(&player.exp));
+        //  玩家等级
+        try writer.writeAll(std.mem.asBytes(&player.level));
+        //  玩家生命
+        try writer.writeAll(std.mem.asBytes(&player.health));
+        // 玩家最大生命
+        try writer.writeAll(std.mem.asBytes(&player.maxHealth));
+        //  玩家攻击力
+        try writer.writeAll(std.mem.asBytes(&player.attack));
+        //  玩家防御力
+        try writer.writeAll(std.mem.asBytes(&player.defend));
+        //  玩家速度
+        try writer.writeAll(std.mem.asBytes(&player.speed));
+        //  玩家金钱
         try writer.writeAll(std.mem.asBytes(&player.money));
-        // 6. 玩家物品
+        //  玩家物品
         try writer.writeAll(std.mem.asBytes(&player.items));
-        // 7. 宝箱状态
+        //  宝箱状态
         try writer.writeAll(std.mem.asBytes(&item.picked));
-        // 8. NPC 状态
+        //  NPC 状态
         try writer.writeAll(std.mem.asBytes(&npc.dead));
         try writer.writeAll(&magic);
 

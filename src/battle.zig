@@ -349,7 +349,6 @@ const EnemyDeathPhase = struct {
         if (step == 0 and window.isAnyRelease()) {
             step += 1;
             player.exp += enemy.level * 20;
-            player.totalExp += enemy.level * 20;
             player.money += enemy.money;
             for (enemy.goods) |index| _ = player.addItem(index);
             return;

@@ -7,6 +7,7 @@ const camera = zhu.camera;
 
 const scene = @import("scene.zig");
 const menu = @import("menu.zig");
+const world = @import("world.zig");
 
 var background: gfx.Texture = undefined;
 var menuBackground: gfx.Texture = undefined;
@@ -53,7 +54,11 @@ fn menuSelected(index: u8) void {
         }.call),
         1 => menu.active = 5,
         2 => window.exit(),
-        3, 4, 5, 6, 7 => scene.changeScene(.world),
+        3, 4, 5, 6, 7 => |event| {
+            world.load(event) catch return;
+            world.back = .battle;
+            scene.changeScene(.world);
+        },
         8 => menu.active = 4,
         else => unreachable(),
     }
