@@ -84,6 +84,9 @@ fn buildWeb(b: *std.Build, target: std.Build.ResolvedTarget) !void {
     const stbAudioPath = writeFiles.add("stb_audio.c", stbAudioSource);
     zhuModule.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{ "-O2", "-fno-sanitize=undefined" } });
 
+    const emPath = writeFiles.add("em.c", emSource);
+    zhuModule.addCSourceFile(.{ .file = emPath, .flags = &.{ "-O2", "-fno-sanitize=undefined" } });
+
     const stb = b.dependency("stb", .{ .target = target, .optimize = optimize });
     zhuModule.addIncludePath(stb.path("."));
     const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
@@ -121,5 +124,42 @@ const stbAudioSource =
     \\#define STB_VORBIS_NO_STDIO
     \\
     \\#include "stb_vorbis.c"
+    \\
+;
+
+const emSource =
+    \\#if defined(__EMSCRIPTEN__)
+    \\
+    \\#include <emscripten.h>
+    \\
+    \\EM_JS(void, em_js_file_save, (const char *c_path, const char *c_data, int len), {
+    \\    const path = UTF8ToString(c_path);
+    \\    console.log("save file: ",path);
+    \\    const bytes = HEAPU8.subarray(c_data, c_data + len);
+    \\    console.log("save file bytes len: ",len);
+    \\    const base64 = btoa(String.fromCharCode(...bytes));
+    \\    window.localStorage.setItem(path, base64);
+    \\});
+    \\
+    \\EM_JS(int, em_js_file_load, (const char *c_path, char *out_buf, int len), {
+    \\    const path = UTF8ToString(c_path);
+    \\    console.log("load file: ",path);
+    \\    const base64 = window.localStorage.getItem(path);
+    \\    if (!base64) return 0;
+    \\
+    \\    const binary = atob(base64);
+    \\    if (binary.length > len) return 0;
+    \\    for (let i = 0; i < binary.length; i++) {
+    \\        HEAPU8[out_buf + i] = binary.charCodeAt(i);
+    \\    }
+    \\    return binary.length;
+    \\});
+    \\
+    \\int my_add(int a, int b)
+    \\{
+    \\    return a + b;
+    \\}
+    \\
+    \\#endif // defined(__EMSCRIPTEN__)
     \\
 ;

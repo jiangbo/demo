@@ -339,10 +339,9 @@ const LoadState = struct {
 const magic = [2]u8{ 0xB0, 0x0B };
 pub fn load(index: u8) !void {
     var buffer: [100]u8 = undefined;
-    var alloc = std.heap.FixedBufferAllocator.init(&buffer);
     var buf: [20]u8 = undefined;
-    const path = zhu.format(&buf, "save/{d}.save", .{index - 2});
-    const slice = try window.readAll(alloc.allocator(), path);
+    const path = zhu.formatZ(&buf, "save/{d}.save", .{index - 2});
+    const slice = try window.readAll(path, &buffer);
     var stream = std.io.fixedBufferStream(slice);
     var reader = stream.reader();
 
@@ -454,8 +453,8 @@ const SaveState = struct {
         try writer.writeAll(&magic);
 
         var buf: [20]u8 = undefined;
-        const path = zhu.format(&buf, "save/{d}.save", .{index - 2});
-        window.saveAll(path, buffer[0..stream.pos]);
+        const path = zhu.formatZ(&buf, "save/{d}.save", .{index - 2});
+        try window.saveAll(path, buffer[0..stream.pos]);
     }
 
     pub fn draw() void {

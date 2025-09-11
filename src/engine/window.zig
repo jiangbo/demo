@@ -240,28 +240,36 @@ pub fn statFileTime(path: [:0]const u8) i64 {
     return @intCast(stat.mtime);
 }
 
-pub fn readAll(alloc: std.mem.Allocator, path: []const u8) ![]u8 {
+pub fn readAll(path: [:0]const u8, content: []u8) ![]u8 {
+    if (@import("builtin").target.os.tag == .emscripten) {
+        const len = @import("c.zig").em.em_js_file_load(path.ptr, //
+            content.ptr, @intCast(content.len));
+        if (len == 0) return error.FileNotFound;
+
+        const value = @import("c.zig").em.my_add(1, 1);
+        _ = value;
+
+        return content[0..@as(usize, @intCast(len))];
+    }
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    const endPos = try file.getEndPos();
-    const content = try alloc.alloc(u8, endPos);
     const bytes = try file.readAll(content);
-    std.debug.assert(bytes == endPos);
-    return content;
+    return content[0..bytes];
 }
 
-pub fn saveAll(path: []const u8, content: []const u8) void {
-    doSaveAll(path, content) catch @panic("save file error");
-}
-fn doSaveAll(path: []const u8, content: []const u8) !void {
+pub fn saveAll(path: [:0]const u8, content: []const u8) !void {
+    if (@import("builtin").target.os.tag == .emscripten) {
+        return @import("c.zig").em.em_js_file_save(path.ptr, //
+            content.ptr, @intCast(content.len));
+    }
+
     const cwd = std.fs.cwd();
 
     if (std.fs.path.dirname(path)) |dir| {
-        try cwd.makePath(dir); // 确保目录存在
+        try cwd.makePath(dir);
     }
 
-    // 2. 再尝试打开文件，如果不存在就创建
     var file = cwd.openFile(path, .{ .mode = .write_only }) //
         catch |err| switch (err) {
             error.FileNotFound => try cwd.createFile(path, .{}),
@@ -269,7 +277,6 @@ fn doSaveAll(path: []const u8, content: []const u8) !void {
         };
     defer file.close();
 
-    // 3. 写内容
     try file.writeAll(content);
 }
 
