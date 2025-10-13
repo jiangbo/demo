@@ -166,7 +166,7 @@ pub fn flush() void {
         2 / x, 0, 0, 0, 0,  2 / -y, 0, 0,
         0,     0, 1, 0, -1, 1,      0, 1,
     };
-    const size = gpu.queryTextureSize(texture.image);
+    const size = gpu.queryTextureSize(texture);
     gpu.setUniform(shader.UB_vs_params, .{
         .viewMatrix = viewMatrix,
         .textureVec = [4]f32{ 1 / size.x, 1 / size.y, 1, 1 },

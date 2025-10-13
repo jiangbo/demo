@@ -6,7 +6,7 @@ const math = @import("math.zig");
 const gfx = sk.gfx;
 
 pub const Texture = struct {
-    image: gfx.Image,
+    view: gfx.View,
     area: math.Rect = .{},
 
     pub fn width(self: *const Texture) f32 {
@@ -22,11 +22,11 @@ pub const Texture = struct {
     }
 
     pub fn subTexture(self: *const Texture, area: math.Rect) Texture {
-        return .{ .image = self.image, .area = area.move(self.area.min) };
+        return .{ .view = self.view, .area = area.move(self.area.min) };
     }
 
     pub fn mapTexture(self: *const Texture, area: math.Rect) Texture {
-        return Texture{ .image = self.image, .area = area };
+        return Texture{ .view = self.view, .area = area };
     }
 
     pub fn deinit(self: *Texture) void {
@@ -34,7 +34,8 @@ pub const Texture = struct {
     }
 };
 
-pub fn queryTextureSize(image: gfx.Image) math.Vector {
+pub fn queryTextureSize(texture: Texture) math.Vector {
+    const image = gfx.queryViewImage(texture.view);
     return math.Vector{
         .x = @floatFromInt(gfx.queryImageWidth(image)),
         .y = @floatFromInt(gfx.queryImageHeight(image)),
@@ -95,16 +96,18 @@ pub fn scissor(area: math.Rect) void {
 
 pub fn createTexture(size: math.Vector, data: []const u8) Texture {
     return Texture{
-        .image = gfx.makeImage(.{
-            .data = init: {
-                var imageData = gfx.ImageData{};
-                imageData.subimage[0][0] = gfx.asRange(data);
-                break :init imageData;
-            },
-            .width = @intFromFloat(size.x),
-            .height = @intFromFloat(size.y),
-            .pixel_format = .RGBA8,
-        }),
+        .view = sk.gfx.makeView(.{ .texture = .{
+            .image = gfx.makeImage(.{
+                .data = init: {
+                    var imageData = gfx.ImageData{};
+                    imageData.mip_levels[0] = gfx.asRange(data);
+                    break :init imageData;
+                },
+                .width = @intFromFloat(size.x),
+                .height = @intFromFloat(size.y),
+                .pixel_format = .RGBA8,
+            }),
+        } }),
         .area = .init(.zero, size),
     };
 }
@@ -133,7 +136,7 @@ pub fn createQuadPipeline(shaderDesc: gfx.ShaderDesc) RenderPipeline {
         .layout = vertexLayout,
         .primitive_type = .TRIANGLE_STRIP,
         .colors = init: {
-            var c: [4]gfx.ColorTargetState = @splat(.{});
+            var c: [8]gfx.ColorTargetState = @splat(.{});
             c[0] = .{ .blend = .{
                 .enabled = true,
                 .src_factor_rgb = .SRC_ALPHA,
@@ -168,7 +171,7 @@ pub const BindGroup = struct {
     }
 
     pub fn setTexture(self: *BindGroup, texture: Texture) void {
-        self.value.images[0] = texture.image;
+        self.value.views[0] = texture.view;
     }
 
     pub fn setSampler(self: *BindGroup, sampler: sk.gfx.Sampler) void {

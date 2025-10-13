@@ -1,23 +1,45 @@
 const std = @import("std");
 const sk = @import("sokol");
 
+const Options = struct {
+    mod: *std.Build.Module,
+    sokol: *std.Build.Dependency,
+};
+
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
-    try if (target.result.cpu.arch.isWasm())
-        buildWeb(b, target)
-    else
-        buildNative(b, target);
-}
-
-fn buildNative(b: *std.Build, target: std.Build.ResolvedTarget) !void {
     const optimize = b.standardOptimizeOption(.{});
-
-    const exe = b.addExecutable(.{
-        .name = "demo",
-        .root_source_file = b.path("src/main.zig"),
+    const sokol = b.dependency("sokol", .{
         .target = target,
         .optimize = optimize,
     });
+
+    const exeModule = b.createModule(.{
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "sokol", .module = sokol.module("sokol") },
+        },
+    });
+
+    const options = Options{ .mod = exeModule, .sokol = sokol };
+    if (target.result.cpu.arch.isWasm()) {
+        try buildWeb(b, options);
+    } else {
+        try buildNative(b, options);
+    }
+}
+
+fn buildNative(b: *std.Build, options: Options) !void {
+    const exe = b.addExecutable(.{
+        .name = "demo",
+        .root_module = options.mod,
+    });
+
+    const optimize = options.mod.optimize.?;
+    const target = options.mod.resolved_target.?;
+    if (optimize != .Debug) exe.subsystem = .Windows;
 
     const zhuModule = b.createModule(.{
         .root_source_file = b.path("src/engine/root.zig"),
@@ -53,14 +75,13 @@ fn buildNative(b: *std.Build, target: std.Build.ResolvedTarget) !void {
     b.step("run", "Run the app").dependOn(&run_cmd.step);
 }
 
-fn buildWeb(b: *std.Build, target: std.Build.ResolvedTarget) !void {
-    const optimize = b.standardOptimizeOption(.{});
+fn buildWeb(b: *std.Build, options: Options) !void {
+    const optimize = options.mod.optimize.?;
+    const target = options.mod.resolved_target.?;
 
-    const exe = b.addStaticLibrary(.{
+    const exe = b.addLibrary(.{
         .name = "demo",
-        .target = target,
-        .optimize = optimize,
-        .root_source_file = b.path("src/main.zig"),
+        .root_module = options.mod,
     });
 
     const zhuModule = b.createModule(.{
@@ -71,10 +92,7 @@ fn buildWeb(b: *std.Build, target: std.Build.ResolvedTarget) !void {
 
     exe.root_module.addImport("zhu", zhuModule);
 
-    const sokol = b.dependency("sokol", .{ .target = target, .optimize = optimize });
-    zhuModule.addImport("sokol", sokol.module("sokol"));
-
-    const emsdk = sokol.builder.dependency("emsdk", .{});
+    const emsdk = options.sokol.builder.dependency("emsdk", .{});
     const include = emsdk.path(b.pathJoin(&.{ "upstream", "emscripten", "cache", "sysroot", "include" }));
     zhuModule.addSystemIncludePath(include);
 
@@ -97,8 +115,6 @@ fn buildWeb(b: *std.Build, target: std.Build.ResolvedTarget) !void {
         .target = target,
         .optimize = optimize,
         .emsdk = emsdk,
-        .use_offset_converter = true,
-        .use_webgl2 = true,
         .use_emmalloc = true,
         .use_filesystem = false,
         .shell_file_path = b.path("index.html"),

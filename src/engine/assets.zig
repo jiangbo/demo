@@ -39,10 +39,10 @@ pub const Texture = struct {
         const entry = cache.getOrPut(allocator, path) catch unreachable;
         if (entry.found_existing) return entry.value_ptr.*;
 
-        const image = sk.gfx.allocImage();
-        _ = File.load(path, image.id, handler);
+        const view = sk.gfx.allocView();
+        _ = File.load(path, view.id, handler);
 
-        entry.value_ptr.* = .{ .image = image, .area = .init(.zero, size) };
+        entry.value_ptr.* = .{ .view = view, .area = .init(.zero, size) };
         return entry.value_ptr.*;
     }
 
@@ -53,15 +53,17 @@ pub const Texture = struct {
         defer c.stbImage.unload(image);
         const texture = cache.getPtr(response.path).?;
 
-        sk.gfx.initImage(texture.image, .{
-            .width = image.width,
-            .height = image.height,
-            .data = init: {
-                var imageData = sk.gfx.ImageData{};
-                imageData.subimage[0][0] = sk.gfx.asRange(image.data);
-                break :init imageData;
-            },
-        });
+        sk.gfx.initView(texture.view, .{ .texture = .{
+            .image = sk.gfx.makeImage(.{
+                .width = image.width,
+                .height = image.height,
+                .data = init: {
+                    var imageData = sk.gfx.ImageData{};
+                    imageData.mip_levels[0] = sk.gfx.asRange(image.data);
+                    break :init imageData;
+                },
+            }),
+        } });
         return &.{};
     }
 };
@@ -172,7 +174,7 @@ pub const File = struct {
         return entry.value_ptr;
     }
 
-    fn callback(responses: [*c]const sk.fetch.Response) callconv(.C) void {
+    fn callback(responses: [*c]const sk.fetch.Response) callconv(.c) void {
         const res = responses[0];
         if (res.failed) {
             std.debug.panic("assets load failed, path: {s}", .{res.path});

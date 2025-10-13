@@ -21,7 +21,7 @@ var pipeline: gpu.RenderPipeline = undefined;
 var buffer: gpu.Buffer = undefined;
 var needDrawCount: usize = 0;
 var totalDrawCount: usize = 0;
-var usingTexture: gpu.Texture = .{ .image = .{} };
+var usingTexture: gpu.Texture = .{ .view = .{} };
 var whiteTexture: gpu.Texture = undefined;
 
 pub fn init(vertexCount: usize) void {
@@ -106,7 +106,7 @@ pub fn drawVertices(texture: Texture, vertex: []const Vertex) void {
     }
 
     if (totalDrawCount == 0) return; // 第一次绘制
-    if (texture.image.id != usingTexture.image.id) flushTexture();
+    if (texture.view.id != usingTexture.view.id) flushTexture();
 }
 
 pub fn flushTexture() void {
@@ -160,7 +160,7 @@ fn drawInstanced(texture: gpu.Texture, options: VertexOptions) void {
     };
     viewMatrix[12] = -1 - position.x * viewMatrix[0];
     viewMatrix[13] = 1 - position.y * viewMatrix[5];
-    const size = gpu.queryTextureSize(texture.image);
+    const size = gpu.queryTextureSize(texture);
     gpu.setUniform(shader.UB_vs_params, .{
         .viewMatrix = viewMatrix,
         .textureVec = [4]f32{ 1 / size.x, 1 / size.y, 1, 1 },
