@@ -16,7 +16,7 @@ var toSceneType: SceneType = .title;
 pub fn init() void {
     window.initFont(.{
         .font = @import("zon/font.zon"),
-        .texture = gfx.loadTexture("assets/font.png", .init(948, 948)),
+        .texture = gfx.loadTexture("assets/font.png", .init(952, 952)),
     });
 
     camera.frameStats(true);
