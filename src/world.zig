@@ -492,7 +492,7 @@ const TalkState = struct {
                     \\敬请关注该游戏的最新动态：
                     \\　　http://goldpoint.126.com
                     \\　　　　　　　　　　　　　成都金点工作组制作
-                    \\　　　　　　　　　　　　　[THE END]"
+                    \\　　　　　　　　　　　　　[THE END]
                 ;
                 headerColor = .red;
                 headerTimer.reset();

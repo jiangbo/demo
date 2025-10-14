@@ -161,5 +161,5 @@
     .{ .name = "全无敌", .picture = 11, .x = 600, .y = 1124, .level = 2, .health = 100, .attack = 25, .defend = 50, .speed = 8, .goods = .{5}, .money = 20, .enemy = true },
 
     // 公  主 ID:90001，40
-    .{ .talks = .{174}, .name = "公  主", .picture = 14, .x = 300, .y = 64, .level = 1, .health = 100, .attack = 15, .defend = 40, .speed = 0, .goods = .{5}, .money = 20, .enemy = false },
+    .{ .talks = .{ 174, 174 }, .name = "公  主", .picture = 14, .x = 300, .y = 64, .level = 1, .health = 100, .attack = 15, .defend = 40, .speed = 0, .goods = .{5}, .money = 20, .enemy = false },
 }
