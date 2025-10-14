@@ -589,15 +589,15 @@ var weaponShop: Shop = .{
         12, 12, 13, 13, 14, 14, 9, 9, //
         10, 10, 8,  8,  16, 16, 0, 0,
     },
-    .notBuyId = 117,
-    .buyId = 119,
+    .notBuyId = 83,
+    .buyId = 85,
 };
 var potionShop: Shop = .{
     .items = .{
         5,  5,  6,  6,  7, 7, 4, 4, //
         17, 17, 18, 18, 0, 0, 0, 0,
     },
-    .notBuyId = 130,
-    .buyId = 132,
+    .notBuyId = 96,
+    .buyId = 98,
 };
 var shop: *Shop = undefined;
