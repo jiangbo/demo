@@ -221,6 +221,7 @@ pub fn levelUp() void {
     defend += exp / maxExp * 1;
     health += (maxHealth - health) / 2;
     exp %= maxExp;
+    health = maxHealth;
 }
 
 pub fn draw() void {
