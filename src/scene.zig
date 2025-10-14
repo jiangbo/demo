@@ -47,6 +47,7 @@ fn doChangeScene() void {
 
 var isDebug: bool = true;
 pub fn update(delta: f32) void {
+    window.keepAspectRatio();
     if (window.isKeyRelease(.X)) isDebug = !isDebug;
 
     if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {

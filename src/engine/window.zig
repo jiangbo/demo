@@ -130,7 +130,7 @@ pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
 pub var logicSize: math.Vector = .zero;
 pub var clientSize: math.Vector = .zero;
 pub var ratio: math.Vector = .init(1, 1);
-// pub var displayArea: math.Rectangle = undefined;
+pub var displayArea: math.Rect = undefined;
 pub var allocator: std.mem.Allocator = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
 var timer: std.time.Timer = undefined;
@@ -139,7 +139,7 @@ const root = @import("root");
 pub fn run(alloc: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
     logicSize = info.logicSize;
-    // displayArea = .init(.zero, logicSize);
+    displayArea = .init(.zero, logicSize);
     countingAllocator = CountingAllocator.init(alloc);
     allocator = countingAllocator.allocator();
 
@@ -173,7 +173,8 @@ export fn windowEvent(event: ?*const Event) void {
         input.event(ev);
         if (ev.type == .MOUSE_MOVE) {
             mouseMoved = true;
-            mousePosition = input.mousePosition.div(ratio);
+            const pos = input.mousePosition.sub(displayArea.min);
+            mousePosition = pos.mul(logicSize).div(displayArea.size);
         } else if (ev.type == .RESIZED) {
             clientSize = .init(sk.app.widthf(), sk.app.heightf());
             ratio = clientSize.div(logicSize);
@@ -182,13 +183,12 @@ export fn windowEvent(event: ?*const Event) void {
     }
 }
 
-// pub fn keepAspectRatio() void {
-//     const ratio = clientSize.div(logicSize);
-//     const minSize = logicSize.scale(@min(ratio.x, ratio.y));
-//     const pos = clientSize.sub(minSize).scale(0.5);
-//     displayArea = .init(pos, minSize);
-//     sk.gfx.applyViewportf(pos.x, pos.y, minSize.x, minSize.y, true);
-// }
+pub fn keepAspectRatio() void {
+    const minSize = logicSize.scale(@min(ratio.x, ratio.y));
+    const pos = clientSize.sub(minSize).scale(0.5);
+    displayArea = .init(pos, minSize);
+    sk.gfx.applyViewportf(pos.x, pos.y, minSize.x, minSize.y, true);
+}
 
 var frameRateTimer: Timer = .init(1);
 var frameRateCount: u32 = 0;
