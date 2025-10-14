@@ -38,7 +38,9 @@ pub fn main() void {
         _ = debugAllocator.deinit();
     };
 
-    _ = ImmDisableIME(-1);
+    if (@import("builtin").os.tag == .windows) {
+        _ = ImmDisableIME(-1);
+    }
 
     window.run(allocator, .{
         .title = "英雄救美",

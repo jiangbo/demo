@@ -92,6 +92,9 @@ fn buildWeb(b: *std.Build, options: Options) !void {
 
     exe.root_module.addImport("zhu", zhuModule);
 
+    const sokol = b.dependency("sokol", .{ .target = target, .optimize = optimize });
+    zhuModule.addImport("sokol", sokol.module("sokol"));
+
     const emsdk = options.sokol.builder.dependency("emsdk", .{});
     const include = emsdk.path(b.pathJoin(&.{ "upstream", "emscripten", "cache", "sysroot", "include" }));
     zhuModule.addSystemIncludePath(include);
@@ -114,6 +117,7 @@ fn buildWeb(b: *std.Build, options: Options) !void {
         .lib_main = exe,
         .target = target,
         .optimize = optimize,
+        .use_webgl2 = true,
         .emsdk = emsdk,
         .use_emmalloc = true,
         .use_filesystem = false,
