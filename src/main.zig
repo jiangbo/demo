@@ -17,6 +17,7 @@ pub fn main() !void {
     std.log.info("has: {}", .{sparseSet.has(4)});
     sparseSet.remove(4);
     std.log.info("has: {}", .{sparseSet.has(4)});
+    std.log.info("sparse set: {}", .{sparseSet});
 }
 
 const SparseSet = struct {
@@ -55,7 +56,9 @@ const SparseSet = struct {
 
     pub fn remove(self: *SparseSet, value: u8) void {
         if (!self.has(value)) return;
+        const last = self.dense.items[self.dense.items.len - 1];
         _ = self.dense.swapRemove(self.sparse.items[value]);
+        self.sparse.items[last] = self.sparse.items[value];
     }
 
     pub fn clear(self: *SparseSet) void {
