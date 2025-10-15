@@ -1,49 +1,56 @@
 const std = @import("std");
 
-const window = @import("zhu").window;
-const audio = @import("zhu").audio;
-const scene = @import("scene.zig");
+pub fn main() !void {
+    std.log.info("hello world", .{});
 
-var soundBuffer: [20]audio.Sound = undefined;
+    var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
+    defer _ = gpa.deinit();
 
-pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
+    var sparseSet: SparseSet = .empty;
+    defer sparseSet.deinit(gpa.allocator());
 
-pub fn init() void {
-    audio.init(8000, &soundBuffer);
-
-    scene.init();
+    try sparseSet.add(gpa.allocator(), 4);
+    try sparseSet.add(gpa.allocator(), 6);
+    try sparseSet.add(gpa.allocator(), 0);
+    sparseSet.clear();
+    std.log.info("sparse set: {}", .{sparseSet});
 }
 
-pub fn frame(delta: f32) void {
-    scene.update(delta);
-    scene.draw();
-}
+const SparseSet = struct {
+    dense: std.ArrayListUnmanaged(u8),
+    sparse: std.ArrayListUnmanaged(u8),
 
-pub fn deinit() void {
-    scene.deinit();
-    audio.deinit();
-}
-
-pub fn main() void {
-    var allocator: std.mem.Allocator = undefined;
-    var debugAllocator: std.heap.DebugAllocator(.{}) = undefined;
-    if (@import("builtin").mode == .Debug) {
-        debugAllocator = std.heap.DebugAllocator(.{}).init;
-        allocator = debugAllocator.allocator();
-    } else {
-        allocator = std.heap.c_allocator;
-    }
-
-    defer if (@import("builtin").mode == .Debug) {
-        _ = debugAllocator.deinit();
+    pub const empty = SparseSet{
+        .dense = .empty,
+        .sparse = .empty,
     };
 
-    if (@import("builtin").os.tag == .windows) {
-        _ = ImmDisableIME(-1);
+    pub fn deinit(self: *SparseSet, allocator: std.mem.Allocator) void {
+        self.dense.deinit(allocator);
+        self.sparse.deinit(allocator);
     }
 
-    window.run(allocator, .{
-        .title = "英雄救美",
-        .logicSize = .{ .x = 640, .y = 480 },
-    });
-}
+    pub fn add(self: *SparseSet, allocator: std.mem.Allocator, value: u8) !void {
+        if (value >= self.sparse.capacity) {
+            try self.sparse.ensureTotalCapacity(allocator, value + 1);
+            self.sparse.expandToCapacity();
+        }
+
+        const len: u8 = @intCast(self.dense.items.len);
+        try self.dense.append(allocator, value);
+        self.sparse.items[value] = len;
+    }
+
+    pub fn remove(self: *SparseSet, value: u8) !void {
+        const len: u8 = @intCast(self.dense.items.len);
+        const index: u8 = self.sparse.items[value];
+        if (index >= len) return;
+
+        const last: u8 = self.dense.items[len - 1];
+        self.dense.items[index] = last;
+    }
+
+    pub fn clear(self: *SparseSet) void {
+        self.dense.clearRetainingCapacity();
+    }
+};
