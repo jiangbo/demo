@@ -54,11 +54,8 @@ const SparseSet = struct {
     }
 
     pub fn remove(self: *SparseSet, value: u8) void {
-        if (value >= self.sparse.items.len) return;
-
-        const index: u8 = self.sparse.items[value];
-        if (index >= self.dense.items.len) return;
-        _ = self.dense.swapRemove(index);
+        if (!self.has(value)) return;
+        _ = self.dense.swapRemove(self.sparse.items[value]);
     }
 
     pub fn clear(self: *SparseSet) void {
