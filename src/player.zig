@@ -169,7 +169,7 @@ pub fn sellItem() bool {
 
     if (items[itemIndex] == 0) return false;
 
-    if (window.isKeyRelease(.LEFT_CONTROL)) {
+    if (window.isAnyKeyRelease(&.{ .LEFT_CONTROL, .F })) {
         // 卖出物品
         sellItemIndex = items[itemIndex];
         const usedItem = item.zon[sellItemIndex];

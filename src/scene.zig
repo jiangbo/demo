@@ -13,6 +13,9 @@ const SceneType = enum { title, world, battle };
 var currentSceneType: SceneType = .title;
 var toSceneType: SceneType = .title;
 
+var isHelp: bool = true;
+var isDebug: bool = false;
+
 pub fn init() void {
     window.initFont(.{
         .font = @import("zon/font.zon"),
@@ -45,9 +48,9 @@ fn doChangeScene() void {
     sceneCall("enter", .{});
 }
 
-var isDebug: bool = true;
 pub fn update(delta: f32) void {
     window.keepAspectRatio();
+    if (window.isKeyRelease(.H)) isHelp = !isHelp;
     if (window.isKeyRelease(.X)) isDebug = !isDebug;
 
     if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
@@ -85,8 +88,26 @@ pub fn draw() void {
         camera.drawRect(.init(.zero, window.logicSize), .{ .w = alpha });
         camera.flushTexture();
     }
+    if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
+}
 
-    if (isDebug) drawDebugInfo();
+fn drawHelpInfo() void {
+    const text =
+        \\按键说明：
+        \\上：W，下：S，左：A，右：D
+        \\确定：F，取消：Q，菜单：E
+        \\帮助：H  按一次打开，再按一次关掉
+        \\作者：jiangbo4444
+    ;
+    var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
+    var count: u32 = 0;
+    while (iterator.nextCodepoint()) |code| {
+        if (code == '\n') continue;
+        count += 1;
+    }
+    debutTextCount = count;
+
+    camera.drawColorText(text, .init(10, 5), .green);
 }
 
 var debutTextCount: u32 = 0;

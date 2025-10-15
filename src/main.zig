@@ -9,7 +9,7 @@ var soundBuffer: [20]audio.Sound = undefined;
 pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
 
 pub fn init() void {
-    audio.init(44100, &soundBuffer);
+    audio.init(8000, &soundBuffer);
 
     scene.init();
 }
