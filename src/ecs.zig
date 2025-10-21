@@ -62,7 +62,7 @@ pub fn SparseSet(T: type) type {
         sparse: std.ArrayList(u32) = .empty,
         valuePtr: [*]T,
         alignment: std.mem.Alignment = .of(T),
-        bytes: u32 = @sizeOf(T),
+        valueSize: u32 = @sizeOf(T),
 
         pub fn init(gpa: Allocator) !Self {
             return Self{
@@ -73,7 +73,7 @@ pub fn SparseSet(T: type) type {
 
         pub fn deinit(self: *Self, gpa: Allocator) void {
             const u8Ptr: [*]u8 = @ptrCast(@alignCast(self.valuePtr));
-            const u8Slice = u8Ptr[0 .. self.dense.capacity * self.bytes];
+            const u8Slice = u8Ptr[0 .. self.dense.capacity * self.valueSize];
             gpa.rawFree(u8Slice, self.alignment, @returnAddress());
             self.dense.deinit(gpa);
             self.sparse.deinit(gpa);
@@ -118,8 +118,9 @@ pub fn SparseSet(T: type) type {
 
             _ = self.dense.swapRemove(index);
             const u8Ptr: [*]u8 = @ptrCast(@alignCast(self.valuePtr));
-            const u8Slice = u8Ptr[self.bytes * index ..][0..self.bytes];
-            @memmove(u8Slice, u8Ptr[self.bytes * last ..][0..self.bytes]);
+            const size = self.valueSize;
+            const u8Slice = u8Ptr[size * index ..][0..size];
+            @memmove(u8Slice, u8Ptr[size * last ..][0..size]);
             self.sparse.items[last] = index;
         }
 

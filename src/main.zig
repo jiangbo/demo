@@ -1,67 +1,27 @@
 const std = @import("std");
+const ecs = @import("ecs.zig");
+
+const Health = struct { health: u32, maxHealth: u32 };
 
 pub fn main() !void {
-    std.log.info("hello world", .{});
-
     var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
     defer _ = gpa.deinit();
 
-    var sparseSet: SparseSet = .init(gpa.allocator());
-    defer sparseSet.deinit();
+    var registry = ecs.Registry.init(gpa.allocator());
+    defer registry.deinit();
 
-    try sparseSet.add(4);
-    try sparseSet.add(6);
-    try sparseSet.add(0);
-    std.log.info("sparse set: {}", .{sparseSet});
+    const e1 = registry.create();
+    std.log.info("e1: {}", .{e1});
+    registry.add(e1, Health{ .health = 1, .maxHealth = 1 });
+    std.log.info("e1 health: {?}", .{registry.get(e1, Health)});
 
-    std.log.info("has: {}", .{sparseSet.has(4)});
-    sparseSet.remove(4);
-    std.log.info("has: {}", .{sparseSet.has(4)});
-    std.log.info("sparse set: {}", .{sparseSet});
+    const e2 = registry.create();
+    std.log.info("e2: {}", .{e2});
+    registry.add(e2, Health{ .health = 2, .maxHealth = 2 });
+    std.log.info("e2 health: {?}", .{registry.get(e2, Health)});
+
+    std.log.info("e2 has health: {}", .{registry.has(e2, Health)});
+
+    registry.remove(e2, Health);
+    std.log.info("e2 health: {}", .{registry.has(e2, Health)});
 }
-
-const SparseSet = struct {
-    dense: std.ArrayList(u8) = .empty,
-    sparse: std.ArrayList(u8) = .empty,
-    allocator: std.mem.Allocator,
-
-    pub fn init(allocator: std.mem.Allocator) SparseSet {
-        return .{ .allocator = allocator };
-    }
-
-    pub fn deinit(self: *SparseSet) void {
-        self.dense.deinit(self.allocator);
-        self.sparse.deinit(self.allocator);
-    }
-
-    pub fn add(self: *SparseSet, value: u8) !void {
-        if (self.has(value)) return;
-
-        if (value >= self.sparse.capacity) {
-            try self.sparse.ensureTotalCapacity(self.allocator, value + 1);
-            self.sparse.expandToCapacity();
-        }
-
-        const len: u8 = @intCast(self.dense.items.len);
-        try self.dense.append(self.allocator, value);
-        self.sparse.items[value] = len;
-    }
-
-    pub fn has(self: *SparseSet, value: u8) bool {
-        if (value >= self.sparse.items.len) return false;
-        const index = self.sparse.items[value];
-        const items = self.dense.items;
-        return index < items.len and items[index] == value;
-    }
-
-    pub fn remove(self: *SparseSet, value: u8) void {
-        if (!self.has(value)) return;
-        const last = self.dense.items[self.dense.items.len - 1];
-        _ = self.dense.swapRemove(self.sparse.items[value]);
-        self.sparse.items[last] = self.sparse.items[value];
-    }
-
-    pub fn clear(self: *SparseSet) void {
-        self.dense.clearRetainingCapacity();
-    }
-};
