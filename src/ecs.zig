@@ -29,10 +29,11 @@ const Entities = struct {
         }
 
         for (self.versions.items, 0..) |*version, i| {
-            if (version.* & alive == 0) continue;
-            version.* += 1;
-            self.deletedCount -= 1;
-            return .{ .index = @intCast(i), .version = version.* };
+            if (version.* & alive == 0) {
+                version.* += 1;
+                self.deletedCount -= 1;
+                return .{ .index = @intCast(i), .version = version.* };
+            }
         }
 
         unreachable;
@@ -55,7 +56,7 @@ pub fn SparseSet(T: type) type {
     return struct {
         const Self = @This();
         const Index = Entity.Index;
-        const capacity = @max(1, std.atomic.cache_line / @sizeOf(T));
+        const initCapacity = @max(1, std.atomic.cache_line / @sizeOf(T));
 
         dense: std.ArrayList(Index),
         sparse: std.ArrayList(u32) = .empty,
@@ -65,8 +66,8 @@ pub fn SparseSet(T: type) type {
 
         pub fn init(gpa: Allocator) !Self {
             return Self{
-                .dense = try .initCapacity(gpa, capacity),
-                .valuePtr = (try gpa.alloc(T, capacity)).ptr,
+                .dense = try .initCapacity(gpa, initCapacity),
+                .valuePtr = (try gpa.alloc(T, initCapacity)).ptr,
             };
         }
 
@@ -87,14 +88,14 @@ pub fn SparseSet(T: type) type {
             }
 
             const index: u32 = @intCast(self.dense.items.len);
-            var values: std.ArrayList(T) = .{
-                .items = self.valuePtr[0..index],
-                .capacity = self.dense.capacity,
-            };
+            const oldCapacity = self.dense.capacity;
             try self.dense.append(gpa, entity);
-            try values.ensureTotalCapacityPrecise(gpa, self.dense.capacity);
-            values.appendAssumeCapacity(value);
-            self.valuePtr = values.items.ptr;
+            if (oldCapacity != self.dense.capacity) {
+                const slice = self.valuePtr[0..oldCapacity];
+                const capacity = self.dense.capacity;
+                self.valuePtr = (try gpa.realloc(slice, capacity)).ptr;
+            }
+            self.valuePtr[index] = value;
             self.sparse.items[entity] = index;
         }
 
@@ -151,7 +152,7 @@ pub const Registry = struct {
     }
 
     pub fn create(self: *Registry) Entity {
-        return self.entities.create(self.allocator) catch oomPanic();
+        return self.entities.create(self.allocator) catch oom();
     }
 
     pub fn destroy(self: *Registry, entity: Entity) void {
@@ -168,7 +169,7 @@ pub const Registry = struct {
     pub fn removeAll(self: *Registry, entity: Entity) void {
         std.debug.assert(self.valid(entity));
 
-        var iterator = self.components.valueIterator();
+        var iterator = self.componentMap.valueIterator();
         while (iterator.next()) |value| {
             var set: *SparseSet(u8) = @ptrCast(@alignCast(value));
             set.remove(entity.index);
@@ -182,11 +183,10 @@ pub const Registry = struct {
     fn assure(self: *Registry, comptime T: type) *SparseSet(T) {
         const id = comptime std.hash.Fnv1a_64.hash(@typeName(T));
 
-        const result = self.componentMap.getOrPut(self.allocator, id) //
-            catch oomPanic();
+        const result = self.componentMap.getOrPut(self.allocator, id) catch oom();
         if (!result.found_existing) {
             const value = SparseSet(T).init(self.allocator);
-            result.value_ptr.* = std.mem.toBytes(value catch oomPanic());
+            result.value_ptr.* = std.mem.toBytes(value catch oom());
         }
         return @ptrCast(@alignCast(result.value_ptr));
     }
@@ -194,7 +194,7 @@ pub const Registry = struct {
     pub fn add(self: *Registry, entity: Entity, value: anytype) void {
         std.debug.assert(self.valid(entity));
         var set = self.assure(@TypeOf(value));
-        set.add(self.allocator, entity.index, value) catch oomPanic();
+        set.add(self.allocator, entity.index, value) catch oom();
     }
 
     pub fn addTyped(self: *Registry, comptime T: type, e: Entity, v: T) void {
@@ -216,6 +216,6 @@ pub const Registry = struct {
     }
 };
 
-fn oomPanic() noreturn {
+fn oom() noreturn {
     @panic("oom");
 }
