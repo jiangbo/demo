@@ -1,34 +1,22 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const zhu = @import("zhu");
 
-const window = zhu.window;
-// const scene = @import("scene.zig");
-const gfx = zhu.gfx;
-const camera = zhu.camera;
+const window = @import("zhu").window;
+const scene = @import("scene.zig");
 
 pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
 
-pub var texture: gfx.Texture = undefined;
 pub fn init() void {
-    // scene.init();
-    camera.init(100);
-    texture = gfx.loadTexture("assets/dungeonfont.png", .init(512, 512));
+    scene.init();
 }
 
 pub fn frame(delta: f32) void {
-    _ = delta;
-    // scene.update(delta);
-    // scene.draw();
-    camera.beginDraw();
-    defer camera.endDraw();
-
-    camera.draw(texture, .zero);
+    scene.update(delta);
+    scene.draw();
 }
 
 pub fn deinit() void {
-    // scene.deinit();
-
+    scene.deinit();
 }
 
 pub fn main() void {

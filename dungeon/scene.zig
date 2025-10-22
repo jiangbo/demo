@@ -5,16 +5,10 @@ const window = zhu.window;
 const gfx = zhu.gfx;
 const camera = zhu.camera;
 
-const titleScene = @import("title.zig");
-const worldScene = @import("world.zig");
-const battleScene = @import("battle.zig");
+var isHelp: bool = false;
+var isDebug: bool = true;
 
-const SceneType = enum { title, world, battle };
-var currentSceneType: SceneType = .title;
-var toSceneType: SceneType = .title;
-
-var isHelp: bool = true;
-var isDebug: bool = false;
+var texture: gfx.Texture = undefined;
 
 pub fn init() void {
     window.initFont(.{
@@ -23,28 +17,9 @@ pub fn init() void {
     });
 
     camera.frameStats(true);
-
     camera.init(2000);
 
-    titleScene.init();
-    worldScene.init();
-    battleScene.init();
-
-    sceneCall("enter", .{});
-}
-
-pub fn changeScene(sceneType: SceneType) void {
-    toSceneType = sceneType;
-    fadeOut(doChangeScene);
-}
-
-pub fn changeMap() void {
-    fadeOut(worldScene.changeMap);
-}
-
-fn doChangeScene() void {
-    sceneCall("exit", .{});
-    currentSceneType = toSceneType;
+    texture = gfx.loadTexture("assets/dungeonfont.png", .init(512, 512));
     sceneCall("enter", .{});
 }
 
@@ -57,18 +32,6 @@ pub fn update(delta: f32) void {
         return window.toggleFullScreen();
     }
 
-    if (fadeTimer) |*timer| {
-        // 存在淡入淡出效果，地图和角色暂时不更新。
-        if (timer.isRunningAfterUpdate(delta)) return;
-        if (isFadeIn) {
-            fadeTimer = null;
-        } else {
-            if (fadeOutEndCallback) |callback| callback();
-            isFadeIn = true;
-            timer.restart();
-        }
-        return;
-    }
     sceneCall("update", .{delta});
 }
 
@@ -76,18 +39,9 @@ pub fn draw() void {
     camera.beginDraw();
     defer camera.endDraw();
 
-    sceneCall("draw", .{});
+    camera.draw(texture, .zero);
 
-    // 将文字先绘制上，后面的淡入淡出才会生效。
-    camera.flushTextureAndText();
-    if (fadeTimer) |*timer| {
-        camera.mode = .local;
-        defer camera.mode = .world;
-        const percent = timer.elapsed / timer.duration;
-        const alpha = if (isFadeIn) 1 - percent else percent;
-        camera.drawRect(.init(.zero, window.logicSize), .{ .w = alpha });
-        camera.flushTexture();
-    }
+    sceneCall("draw", .{});
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
 
@@ -125,12 +79,10 @@ fn drawDebugInfo() void {
         \\文字：{}
         \\内存：{}
         \\鼠标：{d:.2}，{d:.2}
-        \\角色：{d:.2}，{d:.2}
         \\相机：{d:.2}，{d:.2}
     ;
 
     const stats = camera.queryFrameStats();
-    const player = @import("player.zig");
     const text = zhu.format(&buffer, format, .{
         @tagName(camera.queryBackend()),
         window.frameRate,
@@ -145,8 +97,6 @@ fn drawDebugInfo() void {
         window.countingAllocator.used,
         window.mousePosition.x,
         window.mousePosition.y,
-        player.position.x,
-        player.position.y,
         camera.position.x,
         camera.position.y,
     });
@@ -162,29 +112,11 @@ fn drawDebugInfo() void {
     camera.drawColorText(text, .init(10, 5), .green);
 }
 
-var fadeTimer: ?window.Timer = null;
-var isFadeIn: bool = false;
-var fadeOutEndCallback: ?*const fn () void = null;
-
-pub fn fadeIn() void {
-    isFadeIn = true;
-    fadeTimer = .init(1);
-}
-
-pub fn fadeOut(callback: ?*const fn () void) void {
-    isFadeIn = false;
-    fadeTimer = .init(1);
-    fadeOutEndCallback = callback;
-}
-
 pub fn deinit() void {
     sceneCall("deinit", .{});
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {
-    switch (currentSceneType) {
-        .title => window.call(titleScene, function, args),
-        .world => window.call(worldScene, function, args),
-        .battle => window.call(battleScene, function, args),
-    }
+    _ = function;
+    _ = args;
 }
