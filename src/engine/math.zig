@@ -221,6 +221,66 @@ pub const Rect = struct {
 //     }
 // };
 
+pub const Matrix = struct {
+    mat: [16]f32,
+
+    pub const identity = Matrix{ .mat = [16]f32{
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1,
+    } };
+
+    pub fn orthographic(width: f32, height: f32, near: f32, far: f32) Matrix {
+        return .{ .mat = [16]f32{
+            2.0 / width, 0,             0,                   0,
+            0,           -2.0 / height, 0,                   0,
+            0,           0,             1.0 / (far - near),  0,
+            -1.0,        1.0,           near / (near - far), 1,
+        } };
+    }
+
+    pub fn mul(m1: Matrix, m2: Matrix) Matrix {
+        var result: [16]f32 = undefined;
+        for (0..4) |i| {
+            for (0..4) |j| {
+                var sum: f32 = 0;
+                for (0..4) |k| {
+                    sum += m1.mat[i + k * 4] * m2.mat[k + j * 4];
+                }
+                result[i + j * 4] = sum;
+            }
+        }
+        return .{ .mat = result };
+    }
+
+    pub fn translate(x: f32, y: f32, z: f32) Matrix {
+        return .{ .mat = [16]f32{
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            x, y, z, 1,
+        } };
+    }
+
+    pub fn translateVec(vec: Vector3) Matrix {
+        return translate(vec.x, vec.y, vec.z);
+    }
+
+    pub fn scale(x: f32, y: f32, z: f32) Matrix {
+        return .{ .mat = [16]f32{
+            x, 0, 0, 0,
+            0, y, 0, 0,
+            0, 0, z, 0,
+            0, 0, 0, 1,
+        } };
+    }
+
+    pub fn scaleVec(vec: Vector3) Matrix {
+        return scale(vec.x, vec.y, vec.z);
+    }
+};
+
 pub var rand: std.Random.DefaultPrng = undefined;
 
 pub fn setRandomSeed(seed: u64) void {

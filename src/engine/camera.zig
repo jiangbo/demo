@@ -155,15 +155,15 @@ fn drawInstanced(texture: gpu.Texture, options: VertexOptions) void {
 
     // 处理 uniform 变量
     const x, const y = .{ window.logicSize.x, window.logicSize.y };
-    var viewMatrix: [16]f32 = .{
-        2 * scale.x / x, 0, 0, 0, 0,  2 * scale.y / -y, 0, 0,
-        0,               0, 1, 0, -1, 1,                0, 1,
-    };
-    viewMatrix[12] = -1 - position.x * viewMatrix[0];
-    viewMatrix[13] = 1 - position.y * viewMatrix[5];
+    const orth = math.Matrix.orthographic(x, y, 0, 1);
+    const pos = position.scale(-1).toVector3(0);
+    const translate = math.Matrix.translateVec(pos);
+    const scaleMatrix = math.Matrix.scaleVec(scale.toVector3(1));
+    const view = math.Matrix.mul(scaleMatrix, translate);
+
     const size = gpu.queryTextureSize(texture);
     gpu.setUniform(shader.UB_vs_params, .{
-        .viewMatrix = viewMatrix,
+        .viewMatrix = math.Matrix.mul(orth, view).mat,
         .textureVec = [4]f32{ 1 / size.x, 1 / size.y, 1, 1 },
     });
 
