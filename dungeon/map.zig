@@ -74,10 +74,10 @@ fn buildRooms() void {
         var room: Rect = undefined;
         label: {
             room = Rect{
-                .x = zhu.randU8(1, WIDTH - 10),
-                .y = zhu.randU8(1, HEIGHT - 10),
-                .w = zhu.randU8(2, 10),
-                .h = zhu.randU8(2, 10),
+                .x = zhu.randU8(1, WIDTH - 9),
+                .y = zhu.randU8(1, HEIGHT - 9),
+                .w = zhu.randU8(2, 9),
+                .h = zhu.randU8(2, 9),
             };
 
             for (0..roomIndex) |idx| {
