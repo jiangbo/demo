@@ -39,6 +39,6 @@ pub fn main() void {
 
     window.run(allocator, .{
         .title = "地宫探险",
-        .logicSize = .{ .x = 512, .y = 512 },
+        .logicSize = .{ .x = 640, .y = 400 },
     });
 }

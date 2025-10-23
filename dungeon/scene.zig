@@ -5,10 +5,10 @@ const window = zhu.window;
 const gfx = zhu.gfx;
 const camera = zhu.camera;
 
+const map = @import("map.zig");
+
 var isHelp: bool = false;
 var isDebug: bool = true;
-
-var texture: gfx.Texture = undefined;
 
 pub fn init() void {
     window.initFont(.{
@@ -17,12 +17,14 @@ pub fn init() void {
     });
 
     camera.frameStats(true);
-    camera.init(2000);
+    camera.init(5000);
 
-    texture = gfx.loadTexture("assets/dungeonfont.png", .init(512, 512));
+    map.init();
+
     sceneCall("enter", .{});
 }
 
+const SPEED = 100;
 pub fn update(delta: f32) void {
     window.keepAspectRatio();
     if (window.isKeyRelease(.H)) isHelp = !isHelp;
@@ -32,6 +34,12 @@ pub fn update(delta: f32) void {
         return window.toggleFullScreen();
     }
 
+    const speed: f32 = std.math.round(SPEED * delta);
+    if (window.isKeyDown(.W)) camera.position.y -= 1 * speed;
+    if (window.isKeyDown(.S)) camera.position.y += 1 * speed;
+    if (window.isKeyDown(.A)) camera.position.x -= 1 * speed;
+    if (window.isKeyDown(.D)) camera.position.x += 1 * speed;
+
     sceneCall("update", .{delta});
 }
 
@@ -39,9 +47,8 @@ pub fn draw() void {
     camera.beginDraw();
     defer camera.endDraw();
 
-    camera.draw(texture, .zero);
-
     sceneCall("draw", .{});
+    map.draw();
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
 
