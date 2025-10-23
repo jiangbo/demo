@@ -46,9 +46,9 @@ const Entities = struct {
     }
 
     pub fn isAlive(self: *const Entities, entity: Entity) bool {
-        return entity.index < self.versions.items.len and
-            self.versions.items[entity.index] == entity.version and
-            (entity.version & alive) == alive;
+        return entity.version & alive == alive and
+            entity.index < self.versions.items.len and
+            self.versions.items[entity.index] == entity.version;
     }
 };
 
@@ -157,6 +157,10 @@ pub const Registry = struct {
         return self.entities.create(self.allocator) catch oom();
     }
 
+    pub fn valid(self: *const Registry, entity: Entity) bool {
+        return self.entities.isAlive(entity);
+    }
+
     pub fn destroy(self: *Registry, entity: Entity) void {
         std.debug.assert(self.valid(entity));
         self.removeAll(entity);
@@ -176,10 +180,6 @@ pub const Registry = struct {
             var set: *SparseSet(u8) = @ptrCast(@alignCast(value));
             set.remove(entity.index);
         }
-    }
-
-    pub fn valid(self: *const Registry, entity: Entity) bool {
-        return self.entities.isAlive(entity);
     }
 
     fn assure(self: *Registry, comptime T: type) *SparseSet(T) {
