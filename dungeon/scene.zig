@@ -6,9 +6,11 @@ const gfx = zhu.gfx;
 const camera = zhu.camera;
 
 const map = @import("map.zig");
+const player = @import("player.zig");
 
 var isHelp: bool = false;
-var isDebug: bool = true;
+var isDebug: bool = false;
+const scale = 1;
 
 pub fn init() void {
     window.initFont(.{
@@ -18,13 +20,14 @@ pub fn init() void {
 
     camera.frameStats(true);
     camera.init(5000);
+    camera.scale = .init(scale, scale);
 
     map.init();
+    player.init();
 
     sceneCall("enter", .{});
 }
 
-const SPEED = 100;
 pub fn update(delta: f32) void {
     window.keepAspectRatio();
     if (window.isKeyRelease(.H)) isHelp = !isHelp;
@@ -34,11 +37,9 @@ pub fn update(delta: f32) void {
         return window.toggleFullScreen();
     }
 
-    const speed: f32 = std.math.round(SPEED * delta);
-    if (window.isKeyDown(.W)) camera.position.y -= 1 * speed;
-    if (window.isKeyDown(.S)) camera.position.y += 1 * speed;
-    if (window.isKeyDown(.A)) camera.position.x -= 1 * speed;
-    if (window.isKeyDown(.D)) camera.position.x += 1 * speed;
+    if (window.isKeyRelease(.Z)) camera.position = .zero;
+
+    player.update(delta);
 
     sceneCall("update", .{delta});
 }
@@ -49,6 +50,7 @@ pub fn draw() void {
 
     sceneCall("draw", .{});
     map.draw();
+    player.draw();
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
 
@@ -58,7 +60,6 @@ fn drawHelpInfo() void {
         \\上：W，下：S，左：A，右：D
         \\确定：F，取消：Q，菜单：E
         \\帮助：H  按一次打开，再按一次关掉
-        \\作者：jiangbo4444
     ;
     var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
     var count: u32 = 0;

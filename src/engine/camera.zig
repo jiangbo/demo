@@ -12,6 +12,7 @@ pub const Vertex = gpu.QuadVertex;
 
 pub var mode: enum { world, local } = .world;
 pub var position: math.Vector = .zero;
+pub var scale: math.Vector = .one;
 
 var startDraw: bool = false;
 
@@ -155,8 +156,8 @@ fn drawInstanced(texture: gpu.Texture, options: VertexOptions) void {
     // 处理 uniform 变量
     const x, const y = .{ window.logicSize.x, window.logicSize.y };
     var viewMatrix: [16]f32 = .{
-        2 / x, 0, 0, 0, 0,  2 / -y, 0, 0,
-        0,     0, 1, 0, -1, 1,      0, 1,
+        2 * scale.x / x, 0, 0, 0, 0,  2 * scale.y / -y, 0, 0,
+        0,               0, 1, 0, -1, 1,                0, 1,
     };
     viewMatrix[12] = -1 - position.x * viewMatrix[0];
     viewMatrix[13] = 1 - position.y * viewMatrix[5];

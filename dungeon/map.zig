@@ -17,15 +17,15 @@ const Tile = enum(u8) {
 };
 
 const Rect = struct { x: u8, y: u8, w: u8, h: u8 };
-const Vec = struct { x: u8, y: u8 };
+pub const Vec = struct { x: u8, y: u8 };
 
 const WIDTH = 80;
 const HEIGHT = 50;
 const NUM_ROOMS = 20;
 const TILE_SIZE: gfx.Vector = .init(32, 32);
 const TILE_PER_ROW = 16;
-const SCALE = 0.2;
 
+pub var size = gfx.Vector.init(WIDTH, HEIGHT).mul(TILE_SIZE);
 var tiles: [WIDTH * HEIGHT]Tile = undefined;
 var vertexBuffer: [tiles.len]camera.Vertex = undefined;
 var texture: gfx.Texture = undefined;
@@ -44,30 +44,29 @@ pub fn init() void {
 
 fn initVertexBuffer() void {
     var array: std.ArrayList(camera.Vertex) = .initBuffer(&vertexBuffer);
-    for (tiles, 0..) |tileIndex, index| {
-        const tile: u8 = @intFromEnum(tileIndex);
-        array.appendAssumeCapacity(buildVertex(tile, index));
+    for (tiles, 0..) |tile, index| {
+        const tex = getTextureFromTile(tile);
+        const pos = getPositionFromIndex(index);
+        array.appendAssumeCapacity(.{
+            .position = pos.toVector3(0),
+            .size = TILE_SIZE,
+            .texture = tex.area.toVector4(),
+        });
     }
 }
 
-fn buildVertex(tileIndex: usize, index: usize) camera.Vertex {
-    const row: f32 = @floatFromInt(tileIndex / TILE_PER_ROW);
-    const col: f32 = @floatFromInt(tileIndex % TILE_PER_ROW);
-
+pub fn getTextureFromTile(tile: Tile) gfx.Texture {
+    const index: usize = @intFromEnum(tile);
+    const row: f32 = @floatFromInt(index / TILE_PER_ROW);
+    const col: f32 = @floatFromInt(index % TILE_PER_ROW);
     const pos = gfx.Vector.init(col, row).mul(TILE_SIZE);
-
-    const tile = texture.subTexture(.init(pos, TILE_SIZE));
-    return camera.Vertex{
-        .position = getPositionFromIndex(index).toVector3(0),
-        .size = TILE_SIZE.scale(SCALE),
-        .texture = tile.area.toVector4(),
-    };
+    return texture.subTexture(.init(pos, TILE_SIZE));
 }
 
 fn getPositionFromIndex(index: usize) gfx.Vector {
     const row: f32 = @floatFromInt(index / WIDTH);
     const col: f32 = @floatFromInt(index % WIDTH);
-    return gfx.Vector.init(col, row).mul(TILE_SIZE.scale(SCALE));
+    return gfx.Vector.init(col, row).mul(TILE_SIZE);
 }
 
 fn buildRooms() void {
@@ -148,9 +147,17 @@ pub fn indexTile(x: usize, y: usize) Tile {
     return tiles[indexUsize(x, y)];
 }
 
-pub fn canEnter(player: zhu.math.Vector2) bool {
+pub fn canEnter(player: Vec) bool {
     return player.x < WIDTH and player.y < HEIGHT //
     and indexTile(player.x, player.y) == .floor;
+}
+
+pub fn playerStartPosition() Vec {
+    return center(rooms[0]);
+}
+
+pub fn playerWorldPosition(pos: Vec) gfx.Vector {
+    return getPositionFromIndex(indexUsize(pos.x, pos.y));
 }
 
 pub fn draw() void {
