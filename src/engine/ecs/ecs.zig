@@ -189,22 +189,22 @@ pub const Registry = struct {
         self.entities.destroy(entity);
     }
 
-    pub fn addIdentity(self: *Registry, e: Entity, comptime T: type) void {
+    pub fn addIdentity(self: *Registry, e: Entity, T: type) void {
         std.debug.assert(@sizeOf(T) == 0);
-        const id = comptime hashTypeId(T);
+        const id = hashTypeId(T);
         self.identityMap.put(self.allocator, id, e.index) catch oom();
     }
 
-    pub fn getIdentity(self: *Registry, comptime T: type) ?Entity {
-        const index = self.identityMap.get(comptime hashTypeId(T));
+    pub fn getIdentity(self: *Registry, T: type) ?Entity {
+        const index = self.identityMap.get(hashTypeId(T));
         return self.entities.getEntity(index orelse return null);
     }
 
-    pub fn removeIdentity(self: *Registry, comptime T: type) void {
-        _ = self.identityMap.remove(comptime hashTypeId(T));
+    pub fn removeIdentity(self: *Registry, T: type) void {
+        _ = self.identityMap.remove(hashTypeId(T));
     }
 
-    pub fn remove(self: *Registry, entity: Entity, comptime T: type) void {
+    pub fn remove(self: *Registry, entity: Entity, T: type) void {
         std.debug.assert(self.valid(entity));
         self.assure(T).remove(entity.index);
     }
@@ -219,10 +219,11 @@ pub const Registry = struct {
         }
     }
 
-    fn assure(self: *Registry, comptime T: type) *SparseSet(T) {
-        const id = comptime hashTypeId(T);
+    fn assure(self: *Registry, T: type) *SparseSet(T) {
+        const id = hashTypeId(T);
 
-        const result = self.componentMap.getOrPut(self.allocator, id) catch oom();
+        const result = self.componentMap
+            .getOrPut(self.allocator, id) catch oom();
         if (!result.found_existing) {
             const value = SparseSet(T).init(self.allocator);
             result.value_ptr.* = std.mem.toBytes(value catch oom());
@@ -236,37 +237,41 @@ pub const Registry = struct {
         set.add(self.allocator, entity.index, value) catch oom();
     }
 
-    pub fn addTyped(self: *Registry, comptime T: type, e: Entity, v: T) void {
-        self.add(e, v);
+    pub fn addTyped(self: *Registry, T: type, entity: Entity, v: T) void {
+        self.add(entity, v);
     }
 
-    pub fn has(self: *Registry, entity: Entity, comptime T: type) bool {
+    pub fn has(self: *Registry, entity: Entity, T: type) bool {
         std.debug.assert(self.validEntity(entity));
         return self.assure(T).has(entity.index);
     }
 
-    pub fn raw(self: *Registry, comptime T: type) []T {
+    pub fn raw(self: *Registry, T: type) []T {
         return self.assure(T).raw();
     }
 
-    pub fn get(self: *Registry, entity: Entity, comptime T: type) ?T {
+    pub fn get(self: *Registry, entity: Entity, T: type) ?T {
         return (self.getPtr(entity, T) orelse return null).*;
     }
 
-    pub fn getPtr(self: *Registry, entity: Entity, comptime T: type) ?*T {
+    pub fn getPtr(self: *Registry, entity: Entity, T: type) ?*T {
         std.debug.assert(self.validEntity(entity));
         return self.assure(T).tryGet(entity.index);
     }
 
+    pub fn view(self: *Registry, includes: anytype) View(includes, .{}) {
+        return self.viewExcludes(includes, .{});
+    }
+
     // zig fmt: off
-    pub fn view(self: *Registry, comptime includes: anytype,
-        comptime excludes: anytype) View(includes, excludes) {
+    pub fn viewExcludes(self: *Registry,  includes: anytype,
+        excludes: anytype) View(includes, excludes) {
     // zig fmt: on
         return View(includes, excludes).init(self);
     }
 };
 
-pub fn View(comptime includes: anytype, comptime excludes: anytype) type {
+pub fn View(includes: anytype, excludes: anytype) type {
     return struct {
         r: *Registry,
         slice: []Entity.Index = &.{},
@@ -292,16 +297,16 @@ pub fn View(comptime includes: anytype, comptime excludes: anytype) type {
             return self.r.entities.getEntity(e);
         }
 
-        pub fn get(self: *@This(), e: Entity, comptime T: type) T {
-            return self.getPtr(e, T).*;
+        pub fn get(self: *@This(), entity: Entity, T: type) T {
+            return self.getPtr(entity, T).*;
         }
 
-        pub fn getPtr(self: *@This(), e: Entity, comptime T: type) *T {
-            return self.r.assure(T).get(e.index);
+        pub fn getPtr(self: *@This(), entity: Entity, T: type) *T {
+            return self.r.assure(T).get(entity.index);
         }
 
-        pub fn has(self: *@This(), e: Entity, comptime T: type) bool {
-            return self.r.assure(T).has(e.index);
+        pub fn has(self: *@This(), entity: Entity, T: type) bool {
+            return self.r.assure(T).has(entity.index);
         }
     };
 }
@@ -309,7 +314,7 @@ pub fn View(comptime includes: anytype, comptime excludes: anytype) type {
 fn oom() noreturn {
     @panic("oom");
 }
-fn hashTypeId(comptime T: type) TypeId {
+fn hashTypeId(T: type) TypeId {
     return comptime std.hash.Fnv1a_64.hash(@typeName(T));
 }
 
