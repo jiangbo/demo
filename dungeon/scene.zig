@@ -10,7 +10,7 @@ const player = @import("player.zig");
 
 var isHelp: bool = false;
 var isDebug: bool = false;
-const scale = 1;
+const scale = 0.5;
 
 pub fn init() void {
     window.initFont(.{
@@ -37,7 +37,11 @@ pub fn update(delta: f32) void {
         return window.toggleFullScreen();
     }
 
-    if (window.isKeyRelease(.Z)) camera.position = .zero;
+    const speed: f32 = std.math.round(100 * delta) / scale;
+    if (window.isKeyDown(.UP)) camera.position.y -= 1 * speed;
+    if (window.isKeyDown(.DOWN)) camera.position.y += 1 * speed;
+    if (window.isKeyDown(.LEFT)) camera.position.x -= 1 * speed;
+    if (window.isKeyDown(.RIGHT)) camera.position.x += 1 * speed;
 
     player.update(delta);
 

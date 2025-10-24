@@ -19,9 +19,10 @@ pub fn init() void {
 
 pub fn computePosition() void {
     position = map.playerWorldPosition(tilePosition);
+    const scaleSize = window.logicSize.div(camera.scale);
 
-    const half = window.logicSize.scale(0.5);
-    const max = map.size.sub(window.logicSize);
+    const half = scaleSize.scale(0.5);
+    const max = map.size.sub(scaleSize).max(.zero);
     camera.position = position.sub(half).clamp(.zero, max);
 }
 
