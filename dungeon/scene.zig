@@ -43,10 +43,10 @@ pub fn update(delta: f32) void {
     }
 
     const speed: f32 = std.math.round(100 * delta) / scale;
-    if (window.isKeyDown(.UP)) camera.position.y -= 1 * speed;
-    if (window.isKeyDown(.DOWN)) camera.position.y += 1 * speed;
-    if (window.isKeyDown(.LEFT)) camera.position.x -= 1 * speed;
-    if (window.isKeyDown(.RIGHT)) camera.position.x += 1 * speed;
+    if (window.isKeyDown(.UP)) camera.position.y -= speed;
+    if (window.isKeyDown(.DOWN)) camera.position.y += speed;
+    if (window.isKeyDown(.LEFT)) camera.position.x -= speed;
+    if (window.isKeyDown(.RIGHT)) camera.position.x += speed;
 
     player.update(delta);
 
