@@ -290,9 +290,14 @@ pub fn View(includes: anytype, excludes: anytype) type {
             if (self.index >= self.slice.len) return null;
 
             const e = self.slice[self.index];
+
+            inline for (includes) |T| {
+                if (!self.r.assure(T).has(e)) return null;
+            }
             inline for (excludes) |T| {
                 if (self.r.assure(T).has(e)) return null;
             }
+
             self.index += 1;
             return self.r.entities.getEntity(e);
         }
