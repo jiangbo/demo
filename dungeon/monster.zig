@@ -12,7 +12,7 @@ pub fn init() void {
         const center = map.center(room);
         ecs.w.add(enemy, map.worldPosition(center));
 
-        const enemyTile = switch (zhu.randomIntMost(u8, 0, 3)) {
+        const enemyTile = switch (zhu.randomInt(u8, 0, 4)) {
             0 => map.Tile.ettin,
             1 => map.Tile.ogre,
             2 => map.Tile.orc,

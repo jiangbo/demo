@@ -10,8 +10,8 @@ const map = @import("map.zig");
 const player = @import("player.zig");
 const monster = @import("monster.zig");
 
-var isHelp: bool = false;
-var isDebug: bool = false;
+var isHelp = false;
+var isDebug = false;
 const scale = 1;
 
 pub fn init() void {
