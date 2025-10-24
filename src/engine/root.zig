@@ -4,6 +4,7 @@ pub const gfx = @import("graphics.zig");
 pub const camera = @import("camera.zig");
 pub const math = @import("math.zig");
 pub const input = @import("input.zig");
+pub const ecs = @import("ecs/ecs.zig");
 
 const std = @import("std");
 

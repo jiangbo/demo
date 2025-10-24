@@ -4,15 +4,18 @@ const zhu = @import("zhu");
 const window = zhu.window;
 const gfx = zhu.gfx;
 const camera = zhu.camera;
+const ecs = zhu.ecs;
 
 const map = @import("map.zig");
 const player = @import("player.zig");
 
 var isHelp: bool = false;
 var isDebug: bool = false;
-const scale = 0.5;
+const scale = 1;
 
 pub fn init() void {
+    ecs.init(window.allocator);
+
     window.initFont(.{
         .font = @import("zon/font.zon"),
         .texture = gfx.loadTexture("assets/font.png", .init(960, 960)),
@@ -54,7 +57,8 @@ pub fn draw() void {
 
     sceneCall("draw", .{});
     map.draw();
-    player.draw();
+    ecs.s.render(ecs.w);
+
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
 
@@ -126,6 +130,7 @@ fn drawDebugInfo() void {
 
 pub fn deinit() void {
     sceneCall("deinit", .{});
+    ecs.deinit();
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {
