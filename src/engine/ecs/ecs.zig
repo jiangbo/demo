@@ -220,10 +220,9 @@ pub const Registry = struct {
     }
 
     fn assure(self: *Registry, T: type) *SparseSet(T) {
-        const id = hashTypeId(T);
-
         const result = self.componentMap
-            .getOrPut(self.allocator, id) catch oom();
+            .getOrPut(self.allocator, hashTypeId(T)) catch oom();
+
         if (!result.found_existing) {
             const value = SparseSet(T).init(self.allocator);
             result.value_ptr.* = std.mem.toBytes(value catch oom());
