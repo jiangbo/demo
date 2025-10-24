@@ -42,6 +42,10 @@ const Entities = struct {
         unreachable;
     }
 
+    pub fn reserve(self: *Entities, gpa: Allocator, count: usize) !void {
+        try self.versions.appendNTimes(gpa, alive, count);
+    }
+
     pub fn destroy(self: *Entities, entity: Entity) void {
         if (!self.isAlive(entity)) return;
         self.versions.items[entity.index] += 1;
@@ -177,6 +181,10 @@ pub const Registry = struct {
 
     pub fn createEntity(self: *Registry) Entity {
         return self.entities.create(self.allocator) catch oom();
+    }
+
+    pub fn reserveEntity(self: *Registry, count: usize) Entity {
+        return self.entities.reserve(self.allocator, count) catch oom();
     }
 
     pub fn validEntity(self: *const Registry, entity: Entity) bool {

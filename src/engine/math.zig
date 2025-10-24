@@ -313,6 +313,14 @@ pub fn randU8(min: u8, max: u8) u8 {
     return random().intRangeAtMostBiased(u8, min, max);
 }
 
+pub fn randomInt(T: type, min: T, max: T) T {
+    return random().intRangeLessThanBiased(T, min, max);
+}
+
+pub fn randomIntMost(T: type, min: T, max: T) T {
+    return random().intRangeAtMostBiased(T, min, max);
+}
+
 pub fn randEnum(comptime EnumType: type) EnumType {
     return random().enumValue(EnumType);
 }

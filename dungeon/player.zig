@@ -21,7 +21,7 @@ pub fn init() void {
 }
 
 pub fn computePosition() void {
-    const position = map.playerWorldPosition(tilePosition);
+    const position = map.worldPosition(tilePosition);
     ecs.w.add(entity, position);
 
     const scaleSize = window.logicSize.div(camera.scale);

@@ -4,7 +4,7 @@ const zhu = @import("zhu");
 const gfx = zhu.gfx;
 const camera = zhu.camera;
 
-const Tile = enum(u8) {
+pub const Tile = enum(u8) {
     other = 0,
     wall = 35,
     floor = 46,
@@ -29,7 +29,7 @@ pub var size = gfx.Vector.init(WIDTH, HEIGHT).mul(TILE_SIZE);
 var tiles: [WIDTH * HEIGHT]Tile = undefined;
 var vertexBuffer: [tiles.len]camera.Vertex = undefined;
 var texture: gfx.Texture = undefined;
-var rooms: [NUM_ROOMS]Rect = undefined;
+pub var rooms: [NUM_ROOMS]Rect = undefined;
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/dungeonfont.png", .init(512, 512));
@@ -74,10 +74,10 @@ fn buildRooms() void {
         var room: Rect = undefined;
         label: {
             room = Rect{
-                .x = zhu.randU8(1, WIDTH - 9),
-                .y = zhu.randU8(1, HEIGHT - 9),
-                .w = zhu.randU8(2, 9),
-                .h = zhu.randU8(2, 9),
+                .x = zhu.randomInt(u8, 1, WIDTH - 10),
+                .y = zhu.randomInt(u8, 1, HEIGHT - 10),
+                .w = zhu.randomInt(u8, 2, 10),
+                .h = zhu.randomInt(u8, 2, 10),
             };
 
             for (0..roomIndex) |idx| {
@@ -99,7 +99,7 @@ fn intersect(r1: Rect, r2: Rect) bool {
         r1.y < r2.y + r2.h and r1.y + r1.h > r2.y;
 }
 
-fn center(r: Rect) Vec {
+pub fn center(r: Rect) Vec {
     return Vec{ .x = r.x + r.w / 2, .y = r.y + r.h / 2 };
 }
 
@@ -156,7 +156,7 @@ pub fn playerStartPosition() Vec {
     return center(rooms[0]);
 }
 
-pub fn playerWorldPosition(pos: Vec) gfx.Vector {
+pub fn worldPosition(pos: Vec) gfx.Vector {
     return getPositionFromIndex(indexUsize(pos.x, pos.y));
 }
 

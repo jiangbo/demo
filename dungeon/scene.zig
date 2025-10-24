@@ -8,6 +8,7 @@ const ecs = zhu.ecs;
 
 const map = @import("map.zig");
 const player = @import("player.zig");
+const monster = @import("monster.zig");
 
 var isHelp: bool = false;
 var isDebug: bool = false;
@@ -27,6 +28,7 @@ pub fn init() void {
 
     map.init();
     player.init();
+    monster.init();
 
     sceneCall("enter", .{});
 }
