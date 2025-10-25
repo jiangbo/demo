@@ -164,10 +164,8 @@ pub const Registry = struct {
         self.entities.deinit(self.allocator);
         self.identityMap.deinit(self.allocator);
 
-        var contextIterator = self.contextMap.valueIterator();
-        while (contextIterator.next()) |value| {
-            self.allocator.free(value.*);
-        }
+        var it = self.contextMap.valueIterator();
+        while (it.next()) |value| self.allocator.free(value.*);
         self.contextMap.deinit(self.allocator);
 
         var iterator = self.componentMap.valueIterator();
