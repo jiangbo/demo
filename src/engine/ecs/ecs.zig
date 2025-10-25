@@ -68,9 +68,7 @@ const Entities = struct {
 pub fn SparseSet(Component: type) type {
     return struct {
         const isEmpty = @sizeOf(Component) == 0;
-        const Dummy = struct { _: u1 = 0 };
-
-        const T = if (isEmpty) Dummy else Component;
+        const T = if (isEmpty) struct { _: u8 = 0 } else Component;
 
         const Self = @This();
         const Index = Entity.Index;
@@ -150,11 +148,6 @@ pub fn SparseSet(Component: type) type {
 
         pub fn clear(self: *Self) void {
             self.dense.clearRetainingCapacity();
-        }
-
-        pub fn dummyValueIfNeed(_: *const Self, v: anytype) //
-        if (isEmpty) Dummy else @TypeOf(v) {
-            return if (isEmpty) Dummy{} else v;
         }
     };
 }
@@ -275,12 +268,13 @@ pub const Registry = struct {
         std.debug.assert(self.validEntity(entity));
 
         var set = self.assure(@TypeOf(value));
-        const dummyValue = set.dummyValueIfNeed(value);
+        const isEmpty = @sizeOf(@TypeOf(value)) == 0;
+        const dummy = if (isEmpty) undefined else value;
         if (set.tryGet(entity.index)) |ptr| {
-            ptr.* = dummyValue;
+            ptr.* = dummy;
             return;
         }
-        set.add(self.allocator, entity.index, dummyValue) catch oom();
+        set.add(self.allocator, entity.index, dummy) catch oom();
     }
 
     pub fn addTyped(self: *Registry, T: type, entity: Entity, v: T) void {

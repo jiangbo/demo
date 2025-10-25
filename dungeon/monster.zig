@@ -41,8 +41,7 @@ pub fn move() void {
             0 => pos.x += 1,
             1 => pos.y += 1,
             2 => pos.x -= 1,
-            3 => pos.y -= 1,
-            else => unreachable,
+            else => pos.y -= 1,
         }
 
         if (map.canEnter(pos)) {

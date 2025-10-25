@@ -47,5 +47,8 @@ pub fn update(_: f32) void {
         tilePosition = tilePos;
         computePosition();
         ecs.w.addContext(battle.TurnState.player);
+    } else if (window.isKeyRelease(.SPACE)) {
+        // 空格跳过当前回合
+        ecs.w.addContext(battle.TurnState.player);
     }
 }
