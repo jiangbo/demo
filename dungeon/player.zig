@@ -8,7 +8,7 @@ const ecs = zhu.ecs;
 
 const map = @import("map.zig");
 
-var tilePosition: map.Vec = undefined;
+pub var tilePosition: map.Vec = undefined;
 var entity: ecs.Entity = undefined;
 
 pub fn init() void {

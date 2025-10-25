@@ -42,10 +42,6 @@ const Entities = struct {
         unreachable;
     }
 
-    pub fn reserve(self: *Entities, gpa: Allocator, count: usize) !void {
-        try self.versions.appendNTimes(gpa, alive, count);
-    }
-
     pub fn destroy(self: *Entities, entity: Entity) void {
         if (!self.isAlive(entity)) return;
         self.versions.items[entity.index] += 1;
@@ -183,8 +179,8 @@ pub const Registry = struct {
         return self.entities.create(self.allocator) catch oom();
     }
 
-    pub fn reserveEntity(self: *Registry, count: usize) Entity {
-        return self.entities.reserve(self.allocator, count) catch oom();
+    pub fn getEntity(self: *const Registry, index: Entity.Index) ?Entity {
+        return self.entities.getEntity(index);
     }
 
     pub fn validEntity(self: *const Registry, entity: Entity) bool {
@@ -218,7 +214,7 @@ pub const Registry = struct {
     }
 
     pub fn removeAll(self: *Registry, entity: Entity) void {
-        std.debug.assert(self.valid(entity));
+        std.debug.assert(self.validEntity(entity));
 
         var iterator = self.componentMap.valueIterator();
         while (iterator.next()) |value| {
@@ -240,7 +236,12 @@ pub const Registry = struct {
 
     pub fn add(self: *Registry, entity: Entity, value: anytype) void {
         std.debug.assert(self.validEntity(entity));
+
         var set = self.assure(@TypeOf(value));
+        if (set.tryGet(entity.index)) |ptr| {
+            ptr.* = value;
+            return;
+        }
         set.add(self.allocator, entity.index, value) catch oom();
     }
 
@@ -255,6 +256,10 @@ pub const Registry = struct {
 
     pub fn raw(self: *Registry, T: type) []T {
         return self.assure(T).raw();
+    }
+
+    pub fn data(self: *Registry, T: type) []Entity.Index {
+        return self.assure(T).dense.items;
     }
 
     pub fn get(self: *Registry, entity: Entity, T: type) ?T {

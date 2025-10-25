@@ -49,6 +49,7 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.RIGHT)) camera.position.x += speed;
 
     player.update(delta);
+    monster.checkCollision(player.tilePosition);
 
     sceneCall("update", .{delta});
 }
