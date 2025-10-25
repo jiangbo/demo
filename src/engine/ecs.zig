@@ -150,12 +150,11 @@ pub fn SparseMap(Component: type) type {
 }
 
 const TypeId = u64;
-const ComponentStorage = [@sizeOf(SparseMap(u8))]u8;
 const Map = std.AutoHashMapUnmanaged;
 pub const Registry = struct {
     allocator: Allocator,
     entities: Entities = .empty,
-    componentMap: Map(TypeId, ComponentStorage) = .empty,
+    componentMap: Map(TypeId, [@sizeOf(SparseMap(u8))]u8) = .empty,
 
     identityMap: Map(TypeId, Entity.Index) = .empty,
     contextMap: Map(TypeId, []u8) = .empty,
@@ -221,7 +220,6 @@ pub const Registry = struct {
     }
 
     pub fn addIdentity(self: *Registry, e: Entity, T: type) void {
-        std.debug.assert(@sizeOf(T) == 0);
         const id = hashTypeId(T);
         self.identityMap.put(self.allocator, id, e.index) catch oom();
     }
@@ -231,8 +229,8 @@ pub const Registry = struct {
         return self.entities.getEntity(index orelse return null);
     }
 
-    pub fn removeIdentity(self: *Registry, T: type) void {
-        _ = self.identityMap.remove(hashTypeId(T));
+    pub fn removeIdentity(self: *Registry, T: type) bool {
+        return self.identityMap.remove(hashTypeId(T));
     }
 
     pub fn remove(self: *Registry, entity: Entity, T: type) void {
