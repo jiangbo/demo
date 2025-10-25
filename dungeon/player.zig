@@ -7,6 +7,7 @@ const camera = zhu.camera;
 const ecs = zhu.ecs;
 
 const map = @import("map.zig");
+const battle = @import("battle.zig");
 
 pub var tilePosition: map.Vec = undefined;
 var entity: ecs.Entity = undefined;
@@ -18,6 +19,8 @@ pub fn init() void {
     computePosition();
 
     ecs.w.add(entity, map.getTextureFromTile(.player));
+
+    ecs.w.addContext(battle.TurnState.wait);
 }
 
 pub fn computePosition() void {
@@ -43,5 +46,6 @@ pub fn update(_: f32) void {
     if (moved and map.canEnter(tilePos)) {
         tilePosition = tilePos;
         computePosition();
+        ecs.w.addContext(battle.TurnState.player);
     }
 }

@@ -65,8 +65,13 @@ const Entities = struct {
     }
 };
 
-pub fn SparseSet(T: type) type {
+pub fn SparseSet(Component: type) type {
     return struct {
+        const isEmpty = @sizeOf(Component) == 0;
+        const Dummy = struct { _: u1 = 0 };
+
+        const T = if (isEmpty) Dummy else Component;
+
         const Self = @This();
         const Index = Entity.Index;
         const initCapacity = @max(1, std.atomic.cache_line / @sizeOf(T));
@@ -146,6 +151,11 @@ pub fn SparseSet(T: type) type {
         pub fn clear(self: *Self) void {
             self.dense.clearRetainingCapacity();
         }
+
+        pub fn dummyValueIfNeed(_: *const Self, v: anytype) //
+        if (isEmpty) Dummy else @TypeOf(v) {
+            return if (isEmpty) Dummy{} else v;
+        }
     };
 }
 
@@ -158,6 +168,7 @@ pub const Registry = struct {
     componentMap: Map(TypeId, ComponentStorage) = .empty,
 
     identityMap: Map(TypeId, Entity.Index) = .empty,
+    contextMap: Map(TypeId, []u8) = .empty,
 
     pub fn init(allocator: std.mem.Allocator) Registry {
         return .{ .allocator = allocator };
@@ -166,6 +177,12 @@ pub const Registry = struct {
     pub fn deinit(self: *Registry) void {
         self.entities.deinit(self.allocator);
         self.identityMap.deinit(self.allocator);
+
+        var contextIterator = self.contextMap.valueIterator();
+        while (contextIterator.next()) |value| {
+            self.allocator.free(value.*);
+        }
+        self.contextMap.deinit(self.allocator);
 
         var iterator = self.componentMap.valueIterator();
         while (iterator.next()) |value| {
@@ -191,6 +208,26 @@ pub const Registry = struct {
         std.debug.assert(self.validEntity(entity));
         self.removeAll(entity);
         self.entities.destroy(entity);
+    }
+
+    pub fn addContext(self: *Registry, value: anytype) void {
+        const id = hashTypeId(@TypeOf(value));
+        const v = self.contextMap.getOrPut(self.allocator, id) catch oom();
+        if (!v.found_existing) {
+            const size = @sizeOf(@TypeOf(value));
+            v.value_ptr.* = self.allocator.alloc(u8, size) catch oom();
+        }
+        @memcpy(v.value_ptr.*, std.mem.asBytes(&value));
+    }
+
+    pub fn getContext(self: *Registry, T: type) ?*T {
+        const ptr = self.contextMap.get(hashTypeId(T));
+        return @ptrCast(ptr orelse return null);
+    }
+
+    pub fn removeContext(self: *Registry, T: type) void {
+        const removed = self.contextMap.fetchRemove(hashTypeId(T));
+        if (removed) |entry| self.allocator.free(entry.value);
     }
 
     pub fn addIdentity(self: *Registry, e: Entity, T: type) void {
@@ -238,11 +275,12 @@ pub const Registry = struct {
         std.debug.assert(self.validEntity(entity));
 
         var set = self.assure(@TypeOf(value));
+        const dummyValue = set.dummyValueIfNeed(value);
         if (set.tryGet(entity.index)) |ptr| {
-            ptr.* = value;
+            ptr.* = dummyValue;
             return;
         }
-        set.add(self.allocator, entity.index, value) catch oom();
+        set.add(self.allocator, entity.index, dummyValue) catch oom();
     }
 
     pub fn addTyped(self: *Registry, T: type, entity: Entity, v: T) void {

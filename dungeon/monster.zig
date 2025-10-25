@@ -2,8 +2,12 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const ecs = zhu.ecs;
+const gfx = zhu.gfx;
 
 const map = @import("map.zig");
+const battle = @import("battle.zig");
+
+const MovingRandomly = struct {};
 
 pub fn init() void {
     for (map.rooms[1..]) |room| {
@@ -21,6 +25,30 @@ pub fn init() void {
         };
 
         ecs.w.add(enemy, map.getTextureFromTile(enemyTile));
+        ecs.w.add(enemy, MovingRandomly{});
+    }
+}
+
+pub fn move() void {
+    if (ecs.w.getContext(battle.TurnState).?.* != .player) return;
+
+    ecs.w.addContext(battle.TurnState.monster);
+    var view = ecs.w.view(.{ MovingRandomly, map.Vec });
+    while (view.next()) |entity| {
+        const ptr = view.getPtr(entity, map.Vec);
+        var pos = ptr.*;
+        switch (zhu.randomIntMost(u8, 0, 3)) {
+            0 => pos.x += 1,
+            1 => pos.y += 1,
+            2 => pos.x -= 1,
+            3 => pos.y -= 1,
+            else => unreachable,
+        }
+
+        if (map.canEnter(pos)) {
+            ptr.* = pos;
+            ecs.w.add(entity, map.worldPosition(pos));
+        }
     }
 }
 

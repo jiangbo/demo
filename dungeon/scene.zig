@@ -50,6 +50,8 @@ pub fn update(delta: f32) void {
 
     player.update(delta);
     monster.checkCollision(player.tilePosition);
+    monster.move();
+    monster.checkCollision(player.tilePosition);
 
     sceneCall("update", .{delta});
 }
