@@ -12,9 +12,8 @@ pub const Entity = struct {
 
 const Entities = struct {
     versions: std.ArrayList(Entity.Version) = .empty,
-    deletedCount: usize = 0,
+    deletedCount: Entity.Index = 0,
 
-    pub const empty: Entities = .{};
     const alive = 1;
 
     pub fn deinit(self: *Entities, gpa: Allocator) void {
@@ -28,14 +27,13 @@ const Entities = struct {
             return .{ .index = idx, .version = alive };
         }
 
-        for (self.versions.items, 0..) |*version, i| {
-            if (version.* & alive == 0) {
-                version.* += 1;
+        for (self.versions.items, 0..) |version, i| {
+            if (version & alive == 0) {
+                self.versions.items[i] += 1;
                 self.deletedCount -= 1;
-                return .{ .index = @intCast(i), .version = version.* };
+                return .{ .index = @intCast(i), .version = version };
             }
         }
-
         unreachable;
     }
 
@@ -85,9 +83,9 @@ pub fn SparseMap(Component: type) type {
         }
 
         pub fn deinit(self: *Self, gpa: Allocator) void {
-            const u8Ptr: [*]u8 = @ptrCast(@alignCast(self.valuePtr));
-            const u8Slice = u8Ptr[0 .. self.dense.capacity * self.valueSize];
-            gpa.rawFree(u8Slice, self.alignment, @returnAddress());
+            const size = self.dense.capacity * self.valueSize;
+            const slice = self.valuePtr[0..size];
+            gpa.rawFree(slice, self.alignment, @returnAddress());
             self.dense.deinit(gpa);
             self.sparse.deinit(gpa);
         }
@@ -125,7 +123,7 @@ pub fn SparseMap(Component: type) type {
             return index < items.len and items[index] == entity;
         }
 
-        pub fn raw(self: *const Self) []T {
+        pub fn values(self: *const Self) []T {
             return self.valuePtr[0..self.dense.items.len];
         }
 
@@ -136,10 +134,9 @@ pub fn SparseMap(Component: type) type {
             const index = self.sparse.items[entity];
 
             _ = self.dense.swapRemove(index);
-            const u8Ptr: [*]u8 = @ptrCast(@alignCast(self.valuePtr));
             const size = self.valueSize;
-            const u8Slice = u8Ptr[size * index ..][0..size];
-            @memmove(u8Slice, u8Ptr[size * last ..][0..size]);
+            const src = self.valuePtr[size * last ..][0..size];
+            @memmove(self.valuePtr[size * index ..][0..size], src);
             self.sparse.items[last] = index;
         }
 
@@ -153,7 +150,7 @@ const TypeId = u64;
 const Map = std.AutoHashMapUnmanaged;
 pub const Registry = struct {
     allocator: Allocator,
-    entities: Entities = .empty,
+    entities: Entities = .{},
     componentMap: Map(TypeId, [@sizeOf(SparseMap(u8))]u8) = .empty,
 
     identityMap: Map(TypeId, Entity.Index) = .empty,
@@ -265,15 +262,12 @@ pub const Registry = struct {
         var map = self.assure(@TypeOf(value));
         const isEmpty = @sizeOf(@TypeOf(value)) == 0;
         const dummy = if (isEmpty) undefined else value;
-        if (map.tryGet(entity.index)) |ptr| {
-            ptr.* = dummy;
-            return;
-        }
+        if (map.tryGet(entity.index)) |ptr| ptr.* = dummy else //
         map.add(self.allocator, entity.index, dummy) catch oom();
     }
 
-    pub fn addTyped(self: *Registry, T: type, entity: Entity, v: T) void {
-        self.add(entity, v);
+    pub fn addTyped(self: *Registry, T: type, e: Entity, v: T) void {
+        self.add(e, v);
     }
 
     pub fn has(self: *Registry, entity: Entity, T: type) bool {
@@ -282,7 +276,7 @@ pub const Registry = struct {
     }
 
     pub fn raw(self: *Registry, T: type) []T {
-        return self.assure(T).raw();
+        return self.assure(T).values();
     }
 
     pub fn data(self: *Registry, T: type) []Entity.Index {
@@ -329,7 +323,6 @@ pub fn View(includes: anytype, excludes: anytype) type {
             if (self.index >= self.slice.len) return null;
 
             const e = self.slice[self.index];
-
             inline for (includes) |T| {
                 if (!self.r.assure(T).has(e)) return null;
             }
