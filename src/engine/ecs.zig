@@ -1,8 +1,5 @@
 const std = @import("std");
 
-pub const c = @import("component.zig");
-pub const s = @import("system.zig");
-
 const Allocator = std.mem.Allocator;
 
 pub const Entity = struct {
@@ -65,7 +62,7 @@ const Entities = struct {
     }
 };
 
-pub fn SparseSet(Component: type) type {
+pub fn SparseMap(Component: type) type {
     return struct {
         const isEmpty = @sizeOf(Component) == 0;
         const T = if (isEmpty) struct { _: u8 = 0 } else Component;
@@ -153,7 +150,7 @@ pub fn SparseSet(Component: type) type {
 }
 
 const TypeId = u64;
-const ComponentStorage = [@sizeOf(SparseSet(u8))]u8;
+const ComponentStorage = [@sizeOf(SparseMap(u8))]u8;
 const Map = std.AutoHashMapUnmanaged;
 pub const Registry = struct {
     allocator: Allocator,
@@ -179,8 +176,8 @@ pub const Registry = struct {
 
         var iterator = self.componentMap.valueIterator();
         while (iterator.next()) |value| {
-            var set: *SparseSet(u8) = @ptrCast(@alignCast(value));
-            set.deinit(self.allocator);
+            var map: *SparseMap(u8) = @ptrCast(@alignCast(value));
+            map.deinit(self.allocator);
         }
         self.componentMap.deinit(self.allocator);
     }
@@ -239,7 +236,7 @@ pub const Registry = struct {
     }
 
     pub fn remove(self: *Registry, entity: Entity, T: type) void {
-        std.debug.assert(self.valid(entity));
+        std.debug.assert(self.validEntity(entity));
         self.assure(T).remove(entity.index);
     }
 
@@ -248,17 +245,17 @@ pub const Registry = struct {
 
         var iterator = self.componentMap.valueIterator();
         while (iterator.next()) |value| {
-            var set: *SparseSet(u8) = @ptrCast(@alignCast(value));
-            set.remove(entity.index);
+            var map: *SparseMap(u8) = @ptrCast(@alignCast(value));
+            map.remove(entity.index);
         }
     }
 
-    fn assure(self: *Registry, T: type) *SparseSet(T) {
+    fn assure(self: *Registry, T: type) *SparseMap(T) {
         const result = self.componentMap
             .getOrPut(self.allocator, hashTypeId(T)) catch oom();
 
         if (!result.found_existing) {
-            const value = SparseSet(T).init(self.allocator);
+            const value = SparseMap(T).init(self.allocator);
             result.value_ptr.* = std.mem.toBytes(value catch oom());
         }
         return @ptrCast(@alignCast(result.value_ptr));
@@ -267,14 +264,14 @@ pub const Registry = struct {
     pub fn add(self: *Registry, entity: Entity, value: anytype) void {
         std.debug.assert(self.validEntity(entity));
 
-        var set = self.assure(@TypeOf(value));
+        var map = self.assure(@TypeOf(value));
         const isEmpty = @sizeOf(@TypeOf(value)) == 0;
         const dummy = if (isEmpty) undefined else value;
-        if (set.tryGet(entity.index)) |ptr| {
+        if (map.tryGet(entity.index)) |ptr| {
             ptr.* = dummy;
             return;
         }
-        set.add(self.allocator, entity.index, dummy) catch oom();
+        map.add(self.allocator, entity.index, dummy) catch oom();
     }
 
     pub fn addTyped(self: *Registry, T: type, entity: Entity, v: T) void {

@@ -62,7 +62,13 @@ pub fn draw() void {
 
     sceneCall("draw", .{});
     map.draw();
-    ecs.s.render(ecs.w);
+
+    var view = ecs.w.view(.{ gfx.Texture, gfx.Vector });
+    while (view.next()) |entity| {
+        const texture = view.get(entity, gfx.Texture);
+        const position = view.get(entity, gfx.Vector);
+        camera.draw(texture, position);
+    }
 
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
