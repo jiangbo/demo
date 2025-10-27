@@ -290,19 +290,26 @@ pub const Registry = struct {
         return self.assure(T).tryGet(entity.index);
     }
 
-    pub fn view(self: *Registry, includes: anytype) View(includes, .{}) {
-        return self.viewExcludes(includes, .{});
+    pub fn view(self: *Registry, types: anytype) View(types, .{}, false) {
+        return self.viewExcludes(types, .{});
     }
 
     // zig fmt: off
     pub fn viewExcludes(self: *Registry,  includes: anytype,
-        excludes: anytype) View(includes, excludes) {
+        excludes: anytype) View(includes, excludes,false) {
     // zig fmt: on
-        return View(includes, excludes).init(self);
+        return View(includes, excludes, false).init(self);
+    }
+
+    // zig fmt: off
+    pub fn reverseView(self: *Registry,  includes: anytype,
+        excludes: anytype) View(includes, excludes,true) {
+    // zig fmt: on
+        return View(includes, excludes, true).init(self);
     }
 };
 
-pub fn View(includes: anytype, excludes: anytype) type {
+pub fn View(includes: anytype, excludes: anytype, reverse: bool) type {
     return struct {
         r: *Registry,
         slice: []Entity.Index = &.{},
@@ -314,11 +321,14 @@ pub fn View(includes: anytype, excludes: anytype) type {
                 const entities = r.assure(T).dense.items;
                 if (entities.len < slice.len) slice = entities;
             }
-            return .{ .r = r, .slice = slice };
+            const index = if (reverse) slice.len else 0;
+            return .{ .r = r, .slice = slice, .index = @intCast(index) };
         }
 
         pub fn next(self: *@This()) ?Entity {
-            if (self.index >= self.slice.len) return null;
+            if (reverse) {
+                if (self.index == 0) return null else self.index -= 1;
+            } else if (self.index >= self.slice.len) return null;
 
             const e = self.slice[self.index];
             inline for (includes) |T| {
@@ -328,7 +338,7 @@ pub fn View(includes: anytype, excludes: anytype) type {
                 if (self.r.assure(T).has(e)) return null;
             }
 
-            self.index += 1;
+            if (!reverse) self.index += 1;
             return self.r.entities.getEntity(e);
         }
 
