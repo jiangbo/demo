@@ -34,7 +34,6 @@ pub fn init() void {
 }
 
 pub fn update(delta: f32) void {
-    window.keepAspectRatio();
     if (window.isKeyRelease(.H)) isHelp = !isHelp;
     if (window.isKeyRelease(.X)) isDebug = !isDebug;
 
@@ -57,9 +56,10 @@ pub fn update(delta: f32) void {
 }
 
 pub fn draw() void {
-    camera.beginDraw();
+    camera.beginDraw(.{});
     defer camera.endDraw();
 
+    window.keepAspectRatio();
     sceneCall("draw", .{});
     map.draw();
 

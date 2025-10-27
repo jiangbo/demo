@@ -46,7 +46,8 @@ pub fn toWindow(worldPosition: Vector) Vector {
     return worldPosition.sub(position);
 }
 
-pub fn beginDraw() void {
+pub fn beginDraw(color: gpu.Color) void {
+    gpu.begin(color);
     startDraw = true;
     totalDrawCount = 0;
     font.beginDraw();
@@ -129,6 +130,7 @@ pub fn flushTextureAndText() void {
 pub fn endDraw() void {
     flushTextureAndText();
     startDraw = false;
+    gpu.end();
 }
 
 pub fn scissor(area: math.Rect) void {

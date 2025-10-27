@@ -212,10 +212,7 @@ export fn windowFrame() void {
     } else frameRateCount += 1;
 
     sk.fetch.dowork();
-    gpu.begin(.{ .a = 1 });
-    // gpu.begin(.{ .r = 1, .b = 1, .a = 1 });
     call(root, "frame", .{delta});
-    gpu.end();
     input.lastKeyState = input.keyState;
     input.lastMouseState = input.mouseState;
     input.anyRelease = false;
