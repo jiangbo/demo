@@ -9,6 +9,7 @@ const ecs = zhu.ecs;
 const map = @import("map.zig");
 const player = @import("player.zig");
 const monster = @import("monster.zig");
+const hud = @import("hud.zig");
 
 var isHelp = false;
 var isDebug = false;
@@ -21,6 +22,7 @@ pub fn init() void {
         .font = @import("zon/font.zon"),
         .texture = gfx.loadTexture("assets/font.png", .init(960, 960)),
     });
+    hud.init();
 
     camera.frameStats(true);
     camera.init(5000);
@@ -81,6 +83,8 @@ pub fn draw() void {
         const position = view.get(entity, gfx.Vector);
         camera.draw(texture, position);
     }
+
+    hud.draw();
 
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
