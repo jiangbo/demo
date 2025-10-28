@@ -28,9 +28,8 @@ pub fn init() void {
 
     map.init();
     player.init();
+    cameraFollow();
     monster.init();
-
-    sceneCall("enter", .{});
 }
 
 pub fn update(delta: f32) void {
@@ -48,11 +47,23 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.RIGHT)) camera.position.x += speed;
 
     player.update(delta);
-    monster.checkCollision(player.tilePosition);
+    const tilePos = ecs.w.get(player.entity, map.Vec).?;
     monster.move();
-    monster.checkCollision(player.tilePosition);
+    monster.checkCollision(tilePos);
+    map.update(delta);
 
+    const playerWantMove = ecs.w.getIdentity(map.WantsToMove);
+    if (playerWantMove) |_| cameraFollow();
     sceneCall("update", .{delta});
+}
+
+pub fn cameraFollow() void {
+    const position = ecs.w.get(player.entity, gfx.Vector).?;
+
+    const scaleSize = window.logicSize.div(camera.scale);
+    const half = scaleSize.scale(0.5);
+    const max = map.size.sub(scaleSize).max(.zero);
+    camera.position = position.sub(half).clamp(.zero, max);
 }
 
 pub fn draw() void {

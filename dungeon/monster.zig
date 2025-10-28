@@ -35,30 +35,25 @@ pub fn move() void {
     ecs.w.addContext(battle.TurnState.monster);
     var view = ecs.w.view(.{ MovingRandomly, map.Vec });
     while (view.next()) |entity| {
-        const ptr = view.getPtr(entity, map.Vec);
-        var pos = ptr.*;
+        var pos = view.get(entity, map.Vec);
         switch (zhu.randomIntMost(u8, 0, 3)) {
             0 => pos.x += 1,
             1 => pos.y += 1,
             2 => pos.x -= 1,
             else => pos.y -= 1,
         }
-
-        if (map.canEnter(pos)) {
-            ptr.* = pos;
-            ecs.w.add(entity, map.worldPosition(pos));
-        }
+        ecs.w.add(entity, map.WantsToMove{ .dest = pos });
     }
 }
 
 pub fn checkCollision(playerPosition: map.Vec) void {
-    for (ecs.w.raw(map.Vec), ecs.w.data(map.Vec)) |enemyPos, index| {
-        if (playerPosition.x == enemyPos.x and
-            playerPosition.y == enemyPos.y)
-        {
-            const entity = ecs.w.getEntity(index).?;
+    var view = ecs.w.view(.{ MovingRandomly, map.Vec });
+    while (view.next()) |entity| {
+        const enemyPos = view.getPtr(entity, map.Vec);
+        if (enemyPos.equals(playerPosition)) {
             ecs.w.destroyEntity(entity);
-            break;
+            ecs.w.addContext(battle.TurnState.player);
+            return;
         }
     }
 }

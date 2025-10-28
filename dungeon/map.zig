@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 const gfx = zhu.gfx;
 const camera = zhu.camera;
+const ecs = zhu.ecs;
 
 pub const Tile = enum(u8) {
     other = 0,
@@ -17,7 +18,13 @@ pub const Tile = enum(u8) {
 };
 
 const Rect = struct { x: u8, y: u8, w: u8, h: u8 };
-pub const Vec = struct { x: u8, y: u8 };
+pub const Vec = struct {
+    x: u8,
+    y: u8,
+    pub fn equals(self: Vec, other: Vec) bool {
+        return self.x == other.x and self.y == other.y;
+    }
+};
 
 const WIDTH = 80;
 const HEIGHT = 50;
@@ -147,17 +154,28 @@ pub fn indexTile(x: usize, y: usize) Tile {
     return tiles[indexUsize(x, y)];
 }
 
-pub fn canEnter(player: Vec) bool {
-    return player.x < WIDTH and player.y < HEIGHT //
-    and indexTile(player.x, player.y) == .floor;
-}
-
-pub fn playerStartPosition() Vec {
-    return center(rooms[0]);
-}
-
 pub fn worldPosition(pos: Vec) gfx.Vector {
     return getPositionFromIndex(indexUsize(pos.x, pos.y));
+}
+
+pub const WantsToMove = struct { dest: Vec };
+
+pub fn update(_: f32) void {
+    moveIfNeed();
+}
+
+fn moveIfNeed() void {
+    var view = ecs.w.view(.{ WantsToMove, Vec });
+    while (view.next()) |entity| {
+        const dest = view.get(entity, WantsToMove).dest;
+        const canMove = dest.x < WIDTH and dest.y < HEIGHT //
+        and indexTile(dest.x, dest.y) == .floor;
+        if (!canMove) continue;
+
+        view.getPtr(entity, Vec).* = dest;
+        const pos = worldPosition(dest);
+        view.getPtr(entity, gfx.Vector).* = pos;
+    }
 }
 
 pub fn draw() void {
