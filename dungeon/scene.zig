@@ -48,6 +48,7 @@ pub fn update(delta: f32) void {
 
     player.update(delta);
     const tilePos = ecs.w.get(player.entity, map.Vec).?;
+    monster.checkCollision(tilePos);
     monster.move();
     monster.checkCollision(tilePos);
     map.update(delta);

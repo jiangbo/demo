@@ -42,7 +42,7 @@ pub fn move() void {
             2 => pos.x -= 1,
             else => pos.y -= 1,
         }
-        ecs.w.add(entity, map.WantsToMove{ .dest = pos });
+        ecs.w.add(entity, map.WantsToMove{pos});
     }
 }
 

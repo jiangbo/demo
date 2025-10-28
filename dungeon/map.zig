@@ -158,7 +158,7 @@ pub fn worldPosition(pos: Vec) gfx.Vector {
     return getPositionFromIndex(indexUsize(pos.x, pos.y));
 }
 
-pub const WantsToMove = struct { dest: Vec };
+pub const WantsToMove = struct { Vec };
 
 pub fn update(_: f32) void {
     moveIfNeed();
@@ -167,7 +167,7 @@ pub fn update(_: f32) void {
 fn moveIfNeed() void {
     var view = ecs.w.view(.{ WantsToMove, Vec });
     while (view.next()) |entity| {
-        const dest = view.get(entity, WantsToMove).dest;
+        const dest = view.get(entity, WantsToMove)[0];
         const canMove = dest.x < WIDTH and dest.y < HEIGHT //
         and indexTile(dest.x, dest.y) == .floor;
         if (!canMove) continue;

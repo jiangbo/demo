@@ -2,7 +2,7 @@
     .name = .demo,
     .version = "0.0.0",
     .fingerprint = 0xd642dfa0c0da2385,
-    .minimum_zig_version = "0.15.2",
+    .minimum_zig_version = "0.15.1",
     .dependencies = .{
         .sokol = .{
             .url = "git+https://github.com/floooh/sokol-zig#bdd5350dd867469b1a8bb77f204b5c52f07ec146",

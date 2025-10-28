@@ -17,6 +17,8 @@ pub fn init() void {
     ecs.w.add(entity, tilePos);
     ecs.w.add(entity, map.getTextureFromTile(.player));
     ecs.w.add(entity, map.worldPosition(tilePos));
+    const health: battle.Health = .{ .max = 20, .current = 20 };
+    ecs.w.add(entity, health);
     ecs.w.addContext(battle.TurnState.wait);
 }
 
@@ -30,7 +32,7 @@ pub fn update(_: f32) void {
 
     _ = ecs.w.removeIdentity(map.WantsToMove);
     if (!tilePosition.equals(tilePos)) {
-        ecs.w.add(entity, map.WantsToMove{ .dest = tilePos });
+        ecs.w.add(entity, map.WantsToMove{tilePos});
         ecs.w.addIdentity(entity, map.WantsToMove);
         ecs.w.addContext(battle.TurnState.player);
     } else if (window.isKeyRelease(.SPACE)) {
