@@ -273,15 +273,6 @@ pub const Registry = struct {
         return self.assure(T).has(entity.index);
     }
 
-    pub fn raw(self: *Registry, T: type) []T {
-        return self.assure(T).values();
-    }
-
-    pub fn entityIndexes(self: *Registry, T: type) //
-    struct { []Entity.Index, View(.{T}, .{}, false) } {
-        return .{ self.assure(T).dense.items, self.view(.{T}) };
-    }
-
     pub fn get(self: *Registry, entity: Entity, T: type) ?T {
         return (self.getPtr(entity, T) orelse return null).*;
     }
@@ -291,6 +282,15 @@ pub const Registry = struct {
         return self.assure(T).tryGet(entity.index);
     }
 
+    pub fn raw(self: *Registry, T: type) []T {
+        return self.assure(T).values();
+    }
+
+    pub fn indexes(self: *Registry, T: type) //
+    struct { []Entity.Index, View(.{T}, .{}, false) } {
+        return .{ self.assure(T).dense.items, self.view(.{T}) };
+    }
+
     pub fn view(self: *Registry, types: anytype) View(types, .{}, false) {
         return self.viewExcludes(types, .{});
     }
@@ -298,11 +298,9 @@ pub const Registry = struct {
     // zig fmt: off
     pub fn viewExcludes(self: *Registry,  includes: anytype,
         excludes: anytype) View(includes, excludes,false) {
-    // zig fmt: on
         return View(includes, excludes, false).init(self);
     }
 
-    // zig fmt: off
     pub fn reverseView(self: *Registry,  includes: anytype,
         excludes: anytype) View(includes, excludes,true) {
     // zig fmt: on
