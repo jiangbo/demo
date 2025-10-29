@@ -42,7 +42,7 @@ pub fn move() void {
             2 => pos.x -= 1,
             else => pos.y -= 1,
         }
-        ecs.w.add(entity, map.WantsToMove{pos});
+        view.add(entity, map.WantsToMove{pos});
     }
 }
 
@@ -51,7 +51,7 @@ pub fn checkCollision(playerPosition: map.Vec) void {
     while (view.next()) |entity| {
         const enemyPos = view.getPtr(entity, map.Vec);
         if (enemyPos.equals(playerPosition)) {
-            ecs.w.destroyEntity(entity);
+            ecs.w.destroyEntity(ecs.w.getEntity(entity).?);
             ecs.w.addContext(battle.TurnState.player);
             return;
         }

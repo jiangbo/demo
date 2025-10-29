@@ -277,8 +277,9 @@ pub const Registry = struct {
         return self.assure(T).values();
     }
 
-    pub fn data(self: *Registry, T: type) []Entity.Index {
-        return self.assure(T).dense.items;
+    pub fn entityIndexes(self: *Registry, T: type) //
+    struct { []Entity.Index, View(.{T}, .{}, false) } {
+        return .{ self.assure(T).dense.items, self.view(.{T}) };
     }
 
     pub fn get(self: *Registry, entity: Entity, T: type) ?T {
@@ -310,10 +311,11 @@ pub const Registry = struct {
 };
 
 pub fn View(includes: anytype, excludes: anytype, reverse: bool) type {
+    const Index = Entity.Index;
     return struct {
         r: *Registry,
-        slice: []Entity.Index = &.{},
-        index: Entity.Index = 0,
+        slice: []Index = &.{},
+        index: Index = 0,
 
         pub fn init(r: *Registry) @This() {
             var slice = r.assure(includes[0]).dense.items;
@@ -325,33 +327,41 @@ pub fn View(includes: anytype, excludes: anytype, reverse: bool) type {
             return .{ .r = r, .slice = slice, .index = @intCast(index) };
         }
 
-        pub fn next(self: *@This()) ?Entity {
+        pub fn next(self: *@This()) ?Index {
             if (reverse) {
                 if (self.index == 0) return null else self.index -= 1;
             } else if (self.index >= self.slice.len) return null;
 
-            const e = self.slice[self.index];
+            const entity = self.slice[self.index];
             inline for (includes) |T| {
-                if (!self.r.assure(T).has(e)) return null;
+                if (!self.r.assure(T).has(entity)) return null;
             }
             inline for (excludes) |T| {
-                if (self.r.assure(T).has(e)) return null;
+                if (self.r.assure(T).has(entity)) return null;
             }
 
             if (!reverse) self.index += 1;
-            return self.r.entities.getEntity(e);
+            return entity;
         }
 
-        pub fn get(self: *@This(), entity: Entity, T: type) T {
+        pub fn get(self: *@This(), entity: Index, T: type) T {
             return self.getPtr(entity, T).*;
         }
 
-        pub fn getPtr(self: *@This(), entity: Entity, T: type) *T {
-            return self.r.assure(T).get(entity.index);
+        pub fn getPtr(self: *const @This(), entity: Index, T: type) *T {
+            return self.r.assure(T).get(entity);
         }
 
-        pub fn has(self: *@This(), entity: Entity, T: type) bool {
-            return self.r.assure(T).has(entity.index);
+        pub fn has(self: *const @This(), entity: Index, T: type) bool {
+            return self.r.assure(T).has(entity);
+        }
+
+        pub fn add(self: *@This(), entity: Index, value: anytype) void {
+            self.r.add(self.r.getEntity(entity).?, value);
+        }
+
+        pub fn remove(self: *@This(), entity: Index, T: type) void {
+            self.r.assure(T).remove(entity);
         }
     };
 }
