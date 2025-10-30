@@ -106,7 +106,6 @@ pub fn SparseMap(Component: type) type {
             }
             self.valuePtr[index] = v;
             self.sparse.items[e] = index;
-            // return index;
         }
 
         pub fn tryGet(self: *const Self, entity: Index) ?*T {
@@ -256,16 +255,23 @@ pub const Registry = struct {
 
     pub fn add(self: *Registry, entity: Entity, value: anytype) void {
         std.debug.assert(self.validEntity(entity));
+        _ = self.doAdd(entity, value);
+    }
 
+    pub fn groupAdd(self: *Registry, e: Entity, comps: anytype) void {
+        std.debug.assert(self.validEntity(e));
+        var index: [comps.len]u16 = undefined;
+        inline for (comps, &index) |v, *i| i.* = self.doAdd(e, v);
+        for (index[1..]) |i| std.debug.assert(index[0] == i);
+    }
+
+    fn doAdd(self: *Registry, entity: Entity, value: anytype) u16 {
         var map = self.assure(@TypeOf(value));
         const isEmpty = @sizeOf(@TypeOf(value)) == 0;
         const dummy = if (isEmpty) undefined else value;
         if (map.tryGet(entity.index)) |ptr| ptr.* = dummy else //
         map.add(self.allocator, entity.index, dummy) catch oom();
-    }
-
-    pub fn addTyped(self: *Registry, T: type, e: Entity, v: T) void {
-        self.add(e, v);
+        return map.sparse.items[entity.index];
     }
 
     pub fn has(self: *Registry, entity: Entity, T: type) bool {
@@ -355,7 +361,7 @@ pub fn View(includes: anytype, excludes: anytype, reverse: bool) type {
         }
 
         pub fn add(self: *@This(), entity: Index, value: anytype) void {
-            self.r.add(self.r.getEntity(entity).?, value);
+            _ = self.r.doAdd(self.r.getEntity(entity).?, value);
         }
 
         pub fn remove(self: *@This(), entity: Index, T: type) void {
