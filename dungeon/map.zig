@@ -29,7 +29,7 @@ pub const Vec = struct {
 const WIDTH = 80;
 const HEIGHT = 50;
 const NUM_ROOMS = 20;
-const TILE_SIZE: gfx.Vector = .init(32, 32);
+pub const TILE_SIZE: gfx.Vector = .init(32, 32);
 const TILE_PER_ROW = 16;
 
 pub var size = gfx.Vector.init(WIDTH, HEIGHT).mul(TILE_SIZE);

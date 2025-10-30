@@ -17,12 +17,18 @@ pub fn init() void {
         ecs.w.add(enemy, center);
         ecs.w.add(enemy, map.worldPosition(center));
 
-        const enemyTile = switch (zhu.randomInt(u8, 0, 4)) {
-            0 => map.Tile.ettin,
-            1 => map.Tile.ogre,
-            2 => map.Tile.orc,
-            else => map.Tile.goblin,
+        const enemyTile = switch (zhu.randomIntMost(u8, 1, 10)) {
+            0...8 => map.Tile.goblin,
+            else => map.Tile.orc,
         };
+
+        const hp: i32 = switch (enemyTile) {
+            map.Tile.goblin => 1,
+            map.Tile.orc => 2,
+            else => unreachable,
+        };
+        ecs.w.add(enemy, battle.Health{ .current = hp, .max = hp });
+        ecs.w.add(enemy, battle.Name{@tagName(enemyTile)});
 
         ecs.w.add(enemy, map.getTextureFromTile(enemyTile));
         ecs.w.add(enemy, MovingRandomly{});

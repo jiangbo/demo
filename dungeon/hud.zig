@@ -9,6 +9,7 @@ const ecs = zhu.ecs;
 
 const player = @import("player.zig");
 const battle = @import("battle.zig");
+const map = @import("map.zig");
 
 var texture: gfx.Texture = undefined;
 const healthForeground: math.Vector4 = .init(0.298, 0.735, 0.314, 1);
@@ -39,6 +40,30 @@ pub fn draw() void {
     drawTextCenter(text, pos);
     pos.y += size.x * 2;
     drawTextCenter("Explore the Dungeon. A/S/D/W to move.", pos);
+
+    drawNameAndHealthIfNeed();
+}
+
+fn drawNameAndHealthIfNeed() void {
+    var buffer: [50]u8 = undefined;
+    const mousePosition = camera.toWorld(window.mousePosition);
+
+    var view = ecs.w.view(.{ battle.Health, battle.Name, gfx.Vector });
+    while (view.next()) |entity| {
+        var position = view.get(entity, gfx.Vector);
+        const rect: gfx.Rect = .init(position, map.TILE_SIZE);
+
+        if (!rect.contains(mousePosition)) continue;
+
+        const health = view.get(entity, battle.Health).current;
+        const name = view.get(entity, battle.Name)[0];
+
+        const text = zhu.format(&buffer, "{s}: {}hp", //
+            .{ name, health });
+
+        position = position.addXY(map.TILE_SIZE.x / 2, -size.y);
+        drawTextCenter(text, camera.toWindow(position));
+    }
 }
 
 fn drawTextCenter(text: []const u8, position: gfx.Vector) void {
