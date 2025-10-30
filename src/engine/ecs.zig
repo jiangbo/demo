@@ -258,7 +258,7 @@ pub const Registry = struct {
         _ = self.doAdd(entity, value);
     }
 
-    pub fn alignedAdd(self: *Registry, e: Entity, comps: anytype) void {
+    pub fn alignAdd(self: *Registry, e: Entity, comps: anytype) void {
         std.debug.assert(self.validEntity(e));
         var index: [comps.len]u16 = undefined;
         inline for (comps, &index) |v, *i| i.* = self.doAdd(e, v);
