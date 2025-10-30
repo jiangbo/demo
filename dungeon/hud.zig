@@ -2,6 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const gfx = zhu.gfx;
+const window = zhu.window;
 const camera = zhu.camera;
 const ecs = zhu.ecs;
 
@@ -20,10 +21,16 @@ pub fn draw() void {
     var buffer: [50]u8 = undefined;
     const text = zhu.format(&buffer, "Health: {} / {}", //
         .{ health.current, health.max });
-    drawText(text, .init(250, 5));
-    drawText("Explore the Dungeon. A/S/D/W to move.", .init(170, 20));
+    var pos: gfx.Vector = .init(window.logicSize.x / 2, 10);
+    drawTextCenter(text, pos);
+    pos.y += size.x * 2;
+    drawTextCenter("Explore the Dungeon. A/S/D/W to move.", pos);
 }
 
+fn drawTextCenter(text: []const u8, position: gfx.Vector) void {
+    const textSize = size.mul(.init(@floatFromInt(text.len), 1));
+    drawText(text, position.sub(textSize.scale(0.5)));
+}
 const size: gfx.Vector = .init(8, 8);
 fn drawText(text: []const u8, position: gfx.Vector) void {
     camera.mode = .local;
@@ -42,19 +49,4 @@ fn drawText(text: []const u8, position: gfx.Vector) void {
         camera.draw(charTexture, pos);
         pos.x += size.x;
     }
-}
-
-fn computeTextSize(text: []const u8) gfx.Vector {
-    var rows: f32 = 0;
-    var columns: f32 = 0;
-    var maxColumns: f32 = 0;
-    for (text) |byte| {
-        if (byte == '\n') {
-            rows += 1;
-            columns = 0;
-        }
-        columns += 1;
-        if (columns > maxColumns) maxColumns = columns;
-    }
-    return size.mul(.init(maxColumns + 1, rows + 1));
 }
