@@ -63,7 +63,7 @@ const Entities = struct {
 pub fn SparseMap(Component: type) type {
     return struct {
         const isEmpty = @sizeOf(Component) == 0;
-        const T = if (isEmpty) struct { _: u8 = 0 } else Component;
+        const T = if (isEmpty) struct { _: u8 } else Component;
 
         const Self = @This();
         const Index = Entity.Index;
