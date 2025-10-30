@@ -25,6 +25,11 @@ pub const EightDirection =enum { up, down, left, right,
 // zig fmt: on
 pub const epsilon = 1e-4;
 
+pub fn percentInt(a: anytype, b: anytype) f32 {
+    const aa: f32 = @floatFromInt(a);
+    return aa / @as(f32, @floatFromInt(b));
+}
+
 pub const Vector = Vector2;
 pub const Vector2 = extern struct {
     x: f32 = 0,

@@ -22,12 +22,12 @@ pub fn init() void {
         .font = @import("zon/font.zon"),
         .texture = gfx.loadTexture("assets/font.png", .init(960, 960)),
     });
-    hud.init();
 
     camera.frameStats(true);
     camera.init(5000);
     camera.scale = .init(scale, scale);
 
+    hud.init();
     map.init();
     player.init();
     cameraFollow();

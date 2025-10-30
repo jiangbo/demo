@@ -13,6 +13,7 @@ pub const Vertex = gpu.QuadVertex;
 pub var mode: enum { world, local } = .world;
 pub var position: math.Vector = .zero;
 pub var scale: math.Vector = .one;
+pub var whiteTexture: gpu.Texture = undefined;
 
 var startDraw: bool = false;
 
@@ -23,7 +24,6 @@ var buffer: gpu.Buffer = undefined;
 var needDrawCount: usize = 0;
 var totalDrawCount: usize = 0;
 var usingTexture: gpu.Texture = .{ .view = .{} };
-var whiteTexture: gpu.Texture = undefined;
 
 pub fn init(vertexCount: usize) void {
     buffer = gpu.createBuffer(.{
@@ -33,7 +33,10 @@ pub fn init(vertexCount: usize) void {
 
     const shaderDesc = shader.quadShaderDesc(gpu.queryBackend());
     pipeline = gpu.createQuadPipeline(shaderDesc);
+}
 
+pub fn initWithWhiteTexture(vertexCount: usize) void {
+    init(vertexCount);
     const data: [64]u8 = [1]u8{0xFF} ** 64;
     whiteTexture = gpu.createTexture(.init(4, 4), &data);
 }
