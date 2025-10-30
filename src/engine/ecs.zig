@@ -28,7 +28,7 @@ const Entities = struct {
         }
 
         for (self.versions.items, 0..) |version, i| {
-            if (version & alive == 0) {
+            if (version & alive != alive) {
                 self.versions.items[i] += 1;
                 self.deletedCount -= 1;
                 return .{ .index = @intCast(i), .version = version };
@@ -99,6 +99,8 @@ pub fn SparseMap(Component: type) type {
             const index: u16 = @intCast(self.dense.items.len);
             const oldCapacity = self.dense.capacity;
             try self.dense.append(gpa, e);
+            errdefer _ = self.dense.pop();
+
             if (oldCapacity != self.dense.capacity) {
                 const slice = self.valuePtr[0..oldCapacity];
                 const capacity = self.dense.capacity;
@@ -123,7 +125,7 @@ pub fn SparseMap(Component: type) type {
             return index < items.len and items[index] == entity;
         }
 
-        pub fn values(self: *const Self) []T {
+        pub fn components(self: *const Self) []T {
             return self.valuePtr[0..self.dense.items.len];
         }
 
@@ -255,23 +257,23 @@ pub const Registry = struct {
 
     pub fn add(self: *Registry, entity: Entity, value: anytype) void {
         std.debug.assert(self.validEntity(entity));
-        _ = self.doAdd(entity, value);
+        _ = self.doAdd(entity.index, value);
     }
 
     pub fn alignAdd(self: *Registry, e: Entity, comps: anytype) void {
         std.debug.assert(self.validEntity(e));
         var index: [comps.len]u16 = undefined;
-        inline for (comps, &index) |v, *i| i.* = self.doAdd(e, v);
+        inline for (comps, &index) |v, *i| i.* = self.doAdd(e.index, v);
         for (index[1..]) |i| std.debug.assert(index[0] == i);
     }
 
-    fn doAdd(self: *Registry, entity: Entity, value: anytype) u16 {
+    fn doAdd(self: *Registry, index: Entity.Index, value: anytype) u16 {
         var map = self.assure(@TypeOf(value));
         const isEmpty = @sizeOf(@TypeOf(value)) == 0;
         const dummy = if (isEmpty) undefined else value;
-        if (map.tryGet(entity.index)) |ptr| ptr.* = dummy else //
-        map.add(self.allocator, entity.index, dummy) catch oom();
-        return map.sparse.items[entity.index];
+        if (map.tryGet(index)) |ptr| ptr.* = dummy else //
+        map.add(self.allocator, index, dummy) catch oom();
+        return map.sparse.items[index];
     }
 
     pub fn has(self: *Registry, entity: Entity, T: type) bool {
@@ -289,7 +291,7 @@ pub const Registry = struct {
     }
 
     pub fn raw(self: *Registry, T: type) []T {
-        return self.assure(T).values();
+        return self.assure(T).components();
     }
 
     pub fn indexes(self: *Registry, T: type) //
@@ -317,7 +319,7 @@ pub const Registry = struct {
 pub fn View(includes: anytype, excludes: anytype, reverse: bool) type {
     const Index = Entity.Index;
     return struct {
-        r: *Registry,
+        reg: *Registry,
         slice: []Index = &.{},
         index: Index = 0,
 
@@ -328,7 +330,7 @@ pub fn View(includes: anytype, excludes: anytype, reverse: bool) type {
                 if (entities.len < slice.len) slice = entities;
             }
             const index = if (reverse) slice.len else 0;
-            return .{ .r = r, .slice = slice, .index = @intCast(index) };
+            return .{ .reg = r, .slice = slice, .index = @intCast(index) };
         }
 
         pub fn next(self: *@This()) ?Index {
@@ -338,10 +340,10 @@ pub fn View(includes: anytype, excludes: anytype, reverse: bool) type {
 
             const entity = self.slice[self.index];
             inline for (includes) |T| {
-                if (!self.r.assure(T).has(entity)) return null;
+                if (!self.reg.assure(T).has(entity)) return null;
             }
             inline for (excludes) |T| {
-                if (self.r.assure(T).has(entity)) return null;
+                if (self.reg.assure(T).has(entity)) return null;
             }
 
             if (!reverse) self.index += 1;
@@ -353,19 +355,19 @@ pub fn View(includes: anytype, excludes: anytype, reverse: bool) type {
         }
 
         pub fn getPtr(self: *const @This(), entity: Index, T: type) *T {
-            return self.r.assure(T).get(entity);
+            return self.reg.assure(T).get(entity);
         }
 
         pub fn has(self: *const @This(), entity: Index, T: type) bool {
-            return self.r.assure(T).has(entity);
+            return self.reg.assure(T).has(entity);
         }
 
         pub fn add(self: *@This(), entity: Index, value: anytype) void {
-            _ = self.r.doAdd(self.r.getEntity(entity).?, value);
+            _ = self.reg.doAdd(entity, value);
         }
 
         pub fn remove(self: *@This(), entity: Index, T: type) void {
-            self.r.assure(T).remove(entity);
+            self.reg.assure(T).remove(entity);
         }
     };
 }
