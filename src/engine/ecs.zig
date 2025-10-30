@@ -106,6 +106,7 @@ pub fn SparseMap(Component: type) type {
             }
             self.valuePtr[index] = v;
             self.sparse.items[e] = index;
+            // return index;
         }
 
         pub fn tryGet(self: *const Self, entity: Index) ?*T {
@@ -153,7 +154,7 @@ pub const Registry = struct {
     entities: Entities = .{},
     componentMap: Map(TypeId, [@sizeOf(SparseMap(u8))]u8) = .empty,
 
-    identityMap: Map(TypeId, Entity.Index) = .empty,
+    identityMap: Map(TypeId, Entity) = .empty,
     contextMap: Map(TypeId, []u8) = .empty,
 
     pub fn init(allocator: std.mem.Allocator) Registry {
@@ -216,12 +217,11 @@ pub const Registry = struct {
 
     pub fn addIdentity(self: *Registry, e: Entity, T: type) void {
         const id = hashTypeId(T);
-        self.identityMap.put(self.allocator, id, e.index) catch oom();
+        self.identityMap.put(self.allocator, id, e) catch oom();
     }
 
     pub fn getIdentity(self: *Registry, T: type) ?Entity {
-        const index = self.identityMap.get(hashTypeId(T));
-        return self.entities.getEntity(index orelse return null);
+        return self.identityMap.get(hashTypeId(T));
     }
 
     pub fn removeIdentity(self: *Registry, T: type) bool {
