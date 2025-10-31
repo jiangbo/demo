@@ -7,6 +7,8 @@ const gfx = zhu.gfx;
 const map = @import("map.zig");
 const components = @import("components.zig");
 
+const Player = components.Player;
+const Enemy = components.Enemy;
 const Health = components.Health;
 const Name = components.Name;
 const TurnState = components.TurnState;
@@ -37,7 +39,8 @@ pub fn init() void {
         ecs.w.add(enemy, Name{@tagName(enemyTile)});
 
         ecs.w.add(enemy, map.getTextureFromTile(enemyTile));
-        ecs.w.add(enemy, MovingRandomly{});
+        // ecs.w.add(enemy, MovingRandomly{});
+        ecs.w.add(enemy, Enemy{});
     }
 }
 
@@ -55,17 +58,5 @@ pub fn move() void {
             else => pos.y -= 1,
         }
         view.add(entity, WantToMove{pos});
-    }
-}
-
-pub fn checkCollision(playerPosition: TilePosition) void {
-    var view = ecs.w.view(.{ MovingRandomly, TilePosition });
-    while (view.next()) |entity| {
-        const enemyPos = view.getPtr(entity, TilePosition);
-        if (enemyPos.equals(playerPosition)) {
-            ecs.w.destroyEntity(ecs.w.getEntity(entity).?);
-            ecs.w.addContext(TurnState.player);
-            return;
-        }
     }
 }

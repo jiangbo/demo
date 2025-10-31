@@ -10,8 +10,10 @@ const map = @import("map.zig");
 const player = @import("player.zig");
 const monster = @import("monster.zig");
 const hud = @import("hud.zig");
+const battle = @import("battle.zig");
 const components = @import("components.zig");
 
+const Player = components.Player;
 const Position = components.Position;
 const TilePosition = components.TilePosition;
 const WantToMove = components.WantToMove;
@@ -53,20 +55,20 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.LEFT)) camera.position.x -= speed;
     if (window.isKeyDown(.RIGHT)) camera.position.x += speed;
 
-    player.update(delta);
-    const tilePos = ecs.w.get(player.entity, TilePosition).?;
-    monster.checkCollision(tilePos);
+    player.move();
+    battle.checkPlayerAttack();
     monster.move();
-    monster.checkCollision(tilePos);
     map.update(delta);
 
-    const playerWantMove = ecs.w.getIdentity(WantToMove);
-    if (playerWantMove) |_| cameraFollow();
+    cameraFollow();
     sceneCall("update", .{delta});
 }
 
 pub fn cameraFollow() void {
-    const position = ecs.w.get(player.entity, Position).?;
+    const playerEntity = ecs.w.getIdentity(Player).?;
+    if (!ecs.w.has(playerEntity, WantToMove)) return;
+
+    const position = ecs.w.get(playerEntity, Position).?;
 
     const scaleSize = window.logicSize.div(camera.scale);
     const half = scaleSize.scale(0.5);

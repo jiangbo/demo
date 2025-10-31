@@ -9,25 +9,29 @@ const ecs = zhu.ecs;
 const map = @import("map.zig");
 const components = @import("components.zig");
 
+const Player = components.Player;
 const Health = components.Health;
 const TurnState = components.TurnState;
 const TilePosition = components.TilePosition;
 const WantToMove = components.WantToMove;
 
-pub var entity: ecs.Entity = undefined;
-
 pub fn init() void {
-    entity = ecs.w.createEntity();
-    const tilePos = map.rooms[0].center();
-    ecs.w.add(entity, tilePos);
+    const entity = ecs.w.createEntity();
+    ecs.w.addIdentity(entity, Player);
+
+    const tilePosition = map.rooms[0].center();
+    ecs.w.add(entity, tilePosition);
+    ecs.w.add(entity, WantToMove{tilePosition});
     ecs.w.add(entity, map.getTextureFromTile(.player));
-    ecs.w.add(entity, map.worldPosition(tilePos));
+    ecs.w.add(entity, map.worldPosition(tilePosition));
     const health: Health = .{ .max = 20, .current = 20 };
     ecs.w.add(entity, health);
     ecs.w.addContext(TurnState.wait);
 }
 
-pub fn update(_: f32) void {
+pub fn move() void {
+    const entity = ecs.w.getIdentity(components.Player).?;
+
     const tilePosition = ecs.w.get(entity, TilePosition).?;
     var tilePos = tilePosition;
     if (window.isKeyRelease(.W)) tilePos.y -|= 1 //
@@ -38,7 +42,6 @@ pub fn update(_: f32) void {
     _ = ecs.w.removeIdentity(WantToMove);
     if (!tilePosition.equals(tilePos)) {
         ecs.w.add(entity, WantToMove{tilePos});
-        ecs.w.addIdentity(entity, WantToMove);
         ecs.w.addContext(TurnState.player);
     } else if (window.isKeyRelease(.SPACE)) {
         // 空格跳过当前回合

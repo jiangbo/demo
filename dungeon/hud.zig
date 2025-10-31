@@ -8,9 +8,9 @@ const math = zhu.math;
 const ecs = zhu.ecs;
 
 const components = @import("components.zig");
-const player = @import("player.zig");
 const map = @import("map.zig");
 
+const Player = components.Player;
 const Health = components.Health;
 const Name = components.Name;
 const Position = components.Position;
@@ -32,7 +32,8 @@ pub fn draw() void {
     var healthSize: gfx.Vector = .init(200, 12);
     const healthPos = pos.sub(healthSize.scale(0.5));
 
-    const health = ecs.w.get(player.entity, Health).?;
+    const playerEntity = ecs.w.getIdentity(Player).?;
+    const health = ecs.w.get(playerEntity, Health).?;
     var buffer: [50]u8 = undefined;
     const text = zhu.format(&buffer, "Health: {} / {}", //
         .{ health.current, health.max });
@@ -62,8 +63,7 @@ fn drawNameAndHealthIfNeed() void {
         const health = view.get(entity, Health).current;
         const name = view.get(entity, Name)[0];
 
-        const text = zhu.format(&buffer, "{s}: {}hp", //
-            .{ name, health });
+        const text = zhu.format(&buffer, "{s}: {}hp", .{ name, health });
 
         position = position.addXY(map.TILE_SIZE.x / 2, -size.y);
         drawTextCenter(text, camera.toWindow(position));
