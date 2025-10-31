@@ -148,6 +148,21 @@ pub fn SparseMap(Component: type) type {
     };
 }
 
+pub fn DeinitList(T: type) type {
+    return struct {
+        list: std.ArrayList(T) = .empty,
+        alignment: std.mem.Alignment = .of(T),
+        valueSize: u32 = @sizeOf(T),
+
+        pub fn deinit(self: *@This(), gpa: Allocator) void {
+            if (self.list.capacity == 0) return;
+            const size = self.list.capacity * self.valueSize;
+            const slice = self.list.items.ptr[0..size];
+            gpa.rawFree(slice, self.alignment, @returnAddress());
+        }
+    };
+}
+
 const TypeId = u64;
 const Map = std.AutoHashMapUnmanaged;
 pub const Registry = struct {
@@ -157,7 +172,7 @@ pub const Registry = struct {
 
     identityMap: Map(TypeId, Entity) = .empty,
     contextMap: Map(TypeId, []u8) = .empty,
-    eventMap: Map(TypeId, [@sizeOf(std.ArrayList(u8))]u8) = .empty,
+    eventMap: Map(TypeId, [@sizeOf(DeinitList(u8))]u8) = .empty,
 
     pub fn init(allocator: std.mem.Allocator) Registry {
         return .{ .allocator = allocator };
@@ -166,11 +181,17 @@ pub const Registry = struct {
     pub fn deinit(self: *Registry) void {
         self.entities.deinit(self.allocator);
         self.identityMap.deinit(self.allocator);
-        self.eventMap.deinit(self.allocator);
 
         var it = self.contextMap.valueIterator();
         while (it.next()) |value| self.allocator.free(value.*);
         self.contextMap.deinit(self.allocator);
+
+        var events = self.eventMap.valueIterator();
+        while (events.next()) |value| {
+            var list: *DeinitList(u8) = @ptrCast(@alignCast(value));
+            list.deinit(self.allocator);
+        }
+        self.eventMap.deinit(self.allocator);
 
         var iterator = self.componentMap.valueIterator();
         while (iterator.next()) |value| {
@@ -232,17 +253,17 @@ pub const Registry = struct {
     }
 
     fn assureEvent(self: *Registry, T: type) *std.ArrayList(T) {
-        const id = hashTypeId(T);
-        const v = self.eventMap.getOrPut(self.allocator, id) catch oom();
+        const v = self.eventMap.getOrPut(self.allocator, //
+            hashTypeId(T)) catch oom();
         if (!v.found_existing) {
-            const empty: std.ArrayList(T) = .empty;
-            v.value_ptr.* = std.mem.toBytes(empty);
+            v.value_ptr.* = std.mem.toBytes(DeinitList(T){});
         }
-        return @ptrCast(@alignCast(v.value_ptr));
+        var list: *DeinitList(T) = @ptrCast(@alignCast(v.value_ptr));
+        return &list.list;
     }
 
     pub fn addEvent(self: *Registry, value: anytype) void {
-        const list = self.assureEvent(@TypeOf(value));
+        var list = self.assureEvent(@TypeOf(value));
         list.append(self.allocator, value) catch oom();
     }
 
@@ -258,16 +279,9 @@ pub const Registry = struct {
         self.assureEvent(T).clearRetainingCapacity();
     }
 
-    pub fn clearEvents(self: *Registry, types: anytype) void {
-        inline for (types) |T| self.clearEvent(T);
-    }
-
-    pub fn removeEvent(self: *Registry, T: type) void {
+    pub fn removeEvent(self: *Registry, T: type) bool {
         self.assureEvent(T).deinit(self.allocator);
-    }
-
-    pub fn removeEvents(self: *Registry, types: anytype) void {
-        inline for (types) |T| self.removeEvent(T);
+        return self.eventMap.remove(hashTypeId(T));
     }
 
     pub fn remove(self: *Registry, entity: Entity, T: type) void {
