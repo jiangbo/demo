@@ -10,6 +10,10 @@ const map = @import("map.zig");
 const player = @import("player.zig");
 const monster = @import("monster.zig");
 const hud = @import("hud.zig");
+const components = @import("components.zig");
+
+const Position = components.Position;
+const TilePosition = components.TilePosition;
 
 var isHelp = false;
 var isDebug = false;
@@ -49,7 +53,7 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.RIGHT)) camera.position.x += speed;
 
     player.update(delta);
-    const tilePos = ecs.w.get(player.entity, map.Vec).?;
+    const tilePos = ecs.w.get(player.entity, TilePosition).?;
     monster.checkCollision(tilePos);
     monster.move();
     monster.checkCollision(tilePos);
@@ -61,7 +65,7 @@ pub fn update(delta: f32) void {
 }
 
 pub fn cameraFollow() void {
-    const position = ecs.w.get(player.entity, gfx.Vector).?;
+    const position = ecs.w.get(player.entity, Position).?;
 
     const scaleSize = window.logicSize.div(camera.scale);
     const half = scaleSize.scale(0.5);
@@ -77,10 +81,10 @@ pub fn draw() void {
     sceneCall("draw", .{});
     map.draw();
 
-    var view = ecs.w.view(.{ gfx.Texture, gfx.Vector });
+    var view = ecs.w.view(.{ gfx.Texture, Position });
     while (view.next()) |entity| {
         const texture = view.get(entity, gfx.Texture);
-        const position = view.get(entity, gfx.Vector);
+        const position = view.get(entity, Position);
         camera.draw(texture, position);
     }
 

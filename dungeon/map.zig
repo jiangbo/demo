@@ -5,6 +5,11 @@ const gfx = zhu.gfx;
 const camera = zhu.camera;
 const ecs = zhu.ecs;
 
+const components = @import("components.zig");
+
+const Position = components.Position;
+const TilePosition = components.TilePosition;
+
 pub const Tile = enum(u8) {
     other = 0,
     wall = 35,
@@ -18,13 +23,6 @@ pub const Tile = enum(u8) {
 };
 
 const Rect = struct { x: u8, y: u8, w: u8, h: u8 };
-pub const Vec = struct {
-    x: u8,
-    y: u8,
-    pub fn equals(self: Vec, other: Vec) bool {
-        return self.x == other.x and self.y == other.y;
-    }
-};
 
 const WIDTH = 80;
 const HEIGHT = 50;
@@ -106,8 +104,8 @@ fn intersect(r1: Rect, r2: Rect) bool {
         r1.y < r2.y + r2.h and r1.y + r1.h > r2.y;
 }
 
-pub fn center(r: Rect) Vec {
-    return Vec{ .x = r.x + r.w / 2, .y = r.y + r.h / 2 };
+pub fn center(r: Rect) TilePosition {
+    return .{ .x = r.x + r.w / 2, .y = r.y + r.h / 2 };
 }
 
 fn compare(_: void, r1: Rect, r2: Rect) bool {
@@ -154,27 +152,27 @@ pub fn indexTile(x: usize, y: usize) Tile {
     return tiles[indexUsize(x, y)];
 }
 
-pub fn worldPosition(pos: Vec) gfx.Vector {
+pub fn worldPosition(pos: TilePosition) Position {
     return getPositionFromIndex(indexUsize(pos.x, pos.y));
 }
 
-pub const WantsToMove = struct { Vec };
+pub const WantsToMove = struct { TilePosition };
 
 pub fn update(_: f32) void {
     moveIfNeed();
 }
 
 fn moveIfNeed() void {
-    var view = ecs.w.view(.{ WantsToMove, Vec });
+    var view = ecs.w.view(.{ WantsToMove, TilePosition });
     while (view.next()) |entity| {
         const dest = view.get(entity, WantsToMove)[0];
         const canMove = dest.x < WIDTH and dest.y < HEIGHT //
         and indexTile(dest.x, dest.y) == .floor;
         if (!canMove) continue;
 
-        view.getPtr(entity, Vec).* = dest;
+        view.getPtr(entity, TilePosition).* = dest;
         const pos = worldPosition(dest);
-        view.getPtr(entity, gfx.Vector).* = pos;
+        view.getPtr(entity, Position).* = pos;
     }
 }
 

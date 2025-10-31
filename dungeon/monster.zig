@@ -10,6 +10,7 @@ const components = @import("components.zig");
 const Health = components.Health;
 const Name = components.Name;
 const TurnState = components.TurnState;
+const TilePosition = components.TilePosition;
 
 const MovingRandomly = struct {};
 
@@ -43,9 +44,9 @@ pub fn move() void {
     if (ecs.w.getContext(TurnState).?.* != .player) return;
 
     ecs.w.addContext(TurnState.monster);
-    var view = ecs.w.view(.{ MovingRandomly, map.Vec });
+    var view = ecs.w.view(.{ MovingRandomly, TilePosition });
     while (view.next()) |entity| {
-        var pos = view.get(entity, map.Vec);
+        var pos = view.get(entity, TilePosition);
         switch (zhu.randomIntMost(u8, 0, 3)) {
             0 => pos.x += 1,
             1 => pos.y += 1,
@@ -56,10 +57,10 @@ pub fn move() void {
     }
 }
 
-pub fn checkCollision(playerPosition: map.Vec) void {
-    var view = ecs.w.view(.{ MovingRandomly, map.Vec });
+pub fn checkCollision(playerPosition: TilePosition) void {
+    var view = ecs.w.view(.{ MovingRandomly, TilePosition });
     while (view.next()) |entity| {
-        const enemyPos = view.getPtr(entity, map.Vec);
+        const enemyPos = view.getPtr(entity, TilePosition);
         if (enemyPos.equals(playerPosition)) {
             ecs.w.destroyEntity(ecs.w.getEntity(entity).?);
             ecs.w.addContext(TurnState.player);

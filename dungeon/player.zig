@@ -11,6 +11,7 @@ const components = @import("components.zig");
 
 const Health = components.Health;
 const TurnState = components.TurnState;
+const TilePosition = components.TilePosition;
 
 pub var entity: ecs.Entity = undefined;
 
@@ -26,7 +27,7 @@ pub fn init() void {
 }
 
 pub fn update(_: f32) void {
-    const tilePosition = ecs.w.get(entity, map.Vec).?;
+    const tilePosition = ecs.w.get(entity, TilePosition).?;
     var tilePos = tilePosition;
     if (window.isKeyRelease(.W)) tilePos.y -|= 1 //
     else if (window.isKeyRelease(.S)) tilePos.y += 1 //
