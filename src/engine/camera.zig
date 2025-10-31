@@ -8,6 +8,8 @@ const font = @import("font.zig");
 
 const Texture = gpu.Texture;
 const Vector = math.Vector;
+const Rect = math.Rect;
+const Color = math.Vector4;
 pub const Vertex = gpu.QuadVertex;
 
 pub var mode: enum { world, local } = .world;
@@ -66,6 +68,24 @@ pub fn draw(texture: gpu.Texture, pos: math.Vector) void {
 
 pub fn drawFlipX(texture: Texture, pos: Vector, flipX: bool) void {
     drawOption(texture, pos, .{ .flipX = flipX });
+}
+
+pub fn drawRectLine(start: Vector, end: Vector, color: Color) void {
+    if (start.x == end.x) {
+        drawRect(.init(start, .init(end.y - start.y, 1)), color);
+    } else if (start.y == end.y) {
+        drawRect(.init(start, .init(1, end.x - start.x)), color);
+    }
+}
+
+pub fn drawRectBorder(area: Rect, width: f32, color: Color) void {
+    drawRect(.init(area.min, .init(area.size.x, width)), color); // 上
+    var start = area.min.addY(area.size.y - width);
+    drawRect(.init(start, .init(area.size.x, width)), color); // 下
+    drawRect(.init(area.min, .init(width, area.size.y)), color); // 左
+    start = area.min.addX(area.size.x - width);
+    drawRect(.init(start, .init(width, area.size.y)), color); // 右
+
 }
 
 pub fn drawRect(area: math.Rect, color: math.Vector4) void {
