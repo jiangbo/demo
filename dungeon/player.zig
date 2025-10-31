@@ -18,7 +18,7 @@ pub var entity: ecs.Entity = undefined;
 
 pub fn init() void {
     entity = ecs.w.createEntity();
-    const tilePos = map.center(map.rooms[0]);
+    const tilePos = map.rooms[0].center();
     ecs.w.add(entity, tilePos);
     ecs.w.add(entity, map.getTextureFromTile(.player));
     ecs.w.add(entity, map.worldPosition(tilePos));

@@ -9,6 +9,7 @@ const components = @import("components.zig");
 
 const Position = components.Position;
 const TilePosition = components.TilePosition;
+const TileRect = components.TileRect;
 const WantToMove = components.WantToMove;
 
 pub const Tile = enum(u8) {
@@ -23,8 +24,6 @@ pub const Tile = enum(u8) {
     amulet = 124,
 };
 
-const Rect = struct { x: u8, y: u8, w: u8, h: u8 };
-
 const WIDTH = 80;
 const HEIGHT = 50;
 const NUM_ROOMS = 20;
@@ -35,14 +34,14 @@ pub var size = gfx.Vector.init(WIDTH, HEIGHT).mul(TILE_SIZE);
 var tiles: [WIDTH * HEIGHT]Tile = undefined;
 var vertexBuffer: [tiles.len]camera.Vertex = undefined;
 var texture: gfx.Texture = undefined;
-pub var rooms: [NUM_ROOMS]Rect = undefined;
+pub var rooms: [NUM_ROOMS]TileRect = undefined;
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/dungeonfont.png", .init(512, 512));
 
     @memset(&tiles, .wall);
     buildRooms();
-    std.mem.sort(Rect, &rooms, {}, compare);
+    std.mem.sort(TileRect, &rooms, {}, compare);
     buildCorridors();
 
     initVertexBuffer();
@@ -77,9 +76,9 @@ fn getPositionFromIndex(index: usize) gfx.Vector {
 
 fn buildRooms() void {
     for (0..rooms.len) |roomIndex| {
-        var room: Rect = undefined;
+        var room: TileRect = undefined;
         label: {
-            room = Rect{
+            room = TileRect{
                 .x = zhu.randomInt(u8, 1, WIDTH - 10),
                 .y = zhu.randomInt(u8, 1, HEIGHT - 10),
                 .w = zhu.randomInt(u8, 2, 10),
@@ -87,7 +86,7 @@ fn buildRooms() void {
             };
 
             for (0..roomIndex) |idx| {
-                if (intersect(rooms[idx], room)) break :label;
+                if (rooms[idx].intersect(room)) break :label;
             }
         }
 
@@ -100,16 +99,7 @@ fn buildRooms() void {
     }
 }
 
-fn intersect(r1: Rect, r2: Rect) bool {
-    return r1.x < r2.x + r2.w and r1.x + r1.w > r2.x and
-        r1.y < r2.y + r2.h and r1.y + r1.h > r2.y;
-}
-
-pub fn center(r: Rect) TilePosition {
-    return .{ .x = r.x + r.w / 2, .y = r.y + r.h / 2 };
-}
-
-fn compare(_: void, r1: Rect, r2: Rect) bool {
+fn compare(_: void, r1: TileRect, r2: TileRect) bool {
     return if (r1.x == r2.x) r1.y < r2.y else r1.x < r2.x;
 }
 
@@ -127,8 +117,8 @@ fn applyHorizontal(x1: usize, x2: usize, y: usize) void {
 
 fn buildCorridors() void {
     for (rooms[1..], 1..) |room, roomIndex| {
-        const prev = center(rooms[roomIndex - 1]);
-        const new = center(room);
+        const prev = rooms[roomIndex - 1].center();
+        const new = room.center();
         if (zhu.randU8(0, 2) == 1) {
             applyHorizontal(prev.x, new.x, prev.y);
             applyVertical(prev.y, new.y, new.x);

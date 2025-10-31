@@ -19,7 +19,7 @@ pub fn init() void {
     for (map.rooms[1..]) |room| {
         const enemy = ecs.w.createEntity();
 
-        const center = map.center(room);
+        const center = room.center();
         ecs.w.add(enemy, center);
         ecs.w.add(enemy, map.worldPosition(center));
 
