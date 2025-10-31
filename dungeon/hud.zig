@@ -7,9 +7,13 @@ const camera = zhu.camera;
 const math = zhu.math;
 const ecs = zhu.ecs;
 
+const components = @import("components.zig");
 const player = @import("player.zig");
-const battle = @import("battle.zig");
 const map = @import("map.zig");
+
+const Health = components.Health;
+const Name = components.Name;
+const Position = components.Position;
 
 var texture: gfx.Texture = undefined;
 const healthForeground: math.Vector4 = .init(0.298, 0.735, 0.314, 1);
@@ -28,7 +32,7 @@ pub fn draw() void {
     var healthSize: gfx.Vector = .init(200, 12);
     const healthPos = pos.sub(healthSize.scale(0.5));
 
-    const health = ecs.w.get(player.entity, battle.Health).?;
+    const health = ecs.w.get(player.entity, Health).?;
     var buffer: [50]u8 = undefined;
     const text = zhu.format(&buffer, "Health: {} / {}", //
         .{ health.current, health.max });
@@ -48,15 +52,15 @@ fn drawNameAndHealthIfNeed() void {
     var buffer: [50]u8 = undefined;
     const mousePosition = camera.toWorld(window.mousePosition);
 
-    var view = ecs.w.view(.{ battle.Health, battle.Name, gfx.Vector });
+    var view = ecs.w.view(.{ Health, Name, Position });
     while (view.next()) |entity| {
-        var position = view.get(entity, gfx.Vector);
+        var position = view.get(entity, Position);
         const rect: gfx.Rect = .init(position, map.TILE_SIZE);
 
         if (!rect.contains(mousePosition)) continue;
 
-        const health = view.get(entity, battle.Health).current;
-        const name = view.get(entity, battle.Name)[0];
+        const health = view.get(entity, Health).current;
+        const name = view.get(entity, Name)[0];
 
         const text = zhu.format(&buffer, "{s}: {}hp", //
             .{ name, health });
@@ -66,12 +70,12 @@ fn drawNameAndHealthIfNeed() void {
     }
 }
 
-fn drawTextCenter(text: []const u8, position: gfx.Vector) void {
+fn drawTextCenter(text: []const u8, position: Position) void {
     const textSize = size.mul(.init(@floatFromInt(text.len), 1));
     drawText(text, position.sub(textSize.scale(0.5)));
 }
-const size: gfx.Vector = .init(8, 8);
-fn drawText(text: []const u8, position: gfx.Vector) void {
+const size: Position = .init(8, 8);
+fn drawText(text: []const u8, position: Position) void {
     var pos = position;
 
     for (text) |byte| {

@@ -5,7 +5,11 @@ const ecs = zhu.ecs;
 const gfx = zhu.gfx;
 
 const map = @import("map.zig");
-const battle = @import("battle.zig");
+const components = @import("components.zig");
+
+const Health = components.Health;
+const Name = components.Name;
+const TurnState = components.TurnState;
 
 const MovingRandomly = struct {};
 
@@ -27,8 +31,8 @@ pub fn init() void {
             map.Tile.orc => 2,
             else => unreachable,
         };
-        ecs.w.add(enemy, battle.Health{ .current = hp, .max = hp });
-        ecs.w.add(enemy, battle.Name{@tagName(enemyTile)});
+        ecs.w.add(enemy, Health{ .current = hp, .max = hp });
+        ecs.w.add(enemy, Name{@tagName(enemyTile)});
 
         ecs.w.add(enemy, map.getTextureFromTile(enemyTile));
         ecs.w.add(enemy, MovingRandomly{});
@@ -36,9 +40,9 @@ pub fn init() void {
 }
 
 pub fn move() void {
-    if (ecs.w.getContext(battle.TurnState).?.* != .player) return;
+    if (ecs.w.getContext(TurnState).?.* != .player) return;
 
-    ecs.w.addContext(battle.TurnState.monster);
+    ecs.w.addContext(TurnState.monster);
     var view = ecs.w.view(.{ MovingRandomly, map.Vec });
     while (view.next()) |entity| {
         var pos = view.get(entity, map.Vec);
@@ -58,7 +62,7 @@ pub fn checkCollision(playerPosition: map.Vec) void {
         const enemyPos = view.getPtr(entity, map.Vec);
         if (enemyPos.equals(playerPosition)) {
             ecs.w.destroyEntity(ecs.w.getEntity(entity).?);
-            ecs.w.addContext(battle.TurnState.player);
+            ecs.w.addContext(TurnState.player);
             return;
         }
     }
