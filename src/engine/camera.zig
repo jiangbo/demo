@@ -8,6 +8,7 @@ const font = @import("font.zig");
 
 const Texture = gpu.Texture;
 const Vector = math.Vector;
+const Vector2 = math.Vector2;
 const Rect = math.Rect;
 const Color = math.Vector4;
 pub const Vertex = gpu.QuadVertex;
@@ -82,13 +83,13 @@ pub fn drawRectBorder(area: Rect, width: f32, color: Color) void {
     drawRect(.init(area.min, .init(area.size.x, width)), color); // 上
     var start = area.min.addY(area.size.y - width);
     drawRect(.init(start, .init(area.size.x, width)), color); // 下
-    drawRect(.init(area.min, .init(width, area.size.y)), color); // 左
-    start = area.min.addX(area.size.x - width);
-    drawRect(.init(start, .init(width, area.size.y)), color); // 右
-
+    const size: Vector2 = .init(width, area.size.y - 2 * width);
+    drawRect(.init(area.min.addY(width), size), color); // 左
+    start = area.min.addXY(area.size.x - width, width);
+    drawRect(.init(start, size), color); // 右
 }
 
-pub fn drawRect(area: math.Rect, color: math.Vector4) void {
+pub fn drawRect(area: math.Rect, color: Color) void {
     drawOption(whiteTexture, area.min, .{
         .size = area.size,
         .color = color,
@@ -97,9 +98,9 @@ pub fn drawRect(area: math.Rect, color: math.Vector4) void {
 
 pub const Option = struct {
     rotation: f32 = 0, // 旋转角度
-    size: ?math.Vector2 = null, // 大小
-    pivot: math.Vector2 = .zero, // 旋转中心
-    color: math.Vector4 = .one, // 颜色
+    size: ?Vector2 = null, // 大小
+    pivot: Vector2 = .zero, // 旋转中心
+    color: Color = .one, // 颜色
     flipX: bool = false, // 是否水平翻转
 };
 pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
