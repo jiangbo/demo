@@ -11,6 +11,7 @@ const Health = components.Health;
 const Name = components.Name;
 const TurnState = components.TurnState;
 const TilePosition = components.TilePosition;
+const WantToMove = components.WantToMove;
 
 const MovingRandomly = struct {};
 
@@ -53,7 +54,7 @@ pub fn move() void {
             2 => pos.x -= 1,
             else => pos.y -= 1,
         }
-        view.add(entity, map.WantsToMove{pos});
+        view.add(entity, WantToMove{pos});
     }
 }
 

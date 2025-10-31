@@ -14,3 +14,4 @@ pub const TilePosition = struct {
         return self.x == other.x and self.y == other.y;
     }
 };
+pub const WantToMove = struct { TilePosition };

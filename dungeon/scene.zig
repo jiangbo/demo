@@ -14,6 +14,7 @@ const components = @import("components.zig");
 
 const Position = components.Position;
 const TilePosition = components.TilePosition;
+const WantToMove = components.WantToMove;
 
 var isHelp = false;
 var isDebug = false;
@@ -59,7 +60,7 @@ pub fn update(delta: f32) void {
     monster.checkCollision(tilePos);
     map.update(delta);
 
-    const playerWantMove = ecs.w.getIdentity(map.WantsToMove);
+    const playerWantMove = ecs.w.getIdentity(WantToMove);
     if (playerWantMove) |_| cameraFollow();
     sceneCall("update", .{delta});
 }

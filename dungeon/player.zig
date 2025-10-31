@@ -12,6 +12,7 @@ const components = @import("components.zig");
 const Health = components.Health;
 const TurnState = components.TurnState;
 const TilePosition = components.TilePosition;
+const WantToMove = components.WantToMove;
 
 pub var entity: ecs.Entity = undefined;
 
@@ -34,10 +35,10 @@ pub fn update(_: f32) void {
     else if (window.isKeyRelease(.A)) tilePos.x -|= 1 //
     else if (window.isKeyRelease(.D)) tilePos.x += 1; //
 
-    _ = ecs.w.removeIdentity(map.WantsToMove);
+    _ = ecs.w.removeIdentity(WantToMove);
     if (!tilePosition.equals(tilePos)) {
-        ecs.w.add(entity, map.WantsToMove{tilePos});
-        ecs.w.addIdentity(entity, map.WantsToMove);
+        ecs.w.add(entity, WantToMove{tilePos});
+        ecs.w.addIdentity(entity, WantToMove);
         ecs.w.addContext(TurnState.player);
     } else if (window.isKeyRelease(.SPACE)) {
         // 空格跳过当前回合

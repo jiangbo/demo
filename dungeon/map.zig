@@ -9,6 +9,7 @@ const components = @import("components.zig");
 
 const Position = components.Position;
 const TilePosition = components.TilePosition;
+const WantToMove = components.WantToMove;
 
 pub const Tile = enum(u8) {
     other = 0,
@@ -156,16 +157,14 @@ pub fn worldPosition(pos: TilePosition) Position {
     return getPositionFromIndex(indexUsize(pos.x, pos.y));
 }
 
-pub const WantsToMove = struct { TilePosition };
-
 pub fn update(_: f32) void {
     moveIfNeed();
 }
 
 fn moveIfNeed() void {
-    var view = ecs.w.view(.{ WantsToMove, TilePosition });
+    var view = ecs.w.view(.{ WantToMove, TilePosition });
     while (view.next()) |entity| {
-        const dest = view.get(entity, WantsToMove)[0];
+        const dest = view.get(entity, WantToMove)[0];
         const canMove = dest.x < WIDTH and dest.y < HEIGHT //
         and indexTile(dest.x, dest.y) == .floor;
         if (!canMove) continue;
