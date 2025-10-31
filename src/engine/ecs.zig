@@ -157,6 +157,7 @@ pub const Registry = struct {
 
     identityMap: Map(TypeId, Entity) = .empty,
     contextMap: Map(TypeId, []u8) = .empty,
+    eventMap: Map(TypeId, [@sizeOf(std.ArrayList(u8))]u8) = .empty,
 
     pub fn init(allocator: std.mem.Allocator) Registry {
         return .{ .allocator = allocator };
@@ -165,6 +166,7 @@ pub const Registry = struct {
     pub fn deinit(self: *Registry) void {
         self.entities.deinit(self.allocator);
         self.identityMap.deinit(self.allocator);
+        self.eventMap.deinit(self.allocator);
 
         var it = self.contextMap.valueIterator();
         while (it.next()) |value| self.allocator.free(value.*);
@@ -229,6 +231,45 @@ pub const Registry = struct {
         return self.identityMap.remove(hashTypeId(T));
     }
 
+    fn assureEvent(self: *Registry, T: type) *std.ArrayList(T) {
+        const id = hashTypeId(T);
+        const v = self.eventMap.getOrPut(self.allocator, id) catch oom();
+        if (!v.found_existing) {
+            const empty: std.ArrayList(T) = .empty;
+            v.value_ptr.* = std.mem.toBytes(empty);
+        }
+        return @ptrCast(@alignCast(v.value_ptr));
+    }
+
+    pub fn addEvent(self: *Registry, value: anytype) void {
+        const list = self.assureEvent(@TypeOf(value));
+        list.append(self.allocator, value) catch oom();
+    }
+
+    pub fn getEvent(self: *Registry, T: type) []T {
+        return self.assureEvent(T).items;
+    }
+
+    pub fn popEvent(self: *Registry, T: type) ?T {
+        return self.assureEvent(T).pop();
+    }
+
+    pub fn clearEvent(self: *Registry, T: type) void {
+        self.assureEvent(T).clearRetainingCapacity();
+    }
+
+    pub fn clearEvents(self: *Registry, types: anytype) void {
+        inline for (types) |T| self.clearEvent(T);
+    }
+
+    pub fn removeEvent(self: *Registry, T: type) void {
+        self.assureEvent(T).deinit(self.allocator);
+    }
+
+    pub fn removeEvents(self: *Registry, types: anytype) void {
+        inline for (types) |T| self.removeEvent(T);
+    }
+
     pub fn remove(self: *Registry, entity: Entity, T: type) void {
         std.debug.assert(self.validEntity(entity));
         self.assure(T).remove(entity.index);
@@ -277,7 +318,7 @@ pub const Registry = struct {
     }
 
     pub fn has(self: *Registry, entity: Entity, T: type) bool {
-        std.debug.assert(self.validEntity(entity));
+        if (!self.validEntity(entity)) return false;
         return self.assure(T).has(entity.index);
     }
 
