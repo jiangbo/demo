@@ -12,51 +12,39 @@ pub const Entity = struct {
 
 const Entities = struct {
     versions: std.ArrayList(Entity.Version) = .empty,
-    deletedCount: Entity.Index = 0,
-
-    const alive = 1;
+    deleted: std.ArrayList(Entity.Index) = .empty,
 
     pub fn deinit(self: *Entities, gpa: Allocator) void {
         self.versions.deinit(gpa);
+        self.deleted.deinit(gpa);
     }
 
     pub fn create(self: *Entities, gpa: Allocator) !Entity {
-        if (self.deletedCount == 0) {
-            const idx: u16 = @intCast(self.versions.items.len);
-            try self.versions.append(gpa, alive);
-            return .{ .index = idx, .version = alive };
+        if (self.deleted.pop()) |index| {
+            const version = self.versions.items[index];
+            return .{ .index = index, .version = version };
+        } else {
+            const index = self.versions.items.len;
+            try self.versions.append(gpa, 0);
+            return .{ .index = @intCast(index), .version = 0 };
         }
-
-        for (self.versions.items, 0..) |version, i| {
-            if (version & alive != alive) {
-                self.versions.items[i] +%= 1;
-                self.deletedCount -= 1;
-                return .{ .index = @intCast(i), .version = version };
-            }
-        }
-        unreachable;
     }
 
-    pub fn destroy(self: *Entities, entity: Entity) void {
-        if (!self.isAlive(entity)) return;
+    pub fn destroy(self: *Entities, gpa: Allocator, entity: Entity) void {
         self.versions.items[entity.index] += 1;
-        self.deletedCount += 1;
+        self.deleted.append(gpa, entity.index);
     }
 
     pub fn isAlive(self: *const Entities, entity: Entity) bool {
-        return entity.version & alive == alive and
-            entity.index < self.versions.items.len and
+        return entity.index < self.versions.items.len and
             self.versions.items[entity.index] == entity.version;
     }
 
     pub fn getEntity(self: *const Entities, index: Entity.Index) ?Entity {
         if (index < self.versions.items.len) {
             const version = self.versions.items[index];
-            if (version & alive == alive) {
-                return .{ .index = index, .version = version };
-            }
-        }
-        return null;
+            return .{ .index = index, .version = version };
+        } else return null;
     }
 };
 
@@ -216,7 +204,7 @@ pub const Registry = struct {
     pub fn destroyEntity(self: *Registry, entity: Entity) void {
         if (!self.validEntity(entity)) return;
         self.removeAll(entity);
-        self.entities.destroy(entity);
+        self.entities.destroy(self.allocator, entity);
     }
 
     pub fn addContext(self: *Registry, value: anytype) void {
