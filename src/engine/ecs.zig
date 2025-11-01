@@ -214,7 +214,7 @@ pub const Registry = struct {
     }
 
     pub fn destroyEntity(self: *Registry, entity: Entity) void {
-        std.debug.assert(self.validEntity(entity));
+        if (!self.validEntity(entity)) return;
         self.removeAll(entity);
         self.entities.destroy(entity);
     }
@@ -285,12 +285,12 @@ pub const Registry = struct {
     }
 
     pub fn remove(self: *Registry, entity: Entity, T: type) void {
-        std.debug.assert(self.validEntity(entity));
+        if (!self.validEntity(entity)) return;
         self.assure(T).remove(entity.index);
     }
 
     pub fn removeAll(self: *Registry, entity: Entity) void {
-        std.debug.assert(self.validEntity(entity));
+        if (!self.validEntity(entity)) return;
 
         var iterator = self.componentMap.valueIterator();
         while (iterator.next()) |value| {
@@ -311,12 +311,12 @@ pub const Registry = struct {
     }
 
     pub fn add(self: *Registry, entity: Entity, value: anytype) void {
-        std.debug.assert(self.validEntity(entity));
+        if (!self.validEntity(entity)) return;
         _ = self.doAdd(entity.index, value);
     }
 
     pub fn alignAdd(self: *Registry, e: Entity, comps: anytype) void {
-        std.debug.assert(self.validEntity(e));
+        if (!self.validEntity(e)) return;
         var index: [comps.len]u16 = undefined;
         inline for (comps, &index) |v, *i| i.* = self.doAdd(e.index, v);
         for (index[1..]) |i| std.debug.assert(index[0] == i);
@@ -341,7 +341,7 @@ pub const Registry = struct {
     }
 
     pub fn getPtr(self: *Registry, entity: Entity, T: type) ?*T {
-        std.debug.assert(self.validEntity(entity));
+        if (!self.validEntity(entity)) return null;
         return self.assure(T).tryGet(entity.index);
     }
 
