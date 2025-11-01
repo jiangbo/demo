@@ -29,7 +29,7 @@ const Entities = struct {
 
         for (self.versions.items, 0..) |version, i| {
             if (version & alive != alive) {
-                self.versions.items[i] += 1;
+                self.versions.items[i] +%= 1;
                 self.deletedCount -= 1;
                 return .{ .index = @intCast(i), .version = version };
             }
