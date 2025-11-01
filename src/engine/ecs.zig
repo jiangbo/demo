@@ -30,9 +30,9 @@ const Entities = struct {
         }
     }
 
-    pub fn destroy(self: *Entities, gpa: Allocator, entity: Entity) void {
+    pub fn destroy(self: *Entities, gpa: Allocator, entity: Entity) !void {
         self.versions.items[entity.index] += 1;
-        self.deleted.append(gpa, entity.index);
+        try self.deleted.append(gpa, entity.index);
     }
 
     pub fn isAlive(self: *const Entities, entity: Entity) bool {
@@ -204,7 +204,7 @@ pub const Registry = struct {
     pub fn destroyEntity(self: *Registry, entity: Entity) void {
         if (!self.validEntity(entity)) return;
         self.removeAll(entity);
-        self.entities.destroy(self.allocator, entity);
+        self.entities.destroy(self.allocator, entity) catch oom();
     }
 
     pub fn addContext(self: *Registry, value: anytype) void {
