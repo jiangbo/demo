@@ -174,7 +174,7 @@ const VertexOptions = struct {
     vertexOffset: usize = 0,
     count: usize,
 };
-fn drawInstanced(texture: gpu.Texture, options: VertexOptions) void {
+fn drawInstanced(texture: Texture, options: VertexOptions) void {
 
     // 绑定流水线
     gpu.setPipeline(pipeline);

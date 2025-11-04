@@ -65,7 +65,7 @@ pub fn update(delta: f32) void {
 }
 
 pub fn cameraFollow() void {
-    const playerEntity = ecs.w.getIdentity(Player).?;
+    const playerEntity = ecs.w.getIdentityEntity(Player).?;
     if (!ecs.w.has(playerEntity, WantToMove)) return;
 
     const position = ecs.w.get(playerEntity, Position).?;

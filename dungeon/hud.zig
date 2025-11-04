@@ -32,8 +32,7 @@ pub fn draw() void {
     var healthSize: gfx.Vector = .init(200, 12);
     const healthPos = pos.sub(healthSize.scale(0.5));
 
-    const playerEntity = ecs.w.getIdentity(Player).?;
-    const health = ecs.w.get(playerEntity, Health).?;
+    const health = ecs.w.getIdentity(Player, Health).?;
     var buffer: [50]u8 = undefined;
     const text = zhu.format(&buffer, "Health: {} / {}", //
         .{ health.current, health.max });

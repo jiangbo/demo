@@ -30,7 +30,7 @@ pub fn init() void {
 }
 
 pub fn move() void {
-    const entity = ecs.w.getIdentity(components.Player).?;
+    const entity = ecs.w.getIdentityEntity(components.Player).?;
 
     const tilePosition = ecs.w.get(entity, TilePosition).?;
     var tilePos = tilePosition;

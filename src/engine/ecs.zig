@@ -31,7 +31,7 @@ const Entities = struct {
     }
 
     pub fn destroy(self: *Entities, gpa: Allocator, entity: Entity) !void {
-        self.versions.items[entity.index] += 1;
+        self.versions.items[entity.index] +%= 1;
         try self.deleted.append(gpa, entity.index);
     }
 
@@ -40,7 +40,7 @@ const Entities = struct {
             self.versions.items[entity.index] == entity.version;
     }
 
-    pub fn getEntity(self: *const Entities, index: Entity.Index) ?Entity {
+    pub fn toEntity(self: *const Entities, index: Entity.Index) ?Entity {
         if (index < self.versions.items.len) {
             const version = self.versions.items[index];
             return .{ .index = index, .version = version };
@@ -193,8 +193,8 @@ pub const Registry = struct {
         return self.entities.create(self.allocator) catch oom();
     }
 
-    pub fn getEntity(self: *const Registry, index: Entity.Index) ?Entity {
-        return self.entities.getEntity(index);
+    pub fn toEntity(self: *const Registry, index: Entity.Index) ?Entity {
+        return self.entities.toEntity(index);
     }
 
     pub fn validEntity(self: *const Registry, entity: Entity) bool {
@@ -232,8 +232,13 @@ pub const Registry = struct {
         self.identityMap.put(self.allocator, id, e) catch oom();
     }
 
-    pub fn getIdentity(self: *Registry, T: type) ?Entity {
+    pub fn getIdentityEntity(self: *Registry, T: type) ?Entity {
         return self.identityMap.get(hashTypeId(T));
+    }
+
+    pub fn getIdentity(self: *Registry, T: type, V: type) ?V {
+        const entity = self.getIdentityEntity(T) orelse return null;
+        return self.get(entity, V);
     }
 
     pub fn removeIdentity(self: *Registry, T: type) bool {

@@ -12,7 +12,7 @@ const TilePosition = components.TilePosition;
 const WantToAttack = components.WantToAttack;
 
 pub fn checkPlayerAttack() void {
-    const playerEntity = ecs.w.getIdentity(Player).?;
+    const playerEntity = ecs.w.getIdentityEntity(Player).?;
 
     const moved = ecs.w.get(playerEntity, WantToMove);
     if (moved == null) return;
@@ -23,7 +23,7 @@ pub fn checkPlayerAttack() void {
         const position = view.get(enemy, TilePosition);
         if (!tilePosition.equals(position)) continue;
 
-        const enemyEntity = ecs.w.getEntity(enemy).?;
+        const enemyEntity = ecs.w.toEntity(enemy).?;
         ecs.w.add(playerEntity, WantToAttack{enemyEntity});
         ecs.w.remove(playerEntity, WantToMove);
         return;
