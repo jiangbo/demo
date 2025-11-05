@@ -46,5 +46,7 @@ pub fn move() void {
     } else if (window.isKeyRelease(.SPACE)) {
         // 空格跳过当前回合
         ecs.w.addContext(TurnState.player);
+        var health = ecs.w.getPtr(entity, Health).?;
+        health.current = @min(health.max, health.current + 1);
     }
 }

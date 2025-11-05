@@ -14,6 +14,7 @@ const Name = components.Name;
 const TurnState = components.TurnState;
 const TilePosition = components.TilePosition;
 const WantToMove = components.WantToMove;
+const WantToAttack = components.WantToAttack;
 
 const MovingRandomly = struct {};
 
@@ -39,13 +40,16 @@ pub fn init() void {
         ecs.w.add(enemy, Name{@tagName(enemyTile)});
 
         ecs.w.add(enemy, map.getTextureFromTile(enemyTile));
-        // ecs.w.add(enemy, MovingRandomly{});
+        ecs.w.add(enemy, MovingRandomly{});
         ecs.w.add(enemy, Enemy{});
     }
 }
 
 pub fn move() void {
     if (ecs.w.getContext(TurnState).?.* != .player) return;
+
+    const playerEntity = ecs.w.getIdentityEntity(Player).?;
+    const playerPos = ecs.w.get(playerEntity, TilePosition).?;
 
     ecs.w.addContext(TurnState.monster);
     var view = ecs.w.view(.{ MovingRandomly, TilePosition });
@@ -57,6 +61,10 @@ pub fn move() void {
             2 => pos.x -= 1,
             else => pos.y -= 1,
         }
-        view.add(entity, WantToMove{pos});
+        if (playerPos.equals(pos)) {
+            view.add(entity, WantToAttack{playerEntity});
+        } else {
+            view.add(entity, WantToMove{pos});
+        }
     }
 }

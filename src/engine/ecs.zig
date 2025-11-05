@@ -241,6 +241,11 @@ pub const Registry = struct {
         return self.get(entity, V);
     }
 
+    pub fn isIdentity(self: *Registry, e: Entity, T: type) bool {
+        const e1 = self.getIdentityEntity(T) orelse return false;
+        return e1.index == e.index and e1.version == e.version;
+    }
+
     pub fn removeIdentity(self: *Registry, T: type) bool {
         return self.identityMap.remove(hashTypeId(T));
     }
@@ -416,6 +421,11 @@ pub fn View(includes: anytype, excludes: anytype, reverse: bool) type {
 
         pub fn has(self: *const @This(), entity: Index, T: type) bool {
             return self.reg.assure(T).has(entity);
+        }
+
+        pub fn is(self: *const @This(), entity: Index, T: type) bool {
+            const e = self.getIdentityEntity(T) orelse return false;
+            return e.index == entity;
         }
 
         pub fn add(self: *@This(), entity: Index, value: anytype) void {

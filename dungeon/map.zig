@@ -153,11 +153,15 @@ pub fn update(_: f32) void {
 
 fn moveIfNeed() void {
     var view = ecs.w.view(.{ WantToMove, TilePosition });
-    while (view.next()) |entity| {
+    blk: while (view.next()) |entity| {
         const dest = view.get(entity, WantToMove)[0];
         const canMove = dest.x < WIDTH and dest.y < HEIGHT //
         and indexTile(dest.x, dest.y) == .floor;
         if (!canMove) continue;
+
+        for (ecs.w.raw(TilePosition)) |pos| {
+            if (pos.equals(dest)) continue :blk;
+        }
 
         view.getPtr(entity, TilePosition).* = dest;
         const pos = worldPosition(dest);
