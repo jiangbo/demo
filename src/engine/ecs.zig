@@ -277,21 +277,6 @@ pub const Registry = struct {
         return self.eventMap.remove(hashTypeId(T));
     }
 
-    pub fn remove(self: *Registry, entity: Entity, T: type) void {
-        if (!self.validEntity(entity)) return;
-        self.assure(T).remove(entity.index);
-    }
-
-    pub fn removeAll(self: *Registry, entity: Entity) void {
-        if (!self.validEntity(entity)) return;
-
-        var iterator = self.componentMap.valueIterator();
-        while (iterator.next()) |value| {
-            var map: *SparseMap(u8) = @ptrCast(@alignCast(value));
-            map.remove(entity.index);
-        }
-    }
-
     fn assure(self: *Registry, T: type) *SparseMap(T) {
         const result = self.componentMap
             .getOrPut(self.allocator, hashTypeId(T)) catch oom();
@@ -345,6 +330,29 @@ pub const Registry = struct {
     pub fn indexes(self: *Registry, T: type) //
     struct { []Entity.Index, View(.{T}, .{}, false) } {
         return .{ self.assure(T).dense.items, self.view(.{T}) };
+    }
+
+    pub fn remove(self: *Registry, entity: Entity, T: type) void {
+        if (!self.validEntity(entity)) return;
+        self.assure(T).remove(entity.index);
+    }
+
+    pub fn removeAll(self: *Registry, entity: Entity) void {
+        if (!self.validEntity(entity)) return;
+
+        var iterator = self.componentMap.valueIterator();
+        while (iterator.next()) |value| {
+            var map: *SparseMap(u8) = @ptrCast(@alignCast(value));
+            map.remove(entity.index);
+        }
+    }
+
+    pub fn clear(self: *Registry, T: type) void {
+        self.assure(T).clear();
+    }
+
+    pub fn clearAll(self: *Registry, types: anytype) void {
+        inline for (types) |T| self.clear(T);
     }
 
     pub fn view(self: *Registry, types: anytype) View(types, .{}, false) {

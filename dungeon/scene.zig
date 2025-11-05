@@ -57,6 +57,7 @@ pub fn update(delta: f32) void {
 
     player.move();
     battle.checkPlayerAttack();
+    battle.attack();
     monster.move();
     map.update(delta);
 
