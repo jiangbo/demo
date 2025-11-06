@@ -7,13 +7,13 @@ const camera = zhu.camera;
 const ecs = zhu.ecs;
 
 const map = @import("map.zig");
-const components = @import("components.zig");
+const component = @import("component.zig");
 
-const Player = components.Player;
-const Health = components.Health;
-const TurnState = components.TurnState;
-const TilePosition = components.TilePosition;
-const WantToMove = components.WantToMove;
+const Player = component.Player;
+const Health = component.Health;
+const TurnState = component.TurnState;
+const TilePosition = component.TilePosition;
+const WantToMove = component.WantToMove;
 
 pub fn init() void {
     const entity = ecs.w.createEntity();
@@ -30,7 +30,7 @@ pub fn init() void {
 }
 
 pub fn move() void {
-    const entity = ecs.w.getIdentityEntity(components.Player).?;
+    const entity = ecs.w.getIdentityEntity(Player).?;
 
     const tilePosition = ecs.w.get(entity, TilePosition).?;
     var tilePos = tilePosition;

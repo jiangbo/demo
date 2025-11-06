@@ -3,14 +3,14 @@ const zhu = @import("zhu");
 
 const ecs = zhu.ecs;
 
-const components = @import("components.zig");
+const component = @import("component.zig");
 
-const Player = components.Player;
-const Enemy = components.Enemy;
-const WantToMove = components.WantToMove;
-const TilePosition = components.TilePosition;
-const WantToAttack = components.WantToAttack;
-const Health = components.Health;
+const Player = component.Player;
+const Enemy = component.Enemy;
+const WantToMove = component.WantToMove;
+const TilePosition = component.TilePosition;
+const WantToAttack = component.WantToAttack;
+const Health = component.Health;
 
 pub fn checkPlayerAttack() void {
     const entity = ecs.w.getIdentityEntity(Player).?;

@@ -5,12 +5,12 @@ const gfx = zhu.gfx;
 const camera = zhu.camera;
 const ecs = zhu.ecs;
 
-const components = @import("components.zig");
+const component = @import("component.zig");
 
-const Position = components.Position;
-const TilePosition = components.TilePosition;
-const TileRect = components.TileRect;
-const WantToMove = components.WantToMove;
+const Position = component.Position;
+const TilePosition = component.TilePosition;
+const TileRect = component.TileRect;
+const WantToMove = component.WantToMove;
 
 pub const Tile = enum(u8) {
     other = 0,

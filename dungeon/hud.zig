@@ -7,13 +7,13 @@ const camera = zhu.camera;
 const math = zhu.math;
 const ecs = zhu.ecs;
 
-const components = @import("components.zig");
+const component = @import("component.zig");
 const map = @import("map.zig");
 
-const Player = components.Player;
-const Health = components.Health;
-const Name = components.Name;
-const Position = components.Position;
+const Player = component.Player;
+const Health = component.Health;
+const Name = component.Name;
+const Position = component.Position;
 
 var texture: gfx.Texture = undefined;
 const healthForeground: math.Vector4 = .init(0.298, 0.735, 0.314, 1);

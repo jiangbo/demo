@@ -5,16 +5,16 @@ const ecs = zhu.ecs;
 const gfx = zhu.gfx;
 
 const map = @import("map.zig");
-const components = @import("components.zig");
+const component = @import("component.zig");
 
-const Player = components.Player;
-const Enemy = components.Enemy;
-const Health = components.Health;
-const Name = components.Name;
-const TurnState = components.TurnState;
-const TilePosition = components.TilePosition;
-const WantToMove = components.WantToMove;
-const WantToAttack = components.WantToAttack;
+const Player = component.Player;
+const Enemy = component.Enemy;
+const Health = component.Health;
+const Name = component.Name;
+const TurnState = component.TurnState;
+const TilePosition = component.TilePosition;
+const WantToMove = component.WantToMove;
+const WantToAttack = component.WantToAttack;
 
 const MovingRandomly = struct {};
 

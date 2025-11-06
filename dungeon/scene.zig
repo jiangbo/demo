@@ -11,12 +11,12 @@ const player = @import("player.zig");
 const monster = @import("monster.zig");
 const hud = @import("hud.zig");
 const battle = @import("battle.zig");
-const components = @import("components.zig");
+const component = @import("component.zig");
 
-const Player = components.Player;
-const Position = components.Position;
-const TilePosition = components.TilePosition;
-const WantToMove = components.WantToMove;
+const Player = component.Player;
+const Position = component.Position;
+const TilePosition = component.TilePosition;
+const WantToMove = component.WantToMove;
 
 var isHelp = false;
 var isDebug = false;
