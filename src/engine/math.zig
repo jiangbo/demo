@@ -192,7 +192,7 @@ pub const Rect = struct {
     }
 
     pub fn toVector4(self: Rect) Vector4 {
-        return .init(self.min.x, self.min.y, self.max().x, self.max().y);
+        return .init(self.min.x, self.min.y, self.size.x, self.size.y);
     }
 };
 

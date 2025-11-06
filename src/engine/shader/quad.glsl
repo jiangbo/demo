@@ -9,37 +9,20 @@ in vec2 vertex_size;
 in vec4 vertex_texture;
 in vec4 vertex_color;
 
-const vec2 vertexArray[4] = {
-    {0.0f, 0.0f},
-    {1.0f, 0.0f},
-    {0.0f, 1.0f},
-    {1.0f, 1.0f},
-};
-
 out vec4 color;
 out vec2 uv;
 
 void main() {
-
-    // 索引
-    uint vertexIndex = uint(gl_VertexIndex) % 4;
-
     // 顶点
-    vec2 position = vertexArray[vertexIndex] * vertex_size;
+    vec2 corner = vec2(gl_VertexIndex & 1, gl_VertexIndex >> 1 & 1);
+    vec2 position = corner * vertex_size;
     vec4 depthPosition = vec4(position, 0, 0) + vertex_position;
     gl_Position = viewMatrix * depthPosition;
 
-    // 颜色
-    color = vertex_color;
-
     // 纹理
-    vec2 texcoord[4] = {
-        {vertex_texture.x, vertex_texture.y},
-        {vertex_texture.z, vertex_texture.y},
-        {vertex_texture.x, vertex_texture.w},
-        {vertex_texture.z, vertex_texture.w},
-    };
-    uv = texcoord[vertexIndex] * textureVec.xy;
+    color = vertex_color;
+    uv = vertex_texture.xy + corner * vertex_texture.zw;
+    uv *= textureVec.xy;
 }
 @end
 
