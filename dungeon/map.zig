@@ -36,7 +36,6 @@ var tiles: [WIDTH * HEIGHT]Tile = undefined;
 var vertexBuffer: [tiles.len]camera.Vertex = undefined;
 var texture: gfx.Texture = undefined;
 pub var rooms: [NUM_ROOMS]TileRect = undefined;
-var distances: [WIDTH * HEIGHT]u8 = undefined;
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/dungeonfont.png", .init(512, 512));
@@ -151,67 +150,54 @@ pub fn worldPosition(pos: TilePosition) Position {
     return getPositionFromIndex(indexUsize(pos.x, pos.y));
 }
 
-const directions: [4]isize = .{ 1, -1, WIDTH, -WIDTH };
+var distances: [HEIGHT][WIDTH]u8 = undefined;
+const Dequeue = std.PriorityDequeue(TilePosition, void, struct {
+    fn compare(_: void, a: TilePosition, b: TilePosition) std.math.Order {
+        return std.math.order(distances[a.y][a.x], distances[b.y][b.x]);
+    }
+}.compare);
+const directions: [4]TilePosition = .{
+    .{ .x = 1, .y = 0 }, .{ .x = 0xFF, .y = 0 },
+    .{ .x = 0, .y = 1 }, .{ .x = 0, .y = 0xFF },
+};
 pub fn updateDistance(pos: TilePosition) void {
-    @memset(&distances, 0xFF);
+    for (&distances) |*row| @memset(row, 0xFF);
 
-    var queue = std.PriorityDequeue(usize, void, struct {
-        fn compare(_: void, a: usize, b: usize) std.math.Order {
-            return std.math.order(distances[a], distances[b]);
-        }
-    }.compare).init(window.allocator, {});
+    var queue = Dequeue.init(window.allocator, {});
     defer queue.deinit();
 
-    var max: u8 = 0;
-    queue.add(indexUsize(pos.x, pos.y)) catch unreachable;
-    distances[indexUsize(pos.x, pos.y)] = max;
+    distances[pos.y][pos.x] = 0;
+    queue.add(pos) catch unreachable;
 
     while (queue.removeMinOrNull()) |min| {
-        const distance = distances[min];
+        const distance = distances[min.y][min.x];
 
         for (directions) |dir| {
-            const offset = @as(isize, @intCast(min)) + dir;
-            if (offset < 0 or offset >= distances.len) continue; // 超过地图
+            const x, const y = .{ min.x +% dir.x, min.y +% dir.y };
+            if (x >= WIDTH or y >= HEIGHT) continue; // 超过地图
+            if (tiles[indexUsize(x, y)] != .floor) continue; // 不可通过
 
-            const index: usize = @intCast(offset);
-            if (dir == 1 and index % WIDTH == 0) continue; // 换行
-            if (dir == -1 and index % WIDTH == WIDTH - 1) continue;
-            if (tiles[index] != .floor) continue; // 不可通过
-
-            if (distance + 1 < distances[index]) {
-                distances[index] = distance + 1;
-                queue.add(index) catch unreachable;
-                max = @max(max, distances[index]);
+            if (distance + 1 < distances[y][x]) {
+                distances[y][x] = distance + 1;
+                queue.add(.{ .x = x, .y = y }) catch unreachable;
             }
         }
     }
-
-    std.log.info("max distance: {}", .{max});
 }
 
 pub fn queryLessDistance(pos: TilePosition) ?TilePosition {
-    const i: usize = indexUsize(pos.x, pos.y);
-    const distance = distances[i];
+    const distance = distances[pos.y][pos.x];
     if (distance == 0) return null;
 
-    var result: ?TilePosition = null;
     for (directions) |dir| {
-        const offset = @as(isize, @intCast(i)) + dir;
+        const x, const y = .{ pos.x +% dir.x, pos.y +% dir.y };
 
-        if (offset < 0 or offset >= distances.len) continue; // 超过地图
-
-        const index: usize = @intCast(offset);
-        if (dir == 1 and index % WIDTH == 0) continue; // 换行
-        if (dir == -1 and index % WIDTH == WIDTH - 1) continue;
-        if (distances[index] < distance) {
-            result = .{
-                .x = @intCast(index % WIDTH),
-                .y = @intCast(index / WIDTH),
-            };
+        if (x >= WIDTH or y >= HEIGHT) continue; // 超过地图
+        if (distances[y][x] < distance) {
+            return .{ .x = x, .y = y };
         }
     }
-
-    return result;
+    return null;
 }
 
 pub fn update(_: f32) void {
