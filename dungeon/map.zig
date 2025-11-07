@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const gfx = zhu.gfx;
 const camera = zhu.camera;
 const ecs = zhu.ecs;
+const window = zhu.window;
 
 const component = @import("component.zig");
 
@@ -35,6 +36,7 @@ var tiles: [WIDTH * HEIGHT]Tile = undefined;
 var vertexBuffer: [tiles.len]camera.Vertex = undefined;
 var texture: gfx.Texture = undefined;
 pub var rooms: [NUM_ROOMS]TileRect = undefined;
+var distances: [WIDTH * HEIGHT]u8 = undefined;
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/dungeonfont.png", .init(512, 512));
@@ -43,6 +45,8 @@ pub fn init() void {
     buildRooms();
     std.mem.sort(TileRect, &rooms, {}, compare);
     buildCorridors();
+
+    updateDistance(rooms[0].center());
 
     initVertexBuffer();
 }
@@ -145,6 +149,44 @@ pub fn indexTile(x: usize, y: usize) Tile {
 
 pub fn worldPosition(pos: TilePosition) Position {
     return getPositionFromIndex(indexUsize(pos.x, pos.y));
+}
+
+pub fn updateDistance(pos: TilePosition) void {
+    @memset(&distances, 0xFF);
+
+    var queue = std.PriorityDequeue(usize, void, struct {
+        fn compare(_: void, a: usize, b: usize) std.math.Order {
+            return std.math.order(distances[a], distances[b]);
+        }
+    }.compare).init(window.allocator, {});
+    defer queue.deinit();
+
+    var max: u8 = 0;
+    queue.add(indexUsize(pos.x, pos.y)) catch unreachable;
+    distances[indexUsize(pos.x, pos.y)] = max;
+
+    const directions: [4]isize = .{ 1, -1, WIDTH, -WIDTH };
+    while (queue.removeMinOrNull()) |min| {
+        const distance = distances[min];
+
+        for (directions) |dir| {
+            const offset = @as(isize, @intCast(min)) + dir;
+            if (offset < 0 or offset >= distances.len) continue; // 超过地图
+
+            const index: usize = @intCast(offset);
+            if (dir == 1 and index % WIDTH == 0) continue; // 换行
+            if (dir == -1 and index % WIDTH == WIDTH - 1) continue;
+            if (tiles[index] != .floor) continue; // 不可通过
+
+            if (distance + 1 < distances[index]) {
+                distances[index] = distance + 1;
+                queue.add(index) catch unreachable;
+                max = @max(max, distances[index]);
+            }
+        }
+    }
+
+    std.log.info("max distance: {}", .{max});
 }
 
 pub fn update(_: f32) void {

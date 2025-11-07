@@ -39,7 +39,7 @@ pub fn move() void {
     else if (window.isKeyRelease(.A)) tilePos.x -|= 1 //
     else if (window.isKeyRelease(.D)) tilePos.x += 1; //
 
-    _ = ecs.w.removeIdentity(WantToMove);
+    _ = ecs.w.remove(entity, WantToMove);
     if (!tilePosition.equals(tilePos)) {
         ecs.w.add(entity, WantToMove{tilePos});
         ecs.w.addContext(TurnState.player);

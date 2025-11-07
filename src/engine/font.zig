@@ -64,7 +64,11 @@ const initOptions = struct {
 };
 
 fn binarySearch(unicode: u32) ?usize {
-    return std.sort.binarySearch(Glyph, font.glyphs, unicode, compare);
+    return std.sort.binarySearch(Glyph, font.glyphs, unicode, struct {
+        fn compare(a: u32, b: Glyph) std.math.Order {
+            return std.math.order(a, b.unicode);
+        }
+    }.compare);
 }
 
 pub fn init(options: initOptions) void {
@@ -83,12 +87,6 @@ pub fn init(options: initOptions) void {
 
 fn searchGlyph(code: u32) *const Glyph {
     return &font.glyphs[binarySearch(code) orelse invalidIndex];
-}
-
-fn compare(a: u32, b: Glyph) std.math.Order {
-    if (a < b.unicode) return .lt;
-    if (a > b.unicode) return .gt;
-    return .eq;
 }
 
 pub fn beginDraw() void {

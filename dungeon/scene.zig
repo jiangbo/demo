@@ -58,6 +58,10 @@ pub fn update(delta: f32) void {
     player.move();
     battle.checkPlayerAttack();
     battle.attack();
+    const playerEntity = ecs.w.getIdentityEntity(Player).?;
+    if (ecs.w.has(playerEntity, WantToMove)) {
+        map.updateDistance(ecs.w.get(playerEntity, TilePosition).?);
+    }
     monster.move();
     map.update(delta);
 
