@@ -15,6 +15,7 @@ const TurnState = component.TurnState;
 const TilePosition = component.TilePosition;
 const WantToMove = component.WantToMove;
 const WantToAttack = component.WantToAttack;
+const ChasePlayer = component.ChasePlayer;
 
 const MovingRandomly = struct {};
 
@@ -40,7 +41,7 @@ pub fn init() void {
         ecs.w.add(enemy, Name{@tagName(enemyTile)});
 
         ecs.w.add(enemy, map.getTextureFromTile(enemyTile));
-        ecs.w.add(enemy, MovingRandomly{});
+        ecs.w.add(enemy, ChasePlayer{});
         ecs.w.add(enemy, Enemy{});
     }
 }
@@ -52,19 +53,15 @@ pub fn move() void {
     const playerPos = ecs.w.get(playerEntity, TilePosition).?;
 
     ecs.w.addContext(TurnState.monster);
-    var view = ecs.w.view(.{ MovingRandomly, TilePosition });
+    var view = ecs.w.view(.{ ChasePlayer, TilePosition });
     while (view.next()) |entity| {
-        var pos = view.get(entity, TilePosition);
-        switch (zhu.randomIntMost(u8, 0, 3)) {
-            0 => pos.x += 1,
-            1 => pos.y += 1,
-            2 => pos.x -= 1,
-            else => pos.y -= 1,
-        }
-        if (playerPos.equals(pos)) {
+        const pos = view.get(entity, TilePosition);
+        const next = map.queryLessDistance(pos) orelse continue;
+
+        if (playerPos.equals(next)) {
             view.add(entity, WantToAttack{playerEntity});
         } else {
-            view.add(entity, WantToMove{pos});
+            view.add(entity, WantToMove{next});
         }
     }
 }

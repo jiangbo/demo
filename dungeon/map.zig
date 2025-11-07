@@ -151,6 +151,7 @@ pub fn worldPosition(pos: TilePosition) Position {
     return getPositionFromIndex(indexUsize(pos.x, pos.y));
 }
 
+const directions: [4]isize = .{ 1, -1, WIDTH, -WIDTH };
 pub fn updateDistance(pos: TilePosition) void {
     @memset(&distances, 0xFF);
 
@@ -165,7 +166,6 @@ pub fn updateDistance(pos: TilePosition) void {
     queue.add(indexUsize(pos.x, pos.y)) catch unreachable;
     distances[indexUsize(pos.x, pos.y)] = max;
 
-    const directions: [4]isize = .{ 1, -1, WIDTH, -WIDTH };
     while (queue.removeMinOrNull()) |min| {
         const distance = distances[min];
 
@@ -187,6 +187,31 @@ pub fn updateDistance(pos: TilePosition) void {
     }
 
     std.log.info("max distance: {}", .{max});
+}
+
+pub fn queryLessDistance(pos: TilePosition) ?TilePosition {
+    const i: usize = indexUsize(pos.x, pos.y);
+    const distance = distances[i];
+    if (distance == 0) return null;
+
+    var result: ?TilePosition = null;
+    for (directions) |dir| {
+        const offset = @as(isize, @intCast(i)) + dir;
+
+        if (offset < 0 or offset >= distances.len) continue; // 超过地图
+
+        const index: usize = @intCast(offset);
+        if (dir == 1 and index % WIDTH == 0) continue; // 换行
+        if (dir == -1 and index % WIDTH == WIDTH - 1) continue;
+        if (distances[index] < distance) {
+            result = .{
+                .x = @intCast(index % WIDTH),
+                .y = @intCast(index / WIDTH),
+            };
+        }
+    }
+
+    return result;
 }
 
 pub fn update(_: f32) void {

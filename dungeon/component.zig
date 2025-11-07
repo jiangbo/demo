@@ -10,6 +10,7 @@ pub const Health = struct { current: i32, max: i32 };
 pub const Name = struct { []const u8 };
 pub const Player = struct {};
 pub const Enemy = struct {};
+pub const ChasePlayer = struct {};
 
 pub const TilePosition = struct {
     x: u8,
