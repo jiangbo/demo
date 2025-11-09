@@ -97,7 +97,6 @@ pub fn drawRect(area: math.Rect, color: Color) void {
 }
 
 pub const Option = struct {
-    rotation: f32 = 0, // 旋转角度
     size: ?Vector2 = null, // 大小
     pivot: Vector2 = .zero, // 旋转中心
     color: Color = .one, // 颜色
