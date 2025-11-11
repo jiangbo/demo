@@ -17,14 +17,13 @@ const Player = component.Player;
 const Position = component.Position;
 const TilePosition = component.TilePosition;
 const WantToMove = component.WantToMove;
+const TurnState = component.TurnState;
 
 var isHelp = false;
 var isDebug = false;
 const scale = 1;
 
 pub fn init() void {
-    ecs.init(window.allocator);
-
     window.initFont(.{
         .font = @import("zon/font.zon"),
         .texture = gfx.loadTexture("assets/font.png", .init(960, 960)),
@@ -33,6 +32,13 @@ pub fn init() void {
     camera.frameStats(true);
     camera.init(5000);
     camera.scale = .init(scale, scale);
+    ecs.init(window.allocator);
+
+    restart();
+}
+
+fn restart() void {
+    ecs.clear();
 
     hud.init();
     map.init();
@@ -54,6 +60,10 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.DOWN)) camera.position.y += speed;
     if (window.isKeyDown(.LEFT)) camera.position.x -= speed;
     if (window.isKeyDown(.RIGHT)) camera.position.x += speed;
+
+    if (ecs.w.getContext(TurnState).? == .over) {
+        return if (window.isKeyRelease(._1)) restart();
+    }
 
     player.move();
     battle.checkPlayerAttack();

@@ -455,6 +455,11 @@ pub fn init(allocator: std.mem.Allocator) void {
     registry = Registry.init(allocator);
 }
 
+pub fn clear() void {
+    registry.deinit();
+    registry = Registry.init(registry.allocator);
+}
+
 pub fn deinit() void {
     registry.deinit();
 }
