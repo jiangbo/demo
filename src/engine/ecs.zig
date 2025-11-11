@@ -217,7 +217,11 @@ pub const Registry = struct {
         @memcpy(v.value_ptr.*, std.mem.asBytes(&value));
     }
 
-    pub fn getContext(self: *Registry, T: type) ?*T {
+    pub fn getContext(self: *Registry, T: type) ?T {
+        return (self.getContextPtr(T) orelse return null).*;
+    }
+
+    pub fn getContextPtr(self: *Registry, T: type) ?*T {
         const ptr = self.contextMap.get(hashTypeId(T));
         return @ptrCast(ptr orelse return null);
     }
@@ -265,7 +269,7 @@ pub const Registry = struct {
         list.append(self.allocator, value) catch oom();
     }
 
-    pub fn getEvent(self: *Registry, T: type) []T {
+    pub fn getEvents(self: *Registry, T: type) []T {
         return self.assureEvent(T).items;
     }
 

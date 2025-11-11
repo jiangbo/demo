@@ -14,6 +14,7 @@ const Player = component.Player;
 const Health = component.Health;
 const Name = component.Name;
 const Position = component.Position;
+const TurnState = component.TurnState;
 
 var texture: gfx.Texture = undefined;
 const healthForeground: math.Vector4 = .init(0.298, 0.735, 0.314, 1);
@@ -41,11 +42,12 @@ pub fn draw() void {
     healthSize.x *= math.percentInt(health.current, health.max);
     camera.drawRect(.init(healthPos, healthSize), healthForeground);
 
-    drawTextCenter(text, pos);
+    drawTextCenter(text, pos, .{});
     pos.y += size.x * 2;
-    drawTextCenter("Explore the Dungeon. A/S/D/W to move.", pos);
+    drawTextCenter("Explore the Dungeon. A/S/D/W to move.", pos, .{});
 
     drawNameAndHealthIfNeed();
+    drawGameOverIfNeed();
 }
 
 fn drawNameAndHealthIfNeed() void {
@@ -65,16 +67,42 @@ fn drawNameAndHealthIfNeed() void {
         const text = zhu.format(&buffer, "{s}: {}hp", .{ name, health });
 
         position = position.addXY(map.TILE_SIZE.x / 2, -size.y);
-        drawTextCenter(text, camera.toWindow(position));
+        drawTextCenter(text, camera.toWindow(position), .{});
     }
 }
 
-fn drawTextCenter(text: []const u8, position: Position) void {
-    const textSize = size.mul(.init(@floatFromInt(text.len), 1));
-    drawText(text, position.sub(textSize.scale(0.5)));
+fn drawGameOverIfNeed() void {
+    if (ecs.w.getContext(TurnState).? != .over) return;
+
+    var pos: gfx.Vector = .init(window.logicSize.x / 2, 130);
+    var text: []const u8 = "Your quest has ended.";
+    drawTextCenter(text, pos, .{ .color = .red, .scale = 2 });
+
+    text = "Slain by a monster, your hero's journey has come to a end.";
+    pos = pos.addY(50);
+    drawTextCenter(text, pos, .{});
+    text = "The Amulet of Yala remains unclaimed," ++
+        " and your home town is not saved.";
+    pos = pos.addY(20);
+    drawTextCenter(text, pos, .{});
+
+    text = "Don't worry, you can always try again with a new hero.";
+    pos = pos.addY(40);
+    drawTextCenter(text, pos, .{ .color = .yellow });
+
+    text = "Press 1 to play again.";
+    pos = pos.addY(50);
+    drawTextCenter(text, pos, .{ .color = .green, .scale = 2 });
 }
+
+const Options = struct { color: gfx.Color = .white, scale: f32 = 1 };
+fn drawTextCenter(text: []const u8, pos: Position, opt: Options) void {
+    const textSize = size.mul(.init(@floatFromInt(text.len), 1));
+    drawText(text, pos.sub(textSize.scale(0.5).scale(opt.scale)), opt);
+}
+
 const size: Position = .init(8, 8);
-fn drawText(text: []const u8, position: Position) void {
+fn drawText(text: []const u8, position: Position, opt: Options) void {
     var pos = position;
 
     for (text) |byte| {
@@ -85,7 +113,10 @@ fn drawText(text: []const u8, position: Position) void {
             .size = size,
         });
 
-        camera.draw(charTexture, pos);
-        pos.x += size.x;
+        camera.drawOption(charTexture, pos, .{
+            .color = opt.color,
+            .size = size.scale(opt.scale),
+        });
+        pos.x += size.x * opt.scale;
     }
 }

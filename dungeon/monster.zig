@@ -47,7 +47,7 @@ pub fn init() void {
 }
 
 pub fn move() void {
-    if (ecs.w.getContext(TurnState).?.* != .player) return;
+    if (ecs.w.getContext(TurnState).? != .player) return;
 
     const playerEntity = ecs.w.getIdentityEntity(Player).?;
     const playerPos = ecs.w.get(playerEntity, TilePosition).?;
