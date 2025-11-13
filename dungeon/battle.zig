@@ -13,24 +13,6 @@ const WantToAttack = component.WantToAttack;
 const Health = component.Health;
 const TurnState = component.TurnState;
 
-pub fn checkPlayerAttack() void {
-    const entity = ecs.w.getIdentityEntity(Player).?;
-
-    const moved = ecs.w.get(entity, WantToMove) orelse return;
-    const tilePosition = moved[0];
-
-    var view = ecs.w.view(.{ Enemy, TilePosition });
-    while (view.next()) |enemy| {
-        const position = view.get(enemy, TilePosition);
-        if (!tilePosition.equals(position)) continue;
-
-        const enemyEntity = ecs.w.toEntity(enemy).?;
-        ecs.w.add(entity, WantToAttack{enemyEntity});
-        ecs.w.remove(entity, WantToMove);
-        return;
-    }
-}
-
 pub fn attack() void {
     var view = ecs.w.view(.{WantToAttack});
     while (view.next()) |entity| {

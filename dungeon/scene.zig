@@ -68,15 +68,14 @@ pub fn update(delta: f32) void {
         return if (window.isKeyRelease(._1)) restart();
     }
 
-    player.move();
-    battle.checkPlayerAttack();
+    player.update();
     battle.attack();
+    monster.move();
+    map.update(delta);
     const playerEntity = ecs.w.getIdentityEntity(Player).?;
     if (ecs.w.has(playerEntity, WantToMove)) {
         map.updateDistance(ecs.w.get(playerEntity, TilePosition).?);
     }
-    monster.move();
-    map.update(delta);
 
     cameraFollow();
     sceneCall("update", .{delta});
