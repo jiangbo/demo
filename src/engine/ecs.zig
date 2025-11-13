@@ -236,6 +236,12 @@ pub const Registry = struct {
         self.identityMap.put(self.allocator, id, e) catch oom();
     }
 
+    pub fn createIdentityEntity(self: *Registry, T: type) Entity {
+        const entity = self.createEntity();
+        self.addIdentity(entity, T);
+        return entity;
+    }
+
     pub fn getIdentityEntity(self: *Registry, T: type) ?Entity {
         return self.identityMap.get(hashTypeId(T));
     }

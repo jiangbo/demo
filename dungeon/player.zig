@@ -14,17 +14,17 @@ const Health = component.Health;
 const TurnState = component.TurnState;
 const TilePosition = component.TilePosition;
 const WantToMove = component.WantToMove;
+const Amulet = component.Amulet;
 
 pub fn init() void {
-    const entity = ecs.w.createEntity();
-    ecs.w.addIdentity(entity, Player);
+    const entity = ecs.w.createIdentityEntity(Player);
 
     const tilePosition = map.rooms[0].center();
     ecs.w.add(entity, tilePosition);
     ecs.w.add(entity, WantToMove{tilePosition});
     ecs.w.add(entity, map.getTextureFromTile(.player));
     ecs.w.add(entity, map.worldPosition(tilePosition));
-    const health: Health = .{ .max = 20, .current = 20 };
+    const health: Health = .{ .max = 10, .current = 10 };
     ecs.w.add(entity, health);
     ecs.w.addContext(TurnState.wait);
 }
@@ -41,8 +41,13 @@ pub fn move() void {
 
     _ = ecs.w.remove(entity, WantToMove);
     if (!tilePosition.equals(tilePos)) {
-        ecs.w.add(entity, WantToMove{tilePos});
-        ecs.w.addContext(TurnState.player);
+        const amuletPos = ecs.w.getIdentity(Amulet, TilePosition).?;
+        if (amuletPos.equals(tilePos)) {
+            ecs.w.addContext(TurnState.win);
+        } else {
+            ecs.w.add(entity, WantToMove{tilePos});
+            ecs.w.addContext(TurnState.player);
+        }
     } else if (window.isKeyRelease(.SPACE)) {
         // 空格跳过当前回合
         ecs.w.addContext(TurnState.player);

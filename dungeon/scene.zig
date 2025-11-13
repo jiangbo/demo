@@ -12,6 +12,7 @@ const monster = @import("monster.zig");
 const hud = @import("hud.zig");
 const battle = @import("battle.zig");
 const component = @import("component.zig");
+const item = @import("item.zig");
 
 const Player = component.Player;
 const Position = component.Position;
@@ -43,6 +44,7 @@ fn restart() void {
     hud.init();
     map.init();
     player.init();
+    item.init();
     cameraFollow();
     monster.init();
 }
@@ -61,7 +63,8 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.LEFT)) camera.position.x -= speed;
     if (window.isKeyDown(.RIGHT)) camera.position.x += speed;
 
-    if (ecs.w.getContext(TurnState).? == .over) {
+    const state = ecs.w.getContext(TurnState).?;
+    if (state == .over or state == .win) {
         return if (window.isKeyRelease(._1)) restart();
     }
 

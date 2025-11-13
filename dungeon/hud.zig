@@ -48,6 +48,7 @@ pub fn draw() void {
 
     drawNameAndHealthIfNeed();
     drawGameOverIfNeed();
+    drawGameWinIfNeed();
 }
 
 fn drawNameAndHealthIfNeed() void {
@@ -89,6 +90,26 @@ fn drawGameOverIfNeed() void {
     text = "Don't worry, you can always try again with a new hero.";
     pos = pos.addY(40);
     drawTextCenter(text, pos, .{ .color = .yellow });
+
+    text = "Press 1 to play again.";
+    pos = pos.addY(50);
+    drawTextCenter(text, pos, .{ .color = .green, .scale = 2 });
+}
+
+fn drawGameWinIfNeed() void {
+    if (ecs.w.getContext(TurnState).? != .win) return;
+
+    var pos: gfx.Vector = .init(window.logicSize.x / 2, 130);
+    var text: []const u8 = "You have won!";
+    drawTextCenter(text, pos, .{ .color = .green, .scale = 2 });
+
+    text = "You put on the Amulet of Yala and feel its power " ++
+        "course through your veins.";
+    pos = pos.addY(50);
+    drawTextCenter(text, pos, .{});
+    text = "Your town is saved, and you can return to your normal life.";
+    pos = pos.addY(20);
+    drawTextCenter(text, pos, .{});
 
     text = "Press 1 to play again.";
     pos = pos.addY(50);
