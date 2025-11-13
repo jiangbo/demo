@@ -120,14 +120,15 @@ pub fn SparseMap(Component: type) type {
         pub fn remove(self: *Self, entity: Index) void {
             if (!self.has(entity)) return;
 
-            const last = self.dense.items[self.dense.items.len - 1];
             const index = self.sparse.items[entity];
-
+            const moved = self.dense.getLast();
             _ = self.dense.swapRemove(index);
+
+            const last = self.dense.items.len;
             const size = self.valueSize;
             const src = self.valuePtr[size * last ..][0..size];
             @memmove(self.valuePtr[size * index ..][0..size], src);
-            self.sparse.items[last] = index;
+            self.sparse.items[moved] = index;
         }
 
         pub fn clear(self: *Self) void {
