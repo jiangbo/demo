@@ -55,13 +55,21 @@ pub fn move() void {
     ecs.w.addContext(TurnState.monster);
     var view = ecs.w.view(.{ ChasePlayer, TilePosition });
     while (view.next()) |entity| {
-        const pos = view.get(entity, TilePosition);
+        var pos = view.get(entity, TilePosition);
         const next = map.queryLessDistance(pos) orelse continue;
 
         if (playerPos.equals(next)) {
             view.add(entity, WantToAttack{playerEntity});
-        } else {
-            view.add(entity, WantToMove{next});
+            continue;
         }
+
+        for (ecs.w.raw(TilePosition)) |tilePos| {
+            if (!tilePos.equals(next)) continue;
+
+            const step = zhu.math.randomStep(u8, 1);
+            if (pos.x == next.x) pos.x +%= step else pos.y +%= step;
+            view.add(entity, WantToMove{pos});
+            break;
+        } else view.add(entity, WantToMove{next});
     }
 }

@@ -7,7 +7,7 @@ pub const FourDirection = enum {
     right,
 
     pub fn random() FourDirection {
-        return randEnum(FourDirection);
+        return randomEnum(FourDirection);
     }
 
     pub fn opposite(self: FourDirection) FourDirection {
@@ -326,6 +326,15 @@ pub fn randomIntMost(T: type, min: T, max: T) T {
     return random().intRangeAtMostBiased(T, min, max);
 }
 
-pub fn randEnum(comptime EnumType: type) EnumType {
+pub fn randomEnum(comptime EnumType: type) EnumType {
     return random().enumValue(EnumType);
+}
+
+pub fn randomBool() bool {
+    return random().boolean();
+}
+
+pub fn randomStep(T: type, step: T) T {
+    const round = std.math.maxInt(T) - step + 1;
+    return if (randomBool()) step else round;
 }

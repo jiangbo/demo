@@ -189,15 +189,19 @@ pub fn queryLessDistance(pos: TilePosition) ?TilePosition {
     const distance = distances[pos.y][pos.x];
     if (distance == 0) return null;
 
+    var r1: ?TilePosition, var r2: ?TilePosition = .{ null, null };
     for (directions) |dir| {
         const x, const y = .{ pos.x +% dir.x, pos.y +% dir.y };
-
         if (x >= WIDTH or y >= HEIGHT) continue; // 超过地图
+
         if (distances[y][x] < distance) {
-            return .{ .x = x, .y = y };
+            const r = TilePosition{ .x = x, .y = y };
+            if (distance > 4) return r; // 远距离直接返回
+            if (r1 == null) r1 = r else r2 = r;
         }
     }
-    return null;
+    if (r2 == null) return r1;
+    return if (zhu.randomBool()) r1 else r2;
 }
 
 pub fn update(_: f32) void {
