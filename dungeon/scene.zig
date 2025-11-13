@@ -41,11 +41,11 @@ pub fn init() void {
 fn restart() void {
     ecs.clear();
 
+    ecs.w.addContext(TurnState.player);
     hud.init();
     map.init();
     player.init();
     item.init();
-    cameraFollow();
     monster.init();
 }
 
@@ -63,34 +63,11 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.LEFT)) camera.position.x -= speed;
     if (window.isKeyDown(.RIGHT)) camera.position.x += speed;
 
-    const state = ecs.w.getContext(TurnState).?;
-    if (state == .over or state == .win) {
-        return if (window.isKeyRelease(._1)) restart();
+    switch (ecs.w.getContext(TurnState).?) {
+        .over, .win => if (window.isKeyRelease(._1)) restart(),
+        .player => player.update(),
+        .monster => monster.update(),
     }
-
-    player.update();
-    battle.attack();
-    monster.move();
-    map.update(delta);
-    const playerEntity = ecs.w.getIdentityEntity(Player).?;
-    if (ecs.w.has(playerEntity, WantToMove)) {
-        map.updateDistance(ecs.w.get(playerEntity, TilePosition).?);
-    }
-
-    cameraFollow();
-    sceneCall("update", .{delta});
-}
-
-pub fn cameraFollow() void {
-    const playerEntity = ecs.w.getIdentityEntity(Player).?;
-    if (!ecs.w.has(playerEntity, WantToMove)) return;
-
-    const position = ecs.w.get(playerEntity, Position).?;
-
-    const scaleSize = window.logicSize.div(camera.scale);
-    const half = scaleSize.scale(0.5);
-    const max = map.size.sub(scaleSize).max(.zero);
-    camera.position = position.sub(half).clamp(.zero, max);
 }
 
 pub fn draw() void {

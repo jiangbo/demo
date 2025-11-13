@@ -5,6 +5,7 @@ const ecs = zhu.ecs;
 const gfx = zhu.gfx;
 
 const map = @import("map.zig");
+const battle = @import("battle.zig");
 const component = @import("component.zig");
 
 const Player = component.Player;
@@ -46,13 +47,18 @@ pub fn init() void {
     }
 }
 
-pub fn move() void {
-    if (ecs.w.getContext(TurnState).? != .player) return;
+pub fn update() void {
+    ecs.w.addContext(TurnState.player);
 
+    moveOrAttack();
+    battle.attack();
+    map.moveIfNeed();
+}
+
+fn moveOrAttack() void {
     const playerEntity = ecs.w.getIdentityEntity(Player).?;
     const playerPos = ecs.w.get(playerEntity, TilePosition).?;
 
-    ecs.w.addContext(TurnState.monster);
     var view = ecs.w.view(.{ ChasePlayer, TilePosition });
     while (view.next()) |entity| {
         var pos = view.get(entity, TilePosition);

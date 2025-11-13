@@ -7,6 +7,7 @@ const camera = zhu.camera;
 const ecs = zhu.ecs;
 
 const map = @import("map.zig");
+const battle = @import("battle.zig");
 const component = @import("component.zig");
 
 const Player = component.Player;
@@ -14,29 +15,31 @@ const Enemy = component.Enemy;
 const WantToAttack = component.WantToAttack;
 const Health = component.Health;
 const TurnState = component.TurnState;
+const Position = component.Position;
 const TilePosition = component.TilePosition;
-const WantToMove = component.WantToMove;
 const Amulet = component.Amulet;
 
+var entity: ecs.Entity = undefined;
+
 pub fn init() void {
-    const entity = ecs.w.createIdentityEntity(Player);
+    entity = ecs.w.createIdentityEntity(Player);
 
     const tilePosition = map.rooms[0].center();
     ecs.w.add(entity, tilePosition);
-    ecs.w.add(entity, WantToMove{tilePosition});
     ecs.w.add(entity, map.getTextureFromTile(.player));
     ecs.w.add(entity, map.worldPosition(tilePosition));
     const health: Health = .{ .max = 10, .current = 10 };
     ecs.w.add(entity, health);
-    ecs.w.addContext(TurnState.wait);
+
+    cameraFollow(map.worldPosition(tilePosition));
 }
 
 pub fn update() void {
-    const entity = ecs.w.getIdentityEntity(Player).?;
+    if (!window.isAnyRelease()) return; // 没有按任何键
 
     if (window.isKeyRelease(.SPACE)) {
         // 空格跳过当前回合
-        ecs.w.addContext(TurnState.player);
+        ecs.w.addContext(TurnState.monster);
         var health = ecs.w.getPtr(entity, Health).?;
         health.current = @min(health.max, health.current + 1);
         return;
@@ -54,12 +57,14 @@ pub fn update() void {
     const amuletPos = ecs.w.getIdentity(Amulet, TilePosition).?;
     if (amuletPos.equals(newPos)) {
         ecs.w.addContext(TurnState.win);
-    } else moveOrAttack(entity, newPos);
+    } else moveOrAttack(newPos);
+
+    battle.attack();
 }
 
-fn moveOrAttack(entity: ecs.Entity, newPos: TilePosition) void {
-    ecs.w.addContext(TurnState.player);
-    ecs.w.add(entity, WantToMove{newPos});
+fn moveOrAttack(newPos: TilePosition) void {
+    ecs.w.addContext(TurnState.monster);
+    if (!map.canMove(newPos)) return; // 不能移动，撞墙也算移动
 
     var view = ecs.w.view(.{ Enemy, TilePosition });
     while (view.next()) |enemy| {
@@ -68,7 +73,18 @@ fn moveOrAttack(entity: ecs.Entity, newPos: TilePosition) void {
 
         const enemyEntity = ecs.w.toEntity(enemy).?;
         ecs.w.add(entity, WantToAttack{enemyEntity});
-        ecs.w.remove(entity, WantToMove);
         return;
     }
+
+    ecs.w.add(entity, newPos);
+    ecs.w.add(entity, map.worldPosition(newPos));
+    map.updateDistance(newPos);
+    cameraFollow(map.worldPosition(newPos));
+}
+
+fn cameraFollow(position: Position) void {
+    const scaleSize = window.logicSize.div(camera.scale);
+    const half = scaleSize.scale(0.5);
+    const max = map.size.sub(scaleSize).max(.zero);
+    camera.position = position.sub(half).clamp(.zero, max);
 }

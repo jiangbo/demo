@@ -23,9 +23,7 @@ pub fn attack() void {
         if (health.current == 0) {
             if (ecs.w.isIdentity(target, Player)) {
                 ecs.w.addContext(TurnState.over);
-            } else {
-                ecs.w.destroyEntity(target);
-            }
+            } else ecs.w.destroyEntity(target);
         }
     }
     ecs.w.clear(WantToAttack);

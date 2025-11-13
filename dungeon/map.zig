@@ -204,17 +204,16 @@ pub fn queryLessDistance(pos: TilePosition) ?TilePosition {
     return if (zhu.randomBool()) r1 else r2;
 }
 
-pub fn update(_: f32) void {
-    moveIfNeed();
+pub fn canMove(pos: TilePosition) bool {
+    return pos.x < WIDTH and pos.y < HEIGHT //
+    and indexTile(pos.x, pos.y) == .floor;
 }
 
-fn moveIfNeed() void {
+pub fn moveIfNeed() void {
     var view = ecs.w.view(.{ WantToMove, TilePosition });
     blk: while (view.next()) |entity| {
         const dest = view.get(entity, WantToMove)[0];
-        const canMove = dest.x < WIDTH and dest.y < HEIGHT //
-        and indexTile(dest.x, dest.y) == .floor;
-        if (!canMove) continue;
+        if (!canMove(dest)) continue;
 
         for (ecs.w.raw(TilePosition)) |pos| {
             if (pos.equals(dest)) continue :blk;
