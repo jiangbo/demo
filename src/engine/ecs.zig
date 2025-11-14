@@ -137,13 +137,13 @@ pub fn SparseMap(Component: type) type {
     };
 }
 
-pub fn DeinitList(T: type) type {
+fn DeinitList(T: type) type {
     return struct {
         list: std.ArrayList(T) = .empty,
         alignment: std.mem.Alignment = .of(T),
         valueSize: u32 = @sizeOf(T),
 
-        pub fn deinit(self: *@This(), gpa: Allocator) void {
+        fn deinit(self: *@This(), gpa: Allocator) void {
             if (self.list.capacity == 0) return;
             const size = self.list.capacity * self.valueSize;
             const slice = self.list.items.ptr[0..size];

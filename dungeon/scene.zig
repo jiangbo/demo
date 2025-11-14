@@ -78,11 +78,8 @@ pub fn draw() void {
     sceneCall("draw", .{});
     map.draw();
 
-    var view = ecs.w.view(.{ gfx.Texture, Position });
-    while (view.next()) |entity| {
-        const texture = view.get(entity, gfx.Texture);
-        const position = view.get(entity, Position);
-        camera.draw(texture, position);
+    for (ecs.w.raw(gfx.Texture), ecs.w.raw(Position)) |tex, pos| {
+        camera.draw(tex, pos);
     }
 
     hud.draw();
