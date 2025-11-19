@@ -12,6 +12,7 @@ const Player = component.Player;
 const Enemy = component.Enemy;
 const Health = component.Health;
 const Name = component.Name;
+const TileRect = component.TileRect;
 const TurnState = component.TurnState;
 const TilePosition = component.TilePosition;
 const WantToMove = component.WantToMove;
@@ -21,6 +22,7 @@ const PlayerView = component.PlayerView;
 const ViewField = component.ViewField;
 
 const MovingRandomly = struct {};
+const viewSize = 3;
 
 pub fn init() void {
     for (map.rooms[1..]) |room| {
@@ -65,9 +67,12 @@ fn moveOrAttack() void {
     var view = ecs.w.view(.{ ChasePlayer, TilePosition });
     while (view.next()) |entity| {
         var pos = view.get(entity, TilePosition);
+        if (rect.contains(pos)) view.add(entity, PlayerView{});
+        const enemyRect: TileRect = .fromCenter(pos, viewSize);
+        if (!enemyRect.contains(playerPos)) continue;
+
         const next = map.queryLessDistance(pos) orelse continue;
 
-        if (rect.contains(next)) view.add(entity, PlayerView{});
         if (playerPos.equals(next)) {
             view.add(entity, WantToAttack{playerEntity});
             continue;
