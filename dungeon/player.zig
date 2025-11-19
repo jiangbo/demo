@@ -23,20 +23,21 @@ const ViewField = component.ViewField;
 const PlayerView = component.PlayerView;
 
 var entity: ecs.Entity = undefined;
+const viewSize = 4;
 
 pub fn init() void {
     entity = ecs.w.createIdentityEntity(Player);
 
-    const tilePosition = map.rooms[0].center();
-    ecs.w.add(entity, tilePosition);
+    const tilePos = map.rooms[0].center();
+    ecs.w.add(entity, tilePos);
     ecs.w.add(entity, map.getTextureFromTile(.player));
-    ecs.w.add(entity, map.worldPosition(tilePosition));
+    ecs.w.add(entity, map.worldPosition(tilePos));
     const health: Health = .{ .max = 10, .current = 10 };
     ecs.w.add(entity, health);
-    ecs.w.add(entity, ViewField{.fromCenter(tilePosition, 3, 3)});
+    ecs.w.add(entity, ViewField{.fromCenter(tilePos, viewSize)});
     ecs.w.add(entity, PlayerView{});
 
-    cameraFollow(map.worldPosition(tilePosition));
+    cameraFollow(map.worldPosition(tilePos));
 }
 
 pub fn update() void {
@@ -82,7 +83,7 @@ fn moveOrAttack(newPos: TilePosition) void {
     }
 
     ecs.w.add(entity, newPos);
-    ecs.w.add(entity, ViewField{.fromCenter(newPos, 3, 3)});
+    ecs.w.add(entity, ViewField{.fromCenter(newPos, viewSize)});
     ecs.w.add(entity, map.worldPosition(newPos));
     map.updateDistance(newPos);
     cameraFollow(map.worldPosition(newPos));

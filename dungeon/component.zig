@@ -47,12 +47,12 @@ pub const TileRect = struct {
         return .{ .x = r.x + r.w / 2, .y = r.y + r.h / 2 };
     }
 
-    pub fn fromCenter(c: TilePosition, w: u8, h: u8) TileRect {
+    pub fn fromCenter(c: TilePosition, w: u8) TileRect {
         return .{
             .x = c.x -| w,
-            .y = c.y -| h,
+            .y = c.y -| w,
             .w = 2 * w + 1,
-            .h = 2 * h + 1,
+            .h = 2 * w + 1,
         };
     }
 
