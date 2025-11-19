@@ -12,18 +12,9 @@ const Position = component.Position;
 const TilePosition = component.TilePosition;
 const TileRect = component.TileRect;
 const WantToMove = component.WantToMove;
+const Player = component.Player;
 
-pub const Tile = enum(u8) {
-    other = 0,
-    wall = 35,
-    floor = 46,
-    player = 64,
-    ettin = 69,
-    ogre = 79,
-    goblin = 103,
-    orc = 111,
-    amulet = 124,
-};
+pub const Tile = component.Tile;
 
 const WIDTH = 80;
 const HEIGHT = 50;
@@ -33,7 +24,6 @@ const TILE_PER_ROW = 16;
 
 pub var size = gfx.Vector.init(WIDTH, HEIGHT).mul(TILE_SIZE);
 var tiles: [WIDTH * HEIGHT]Tile = undefined;
-var vertexBuffer: [tiles.len]camera.Vertex = undefined;
 var texture: gfx.Texture = undefined;
 pub var rooms: [NUM_ROOMS]TileRect = undefined;
 
@@ -46,21 +36,6 @@ pub fn init() void {
     buildCorridors();
 
     updateDistance(rooms[0].center());
-
-    initVertexBuffer();
-}
-
-fn initVertexBuffer() void {
-    var array: std.ArrayList(camera.Vertex) = .initBuffer(&vertexBuffer);
-    for (tiles, 0..) |tile, index| {
-        const tex = getTextureFromTile(tile);
-        const pos = getPositionFromIndex(index);
-        array.appendAssumeCapacity(.{
-            .position = pos.toVector3(0),
-            .size = TILE_SIZE,
-            .texture = tex.area.toVector4(),
-        });
-    }
 }
 
 pub fn getTextureFromTile(tile: Tile) gfx.Texture {
@@ -226,5 +201,20 @@ pub fn moveIfNeed() void {
 }
 
 pub fn draw() void {
-    camera.drawVertices(texture, &vertexBuffer);
+    drawPlayerView();
+}
+
+fn drawPlayerView() void {
+    const pos = ecs.w.getIdentity(Player, TilePosition).?;
+    const viewField: u8 = 4;
+    const maxX = @min(WIDTH, pos.x + viewField + 1);
+    const maxY = @min(HEIGHT, pos.y + viewField + 1);
+
+    for (pos.x -| viewField..maxX) |x| {
+        for (pos.y -| viewField..maxY) |y| {
+            const index = indexUsize(x, y);
+            const tex = getTextureFromTile(tiles[index]);
+            camera.draw(tex, getPositionFromIndex(index));
+        }
+    }
 }

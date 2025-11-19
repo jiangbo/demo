@@ -13,6 +13,18 @@ pub const Enemy = struct {};
 pub const ChasePlayer = struct {};
 pub const Amulet = struct {};
 
+pub const Tile = enum(u8) {
+    other = 0,
+    wall = 35,
+    floor = 46,
+    player = 64,
+    ettin = 69,
+    ogre = 79,
+    goblin = 103,
+    orc = 111,
+    amulet = 124,
+};
+
 pub const TilePosition = struct {
     x: u8,
     y: u8,
