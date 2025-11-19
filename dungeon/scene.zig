@@ -19,6 +19,7 @@ const Position = component.Position;
 const TilePosition = component.TilePosition;
 const WantToMove = component.WantToMove;
 const TurnState = component.TurnState;
+const PlayerView = component.PlayerView;
 
 var isHelp = false;
 var isDebug = false;
@@ -78,8 +79,10 @@ pub fn draw() void {
     sceneCall("draw", .{});
     map.draw();
 
-    for (ecs.w.raw(gfx.Texture), ecs.w.raw(Position)) |tex, pos| {
-        camera.draw(tex, pos);
+    var view = ecs.w.view(.{ gfx.Texture, Position, PlayerView });
+    while (view.next()) |entity| {
+        const pos = view.get(entity, Position);
+        camera.draw(view.get(entity, gfx.Texture), pos);
     }
 
     hud.draw();

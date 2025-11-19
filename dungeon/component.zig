@@ -46,6 +46,22 @@ pub const TileRect = struct {
     pub fn center(r: TileRect) TilePosition {
         return .{ .x = r.x + r.w / 2, .y = r.y + r.h / 2 };
     }
+
+    pub fn fromCenter(c: TilePosition, w: u8, h: u8) TileRect {
+        return .{
+            .x = c.x -| w,
+            .y = c.y -| h,
+            .w = 2 * w + 1,
+            .h = 2 * h + 1,
+        };
+    }
+
+    pub fn contains(self: TileRect, pos: TilePosition) bool {
+        return self.x <= pos.x and pos.x < self.x + self.w and
+            self.y <= pos.y and pos.y < self.y + self.h;
+    }
 };
 pub const WantToMove = struct { TilePosition };
 pub const WantToAttack = struct { ecs.Entity };
+pub const ViewField = struct { TileRect };
+pub const PlayerView = struct {};

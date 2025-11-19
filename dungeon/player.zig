@@ -17,7 +17,10 @@ const Health = component.Health;
 const TurnState = component.TurnState;
 const Position = component.Position;
 const TilePosition = component.TilePosition;
+const TileRect = component.TileRect;
 const Amulet = component.Amulet;
+const ViewField = component.ViewField;
+const PlayerView = component.PlayerView;
 
 var entity: ecs.Entity = undefined;
 
@@ -30,6 +33,8 @@ pub fn init() void {
     ecs.w.add(entity, map.worldPosition(tilePosition));
     const health: Health = .{ .max = 10, .current = 10 };
     ecs.w.add(entity, health);
+    ecs.w.add(entity, ViewField{.fromCenter(tilePosition, 3, 3)});
+    ecs.w.add(entity, PlayerView{});
 
     cameraFollow(map.worldPosition(tilePosition));
 }
@@ -77,6 +82,7 @@ fn moveOrAttack(newPos: TilePosition) void {
     }
 
     ecs.w.add(entity, newPos);
+    ecs.w.add(entity, ViewField{.fromCenter(newPos, 3, 3)});
     ecs.w.add(entity, map.worldPosition(newPos));
     map.updateDistance(newPos);
     cameraFollow(map.worldPosition(newPos));

@@ -17,6 +17,8 @@ const TilePosition = component.TilePosition;
 const WantToMove = component.WantToMove;
 const WantToAttack = component.WantToAttack;
 const ChasePlayer = component.ChasePlayer;
+const PlayerView = component.PlayerView;
+const ViewField = component.ViewField;
 
 const MovingRandomly = struct {};
 
@@ -58,12 +60,14 @@ pub fn update() void {
 fn moveOrAttack() void {
     const playerEntity = ecs.w.getIdentityEntity(Player).?;
     const playerPos = ecs.w.get(playerEntity, TilePosition).?;
+    const rect = ecs.w.get(playerEntity, ViewField).?[0];
 
     var view = ecs.w.view(.{ ChasePlayer, TilePosition });
     while (view.next()) |entity| {
         var pos = view.get(entity, TilePosition);
         const next = map.queryLessDistance(pos) orelse continue;
 
+        if (rect.contains(next)) view.add(entity, PlayerView{});
         if (playerPos.equals(next)) {
             view.add(entity, WantToAttack{playerEntity});
             continue;

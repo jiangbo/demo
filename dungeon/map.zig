@@ -15,6 +15,7 @@ const WantToMove = component.WantToMove;
 const Player = component.Player;
 
 pub const Tile = component.Tile;
+pub const ViewField = component.ViewField;
 
 const WIDTH = 80;
 const HEIGHT = 50;
@@ -205,13 +206,10 @@ pub fn draw() void {
 }
 
 fn drawPlayerView() void {
-    const pos = ecs.w.getIdentity(Player, TilePosition).?;
-    const viewField: u8 = 4;
-    const maxX = @min(WIDTH, pos.x + viewField + 1);
-    const maxY = @min(HEIGHT, pos.y + viewField + 1);
+    const viewField = ecs.w.getIdentity(Player, ViewField).?[0];
 
-    for (pos.x -| viewField..maxX) |x| {
-        for (pos.y -| viewField..maxY) |y| {
+    for (viewField.x..viewField.x + viewField.w) |x| {
+        for (viewField.y..viewField.y + viewField.h) |y| {
             const index = indexUsize(x, y);
             const tex = getTextureFromTile(tiles[index]);
             camera.draw(tex, getPositionFromIndex(index));

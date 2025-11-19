@@ -15,6 +15,7 @@ const Health = component.Health;
 const Name = component.Name;
 const Position = component.Position;
 const TurnState = component.TurnState;
+const PlayerView = component.PlayerView;
 
 var texture: gfx.Texture = undefined;
 const healthForeground: math.Vector4 = .init(0.298, 0.735, 0.314, 1);
@@ -53,15 +54,10 @@ pub fn draw() void {
 
 fn drawNameAndHealthIfNeed() void {
     var buffer: [50]u8 = undefined;
-    const mousePosition = camera.toWorld(window.mousePosition);
 
-    var view = ecs.w.view(.{ Health, Name, Position });
+    var view = ecs.w.view(.{ Health, Name, Position, PlayerView });
     while (view.next()) |entity| {
         var position = view.get(entity, Position);
-        const rect: gfx.Rect = .init(position, map.TILE_SIZE);
-
-        if (!rect.contains(mousePosition)) continue;
-
         const health = view.get(entity, Health).current;
         const name = view.get(entity, Name)[0];
 

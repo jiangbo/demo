@@ -393,7 +393,7 @@ pub fn View(includes: anytype, excludes: anytype, reverse: bool) type {
     return struct {
         reg: *Registry,
         slice: []Index = &.{},
-        index: Index = 0,
+        index: Index,
 
         pub fn init(r: *Registry) @This() {
             var slice = r.assure(includes[0]).dense.items;
@@ -401,25 +401,23 @@ pub fn View(includes: anytype, excludes: anytype, reverse: bool) type {
                 const entities = r.assure(T).dense.items;
                 if (entities.len < slice.len) slice = entities;
             }
-            const index = if (reverse) slice.len else 0;
+            const index = if (reverse) slice.len - 1 else 0;
             return .{ .reg = r, .slice = slice, .index = @intCast(index) };
         }
 
         pub fn next(self: *@This()) ?Index {
-            if (reverse) {
-                if (self.index == 0) return null else self.index -= 1;
-            } else if (self.index >= self.slice.len) return null;
+            blk: while (self.index < self.slice.len) {
+                const entity = self.slice[self.index];
+                if (reverse) self.index -%= 1 else self.index += 1;
 
-            const entity = self.slice[self.index];
-            inline for (includes) |T| {
-                if (!self.reg.assure(T).has(entity)) return null;
-            }
-            inline for (excludes) |T| {
-                if (self.reg.assure(T).has(entity)) return null;
-            }
-
-            if (!reverse) self.index += 1;
-            return entity;
+                inline for (includes) |T| {
+                    if (!self.reg.assure(T).has(entity)) continue :blk;
+                }
+                inline for (excludes) |T| {
+                    if (self.reg.assure(T).has(entity)) continue :blk;
+                }
+                return entity;
+            } else return null;
         }
 
         pub fn get(self: *@This(), entity: Index, T: type) T {
