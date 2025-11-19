@@ -27,6 +27,7 @@ pub var size = gfx.Vector.init(WIDTH, HEIGHT).mul(TILE_SIZE);
 var tiles: [WIDTH * HEIGHT]Tile = undefined;
 var texture: gfx.Texture = undefined;
 pub var rooms: [NUM_ROOMS]TileRect = undefined;
+var walks: [HEIGHT * WIDTH]bool = undefined;
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/dungeonfont.png", .init(512, 512));
@@ -37,6 +38,7 @@ pub fn init() void {
     buildCorridors();
 
     updateDistance(rooms[0].center());
+    @memset(&walks, false);
 }
 
 pub fn getTextureFromTile(tile: Tile) gfx.Texture {
@@ -201,8 +203,36 @@ pub fn moveIfNeed() void {
     }
 }
 
+pub fn updatePlayerWalk() void {
+    const viewField = ecs.w.getIdentity(Player, ViewField).?[0];
+
+    for (viewField.y..viewField.y + viewField.h) |y| {
+        const start = indexUsize(viewField.x, y);
+        @memset(walks[start..][0..viewField.w], true);
+    }
+}
+
 pub fn draw() void {
+    drawPlayerWalk();
     drawPlayerView();
+}
+
+fn drawPlayerWalk() void {
+    const viewField = ecs.w.getIdentity(Player, ViewField).?[0];
+
+    for (walks, 0..) |isWalk, index| {
+        if (!isWalk) continue;
+        const pos = TilePosition{
+            .x = @intCast(index % WIDTH),
+            .y = @intCast(index / WIDTH),
+        };
+        if (viewField.contains(pos)) continue;
+
+        const tex = getTextureFromTile(tiles[index]);
+        camera.drawOption(tex, getPositionFromIndex(index), .{
+            .color = .{ .x = 0.5, .y = 0.5, .z = 0.5, .w = 1 },
+        });
+    }
 }
 
 fn drawPlayerView() void {

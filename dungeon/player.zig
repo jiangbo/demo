@@ -85,6 +85,7 @@ fn moveOrAttack(newPos: TilePosition) void {
     ecs.w.add(entity, newPos);
     ecs.w.add(entity, ViewField{.fromCenter(newPos, viewSize)});
     ecs.w.add(entity, map.worldPosition(newPos));
+    map.updatePlayerWalk();
     map.updateDistance(newPos);
     cameraFollow(map.worldPosition(newPos));
 }
