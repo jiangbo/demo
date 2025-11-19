@@ -36,6 +36,7 @@ pub fn init() void {
     ecs.w.add(entity, health);
     ecs.w.add(entity, ViewField{.fromCenter(tilePos, viewSize)});
     ecs.w.add(entity, PlayerView{});
+    map.updatePlayerWalk();
 
     cameraFollow(map.worldPosition(tilePos));
 }

@@ -371,24 +371,20 @@ pub const Registry = struct {
         inline for (types) |T| self.clear(T);
     }
 
-    pub fn view(self: *Registry, types: anytype) View(types, .{}, false) {
-        return self.viewExcludes(types, .{});
+    pub fn view(self: *Registry, types: anytype) View(types, .{}, .{}) {
+        return self.viewOptions(types, .{}, .{});
     }
 
     // zig fmt: off
-    pub fn viewExcludes(self: *Registry,  includes: anytype,
-        excludes: anytype) View(includes, excludes,false) {
-        return View(includes, excludes, false).init(self);
-    }
-
-    pub fn reverseView(self: *Registry,  includes: anytype,
-        excludes: anytype) View(includes, excludes,true) {
+    pub fn viewOptions(self: *Registry, includes: anytype, excludes: anytype,
+        comptime opt: ViewOptions) View(includes,excludes, opt) {
     // zig fmt: on
-        return View(includes, excludes, true).init(self);
+        return View(includes, excludes, opt).init(self);
     }
 };
 
-pub fn View(includes: anytype, excludes: anytype, reverse: bool) type {
+pub const ViewOptions = struct { reverse: bool = false };
+pub fn View(includes: anytype, excludes: anytype, opt: ViewOptions) type {
     const Index = Entity.Index;
     return struct {
         reg: *Registry,
@@ -401,14 +397,14 @@ pub fn View(includes: anytype, excludes: anytype, reverse: bool) type {
                 const entities = r.assure(T).dense.items;
                 if (entities.len < slice.len) slice = entities;
             }
-            const index = if (reverse) slice.len - 1 else 0;
+            const index = if (opt.reverse) slice.len - 1 else 0;
             return .{ .reg = r, .slice = slice, .index = @intCast(index) };
         }
 
         pub fn next(self: *@This()) ?Index {
             blk: while (self.index < self.slice.len) {
                 const entity = self.slice[self.index];
-                if (reverse) self.index -%= 1 else self.index += 1;
+                if (opt.reverse) self.index -%= 1 else self.index += 1;
 
                 inline for (includes) |T| {
                     if (!self.reg.assure(T).has(entity)) continue :blk;
