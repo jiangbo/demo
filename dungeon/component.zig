@@ -31,6 +31,10 @@ pub const TilePosition = struct {
     pub fn equals(self: TilePosition, other: TilePosition) bool {
         return self.x == other.x and self.y == other.y;
     }
+
+    pub fn toVector(self: TilePosition) Position {
+        return .{ .x = @floatFromInt(self.x), .y = @floatFromInt(self.y) };
+    }
 };
 pub const TileRect = struct {
     x: u8,

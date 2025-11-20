@@ -20,14 +20,13 @@ pub const ViewField = component.ViewField;
 
 const WIDTH = builder.WIDTH;
 const HEIGHT = builder.HEIGHT;
-const NUM_ROOMS = 20;
 pub const TILE_SIZE: gfx.Vector = .init(32, 32);
 const TILE_PER_ROW = 16;
 
 pub var size = gfx.Vector.init(WIDTH, HEIGHT).mul(TILE_SIZE);
 var tiles: [WIDTH * HEIGHT]Tile = undefined;
 var texture: gfx.Texture = undefined;
-pub var rooms: [NUM_ROOMS]TileRect = undefined;
+pub var rooms: [20]TileRect = undefined;
 var walks: [HEIGHT * WIDTH]bool = undefined;
 
 pub fn init() void {
@@ -38,7 +37,7 @@ pub fn init() void {
     std.mem.sort(TileRect, &rooms, {}, compare);
     builder.buildCorridors(&tiles, &rooms);
 
-    updateDistance(rooms[0].center());
+    builder.updateDistance(&tiles, rooms[0].center());
     @memset(&walks, false);
 }
 
@@ -60,72 +59,13 @@ fn compare(_: void, r1: TileRect, r2: TileRect) bool {
     return if (r1.x == r2.x) r1.y < r2.y else r1.x < r2.x;
 }
 
-fn indexUsize(x: usize, y: usize) usize {
-    const x1 = if (x < WIDTH) x else WIDTH - 1;
-    const y1 = if (y < HEIGHT) y else HEIGHT - 1;
-    return x1 + y1 * WIDTH;
-}
-
+const indexUsize = builder.indexUsize;
 pub fn indexTile(x: usize, y: usize) Tile {
     return tiles[indexUsize(x, y)];
 }
 
 pub fn worldPosition(pos: TilePosition) Position {
-    return getPositionFromIndex(indexUsize(pos.x, pos.y));
-}
-
-var distances: [HEIGHT][WIDTH]u8 = undefined;
-const Dequeue = std.PriorityDequeue(TilePosition, void, struct {
-    fn compare(_: void, a: TilePosition, b: TilePosition) std.math.Order {
-        return std.math.order(distances[a.y][a.x], distances[b.y][b.x]);
-    }
-}.compare);
-const directions: [4]TilePosition = .{
-    .{ .x = 1, .y = 0 }, .{ .x = 0xFF, .y = 0 },
-    .{ .x = 0, .y = 1 }, .{ .x = 0, .y = 0xFF },
-};
-pub fn updateDistance(pos: TilePosition) void {
-    for (&distances) |*row| @memset(row, 0xFF);
-
-    var queue = Dequeue.init(window.allocator, {});
-    defer queue.deinit();
-
-    distances[pos.y][pos.x] = 0;
-    queue.add(pos) catch unreachable;
-
-    while (queue.removeMinOrNull()) |min| {
-        const distance = distances[min.y][min.x];
-
-        for (directions) |dir| {
-            const x, const y = .{ min.x +% dir.x, min.y +% dir.y };
-            if (x >= WIDTH or y >= HEIGHT) continue; // 超过地图
-            if (tiles[indexUsize(x, y)] != .floor) continue; // 不可通过
-
-            if (distance + 1 < distances[y][x]) {
-                distances[y][x] = distance + 1;
-                queue.add(.{ .x = x, .y = y }) catch unreachable;
-            }
-        }
-    }
-}
-
-pub fn queryLessDistance(pos: TilePosition) ?TilePosition {
-    const distance = distances[pos.y][pos.x];
-    if (distance == 0) return null;
-
-    var r1: ?TilePosition, var r2: ?TilePosition = .{ null, null };
-    for (directions) |dir| {
-        const x, const y = .{ pos.x +% dir.x, pos.y +% dir.y };
-        if (x >= WIDTH or y >= HEIGHT) continue; // 超过地图
-
-        if (distances[y][x] < distance) {
-            const r = TilePosition{ .x = x, .y = y };
-            if (distance > 4) return r; // 远距离直接返回
-            if (r1 == null) r1 = r else r2 = r;
-        }
-    }
-    if (r2 == null) return r1;
-    return if (zhu.randomBool()) r1 else r2;
+    return pos.toVector().mul(TILE_SIZE);
 }
 
 pub fn canMove(pos: TilePosition) bool {
@@ -147,6 +87,11 @@ pub fn moveIfNeed() void {
         const pos = worldPosition(dest);
         view.getPtr(entity, Position).* = pos;
     }
+}
+
+pub const queryLessDistance = builder.queryLessDistance;
+pub fn updateDistance(pos: TilePosition) void {
+    builder.updateDistance(&tiles, pos);
 }
 
 pub fn updatePlayerWalk() void {
