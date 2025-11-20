@@ -21,20 +21,18 @@ pub const TILE_SIZE: gfx.Vector = .init(32, 32);
 const TILE_PER_ROW = 16;
 
 pub var size = gfx.Vector.init(WIDTH, HEIGHT).mul(TILE_SIZE);
+pub var spawns: [builder.SPAWN_SIZE]TilePosition = undefined;
+
 var tiles: [WIDTH * HEIGHT]Tile = undefined;
 var texture: gfx.Texture = undefined;
-pub var rooms: [20]TileRect = undefined;
 var walks: [HEIGHT * WIDTH]bool = undefined;
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/dungeonfont.png", .init(512, 512));
 
-    @memset(&tiles, .wall);
-    builder.buildRooms(&tiles, &rooms);
-    std.mem.sort(TileRect, &rooms, {}, compare);
-    builder.buildCorridors(&tiles, &rooms);
+    builder.buildRooms(&tiles, &spawns);
 
-    builder.updateDistance(&tiles, rooms[0].center());
+    builder.updateDistance(&tiles, spawns[0]);
     @memset(&walks, false);
 }
 
@@ -50,10 +48,6 @@ fn getPositionFromIndex(index: usize) gfx.Vector {
     const row: f32 = @floatFromInt(index / WIDTH);
     const col: f32 = @floatFromInt(index % WIDTH);
     return gfx.Vector.init(col, row).mul(TILE_SIZE);
-}
-
-fn compare(_: void, r1: TileRect, r2: TileRect) bool {
-    return if (r1.x == r2.x) r1.y < r2.y else r1.x < r2.x;
 }
 
 const indexUsize = builder.indexUsize;

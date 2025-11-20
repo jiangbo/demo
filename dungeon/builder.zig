@@ -9,8 +9,12 @@ const TilePosition = component.TilePosition;
 
 pub const WIDTH: usize = 80;
 pub const HEIGHT: usize = 50;
+pub const SPAWN_SIZE = 20;
 
-pub fn buildRooms(tiles: []Tile, rooms: []TileRect) void {
+pub fn buildRooms(tiles: []Tile, spawns: []TilePosition) void {
+    @memset(tiles, .wall);
+
+    var rooms: [SPAWN_SIZE]TileRect = undefined;
     for (0..rooms.len) |roomIndex| {
         var room: TileRect = undefined;
         label: {
@@ -33,9 +37,17 @@ pub fn buildRooms(tiles: []Tile, rooms: []TileRect) void {
         }
         rooms[roomIndex] = room;
     }
+
+    std.mem.sort(TileRect, &rooms, {}, compare);
+    buildCorridors(tiles, &rooms);
+    for (spawns, 0..) |*value, i| value.* = rooms[i].center();
 }
 
-pub fn buildCorridors(tiles: []Tile, rooms: []TileRect) void {
+fn compare(_: void, r1: TileRect, r2: TileRect) bool {
+    return if (r1.x == r2.x) r1.y < r2.y else r1.x < r2.x;
+}
+
+fn buildCorridors(tiles: []Tile, rooms: []TileRect) void {
     for (rooms[1..], 1..) |room, roomIndex| {
         const prev = rooms[roomIndex - 1].center();
         const new = room.center();
@@ -65,7 +77,7 @@ pub fn indexUsize(x: usize, y: usize) usize {
     return @min(x, WIDTH - 1) + @min(y, HEIGHT) * WIDTH;
 }
 
-pub fn setTile(tiles: []Tile, x: usize, y: usize, tile: Tile) void {
+fn setTile(tiles: []Tile, x: usize, y: usize, tile: Tile) void {
     tiles[indexUsize(x, y)] = tile;
 }
 

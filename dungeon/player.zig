@@ -28,7 +28,7 @@ const viewSize = 4;
 pub fn init() void {
     entity = ecs.w.createIdentityEntity(Player);
 
-    const tilePos = map.rooms[0].center();
+    const tilePos = map.spawns[0];
     ecs.w.add(entity, tilePos);
     ecs.w.add(entity, map.getTextureFromTile(.player));
     ecs.w.add(entity, map.worldPosition(tilePos));

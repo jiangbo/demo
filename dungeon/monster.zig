@@ -27,10 +27,9 @@ const viewSize = 3;
 
 pub fn init() void {
     const playerView = ecs.w.getIdentity(Player, ViewField).?[0];
-    for (map.rooms[1..]) |room| {
+    for (map.spawns[1..]) |center| {
         const enemy = ecs.w.createEntity();
 
-        const center = room.center();
         if (playerView.contains(center)) ecs.w.add(enemy, PlayerView{});
         ecs.w.add(enemy, center);
         ecs.w.add(enemy, map.worldPosition(center));
