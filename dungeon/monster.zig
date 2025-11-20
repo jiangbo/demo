@@ -20,6 +20,7 @@ const WantToAttack = component.WantToAttack;
 const ChasePlayer = component.ChasePlayer;
 const PlayerView = component.PlayerView;
 const ViewField = component.ViewField;
+const Tile = component.Tile;
 
 const MovingRandomly = struct {};
 const viewSize = 3;
@@ -35,13 +36,13 @@ pub fn init() void {
         ecs.w.add(enemy, map.worldPosition(center));
 
         const enemyTile = switch (zhu.randomIntMost(u8, 1, 10)) {
-            0...8 => map.Tile.goblin,
-            else => map.Tile.orc,
+            0...8 => Tile.goblin,
+            else => Tile.orc,
         };
 
         const hp: i32 = switch (enemyTile) {
-            map.Tile.goblin => 1,
-            map.Tile.orc => 2,
+            Tile.goblin => 1,
+            Tile.orc => 2,
             else => unreachable,
         };
         ecs.w.add(enemy, Health{ .current = hp, .max = hp });

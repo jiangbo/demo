@@ -12,9 +12,8 @@ const TilePosition = component.TilePosition;
 const TileRect = component.TileRect;
 const WantToMove = component.WantToMove;
 const Player = component.Player;
-
-pub const Tile = component.Tile;
-pub const ViewField = component.ViewField;
+const Tile = component.Tile;
+const ViewField = component.ViewField;
 
 const WIDTH = builder.WIDTH;
 const HEIGHT = builder.HEIGHT;
