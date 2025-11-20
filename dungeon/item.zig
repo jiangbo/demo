@@ -13,8 +13,8 @@ const Amulet = component.Amulet;
 pub fn init() void {
     const amulet = ecs.w.createIdentityEntity(Amulet);
 
-    const last = map.spawns[map.spawns.len - 1];
-    ecs.w.add(amulet, last);
+    const pos = map.amuletPos;
+    ecs.w.add(amulet, pos);
     const texture = map.getTextureFromTile(.amulet);
-    ecs.w.alignAdd(amulet, .{ map.worldPosition(last), texture });
+    ecs.w.alignAdd(amulet, .{ map.worldPosition(pos), texture });
 }

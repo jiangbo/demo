@@ -22,6 +22,7 @@ const TILE_PER_ROW = 16;
 
 pub var size = gfx.Vector.init(WIDTH, HEIGHT).mul(TILE_SIZE);
 pub var spawns: [builder.SPAWN_SIZE]TilePosition = undefined;
+pub var amuletPos: TilePosition = undefined;
 
 var tiles: [WIDTH * HEIGHT]Tile = undefined;
 var texture: gfx.Texture = undefined;
@@ -30,10 +31,20 @@ var walks: [HEIGHT * WIDTH]bool = undefined;
 pub fn init() void {
     texture = gfx.loadTexture("assets/dungeonfont.png", .init(512, 512));
 
-    builder.buildRooms(&tiles, &spawns);
+    // builder.buildRooms(&tiles, &spawns);
+    builder.buildAutometa(&tiles, &spawns);
 
-    builder.updateDistance(&tiles, spawns[0]);
     @memset(&walks, false);
+    updateDistance(spawns[0]);
+
+    var max: u8 = 0;
+    for (&distances, 0..) |*line, y| {
+        for (line, 0..) |value, x| {
+            if (value == 0xFF or value <= max) continue;
+            max = value;
+            amuletPos = .{ .x = @intCast(x), .y = @intCast(y) };
+        }
+    }
 }
 
 pub fn getTextureFromTile(tile: Tile) gfx.Texture {
@@ -80,17 +91,67 @@ pub fn moveIfNeed() void {
     }
 }
 
-pub const queryLessDistance = builder.queryLessDistance;
+var distances: [HEIGHT][WIDTH]u8 = undefined;
+const Dequeue = std.PriorityDequeue(TilePosition, void, struct {
+    fn compare(_: void, a: TilePosition, b: TilePosition) std.math.Order {
+        return std.math.order(distances[a.y][a.x], distances[b.y][b.x]);
+    }
+}.compare);
+const directions: [4]TilePosition = .{
+    .{ .x = 1, .y = 0 }, .{ .x = 0xFF, .y = 0 },
+    .{ .x = 0, .y = 1 }, .{ .x = 0, .y = 0xFF },
+};
 pub fn updateDistance(pos: TilePosition) void {
-    builder.updateDistance(&tiles, pos);
+    for (&distances) |*row| @memset(row, 0xFF);
+
+    var queue = Dequeue.init(zhu.window.allocator, {});
+    defer queue.deinit();
+
+    distances[pos.y][pos.x] = 0;
+    queue.add(pos) catch unreachable;
+
+    while (queue.removeMinOrNull()) |min| {
+        const distance = distances[min.y][min.x];
+
+        for (directions) |dir| {
+            const x, const y = .{ min.x +% dir.x, min.y +% dir.y };
+            if (x >= WIDTH or y >= HEIGHT) continue; // 超过地图
+            if (tiles[indexUsize(x, y)] != .floor) continue; // 不可通过
+
+            if (distance + 1 < distances[y][x]) {
+                distances[y][x] = distance + 1;
+                queue.add(.{ .x = x, .y = y }) catch unreachable;
+            }
+        }
+    }
+}
+
+pub fn queryLessDistance(pos: TilePosition) ?TilePosition {
+    const distance = distances[pos.y][pos.x];
+    if (distance == 0) return null;
+
+    var r1: ?TilePosition, var r2: ?TilePosition = .{ null, null };
+    for (directions) |dir| {
+        const x, const y = .{ pos.x +% dir.x, pos.y +% dir.y };
+        if (x >= WIDTH or y >= HEIGHT) continue; // 超过地图
+
+        if (distances[y][x] < distance) {
+            const r = TilePosition{ .x = x, .y = y };
+            if (distance > 4) return r; // 远距离直接返回
+            if (r1 == null) r1 = r else r2 = r;
+        }
+    }
+    if (r2 == null) return r1;
+    return if (zhu.randomBool()) r1 else r2;
 }
 
 pub fn updatePlayerWalk() void {
     const viewField = ecs.w.getIdentity(Player, ViewField).?[0];
 
     for (viewField.y..viewField.y + viewField.h) |y| {
-        const start = indexUsize(viewField.x, y);
-        @memset(walks[start..][0..viewField.w], true);
+        for (viewField.x..viewField.x + viewField.w) |x| {
+            walks[indexUsize(x, y)] = true;
+        }
     }
 }
 

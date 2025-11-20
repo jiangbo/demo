@@ -35,6 +35,12 @@ pub const TilePosition = struct {
     pub fn toVector(self: TilePosition) Position {
         return .{ .x = @floatFromInt(self.x), .y = @floatFromInt(self.y) };
     }
+
+    pub fn distanceSquared(self: TilePosition, other: TilePosition) usize {
+        const dx = @as(i32, self.x) - @as(i32, other.x);
+        const dy = @as(i32, self.y) - @as(i32, other.y);
+        return @intCast(dx * dx + dy * dy);
+    }
 };
 pub const TileRect = struct {
     x: u8,

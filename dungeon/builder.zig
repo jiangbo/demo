@@ -73,64 +73,78 @@ fn applyHorizontal(tiles: []Tile, x1: usize, x2: usize, y: usize) void {
     }
 }
 
+pub fn buildAutometa(tiles: []Tile, spawns: []TilePosition) void {
+    for (tiles) |*value| {
+        const roll = zhu.randomInt(u8, 0, 100);
+        value.* = if (roll > 55) .floor else .wall;
+    }
+
+    for (0..10) |_| {
+        var copy: [HEIGHT * WIDTH]Tile = undefined;
+        @memcpy(&copy, tiles);
+        for (1..HEIGHT - 1) |y| {
+            for (1..WIDTH - 1) |x| {
+                const dx: u8 = @intCast(x);
+                const walls = countNeighborWall(&copy, dx, @intCast(y));
+                const genWall = walls > 4 or walls == 0;
+                tiles[indexUsize(x, y)] = if (genWall) .wall else .floor;
+            }
+        }
+    }
+
+    { // 放置玩家
+        var x: u8, var y: u8 = .{ WIDTH / 2, WIDTH / 2 };
+        blk: while (tiles[indexUsize(x, y)] == .wall) {
+            for (neighborDir) |dir| {
+                const dx, const dy = .{ x +% dir.x, y +% dir.y };
+                if (tiles[indexUsize(dx, dy)] != .wall) {
+                    spawns[0] = .{ .x = dx, .y = dy };
+                    break :blk;
+                }
+            }
+            const dir = neighborDir[zhu.randomIntMost(u8, 0, 7)];
+            x, y = .{ x +% dir.x, y +% dir.y };
+        } else spawns[0] = .{ .x = x, .y = y };
+    }
+
+    // 放置怪物
+    for (spawns[1..]) |*value| {
+        var pos = spawnRandomMonster(tiles);
+        while (spawns[0].distanceSquared(pos) < 100) {
+            pos = spawnRandomMonster(tiles);
+        }
+        value.* = pos;
+    }
+}
+
+const neighborDir: [8]TilePosition = .{
+    .{ .x = 0xFF, .y = 0xFF }, .{ .x = 0, .y = 0xFF },
+    .{ .x = 1, .y = 0xFF },    .{ .x = 0xFF, .y = 0 },
+    .{ .x = 1, .y = 0 },       .{ .x = 0xFF, .y = 1 },
+    .{ .x = 0, .y = 1 },       .{ .x = 1, .y = 1 },
+};
+fn countNeighborWall(tiles: []Tile, x: u8, y: u8) u8 {
+    var count: u8 = 0;
+    for (&neighborDir) |dir| {
+        const dx, const dy = .{ x +% dir.x, y +% dir.y };
+        if (tiles[dy * WIDTH + dx] == .wall) count += 1;
+    }
+    return count;
+}
+
+fn spawnRandomMonster(tiles: []Tile) TilePosition {
+    var roll = zhu.randomInt(u16, 0, HEIGHT * WIDTH);
+    while (tiles[roll] == .wall) {
+        roll = zhu.randomInt(u16, 0, HEIGHT * WIDTH);
+    }
+    const x, const y = .{ roll % WIDTH, roll / WIDTH };
+    return .{ .x = @intCast(x), .y = @intCast(y) };
+}
+
 pub fn indexUsize(x: usize, y: usize) usize {
-    return @min(x, WIDTH - 1) + @min(y, HEIGHT) * WIDTH;
+    return @min(x, WIDTH - 1) + @min(y, HEIGHT - 1) * WIDTH;
 }
 
 fn setTile(tiles: []Tile, x: usize, y: usize, tile: Tile) void {
     tiles[indexUsize(x, y)] = tile;
-}
-
-var distances: [HEIGHT][WIDTH]u8 = undefined;
-const Dequeue = std.PriorityDequeue(TilePosition, void, struct {
-    fn compare(_: void, a: TilePosition, b: TilePosition) std.math.Order {
-        return std.math.order(distances[a.y][a.x], distances[b.y][b.x]);
-    }
-}.compare);
-const directions: [4]TilePosition = .{
-    .{ .x = 1, .y = 0 }, .{ .x = 0xFF, .y = 0 },
-    .{ .x = 0, .y = 1 }, .{ .x = 0, .y = 0xFF },
-};
-pub fn updateDistance(tiles: []const Tile, pos: TilePosition) void {
-    for (&distances) |*row| @memset(row, 0xFF);
-
-    var queue = Dequeue.init(zhu.window.allocator, {});
-    defer queue.deinit();
-
-    distances[pos.y][pos.x] = 0;
-    queue.add(pos) catch unreachable;
-
-    while (queue.removeMinOrNull()) |min| {
-        const distance = distances[min.y][min.x];
-
-        for (directions) |dir| {
-            const x, const y = .{ min.x +% dir.x, min.y +% dir.y };
-            if (x >= WIDTH or y >= HEIGHT) continue; // 超过地图
-            if (tiles[indexUsize(x, y)] != .floor) continue; // 不可通过
-
-            if (distance + 1 < distances[y][x]) {
-                distances[y][x] = distance + 1;
-                queue.add(.{ .x = x, .y = y }) catch unreachable;
-            }
-        }
-    }
-}
-
-pub fn queryLessDistance(pos: TilePosition) ?TilePosition {
-    const distance = distances[pos.y][pos.x];
-    if (distance == 0) return null;
-
-    var r1: ?TilePosition, var r2: ?TilePosition = .{ null, null };
-    for (directions) |dir| {
-        const x, const y = .{ pos.x +% dir.x, pos.y +% dir.y };
-        if (x >= WIDTH or y >= HEIGHT) continue; // 超过地图
-
-        if (distances[y][x] < distance) {
-            const r = TilePosition{ .x = x, .y = y };
-            if (distance > 4) return r; // 远距离直接返回
-            if (r1 == null) r1 = r else r2 = r;
-        }
-    }
-    if (r2 == null) return r1;
-    return if (zhu.randomBool()) r1 else r2;
 }
