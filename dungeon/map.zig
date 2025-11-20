@@ -2,9 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const gfx = zhu.gfx;
-const camera = zhu.camera;
 const ecs = zhu.ecs;
-const window = zhu.window;
 
 const component = @import("component.zig");
 const builder = @import("builder.zig");
@@ -127,7 +125,7 @@ fn drawPlayerWalk() void {
         if (viewField.contains(pos)) continue;
 
         const tex = getTextureFromTile(tiles[index]);
-        camera.drawOption(tex, getPositionFromIndex(index), .{
+        zhu.camera.drawOption(tex, getPositionFromIndex(index), .{
             .color = .{ .x = 0.5, .y = 0.5, .z = 0.5, .w = 1 },
         });
     }
@@ -140,7 +138,7 @@ fn drawPlayerView() void {
         for (viewField.y..viewField.y + viewField.h) |y| {
             const index = indexUsize(x, y);
             const tex = getTextureFromTile(tiles[index]);
-            camera.draw(tex, getPositionFromIndex(index));
+            zhu.camera.draw(tex, getPositionFromIndex(index));
         }
     }
 }
