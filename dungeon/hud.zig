@@ -8,7 +8,6 @@ const math = zhu.math;
 const ecs = zhu.ecs;
 
 const component = @import("component.zig");
-const map = @import("map.zig");
 
 const Player = component.Player;
 const Health = component.Health;
@@ -16,6 +15,8 @@ const Name = component.Name;
 const Position = component.Position;
 const TurnState = component.TurnState;
 const PlayerView = component.PlayerView;
+
+const TILE_SIZE = 32;
 
 var texture: gfx.Texture = undefined;
 const healthForeground: math.Vector4 = .init(0.298, 0.735, 0.314, 1);
@@ -63,7 +64,7 @@ fn drawNameAndHealthIfNeed() void {
 
         const text = zhu.format(&buffer, "{s}: {}hp", .{ name, health });
 
-        position = position.addXY(map.TILE_SIZE.x / 2, -size.y);
+        position = position.addXY(TILE_SIZE / 2, -size.y);
         drawTextCenter(text, camera.toWindow(position), .{});
     }
 }

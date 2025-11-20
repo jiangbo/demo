@@ -30,7 +30,6 @@ pub fn utf8NextIndex(str: []const u8, index: usize) usize {
     return index + (next catch unreachable);
 }
 
-pub const randU8 = math.randU8;
 pub const randomInt = math.randomInt;
 pub const randomIntMost = math.randomIntMost;
 pub const randomEnum = math.randomEnum;
