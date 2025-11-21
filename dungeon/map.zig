@@ -15,6 +15,8 @@ const Player = component.Player;
 const Tile = component.Tile;
 const ViewField = component.ViewField;
 
+const Theme = enum { dungeon, forest };
+
 const WIDTH = builder.WIDTH;
 const HEIGHT = builder.HEIGHT;
 pub const TILE_SIZE: gfx.Vector = .init(32, 32);
@@ -27,9 +29,11 @@ pub var amuletPos: TilePosition = undefined;
 var tiles: [WIDTH * HEIGHT]Tile = undefined;
 var texture: gfx.Texture = undefined;
 var walks: [HEIGHT * WIDTH]bool = undefined;
+var theme: Theme = undefined;
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/dungeonfont.png", .init(512, 512));
+    theme = if (zhu.randomBool()) .dungeon else .forest;
 
     switch (zhu.randomInt(u8, 0, 3)) {
         1 => builder.buildRooms(&tiles, &spawns),
@@ -121,7 +125,12 @@ fn applyPrefab() void {
 }
 
 pub fn getTextureFromTile(tile: Tile) gfx.Texture {
-    const index: usize = @intFromEnum(tile);
+    var index: usize = @intFromEnum(tile);
+    if (theme == .forest) {
+        if (tile == .wall) index = 34;
+        if (tile == .floor) index = 59;
+    }
+
     const row: f32 = @floatFromInt(index / TILE_PER_ROW);
     const col: f32 = @floatFromInt(index % TILE_PER_ROW);
     const pos = gfx.Vector.init(col, row).mul(TILE_SIZE);
