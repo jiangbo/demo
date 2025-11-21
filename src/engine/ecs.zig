@@ -137,12 +137,12 @@ pub fn SparseMap(Component: type) type {
         pub fn sort(self: *Self, lessFn: fn (T, T) bool) void {
             if (self.dense.items.len <= 1 or isEmpty) return;
 
-            const value = self.valuePtr[0..self.dense.items.len];
             const sparse = self.sparse.items;
-            for (0..value.len) |i| {
+            const v = self.valuePtr[0..self.dense.items.len];
+            for (0..v.len) |i| {
                 var j = i;
-                while (j > 0 and lessFn(value[j], value[j - 1])) : (j -= 1) {
-                    std.mem.swap(T, &value[j], &value[j - 1]);
+                while (j > 0 and lessFn(v[j], v[j - 1])) : (j -= 1) {
+                    std.mem.swap(T, &v[j], &v[j - 1]);
                     const lhs = &self.dense.items[j];
                     const rhs = &self.dense.items[j - 1];
                     std.mem.swap(Index, lhs, rhs);
