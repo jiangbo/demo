@@ -48,6 +48,76 @@ pub fn init() void {
             amuletPos = .{ .x = @intCast(x), .y = @intCast(y) };
         }
     }
+
+    applyPrefab();
+}
+
+const FORTRESS: [11][12]u8 = .{
+    .{ 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46 },
+    .{ 46, 46, 46, 35, 35, 35, 35, 35, 35, 46, 46, 46 },
+    .{ 46, 46, 46, 35, 46, 46, 46, 46, 35, 46, 46, 46 },
+    .{ 46, 46, 46, 35, 46, 79, 46, 46, 35, 46, 46, 46 },
+    .{ 46, 35, 35, 35, 46, 46, 46, 46, 35, 35, 35, 46 },
+    .{ 46, 46, 79, 46, 46, 46, 46, 46, 46, 79, 46, 46 },
+    .{ 46, 35, 35, 35, 46, 46, 46, 46, 35, 35, 35, 46 },
+    .{ 46, 46, 46, 35, 46, 46, 46, 46, 35, 46, 46, 46 },
+    .{ 46, 46, 46, 35, 46, 46, 46, 46, 35, 46, 46, 46 },
+    .{ 46, 46, 46, 35, 35, 35, 35, 35, 35, 46, 46, 46 },
+    .{ 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46 },
+};
+
+fn applyPrefab() void {
+    var rect: ?TileRect = null;
+
+    blk: for (0..10) |_| {
+        const prefab = TileRect{
+            .x = zhu.randomInt(u8, 0, WIDTH - FORTRESS[0].len),
+            .y = zhu.randomInt(u8, 0, HEIGHT - FORTRESS.len),
+            .w = FORTRESS[0].len,
+            .h = FORTRESS.len,
+        };
+
+        if (prefab.contains(amuletPos)) continue;
+        for (prefab.y..prefab.y + prefab.h) |y| {
+            for (prefab.x..prefab.x + prefab.w) |x| {
+                const distance = distances[y][x];
+                if (distance != 0xFF and distance > 20) {
+                    rect = prefab;
+                    break :blk;
+                }
+            }
+        }
+    }
+    if (rect == null) return; // 没有找到放置的地方
+
+    var prefabSpawnsArray: [3]usize = .{ 0, 0, 0 };
+    var count: usize = 0;
+    for (spawns[1..], 1..) |pos, index| {
+        if (rect.?.contains(pos)) {
+            prefabSpawnsArray[count] = index;
+            count += 1;
+        }
+    }
+
+    const prefabSpawns = prefabSpawnsArray[0..count];
+    count = 0;
+
+    const start = TilePosition{ .x = rect.?.x, .y = rect.?.y };
+    for (0..FORTRESS.len) |y| {
+        for (0..FORTRESS[0].len) |x| {
+            const index = indexUsize(start.x + x, start.y + y);
+            if (FORTRESS[y][x] == 79) {
+                const i = if (count < prefabSpawns.len)
+                    prefabSpawns[count]
+                else
+                    zhu.randomInt(u8, 1, spawns.len);
+                const dx: u8 = @intCast(start.x + x);
+                spawns[i] = .{ .x = dx, .y = @intCast(start.y + y) };
+                count += 1;
+                tiles[index] = .floor;
+            } else tiles[index] = @enumFromInt(FORTRESS[y][x]);
+        }
+    }
 }
 
 pub fn getTextureFromTile(tile: Tile) gfx.Texture {
@@ -159,6 +229,10 @@ pub fn updatePlayerWalk() void {
 }
 
 pub fn draw() void {
+    // for (&tiles, 0..) |tile, index| {
+    //     const tex = getTextureFromTile(tile);
+    //     zhu.camera.draw(tex, getPositionFromIndex(index));
+    // }
     drawPlayerWalk();
     drawPlayerView();
 }
