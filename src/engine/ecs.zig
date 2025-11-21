@@ -134,6 +134,23 @@ pub fn SparseMap(Component: type) type {
             return index;
         }
 
+        pub fn sort(self: *Self, lessFn: fn (T, T) bool) void {
+            if (self.dense.items.len <= 1 or isEmpty) return;
+
+            const value = self.valuePtr[0..self.dense.items.len];
+            const sparse = self.sparse.items;
+            for (0..value.len) |i| {
+                var j = i;
+                while (j > 0 and lessFn(value[j], value[j - 1])) : (j -= 1) {
+                    std.mem.swap(T, &value[j], &value[j - 1]);
+                    const lhs = &self.dense.items[j];
+                    const rhs = &self.dense.items[j - 1];
+                    std.mem.swap(Index, lhs, rhs);
+                    std.mem.swap(u16, &sparse[lhs.*], &sparse[rhs.*]);
+                }
+            }
+        }
+
         pub fn clear(self: *Self) void {
             @memset(self.sparse.items, Entity.invalid);
             self.dense.clearRetainingCapacity();
@@ -350,6 +367,10 @@ pub const Registry = struct {
     pub fn indexes(self: *Registry, T: type) //
     struct { []Entity.Index, View(.{T}, .{}, false) } {
         return .{ self.assure(T).dense.items, self.view(.{T}) };
+    }
+
+    pub fn sort(self: *Registry, T: type, lessFn: fn (T, T) bool) void {
+        self.assure(T).sort(lessFn);
     }
 
     pub fn remove(self: *Registry, entity: Entity, T: type) void {
