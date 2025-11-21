@@ -108,13 +108,7 @@ pub fn buildAutometa(tiles: []Tile, spawns: []TilePosition) void {
     }
 
     // 放置怪物
-    for (spawns[1..]) |*value| {
-        var pos = spawnRandomMonster(tiles);
-        while (spawns[0].distanceSquared(pos) < 100) {
-            pos = spawnRandomMonster(tiles);
-        }
-        value.* = pos;
-    }
+    spawnMonster(tiles, spawns);
 }
 
 const neighborDir: [8]TilePosition = .{
@@ -132,6 +126,16 @@ fn countNeighborWall(tiles: []Tile, x: u8, y: u8) u8 {
     return count;
 }
 
+fn spawnMonster(tiles: []Tile, spawns: []TilePosition) void {
+    for (spawns[1..]) |*value| {
+        var pos = spawnRandomMonster(tiles);
+        while (spawns[0].distanceSquared(pos) < 100) {
+            pos = spawnRandomMonster(tiles);
+        }
+        value.* = pos;
+    }
+}
+
 fn spawnRandomMonster(tiles: []Tile) TilePosition {
     var roll = zhu.randomInt(u16, 0, HEIGHT * WIDTH);
     while (tiles[roll] == .wall) {
@@ -139,6 +143,46 @@ fn spawnRandomMonster(tiles: []Tile) TilePosition {
     }
     const x, const y = .{ roll % WIDTH, roll / WIDTH };
     return .{ .x = @intCast(x), .y = @intCast(y) };
+}
+
+const STAGGER_DISTANCE = 400;
+const DESIRED_FLOOR = WIDTH * HEIGHT / 3;
+pub fn buildDrunkard(tiles: []Tile, spawns: []TilePosition) void {
+    @memset(tiles, .wall);
+    spawns[0] = .{ .x = WIDTH / 2, .y = HEIGHT / 2 };
+
+    var count: u16, var start = .{ 0, spawns[0] };
+    while (count < DESIRED_FLOOR) {
+        drunkard(tiles, start);
+
+        count = 0;
+        for (tiles) |value| {
+            if (value == .floor) count += 1;
+        }
+        start = .{
+            .x = zhu.randomInt(u8, 0, WIDTH),
+            .y = zhu.randomInt(u8, 0, HEIGHT),
+        };
+    }
+
+    // 放置怪物
+    spawnMonster(tiles, spawns);
+}
+
+fn drunkard(tiles: []Tile, start: TilePosition) void {
+    var pos = start;
+    for (0..STAGGER_DISTANCE) |_| {
+        const index = indexUsize(pos.x, pos.y);
+        tiles[index] = .floor;
+
+        switch (zhu.randomInt(u8, 0, 4)) {
+            0 => pos.x += 1,
+            1 => pos.x +%= 0xFF,
+            2 => pos.y += 1,
+            else => pos.y +%= 0xFF,
+        }
+        if (pos.x >= WIDTH or pos.y >= HEIGHT) break;
+    }
 }
 
 pub fn indexUsize(x: usize, y: usize) usize {

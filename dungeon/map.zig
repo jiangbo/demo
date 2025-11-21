@@ -32,7 +32,8 @@ pub fn init() void {
     texture = gfx.loadTexture("assets/dungeonfont.png", .init(512, 512));
 
     // builder.buildRooms(&tiles, &spawns);
-    builder.buildAutometa(&tiles, &spawns);
+    // builder.buildAutometa(&tiles, &spawns);
+    builder.buildDrunkard(&tiles, &spawns);
 
     @memset(&walks, false);
     updateDistance(spawns[0]);

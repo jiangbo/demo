@@ -61,8 +61,7 @@ pub fn update() void {
 
     if (tilePosition.equals(newPos)) return; // 没有移动
 
-    const amuletPos = ecs.w.getIdentity(Amulet, TilePosition).?;
-    if (amuletPos.equals(newPos)) {
+    if (map.amuletPos.equals(newPos)) {
         ecs.w.addContext(TurnState.win);
     } else moveOrAttack(newPos);
 
@@ -83,9 +82,14 @@ fn moveOrAttack(newPos: TilePosition) void {
         return;
     }
 
+    const viewField = ViewField{.fromCenter(newPos, viewSize)};
     ecs.w.add(entity, newPos);
-    ecs.w.add(entity, ViewField{.fromCenter(newPos, viewSize)});
+    ecs.w.add(entity, viewField);
     ecs.w.add(entity, map.worldPosition(newPos));
+    if (viewField[0].contains(map.amuletPos)) {
+        const amulet = ecs.w.getIdentityEntity(Amulet).?;
+        ecs.w.add(amulet, PlayerView{});
+    }
     map.updatePlayerWalk();
     map.updateDistance(newPos);
     cameraFollow(map.worldPosition(newPos));
