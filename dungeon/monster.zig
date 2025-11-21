@@ -63,8 +63,8 @@ pub fn update() void {
 
 fn moveOrAttack() void {
     const playerEntity = ecs.w.getIdentityEntity(Player).?;
-    const playerPos = ecs.w.get(playerEntity, TilePosition).?;
-    const rect = ecs.w.get(playerEntity, ViewField).?[0];
+    const playerPos = ecs.w.get(playerEntity, TilePosition);
+    const rect = ecs.w.get(playerEntity, ViewField)[0];
 
     var view = ecs.w.view(.{ ChasePlayer, TilePosition });
     while (view.next()) |entity| {

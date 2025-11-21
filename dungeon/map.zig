@@ -248,8 +248,8 @@ pub fn draw() void {
 
 fn drawPlayerWalk() void {
     const playerEntity = ecs.w.getIdentityEntity(Player).?;
-    const viewField = ecs.w.get(playerEntity, ViewField).?[0];
-    const playerPos = ecs.w.get(playerEntity, TilePosition).?;
+    const viewField = ecs.w.get(playerEntity, ViewField)[0];
+    const playerPos = ecs.w.get(playerEntity, TilePosition);
 
     const x = playerPos.x -| 10;
     const y = playerPos.y -| 7;

@@ -351,11 +351,19 @@ pub const Registry = struct {
         return self.assure(T).has(entity.index);
     }
 
-    pub fn get(self: *Registry, entity: Entity, T: type) ?T {
-        return (self.getPtr(entity, T) orelse return null).*;
+    pub fn get(self: *Registry, entity: Entity, T: type) T {
+        return self.tryGet(entity, T).?;
     }
 
-    pub fn getPtr(self: *Registry, entity: Entity, T: type) ?*T {
+    pub fn tryGet(self: *Registry, entity: Entity, T: type) ?T {
+        return (self.tryGetPtr(entity, T) orelse return null).*;
+    }
+
+    pub fn getPtr(self: *Registry, entity: Entity, T: type) *T {
+        return self.tryGetPtr(entity, T).?;
+    }
+
+    pub fn tryGetPtr(self: *Registry, entity: Entity, T: type) ?*T {
         if (!self.validEntity(entity)) return null;
         return self.assure(T).tryGet(entity.index);
     }
