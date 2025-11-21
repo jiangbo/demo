@@ -3,8 +3,9 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 pub const Entity = struct {
-    pub const Index = u16;
-    pub const Version = u16;
+    const Index = u16;
+    const Version = u16;
+    const invalid = std.math.maxInt(Index);
 
     index: Index,
     version: Version,
@@ -25,6 +26,7 @@ const Entities = struct {
             return .{ .index = index, .version = version };
         } else {
             const index = self.versions.items.len;
+            if (index == Entity.invalid) @panic("max entity index");
             try self.versions.append(gpa, 0);
             return .{ .index = @intCast(index), .version = 0 };
         }
@@ -79,9 +81,9 @@ pub fn SparseMap(Component: type) type {
         }
 
         pub fn add(self: *Self, gpa: Allocator, e: Index, v: T) !void {
-            if (e >= self.sparse.capacity) {
-                try self.sparse.ensureTotalCapacity(gpa, e + 1);
-                self.sparse.expandToCapacity();
+            if (e >= self.sparse.items.len) {
+                const count = e + 1 - self.sparse.items.len;
+                try self.sparse.appendNTimes(gpa, Entity.invalid, count);
             }
 
             const index: u16 = @intCast(self.dense.items.len);
@@ -107,32 +109,33 @@ pub fn SparseMap(Component: type) type {
         }
 
         pub fn has(self: *const Self, entity: Index) bool {
-            if (entity >= self.sparse.items.len) return false;
-            const index = self.sparse.items[entity];
-            const items = self.dense.items;
-            return index < items.len and items[index] == entity;
+            return entity < self.sparse.items.len and
+                self.sparse.items[entity] != Entity.invalid;
         }
 
         pub fn components(self: *const Self) []T {
             return self.valuePtr[0..self.dense.items.len];
         }
 
-        pub fn remove(self: *Self, entity: Index) void {
-            if (!self.has(entity)) return;
+        pub fn remove(self: *Self, entity: Index) u16 {
+            if (!self.has(entity)) return Entity.invalid;
 
             const index = self.sparse.items[entity];
-            const moved = self.dense.pop().?;
-            if (self.dense.items.len == index) return;
-            self.dense.items[index] = moved;
-            self.sparse.items[moved] = index;
+            self.sparse.items[entity] = Entity.invalid;
 
-            const last = self.dense.items.len;
-            const size = self.valueSize;
-            const src = self.valuePtr[size * last ..][0..size];
-            @memcpy(self.valuePtr[size * index ..][0..size], src);
+            const moved = self.dense.pop().?;
+            if (self.dense.items.len == index) return index;
+            self.sparse.items[moved] = index;
+            self.dense.items[index] = moved;
+
+            const sz = self.valueSize;
+            const src = self.valuePtr[sz * self.dense.items.len ..];
+            @memcpy(self.valuePtr[sz * index ..][0..sz], src[0..sz]);
+            return index;
         }
 
         pub fn clear(self: *Self) void {
+            @memset(self.sparse.items, Entity.invalid);
             self.dense.clearRetainingCapacity();
         }
     };
@@ -351,7 +354,15 @@ pub const Registry = struct {
 
     pub fn remove(self: *Registry, entity: Entity, T: type) void {
         if (!self.validEntity(entity)) return;
-        self.assure(T).remove(entity.index);
+        _ = self.assure(T).remove(entity.index);
+    }
+
+    pub fn alignRemove(self: *Registry, e: Entity, types: anytype) void {
+        if (!self.validEntity(e)) return;
+        var index: [types.len]u16 = undefined;
+        inline for (types, &index) |T, *i|
+            i.* = self.assure(T).remove(e.index);
+        for (index[1..]) |i| std.debug.assert(index[0] == i);
     }
 
     pub fn removeAll(self: *Registry, entity: Entity) void {
@@ -360,7 +371,7 @@ pub const Registry = struct {
         var iterator = self.componentMap.valueIterator();
         while (iterator.next()) |value| {
             var map: *SparseMap(u8) = @ptrCast(@alignCast(value));
-            map.remove(entity.index);
+            _ = map.remove(entity.index);
         }
     }
 
