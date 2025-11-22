@@ -134,8 +134,8 @@ pub fn SparseMap(Component: type) type {
             return index;
         }
 
-        pub fn orderedRemove(self: *Self, entity: Index) u16 {
-            if (!self.has(entity)) return Entity.invalid;
+        pub fn orderedRemove(self: *Self, entity: Index) void {
+            if (!self.has(entity)) return;
 
             const index = self.sparse.items[entity];
             self.sparse.items[entity] = Entity.invalid;
@@ -399,11 +399,16 @@ pub const Registry = struct {
         _ = self.assure(T).swapRemove(entity.index);
     }
 
+    pub fn orderedRemove(self: *Registry, e: Entity, T: type) void {
+        if (!self.validEntity(e)) return;
+        self.assure(T).orderedRemove(e.index);
+    }
+
     pub fn alignRemove(self: *Registry, e: Entity, types: anytype) void {
         if (!self.validEntity(e)) return;
         var index: [types.len]u16 = undefined;
         inline for (types, &index) |T, *i|
-            i.* = self.assure(T).remove(e.index);
+            i.* = self.assure(T).swapRemove(e.index);
         for (index[1..]) |i| std.debug.assert(index[0] == i);
     }
 
@@ -505,6 +510,15 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
 
         pub fn remove(self: *@This(), entity: Index, T: type) void {
             _ = self.reg.assure(T).swapRemove(entity);
+        }
+
+        pub fn orderedRemove(self: *@This(), e: Index, T: type) void {
+            self.reg.assure(T).orderedRemove(e);
+        }
+
+        pub fn destroy(self: *@This(), entity: Index) void {
+            const e = self.reg.toEntity(entity) orelse return;
+            self.reg.destroyEntity(e);
         }
     };
 }
