@@ -8,6 +8,7 @@ const ecs = zhu.ecs;
 
 const map = @import("map.zig");
 const battle = @import("battle.zig");
+const item = @import("item.zig");
 const component = @import("component.zig");
 
 const Player = component.Player;
@@ -86,10 +87,9 @@ fn moveOrAttack(newPos: TilePosition) void {
     ecs.w.add(entity, newPos);
     ecs.w.add(entity, viewField);
     ecs.w.add(entity, map.worldPosition(newPos));
-    if (viewField[0].contains(map.amuletPos)) {
-        const amulet = ecs.w.getIdentityEntity(Amulet).?;
-        ecs.w.add(amulet, PlayerView{});
-    }
+
+    item.update();
+
     map.updatePlayerWalk();
     map.updateDistance(newPos);
     cameraFollow(map.worldPosition(newPos));

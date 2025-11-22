@@ -461,8 +461,17 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOptions) type {
             return self.getPtr(entity, T).*;
         }
 
-        pub fn getPtr(self: *const @This(), entity: Index, T: type) *T {
+        pub fn tryGet(self: *@This(), entity: Index, T: type) ?T {
+            return (self.tryGetPtr(entity, T) orelse return null).*;
+        }
+
+        pub fn getPtr(self: *@This(), entity: Index, T: type) *T {
             return self.reg.assure(T).get(entity);
+        }
+
+        pub fn tryGetPtr(self: *@This(), entity: Index, T: type) ?*T {
+            const e = self.reg.toEntity(entity) orelse return null;
+            return self.reg.tryGetPtr(e, T);
         }
 
         pub fn has(self: *const @This(), entity: Index, T: type) bool {

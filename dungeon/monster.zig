@@ -21,36 +21,60 @@ const ChasePlayer = component.ChasePlayer;
 const PlayerView = component.PlayerView;
 const ViewField = component.ViewField;
 const Tile = component.Tile;
+const Item = component.Item;
 
 const MovingRandomly = struct {};
 const viewSize = 3;
 
 pub fn init() void {
     const playerView = ecs.w.getIdentity(Player, ViewField).?[0];
-    for (map.spawns[1..]) |center| {
+
+    const mapItemIndex = zhu.randomInt(u8, 5, map.spawns.len);
+
+    for (map.spawns[1..], 1..) |pos, index| {
         const enemy = ecs.w.createEntity();
 
-        if (playerView.contains(center)) ecs.w.add(enemy, PlayerView{});
-        ecs.w.add(enemy, center);
-        ecs.w.add(enemy, map.worldPosition(center));
+        if (playerView.contains(pos)) ecs.w.add(enemy, PlayerView{});
+        ecs.w.add(enemy, pos);
+        ecs.w.add(enemy, map.worldPosition(pos));
 
-        const enemyTile = switch (zhu.randomIntMost(u8, 1, 10)) {
-            0...8 => Tile.goblin,
-            else => Tile.orc,
-        };
+        if (index == mapItemIndex) {
+            ecs.w.add(enemy, map.getTextureFromTile(.map));
+            ecs.w.add(enemy, Item{});
+            ecs.w.add(enemy, Name{"Map"});
+            continue;
+        }
 
-        const hp: i32 = switch (enemyTile) {
-            Tile.goblin => 1,
-            Tile.orc => 2,
-            else => unreachable,
-        };
-        ecs.w.add(enemy, Health{ .current = hp, .max = hp });
-        ecs.w.add(enemy, Name{@tagName(enemyTile)});
-
-        ecs.w.add(enemy, map.getTextureFromTile(enemyTile));
-        ecs.w.add(enemy, ChasePlayer{});
-        ecs.w.add(enemy, Enemy{});
+        switch (zhu.randomInt(u8, 0, 6)) {
+            0 => spawnHeal(enemy),
+            else => spawnMonster(enemy),
+        }
     }
+}
+
+fn spawnHeal(entity: ecs.Entity) void {
+    ecs.w.add(entity, map.getTextureFromTile(.heal));
+    ecs.w.add(entity, Item{});
+    ecs.w.add(entity, Name{"healing potion"});
+}
+
+fn spawnMonster(enemy: ecs.Entity) void {
+    const enemyTile = switch (zhu.randomIntMost(u8, 1, 10)) {
+        0...8 => Tile.goblin,
+        else => Tile.orc,
+    };
+
+    const hp: i32 = switch (enemyTile) {
+        Tile.goblin => 1,
+        Tile.orc => 2,
+        else => unreachable,
+    };
+    ecs.w.add(enemy, Health{ .current = hp, .max = hp });
+    ecs.w.add(enemy, Name{@tagName(enemyTile)});
+
+    ecs.w.add(enemy, map.getTextureFromTile(enemyTile));
+    ecs.w.add(enemy, ChasePlayer{});
+    ecs.w.add(enemy, Enemy{});
 }
 
 pub fn update() void {

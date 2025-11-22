@@ -56,15 +56,18 @@ pub fn draw() void {
 fn drawNameAndHealthIfNeed() void {
     var buffer: [50]u8 = undefined;
 
-    var view = ecs.w.view(.{ Health, Name, Position, PlayerView });
+    var view = ecs.w.view(.{ Name, Position, PlayerView });
     while (view.next()) |entity| {
         var position = view.get(entity, Position);
-        const health = view.get(entity, Health).current;
         const name = view.get(entity, Name)[0];
 
-        const text = zhu.format(&buffer, "{s}: {}hp", .{ name, health });
-
         position = position.addXY(TILE_SIZE / 2, -size.y);
+        var text: []const u8 = undefined;
+        if (view.tryGet(entity, Health)) |h| {
+            text = zhu.format(&buffer, "{s}: {}hp", .{ name, h.current });
+        } else {
+            text = zhu.format(&buffer, "{s}", .{name});
+        }
         drawTextCenter(text, camera.toWindow(position), .{});
     }
 }

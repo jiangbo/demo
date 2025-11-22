@@ -15,6 +15,7 @@ pub const Amulet = struct {};
 
 pub const Tile = enum(u8) {
     other = 0,
+    heal = 33,
     wall = 35,
     floor = 46,
     player = 64,
@@ -22,6 +23,7 @@ pub const Tile = enum(u8) {
     ogre = 79,
     goblin = 103,
     orc = 111,
+    map = 123,
     amulet = 124,
 };
 
@@ -75,3 +77,4 @@ pub const WantToMove = struct { TilePosition };
 pub const WantToAttack = struct { ecs.Entity };
 pub const ViewField = struct { TileRect };
 pub const PlayerView = struct {};
+pub const Item = struct {};
