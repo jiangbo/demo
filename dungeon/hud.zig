@@ -15,6 +15,8 @@ const Name = component.Name;
 const Position = component.Position;
 const TurnState = component.TurnState;
 const PlayerView = component.PlayerView;
+const Item = component.Item;
+const Carried = component.Carried;
 
 const TILE_SIZE = 32;
 
@@ -49,6 +51,7 @@ pub fn draw() void {
     drawTextCenter("Explore the Dungeon. A/S/D/W to move.", pos, .{});
 
     drawNameAndHealthIfNeed();
+    drawCarriedItemIfNeed();
     drawGameOverIfNeed();
     drawGameWinIfNeed();
 }
@@ -69,6 +72,16 @@ fn drawNameAndHealthIfNeed() void {
             text = zhu.format(&buffer, "{s}", .{name});
         }
         drawTextCenter(text, camera.toWindow(position), .{});
+    }
+}
+
+fn drawCarriedItemIfNeed() void {
+    var view = ecs.w.view(.{ Item, Name, Carried });
+    var index: f32 = 0;
+    while (view.next()) |entity| : (index += 1) {
+        const name = view.get(entity, Name)[0];
+        const pos = gfx.Vector.init(30, 30 + index * 20);
+        drawText(name, pos, .{ .color = .yellow });
     }
 }
 

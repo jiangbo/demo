@@ -117,7 +117,7 @@ pub fn SparseMap(Component: type) type {
             return self.valuePtr[0..self.dense.items.len];
         }
 
-        pub fn remove(self: *Self, entity: Index) u16 {
+        pub fn swapRemove(self: *Self, entity: Index) u16 {
             if (!self.has(entity)) return Entity.invalid;
 
             const index = self.sparse.items[entity];
@@ -132,6 +132,19 @@ pub fn SparseMap(Component: type) type {
             const src = self.valuePtr[sz * self.dense.items.len ..];
             @memcpy(self.valuePtr[sz * index ..][0..sz], src[0..sz]);
             return index;
+        }
+
+        pub fn orderedRemove(self: *Self, entity: Index) u16 {
+            if (!self.has(entity)) return Entity.invalid;
+
+            const index = self.sparse.items[entity];
+            self.sparse.items[entity] = Entity.invalid;
+
+            _ = self.dense.orderedRemove(index);
+            const sz = if (T == u8) self.valueSize else 1;
+            const len = (self.dense.items.len - index) * sz;
+            const src = self.valuePtr[sz * (index + 1) ..][0..len];
+            @memmove(self.valuePtr[sz * index ..][0..len], src);
         }
 
         pub fn sort(self: *Self, lessFn: fn (T, T) bool) void {
@@ -383,7 +396,7 @@ pub const Registry = struct {
 
     pub fn remove(self: *Registry, entity: Entity, T: type) void {
         if (!self.validEntity(entity)) return;
-        _ = self.assure(T).remove(entity.index);
+        _ = self.assure(T).swapRemove(entity.index);
     }
 
     pub fn alignRemove(self: *Registry, e: Entity, types: anytype) void {
@@ -400,7 +413,7 @@ pub const Registry = struct {
         var iterator = self.componentMap.valueIterator();
         while (iterator.next()) |value| {
             var map: *SparseMap(u8) = @ptrCast(@alignCast(value));
-            _ = map.remove(entity.index);
+            _ = map.swapRemove(entity.index);
         }
     }
 
@@ -423,7 +436,10 @@ pub const Registry = struct {
     }
 };
 
-pub const ViewOption = struct { reverse: bool = false };
+pub const ViewOption = struct {
+    reverse: bool = false,
+    shortest: bool = true, // use shortest or first?
+};
 pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
     const Index = Entity.Index;
     return struct {
@@ -433,9 +449,11 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
 
         pub fn init(r: *Registry) @This() {
             var slice = r.assure(includes[0]).dense.items;
-            inline for (includes) |T| {
-                const entities = r.assure(T).dense.items;
-                if (entities.len < slice.len) slice = entities;
+            if (opt.shortest) {
+                inline for (includes) |T| {
+                    const entities = r.assure(T).dense.items;
+                    if (entities.len < slice.len) slice = entities;
+                }
             }
             const index = if (opt.reverse) slice.len - 1 else 0;
             return .{ .reg = r, .slice = slice, .index = @intCast(index) };
@@ -486,7 +504,7 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
         }
 
         pub fn remove(self: *@This(), entity: Index, T: type) void {
-            _ = self.reg.assure(T).remove(entity);
+            _ = self.reg.assure(T).swapRemove(entity);
         }
     };
 }
