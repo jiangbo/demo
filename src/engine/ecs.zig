@@ -478,7 +478,7 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOptions) type {
         }
 
         pub fn is(self: *const @This(), entity: Index, T: type) bool {
-            const e = self.getIdentityEntity(T) orelse return false;
+            const e = self.reg.getIdentityEntity(T) orelse return false;
             return e.index == entity;
         }
 
