@@ -77,12 +77,21 @@ fn drawNameAndHealthIfNeed() void {
 
 fn drawCarriedItemIfNeed() void {
     var view = ecs.w.view(.{ Item, Name, Carried });
-    var index: f32 = 0;
+    var index: u8 = 1;
+    var buffer: [44]u8 = undefined;
     while (view.next()) |entity| : (index += 1) {
         const name = view.get(entity, Name)[0];
-        const pos = gfx.Vector.init(30, 30 + index * 20);
-        drawText(name, pos, .{ .color = .yellow });
+        const offset: f32 = @floatFromInt(index * 16);
+        const pos = gfx.Vector.init(30, 20 + offset);
+        const text = zhu.format(&buffer, "{}: {s}", .{ index, name });
+        drawText(text, pos, .{});
     }
+    if (index == 1) return;
+
+    const pos = gfx.Vector.init(15, 15);
+    drawText("Items carried", pos, .{ .color = .yellow });
+    const offset: f32 = @floatFromInt(index * 16 + 15);
+    drawText("Number to use", pos.addY(offset), .{ .color = .yellow });
 }
 
 fn drawGameOverIfNeed() void {
