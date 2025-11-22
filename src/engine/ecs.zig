@@ -173,7 +173,7 @@ fn DeinitList(T: type) type {
     };
 }
 
-const TypeId = u64;
+pub const TypeId = u64;
 const Map = std.AutoHashMapUnmanaged;
 pub const Registry = struct {
     allocator: Allocator,
@@ -495,7 +495,7 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOptions) type {
 fn oom() noreturn {
     @panic("oom");
 }
-fn hashTypeId(T: type) TypeId {
+pub fn hashTypeId(T: type) TypeId {
     return comptime std.hash.Fnv1a_64.hash(@typeName(T));
 }
 
