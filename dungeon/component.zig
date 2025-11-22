@@ -78,3 +78,4 @@ pub const WantToAttack = struct { ecs.Entity };
 pub const ViewField = struct { TileRect };
 pub const PlayerView = struct {};
 pub const Item = struct {};
+pub const Carried = struct {};

@@ -73,8 +73,8 @@ pub fn SparseMap(Component: type) type {
         }
 
         pub fn deinit(self: *Self, gpa: Allocator) void {
-            const size = self.dense.capacity * self.valueSize;
-            const slice = self.valuePtr[0..size];
+            const size = if (T == u8) self.valueSize else 1;
+            const slice = self.valuePtr[0 .. self.dense.capacity * size];
             gpa.rawFree(slice, self.alignment, @returnAddress());
             self.dense.deinit(gpa);
             self.sparse.deinit(gpa);
@@ -128,7 +128,7 @@ pub fn SparseMap(Component: type) type {
             self.sparse.items[moved] = index;
             self.dense.items[index] = moved;
 
-            const sz = self.valueSize;
+            const sz = if (T == u8) self.valueSize else 1;
             const src = self.valuePtr[sz * self.dense.items.len ..];
             @memcpy(self.valuePtr[sz * index ..][0..sz], src[0..sz]);
             return index;
@@ -487,7 +487,7 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOptions) type {
         }
 
         pub fn remove(self: *@This(), entity: Index, T: type) void {
-            self.reg.assure(T).remove(entity);
+            _ = self.reg.assure(T).remove(entity);
         }
     };
 }
