@@ -29,7 +29,7 @@ pub fn update() void {
     const playerPos = ecs.w.get(playerEntity, TilePosition);
     const viewField = ecs.w.get(playerEntity, ViewField)[0];
 
-    var view = ecs.w.viewOptions(.{Item}, .{PlayerView}, .{});
+    var view = ecs.w.viewOption(.{Item}, .{PlayerView}, .{});
     while (view.next()) |item| {
         const itemPos = view.get(item, TilePosition);
         if (viewField.contains(itemPos)) {

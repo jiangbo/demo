@@ -413,19 +413,18 @@ pub const Registry = struct {
     }
 
     pub fn view(self: *Registry, types: anytype) View(types, .{}, .{}) {
-        return self.viewOptions(types, .{}, .{});
+        return self.viewOption(types, .{}, .{});
     }
-
     // zig fmt: off
-    pub fn viewOptions(self: *Registry, includes: anytype, excludes: anytype,
-        comptime opt: ViewOptions) View(includes,excludes, opt) {
+    pub fn viewOption(self: *Registry, includes: anytype, excludes: anytype,
+        comptime opt: ViewOption) View(includes, excludes, opt) {
     // zig fmt: on
         return View(includes, excludes, opt).init(self);
     }
 };
 
-pub const ViewOptions = struct { reverse: bool = false };
-pub fn View(includes: anytype, excludes: anytype, opt: ViewOptions) type {
+pub const ViewOption = struct { reverse: bool = false };
+pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
     const Index = Entity.Index;
     return struct {
         reg: *Registry,
