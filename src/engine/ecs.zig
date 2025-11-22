@@ -448,10 +448,10 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOptions) type {
                 if (opt.reverse) self.index -%= 1 else self.index += 1;
 
                 inline for (includes) |T| {
-                    if (!self.reg.assure(T).has(entity)) continue :blk;
+                    if (!self.has(entity, T)) continue :blk;
                 }
                 inline for (excludes) |T| {
-                    if (self.reg.assure(T).has(entity)) continue :blk;
+                    if (self.has(entity, T)) continue :blk;
                 }
                 return entity;
             } else return null;
@@ -470,8 +470,7 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOptions) type {
         }
 
         pub fn tryGetPtr(self: *@This(), entity: Index, T: type) ?*T {
-            const e = self.reg.toEntity(entity) orelse return null;
-            return self.reg.tryGetPtr(e, T);
+            return self.reg.assure(T).tryGet(entity);
         }
 
         pub fn has(self: *const @This(), entity: Index, T: type) bool {
