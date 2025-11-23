@@ -63,7 +63,8 @@ pub fn SparseMap(Component: type) type {
         dense: std.ArrayList(Index),
         valuePtr: [*]T,
         alignment: std.mem.Alignment = .of(T),
-        valueSize: u32 = @sizeOf(T),
+        valueSize: u16 = @sizeOf(T),
+        alignIndex: u16 = 0,
 
         pub fn init(gpa: Allocator) !Self {
             return Self{
@@ -356,7 +357,7 @@ pub const Registry = struct {
         const dummy = if (isEmpty) undefined else value;
         if (map.tryGet(index)) |ptr| ptr.* = dummy else //
         map.add(self.allocator, index, dummy) catch oom();
-        return map.sparse.items[index];
+        return map.sparse.items[index] +% map.alignIndex;
     }
 
     pub fn has(self: *Registry, entity: Entity, T: type) bool {
@@ -407,8 +408,11 @@ pub const Registry = struct {
     pub fn alignRemove(self: *Registry, e: Entity, types: anytype) void {
         if (!self.validEntity(e)) return;
         var index: [types.len]u16 = undefined;
-        inline for (types, &index) |T, *i|
-            i.* = self.assure(T).swapRemove(e.index);
+        inline for (types, &index) |T, *i| {
+            var map = self.assure(T);
+            i.* = map.swapRemove(e.index);
+            if (i.* != Entity.invalid) i.* +% map.alignIndex;
+        }
         for (index[1..]) |i| std.debug.assert(index[0] == i);
     }
 
