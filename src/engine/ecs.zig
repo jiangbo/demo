@@ -140,8 +140,9 @@ pub fn SparseMap(Component: type) type {
 
             const index = self.sparse.items[entity];
             self.sparse.items[entity] = Entity.invalid;
-
             _ = self.dense.orderedRemove(index);
+            for (self.dense.items[index..]) |e| self.sparse.items[e] -= 1;
+
             const sz = if (T == u8) self.valueSize else 1;
             const len = (self.dense.items.len - index) * sz;
             const src = self.valuePtr[sz * (index + 1) ..][0..len];
