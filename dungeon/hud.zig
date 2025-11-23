@@ -76,7 +76,9 @@ fn drawNameAndHealthIfNeed() void {
 }
 
 fn drawCarriedItemIfNeed() void {
-    var view = ecs.w.view(.{ Item, Name, Carried });
+    var view = ecs.w.viewOption(.{ Carried, Item, Name }, .{}, .{
+        .useFirst = true,
+    });
     var index: u8 = 1;
     var buffer: [44]u8 = undefined;
     while (view.next()) |entity| : (index += 1) {

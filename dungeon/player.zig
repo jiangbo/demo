@@ -70,27 +70,23 @@ pub fn update() void {
     }
 
     const start: u32 = @intFromEnum(zhu.input.KeyCode._0);
-    for (1..10) |index| {
+    var view = ecs.w.view(.{ Item, Carried });
+    var index: u8 = 1;
+    while (view.next()) |itemEntity| : (index += 1) {
         if (!window.isKeyRelease(@enumFromInt(start + index))) continue;
 
-        var view = ecs.w.view(.{ Item, Carried });
-        var itemIndex: u8 = 1;
-        while (view.next()) |itemEntity| : (itemIndex += 1) {
-            if (itemIndex != index) continue;
+        if (view.tryGet(itemEntity, Healing)) |heal| { // 使用药水
+            const h = ecs.w.getPtr(entity, Health);
+            h.current = @min(h.max, h.current + heal.amount);
+            view.orderedRemove(itemEntity, Carried);
+            view.destroy(itemEntity);
+            ecs.w.addContext(TurnState.monster);
+            return;
+        }
 
-            if (view.tryGet(itemEntity, Healing)) |heal| { // 使用药水
-                const health = ecs.w.getPtr(entity, Health);
-                health.current = @min(health.max, health.current + heal.amount);
-                view.orderedRemove(itemEntity, Carried);
-                view.destroy(itemEntity);
-                ecs.w.addContext(TurnState.monster);
-                return;
-            }
-
-            if (view.is(itemEntity, component.Map)) { // 使用地图
-                map.minMap = !map.minMap;
-                return;
-            }
+        if (view.is(itemEntity, component.Map)) { // 使用地图
+            map.minMap = !map.minMap;
+            return;
         }
     }
 

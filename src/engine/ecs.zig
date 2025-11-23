@@ -447,7 +447,7 @@ pub const Registry = struct {
 
 pub const ViewOption = struct {
     reverse: bool = false,
-    shortest: bool = true, // use shortest or first?
+    useFirst: bool = false, // use shortest or first?
 };
 pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
     const Index = Entity.Index;
@@ -458,7 +458,7 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
 
         pub fn init(r: *Registry) @This() {
             var slice = r.assure(includes[0]).dense.items;
-            if (opt.shortest) {
+            if (!opt.useFirst) {
                 inline for (includes) |T| {
                     const entities = r.assure(T).dense.items;
                     if (entities.len < slice.len) slice = entities;
