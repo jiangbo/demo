@@ -23,7 +23,6 @@ const PlayerView = component.PlayerView;
 
 var isHelp = false;
 var isDebug = false;
-const scale = 1;
 
 pub fn init() void {
     window.initFont(.{
@@ -33,7 +32,6 @@ pub fn init() void {
 
     camera.frameStats(true);
     camera.init(5000);
-    camera.scale = .init(scale, scale);
     ecs.init(window.allocator);
 
     restart();
@@ -50,7 +48,7 @@ fn restart() void {
     monster.init();
 }
 
-pub fn update(delta: f32) void {
+pub fn update(_: f32) void {
     if (window.isKeyRelease(.H)) isHelp = !isHelp;
     if (window.isKeyRelease(.X)) isDebug = !isDebug;
 
@@ -58,11 +56,7 @@ pub fn update(delta: f32) void {
         return window.toggleFullScreen();
     }
 
-    const speed: f32 = std.math.round(100 * delta) / scale;
-    if (window.isKeyDown(.UP)) camera.position.y -= speed;
-    if (window.isKeyDown(.DOWN)) camera.position.y += speed;
-    if (window.isKeyDown(.LEFT)) camera.position.x -= speed;
-    if (window.isKeyDown(.RIGHT)) camera.position.x += speed;
+    if (window.isKeyRelease(.M)) map.minMap = !map.minMap;
 
     switch (ecs.w.getContext(TurnState).?) {
         .over, .win => if (window.isKeyRelease(._1)) restart(),
