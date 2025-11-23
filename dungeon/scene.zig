@@ -71,8 +71,8 @@ pub fn draw() void {
 
     window.keepAspectRatio();
     sceneCall("draw", .{});
-    if (map.minMap) camera.scale = .init(0.25, 0.25);
 
+    if (map.minMap) camera.mode = .local;
     map.draw();
 
     var view = ecs.w.view(.{ gfx.Texture, Position, PlayerView });
@@ -81,8 +81,10 @@ pub fn draw() void {
         camera.draw(view.get(entity, gfx.Texture), pos);
     }
     if (map.minMap) {
+        camera.scale = .init(0.25, 0.25);
         camera.flushTexture();
         camera.scale = .init(1, 1);
+        camera.mode = .world;
     }
 
     hud.draw();

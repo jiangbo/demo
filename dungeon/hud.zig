@@ -7,6 +7,7 @@ const camera = zhu.camera;
 const math = zhu.math;
 const ecs = zhu.ecs;
 
+const map = @import("map.zig");
 const component = @import("component.zig");
 
 const Player = component.Player;
@@ -50,7 +51,7 @@ pub fn draw() void {
     pos.y += size.x * 2;
     drawTextCenter("Explore the Dungeon. A/S/D/W to move.", pos, .{});
 
-    drawNameAndHealthIfNeed();
+    if (!map.minMap) drawNameAndHealthIfNeed();
     drawCarriedItemIfNeed();
     drawGameOverIfNeed();
     drawGameWinIfNeed();
