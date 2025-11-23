@@ -24,6 +24,7 @@ const ViewField = component.ViewField;
 const PlayerView = component.PlayerView;
 const Item = component.Item;
 const Carried = component.Carried;
+const Healing = component.Healing;
 
 var entity: ecs.Entity = undefined;
 const viewSize = 4;
@@ -47,6 +48,10 @@ pub fn init() void {
 pub fn update() void {
     if (!window.isAnyRelease()) return; // 没有按任何键
 
+    if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q })) {
+        map.minMap = false;
+    }
+
     const playerPos = ecs.w.get(entity, TilePosition);
     if (window.isKeyRelease(.G)) { // 拾取物品
         // 找到在角色视野中的物品，判断是否可以拾取
@@ -61,6 +66,31 @@ pub fn update() void {
             view.remove(itemEntity, Position);
             view.add(itemEntity, Carried{});
             return;
+        }
+    }
+
+    const start: u32 = @intFromEnum(zhu.input.KeyCode._0);
+    for (1..10) |index| {
+        if (!window.isKeyRelease(@enumFromInt(start + index))) continue;
+
+        var view = ecs.w.view(.{ Item, Carried });
+        var itemIndex: u8 = 1;
+        while (view.next()) |itemEntity| : (itemIndex += 1) {
+            if (itemIndex != index) continue;
+
+            if (view.tryGet(itemEntity, Healing)) |heal| { // 使用药水
+                const health = ecs.w.getPtr(entity, Health);
+                health.current = @min(health.max, health.current + heal.amount);
+                view.orderedRemove(itemEntity, Carried);
+                view.destroy(itemEntity);
+                ecs.w.addContext(TurnState.monster);
+                return;
+            }
+
+            if (view.is(itemEntity, component.Map)) { // 使用地图
+                map.minMap = !map.minMap;
+                return;
+            }
         }
     }
 

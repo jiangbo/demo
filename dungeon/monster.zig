@@ -22,6 +22,7 @@ const PlayerView = component.PlayerView;
 const ViewField = component.ViewField;
 const Tile = component.Tile;
 const Item = component.Item;
+const Healing = component.Healing;
 
 const MovingRandomly = struct {};
 const viewSize = 3;
@@ -42,6 +43,7 @@ pub fn init() void {
             ecs.w.add(enemy, map.getTextureFromTile(.map));
             ecs.w.add(enemy, Item{});
             ecs.w.add(enemy, Name{"Map"});
+            ecs.w.addIdentity(enemy, component.Map);
             continue;
         }
 
@@ -56,6 +58,7 @@ fn spawnHeal(entity: ecs.Entity) void {
     ecs.w.add(entity, map.getTextureFromTile(.heal));
     ecs.w.add(entity, Item{});
     ecs.w.add(entity, Name{"healing potion"});
+    ecs.w.add(entity, Healing{ .amount = 4 });
 }
 
 fn spawnMonster(enemy: ecs.Entity) void {

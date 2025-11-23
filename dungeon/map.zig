@@ -101,6 +101,7 @@ fn applyPrefab() void {
             prefabSpawnsArray[count] = index;
             count += 1;
         }
+        if (count == prefabSpawnsArray.len) break;
     }
 
     const prefabSpawns = prefabSpawnsArray[0..count];
@@ -237,6 +238,7 @@ pub fn updatePlayerWalk() void {
     }
 }
 
+pub var minMap: bool = false;
 pub fn draw() void {
     // for (&tiles, 0..) |tile, index| {
     //     const tex = getTextureFromTile(tile);
@@ -249,11 +251,6 @@ pub fn draw() void {
 fn drawPlayerWalk() void {
     const playerEntity = ecs.w.getIdentityEntity(Player).?;
     const viewField = ecs.w.get(playerEntity, ViewField)[0];
-    const playerPos = ecs.w.get(playerEntity, TilePosition);
-
-    const x = playerPos.x -| 10;
-    const y = playerPos.y -| 7;
-    const windowView = TileRect{ .x = x, .y = y, .w = 20, .h = 13 };
 
     for (walks, 0..) |isWalk, index| {
         if (!isWalk) continue;
@@ -261,7 +258,6 @@ fn drawPlayerWalk() void {
             .x = @intCast(index % WIDTH),
             .y = @intCast(index / WIDTH),
         };
-        if (!windowView.contains(pos)) continue;
         if (viewField.contains(pos)) continue;
 
         const tex = getTextureFromTile(tiles[index]);
