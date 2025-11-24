@@ -40,7 +40,7 @@ pub fn draw() void {
 
     const health = ecs.w.getIdentity(Player, Health).?;
     var buffer: [50]u8 = undefined;
-    const text = zhu.format(&buffer, "Health: {} / {}", //
+    var text = zhu.format(&buffer, "Health: {} / {}", //
         .{ health.current, health.max });
 
     camera.drawRect(.init(healthPos, healthSize), healthBackground);
@@ -50,6 +50,11 @@ pub fn draw() void {
     drawTextCenter(text, pos, .{});
     pos.y += size.x * 2;
     drawTextCenter("Explore the Dungeon. A/S/D/W to move.", pos, .{});
+
+    text = zhu.format(&buffer, "Dungeon Level: {}", .{map.currentLevel});
+    const textSize = size.mul(.init(@floatFromInt(text.len), 1));
+    const x = window.logicSize.x - textSize.x - 10;
+    drawText(text, .init(x, 10), .{});
 
     if (!map.minMap) drawNameAndHealthIfNeed();
     drawCarriedItemIfNeed();
