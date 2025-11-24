@@ -50,35 +50,27 @@ const Entities = struct {
     }
 };
 
-pub fn SparseMap(Component: type) type {
+pub fn SparseMap(T: type) type {
     return struct {
-        const isEmpty = @sizeOf(Component) == 0;
-        const T = if (isEmpty) struct { _: u8 } else Component;
-
         const Self = @This();
         const Index = Entity.Index;
-        const initCapacity = @max(1, std.atomic.cache_line / @sizeOf(T));
 
         sparse: std.ArrayList(u16) = .empty,
-        dense: std.ArrayList(Index),
-        valuePtr: [*]T,
+        dense: std.ArrayList(Index) = .empty,
         alignment: std.mem.Alignment = .of(T),
+        valuePtr: [*]T = undefined,
         valueSize: u16 = @sizeOf(T),
         alignIndex: u16 = 0,
 
-        pub fn init(gpa: Allocator) !Self {
-            return Self{
-                .dense = try .initCapacity(gpa, initCapacity),
-                .valuePtr = (try gpa.alloc(T, initCapacity)).ptr,
-            };
-        }
-
         pub fn deinit(self: *Self, gpa: Allocator) void {
-            const size = if (T == u8) self.valueSize else 1;
-            const slice = self.valuePtr[0 .. self.dense.capacity * size];
-            gpa.rawFree(slice, self.alignment, @returnAddress());
-            self.dense.deinit(gpa);
             self.sparse.deinit(gpa);
+            const capacity = self.dense.capacity;
+            self.dense.deinit(gpa);
+            if (self.valueSize == 0) return;
+
+            const size = if (T == u8) self.valueSize else 1;
+            const slice = self.valuePtr[0 .. capacity * size];
+            gpa.rawFree(slice, self.alignment, @returnAddress());
         }
 
         pub fn add(self: *Self, gpa: Allocator, e: Index, v: T) !void {
@@ -91,13 +83,14 @@ pub fn SparseMap(Component: type) type {
             const oldCapacity = self.dense.capacity;
             try self.dense.append(gpa, e);
             errdefer _ = self.dense.pop();
-
-            if (oldCapacity != self.dense.capacity) {
-                const slice = self.valuePtr[0..oldCapacity];
-                const capacity = self.dense.capacity;
-                self.valuePtr = (try gpa.realloc(slice, capacity)).ptr;
+            if (self.valueSize != 0) {
+                if (oldCapacity != self.dense.capacity) {
+                    const slice = self.valuePtr[0..oldCapacity];
+                    const capacity = self.dense.capacity;
+                    self.valuePtr = (try gpa.realloc(slice, capacity)).ptr;
+                }
+                self.valuePtr[index] = v;
             }
-            self.valuePtr[index] = v;
             self.sparse.items[e] = index;
         }
 
@@ -106,6 +99,7 @@ pub fn SparseMap(Component: type) type {
         }
 
         pub fn get(self: *const Self, entity: Index) *T {
+            std.debug.assert(self.valueSize != 0);
             return &self.valuePtr[self.sparse.items[entity]];
         }
 
@@ -115,6 +109,7 @@ pub fn SparseMap(Component: type) type {
         }
 
         pub fn components(self: *const Self) []T {
+            std.debug.assert(self.valueSize != 0);
             return self.valuePtr[0..self.dense.items.len];
         }
 
@@ -128,6 +123,7 @@ pub fn SparseMap(Component: type) type {
             if (self.dense.items.len == index) return index;
             self.sparse.items[moved] = index;
             self.dense.items[index] = moved;
+            if (self.valueSize == 0) return index;
 
             const sz = if (T == u8) self.valueSize else 1;
             const src = self.valuePtr[sz * self.dense.items.len ..];
@@ -142,6 +138,7 @@ pub fn SparseMap(Component: type) type {
             self.sparse.items[entity] = Entity.invalid;
             _ = self.dense.orderedRemove(index);
             for (self.dense.items[index..]) |e| self.sparse.items[e] -= 1;
+            if (self.valueSize == 0) return;
 
             const sz = if (T == u8) self.valueSize else 1;
             const len = (self.dense.items.len - index) * sz;
@@ -150,7 +147,7 @@ pub fn SparseMap(Component: type) type {
         }
 
         pub fn sort(self: *Self, lessFn: fn (T, T) bool) void {
-            if (self.dense.items.len <= 1 or isEmpty) return;
+            if (self.dense.items.len <= 1 or self.valueSize == 0) return;
 
             const sparse = self.sparse.items;
             const v = self.valuePtr[0..self.dense.items.len];
@@ -330,31 +327,26 @@ pub const Registry = struct {
             .getOrPut(self.allocator, hashTypeId(T)) catch oom();
 
         if (!result.found_existing) {
-            const value = SparseMap(T).init(self.allocator);
-            result.value_ptr.* = std.mem.toBytes(value catch oom());
+            result.value_ptr.* = std.mem.toBytes(SparseMap(T){});
         }
         return @ptrCast(@alignCast(result.value_ptr));
     }
 
     pub fn add(self: *Registry, entity: Entity, value: anytype) void {
         if (!self.validEntity(entity)) return;
-        _ = self.doAdd(entity.index, value);
+        var map = self.assure(@TypeOf(value));
+        map.add(self.allocator, entity.index, value) catch oom();
     }
 
     pub fn alignAdd(self: *Registry, e: Entity, comps: anytype) void {
         if (!self.validEntity(e)) return;
         var index: [comps.len]u16 = undefined;
-        inline for (comps, &index) |v, *i| i.* = self.doAdd(e.index, v);
+        inline for (comps, &index) |value, *i| {
+            var map = self.assure(@TypeOf(value));
+            map.add(self.allocator, e.index, value) catch oom();
+            i.* = map.sparse.items[e.index] + map.alignIndex;
+        }
         for (index[1..]) |i| std.debug.assert(index[0] == i);
-    }
-
-    fn doAdd(self: *Registry, index: Entity.Index, value: anytype) u16 {
-        var map = self.assure(@TypeOf(value));
-        const isEmpty = @sizeOf(@TypeOf(value)) == 0;
-        const dummy = if (isEmpty) undefined else value;
-        if (map.tryGet(index)) |ptr| ptr.* = dummy else //
-        map.add(self.allocator, index, dummy) catch oom();
-        return map.sparse.items[index] +% map.alignIndex;
     }
 
     pub fn has(self: *Registry, entity: Entity, T: type) bool {
@@ -506,7 +498,8 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
         }
 
         pub fn add(self: *@This(), entity: Index, value: anytype) void {
-            _ = self.reg.doAdd(entity, value);
+            const map = self.reg.assure(@TypeOf(value));
+            map.add(self.reg.allocator, entity, value) catch oom();
         }
 
         pub fn toEntity(self: *const @This(), index: Index) ?Entity {
