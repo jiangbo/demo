@@ -78,6 +78,9 @@ pub fn SparseMap(T: type) type {
             if (e >= self.sparse.items.len) {
                 const count = e + 1 - self.sparse.items.len;
                 try self.sparse.appendNTimes(gpa, Entity.invalid, count);
+            } else if (self.has(e)) { // repeat add
+                if (self.valueSize != 0) self.get(e).* = v;
+                return;
             }
 
             const index: u16 = @intCast(self.dense.items.len);
@@ -528,7 +531,7 @@ pub fn hashTypeId(T: type) TypeId {
     return comptime std.hash.Fnv1a_64.hash(@typeName(T));
 }
 
-var registry: Registry = undefined;
+pub var registry: Registry = undefined;
 pub var w = &registry;
 pub fn init(allocator: std.mem.Allocator) void {
     registry = Registry.init(allocator);

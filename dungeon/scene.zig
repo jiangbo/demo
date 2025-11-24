@@ -34,18 +34,38 @@ pub fn init() void {
     camera.init(5000);
     ecs.init(window.allocator);
 
-    restart();
+    restart(1);
 }
 
-fn restart() void {
+fn restart(mapLevel: u8) void {
     ecs.clear();
+    initWorld(mapLevel);
+}
 
+fn initWorld(mapLevel: u8) void {
     ecs.w.addContext(TurnState.player);
     hud.init();
-    map.init();
+    map.init(mapLevel);
     player.init();
     item.init();
     monster.init();
+}
+
+fn nextLevel() void {
+    // 保留拾取的物品，不要地图
+    var reg = ecs.Registry.init(window.allocator);
+    var view = ecs.w.view(.{ component.Carried, component.Healing });
+    while (view.next()) |entity| {
+        const newEntity = reg.createEntity();
+        reg.add(newEntity, component.Carried{});
+        reg.add(newEntity, component.Item{});
+        reg.add(newEntity, view.get(entity, component.Healing));
+        reg.add(newEntity, view.get(entity, component.Name));
+    }
+    ecs.w.deinit();
+    ecs.registry = reg;
+    // 保留地图等级
+    initWorld(map.currentLevel + 1);
 }
 
 pub fn update(_: f32) void {
@@ -59,9 +79,10 @@ pub fn update(_: f32) void {
     if (window.isKeyRelease(.M)) map.minMap = !map.minMap;
 
     switch (ecs.w.getContext(TurnState).?) {
-        .over, .win => if (window.isKeyRelease(._1)) restart(),
+        .over, .win => if (window.isKeyRelease(._1)) restart(1),
         .player => player.update(),
         .monster => monster.update(),
+        .next => nextLevel(),
     }
 }
 

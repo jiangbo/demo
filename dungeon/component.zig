@@ -5,7 +5,7 @@ const ecs = zhu.ecs;
 
 pub const Position = zhu.gfx.Vector;
 pub const Texture = zhu.gfx.Texture;
-pub const TurnState = enum { player, monster, over, win };
+pub const TurnState = enum { player, monster, over, win, next };
 pub const Health = struct { current: i32, max: i32 };
 pub const Name = struct { []const u8 };
 pub const Player = struct {};

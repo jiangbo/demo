@@ -15,13 +15,31 @@ const ViewField = component.ViewField;
 const Item = component.Item;
 
 pub fn init() void {
+    if (map.currentLevel == map.MAX_LEVEL) {
+        spawnAmulet();
+    } else {
+        spawnExit();
+    }
+}
+
+fn spawnAmulet() void {
     const amulet = ecs.w.createIdentityEntity(Amulet);
 
-    const pos = map.amuletPos;
+    const pos = map.finalPos;
     ecs.w.add(amulet, pos);
     const texture = map.getTextureFromTile(.amulet);
     ecs.w.alignAdd(amulet, .{ map.worldPosition(pos), texture });
     ecs.w.add(amulet, Item{});
+}
+
+fn spawnExit() void {
+    const exit = ecs.w.createEntity();
+
+    const pos = map.finalPos;
+    ecs.w.add(exit, pos);
+    const texture = map.getTextureFromTile(.exit);
+    ecs.w.alignAdd(exit, .{ map.worldPosition(pos), texture });
+    ecs.w.add(exit, Item{});
 }
 
 pub fn update() void {

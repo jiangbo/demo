@@ -64,6 +64,7 @@ pub fn update() void {
             view.remove(itemEntity, PlayerView);
             view.remove(itemEntity, TilePosition);
             view.remove(itemEntity, Position);
+            view.remove(itemEntity, gfx.Texture);
             view.add(itemEntity, Carried{});
             return;
         }
@@ -98,8 +99,10 @@ pub fn update() void {
 
     if (playerPos.equals(newPos)) return; // 没有移动
 
-    if (map.amuletPos.equals(newPos)) {
-        ecs.w.addContext(TurnState.win);
+    if (map.finalPos.equals(newPos)) {
+        const final = map.currentLevel == map.MAX_LEVEL;
+        const state: TurnState = if (final) .win else .next;
+        ecs.w.addContext(state);
     } else moveOrAttack(newPos);
 
     battle.attack();

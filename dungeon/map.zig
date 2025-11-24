@@ -20,20 +20,23 @@ const Theme = enum { dungeon, forest };
 const WIDTH = builder.WIDTH;
 const HEIGHT = builder.HEIGHT;
 pub const TILE_SIZE: gfx.Vector = .init(32, 32);
+pub const MAX_LEVEL = 3;
 const TILE_PER_ROW = 16;
 
 pub var size = gfx.Vector.init(WIDTH, HEIGHT).mul(TILE_SIZE);
 pub var spawns: [builder.SPAWN_SIZE]TilePosition = undefined;
-pub var amuletPos: TilePosition = undefined;
+pub var finalPos: TilePosition = undefined;
+pub var currentLevel: u8 = 1;
 
 var tiles: [WIDTH * HEIGHT]Tile = undefined;
 var texture: gfx.Texture = undefined;
 var walks: [HEIGHT * WIDTH]bool = undefined;
 var theme: Theme = undefined;
 
-pub fn init() void {
+pub fn init(mapLevel: u8) void {
     texture = gfx.loadTexture("assets/dungeonfont.png", .init(512, 512));
     theme = if (zhu.randomBool()) .dungeon else .forest;
+    currentLevel = mapLevel;
 
     switch (zhu.randomInt(u8, 0, 3)) {
         1 => builder.buildRooms(&tiles, &spawns),
@@ -49,7 +52,7 @@ pub fn init() void {
         for (line, 0..) |value, x| {
             if (value == 0xFF or value <= max) continue;
             max = value;
-            amuletPos = .{ .x = @intCast(x), .y = @intCast(y) };
+            finalPos = .{ .x = @intCast(x), .y = @intCast(y) };
         }
     }
 
@@ -81,7 +84,7 @@ fn applyPrefab() void {
             .h = FORTRESS.len,
         };
 
-        if (prefab.contains(amuletPos)) continue;
+        if (prefab.contains(finalPos)) continue;
         for (prefab.y..prefab.y + prefab.h) |y| {
             for (prefab.x..prefab.x + prefab.w) |x| {
                 const distance = distances[y][x];
