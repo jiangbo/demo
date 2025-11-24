@@ -230,18 +230,14 @@ pub const Registry = struct {
         return self.entities.create(self.allocator) catch oom();
     }
 
-    pub fn toEntity(self: *const Registry, index: Entity.Index) ?Entity {
-        return self.entities.toEntity(index);
+    pub fn validEntity(self: *const Registry, entity: ?Entity) bool {
+        return self.entities.isAlive(entity orelse return false);
     }
 
-    pub fn validEntity(self: *const Registry, entity: Entity) bool {
-        return self.entities.isAlive(entity);
-    }
-
-    pub fn destroyEntity(self: *Registry, entity: Entity) void {
+    pub fn destroyEntity(self: *Registry, entity: ?Entity) void {
         if (!self.validEntity(entity)) return;
-        self.removeAll(entity);
-        self.entities.destroy(self.allocator, entity) catch oom();
+        self.removeAll(entity.?);
+        self.entities.destroy(self.allocator, entity.?) catch oom();
     }
 
     pub fn addContext(self: *Registry, value: anytype) void {
@@ -513,6 +509,10 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
             _ = self.reg.doAdd(entity, value);
         }
 
+        pub fn toEntity(self: *const @This(), index: Index) ?Entity {
+            return self.reg.entities.toEntity(index);
+        }
+
         pub fn remove(self: *@This(), entity: Index, T: type) void {
             _ = self.reg.assure(T).swapRemove(entity);
         }
@@ -522,8 +522,7 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
         }
 
         pub fn destroy(self: *@This(), entity: Index) void {
-            const e = self.reg.toEntity(entity) orelse return;
-            self.reg.destroyEntity(e);
+            self.reg.destroyEntity(self.toEntity(entity));
         }
     };
 }

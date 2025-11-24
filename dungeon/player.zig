@@ -114,7 +114,7 @@ fn moveOrAttack(newPos: TilePosition) void {
         const position = view.get(enemy, TilePosition);
         if (!newPos.equals(position)) continue;
 
-        const enemyEntity = ecs.w.toEntity(enemy).?;
+        const enemyEntity = view.toEntity(enemy).?;
         ecs.w.add(entity, WantToAttack{enemyEntity});
         return;
     }
