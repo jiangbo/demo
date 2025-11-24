@@ -18,6 +18,7 @@ pub const Tile = enum(u8) {
     heal = 33,
     wall = 35,
     floor = 46,
+    exit = 62,
     player = 64,
     ettin = 69,
     ogre = 79,

@@ -61,12 +61,13 @@ pub fn SparseMap(T: type) type {
         valuePtr: [*]T = undefined,
         valueSize: u16 = @sizeOf(T),
         alignIndex: u16 = 0,
+        name: []const u8 = @typeName(T),
 
         pub fn deinit(self: *Self, gpa: Allocator) void {
             self.sparse.deinit(gpa);
             const capacity = self.dense.capacity;
             self.dense.deinit(gpa);
-            if (self.valueSize == 0) return;
+            if (capacity == 0 or self.valueSize == 0) return;
 
             const size = if (T == u8) self.valueSize else 1;
             const slice = self.valuePtr[0 .. capacity * size];

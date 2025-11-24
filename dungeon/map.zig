@@ -155,7 +155,7 @@ pub fn worldPosition(pos: TilePosition) Position {
 
 pub fn canMove(pos: TilePosition) bool {
     return pos.x < WIDTH and pos.y < HEIGHT //
-    and indexTile(pos.x, pos.y) == .floor;
+    and indexTile(pos.x, pos.y) != .wall;
 }
 
 pub fn moveIfNeed() void {
