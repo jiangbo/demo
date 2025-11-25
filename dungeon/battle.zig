@@ -19,7 +19,7 @@ pub fn attack() void {
         const target = view.get(entity, WantToAttack)[0];
 
         var health = ecs.w.tryGetPtr(target, Health) orelse continue;
-        const damage = view.get(entity, component.Damage)[0];
+        const damage = view.get(entity, component.Damage).v;
         health.current -= damage;
         if (health.current <= 0) {
             if (ecs.w.isIdentity(target, Player)) {

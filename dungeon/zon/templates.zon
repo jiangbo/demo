@@ -45,7 +45,6 @@
         .frequency = 1,
         .name = "Dungeon Map",
         .tile = .map,
-        .value = 0,
     },
     .{
         .entityType = .enemy,

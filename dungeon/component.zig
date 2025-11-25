@@ -83,5 +83,5 @@ pub const ViewField = struct { TileRect };
 pub const PlayerView = struct {};
 pub const Item = struct {};
 pub const Carried = struct {};
-pub const Healing = struct { u8 };
-pub const Damage = struct { u8 };
+pub const Healing = struct { v: u8 };
+pub const Damage = struct { v: u8 };

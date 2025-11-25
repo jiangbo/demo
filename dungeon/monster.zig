@@ -23,6 +23,7 @@ const ViewField = component.ViewField;
 const Tile = component.Tile;
 const Item = component.Item;
 const Healing = component.Healing;
+const Damage = component.Damage;
 
 const MovingRandomly = struct {};
 const viewSize = 3;
@@ -69,10 +70,9 @@ fn spawnItem(entity: ecs.Entity, t: *const Template) void {
     ecs.w.add(entity, Item{});
     if (t.tile == .map) return;
     if (t.damage == 0) {
-        ecs.w.add(entity, Healing{t.value});
-        return;
+        return ecs.w.add(entity, Healing{ .v = t.value });
     }
-    ecs.w.add(entity, component.Damage{t.damage});
+    ecs.w.add(entity, Damage{ .v = t.damage });
 }
 
 fn spawnMonster(enemy: ecs.Entity, t: *const Template) void {
@@ -80,7 +80,7 @@ fn spawnMonster(enemy: ecs.Entity, t: *const Template) void {
     ecs.w.add(enemy, Health{ .current = hp, .max = hp });
     ecs.w.add(enemy, ChasePlayer{});
     ecs.w.add(enemy, Enemy{});
-    ecs.w.add(enemy, component.Damage{t.damage});
+    ecs.w.add(enemy, Damage{ .v = t.damage });
 }
 
 pub fn update() void {

@@ -51,7 +51,7 @@ pub fn draw() void {
     pos.y += size.x * 2;
     drawTextCenter("Explore the Dungeon. A/S/D/W to move.", pos, .{});
 
-    const damage = ecs.w.getIdentity(Player, component.Damage).?[0];
+    const damage = ecs.w.getIdentity(Player, component.Damage).?.v;
     const fmt = "Damage: {} Dungeon Level: {}";
     text = zhu.format(&buffer, fmt, .{ damage, map.currentLevel });
     const textSize = size.mul(.init(@floatFromInt(text.len), 1));
