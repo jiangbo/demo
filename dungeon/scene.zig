@@ -34,12 +34,12 @@ pub fn init() void {
     camera.init(5000);
     ecs.init(window.allocator);
 
-    restart(1);
+    restart();
 }
 
-fn restart(mapLevel: u8) void {
+fn restart() void {
     ecs.clear();
-    initWorld(mapLevel);
+    initWorld(1);
 }
 
 fn initWorld(mapLevel: u8) void {
@@ -53,6 +53,7 @@ fn initWorld(mapLevel: u8) void {
 
 fn nextLevel() void {
     var reg = ecs.Registry.init(window.allocator);
+    // 保留拾取的物品
     var view = ecs.w.view(.{component.Carried});
     while (view.next()) |entity| {
         const newEntity = reg.createEntity();
@@ -64,10 +65,16 @@ fn nextLevel() void {
         }
         reg.add(newEntity, view.get(entity, component.Name));
     }
+    // 保留角色攻击力
+    const damage = ecs.w.get(player.entity, component.Damage);
+    const health = ecs.w.get(player.entity, component.Health);
+
     ecs.w.deinit();
     ecs.registry = reg;
     // 保留地图等级
     initWorld(map.currentLevel + 1);
+    ecs.w.add(player.entity, damage);
+    ecs.w.add(player.entity, health);
 }
 
 pub fn update(_: f32) void {
@@ -81,7 +88,7 @@ pub fn update(_: f32) void {
     if (window.isKeyRelease(.M)) map.minMap = !map.minMap;
 
     switch (ecs.w.getContext(TurnState).?) {
-        .over, .win => if (window.isKeyRelease(._1)) restart(1),
+        .over, .win => if (window.isKeyRelease(._1)) restart(),
         .player => player.update(),
         .monster => monster.update(),
         .next => nextLevel(),

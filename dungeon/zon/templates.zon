@@ -10,10 +10,10 @@
     .{
         .entityType = .item,
         .levels = .{ 1, 2, 3 },
-        .frequency = 1,
+        .frequency = 2,
         .name = "Healing Potion",
         .tile = .heal,
-        .value = 4,
+        .value = 6,
     },
     .{
         .entityType = .item,
@@ -25,10 +25,11 @@
     },
     .{
         .entityType = .enemy,
-        .levels = .{ 1, 2, 3 },
+        .levels = .{1},
         .frequency = 3,
         .name = "Goblin",
         .tile = .goblin,
+        .damage = 1,
         .value = 1,
     },
     .{
@@ -37,6 +38,25 @@
         .frequency = 2,
         .name = "Orc",
         .tile = .orc,
+        .damage = 1,
         .value = 2,
+    },
+    .{
+        .entityType = .enemy,
+        .levels = .{ 2, 3 },
+        .frequency = 1,
+        .name = "Ogre",
+        .tile = .ogre,
+        .damage = 2,
+        .value = 5,
+    },
+    .{
+        .entityType = .enemy,
+        .levels = .{3},
+        .frequency = 1,
+        .name = "Ettin",
+        .tile = .ettin,
+        .damage = 3,
+        .value = 10,
     },
 }

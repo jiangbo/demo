@@ -26,7 +26,7 @@ const Item = component.Item;
 const Carried = component.Carried;
 const Healing = component.Healing;
 
-var entity: ecs.Entity = undefined;
+pub var entity: ecs.Entity = undefined;
 const viewSize = 4;
 
 pub fn init() void {
@@ -40,6 +40,7 @@ pub fn init() void {
     ecs.w.add(entity, health);
     ecs.w.add(entity, ViewField{.fromCenter(tilePos, viewSize)});
     ecs.w.add(entity, PlayerView{});
+    ecs.w.add(entity, component.Damage{ .amount = 1 });
     map.updatePlayerWalk();
 
     cameraFollow(map.worldPosition(tilePos));
@@ -61,7 +62,6 @@ pub fn update() void {
             if (!playerPos.equals(pos)) continue;
             // 找到一个物品可以拾取
             ecs.w.addContext(TurnState.monster);
-            view.remove(itemEntity, PlayerView);
             view.remove(itemEntity, TilePosition);
             view.remove(itemEntity, Position);
             view.remove(itemEntity, gfx.Texture);

@@ -14,13 +14,14 @@ const Health = component.Health;
 const TurnState = component.TurnState;
 
 pub fn attack() void {
-    var view = ecs.w.view(.{WantToAttack});
+    var view = ecs.w.view(.{ WantToAttack, component.Damage });
     while (view.next()) |entity| {
         const target = view.get(entity, WantToAttack)[0];
 
         var health = ecs.w.tryGetPtr(target, Health) orelse continue;
-        health.current -|= 1;
-        if (health.current == 0) {
+        const damage = view.get(entity, component.Damage);
+        health.current -= damage.amount;
+        if (health.current <= 0) {
             if (ecs.w.isIdentity(target, Player)) {
                 ecs.w.addContext(TurnState.over);
             } else ecs.w.destroyEntity(target);

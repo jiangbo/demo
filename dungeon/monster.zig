@@ -31,6 +31,7 @@ const Template = struct {
     entityType: enum { enemy, item },
     levels: []const u8,
     frequency: u8,
+    damage: u8 = 0,
     name: []const u8,
     tile: Tile,
     value: u8,
@@ -75,6 +76,7 @@ fn spawnMonster(enemy: ecs.Entity, t: *const Template) void {
     ecs.w.add(enemy, Health{ .current = hp, .max = hp });
     ecs.w.add(enemy, ChasePlayer{});
     ecs.w.add(enemy, Enemy{});
+    ecs.w.add(enemy, component.Damage{ .amount = t.damage });
 }
 
 pub fn update() void {
