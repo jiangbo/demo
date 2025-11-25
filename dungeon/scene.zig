@@ -52,14 +52,16 @@ fn initWorld(mapLevel: u8) void {
 }
 
 fn nextLevel() void {
-    // 保留拾取的物品，不要地图
     var reg = ecs.Registry.init(window.allocator);
-    var view = ecs.w.view(.{ component.Carried, component.Healing });
+    var view = ecs.w.view(.{component.Carried});
     while (view.next()) |entity| {
         const newEntity = reg.createEntity();
         reg.add(newEntity, component.Carried{});
         reg.add(newEntity, component.Item{});
-        reg.add(newEntity, view.get(entity, component.Healing));
+        reg.add(newEntity, component.PlayerView{});
+        if (view.tryGet(entity, component.Healing)) |heal| {
+            reg.add(newEntity, heal);
+        }
         reg.add(newEntity, view.get(entity, component.Name));
     }
     ecs.w.deinit();

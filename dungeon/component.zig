@@ -81,4 +81,3 @@ pub const PlayerView = struct {};
 pub const Item = struct {};
 pub const Carried = struct {};
 pub const Healing = struct { amount: u8 };
-pub const Map = struct {};

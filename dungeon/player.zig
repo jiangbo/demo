@@ -79,16 +79,12 @@ pub fn update() void {
         if (view.tryGet(itemEntity, Healing)) |heal| { // 使用药水
             const h = ecs.w.getPtr(entity, Health);
             h.current = @min(h.max, h.current + heal.amount);
-            view.assure(Carried).orderedRemove(itemEntity);
-            view.destroy(itemEntity);
-            ecs.w.addContext(TurnState.monster);
-            return;
-        }
+        } else map.minMap = !map.minMap;
 
-        if (view.is(itemEntity, component.Map)) { // 使用地图
-            map.minMap = !map.minMap;
-            return;
-        }
+        view.assure(Carried).orderedRemove(itemEntity);
+        view.destroy(itemEntity);
+        ecs.w.addContext(TurnState.monster);
+        return;
     }
 
     var newPos = playerPos;

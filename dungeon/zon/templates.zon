@@ -1,0 +1,42 @@
+.{
+    .{
+        .entityType = .item,
+        .levels = .{ 1, 2, 3 },
+        .frequency = 2,
+        .name = "Weak Healing Potion",
+        .tile = .heal,
+        .value = 2,
+    },
+    .{
+        .entityType = .item,
+        .levels = .{ 1, 2, 3 },
+        .frequency = 1,
+        .name = "Healing Potion",
+        .tile = .heal,
+        .value = 4,
+    },
+    .{
+        .entityType = .item,
+        .levels = .{ 1, 2, 3 },
+        .frequency = 1,
+        .name = "Dungeon Map",
+        .tile = .map,
+        .value = 0,
+    },
+    .{
+        .entityType = .enemy,
+        .levels = .{ 1, 2, 3 },
+        .frequency = 3,
+        .name = "Goblin",
+        .tile = .goblin,
+        .value = 1,
+    },
+    .{
+        .entityType = .enemy,
+        .levels = .{ 1, 2, 3 },
+        .frequency = 2,
+        .name = "Orc",
+        .tile = .orc,
+        .value = 2,
+    },
+}

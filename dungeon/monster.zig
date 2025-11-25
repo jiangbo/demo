@@ -27,55 +27,52 @@ const Healing = component.Healing;
 const MovingRandomly = struct {};
 const viewSize = 3;
 
+const Template = struct {
+    entityType: enum { enemy, item },
+    levels: []const u8,
+    frequency: u8,
+    name: []const u8,
+    tile: Tile,
+    value: u8,
+};
+const templates: []const Template = @import("zon/templates.zon");
+var frequencies: [templates.len]u8 = undefined;
+
 pub fn init() void {
+    for (templates, &frequencies) |template, *f| {
+        const contains = std.mem.indexOfScalar;
+        const found = contains(u8, template.levels, map.currentLevel);
+        f.* = if (found == null) 0 else template.frequency;
+    }
+
     const playerView = ecs.w.getIdentity(Player, ViewField).?[0];
+    for (map.spawns[1..]) |pos| {
+        const entity = ecs.w.createEntity();
+        if (playerView.contains(pos)) ecs.w.add(entity, PlayerView{});
 
-    const mapItemIndex = zhu.randomInt(u8, 5, map.spawns.len);
+        const index = zhu.random().weightedIndex(u8, &frequencies);
+        const template = &templates[index];
+        ecs.w.add(entity, pos);
+        ecs.w.add(entity, map.worldPosition(pos));
+        ecs.w.add(entity, map.getTextureFromTile(template.tile));
+        ecs.w.add(entity, Name{template.name});
 
-    for (map.spawns[1..], 1..) |pos, index| {
-        const enemy = ecs.w.createEntity();
-
-        if (playerView.contains(pos)) ecs.w.add(enemy, PlayerView{});
-        ecs.w.add(enemy, pos);
-        ecs.w.add(enemy, map.worldPosition(pos));
-
-        if (index == mapItemIndex) {
-            ecs.w.add(enemy, map.getTextureFromTile(.map));
-            ecs.w.add(enemy, Item{});
-            ecs.w.add(enemy, Name{"Map"});
-            ecs.w.addIdentity(enemy, component.Map);
-            continue;
-        }
-
-        switch (zhu.randomInt(u8, 0, 6)) {
-            0 => spawnHeal(enemy),
-            else => spawnMonster(enemy),
+        switch (templates[index].entityType) {
+            .item => spawnItem(entity, template),
+            .enemy => spawnMonster(entity, template),
         }
     }
 }
 
-fn spawnHeal(entity: ecs.Entity) void {
-    ecs.w.add(entity, map.getTextureFromTile(.heal));
+fn spawnItem(entity: ecs.Entity, t: *const Template) void {
     ecs.w.add(entity, Item{});
-    ecs.w.add(entity, Name{"healing potion"});
-    ecs.w.add(entity, Healing{ .amount = 4 });
+    if (t.tile == .map) return;
+    ecs.w.add(entity, Healing{ .amount = t.value });
 }
 
-fn spawnMonster(enemy: ecs.Entity) void {
-    const enemyTile = switch (zhu.randomIntMost(u8, 1, 10)) {
-        0...8 => Tile.goblin,
-        else => Tile.orc,
-    };
-
-    const hp: i32 = switch (enemyTile) {
-        Tile.goblin => 1,
-        Tile.orc => 2,
-        else => unreachable,
-    };
+fn spawnMonster(enemy: ecs.Entity, t: *const Template) void {
+    const hp: i32 = @intCast(t.value);
     ecs.w.add(enemy, Health{ .current = hp, .max = hp });
-    ecs.w.add(enemy, Name{@tagName(enemyTile)});
-
-    ecs.w.add(enemy, map.getTextureFromTile(enemyTile));
     ecs.w.add(enemy, ChasePlayer{});
     ecs.w.add(enemy, Enemy{});
 }

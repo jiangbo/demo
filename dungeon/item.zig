@@ -44,7 +44,6 @@ fn spawnExit() void {
 
 pub fn update() void {
     const playerEntity = ecs.w.getIdentityEntity(Player).?;
-    const playerPos = ecs.w.get(playerEntity, TilePosition);
     const viewField = ecs.w.get(playerEntity, ViewField)[0];
 
     var view = ecs.w.viewOption(.{Item}, .{PlayerView}, .{});
@@ -54,5 +53,4 @@ pub fn update() void {
             view.add(item, PlayerView{});
         }
     }
-    _ = playerPos;
 }
