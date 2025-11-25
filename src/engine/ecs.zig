@@ -326,7 +326,7 @@ pub const Registry = struct {
         return self.eventMap.remove(hashTypeId(T));
     }
 
-    fn assure(self: *Registry, T: type) *SparseMap(T) {
+    pub fn assure(self: *Registry, T: type) *SparseMap(T) {
         const result = self.componentMap
             .getOrPut(self.allocator, hashTypeId(T)) catch oom();
 
@@ -476,6 +476,10 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
             } else return null;
         }
 
+        pub fn assure(self: *@This(), T: type) *SparseMap(T) {
+            return self.reg.assure(T);
+        }
+
         pub fn get(self: *@This(), entity: Index, T: type) T {
             return self.getPtr(entity, T).*;
         }
@@ -502,7 +506,7 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
         }
 
         pub fn add(self: *@This(), entity: Index, value: anytype) void {
-            const map = self.reg.assure(@TypeOf(value));
+            const map = self.assure(@TypeOf(value));
             map.add(self.reg.allocator, entity, value) catch oom();
         }
 
@@ -512,10 +516,6 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
 
         pub fn remove(self: *@This(), entity: Index, T: type) void {
             _ = self.reg.assure(T).swapRemove(entity);
-        }
-
-        pub fn orderedRemove(self: *@This(), e: Index, T: type) void {
-            self.reg.assure(T).orderedRemove(e);
         }
 
         pub fn destroy(self: *@This(), entity: Index) void {

@@ -79,7 +79,7 @@ pub fn update() void {
         if (view.tryGet(itemEntity, Healing)) |heal| { // 使用药水
             const h = ecs.w.getPtr(entity, Health);
             h.current = @min(h.max, h.current + heal.amount);
-            view.orderedRemove(itemEntity, Carried);
+            _ = view.assure(Carried).orderedRemove(itemEntity);
             view.destroy(itemEntity);
             ecs.w.addContext(TurnState.monster);
             return;
