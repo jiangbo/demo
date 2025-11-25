@@ -51,9 +51,11 @@ pub fn draw() void {
     pos.y += size.x * 2;
     drawTextCenter("Explore the Dungeon. A/S/D/W to move.", pos, .{});
 
-    text = zhu.format(&buffer, "Dungeon Level: {}", .{map.currentLevel});
+    const damage = ecs.w.getIdentity(Player, component.Damage).?[0];
+    const fmt = "Damage: {} Dungeon Level: {}";
+    text = zhu.format(&buffer, fmt, .{ damage, map.currentLevel });
     const textSize = size.mul(.init(@floatFromInt(text.len), 1));
-    const x = window.logicSize.x - textSize.x - 10;
+    const x = window.logicSize.x - textSize.x - 5;
     drawText(text, .init(x, 10), .{});
 
     if (!map.minMap) drawNameAndHealthIfNeed();
@@ -88,6 +90,7 @@ fn drawCarriedItemIfNeed() void {
     var index: u8 = 1;
     var buffer: [44]u8 = undefined;
     while (view.next()) |entity| : (index += 1) {
+        if (index > 9) break;
         const name = view.get(entity, Name)[0];
         const offset: f32 = @floatFromInt(index * 16);
         const pos = gfx.Vector.init(30, 20 + offset);
