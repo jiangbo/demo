@@ -40,7 +40,7 @@ pub fn init() void {
     ecs.w.add(entity, health);
     ecs.w.add(entity, ViewField{.fromCenter(tilePos, viewSize)});
     ecs.w.add(entity, PlayerView{});
-    ecs.w.add(entity, component.Damage{ .amount = 1 });
+    ecs.w.add(entity, component.Damage{1});
     map.updatePlayerWalk();
 
     cameraFollow(map.worldPosition(tilePos));
@@ -78,7 +78,9 @@ pub fn update() void {
 
         if (view.tryGet(itemEntity, Healing)) |heal| { // 使用药水
             const h = ecs.w.getPtr(entity, Health);
-            h.current = @min(h.max, h.current + heal.amount);
+            h.current = @min(h.max, h.current + heal[0]);
+        } else if (view.tryGet(itemEntity, component.Damage)) |damage| {
+            ecs.w.add(entity, damage);
         } else map.minMap = !map.minMap;
 
         view.assure(Carried).orderedRemove(itemEntity);

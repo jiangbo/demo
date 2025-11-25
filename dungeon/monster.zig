@@ -34,7 +34,7 @@ const Template = struct {
     damage: u8 = 0,
     name: []const u8,
     tile: Tile,
-    value: u8,
+    value: u8 = 0,
 };
 const templates: []const Template = @import("zon/templates.zon");
 var frequencies: [templates.len]u8 = undefined;
@@ -68,7 +68,11 @@ pub fn init() void {
 fn spawnItem(entity: ecs.Entity, t: *const Template) void {
     ecs.w.add(entity, Item{});
     if (t.tile == .map) return;
-    ecs.w.add(entity, Healing{ .amount = t.value });
+    if (t.damage == 0) {
+        ecs.w.add(entity, Healing{t.value});
+        return;
+    }
+    ecs.w.add(entity, component.Damage{t.damage});
 }
 
 fn spawnMonster(enemy: ecs.Entity, t: *const Template) void {
@@ -76,7 +80,7 @@ fn spawnMonster(enemy: ecs.Entity, t: *const Template) void {
     ecs.w.add(enemy, Health{ .current = hp, .max = hp });
     ecs.w.add(enemy, ChasePlayer{});
     ecs.w.add(enemy, Enemy{});
-    ecs.w.add(enemy, component.Damage{ .amount = t.damage });
+    ecs.w.add(enemy, component.Damage{t.damage});
 }
 
 pub fn update() void {
