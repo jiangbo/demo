@@ -75,13 +75,14 @@ pub fn update() void {
     var view = ecs.w.view(.{ Item, Carried });
     var index: u8 = 1;
     while (view.next()) |itemEntity| : (index += 1) {
+        if (index > 9) break;
         if (!window.isKeyRelease(@enumFromInt(start + index))) continue;
 
         if (view.tryGet(itemEntity, Healing)) |heal| { // 使用药水
             const h = ecs.w.getPtr(entity, Health);
             h.current = @min(h.max, h.current + heal.v);
         } else if (view.tryGet(itemEntity, Damage)) |damage| {
-            ecs.w.add(entity, damage.v);
+            ecs.w.add(entity, damage);
         } else map.minMap = !map.minMap;
 
         view.assure(Carried).orderedRemove(itemEntity);

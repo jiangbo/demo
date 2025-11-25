@@ -63,6 +63,9 @@ fn nextLevel() void {
         if (view.tryGet(entity, component.Healing)) |heal| {
             reg.add(newEntity, heal);
         }
+        if (view.tryGet(entity, component.Damage)) |damage| {
+            reg.add(newEntity, damage);
+        }
         reg.add(newEntity, view.get(entity, component.Name));
     }
     // 保留角色攻击力
