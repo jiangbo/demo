@@ -36,6 +36,7 @@ pub const Vector2 = extern struct {
     y: f32 = 0,
 
     pub const zero = Vector2{ .x = 0, .y = 0 };
+    pub const center = Vector2{ .x = 0.5, .y = 0.5 };
     pub const one = Vector2{ .x = 1, .y = 1 };
 
     pub fn init(x: f32, y: f32) Vector2 {

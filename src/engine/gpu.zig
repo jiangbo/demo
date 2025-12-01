@@ -118,17 +118,22 @@ pub fn createBuffer(desc: gfx.BufferDesc) Buffer {
 
 pub const QuadVertex = extern struct {
     position: math.Vector3, // 顶点坐标
+    radian: f32 = 0, // 旋转弧度
     size: math.Vector2, // 大小
+    pivot: math.Vector2 = .zero, // 旋转中心
     texture: math.Vector4, // 纹理坐标
     color: math.Vector4 = .one, // 顶点颜色
 };
 
 pub fn createQuadPipeline(shaderDesc: gfx.ShaderDesc) RenderPipeline {
     var vertexLayout = gfx.VertexLayoutState{};
+
     vertexLayout.attrs[0].format = .FLOAT3;
-    vertexLayout.attrs[1].format = .FLOAT2;
-    vertexLayout.attrs[2].format = .FLOAT4;
-    vertexLayout.attrs[3].format = .FLOAT4;
+    vertexLayout.attrs[1].format = .FLOAT;
+    vertexLayout.attrs[2].format = .FLOAT2;
+    vertexLayout.attrs[3].format = .FLOAT2;
+    vertexLayout.attrs[4].format = .FLOAT4;
+    vertexLayout.attrs[5].format = .FLOAT4;
     vertexLayout.buffers[0].step_func = .PER_INSTANCE;
 
     return gfx.makePipeline(.{

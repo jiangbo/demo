@@ -5,7 +5,9 @@ layout(binding=0) uniform vs_params {
 };
 
 in vec4 vertex_position;
-in vec2 vertex_size;
+in float vertex_radian;
+in vec2 vertex_scale;
+in vec2 vertex_pivot;
 in vec4 vertex_texture;
 in vec4 vertex_color;
 
@@ -15,8 +17,12 @@ out vec2 uv;
 void main() {
     // 顶点
     vec2 corner = vec2(gl_VertexIndex & 1, gl_VertexIndex >> 1 & 1);
-    vec2 position = corner * vertex_size;
-    vec4 depthPosition = vec4(position, 0, 0) + vertex_position;
+
+    float cosA = cos(vertex_radian);
+    float sinA = sin(vertex_radian);
+    mat2 R = mat2(cosA, sinA, -sinA, cosA);
+    vec2 P = R * (corner - vertex_pivot) + vertex_pivot;
+    vec4 depthPosition = vec4(P * vertex_scale, 0, 0) + vertex_position;
     gl_Position = viewMatrix * depthPosition;
 
     // 纹理

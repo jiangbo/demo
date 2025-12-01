@@ -99,6 +99,7 @@ pub fn drawRect(area: math.Rect, color: Color) void {
 pub const Option = struct {
     size: ?Vector2 = null, // 大小
     pivot: Vector2 = .zero, // 旋转中心
+    radian: f32 = 0, // 旋转角度
     color: Color = .one, // 颜色
     flipX: bool = false, // 是否水平翻转
 };
@@ -114,6 +115,7 @@ pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
 
     drawVertices(texture, &.{Vertex{
         .position = temp.toVector3(0),
+        .radian = option.radian,
         .size = size,
         .texture = textureVector,
         .color = option.color,
