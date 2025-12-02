@@ -156,6 +156,10 @@ pub fn appendBuffer(buffer: Buffer, data: anytype) void {
     _ = gfx.appendBuffer(buffer, gfx.asRange(data));
 }
 
+pub fn updateBuffer(buffer: Buffer, data: anytype) void {
+    _ = gfx.updateBuffer(buffer, gfx.asRange(data));
+}
+
 pub fn frameStats(enable: bool) void {
     if (enable) gfx.enableFrameStats() else gfx.disableFrameStats();
 }

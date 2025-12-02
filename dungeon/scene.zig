@@ -23,6 +23,7 @@ const PlayerView = component.PlayerView;
 
 var isHelp = false;
 var isDebug = false;
+var vertexBuffer: []camera.Vertex = undefined;
 
 pub fn init() void {
     window.initFont(.{
@@ -30,8 +31,9 @@ pub fn init() void {
         .texture = gfx.loadTexture("assets/font.png", .init(960, 960)),
     });
 
+    vertexBuffer = window.alloc(camera.Vertex, 5000);
     camera.frameStats(true);
-    camera.init(5000);
+    camera.init(vertexBuffer);
     ecs.init(window.allocator);
 
     restart();
@@ -114,9 +116,7 @@ pub fn draw() void {
         camera.draw(view.get(entity, gfx.Texture), pos);
     }
     if (map.minMap) {
-        camera.scale = .init(0.25, 0.25);
-        camera.flushTexture();
-        camera.scale = .init(1, 1);
+        camera.encodeScaleCommand(.init(0.25, 0.25));
         camera.mode = .world;
     }
 
@@ -194,6 +194,7 @@ fn drawDebugInfo() void {
 pub fn deinit() void {
     sceneCall("deinit", .{});
     ecs.deinit();
+    window.free(vertexBuffer);
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {

@@ -135,7 +135,8 @@ fn moveOrAttack(newPos: TilePosition) void {
 }
 
 fn cameraFollow(position: Position) void {
-    const scaleSize = window.logicSize.div(camera.scale);
+    // const scaleSize = window.logicSize.div(camera.scale);
+    const scaleSize = window.logicSize;
     const half = scaleSize.scale(0.5);
     const max = map.size.sub(scaleSize).max(.zero);
     camera.position = position.sub(half).clamp(.zero, max);

@@ -64,16 +64,16 @@ const CountingAllocator = struct {
         return .{
             .ptr = self,
             .vtable = &.{
-                .alloc = alloc,
+                .alloc = allocs,
                 .resize = resize,
                 .remap = remap,
-                .free = free,
+                .free = frees,
             },
         };
     }
 
     const A = std.mem.Alignment;
-    fn alloc(c: *anyopaque, len: usize, a: A, r: usize) ?[*]u8 {
+    fn allocs(c: *anyopaque, len: usize, a: A, r: usize) ?[*]u8 {
         const self: *CountingAllocator = @ptrCast(@alignCast(c));
         const p = self.child.rawAlloc(len, a, r) orelse return null;
         self.count += 1;
@@ -99,7 +99,7 @@ const CountingAllocator = struct {
         return n;
     }
 
-    fn free(c: *anyopaque, buf: []u8, a: A, r: usize) void {
+    fn frees(c: *anyopaque, buf: []u8, a: A, r: usize) void {
         const self: *CountingAllocator = @ptrCast(@alignCast(c));
         self.used -= buf.len;
         return self.child.rawFree(buf, a, r);
@@ -133,11 +133,11 @@ pub var countingAllocator: CountingAllocator = undefined;
 var timer: std.time.Timer = undefined;
 
 const root = @import("root");
-pub fn run(alloc: std.mem.Allocator, info: WindowInfo) void {
+pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
     logicSize = info.logicSize;
     displayArea = .init(.zero, logicSize);
-    countingAllocator = CountingAllocator.init(alloc);
+    countingAllocator = CountingAllocator.init(allocs);
     allocator = countingAllocator.allocator();
 
     const size = logicSize.scale(info.scale);
@@ -272,6 +272,14 @@ pub fn saveAll(path: [:0]const u8, content: []const u8) !void {
     defer file.close();
 
     try file.writeAll(content);
+}
+
+pub fn alloc(comptime T: type, n: usize) []T {
+    return allocator.alloc(T, n) catch @panic("out of memory");
+}
+
+pub fn free(memory: anytype) void {
+    return allocator.free(memory);
 }
 
 pub fn exit() void {

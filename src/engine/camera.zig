@@ -15,7 +15,6 @@ pub const Vertex = gpu.QuadVertex;
 
 pub var mode: enum { world, local } = .world;
 pub var position: math.Vector = .zero;
-pub var scale: math.Vector = .one;
 pub var whiteTexture: gpu.Texture = undefined;
 
 var startDraw: bool = false;
@@ -23,23 +22,28 @@ var startDraw: bool = false;
 var bindGroup: gpu.BindGroup = .{};
 var pipeline: gpu.RenderPipeline = undefined;
 
-var buffer: gpu.Buffer = undefined;
-var needDrawCount: usize = 0;
-var totalDrawCount: usize = 0;
+var gpuBuffer: gpu.Buffer = undefined;
+var vertexBuffer: std.ArrayList(gpu.QuadVertex) = .empty;
 var usingTexture: gpu.Texture = .{ .view = .{} };
+const DrawCommand = struct { scale: Vector2 = .one, texture: Texture };
+const CommandUnion = union(enum) { draw: DrawCommand, scissor: Rect };
+const Command = struct { start: u32 = 0, end: u32, cmd: CommandUnion };
+var commandArray: [16]Command = undefined;
+var commandIndex: u32 = 0;
 
-pub fn init(vertexCount: usize) void {
-    buffer = gpu.createBuffer(.{
-        .size = @sizeOf(Vertex) * vertexCount,
+pub fn init(buffer: []Vertex) void {
+    gpuBuffer = gpu.createBuffer(.{
+        .size = @sizeOf(Vertex) * buffer.len,
         .usage = .{ .stream_update = true },
     });
+    vertexBuffer = .initBuffer(buffer);
 
     const shaderDesc = shader.quadShaderDesc(gpu.queryBackend());
     pipeline = gpu.createQuadPipeline(shaderDesc);
 }
 
-pub fn initWithWhiteTexture(vertexCount: usize) void {
-    init(vertexCount);
+pub fn initWithWhiteTexture(buffer: []Vertex) void {
+    init(buffer);
     const data: [64]u8 = [1]u8{0xFF} ** 64;
     whiteTexture = gpu.createTexture(.init(4, 4), &data);
 }
@@ -55,7 +59,6 @@ pub fn toWindow(worldPosition: Vector) Vector {
 pub fn beginDraw(color: gpu.Color) void {
     gpu.begin(color);
     startDraw = true;
-    totalDrawCount = 0;
     font.beginDraw();
 }
 
@@ -124,59 +127,63 @@ pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
 
 pub fn drawVertices(texture: Texture, vertex: []const Vertex) void {
     if (!startDraw) @panic("need begin draw");
-    gpu.appendBuffer(buffer, vertex);
 
-    defer {
-        needDrawCount += vertex.len;
-        totalDrawCount += vertex.len;
+    if (texture.view.id != usingTexture.view.id) {
         usingTexture = texture;
+        if (vertexBuffer.items.len == 0) {
+            const cmd = CommandUnion{ .draw = .{ .texture = texture } };
+            commandArray[commandIndex] = .{ .end = 0, .cmd = cmd };
+        } else startNewDrawCommand();
     }
-
-    if (totalDrawCount == 0) return; // 第一次绘制
-    if (texture.view.id != usingTexture.view.id) flushTexture();
+    vertexBuffer.appendSliceAssumeCapacity(vertex);
 }
 
-pub fn flushTexture() void {
-    if (needDrawCount == 0) return;
-
-    drawInstanced(usingTexture, .{
-        .vertexBuffer = buffer,
-        .vertexOffset = totalDrawCount - needDrawCount,
-        .count = needDrawCount,
-    });
-    needDrawCount = 0;
+pub fn encodeScaleCommand(scale: Vector2) void {
+    commandArray[commandIndex].cmd.draw.scale = scale;
+    startNewDrawCommand();
 }
 
-pub fn flushTextureAndText() void {
-    flushTexture();
-    font.flush();
+pub fn startNewDrawCommand() void {
+    encodeCommand(.{ .draw = .{ .texture = usingTexture } });
+}
+
+pub fn encodeCommand(cmd: CommandUnion) void {
+    const index: u32 = @intCast(vertexBuffer.items.len);
+    commandArray[commandIndex].end = index;
+    commandIndex += 1;
+    commandArray[commandIndex].cmd = cmd;
+    commandArray[commandIndex].start = index;
 }
 
 pub fn endDraw() void {
-    flushTextureAndText();
+    commandArray[commandIndex].end = @intCast(vertexBuffer.items.len);
+    gpu.updateBuffer(gpuBuffer, vertexBuffer.items);
+    var drawCmd: DrawCommand = undefined;
+    for (commandArray[0 .. commandIndex + 1]) |cmd| {
+        switch (cmd.cmd) {
+            .draw => |d| drawCmd = d,
+            .scissor => |area| gpu.scissor(area),
+        }
+        drawInstanced(cmd, drawCmd);
+    }
+
+    vertexBuffer.clearRetainingCapacity();
+    commandIndex = 0;
+    font.flush();
     startDraw = false;
     gpu.end();
 }
 
 pub fn scissor(area: math.Rect) void {
-    flushTextureAndText();
-    gpu.scissor(math.Rect{
-        .min = area.min.mul(window.ratio),
-        .size = area.size.mul(window.ratio),
-    });
+    const min = area.min.mul(window.ratio);
+    const size = area.size.mul(window.ratio);
+    encodeCommand(.{ .scissor = .{ .min = min, .size = size } });
 }
 pub fn resetScissor() void {
-    flushTextureAndText();
-    gpu.scissor(.fromMax(.zero, window.clientSize));
+    encodeCommand(.{ .scissor = .fromMax(.zero, window.clientSize) });
 }
 
-const VertexOptions = struct {
-    vertexBuffer: gpu.Buffer,
-    vertexOffset: usize = 0,
-    count: usize,
-};
-fn drawInstanced(texture: Texture, options: VertexOptions) void {
-
+fn drawInstanced(cmd: Command, drawCmd: DrawCommand) void {
     // 绑定流水线
     gpu.setPipeline(pipeline);
 
@@ -185,25 +192,25 @@ fn drawInstanced(texture: Texture, options: VertexOptions) void {
     const orth = math.Matrix.orthographic(x, y, 0, 1);
     const pos = position.scale(-1).toVector3(0);
     const translate = math.Matrix.translateVec(pos);
-    const scaleMatrix = math.Matrix.scaleVec(scale.toVector3(1));
+    const scaleMatrix = math.Matrix.scaleVec(drawCmd.scale.toVector3(1));
     const view = math.Matrix.mul(scaleMatrix, translate);
 
-    const size = gpu.queryTextureSize(texture);
+    const size = gpu.queryTextureSize(drawCmd.texture);
     gpu.setUniform(shader.UB_vs_params, .{
         .viewMatrix = math.Matrix.mul(orth, view).mat,
         .textureVec = [4]f32{ 1 / size.x, 1 / size.y, 1, 1 },
     });
 
     // 绑定组
-    bindGroup.setTexture(texture);
-    bindGroup.setVertexBuffer(options.vertexBuffer);
-    bindGroup.setVertexOffset(options.vertexOffset * @sizeOf(Vertex));
+    bindGroup.setTexture(drawCmd.texture);
+    bindGroup.setVertexBuffer(gpuBuffer);
+    bindGroup.setVertexOffset(cmd.start * @sizeOf(Vertex));
     bindGroup.setSampler(gpu.nearestSampler);
 
     gpu.setBindGroup(bindGroup);
 
     // 绘制
-    gpu.drawInstanced(options.count);
+    gpu.drawInstanced(cmd.end - cmd.start);
 }
 
 pub const frameStats = gpu.frameStats;
@@ -217,7 +224,7 @@ pub const drawTextOptions = font.drawTextOptions;
 pub const flushText = font.flush;
 
 pub fn imageDrawCount() usize {
-    return totalDrawCount;
+    return commandIndex + 1;
 }
 
 pub fn textDrawCount() usize {
