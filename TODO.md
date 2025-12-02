@@ -1,5 +1,11 @@
 # 代办事项
 
+## 构建命令
+
+```sh
+zig build -Dtarget=wasm32-emscripten --release=safe
+```
+
 ## ASTC 纹理支持
 
 ```zig

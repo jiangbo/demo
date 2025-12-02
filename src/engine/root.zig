@@ -1,6 +1,7 @@
 const std = @import("std");
 
 pub const window = @import("window.zig");
+pub const assets = @import("assets.zig");
 pub const audio = @import("audio.zig");
 pub const gfx = @import("graphics.zig");
 pub const camera = @import("camera.zig");

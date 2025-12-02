@@ -6,9 +6,25 @@ const scene = @import("scene.zig");
 
 pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
 
+const zhu = @import("zhu");
 pub fn init() void {
     scene.init();
+    _ = Font.load("assets/font/VonwaonBitmap-16px.ttf", 32);
 }
+
+pub const Font = struct {
+    pub fn load(path: [:0]const u8, scale: f32) []u8 {
+        _ = zhu.assets.File.load(path, 0, handler);
+        _ = scale;
+        return &.{};
+    }
+
+    fn handler(response: zhu.assets.Response) []u8 {
+        const data = response.data;
+        std.log.info("data len: {}", .{data.len});
+        return window.allocator.dupe(u8, data) catch unreachable;
+    }
+};
 
 pub fn frame(delta: f32) void {
     scene.update(delta);

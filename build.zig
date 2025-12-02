@@ -14,12 +14,18 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    const ttf = b.dependency("TrueType", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const exeModule = b.createModule(.{
         .root_source_file = b.path("dungeon/main.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
             .{ .name = "sokol", .module = sokol.module("sokol") },
+            .{ .name = "ttf", .module = ttf.module("TrueType") },
         },
     });
 
