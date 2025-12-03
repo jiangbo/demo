@@ -12,6 +12,11 @@ var isDebug = false;
 var vertexBuffer: []camera.Vertex = undefined;
 
 pub fn init() void {
+    window.initFont(.{
+        .font = @import("zon/font.zon"),
+        .texture = gfx.loadTexture("assets/font.png", .init(960, 960)),
+    });
+
     vertexBuffer = window.alloc(camera.Vertex, 5000);
     camera.frameStats(true);
     camera.init(vertexBuffer);
@@ -38,7 +43,7 @@ pub fn draw() void {
     sceneCall("draw", .{});
 
     player.draw();
-    // if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
+    if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
 
 fn drawHelpInfo() void {

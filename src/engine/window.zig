@@ -118,6 +118,10 @@ pub const WindowInfo = struct {
     title: [:0]const u8,
     logicSize: math.Vector,
     scale: f32 = 1,
+    // 帧率，0 表示垂直同步。
+    // 目前不可用，windows 睡眠精度不够，需要类似 timeBeginPeriod 的功能。
+    // 而且浏览器平台，不支持控制帧率。
+    fps: u64 = 0,
 };
 
 pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
@@ -139,6 +143,10 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     displayArea = .init(.zero, logicSize);
     countingAllocator = CountingAllocator.init(allocs);
     allocator = countingAllocator.allocator();
+    if (info.fps != 0) {
+        // 如果设置了帧率才进行控制，没有设置则垂直同步
+        nanosecondPerFrame = std.time.ns_per_s / info.fps;
+    }
 
     const size = logicSize.scale(info.scale);
     sk.app.run(.{
@@ -193,10 +201,11 @@ pub var frameRate: u32 = 0;
 pub var frameDeltaPerSecond: f32 = 0;
 pub var usedDeltaPerSecond: f32 = 0;
 
+var nanosecondPerFrame: u64 = 0; // 每帧时间，单位为纳秒
+
 export fn windowFrame() void {
     const deltaNano: f32 = @floatFromInt(timer.lap());
     const delta = deltaNano / std.time.ns_per_s;
-    defer usedDelta = timer.read();
 
     if (frameRateTimer.isFinishedAfterUpdate(delta)) {
         frameRateTimer.restart();
@@ -213,6 +222,12 @@ export fn windowFrame() void {
     input.lastMouseState = input.mouseState;
     input.anyRelease = false;
     mouseMoved = false;
+
+    usedDelta = timer.read(); // 执行更新和渲染消耗的时间，单位为纳秒
+    if (nanosecondPerFrame > usedDelta) {
+        // 执行了更新和渲染，还有剩余时间，则休眠到下一帧的时间
+        std.Thread.sleep(nanosecondPerFrame - usedDelta);
+    }
 }
 
 export fn windowDeinit() void {
