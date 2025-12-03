@@ -6,6 +6,12 @@
 zig build -Dtarget=wasm32-emscripten --release=safe
 ```
 
+## 生成字体
+
+```sh
+msdf-atlas-gen.exe -font .\SourceHanSansSC-Medium.otf -yorigin top -charset .\allchars.txt -json font.json -imageout font.png
+```
+
 ## ASTC 纹理支持
 
 ```zig
