@@ -149,7 +149,6 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
         .event_cb = windowEvent,
         .frame_cb = windowFrame,
         .cleanup_cb = windowDeinit,
-        .high_dpi = true,
     });
 }
 
