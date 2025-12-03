@@ -5,6 +5,8 @@ const window = zhu.window;
 const gfx = zhu.gfx;
 const camera = zhu.camera;
 
+const player = @import("player.zig");
+
 var isHelp = false;
 var isDebug = false;
 var vertexBuffer: []camera.Vertex = undefined;
@@ -13,24 +15,29 @@ pub fn init() void {
     vertexBuffer = window.alloc(camera.Vertex, 5000);
     camera.frameStats(true);
     camera.init(vertexBuffer);
+
+    player.init();
 }
 
-pub fn update(_: f32) void {
+pub fn update(delta: f32) void {
     if (window.isKeyRelease(.H)) isHelp = !isHelp;
     if (window.isKeyRelease(.X)) isDebug = !isDebug;
 
     if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
         return window.toggleFullScreen();
     }
+
+    player.update(delta);
 }
 
 pub fn draw() void {
-    // camera.beginDraw(.{});
-    // defer camera.endDraw();
+    camera.beginDraw(.{});
+    defer camera.endDraw();
+    window.keepAspectRatio();
 
-    // window.keepAspectRatio();
-    // sceneCall("draw", .{});
+    sceneCall("draw", .{});
 
+    player.draw();
     // if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
 

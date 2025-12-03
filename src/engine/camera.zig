@@ -156,21 +156,23 @@ pub fn encodeCommand(cmd: CommandUnion) void {
 }
 
 pub fn endDraw() void {
-    commandArray[commandIndex].end = @intCast(vertexBuffer.items.len);
-    gpu.updateBuffer(gpuBuffer, vertexBuffer.items);
-    var drawCmd: DrawCommand = undefined;
-    for (commandArray[0 .. commandIndex + 1]) |cmd| {
-        switch (cmd.cmd) {
-            .draw => |d| drawCmd = d,
-            .scissor => |area| gpu.scissor(area),
+    if (vertexBuffer.items.len != 0) {
+        commandArray[commandIndex].end = @intCast(vertexBuffer.items.len);
+        gpu.updateBuffer(gpuBuffer, vertexBuffer.items);
+        var drawCmd: DrawCommand = undefined;
+        for (commandArray[0 .. commandIndex + 1]) |cmd| {
+            switch (cmd.cmd) {
+                .draw => |d| drawCmd = d,
+                .scissor => |area| gpu.scissor(area),
+            }
+            drawInstanced(cmd, drawCmd);
         }
-        drawInstanced(cmd, drawCmd);
-    }
 
-    vertexBuffer.clearRetainingCapacity();
-    commandIndex = 0;
-    font.flush();
-    startDraw = false;
+        vertexBuffer.clearRetainingCapacity();
+        commandIndex = 0;
+        font.flush();
+        startDraw = false;
+    }
     gpu.end();
 }
 
