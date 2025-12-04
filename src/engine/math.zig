@@ -311,7 +311,7 @@ pub fn random() std.Random {
     return rand.random();
 }
 
-pub fn randF32(min: f32, max: f32) f32 {
+pub fn randomF32(min: f32, max: f32) f32 {
     return random().float(f32) * (max - min) + min;
 }
 

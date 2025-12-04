@@ -19,8 +19,8 @@ var texture: gfx.Texture = undefined; // 玩家的纹理
 var size: gfx.Vector = undefined; // 玩家的尺寸
 
 var bulletTexture: gfx.Texture = undefined; // 子弹的纹理
-var bullets: [10]Bullet = undefined; // 子弹数组
 var bulletSize: gfx.Vector = undefined; // 子弹的尺寸
+var bullets: [10]Bullet = undefined; // 子弹数组
 
 // 子弹发射的间隔，每 0.5 秒可以发射一次
 var bulletTimer: zhu.window.Timer = .init(0.5);
@@ -55,7 +55,7 @@ pub fn update(delta: f32) void {
                 break;
             }
         }
-        bulletTimer.reset();
+        bulletTimer.reset(); // 重置计时器，玩家需要等到计时器结束才可以发射。
     }
 
     // 限制玩家的移动边界

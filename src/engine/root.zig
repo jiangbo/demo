@@ -32,6 +32,7 @@ pub fn utf8NextIndex(str: []const u8, index: usize) usize {
 }
 
 pub const random = math.random;
+pub const randomF32 = math.randomF32;
 pub const randomInt = math.randomInt;
 pub const randomIntMost = math.randomIntMost;
 pub const randomEnum = math.randomEnum;

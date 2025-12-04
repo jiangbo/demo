@@ -6,6 +6,7 @@ const gfx = zhu.gfx;
 const camera = zhu.camera;
 
 const player = @import("player.zig");
+const enemy = @import("enemy.zig");
 
 var isHelp = false;
 var isDebug = false;
@@ -22,6 +23,7 @@ pub fn init() void {
     camera.init(vertexBuffer);
 
     player.init();
+    enemy.init();
 }
 
 pub fn update(delta: f32) void {
@@ -33,6 +35,7 @@ pub fn update(delta: f32) void {
     }
 
     player.update(delta);
+    enemy.update(delta);
 }
 
 pub fn draw() void {
@@ -43,6 +46,7 @@ pub fn draw() void {
     sceneCall("draw", .{});
 
     player.draw();
+    enemy.draw();
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
 
@@ -113,6 +117,7 @@ fn drawDebugInfo() void {
 }
 
 pub fn deinit() void {
+    enemy.deinit();
     player.deinit();
     sceneCall("deinit", .{});
     window.free(vertexBuffer);
