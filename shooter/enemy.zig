@@ -84,7 +84,7 @@ fn spawnBullet(enemy: *Enemy) void {
     const center = gfx.Rect.init(pos, bulletSize).center();
     bullets.append(window.allocator, .{
         .position = pos,
-        // 子弹的方向应该时子弹的中心指向角色的中心
+        // 子弹的方向应该是子弹的中心指向角色的中心
         .direction = player.center().sub(center).normalize(),
     }) catch unreachable;
 }
@@ -101,11 +101,16 @@ fn updateBullets(delta: f32) void {
     }
 }
 
+// 图片方向向下为正方向，所以需要减去半 π
+const halfPi: f32 = @as(f32, std.math.pi) / 2;
+
 pub fn draw() void {
     // 绘制子弹
     for (bullets.items) |bullet| {
         camera.drawOption(bulletTexture, bullet.position, .{
             .size = bulletSize,
+            .radian = bullet.direction.atan2() - halfPi,
+            .pivot = .center,
         });
     }
     // 绘制敌机

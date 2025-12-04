@@ -125,6 +125,10 @@ pub const Vector2 = extern struct {
         return std.math.approxEqAbs(f32, self.x, other.x, tolerance) and
             std.math.approxEqAbs(f32, self.y, other.y, tolerance);
     }
+
+    pub fn atan2(self: Vector2) f32 {
+        return std.math.atan2(self.y, self.x);
+    }
 };
 
 pub const Vector4 = extern struct {
