@@ -59,6 +59,8 @@ pub fn toWindow(worldPosition: Vector) Vector {
 pub fn beginDraw(color: gpu.Color) void {
     gpu.begin(color);
     startDraw = true;
+    commandIndex = 0;
+    vertexBuffer.clearRetainingCapacity();
     font.beginDraw();
 }
 
@@ -128,14 +130,21 @@ pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
 pub fn drawVertices(texture: Texture, vertex: []const Vertex) void {
     if (!startDraw) @panic("need begin draw");
 
-    if (texture.view.id != usingTexture.view.id) {
+    // 无论怎么样都加入顶点缓冲，但是放到最后来加，判断是不是第一次更清晰
+    defer vertexBuffer.appendSliceAssumeCapacity(vertex);
+
+    if (vertexBuffer.items.len == 0) { // 第一次绘制
+        const cmd = CommandUnion{ .draw = .{ .texture = texture } };
+        commandArray[commandIndex] = .{ .end = 0, .cmd = cmd };
         usingTexture = texture;
-        if (vertexBuffer.items.len == 0) {
-            const cmd = CommandUnion{ .draw = .{ .texture = texture } };
-            commandArray[commandIndex] = .{ .end = 0, .cmd = cmd };
-        } else startNewDrawCommand();
+        return;
     }
-    vertexBuffer.appendSliceAssumeCapacity(vertex);
+
+    if (texture.view.id != usingTexture.view.id) {
+        // 不是第一次的情况下，只有纹理不一致才开始新的绘制命令
+        usingTexture = texture;
+        startNewDrawCommand();
+    }
 }
 
 pub fn encodeScaleCommand(scale: Vector2) void {
@@ -156,24 +165,21 @@ pub fn encodeCommand(cmd: CommandUnion) void {
 }
 
 pub fn endDraw() void {
-    if (vertexBuffer.items.len != 0) {
-        commandArray[commandIndex].end = @intCast(vertexBuffer.items.len);
-        gpu.updateBuffer(gpuBuffer, vertexBuffer.items);
-        var drawCmd: DrawCommand = undefined;
-        for (commandArray[0 .. commandIndex + 1]) |cmd| {
-            switch (cmd.cmd) {
-                .draw => |d| drawCmd = d,
-                .scissor => |area| gpu.scissor(area),
-            }
-            drawInstanced(cmd, drawCmd);
-        }
+    startDraw = false;
+    font.flush();
+    defer gpu.end();
+    if (vertexBuffer.items.len == 0) return; // 没需要绘制的东西
 
-        vertexBuffer.clearRetainingCapacity();
-        commandIndex = 0;
-        font.flush();
-        startDraw = false;
+    commandArray[commandIndex].end = @intCast(vertexBuffer.items.len);
+    gpu.updateBuffer(gpuBuffer, vertexBuffer.items);
+    var drawCmd: DrawCommand = undefined;
+    for (commandArray[0 .. commandIndex + 1]) |cmd| {
+        switch (cmd.cmd) {
+            .draw => |d| drawCmd = d,
+            .scissor => |area| gpu.scissor(area),
+        }
+        drawInstanced(cmd, drawCmd);
     }
-    gpu.end();
 }
 
 pub fn scissor(area: math.Rect) void {
