@@ -8,6 +8,7 @@ const camera = zhu.camera;
 const Bullet = struct {
     position: gfx.Vector, // 子弹的位置
     speed: f32 = 400, // 子弹的速度
+    dead: bool = true, // 子弹是否死亡
 };
 
 const SPEED = 200; // 玩家的移动速度
@@ -18,7 +19,7 @@ var texture: gfx.Texture = undefined; // 玩家的纹理
 var size: gfx.Vector = undefined; // 玩家的尺寸
 
 var bulletTexture: gfx.Texture = undefined; // 子弹的纹理
-var bullets: std.ArrayList(Bullet) = .empty; // 子弹
+var bullets: [10]Bullet = undefined; // 子弹数组
 var bulletSize: gfx.Vector = undefined; // 子弹的尺寸
 
 // 子弹发射的间隔，每 0.5 秒可以发射一次
@@ -33,6 +34,7 @@ pub fn init() void {
     bulletTexture = gfx.loadTexture("assets/image/laser-1.png", .init(81, 126));
     bulletSize = bulletTexture.size().scale(SCALE);
     bulletTimer.stop(); // 游戏开始就可以发射子弹
+    for (&bullets) |*bullet| bullet.dead = true; //初始时所有子弹都可用
 }
 
 pub fn update(delta: f32) void {
@@ -47,7 +49,12 @@ pub fn update(delta: f32) void {
     if (bulletTimer.isFinishedAfterUpdate(delta) and window.isKeyDown(.J)) {
         // 发射的位置：和玩家的 Y 坐标一样，在玩家的 X 中间
         const pos = position.addX(size.x / 2).addX(-bulletSize.x / 2);
-        bullets.append(window.allocator, .{ .position = pos }) catch unreachable;
+        for (&bullets) |*bullet| {
+            if (bullet.dead) { // 找到一个未使用的子弹
+                bullet.* = .{ .position = pos, .dead = false };
+                break;
+            }
+        }
         bulletTimer.reset();
     }
 
@@ -59,22 +66,19 @@ pub fn update(delta: f32) void {
 }
 
 fn updateBullet(delta: f32) void {
-    // 需要边遍历边删除，所以使用反向迭代
-    var iterator = std.mem.reverseIterator(bullets.items);
-    while (iterator.nextPtr()) |bullet| {
-        // 子弹存在，才进行位置更新
+    for (&bullets) |*bullet| {
+        if (bullet.dead) continue;
+        // 子弹存活，才进行位置更新
         bullet.position.y -= bullet.speed * delta; // 向上移动
         // 判断子弹是否超出屏幕，不是 Y 到 0，而是完全超出
-        if (bullet.position.y < -bulletSize.y) {
-            _ = bullets.swapRemove(iterator.index);
-        }
+        if (bullet.position.y < -bulletSize.y) bullet.dead = true;
     }
 }
 
 pub fn draw() void {
-
     // 先绘制子弹，再绘制玩家，让子弹在玩家的下面
-    for (bullets.items) |bullet| {
+    for (&bullets) |bullet| {
+        if (bullet.dead) continue; // 子弹存活才绘制
         camera.drawOption(bulletTexture, bullet.position, .{
             .size = bulletSize,
         });
@@ -84,6 +88,4 @@ pub fn draw() void {
     camera.drawOption(texture, position, .{ .size = size });
 }
 
-pub fn deinit() void {
-    bullets.deinit(window.allocator);
-}
+pub fn deinit() void {}
