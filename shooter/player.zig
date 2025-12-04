@@ -62,10 +62,10 @@ pub fn update(delta: f32) void {
     position = position.clamp(.zero, window.logicSize.sub(size));
 
     // 子弹移动
-    updateBullet(delta);
+    updateBullets(delta);
 }
 
-fn updateBullet(delta: f32) void {
+fn updateBullets(delta: f32) void {
     for (&bullets) |*bullet| {
         if (bullet.dead) continue;
         // 子弹存活，才进行位置更新
