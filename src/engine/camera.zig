@@ -132,21 +132,15 @@ pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
 pub fn drawVertices(texture: Texture, vertex: []const Vertex) void {
     if (!startDraw) @panic("need begin draw");
 
-    // 无论怎么样都加入顶点缓冲，但是放到最后来加，判断是不是第一次更清晰
-    defer vertexBuffer.appendSliceAssumeCapacity(vertex);
+    const changed = texture.view.id != usingTexture.view.id;
+    if (changed) usingTexture = texture; // 纹理改变，修改使用中的纹理
 
     if (vertexBuffer.items.len == 0) { // 第一次绘制
         const cmd = CommandUnion{ .draw = .{ .texture = texture } };
         commandArray[commandIndex] = .{ .end = 0, .cmd = cmd };
-        usingTexture = texture;
-        return;
-    }
+    } else if (changed) startNewDrawCommand(); // 纹理改变，开始新的命令
 
-    if (texture.view.id != usingTexture.view.id) {
-        // 不是第一次的情况下，只有纹理不一致才开始新的绘制命令
-        usingTexture = texture;
-        startNewDrawCommand();
-    }
+    vertexBuffer.appendSliceAssumeCapacity(vertex);
 }
 
 pub fn encodeScaleCommand(scale: Vector2) void {
