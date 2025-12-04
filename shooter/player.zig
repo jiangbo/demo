@@ -75,6 +75,11 @@ fn updateBullets(delta: f32) void {
     }
 }
 
+pub fn center() gfx.Vector {
+    // 玩家的中心位置
+    return gfx.Rect.init(position, size).center();
+}
+
 pub fn draw() void {
     // 先绘制子弹，再绘制玩家，让子弹在玩家的下面
     for (&bullets) |bullet| {

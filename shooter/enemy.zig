@@ -5,6 +5,8 @@ const gfx = zhu.gfx;
 const window = zhu.window;
 const camera = zhu.camera;
 
+const player = @import("player.zig");
+
 const Enemy = struct {
     position: gfx.Vector, // 敌机的位置
     shotTime: u64 = 0, // 敌机开火的时间
@@ -28,6 +30,7 @@ var spawnTimer: window.Timer = .init(1); // 生成敌机的定时器
 var bulletTexture: gfx.Texture = undefined; // 子弹的纹理
 var bulletSize: gfx.Vector = undefined; // 子弹的大小
 var bullets: std.ArrayList(Bullet) = .empty;
+var bulletBorder: gfx.Rect = undefined; // 子弹的边界
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/image/insect-2.png", .init(182, 160));
@@ -35,6 +38,9 @@ pub fn init() void {
 
     bulletTexture = gfx.loadTexture("assets/image/bullet-1.png", .init(14, 42));
     bulletSize = bulletTexture.size().scale(0.25);
+
+    // 子弹的边界框，超出就可以删除了。
+    bulletBorder = .init(bulletSize.scale(-1), window.logicSize);
 }
 
 pub fn update(delta: f32) void {
@@ -60,28 +66,35 @@ pub fn update(delta: f32) void {
     updateBullets(delta);
 }
 
-pub fn spawnEnemy() void {
+fn spawnEnemy() void {
     // 在 X 轴上随机生成敌机，Y 固定。
     const x = zhu.randomF32(0, window.logicSize.x - size.x);
     enemies.append(window.allocator, .{
+        // Y 刚好让敌机出现在屏幕上方的外面
         .position = .init(x, -size.y),
         .shotTime = window.relativeTime(),
     }) catch unreachable;
 }
 
-pub fn spawnBullet(enemy: *Enemy) void {
+fn spawnBullet(enemy: *Enemy) void {
+    // 子弹出现在敌机的中心的位置，并且子弹中心和敌机的中心一样。
     const offset = size.sub(bulletSize).scale(0.5);
+    const pos = enemy.position.add(offset);
+    // 子弹的中心位置，是不是可以考虑子弹就是一个点，位置就是中心位置？
+    const center = gfx.Rect.init(pos, bulletSize).center();
     bullets.append(window.allocator, .{
-        .position = enemy.position.add(offset),
-        .direction = .init(0, 1),
+        .position = pos,
+        // 子弹的方向应该时子弹的中心指向角色的中心
+        .direction = player.center().sub(center).normalize(),
     }) catch unreachable;
 }
 
-pub fn updateBullets(delta: f32) void {
+fn updateBullets(delta: f32) void {
     var iterator = std.mem.reverseIterator(bullets.items);
     while (iterator.nextPtr()) |bullet| {
-        bullet.position.y += BULLET_SPEED * delta; // 子弹向下移动
-        if (bullet.position.y > window.logicSize.y) {
+        const offset = bullet.direction.scale(BULLET_SPEED * delta);
+        bullet.position = bullet.position.add(offset);
+        if (!bulletBorder.contains(bullet.position)) {
             // 移动到屏幕外了，删除
             _ = bullets.swapRemove(iterator.index);
         }
