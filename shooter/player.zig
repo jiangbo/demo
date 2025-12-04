@@ -5,17 +5,34 @@ const window = zhu.window;
 const gfx = zhu.gfx;
 const camera = zhu.camera;
 
+const Bullet = struct {
+    position: gfx.Vector, // 子弹的位置
+    speed: f32 = 400, // 子弹的速度
+};
+
 const SPEED = 200; // 玩家的移动速度
+const SCALE = 0.25; // 图片素材太大，缩小到四分之一
 
 var position: gfx.Vector = undefined; // 玩家的位置
 var texture: gfx.Texture = undefined; // 玩家的纹理
 var size: gfx.Vector = undefined; // 玩家的尺寸
 
+var bulletTexture: gfx.Texture = undefined; // 子弹的纹理
+var bullets: std.ArrayList(Bullet) = .empty; // 子弹
+var bulletSize: gfx.Vector = undefined; // 子弹的尺寸
+
+// 子弹发射的间隔，每 0.5 秒可以发射一次
+var bulletTimer: zhu.window.Timer = .init(0.5);
+
 pub fn init() void {
     texture = gfx.loadTexture("assets/image/SpaceShip.png", .init(241, 187));
     // 图片太大了，缩小到四分之一
-    size = texture.size().scale(0.25);
+    size = texture.size().scale(SCALE);
     position = window.logicSize.sub(size).div(.init(2, 1));
+
+    bulletTexture = gfx.loadTexture("assets/image/laser-1.png", .init(81, 126));
+    bulletSize = bulletTexture.size().scale(SCALE);
+    bulletTimer.stop(); // 游戏开始就可以发射子弹
 }
 
 pub fn update(delta: f32) void {
@@ -26,11 +43,47 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.W)) position.y -= distance;
     if (window.isKeyDown(.S)) position.y += distance;
 
+    // 发射子弹。按下了按键，使用时间来控制发射子弹的间隔
+    if (bulletTimer.isFinishedAfterUpdate(delta) and window.isKeyDown(.J)) {
+        // 发射的位置：和玩家的 Y 坐标一样，在玩家的 X 中间
+        const pos = position.addX(size.x / 2).addX(-bulletSize.x / 2);
+        bullets.append(window.allocator, .{ .position = pos }) catch unreachable;
+        bulletTimer.reset();
+    }
+
     // 限制玩家的移动边界
     position = position.clamp(.zero, window.logicSize.sub(size));
+
+    // 子弹移动
+    updateBullet(delta);
+}
+
+fn updateBullet(delta: f32) void {
+    // 需要边遍历边删除，所以使用反向迭代
+    var iterator = std.mem.reverseIterator(bullets.items);
+    while (iterator.nextPtr()) |bullet| {
+        // 子弹存在，才进行位置更新
+        bullet.position.y -= bullet.speed * delta; // 向上移动
+        // 判断子弹是否超出屏幕，不是 Y 到 0，而是完全超出
+        if (bullet.position.y < -bulletSize.y) {
+            _ = bullets.swapRemove(iterator.index);
+        }
+    }
 }
 
 pub fn draw() void {
+
+    // 先绘制子弹，再绘制玩家，让子弹在玩家的下面
+    for (bullets.items) |bullet| {
+        camera.drawOption(bulletTexture, bullet.position, .{
+            .size = bulletSize,
+        });
+    }
+
     // 绘制玩家
     camera.drawOption(texture, position, .{ .size = size });
+}
+
+pub fn deinit() void {
+    bullets.deinit(window.allocator);
 }

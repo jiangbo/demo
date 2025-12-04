@@ -113,6 +113,7 @@ fn drawDebugInfo() void {
 }
 
 pub fn deinit() void {
+    player.deinit();
     sceneCall("deinit", .{});
     window.free(vertexBuffer);
 }
