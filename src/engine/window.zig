@@ -118,10 +118,6 @@ pub const WindowInfo = struct {
     title: [:0]const u8,
     logicSize: math.Vector,
     scale: f32 = 1,
-    // 帧率，0 表示垂直同步。
-    // 目前不可用，windows 睡眠精度不够，需要类似 timeBeginPeriod 的功能。
-    // 而且浏览器平台，不支持控制帧率。
-    fps: u64 = 0,
 };
 
 pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
@@ -143,10 +139,6 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     displayArea = .init(.zero, logicSize);
     countingAllocator = CountingAllocator.init(allocs);
     allocator = countingAllocator.allocator();
-    if (info.fps != 0) {
-        // 如果设置了帧率才进行控制，没有设置则垂直同步
-        nanosecondPerFrame = std.time.ns_per_s / info.fps;
-    }
 
     const size = logicSize.scale(info.scale);
     sk.app.run(.{
@@ -165,7 +157,7 @@ export fn windowInit() void {
     ratio = clientSize.div(logicSize);
     assets.init(allocator);
     gpu.init();
-    math.setRandomSeed(timer.lap());
+    math.setRandomSeed(timer.read());
     call(root, "init", .{});
 }
 
@@ -194,60 +186,37 @@ pub fn keepAspectRatio() void {
     sk.gfx.applyViewportf(pos.x, pos.y, minSize.x, minSize.y, true);
 }
 
-var frameRateTimer: Timer = .init(1);
-var frameRateCount: u32 = 0;
-var usedDelta: u64 = 0;
 pub var frameRate: u32 = 0;
 pub var frameDeltaPerSecond: f32 = 0;
 pub var usedDeltaPerSecond: f32 = 0;
 
-var nanosecondPerFrame: u64 = 0; // 每帧时间，单位为纳秒
-
-const smoothFrameTime: [5]f32 = .{
-    @as(f32, 1) / 30, // 30 帧
-    @as(f32, 1) / 60, // 60 帧
-    @as(f32, 1) / 120, // 120 帧
-    @as(f32, 1) / 144, // 144 帧
-    @as(f32, 1) / 240, // 240 帧
-};
-var currentSmoothTime: f32 = 0;
+var frameRateTime: u64 = 0;
+var frameRateCount: u64 = 0;
+var usedDelta: u64 = 0;
 
 export fn windowFrame() void {
-    const deltaNano: f32 = @floatFromInt(timer.lap());
-    const delta = deltaNano / std.time.ns_per_s;
+    const delta: f32 = @floatCast(sk.app.frameDuration());
+    const start = timer.read();
 
-    if (frameRateTimer.isFinishedAfterUpdate(delta)) {
-        frameRateTimer.restart();
-        frameRate = frameRateCount;
-        frameRateCount = 1;
+    if (start > frameRateTime + std.time.ns_per_s) { // 一秒统计一次
+        frameRateTime = start;
+        frameRate = @intCast(frameCount() - frameRateCount);
+        frameRateCount = frameCount();
         frameDeltaPerSecond = delta * 1000;
         const deltaUsed: f32 = @floatFromInt(usedDelta);
         usedDeltaPerSecond = deltaUsed / std.time.ns_per_ms;
-    } else frameRateCount += 1;
+    }
 
     sk.fetch.dowork();
 
-    if (@abs(currentSmoothTime - delta) > 0.01) {
-        // 超过误差，重新平滑时间
-        for (smoothFrameTime) |time| {
-            if (@abs(time - delta) < 0.001) {
-                currentSmoothTime = time;
-                break;
-            }
-        } else currentSmoothTime = delta; // 没有找到平滑的时间
-    }
-
-    call(root, "frame", .{currentSmoothTime});
+    call(root, "frame", .{delta});
     input.lastKeyState = input.keyState;
     input.lastMouseState = input.mouseState;
     input.anyRelease = false;
     mouseMoved = false;
 
-    usedDelta = timer.read(); // 执行更新和渲染消耗的时间，单位为纳秒
-    if (nanosecondPerFrame > usedDelta) {
-        // 执行了更新和渲染，还有剩余时间，则休眠到下一帧的时间
-        std.Thread.sleep(nanosecondPerFrame - usedDelta);
-    }
+    // 执行更新和渲染消耗的时间，单位为纳秒
+    usedDelta = timer.read() - start;
 }
 
 export fn windowDeinit() void {
@@ -258,6 +227,10 @@ export fn windowDeinit() void {
 
 pub fn frameCount() u64 {
     return sk.app.frameCount();
+}
+
+pub fn relativeTime() u64 {
+    return timer.read();
 }
 
 pub fn statFileTime(path: [:0]const u8) i64 {
