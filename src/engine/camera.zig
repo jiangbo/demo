@@ -103,6 +103,7 @@ pub fn drawRect(area: math.Rect, color: Color) void {
 
 pub const Option = struct {
     size: ?Vector2 = null, // 大小
+    anchor: Vector2 = .zero, // 锚点
     pivot: Vector2 = .zero, // 旋转中心
     radian: f32 = 0, // 旋转角度
     color: Color = .one, // 颜色
@@ -115,13 +116,14 @@ pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
     }
 
     const size = option.size orelse texture.size();
-    var temp = pos.sub(size.mul(option.pivot));
+    var temp = pos.sub(size.mul(option.anchor));
     if (mode == .local) temp = temp.add(position);
 
     drawVertices(texture, &.{Vertex{
         .position = temp.toVector3(0),
         .radian = option.radian,
         .size = size,
+        .pivot = option.pivot,
         .texture = textureVector,
         .color = option.color,
     }});
