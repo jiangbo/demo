@@ -203,6 +203,15 @@ pub var usedDeltaPerSecond: f32 = 0;
 
 var nanosecondPerFrame: u64 = 0; // 每帧时间，单位为纳秒
 
+const smoothFrameTime: [5]f32 = .{
+    @as(f32, 1) / 30, // 30 帧
+    @as(f32, 1) / 60, // 60 帧
+    @as(f32, 1) / 120, // 120 帧
+    @as(f32, 1) / 144, // 144 帧
+    @as(f32, 1) / 240, // 240 帧
+};
+var currentSmoothTime: f32 = 0;
+
 export fn windowFrame() void {
     const deltaNano: f32 = @floatFromInt(timer.lap());
     const delta = deltaNano / std.time.ns_per_s;
@@ -217,7 +226,18 @@ export fn windowFrame() void {
     } else frameRateCount += 1;
 
     sk.fetch.dowork();
-    call(root, "frame", .{delta});
+
+    if (@abs(currentSmoothTime - delta) > 0.01) {
+        // 超过误差，重新平滑时间
+        for (smoothFrameTime) |time| {
+            if (@abs(time - delta) < 0.001) {
+                currentSmoothTime = time;
+                break;
+            }
+        } else currentSmoothTime = delta; // 没有找到平滑的时间
+    }
+
+    call(root, "frame", .{currentSmoothTime});
     input.lastKeyState = input.keyState;
     input.lastMouseState = input.mouseState;
     input.anyRelease = false;
