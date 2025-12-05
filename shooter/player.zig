@@ -5,6 +5,8 @@ const window = zhu.window;
 const gfx = zhu.gfx;
 const camera = zhu.camera;
 
+const enemy = @import("enemy.zig");
+
 const Bullet = struct {
     position: gfx.Vector, // 子弹的位置
     speed: f32 = 400, // 子弹的速度
@@ -68,11 +70,35 @@ pub fn update(delta: f32) void {
 fn updateBullets(delta: f32) void {
     for (&bullets) |*bullet| {
         if (bullet.dead) continue;
+
         // 子弹存活，才进行位置更新
         bullet.position.y -= bullet.speed * delta; // 向上移动
         // 判断子弹是否超出屏幕，不是 Y 到 0，而是完全超出
-        if (bullet.position.y < -bulletSize.y) bullet.dead = true;
+        if (bullet.position.y < -bulletSize.y) {
+            bullet.dead = true;
+            continue;
+        }
+
+        // 玩家子弹的碰撞检测，用子弹的中心点检测感觉效果好一点
+        const bulletCenter = bullet.position.add(bulletSize.scale(0.5));
+        if (collideEnemy(bulletCenter)) bullet.dead = true;
     }
+}
+
+pub fn collideEnemy(bullet: gfx.Vector) bool {
+    // 反向遍历，支持遍历时删除
+    var iterator = std.mem.reverseIterator(enemy.enemies.items);
+    while (iterator.nextPtr()) |ptr| {
+        const rect: gfx.Rect = .init(ptr.position, enemy.size);
+        if (!rect.contains(bullet)) continue; // 不相交，检测下一个
+
+        ptr.health -|= 1; // 碰撞，减少一点血量
+        if (ptr.health == 0) { // 血量为 0 ，进行销毁。
+            _ = enemy.enemies.swapRemove(iterator.index);
+        }
+        return true;
+    }
+    return false;
 }
 
 pub fn center() gfx.Vector {

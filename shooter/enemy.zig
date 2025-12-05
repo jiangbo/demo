@@ -10,6 +10,7 @@ const player = @import("player.zig");
 const Enemy = struct {
     position: gfx.Vector, // 敌机的位置
     shotTime: u64 = 0, // 敌机开火的时间
+    health: u8 = 2, // 敌机的生命值
 };
 
 const Bullet = struct {
@@ -22,9 +23,9 @@ const BULLET_SPEED = 400; // 子弹的移动速度
 const SHOOT_INTERVAL = std.time.ns_per_s; // 敌机开火间隔
 
 var texture: gfx.Texture = undefined; // 敌机的纹理
-var size: gfx.Vector = undefined; // 敌机的大小
+pub var size: gfx.Vector = undefined; // 敌机的大小
 
-var enemies: std.ArrayList(Enemy) = .empty;
+pub var enemies: std.ArrayList(Enemy) = .empty;
 var spawnTimer: window.Timer = .init(1); // 生成敌机的定时器
 
 var bulletTexture: gfx.Texture = undefined; // 子弹的纹理
