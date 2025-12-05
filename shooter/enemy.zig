@@ -98,6 +98,12 @@ fn updateBullets(delta: f32) void {
         if (!bulletBound.contains(bullet.position)) {
             // 移动到屏幕外了，删除
             _ = bullets.swapRemove(iterator.index);
+            continue;
+        }
+        // 检测是否击中玩家
+        const center = bullet.position.add(bulletSize.scale(0.5));
+        if (player.collidePlayer(center)) {
+            _ = bullets.swapRemove(iterator.index);
         }
     }
 }

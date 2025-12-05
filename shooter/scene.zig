@@ -10,6 +10,7 @@ const enemy = @import("enemy.zig");
 
 var isHelp = false;
 var isDebug = false;
+var isPause = false;
 var vertexBuffer: []camera.Vertex = undefined;
 
 pub fn init() void {
@@ -29,10 +30,13 @@ pub fn init() void {
 pub fn update(delta: f32) void {
     if (window.isKeyRelease(.H)) isHelp = !isHelp;
     if (window.isKeyRelease(.X)) isDebug = !isDebug;
+    if (window.isKeyRelease(.SPACE)) isPause = !isPause;
 
     if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
         return window.toggleFullScreen();
     }
+
+    if (isPause) return; // 暂停时不更新游戏
 
     player.update(delta);
     enemy.update(delta);

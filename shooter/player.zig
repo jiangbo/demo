@@ -19,6 +19,7 @@ const SCALE = 0.25; // 图片素材太大，缩小到四分之一
 var position: gfx.Vector = undefined; // 玩家的位置
 var texture: gfx.Texture = undefined; // 玩家的纹理
 var size: gfx.Vector = undefined; // 玩家的尺寸
+var health: u8 = 3; // 玩家生命值
 
 var bulletTexture: gfx.Texture = undefined; // 子弹的纹理
 var bulletSize: gfx.Vector = undefined; // 子弹的尺寸
@@ -40,6 +41,10 @@ pub fn init() void {
 }
 
 pub fn update(delta: f32) void {
+    // 子弹移动
+    updateBullets(delta);
+    if (health == 0) return; // 玩家死亡，不进行任何操作
+
     // 玩家键盘控制
     const distance = SPEED * delta; // 根据时间调整移动距离
     if (window.isKeyDown(.A)) position.x -= distance;
@@ -62,9 +67,6 @@ pub fn update(delta: f32) void {
 
     // 限制玩家的移动边界
     position = position.clamp(.zero, window.logicSize.sub(size));
-
-    // 子弹移动
-    updateBullets(delta);
 }
 
 fn updateBullets(delta: f32) void {
@@ -106,6 +108,17 @@ pub fn center() gfx.Vector {
     return gfx.Rect.init(position, size).center();
 }
 
+pub fn collidePlayer(enemyBulletPosition: gfx.Vector) bool {
+    if (health == 0) return false; // 玩家死亡，不碰撞
+    // 玩家的碰撞矩形
+    const rect = gfx.Rect.init(position, size);
+    if (rect.contains(enemyBulletPosition)) {
+        health -= 1; // 碰撞，减少一点血量
+        return true;
+    }
+    return false;
+}
+
 pub fn draw() void {
     // 先绘制子弹，再绘制玩家，让子弹在玩家的下面
     for (&bullets) |bullet| {
@@ -115,8 +128,10 @@ pub fn draw() void {
         });
     }
 
-    // 绘制玩家
-    camera.drawOption(texture, position, .{ .size = size });
+    if (health != 0) {
+        // 绘制玩家
+        camera.drawOption(texture, position, .{ .size = size });
+    }
 }
 
 pub fn deinit() void {}
