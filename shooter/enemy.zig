@@ -18,9 +18,9 @@ const Bullet = struct {
     direction: gfx.Vector, // 子弹的方向
 };
 
-const ENEMY_SPEED = 200; // 敌机的移动速度
+const ENEMY_SPEED = 150; // 敌机的移动速度
 const BULLET_SPEED = 400; // 子弹的移动速度
-const SHOOT_INTERVAL = std.time.ns_per_s; // 敌机开火间隔
+const SHOOT_INTERVAL = 2 * std.time.ns_per_s; // 敌机开火间隔
 
 var texture: gfx.Texture = undefined; // 敌机的纹理
 pub var size: gfx.Vector = undefined; // 敌机的大小

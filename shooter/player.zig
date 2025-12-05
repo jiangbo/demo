@@ -9,11 +9,11 @@ const enemy = @import("enemy.zig");
 
 const Bullet = struct {
     position: gfx.Vector, // 子弹的位置
-    speed: f32 = 400, // 子弹的速度
     dead: bool = true, // 子弹是否死亡
 };
 
-const SPEED = 200; // 玩家的移动速度
+const SPEED = 300; // 玩家的移动速度
+const BULLET_SPEED = 600; // 子弹的速度
 const SCALE = 0.25; // 图片素材太大，缩小到四分之一
 
 var position: gfx.Vector = undefined; // 玩家的位置
@@ -24,8 +24,8 @@ var bulletTexture: gfx.Texture = undefined; // 子弹的纹理
 var bulletSize: gfx.Vector = undefined; // 子弹的尺寸
 var bullets: [10]Bullet = undefined; // 子弹数组
 
-// 子弹发射的间隔，每 0.5 秒可以发射一次
-var bulletTimer: zhu.window.Timer = .init(0.5);
+// 子弹发射的间隔，每 0.3 秒可以发射一次
+var bulletTimer: zhu.window.Timer = .init(0.3);
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/image/SpaceShip.png", .init(241, 187));
@@ -72,7 +72,7 @@ fn updateBullets(delta: f32) void {
         if (bullet.dead) continue;
 
         // 子弹存活，才进行位置更新
-        bullet.position.y -= bullet.speed * delta; // 向上移动
+        bullet.position.y -= BULLET_SPEED * delta; // 向上移动
         // 判断子弹是否超出屏幕，不是 Y 到 0，而是完全超出
         if (bullet.position.y < -bulletSize.y) {
             bullet.dead = true;
