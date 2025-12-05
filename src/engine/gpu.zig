@@ -48,6 +48,12 @@ pub const queryBackend = gfx.queryBackend;
 pub const Buffer = gfx.Buffer;
 pub const Color = gfx.Color;
 pub const Sampler = gfx.Sampler;
+pub const ShaderDesc = gfx.ShaderDesc;
+pub const VertexLayoutState = gfx.VertexLayoutState;
+pub const ColorTargetState = gfx.ColorTargetState;
+pub const createPipeline = gfx.makePipeline;
+pub const createShader = gfx.makeShader;
+
 pub var nearestSampler: gfx.Sampler = undefined;
 pub var linearSampler: gfx.Sampler = undefined;
 
@@ -115,42 +121,6 @@ pub fn createTexture(size: math.Vector, data: []const u8) Texture {
 
 pub fn createBuffer(desc: gfx.BufferDesc) Buffer {
     return gfx.makeBuffer(desc);
-}
-
-pub const QuadVertex = extern struct {
-    position: math.Vector3, // 顶点坐标
-    radian: f32 = 0, // 旋转弧度
-    size: math.Vector2, // 大小
-    pivot: math.Vector2 = .zero, // 旋转中心
-    texture: math.Vector4, // 纹理坐标
-    color: math.Vector4 = .one, // 顶点颜色
-};
-
-pub fn createQuadPipeline(shaderDesc: gfx.ShaderDesc) RenderPipeline {
-    var vertexLayout = gfx.VertexLayoutState{};
-
-    vertexLayout.attrs[0].format = .FLOAT3;
-    vertexLayout.attrs[1].format = .FLOAT;
-    vertexLayout.attrs[2].format = .FLOAT2;
-    vertexLayout.attrs[3].format = .FLOAT2;
-    vertexLayout.attrs[4].format = .FLOAT4;
-    vertexLayout.attrs[5].format = .FLOAT4;
-    vertexLayout.buffers[0].step_func = .PER_INSTANCE;
-
-    return gfx.makePipeline(.{
-        .shader = gfx.makeShader(shaderDesc),
-        .layout = vertexLayout,
-        .primitive_type = .TRIANGLE_STRIP,
-        .colors = init: {
-            var c: [8]gfx.ColorTargetState = @splat(.{});
-            c[0] = .{ .blend = .{
-                .enabled = true,
-                .src_factor_rgb = .SRC_ALPHA,
-                .dst_factor_rgb = .ONE_MINUS_SRC_ALPHA,
-            } };
-            break :init c;
-        },
-    });
 }
 
 pub fn appendBuffer(buffer: Buffer, data: anytype) void {

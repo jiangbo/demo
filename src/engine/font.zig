@@ -4,6 +4,7 @@ const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const shader = @import("shader/font.glsl.zig");
 const window = @import("window.zig");
+const batch = @import("batch.zig");
 
 pub const Font = struct {
     atlas: struct {
@@ -77,12 +78,12 @@ pub fn init(options: initOptions) void {
     texture = options.texture;
 
     buffer = gpu.createBuffer(.{
-        .size = @sizeOf(gpu.QuadVertex) * options.vertexCount,
+        .size = @sizeOf(batch.QuadVertex) * options.vertexCount,
         .usage = .{ .vertex_buffer = true, .stream_update = true },
     });
 
     const shaderDesc = shader.fontShaderDesc(gpu.queryBackend());
-    pipeline = gpu.createQuadPipeline(shaderDesc);
+    pipeline = batch.createQuadPipeline(shaderDesc);
 }
 
 fn searchGlyph(code: u32) *const Glyph {
@@ -140,7 +141,7 @@ pub fn drawTextOptions(text: []const u8, options: TextOptions) void {
         const char = searchGlyph(code);
 
         const target = char.planeBounds.toArea();
-        gpu.appendBuffer(buffer, &.{gpu.QuadVertex{
+        gpu.appendBuffer(buffer, &.{batch.QuadVertex{
             .position = pos.add(target.min.scale(options.size)).toVector3(0),
             .size = target.size.scale(options.size),
             .texture = char.atlasBounds.toArea().toVector4(),
@@ -175,7 +176,7 @@ pub fn flush() void {
     bindGroup.setTexture(texture);
     bindGroup.setVertexBuffer(buffer);
     const vertexOffset = totalDrawCount - needDrawCount;
-    bindGroup.setVertexOffset(vertexOffset * @sizeOf(gpu.QuadVertex));
+    bindGroup.setVertexOffset(vertexOffset * @sizeOf(batch.QuadVertex));
     gpu.setBindGroup(bindGroup);
 
     // 绘制
