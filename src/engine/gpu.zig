@@ -47,6 +47,7 @@ pub const asRange = gfx.asRange;
 pub const queryBackend = gfx.queryBackend;
 pub const Buffer = gfx.Buffer;
 pub const Color = gfx.Color;
+pub const Sampler = gfx.Sampler;
 pub var nearestSampler: gfx.Sampler = undefined;
 pub var linearSampler: gfx.Sampler = undefined;
 

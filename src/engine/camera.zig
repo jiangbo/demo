@@ -16,6 +16,7 @@ pub const Vertex = gpu.QuadVertex;
 pub var mode: enum { world, local } = .world;
 pub var position: math.Vector = .zero;
 pub var whiteTexture: gpu.Texture = undefined;
+pub var sampler: gpu.Sampler = undefined;
 
 var startDraw: bool = false;
 
@@ -40,6 +41,7 @@ pub fn init(buffer: []Vertex) void {
 
     const shaderDesc = shader.quadShaderDesc(gpu.queryBackend());
     pipeline = gpu.createQuadPipeline(shaderDesc);
+    sampler = gpu.nearestSampler;
 }
 
 pub fn initWithWhiteTexture(buffer: []Vertex) void {
@@ -209,7 +211,7 @@ fn drawInstanced(cmd: Command, drawCmd: DrawCommand) void {
     bindGroup.setTexture(drawCmd.texture);
     bindGroup.setVertexBuffer(gpuBuffer);
     bindGroup.setVertexOffset(cmd.start * @sizeOf(Vertex));
-    bindGroup.setSampler(gpu.nearestSampler);
+    bindGroup.setSampler(sampler);
 
     gpu.setBindGroup(bindGroup);
 

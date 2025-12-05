@@ -30,7 +30,7 @@ var spawnTimer: window.Timer = .init(1); // 生成敌机的定时器
 var bulletTexture: gfx.Texture = undefined; // 子弹的纹理
 var bulletSize: gfx.Vector = undefined; // 子弹的大小
 var bullets: std.ArrayList(Bullet) = .empty;
-var bulletBorder: gfx.Rect = undefined; // 子弹的边界
+var bulletBound: gfx.Rect = undefined; // 子弹的边界
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/image/insect-2.png", .init(182, 160));
@@ -40,7 +40,7 @@ pub fn init() void {
     bulletSize = bulletTexture.size().scale(0.25);
 
     // 子弹的边界框，超出就可以删除了。
-    bulletBorder = .init(bulletSize.scale(-1), window.logicSize);
+    bulletBound = .init(bulletSize.scale(-1), window.logicSize);
 }
 
 pub fn update(delta: f32) void {
@@ -94,7 +94,7 @@ fn updateBullets(delta: f32) void {
     while (iterator.nextPtr()) |bullet| {
         const offset = bullet.direction.scale(BULLET_SPEED * delta);
         bullet.position = bullet.position.add(offset);
-        if (!bulletBorder.contains(bullet.position)) {
+        if (!bulletBound.contains(bullet.position)) {
             // 移动到屏幕外了，删除
             _ = bullets.swapRemove(iterator.index);
         }
