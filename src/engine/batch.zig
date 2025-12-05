@@ -49,7 +49,7 @@ pub fn init(size: Vector2, buffer: []QuadVertex) void {
 pub const Option = struct {
     size: ?Vector2 = null, // 大小
     anchor: Vector2 = .zero, // 锚点
-    pivot: ?Vector2 = null, // 旋转中心
+    pivot: Vector2 = .center, // 旋转中心
     radian: f32 = 0, // 旋转弧度
     color: math.Vector4 = .one, // 颜色
     flipX: bool = false, // 是否水平翻转
@@ -85,15 +85,13 @@ pub fn drawOption(texture: Texture, pos: Vector2, option: Option) void {
 
     const size = option.size orelse texture.size();
     var worldPos = pos.sub(size.mul(option.anchor));
-    // 默认旋转点为中心位置，如果不旋转则传 0。
-    var pivot: Vector2 = option.pivot orelse .center;
-    if (option.radian == 0) pivot = .zero; // 不旋转
 
     drawVertices(texture, &.{QuadVertex{
         .position = worldPos.toVector3(0),
         .radian = option.radian,
         .size = size,
-        .pivot = pivot,
+        // 默认旋转点为中心位置，如果不旋转则传 0
+        .pivot = if (option.radian == 0) .zero else option.pivot,
         .texture = textureVector,
         .color = option.color,
     }});
