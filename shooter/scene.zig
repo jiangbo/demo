@@ -49,8 +49,8 @@ pub fn draw() void {
 
     sceneCall("draw", .{});
 
-    player.draw();
     enemy.draw();
+    player.draw();
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
 

@@ -28,6 +28,25 @@ var bullets: [10]Bullet = undefined; // 子弹数组
 // 子弹发射的间隔，每 0.3 秒可以发射一次
 var bulletTimer: zhu.window.Timer = .init(0.3);
 
+// 爆炸帧动画元数据
+const bombFrames: [9]gfx.Frame = blk: {
+    var frames: [9]gfx.Frame = undefined;
+    for (&frames, 0..) |*frame, i| {
+        const x: f32 = @floatFromInt(32 * i);
+        frame.area = .init(.init(x, 0), .init(32, 32));
+        frame.interval = 0.1;
+    }
+    break :blk frames;
+};
+var bombFrameAnimation: gfx.FrameAnimation = undefined;
+
+const BombAnimation = struct {
+    animation: gfx.FrameAnimation, // 爆炸动画
+    center: gfx.Vector, // 爆炸中心点
+};
+var bombAnimations: std.ArrayList(BombAnimation) = .empty;
+var bombed: bool = false; // 玩家是否爆炸
+
 pub fn init() void {
     texture = gfx.loadTexture("assets/image/SpaceShip.png", .init(241, 187));
     // 图片太大了，缩小到四分之一
@@ -38,12 +57,33 @@ pub fn init() void {
     bulletSize = bulletTexture.size().scale(SCALE);
     bulletTimer.stop(); // 游戏开始就可以发射子弹
     for (&bullets) |*bullet| bullet.dead = true; //初始时所有子弹都可用
+    // 初始化爆炸动画
+    const tex = gfx.loadTexture("assets/effect/explosion.png", .init(288, 32));
+    bombFrameAnimation = .init(tex, &bombFrames);
+    bombFrameAnimation.loop = false;
 }
 
 pub fn update(delta: f32) void {
     // 子弹移动
     updateBullets(delta);
-    if (health == 0) return; // 玩家死亡，不进行任何操作
+
+    // 更新动画，反向遍历，因为边遍历边删除
+    var bombs = std.mem.reverseIterator(bombAnimations.items);
+    while (bombs.nextPtr()) |bomb| {
+        if (bomb.animation.isFinishedAfterUpdate(delta)) {
+            // 动画结束后，删除动画
+            _ = bombAnimations.swapRemove(bombs.index);
+        }
+    }
+
+    if (health == 0) {
+        // 玩家还没有爆炸动画，就添加一个
+        if (!bombed) {
+            bombed = true;
+            addBombAnimation(center());
+        }
+        return; // 玩家死亡，不进行任何操作
+    }
 
     // 玩家键盘控制
     const distance = SPEED * delta; // 根据时间调整移动距离
@@ -77,6 +117,7 @@ pub fn update(delta: f32) void {
         if (!rect.intersect(playerRect)) continue; // 不相交，检测下一个
         health -= 1; // 碰撞，减少一点血量。敌机直接销毁，不关注血量
         _ = enemy.enemies.swapRemove(iterator.index);
+        addBombAnimation(rect.center()); // 添加爆炸动画
     }
 }
 
@@ -98,7 +139,14 @@ fn updateBullets(delta: f32) void {
     }
 }
 
-pub fn collideEnemy(bullet: gfx.Vector) bool {
+fn addBombAnimation(bombCenter: gfx.Vector) void {
+    bombAnimations.append(window.allocator, .{
+        .animation = bombFrameAnimation,
+        .center = bombCenter,
+    }) catch @panic("add bomb oom");
+}
+
+fn collideEnemy(bullet: gfx.Vector) bool {
     // 反向遍历，支持遍历时删除
     var iterator = std.mem.reverseIterator(enemy.enemies.items);
     while (iterator.nextPtr()) |ptr| {
@@ -108,6 +156,7 @@ pub fn collideEnemy(bullet: gfx.Vector) bool {
         ptr.health -|= 1; // 碰撞，减少一点血量
         if (ptr.health == 0) { // 血量为 0 ，进行销毁。
             _ = enemy.enemies.swapRemove(iterator.index);
+            addBombAnimation(rect.center()); // 添加爆炸动画
         }
         return true;
     }
@@ -143,6 +192,17 @@ pub fn draw() void {
         // 绘制玩家
         camera.drawOption(texture, position, .{ .size = size });
     }
+
+    // 绘制爆炸动画
+    for (bombAnimations.items) |bomb| {
+        const currentTexture = bomb.animation.currentTexture();
+        camera.drawOption(currentTexture, bomb.center, .{
+            .anchor = .center,
+            .size = currentTexture.size().scale(2), // 爆炸动画太小
+        });
+    }
 }
 
-pub fn deinit() void {}
+pub fn deinit() void {
+    bombAnimations.deinit(window.allocator);
+}
