@@ -16,6 +16,7 @@ const Bullet = struct {
 const SPEED = 300; // 玩家的移动速度
 const BULLET_SPEED = 600; // 子弹的速度
 const SCALE = 0.25; // 图片素材太大，缩小到四分之一
+const MAX_HEALTH = 3; // 玩家最大生命值
 
 var position: gfx.Vector = undefined; // 玩家的位置
 var texture: gfx.Texture = undefined; // 玩家的纹理
@@ -67,6 +68,9 @@ pub fn init() void {
 }
 
 pub fn update(delta: f32) void {
+    // 更新物品
+    item.update(delta);
+
     // 子弹移动
     updateBullets(delta);
 
@@ -87,6 +91,9 @@ pub fn update(delta: f32) void {
         }
         return; // 玩家死亡，不进行任何操作
     }
+
+    // 玩家是否拾取物品
+    maybePickItem();
 
     // 玩家键盘控制
     const distance = SPEED * delta; // 根据时间调整移动距离
@@ -124,6 +131,19 @@ pub fn update(delta: f32) void {
     }
 }
 
+fn maybePickItem() void {
+    // 玩家是否拾取物品
+    const playerRect = gfx.Rect.init(position, size);
+    var iterator = std.mem.reverseIterator(item.items.items);
+    while (iterator.nextPtr()) |ptr| {
+        if (playerRect.contains(ptr.position)) {
+            // 拾取物品，增加一点血量
+            _ = item.items.swapRemove(iterator.index);
+            if (health < MAX_HEALTH) health += 1;
+        }
+    }
+}
+
 fn updateBullets(delta: f32) void {
     for (&bullets) |*bullet| {
         if (bullet.dead) continue;
@@ -158,6 +178,7 @@ fn collideEnemy(bullet: gfx.Vector) bool {
 
         ptr.health -|= 1; // 碰撞，减少一点血量
         if (ptr.health == 0) { // 血量为 0 ，进行销毁。
+            item.maybeDropItem(rect.center()); // 掉落道具
             _ = enemy.enemies.swapRemove(iterator.index);
             addBombAnimation(rect.center()); // 添加爆炸动画
         }
@@ -191,6 +212,8 @@ pub fn draw() void {
         });
     }
 
+    item.draw(); // 绘制掉落的物品
+
     if (health != 0) {
         // 绘制玩家
         camera.drawOption(texture, position, .{ .size = size });
@@ -207,5 +230,7 @@ pub fn draw() void {
 }
 
 pub fn deinit() void {
+    // 释放分配的内存
     bombAnimations.deinit(window.allocator);
+    item.items.deinit(window.allocator);
 }
