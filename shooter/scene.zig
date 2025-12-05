@@ -25,6 +25,8 @@ pub fn init() void {
 
     player.init();
     enemy.init();
+
+    zhu.audio.playMusic("assets/music/03_Racing_Through_Asteroids_Loop.ogg");
 }
 
 pub fn update(delta: f32) void {

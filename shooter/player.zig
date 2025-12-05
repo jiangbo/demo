@@ -88,6 +88,7 @@ pub fn update(delta: f32) void {
         if (!bombed) {
             bombed = true;
             addBombAnimation(center());
+            zhu.audio.playSound("assets/sound/explosion1.ogg");
         }
         return; // 玩家死亡，不进行任何操作
     }
@@ -112,6 +113,7 @@ pub fn update(delta: f32) void {
                 break;
             }
         }
+        zhu.audio.playSound("assets/sound/laser_shoot4.ogg");
         bulletTimer.reset(); // 重置计时器，玩家需要等到计时器结束才可以发射。
     }
 
@@ -140,6 +142,7 @@ fn maybePickItem() void {
             // 拾取物品，增加一点血量
             _ = item.items.swapRemove(iterator.index);
             if (health < MAX_HEALTH) health += 1;
+            zhu.audio.playSound("assets/sound/eff5.ogg");
         }
     }
 }
@@ -181,7 +184,9 @@ fn collideEnemy(bullet: gfx.Vector) bool {
             item.maybeDropItem(rect.center()); // 掉落道具
             _ = enemy.enemies.swapRemove(iterator.index);
             addBombAnimation(rect.center()); // 添加爆炸动画
+            zhu.audio.playSound("assets/sound/explosion3.ogg");
         }
+        zhu.audio.playSound("assets/sound/eff11.ogg");
         return true;
     }
     return false;

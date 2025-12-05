@@ -28,6 +28,13 @@ pub const Music = struct {
 };
 
 pub var music: ?Music = null;
+pub var musicVolume: f32 = 1.0;
+pub var soundVolume: f32 = 1.0;
+
+pub fn setVolume(volume: f32) void {
+    musicVolume = volume;
+    soundVolume = volume;
+}
 
 pub fn playMusic(path: [:0]const u8) void {
     music = assets.loadMusic(path, true).*;
@@ -89,17 +96,21 @@ pub fn stopSound(sound: SoundHandle) void {
 
 export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     const buffer = b[0..@as(usize, @intCast(frames * channels))];
-    @memset(buffer, 0);
+    @memset(buffer, 0); // 清空音乐的缓冲区
 
-    var len: usize = 0;
+    // 先处理音乐，目前只支持播放一个音乐。
+    var len: usize = 0; // 存储填充的长度
+    // 因为有可能循环播放，所以循环添加，直到缓冲区填满。
     while (music != null and music.?.state == .playing) {
         const source = music.?.source;
         const count = stbAudio.fillSamples(source, buffer[len..], channels);
         len += @as(usize, @intCast(count * channels));
 
-        if (len == buffer.len) break;
+        if (len == buffer.len) break; // 声音缓冲区填充满了
         if (music.?.loop) stbAudio.reset(source) else music = null;
     }
+    // 填充音乐完成，设置音乐的音量
+    for (buffer[0..len]) |*sample| sample.* *= musicVolume;
 
     for (sounds) |*sound| {
         len = 0;
@@ -129,7 +140,10 @@ fn mixStereoSamples(dstBuffer: []f32, sound: *Sound) usize {
     const srcBuffer = sound.source[sound.index..];
     const len = @min(dstBuffer.len, srcBuffer.len);
 
-    for (0..len) |index| dstBuffer[index] += srcBuffer[index];
+    for (0..len) |index| {
+        const src = srcBuffer[index] * soundVolume;
+        dstBuffer[index] += src;
+    }
     sound.index += len;
     return len;
 }
@@ -139,8 +153,9 @@ fn mixMonoSamples(dstBuffer: []f32, sound: *Sound) usize {
     const len = @min(dstBuffer.len / 2, srcBuffer.len);
 
     for (0..len) |index| {
-        dstBuffer[index * 2] += srcBuffer[index];
-        dstBuffer[index * 2 + 1] += srcBuffer[index];
+        const src = srcBuffer[index] * soundVolume;
+        dstBuffer[index * 2] += src;
+        dstBuffer[index * 2 + 1] += src;
     }
     sound.index += len;
     return len * 2;

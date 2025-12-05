@@ -61,6 +61,7 @@ pub fn update(delta: f32) void {
             // 到达开火时间
             enemy.shotTime = window.relativeTime();
             spawnBullet(enemy);
+            zhu.audio.playSound("assets/sound/xs_laser.ogg");
         }
     }
 
