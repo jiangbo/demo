@@ -110,7 +110,6 @@ pub fn draw() void {
         camera.drawOption(bulletTexture, bullet.position, .{
             .size = bulletSize,
             .radian = bullet.direction.atan2() - halfPi,
-            .pivot = .center,
         });
     }
     // 绘制敌机

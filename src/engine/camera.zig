@@ -106,8 +106,8 @@ pub fn drawRect(area: math.Rect, color: Color) void {
 pub const Option = struct {
     size: ?Vector2 = null, // 大小
     anchor: Vector2 = .zero, // 锚点
-    pivot: Vector2 = .zero, // 旋转中心
-    radian: f32 = 0, // 旋转角度
+    pivot: ?Vector2 = null, // 旋转中心
+    radian: f32 = 0, // 旋转弧度
     color: Color = .one, // 颜色
     flipX: bool = false, // 是否水平翻转
 };
@@ -121,11 +121,15 @@ pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
     var temp = pos.sub(size.mul(option.anchor));
     if (mode == .local) temp = temp.add(position);
 
+    // 默认旋转点为中心位置，如果不旋转则传 0。
+    var pivot: Vector2 = option.pivot orelse .center;
+    if (option.radian == 0) pivot = .zero; // 不旋转
+
     drawVertices(texture, &.{Vertex{
         .position = temp.toVector3(0),
         .radian = option.radian,
         .size = size,
-        .pivot = option.pivot,
+        .pivot = pivot,
         .texture = textureVector,
         .color = option.color,
     }});
