@@ -84,13 +84,13 @@ pub fn drawOption(texture: Texture, pos: Vector2, option: Option) void {
     }
 
     const size = option.size orelse texture.size();
-
+    var worldPos = pos.sub(size.mul(option.anchor));
     // 默认旋转点为中心位置，如果不旋转则传 0。
     var pivot: Vector2 = option.pivot orelse .center;
     if (option.radian == 0) pivot = .zero; // 不旋转
 
     drawVertices(texture, &.{QuadVertex{
-        .position = pos.toVector3(0),
+        .position = worldPos.toVector3(0),
         .radian = option.radian,
         .size = size,
         .pivot = pivot,

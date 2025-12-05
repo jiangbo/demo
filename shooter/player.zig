@@ -6,6 +6,7 @@ const gfx = zhu.gfx;
 const camera = zhu.camera;
 
 const enemy = @import("enemy.zig");
+const item = @import("item.zig");
 
 const Bullet = struct {
     position: gfx.Vector, // 子弹的位置
@@ -61,6 +62,8 @@ pub fn init() void {
     const tex = gfx.loadTexture("assets/effect/explosion.png", .init(288, 32));
     bombFrameAnimation = .init(tex, &bombFrames);
     bombFrameAnimation.loop = false;
+
+    item.init();
 }
 
 pub fn update(delta: f32) void {

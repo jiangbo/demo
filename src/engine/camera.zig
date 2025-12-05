@@ -80,12 +80,13 @@ pub fn drawRect(area: math.Rect, color: Color) void {
     });
 }
 
-pub fn drawOption(texture: Texture, pos: Vector, o: batch.Option) void {
+pub const Option = batch.Option;
+pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
     if (!startDraw) @panic("need begin draw");
 
     var worldPos = pos;
     if (mode == .local) worldPos = pos.add(position);
-    batch.drawOption(texture, worldPos, o);
+    batch.drawOption(texture, worldPos, option);
 }
 
 pub fn endDraw() void {
