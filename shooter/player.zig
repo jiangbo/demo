@@ -67,6 +67,17 @@ pub fn update(delta: f32) void {
 
     // 限制玩家的移动边界
     position = position.clamp(.zero, window.logicSize.sub(size));
+
+    // 玩家和敌机的碰撞
+    const playerRect = gfx.Rect.init(position, size);
+    var iterator = std.mem.reverseIterator(enemy.enemies.items);
+    while (iterator.nextPtr()) |ptr| {
+        if (health == 0) break;
+        const rect: gfx.Rect = .init(ptr.position, enemy.size);
+        if (!rect.intersect(playerRect)) continue; // 不相交，检测下一个
+        health -= 1; // 碰撞，减少一点血量。敌机直接销毁，不关注血量
+        _ = enemy.enemies.swapRemove(iterator.index);
+    }
 }
 
 fn updateBullets(delta: f32) void {
