@@ -51,7 +51,7 @@ pub fn draw(text: []const u8, position: math.Vector) void {
 }
 
 pub fn drawCenter(text: []const u8, posY: f32, option: Option) void {
-    const width = computeTextWidth(text);
+    const width = computeSizedTextWidth(text, option.size);
     const x = (window.logicSize.x - width) / 2;
     drawOption(text, .init(x, posY), option);
 }
@@ -102,10 +102,15 @@ pub fn drawOption(text: []const u8, position: Vector, option: Option) void {
 }
 
 pub fn computeTextWidth(text: []const u8) f32 {
+    return computeSizedTextWidth(text, textSize);
+}
+
+pub fn computeSizedTextWidth(text: []const u8, size: ?f32) f32 {
     var width: f32 = 0;
+    const sz = size orelse textSize; // 提供则获取，没有则获取默认值
     var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {
-        width += searchGlyph(code).advance * textSize;
+        width += searchGlyph(code).advance * sz;
     }
     return width;
 }
