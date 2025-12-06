@@ -7,6 +7,7 @@ const font = @import("font.zig");
 
 const Font = font.Font;
 const Glyph = font.Glyph;
+const Vector = math.Vector2;
 
 var zon: font.Font = undefined;
 var texture: gpu.Texture = undefined;
@@ -34,11 +35,11 @@ fn searchGlyph(code: u32) *const Glyph {
     return &zon.glyphs[binarySearch(code) orelse invalidIndex];
 }
 
-pub fn drawNumber(number: anytype, position: math.Vector) void {
+pub fn drawNumber(number: anytype, position: Vector) void {
     drawColorNumber(number, position, .one);
 }
 
-pub fn drawColorNumber(number: anytype, pos: math.Vector, color: Color) void {
+pub fn drawColorNumber(number: anytype, pos: Vector, color: Color) void {
     var textBuffer: [15]u8 = undefined;
     const text = std.fmt.bufPrint(textBuffer[0..], "{d}", .{number});
     const t = text catch unreachable;
@@ -47,6 +48,12 @@ pub fn drawColorNumber(number: anytype, pos: math.Vector, color: Color) void {
 
 pub fn drawText(text: []const u8, position: math.Vector) void {
     drawOption(text, .{ .position = position });
+}
+
+pub fn drawTextFmt(fmt: []const u8, pos: Vector, args: anytype) void {
+    var buffer: [1024]u8 = undefined;
+    const text = std.fmt.bufPrint(buffer[0..], fmt, args);
+    drawText(text catch @panic("text too long"), pos);
 }
 
 const Color = math.Vector4;
