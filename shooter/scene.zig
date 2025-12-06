@@ -119,7 +119,7 @@ fn drawHelpInfo() void {
     }
     debutTextCount = count;
 
-    camera.drawColorText(text, .init(10, 5), .green);
+    camera.drawTextColor(text, .init(10, 5), .green);
 }
 
 var debutTextCount: u32 = 0;
@@ -169,7 +169,7 @@ fn drawDebugInfo() void {
     }
     debutTextCount = count;
 
-    camera.drawColorText(text, .init(10, 55), .green);
+    camera.drawTextColor(text, .init(10, 55), .green);
 }
 
 pub fn deinit() void {

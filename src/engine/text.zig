@@ -4,6 +4,7 @@ const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const batch = @import("batch.zig");
 const font = @import("font.zig");
+const window = @import("window.zig");
 
 const Font = font.Font;
 const Glyph = font.Glyph;
@@ -36,53 +37,56 @@ fn searchGlyph(code: u32) *const Glyph {
 }
 
 pub fn drawNumber(number: anytype, position: Vector) void {
-    drawColorNumber(number, position, .one);
+    drawNumberColor(number, position, .one);
 }
 
-pub fn drawColorNumber(number: anytype, pos: Vector, color: Color) void {
+pub fn drawNumberColor(number: anytype, pos: Vector, color: Color) void {
     var textBuffer: [15]u8 = undefined;
-    const text = std.fmt.bufPrint(textBuffer[0..], "{d}", .{number});
-    const t = text catch unreachable;
-    drawOption(t, .{ .position = pos, .color = color });
+    const text = format(&textBuffer, "{d}", .{number});
+    drawColor(text, pos, color);
 }
 
-pub fn drawText(text: []const u8, position: math.Vector) void {
-    drawOption(text, .{ .position = position });
+pub fn draw(text: []const u8, position: math.Vector) void {
+    drawOption(text, position, .{});
 }
 
-pub fn drawTextFmt(fmt: []const u8, pos: Vector, args: anytype) void {
+pub fn drawCenter(text: []const u8, posY: f32, option: Option) void {
+    const width = computeTextWidth(text);
+    const x = (window.logicSize.x - width) / 2;
+    drawOption(text, .init(x, posY), option);
+}
+
+pub fn drawFmt(fmt: []const u8, pos: Vector, args: anytype) void {
     var buffer: [1024]u8 = undefined;
-    const text = std.fmt.bufPrint(buffer[0..], fmt, args);
-    drawText(text catch @panic("text too long"), pos);
+    draw(format(&buffer, fmt, args), pos);
 }
 
 const Color = math.Vector4;
-pub fn drawColorText(text: []const u8, pos: math.Vector, color: Color) void {
-    drawOption(text, .{ .position = pos, .color = color });
+pub fn drawColor(text: []const u8, pos: Vector, color: Color) void {
+    drawOption(text, pos, .{ .color = color });
 }
 
 pub const Option = struct {
     size: ?f32 = null,
-    position: math.Vector,
     color: math.Vector4 = .one,
     width: f32 = std.math.floatMax(f32),
 };
 const Utf8View = std.unicode.Utf8View;
-pub fn drawOption(text: []const u8, options: Option) void {
+pub fn drawOption(text: []const u8, position: Vector, option: Option) void {
     var iterator = Utf8View.initUnchecked(text).iterator();
 
-    const size = options.size orelse textSize;
+    const size = option.size orelse textSize;
     const height = zon.metrics.lineHeight * size;
     const offsetY = -zon.metrics.ascender * size;
-    var pos = options.position.addY(offsetY);
+    var pos = position.addY(offsetY);
 
     while (iterator.nextCodepoint()) |code| {
         if (code == '\n') {
-            pos = .init(options.position.x, pos.y + height);
+            pos = .init(position.x, pos.y + height);
             continue;
         }
-        if (pos.x > options.width) {
-            pos = .init(options.position.x, pos.y + height);
+        if (pos.x > option.width) {
+            pos = .init(position.x, pos.y + height);
         }
         const char = searchGlyph(code);
         count += 1;
@@ -91,18 +95,21 @@ pub fn drawOption(text: []const u8, options: Option) void {
         const tex = texture.mapTexture(char.atlasBounds.toArea());
         batch.drawOption(tex, pos.add(target.min.scale(size)), .{
             .size = target.size.scale(size),
-            .color = options.color,
+            .color = option.color,
         });
         pos = pos.addX(char.advance * size);
     }
 }
 
 pub fn computeTextWidth(text: []const u8) f32 {
-    var iterator = Utf8View.initUnchecked(text).iterator();
-
     var width: f32 = 0;
+    var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {
         width += searchGlyph(code).advance * textSize;
     }
     return width;
+}
+
+fn format(buffer: []u8, fmt: []const u8, args: anytype) []u8 {
+    return std.fmt.bufPrint(buffer, fmt, args) catch @panic("text too long");
 }
