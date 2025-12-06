@@ -51,7 +51,7 @@ var bombAnimations: std.ArrayList(BombAnimation) = .empty;
 var bombed: bool = false; // 玩家是否爆炸
 
 var healthTexture: gfx.Texture = undefined; // 玩家生命值的纹理
-var score: u32 = 0; // 玩家得分
+pub var score: u32 = 0; // 玩家得分
 var deadTimer: window.Timer = .init(3); // 玩家死亡计时器
 
 pub fn init() void {
