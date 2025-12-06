@@ -8,10 +8,48 @@ const camera = zhu.camera;
 const player = @import("player.zig");
 const enemy = @import("enemy.zig");
 
+const Background = struct {
+    texture: gfx.Texture,
+    position: gfx.Vector,
+    size: gfx.Vector,
+    offset: f32,
+    speed: f32,
+
+    fn init(path: [:0]const u8, speed: f32) Background {
+        var self: Background = std.mem.zeroes(Background);
+        self.texture = gfx.loadTexture(path, .init(1000, 1000));
+        self.size = self.texture.size().scale(0.5);
+        self.speed = speed;
+        return self;
+    }
+
+    fn update(self: *Background, delta: f32) void {
+        self.offset += self.speed * delta;
+        if (self.offset > 0) self.offset -= self.size.y;
+    }
+
+    fn draw(self: *const Background) void {
+        var y = self.offset;
+        // 填满 Y 轴
+        while (y < window.logicSize.y) : (y += self.size.y) {
+            var x: f32 = 0;
+            // 填满 X 轴
+            while (x < window.logicSize.x) : (x += self.size.x) {
+                camera.drawOption(self.texture, .init(x, y), .{
+                    .size = self.size,
+                });
+            }
+        }
+    }
+};
+
 var isHelp = false;
 var isDebug = false;
 var isPause = false;
 var vertexBuffer: []camera.Vertex = undefined;
+
+var far: Background = undefined; // 远景
+var near: Background = undefined; // 近景
 
 pub fn init() void {
     window.initFont(.{
@@ -25,6 +63,9 @@ pub fn init() void {
 
     player.init();
     enemy.init();
+
+    far = .init("assets/image/Stars-B.png", 20);
+    near = .init("assets/image/Stars-A.png", 30);
 
     zhu.audio.playMusic("assets/music/03_Racing_Through_Asteroids_Loop.ogg");
 }
@@ -40,6 +81,11 @@ pub fn update(delta: f32) void {
 
     if (isPause) return; // 暂停时不更新游戏
 
+    // 更新背景
+    far.update(delta);
+    near.update(delta);
+
+    // 更新玩家和敌人
     player.update(delta);
     enemy.update(delta);
 }
@@ -50,6 +96,10 @@ pub fn draw() void {
     window.keepAspectRatio();
 
     sceneCall("draw", .{});
+
+    // 绘制背景
+    far.draw();
+    near.draw();
 
     enemy.draw();
     player.draw();
