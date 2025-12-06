@@ -7,6 +7,7 @@ const camera = zhu.camera;
 
 const enemy = @import("enemy.zig");
 const item = @import("item.zig");
+const scene = @import("scene.zig");
 
 const Bullet = struct {
     position: gfx.Vector, // 子弹的位置
@@ -51,6 +52,7 @@ var bombed: bool = false; // 玩家是否爆炸
 
 var healthTexture: gfx.Texture = undefined; // 玩家生命值的纹理
 var score: u32 = 0; // 玩家得分
+var deadTimer: window.Timer = .init(3); // 玩家死亡计时器
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/image/SpaceShip.png", .init(241, 187));
@@ -69,6 +71,8 @@ pub fn init() void {
 
     // 初始化玩家生命值
     healthTexture = gfx.loadTexture("assets/image/Health UI Black.png", .init(32, 32));
+    deadTimer.reset();
+    bombed = false;
 
     item.init();
 }
@@ -90,6 +94,10 @@ pub fn update(delta: f32) void {
     }
 
     if (health == 0) {
+        if (deadTimer.isFinishedAfterUpdate(delta)) {
+            // 计时器结束后，进入结束场景
+            scene.currentScene = .end;
+        }
         // 玩家还没有爆炸动画，就添加一个
         if (!bombed) {
             bombed = true;

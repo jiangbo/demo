@@ -8,6 +8,7 @@ const camera = zhu.camera;
 const player = @import("player.zig");
 const enemy = @import("enemy.zig");
 const title = @import("title.zig");
+const end = @import("end.zig");
 
 const Background = struct {
     texture: gfx.Texture,
@@ -87,7 +88,9 @@ pub fn update(delta: f32) void {
 
     if (currentScene == .title) {
         title.update(delta);
-    } else if (currentScene == .end) {} else {
+    } else if (currentScene == .end) {
+        end.update(delta);
+    } else {
         if (isPause) return; // 暂停时不更新游戏
 
         // 更新玩家和敌人
@@ -107,7 +110,9 @@ pub fn draw() void {
 
     if (currentScene == .title) {
         title.draw();
-    } else if (currentScene == .end) {} else {
+    } else if (currentScene == .end) {
+        end.draw();
+    } else {
         enemy.draw();
         player.draw();
         if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
