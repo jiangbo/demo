@@ -5,6 +5,7 @@ const assets = @import("assets.zig");
 const audio = @import("audio.zig");
 const input = @import("input.zig");
 const font = @import("font.zig");
+const text = @import("text.zig");
 const gpu = @import("gpu.zig");
 
 pub const Event = sk.app.Event;
@@ -317,3 +318,4 @@ pub const isMouseRelease = input.isMouseRelease;
 pub const isAnyMouseRelease = input.isAnyMouseRelease;
 
 pub const initFont = font.init;
+pub const initText = text.init;

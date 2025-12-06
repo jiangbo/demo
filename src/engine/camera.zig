@@ -3,7 +3,7 @@ const std = @import("std");
 const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const window = @import("window.zig");
-const font = @import("font.zig");
+const text = @import("text.zig");
 const batch = @import("batch.zig");
 
 const Texture = gpu.Texture;
@@ -39,8 +39,8 @@ pub fn toWindow(worldPosition: Vector) Vector {
 
 pub fn beginDraw(color: gpu.Color) void {
     batch.beginDraw(color);
-    font.beginDraw();
     startDraw = true;
+    text.count = 0;
 }
 
 pub fn debugDraw(area: math.Rect) void {
@@ -91,7 +91,6 @@ pub fn drawOption(texture: Texture, pos: Vector, option: Option) void {
 
 pub fn endDraw() void {
     startDraw = false;
-    font.flush();
     batch.endDraw(position);
 }
 
@@ -107,14 +106,13 @@ pub fn resetScissor() void {
 pub const frameStats = gpu.frameStats;
 pub const queryFrameStats = gpu.queryFrameStats;
 pub const queryBackend = gpu.queryBackend;
-pub const drawNumber = font.drawNumber;
-pub const drawColorNumber = font.drawColorNumber;
-pub const drawText = font.drawText;
-pub const drawColorText = font.drawColorText;
-pub const drawTextOptions = font.drawTextOptions;
-pub const flushText = font.flush;
+pub const drawNumber = text.drawNumber;
+pub const drawColorNumber = text.drawColorNumber;
+pub const drawText = text.drawText;
+pub const drawColorText = text.drawColorText;
+pub const drawTextOptions = text.drawOption;
 pub const imageDrawCount = batch.imageDrawCount;
 
 pub fn textDrawCount() usize {
-    return font.totalDrawCount;
+    return text.count;
 }

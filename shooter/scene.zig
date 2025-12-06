@@ -52,10 +52,8 @@ var far: Background = undefined; // 远景
 var near: Background = undefined; // 近景
 
 pub fn init() void {
-    window.initFont(.{
-        .font = @import("zon/font.zon"),
-        .texture = gfx.loadTexture("assets/font.png", .init(960, 960)),
-    });
+    const text = gfx.loadTexture("assets/font/font.png", .init(1100, 1100));
+    window.initText(@import("zon/font.zon"), text, 24);
 
     vertexBuffer = window.alloc(camera.Vertex, 5000);
     camera.frameStats(true);
@@ -169,7 +167,7 @@ fn drawDebugInfo() void {
     }
     debutTextCount = count;
 
-    camera.drawColorText(text, .init(10, 5), .green);
+    camera.drawColorText(text, .init(10, 55), .green);
 }
 
 pub fn deinit() void {

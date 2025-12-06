@@ -9,8 +9,8 @@ const batch = @import("batch.zig");
 pub const Font = struct {
     atlas: struct {
         type: []const u8,
-        distanceRange: u32,
-        distanceRangeMiddle: u32,
+        distanceRange: u32 = 0,
+        distanceRangeMiddle: u32 = 0,
         size: f32,
         width: u32,
         height: u32,
@@ -28,20 +28,20 @@ pub const Font = struct {
     kerning: struct {},
 };
 
-const Glyph = struct {
+pub const Glyph = struct {
     unicode: u32,
     advance: f32,
     planeBounds: Rect = .{},
     atlasBounds: Rect = .{},
 };
 
-const Rect = struct {
+pub const Rect = struct {
     left: f32 = 0,
     top: f32 = 0,
     right: f32 = 0,
     bottom: f32 = 0,
 
-    fn toArea(self: Rect) math.Rect {
+    pub fn toArea(self: Rect) math.Rect {
         const min = math.Vector2{ .x = self.left, .y = self.top };
         return .fromMax(min, .{ .x = self.right, .y = self.bottom });
     }
