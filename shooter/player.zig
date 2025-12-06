@@ -21,7 +21,7 @@ const MAX_HEALTH = 3; // 玩家最大生命值
 var position: gfx.Vector = undefined; // 玩家的位置
 var texture: gfx.Texture = undefined; // 玩家的纹理
 var size: gfx.Vector = undefined; // 玩家的尺寸
-var health: u8 = 3; // 玩家生命值
+var health: u8 = MAX_HEALTH; // 玩家生命值
 
 var bulletTexture: gfx.Texture = undefined; // 子弹的纹理
 var bulletSize: gfx.Vector = undefined; // 子弹的尺寸
@@ -49,6 +49,8 @@ const BombAnimation = struct {
 var bombAnimations: std.ArrayList(BombAnimation) = .empty;
 var bombed: bool = false; // 玩家是否爆炸
 
+var healthTexture: gfx.Texture = undefined; // 玩家生命值的纹理
+
 pub fn init() void {
     texture = gfx.loadTexture("assets/image/SpaceShip.png", .init(241, 187));
     // 图片太大了，缩小到四分之一
@@ -63,6 +65,9 @@ pub fn init() void {
     const tex = gfx.loadTexture("assets/effect/explosion.png", .init(288, 32));
     bombFrameAnimation = .init(tex, &bombFrames);
     bombFrameAnimation.loop = false;
+
+    // 初始化玩家生命值
+    healthTexture = gfx.loadTexture("assets/image/Health UI Black.png", .init(32, 32));
 
     item.init();
 }
@@ -230,6 +235,16 @@ pub fn draw() void {
         camera.drawOption(currentTexture, bomb.center, .{
             .anchor = .center,
             .size = currentTexture.size().scale(2), // 爆炸动画太小
+        });
+    }
+
+    // 绘制血量
+    for (0..MAX_HEALTH) |index| {
+        var color: gfx.Color = .init(0.4, 0.4, 0.4, 1);
+        if (health > index) color = .one;
+        const i: f32 = @floatFromInt(index);
+        camera.drawOption(healthTexture, .init(10 + i * 40, 10), .{
+            .color = color,
         });
     }
 }
