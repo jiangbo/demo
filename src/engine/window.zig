@@ -195,9 +195,20 @@ var frameRateTime: u64 = 0;
 var frameRateCount: u64 = 0;
 var usedDelta: u64 = 0;
 
+const smoothFrameTime: [5]f32 = .{
+    @as(f32, 1) / 30, // 30 帧
+    @as(f32, 1) / 60, // 60 帧
+    @as(f32, 1) / 120, // 120 帧
+    @as(f32, 1) / 144, // 144 帧
+    @as(f32, 1) / 240, // 240 帧
+};
+var currentSmoothTime: f32 = 0;
+var lastTime: u64 = 0;
+
 export fn windowFrame() void {
-    const delta: f32 = @floatCast(sk.app.frameDuration());
-    const start = timer.read();
+    const start = timer.read(); // 当前帧的起始时间
+    const deltaNano: f32 = @floatFromInt(start - lastTime);
+    const delta: f32 = deltaNano / std.time.ns_per_s;
 
     if (start > frameRateTime + std.time.ns_per_s) { // 一秒统计一次
         frameRateTime = start;
@@ -210,7 +221,18 @@ export fn windowFrame() void {
 
     sk.fetch.dowork();
 
-    call(root, "frame", .{delta});
+    const threshold = 0.002; // 帧平滑阈值，毫秒
+    if (@abs(currentSmoothTime - delta) > threshold) {
+        // 超过误差，重新平滑时间
+        for (smoothFrameTime) |time| {
+            if (@abs(time - delta) < threshold) {
+                currentSmoothTime = time;
+                break;
+            }
+        } else currentSmoothTime = delta; // 没有找到平滑的时间
+    }
+
+    call(root, "frame", .{currentSmoothTime});
     input.lastKeyState = input.keyState;
     input.lastMouseState = input.mouseState;
     input.anyRelease = false;
@@ -218,6 +240,7 @@ export fn windowFrame() void {
 
     // 执行更新和渲染消耗的时间，单位为纳秒
     usedDelta = timer.read() - start;
+    lastTime = start; // 记录上一帧的时间
 }
 
 export fn windowDeinit() void {
