@@ -60,8 +60,8 @@ pub const Option = struct {
     color: math.Vector4 = .one,
     width: f32 = std.math.floatMax(f32),
 };
+const Utf8View = std.unicode.Utf8View;
 pub fn drawOption(text: []const u8, options: Option) void {
-    const Utf8View = std.unicode.Utf8View;
     var iterator = Utf8View.initUnchecked(text).iterator();
 
     const size = options.size orelse textSize;
@@ -88,4 +88,14 @@ pub fn drawOption(text: []const u8, options: Option) void {
         });
         pos = pos.addX(char.advance * size);
     }
+}
+
+pub fn computeTextWidth(text: []const u8) f32 {
+    var iterator = Utf8View.initUnchecked(text).iterator();
+
+    var width: f32 = 0;
+    while (iterator.nextCodepoint()) |code| {
+        width += searchGlyph(code).advance * textSize;
+    }
+    return width;
 }

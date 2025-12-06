@@ -50,6 +50,7 @@ var bombAnimations: std.ArrayList(BombAnimation) = .empty;
 var bombed: bool = false; // 玩家是否爆炸
 
 var healthTexture: gfx.Texture = undefined; // 玩家生命值的纹理
+var score: u32 = 0; // 玩家得分
 
 pub fn init() void {
     texture = gfx.loadTexture("assets/image/SpaceShip.png", .init(241, 187));
@@ -147,6 +148,7 @@ fn maybePickItem() void {
             // 拾取物品，增加一点血量
             _ = item.items.swapRemove(iterator.index);
             if (health < MAX_HEALTH) health += 1;
+            score += 5;
             zhu.audio.playSound("assets/sound/eff5.ogg");
         }
     }
@@ -188,6 +190,7 @@ fn collideEnemy(bullet: gfx.Vector) bool {
         if (ptr.health == 0) { // 血量为 0 ，进行销毁。
             item.maybeDropItem(rect.center()); // 掉落道具
             _ = enemy.enemies.swapRemove(iterator.index);
+            score += 10;
             addBombAnimation(rect.center()); // 添加爆炸动画
             zhu.audio.playSound("assets/sound/explosion3.ogg");
         }
@@ -247,6 +250,12 @@ pub fn draw() void {
             .color = color,
         });
     }
+
+    // 绘制分数
+    var buffer: [50]u8 = undefined;
+    const text = zhu.format(&buffer, "SCORE:{}", .{score});
+    const x = window.logicSize.x - camera.computeTextWidth(text) - 10;
+    camera.drawText(text, .init(x, 10));
 }
 
 pub fn deinit() void {

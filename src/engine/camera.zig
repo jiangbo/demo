@@ -111,6 +111,7 @@ pub const drawColorNumber = text.drawColorNumber;
 pub const drawText = text.drawText;
 pub const drawColorText = text.drawColorText;
 pub const drawTextOptions = text.drawOption;
+pub const computeTextWidth = text.computeTextWidth;
 pub const imageDrawCount = batch.imageDrawCount;
 
 pub fn textDrawCount() usize {
