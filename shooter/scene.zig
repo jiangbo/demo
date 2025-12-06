@@ -128,6 +128,7 @@ fn drawDebugInfo() void {
     const format =
         \\后端：{s}
         \\帧率：{}
+        \\平滑：{d:.2}
         \\帧时：{d:.2}
         \\用时：{d:.2}
         \\显存：{}
@@ -144,6 +145,7 @@ fn drawDebugInfo() void {
     const text = zhu.format(&buffer, format, .{
         @tagName(camera.queryBackend()),
         window.frameRate,
+        window.currentSmoothTime * 1000,
         window.frameDeltaPerSecond,
         window.usedDeltaPerSecond,
         stats.size_append_buffer + stats.size_update_buffer,

@@ -195,14 +195,13 @@ var frameRateTime: u64 = 0;
 var frameRateCount: u64 = 0;
 var usedDelta: u64 = 0;
 
-const smoothFrameTime: [5]f32 = .{
+const smoothFrameTime: [4]f32 = .{
     @as(f32, 1) / 30, // 30 帧
     @as(f32, 1) / 60, // 60 帧
-    @as(f32, 1) / 120, // 120 帧
     @as(f32, 1) / 144, // 144 帧
     @as(f32, 1) / 240, // 240 帧
 };
-var currentSmoothTime: f32 = 0;
+pub var currentSmoothTime: f32 = 0;
 var lastTime: u64 = 0;
 
 export fn windowFrame() void {
