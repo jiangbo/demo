@@ -8,6 +8,7 @@ pub const camera = @import("camera.zig");
 pub const math = @import("math.zig");
 pub const input = @import("input.zig");
 pub const ecs = @import("ecs.zig");
+pub const text = @import("text.zig");
 
 pub fn format(buffer: []u8, comptime fmt: []const u8, args: anytype) []u8 {
     return std.fmt.bufPrint(buffer, fmt, args) catch unreachable;

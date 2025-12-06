@@ -7,6 +7,7 @@ const camera = zhu.camera;
 
 const player = @import("player.zig");
 const enemy = @import("enemy.zig");
+const title = @import("title.zig");
 
 const Background = struct {
     texture: gfx.Texture,
@@ -51,6 +52,9 @@ var vertexBuffer: []camera.Vertex = undefined;
 var far: Background = undefined; // 远景
 var near: Background = undefined; // 近景
 
+const sceneType = enum { title, game, end };
+pub var currentScene: sceneType = .title;
+
 pub fn init() void {
     const text = gfx.loadTexture("assets/font/font.png", .init(1100, 1100));
     window.initText(@import("zon/font.zon"), text, 24);
@@ -77,15 +81,19 @@ pub fn update(delta: f32) void {
         return window.toggleFullScreen();
     }
 
-    if (isPause) return; // 暂停时不更新游戏
-
     // 更新背景
     far.update(delta);
     near.update(delta);
 
-    // 更新玩家和敌人
-    player.update(delta);
-    enemy.update(delta);
+    if (currentScene == .title) {
+        title.update(delta);
+    } else if (currentScene == .end) {} else {
+        if (isPause) return; // 暂停时不更新游戏
+
+        // 更新玩家和敌人
+        player.update(delta);
+        enemy.update(delta);
+    }
 }
 
 pub fn draw() void {
@@ -93,15 +101,17 @@ pub fn draw() void {
     defer camera.endDraw();
     window.keepAspectRatio();
 
-    sceneCall("draw", .{});
-
     // 绘制背景
     far.draw();
     near.draw();
 
-    enemy.draw();
-    player.draw();
-    if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
+    if (currentScene == .title) {
+        title.draw();
+    } else if (currentScene == .end) {} else {
+        enemy.draw();
+        player.draw();
+        if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
+    }
 }
 
 fn drawHelpInfo() void {
@@ -175,11 +185,5 @@ fn drawDebugInfo() void {
 pub fn deinit() void {
     enemy.deinit();
     player.deinit();
-    sceneCall("deinit", .{});
     window.free(vertexBuffer);
-}
-
-fn sceneCall(comptime function: []const u8, args: anytype) void {
-    _ = function;
-    _ = args;
 }

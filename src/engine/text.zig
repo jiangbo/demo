@@ -50,10 +50,10 @@ pub fn draw(text: []const u8, position: math.Vector) void {
     drawOption(text, position, .{});
 }
 
-pub fn drawCenter(text: []const u8, posY: f32, option: Option) void {
-    const width = computeSizedTextWidth(text, option.size);
+pub fn drawCenter(text: []const u8, y: f32, option: Option) void {
+    const width = computeTextWidthOption(text, option);
     const x = (window.logicSize.x - width) / 2;
-    drawOption(text, .init(x, posY), option);
+    drawOption(text, .init(x, window.logicSize.y * y), option);
 }
 
 pub fn drawFmt(fmt: []const u8, pos: Vector, args: anytype) void {
@@ -67,9 +67,10 @@ pub fn drawColor(text: []const u8, pos: Vector, color: Color) void {
 }
 
 pub const Option = struct {
-    size: ?f32 = null,
-    color: math.Vector4 = .one,
-    width: f32 = std.math.floatMax(f32),
+    size: ?f32 = null, // 文字的大小，没有则使用默认值
+    color: math.Vector4 = .one, // 文字的颜色
+    maxWidth: f32 = std.math.floatMax(f32), // 最大宽度，超过换行
+    spacing: f32 = 0, // 文字间的间距
 };
 const Utf8View = std.unicode.Utf8View;
 pub fn drawOption(text: []const u8, position: Vector, option: Option) void {
@@ -85,7 +86,7 @@ pub fn drawOption(text: []const u8, position: Vector, option: Option) void {
             pos = .init(position.x, pos.y + height);
             continue;
         }
-        if (pos.x > option.width) {
+        if (pos.x > option.maxWidth) {
             pos = .init(position.x, pos.y + height);
         }
         const char = searchGlyph(code);
@@ -97,24 +98,24 @@ pub fn drawOption(text: []const u8, position: Vector, option: Option) void {
             .size = target.size.scale(size),
             .color = option.color,
         });
-        pos = pos.addX(char.advance * size);
+        pos = pos.addX(char.advance * size + option.spacing);
     }
 }
 
 pub fn computeTextWidth(text: []const u8) f32 {
-    return computeSizedTextWidth(text, textSize);
+    return computeTextWidthOption(text, .{});
 }
 
-pub fn computeSizedTextWidth(text: []const u8, size: ?f32) f32 {
+pub fn computeTextWidthOption(text: []const u8, option: Option) f32 {
     var width: f32 = 0;
-    const sz = size orelse textSize; // 提供则获取，没有则获取默认值
+    const sz = option.size orelse textSize; // 提供则获取，没有则获取默认值
     var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {
-        width += searchGlyph(code).advance * sz;
+        width += searchGlyph(code).advance * sz + option.spacing;
     }
-    return width;
+    return width - option.spacing;
 }
 
-fn format(buffer: []u8, fmt: []const u8, args: anytype) []u8 {
-    return std.fmt.bufPrint(buffer, fmt, args) catch @panic("text too long");
+fn format(buf: []u8, fmt: []const u8, args: anytype) []u8 {
+    return std.fmt.bufPrint(buf, fmt, args) catch @panic("text too long");
 }

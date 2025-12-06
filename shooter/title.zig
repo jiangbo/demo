@@ -1,0 +1,25 @@
+const std = @import("std");
+const zhu = @import("zhu");
+
+const window = zhu.window;
+const text = zhu.text;
+
+const scene = @import("scene.zig");
+
+var timer: window.Timer = .init(1); // 闪烁的定时器
+var blink: bool = true;
+
+pub fn update(delta: f32) void {
+    if (window.isKeyRelease(.J)) scene.currentScene = .game;
+
+    // 计时器闪烁
+    if (timer.isFinishedAfterUpdate(delta)) {
+        blink = !blink;
+        timer.reset();
+    }
+}
+
+pub fn draw() void {
+    text.drawCenter("太空战机", 0.35, .{ .size = 72, .spacing = 20 });
+    if (blink) text.drawCenter("按J键开始游戏", 0.8, .{ .spacing = 5 });
+}
