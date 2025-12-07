@@ -72,10 +72,29 @@ pub const Option = struct {
     maxWidth: f32 = std.math.floatMax(f32), // 最大宽度，超过换行
     spacing: f32 = 0, // 文字间的间距
 };
-const Utf8View = std.unicode.Utf8View;
+
+pub fn drawUnicode(text: []u32, position: Vector, option: Option) void {
+    var iterator = UnicodeIterator{ .unicode = text };
+    drawIterator(&iterator, position, option);
+}
+
 pub fn drawOption(text: []const u8, position: Vector, option: Option) void {
     var iterator = Utf8View.initUnchecked(text).iterator();
+    drawIterator(&iterator, position, option);
+}
 
+const UnicodeIterator = struct {
+    unicode: []const u32,
+    index: usize = 0,
+
+    pub fn nextCodepoint(self: *UnicodeIterator) ?u21 {
+        if (self.index >= self.unicode.len) return null;
+        defer self.index += 1;
+        return @intCast(self.unicode[self.index]);
+    }
+};
+const Utf8View = std.unicode.Utf8View;
+pub fn drawIterator(iterator: anytype, position: Vector, option: Option) void {
     const size = option.size orelse textSize;
     const height = zon.metrics.lineHeight * size;
     const offsetY = -zon.metrics.ascender * size;

@@ -54,7 +54,7 @@ var far: Background = undefined; // 远景
 var near: Background = undefined; // 近景
 
 const sceneType = enum { title, game, end };
-pub var currentScene: sceneType = .title;
+pub var currentScene: sceneType = .end;
 
 pub fn init() void {
     const text = gfx.loadTexture("assets/font/font.png", .init(1100, 1100));
@@ -71,6 +71,10 @@ pub fn init() void {
     near = .init("assets/image/Stars-A.png", 30);
 
     zhu.audio.playMusic("assets/music/03_Racing_Through_Asteroids_Loop.ogg");
+}
+
+pub fn handleEvent(event: *const window.Event) void {
+    if (currentScene == .end) end.handleEvent(event);
 }
 
 pub fn update(delta: f32) void {
