@@ -15,6 +15,8 @@ var name: []u8 = &.{};
 
 var blink: bool = true; // 输入光标闪烁
 var blinkTimer: window.Timer = .init(0.7); // 输入光标闪烁
+const Score = struct { name: []const u8, score: u32 };
+var scoreBoard: [8]Score = undefined; // 最多显示 8 个
 
 pub fn handleEvent(event: *const zhu.window.Event) void {
     if (!isTyping or event.type != .CHAR) return;
@@ -26,7 +28,7 @@ pub fn handleEvent(event: *const zhu.window.Event) void {
 }
 
 pub fn update(delta: f32) void {
-    updateTyping(delta);
+    if (isTyping) return updateTyping(delta);
 }
 
 fn updateTyping(delta: f32) void {
@@ -43,9 +45,23 @@ fn updateTyping(delta: f32) void {
         nameIndex -= 1;
         name = text.encodeUtf8(&nameBuffer, nameUnicode[0..nameIndex]);
     }
+
+    if (window.isKeyPress(.ENTER)) { // 确定输入
+        isTyping = false;
+        if (player.score > scoreBoard[scoreBoard.len - 1].score) {
+            // 只有大于最小的得分，才进行保存。
+            saveScore();
+        }
+    }
 }
 
+fn saveScore() void {}
+
 pub fn draw() void {
+    if (isTyping) return drawTyping();
+}
+
+fn drawTyping() void {
     var buffer: [255]u8 = undefined;
     const score = zhu.format(&buffer, "你的得分是：{}", .{player.score});
     text.drawCenter(score, 0.1, .{ .spacing = 2 });
