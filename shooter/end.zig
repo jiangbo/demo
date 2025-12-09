@@ -7,14 +7,17 @@ const text = zhu.text;
 const player = @import("player.zig");
 
 var isTyping: bool = true;
-var name: [20]u32 = undefined;
+var nameUnicode: [20]u21 = undefined;
 var nameIndex: u8 = 0;
+var nameBuffer: [nameUnicode.len * 3]u8 = undefined;
+var name: []u8 = &.{};
 
 pub fn handleEvent(event: *const zhu.window.Event) void {
     if (!isTyping or event.type != .CHAR) return;
 
-    name[nameIndex] = event.char_code;
+    nameUnicode[nameIndex] = @intCast(event.char_code);
     nameIndex += 1;
+    name = text.encodeUtf8(&nameBuffer, nameUnicode[0..nameIndex]);
 }
 
 pub fn update(delta: f32) void {
@@ -32,6 +35,6 @@ pub fn draw() void {
     text.drawCenter(typing, 0.6, .{ .spacing = 2 });
 
     if (nameIndex > 0) {
-        text.drawUnicode(name[0..nameIndex], .init(100, 100), .{ .spacing = 2 });
+        text.drawCenter(name, 0.8, .{ .spacing = 2 });
     }
 }

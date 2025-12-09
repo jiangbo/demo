@@ -73,28 +73,9 @@ pub const Option = struct {
     spacing: f32 = 0, // 文字间的间距
 };
 
-pub fn drawUnicode(text: []u32, position: Vector, option: Option) void {
-    var iterator = UnicodeIterator{ .unicode = text };
-    drawIterator(&iterator, position, option);
-}
-
+const Utf8View = std.unicode.Utf8View;
 pub fn drawOption(text: []const u8, position: Vector, option: Option) void {
     var iterator = Utf8View.initUnchecked(text).iterator();
-    drawIterator(&iterator, position, option);
-}
-
-const UnicodeIterator = struct {
-    unicode: []const u32,
-    index: usize = 0,
-
-    pub fn nextCodepoint(self: *UnicodeIterator) ?u21 {
-        if (self.index >= self.unicode.len) return null;
-        defer self.index += 1;
-        return @intCast(self.unicode[self.index]);
-    }
-};
-const Utf8View = std.unicode.Utf8View;
-pub fn drawIterator(iterator: anytype, position: Vector, option: Option) void {
     const size = option.size orelse textSize;
     const height = zon.metrics.lineHeight * size;
     const offsetY = -zon.metrics.ascender * size;
@@ -133,6 +114,16 @@ pub fn computeTextWidthOption(text: []const u8, option: Option) f32 {
         width += searchGlyph(code).advance * sz + option.spacing;
     }
     return width - option.spacing;
+}
+
+pub fn encodeUtf8(buffer: []u8, unicode: []const u21) []u8 {
+    var len: usize = 0;
+    for (unicode) |code| {
+        // 将单个 unicode 编码为 utf8
+        len += std.unicode.utf8Encode(code, buffer[len..]) //
+            catch std.debug.panic("illegal unicode: {}", .{code});
+    }
+    return buffer[0..len];
 }
 
 fn format(buf: []u8, fmt: []const u8, args: anytype) []u8 {
