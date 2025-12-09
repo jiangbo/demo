@@ -13,21 +13,29 @@ var nameIndex: u8 = 0;
 var nameBuffer: [nameUnicode.len * 3]u8 = undefined;
 var name: []u8 = &.{};
 
+var blink: bool = true; // 输入光标闪烁
+var blinkTimer: window.Timer = .init(0.7); // 输入光标闪烁
+
 pub fn handleEvent(event: *const zhu.window.Event) void {
     if (!isTyping or event.type != .CHAR) return;
+    if (nameIndex >= nameUnicode.len - 1) return; // 存不下了
 
     nameUnicode[nameIndex] = @intCast(event.char_code);
     nameIndex += 1;
     name = text.encodeUtf8(&nameBuffer, nameUnicode[0..nameIndex]);
-    std.log.info("handle event", .{});
 }
 
 pub fn update(delta: f32) void {
-    _ = delta;
-    updateTyping();
+    updateTyping(delta);
 }
 
-fn updateTyping() void {
+fn updateTyping(delta: f32) void {
+    // 输入光标闪烁计时器，应该在名称长度判断的前面，因为没有输入也闪烁。
+    if (blinkTimer.isFinishedAfterUpdate(delta)) {
+        blink = !blink;
+        blinkTimer.reset();
+    }
+
     if (nameIndex == 0) return; // 没有输入任何字符的时候，不处理。
 
     if (window.isKeyPress(.BACKSPACE)) {
@@ -47,7 +55,13 @@ pub fn draw() void {
     const typing = "请输入你的名字，按回车键确认：";
     text.drawCenter(typing, 0.6, .{ .spacing = 2 });
 
-    if (nameIndex > 0) {
-        text.drawCenter(name, 0.8, .{ .spacing = 2 });
+    if (nameIndex == 0) {
+        if (blink) text.drawCenter("_", 0.8, .{ .spacing = 2 });
+    } else {
+        const width = text.computeTextWidthOption(name, .{ .spacing = 2 });
+        const x = (window.logicSize.x - width) / 2;
+        const pos: zhu.math.Vector = .init(x, window.logicSize.y * 0.8);
+        text.drawOption(name, pos, .{ .spacing = 2 });
+        if (blink) text.draw("_", pos.addX(width + 4));
     }
 }

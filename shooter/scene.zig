@@ -109,8 +109,8 @@ pub fn draw() void {
     window.keepAspectRatio();
 
     // 绘制背景
-    far.draw();
-    near.draw();
+    // far.draw();
+    // near.draw();
 
     if (currentScene == .title) {
         title.draw();
