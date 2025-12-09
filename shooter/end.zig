@@ -15,8 +15,9 @@ var name: []u8 = &.{};
 
 var blink: bool = true; // 输入光标闪烁
 var blinkTimer: window.Timer = .init(0.7); // 输入光标闪烁
-const Score = struct { name: []const u8, score: u32 };
+const Score = struct { name: []const u8, score: u32 = 0 };
 var scoreBoard: [8]Score = undefined; // 最多显示 8 个
+var scoreIndex: ?u8 = null;
 
 pub fn handleEvent(event: *const zhu.window.Event) void {
     if (!isTyping or event.type != .CHAR) return;
@@ -48,14 +49,37 @@ fn updateTyping(delta: f32) void {
 
     if (window.isKeyPress(.ENTER)) { // 确定输入
         isTyping = false;
-        if (player.score > scoreBoard[scoreBoard.len - 1].score) {
-            // 只有大于最小的得分，才进行保存。
-            saveScore();
-        }
+        saveScore(player.score);
     }
 }
 
-fn saveScore() void {}
+fn saveScore(score: u32) void {
+    if (scoreIndex) |index| {
+        // 只有大于最小的得分，才进行保存。
+        if (player.score <= scoreBoard[index].score) return;
+
+        var insertPos: u8 = 0; // 插入位置
+        for (scoreBoard[0..scoreIndex], 0..) |boardScore, pos| { // 找插入位置
+            if (boardScore < score) {
+                insertPos = @intCast(pos);
+                break;
+            }
+        }
+
+        var scores = std.ArrayList(Score).initBuffer(&scoreBoard);
+        var len = scoreIndex;
+        // 肯定需要插入，如果超过最大长度，则先排除一个。
+        if (len == scoreBoard.len - 1) len -= 1;
+        scores.items.len = len;
+        const scoreName = window.dupe(u8, name);
+        const toInsert: Score = .{ .name = scoreName, .score = score };
+        scores.insertBounded(insertPos, toInsert);
+    } else { // 还没有任何得分记录
+        scoreIndex = 0;
+        const scoreName = window.dupe(u8, name);
+        scoreBoard[0] = .{ .name = scoreName, .score = score };
+    }
+}
 
 pub fn draw() void {
     if (isTyping) return drawTyping();

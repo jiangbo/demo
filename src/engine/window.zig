@@ -308,6 +308,10 @@ pub fn alloc(comptime T: type, n: usize) []T {
     return allocator.alloc(T, n) catch @panic("out of memory");
 }
 
+pub fn dupe(comptime T: type, m: []const T) []T {
+    return allocator.dupe(T, m) catch @panic("out of memory");
+}
+
 pub fn free(memory: anytype) void {
     return allocator.free(memory);
 }
