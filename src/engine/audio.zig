@@ -98,6 +98,12 @@ export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     const buffer = b[0..@as(usize, @intCast(frames * channels))];
     @memset(buffer, 0); // 清空音乐的缓冲区
 
+    fillMusic(buffer, channels);
+    fillSound(buffer);
+}
+
+fn fillMusic(buffer: []f32, channels: i32) void {
+    if (musicVolume == 0) return; // 音量为 0，不播放音乐
     // 先处理音乐，目前只支持播放一个音乐。
     var len: usize = 0; // 存储填充的长度
     // 因为有可能循环播放，所以循环添加，直到缓冲区填满。
@@ -111,9 +117,13 @@ export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     }
     // 填充音乐完成，设置音乐的音量
     for (buffer[0..len]) |*sample| sample.* *= musicVolume;
+}
 
+fn fillSound(buffer: []f32) void {
+    if (soundVolume == 0) return; // 音量为 0，不播放声音
+    // 填充声音
     for (sounds) |*sound| {
-        len = 0;
+        var len: usize = 0;
         if (sound.state != .playing) continue;
         while (len < buffer.len and sound.state == .playing) {
             len += mixSamples(buffer[len..], sound);
