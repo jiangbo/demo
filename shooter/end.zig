@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 const camera = zhu.camera;
 const text = zhu.text;
+const window = zhu.window;
 
 const player = @import("player.zig");
 
@@ -18,10 +19,22 @@ pub fn handleEvent(event: *const zhu.window.Event) void {
     nameUnicode[nameIndex] = @intCast(event.char_code);
     nameIndex += 1;
     name = text.encodeUtf8(&nameBuffer, nameUnicode[0..nameIndex]);
+    std.log.info("handle event", .{});
 }
 
 pub fn update(delta: f32) void {
     _ = delta;
+    updateTyping();
+}
+
+fn updateTyping() void {
+    if (nameIndex == 0) return; // 没有输入任何字符的时候，不处理。
+
+    if (window.isKeyPress(.BACKSPACE)) {
+        // 按退格的时候，删除一个字符，并且更新名字。
+        nameIndex -= 1;
+        name = text.encodeUtf8(&nameBuffer, nameUnicode[0..nameIndex]);
+    }
 }
 
 pub fn draw() void {
