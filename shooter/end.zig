@@ -17,7 +17,7 @@ var blink: bool = true; // 输入光标闪烁
 var blinkTimer: window.Timer = .init(0.7); // 输入光标闪烁
 const Score = struct { name: []const u8, score: u32 = 0 };
 var scoreBoard: [8]Score = undefined; // 最多显示 8 个
-var scoreIndex: u8 = scoreBoard.len; //没有任何得分记录
+var scoreCount: u8 = 0; //没有任何得分记录
 
 pub fn restart() void {
     nameIndex = 0;
@@ -61,28 +61,29 @@ fn updateTyping(delta: f32) void {
 }
 
 fn saveScore(score: u32) void {
-    if (scoreIndex == scoreBoard.len) { // 还没有任何得分记录
-        scoreIndex = 0;
-        const scoreName = window.dupe(u8, name);
-        scoreBoard[0] = .{ .name = scoreName, .score = score };
-    }
-
-    // 只有大于最小的得分，才进行保存。
-    if (player.score <= scoreBoard[scoreIndex].score) return;
+    // 在得分记录满的情况下，只有大于最小的得分，才进行保存。
+    if (scoreCount == scoreBoard.len and
+        player.score <= scoreBoard[scoreCount - 1].score) return;
 
     // 待插入的分数
     const scoreName = window.dupe(u8, name);
     const toInsert: Score = .{ .name = scoreName, .score = score };
 
-    if (scoreIndex < scoreBoard.len - 1) scoreIndex += 1;
-    for (scoreBoard[0..scoreIndex], 0..) |boardScore, i| {
+    for (scoreBoard[0..scoreCount], 0..) |boardScore, i| {
         if (boardScore.score < score) {
-            @memmove(scoreBoard[i + 1 ..], scoreBoard[i .. scoreBoard.len - 1]);
+            if (scoreCount == scoreBoard.len) {
+                // 得分记录满了，释放删除的姓名的内存
+                window.free(scoreBoard[scoreCount - 1].name);
+            } else scoreCount += 1; // 没有满，增加一个记录
+            const dest = scoreBoard[i + 1 .. scoreBoard.len];
+            @memmove(dest, scoreBoard[i .. scoreBoard.len - 1]);
             scoreBoard[i] = toInsert;
             return;
         }
     }
-    scoreBoard[scoreIndex] = toInsert;
+
+    scoreBoard[scoreCount] = toInsert; // 插入到最后一个
+    scoreCount += 1;
 }
 
 pub fn draw() void {
@@ -91,7 +92,7 @@ pub fn draw() void {
     window.drawCenter("得分榜", 0.1, .{ .size = 72, .spacing = 5 });
 
     var y = 0.25 * window.logicSize.y;
-    for (scoreBoard[0 .. scoreIndex + 1], 0..) |score, i| {
+    for (scoreBoard[0..scoreCount], 0..) |score, i| {
         text.drawFmt("{}. {s}", .init(100, y), .{ i + 1, score.name });
         const numberText = text.globalFormatNumber(score.score);
         text.drawRight(numberText, .init(window.logicSize.x - 100, y), .{});
@@ -122,8 +123,7 @@ fn drawTyping() void {
 }
 
 pub fn deinit() void {
-    if (scoreIndex == scoreBoard.len) return;
-    for (scoreBoard[0 .. scoreIndex + 1]) |score| {
+    for (scoreBoard[0..scoreCount]) |score| {
         window.free(score.name);
     }
 }
