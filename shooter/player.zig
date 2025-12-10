@@ -108,6 +108,7 @@ pub fn update(delta: f32) void {
             // 计时器结束后，进入结束场景
             scene.currentScene = .end;
             scene.isTyping = true;
+            zhu.audio.playMusic("assets/music/06_Battle_in_Space_Intro.ogg");
         }
         // 玩家还没有爆炸动画，就添加一个
         if (!bombed) {

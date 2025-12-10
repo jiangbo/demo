@@ -10,7 +10,7 @@ var timer: window.Timer = .init(1); // 闪烁的定时器
 var blink: bool = true;
 
 pub fn update(delta: f32) void {
-    if (window.isKeyRelease(.J)) scene.currentScene = .game;
+    if (window.isKeyRelease(.J)) scene.restart();
 
     // 计时器闪烁
     if (timer.isFinishedAfterUpdate(delta)) {

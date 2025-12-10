@@ -103,6 +103,11 @@ pub fn resetScissor() void {
     batch.encodeCommand(.{ .scissor = .fromMax(.zero, window.clientSize) });
 }
 
+pub fn encodeScaleCommand(scale: Vector) void {
+    batch.setScale(scale);
+    batch.startNewDrawCommand();
+}
+
 pub const frameStats = gpu.frameStats;
 pub const queryFrameStats = gpu.queryFrameStats;
 pub const queryBackend = gpu.queryBackend;

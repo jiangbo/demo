@@ -67,8 +67,7 @@ pub fn init() void {
 
     far = .init("assets/image/Stars-B.png", 20);
     near = .init("assets/image/Stars-A.png", 30);
-
-    zhu.audio.playMusic("assets/music/03_Racing_Through_Asteroids_Loop.ogg");
+    zhu.audio.playMusic("assets/music/06_Battle_in_Space_Intro.ogg");
     player.init();
     enemy.init();
     end.init();
@@ -79,6 +78,7 @@ pub fn restart() void {
     player.restart();
     enemy.restart();
     end.restart();
+    zhu.audio.playMusic("assets/music/03_Racing_Through_Asteroids_Loop.ogg");
 }
 
 pub fn handleEvent(event: *const window.Event) void {

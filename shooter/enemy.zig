@@ -38,7 +38,7 @@ pub fn init() void {
     size = texture.size().scale(0.25);
 
     bulletTexture = gfx.loadTexture("assets/image/bullet-1.png", .init(14, 42));
-    bulletSize = bulletTexture.size().scale(0.25);
+    bulletSize = bulletTexture.size().scale(0.5);
 
     // 子弹的边界框，超出就可以删除了。
     bulletBound = .init(bulletSize.scale(-1), window.logicSize);

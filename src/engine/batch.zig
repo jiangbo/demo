@@ -113,6 +113,10 @@ pub fn startNewDrawCommand() void {
     encodeCommand(.{ .draw = .{ .texture = usingTexture } });
 }
 
+pub fn setScale(scale: Vector2) void {
+    commands[commandIndex].cmd.draw.scale = scale;
+}
+
 pub fn encodeCommand(cmd: CommandUnion) void {
     const index: u32 = @intCast(vertexBuffer.items.len);
     commands[commandIndex].end = index;
