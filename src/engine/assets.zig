@@ -128,7 +128,12 @@ const Music = struct {
 
     pub fn deinit() void {
         var iterator = cache.valueIterator();
-        while (iterator.next()) |value| c.stbAudio.unload(value.source);
+        while (iterator.next()) |value| {
+            if (value.state != .init) {
+                // 不释放没有加载的资源
+                c.stbAudio.unload(value.source);
+            }
+        }
         cache.deinit(allocator);
     }
 };
