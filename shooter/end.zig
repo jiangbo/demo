@@ -34,18 +34,18 @@ pub fn handleEvent(event: *const zhu.window.Event) void {
 }
 
 pub fn update(delta: f32) void {
-    if (scene.isTyping) return updateTyping(delta);
-
-    if (window.isKeyPress(.J)) scene.restart();
-}
-
-fn updateTyping(delta: f32) void {
-    // 输入光标闪烁计时器，应该在名称长度判断的前面，因为没有输入也闪烁。
+    // 输入光标闪烁计时器
     if (blinkTimer.isFinishedAfterUpdate(delta)) {
         blink = !blink;
         blinkTimer.elapsed = 0;
     }
 
+    if (scene.isTyping) return updateTyping();
+
+    if (window.isKeyPress(.J)) scene.restart();
+}
+
+fn updateTyping() void {
     if (nameIndex == 0) return; // 没有输入任何字符的时候，不处理。
 
     if (window.isKeyPress(.BACKSPACE)) {
@@ -98,7 +98,9 @@ pub fn draw() void {
         text.drawRight(numberText, .init(window.logicSize.x - 100, y), .{});
         y += 50;
     }
-    window.drawCenter("按J键重新开始游戏", 0.8, .{ .spacing = 5 });
+    if (blink) {
+        window.drawCenter("按J键重新开始游戏", 0.8, .{ .spacing = 5 });
+    }
 }
 
 fn drawTyping() void {

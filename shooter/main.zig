@@ -49,6 +49,5 @@ pub fn main() void {
     window.run(allocator, .{
         .title = "太空战机",
         .logicSize = .{ .x = 600, .y = 800 },
-        .scale = 0.75,
     });
 }
