@@ -107,6 +107,7 @@ pub fn update(delta: f32) void {
         if (deadTimer.isFinishedAfterUpdate(delta)) {
             // 计时器结束后，进入结束场景
             scene.currentScene = .end;
+            scene.isTyping = true;
         }
         // 玩家还没有爆炸动画，就添加一个
         if (!bombed) {

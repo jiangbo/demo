@@ -8,7 +8,6 @@ const window = zhu.window;
 const player = @import("player.zig");
 const scene = @import("scene.zig");
 
-var isTyping: bool = true;
 var nameUnicode: [20]u21 = undefined;
 var nameIndex: u8 = 0;
 var nameBuffer: [nameUnicode.len * 3]u8 = undefined;
@@ -21,12 +20,11 @@ var scoreBoard: [8]Score = undefined; // 最多显示 8 个
 var scoreIndex: u8 = scoreBoard.len; //没有任何得分记录
 
 pub fn restart() void {
-    isTyping = true;
     nameIndex = 0;
 }
 
 pub fn handleEvent(event: *const zhu.window.Event) void {
-    if (!isTyping or event.type != .CHAR) return;
+    if (!scene.isTyping or event.type != .CHAR) return;
     if (nameIndex >= nameUnicode.len - 1) return; // 存不下了
 
     // 临时保存输入的用户名
@@ -36,7 +34,7 @@ pub fn handleEvent(event: *const zhu.window.Event) void {
 }
 
 pub fn update(delta: f32) void {
-    if (isTyping) return updateTyping(delta);
+    if (scene.isTyping) return updateTyping(delta);
 
     if (window.isKeyPress(.J)) scene.restart();
 }
@@ -57,7 +55,7 @@ fn updateTyping(delta: f32) void {
     }
 
     if (window.isKeyPress(.ENTER)) { // 确定输入
-        isTyping = false;
+        scene.isTyping = false;
         saveScore(player.score);
     }
 }
@@ -88,7 +86,7 @@ fn saveScore(score: u32) void {
 }
 
 pub fn draw() void {
-    if (isTyping) return drawTyping();
+    if (scene.isTyping) return drawTyping();
 
     window.drawCenter("得分榜", 0.1, .{ .size = 72, .spacing = 5 });
 

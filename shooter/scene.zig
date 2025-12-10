@@ -55,6 +55,7 @@ var near: Background = undefined; // 近景
 
 const sceneType = enum { title, game, end };
 pub var currentScene: sceneType = .title;
+pub var isTyping: bool = false;
 
 pub fn init() void {
     const text = gfx.loadTexture("assets/font/font.png", .init(1100, 1100));
@@ -84,12 +85,13 @@ pub fn handleEvent(event: *const window.Event) void {
 }
 
 pub fn update(delta: f32) void {
-    if (window.isKeyRelease(.H)) isHelp = !isHelp;
-    if (window.isKeyRelease(.X)) isDebug = !isDebug;
-    if (window.isKeyRelease(.SPACE)) isPause = !isPause;
+    if (!isTyping) {
+        if (window.isKeyRelease(.H)) isHelp = !isHelp;
+        if (window.isKeyRelease(.X)) isDebug = !isDebug;
 
-    if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
-        return window.toggleFullScreen();
+        if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
+            return window.toggleFullScreen();
+        }
     }
 
     // 更新背景
@@ -101,6 +103,7 @@ pub fn update(delta: f32) void {
     } else if (currentScene == .end) {
         end.update(delta);
     } else {
+        if (window.isKeyRelease(.SPACE)) isPause = !isPause;
         if (isPause) return; // 暂停时不更新游戏
 
         // 更新玩家和敌人
@@ -125,8 +128,8 @@ pub fn draw() void {
     } else {
         enemy.draw();
         player.draw();
-        if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
     }
+    if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
 
 fn drawHelpInfo() void {
