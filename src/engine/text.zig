@@ -11,30 +11,18 @@ const Vector = math.Vector2;
 
 pub const String = []const u8;
 
-var zon: font.Font = undefined;
 var texture: gpu.Texture = undefined;
 var textSize: f32 = 18;
 pub var count: u32 = 0;
-var invalidUnicode: u32 = 0x25A0;
-var invalidIndex: usize = 0;
 
 pub fn init(fontZon: Font, fontTexture: gpu.Texture, size: f32) void {
-    zon = fontZon;
     texture = fontTexture;
-    invalidIndex = binarySearch(invalidUnicode) orelse @panic("no invalid char");
     textSize = size;
-}
-
-fn binarySearch(unicode: u32) ?usize {
-    return std.sort.binarySearch(Glyph, zon.glyphs, unicode, struct {
-        fn compare(a: u32, b: Glyph) std.math.Order {
-            return std.math.order(a, b.unicode);
-        }
-    }.compare);
-}
-
-fn searchGlyph(code: u32) *const Glyph {
-    return &zon.glyphs[binarySearch(code) orelse invalidIndex];
+    // font.init(fontZon);
+    font.initSDF(.{
+        .font = fontZon,
+        .texture = fontTexture,
+    });
 }
 
 pub fn drawNumber(number: anytype, position: Vector) void {
@@ -81,8 +69,8 @@ pub const Option = struct {
 const Utf8View = std.unicode.Utf8View;
 pub fn drawOption(text: String, position: Vector, option: Option) void {
     const size = option.size orelse textSize;
-    const height = zon.metrics.lineHeight * size;
-    const offsetY = -zon.metrics.ascender * size;
+    const height = font.zon.metrics.lineHeight * size;
+    const offsetY = -font.zon.metrics.ascender * size;
     var pos = position.addY(offsetY);
 
     var iterator = Utf8View.initUnchecked(text).iterator();
@@ -94,7 +82,7 @@ pub fn drawOption(text: String, position: Vector, option: Option) void {
         if (pos.x > option.maxWidth) {
             pos = .init(position.x, pos.y + height);
         }
-        const char = searchGlyph(code);
+        const char = font.searchGlyph(code);
         count += 1;
 
         const target = char.planeBounds.toArea();
@@ -116,7 +104,7 @@ pub fn computeTextWidthOption(text: String, option: Option) f32 {
     const sz = option.size orelse textSize; // 提供则获取，没有则获取默认值
     var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {
-        width += searchGlyph(code).advance * sz + option.spacing;
+        width += font.searchGlyph(code).advance * sz + option.spacing;
     }
     return width - option.spacing;
 }

@@ -47,7 +47,7 @@ pub const Rect = struct {
     }
 };
 
-var font: Font = undefined;
+pub var zon: Font = undefined;
 var texture: gpu.Texture = undefined;
 var invalidUnicode: u32 = 0x25A0;
 var invalidIndex: usize = 0;
@@ -65,15 +65,20 @@ const initOptions = struct {
 };
 
 fn binarySearch(unicode: u32) ?usize {
-    return std.sort.binarySearch(Glyph, font.glyphs, unicode, struct {
+    return std.sort.binarySearch(Glyph, zon.glyphs, unicode, struct {
         fn compare(a: u32, b: Glyph) std.math.Order {
             return std.math.order(a, b.unicode);
         }
     }.compare);
 }
 
-pub fn init(options: initOptions) void {
-    font = options.font;
+pub fn init(fontZon: Font) void {
+    zon = fontZon;
+    invalidIndex = binarySearch(invalidUnicode).?;
+}
+
+pub fn initSDF(options: initOptions) void {
+    zon = options.font;
     invalidIndex = binarySearch(invalidUnicode).?;
     texture = options.texture;
 
@@ -86,8 +91,8 @@ pub fn init(options: initOptions) void {
     pipeline = batch.createQuadPipeline(shaderDesc);
 }
 
-fn searchGlyph(code: u32) *const Glyph {
-    return &font.glyphs[binarySearch(code) orelse invalidIndex];
+pub fn searchGlyph(code: u32) *const Glyph {
+    return &zon.glyphs[binarySearch(code) orelse invalidIndex];
 }
 
 pub fn beginDraw() void {
@@ -125,17 +130,17 @@ pub fn drawTextOptions(text: []const u8, options: TextOptions) void {
     const Utf8View = std.unicode.Utf8View;
     var iterator = Utf8View.initUnchecked(text).iterator();
 
-    const offsetY = -font.metrics.ascender * options.size;
+    const offsetY = -zon.metrics.ascender * options.size;
     var pos = options.position.addY(offsetY);
 
     while (iterator.nextCodepoint()) |code| {
         if (code == '\n') {
-            const height = font.metrics.lineHeight * options.size;
+            const height = zon.metrics.lineHeight * options.size;
             pos = .init(options.position.x, pos.y + height);
             continue;
         }
         if (pos.x > options.width) {
-            const height = font.metrics.lineHeight * options.size;
+            const height = zon.metrics.lineHeight * options.size;
             pos = .init(options.position.x, pos.y + height);
         }
         const char = searchGlyph(code);

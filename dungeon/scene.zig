@@ -26,10 +26,11 @@ var isDebug = false;
 var vertexBuffer: []camera.Vertex = undefined;
 
 pub fn init() void {
-    window.initFont(.{
-        .font = @import("zon/font.zon"),
-        .texture = gfx.loadTexture("assets/font.png", .init(960, 960)),
-    });
+    window.initText(
+        @import("zon/font.zon"),
+        gfx.loadTexture("assets/font.png", .init(960, 960)),
+        18,
+    );
 
     vertexBuffer = window.alloc(camera.Vertex, 5000);
     camera.frameStats(true);
@@ -126,6 +127,7 @@ pub fn draw() void {
 }
 
 fn drawHelpInfo() void {
+    std.log.info("draw help", .{});
     const text =
         \\按键说明：
         \\上：W，下：S，左：A，右：D
@@ -140,7 +142,7 @@ fn drawHelpInfo() void {
     }
     debutTextCount = count;
 
-    camera.drawColorText(text, .init(10, 5), .green);
+    camera.drawTextColor(text, .init(10, 5), .green);
 }
 
 var debutTextCount: u32 = 0;
@@ -188,7 +190,7 @@ fn drawDebugInfo() void {
     }
     debutTextCount = count;
 
-    camera.drawColorText(text, .init(10, 5), .green);
+    camera.drawTextColor(text, .init(10, 5), .green);
 }
 
 pub fn deinit() void {
