@@ -71,6 +71,7 @@ pub fn init() void {
     zhu.audio.playMusic("assets/music/03_Racing_Through_Asteroids_Loop.ogg");
     player.init();
     enemy.init();
+    end.init();
 }
 
 pub fn restart() void {

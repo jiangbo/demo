@@ -19,6 +19,10 @@ const Score = struct { name: []const u8, score: u32 = 0 };
 var scoreBoard: [8]Score = undefined; // 最多显示 8 个
 var scoreCount: u8 = 0; //没有任何得分记录
 
+pub fn init() void {
+    loadScore() catch |e| std.log.info("e: {}", .{e});
+}
+
 pub fn restart() void {
     nameIndex = 0;
 }
@@ -56,14 +60,17 @@ fn updateTyping() void {
 
     if (window.isKeyPress(.ENTER)) { // 确定输入
         scene.isTyping = false;
-        saveScore(player.score);
+        updateScore(player.score);
     }
 }
 
-fn saveScore(score: u32) void {
+fn updateScore(score: u32) void {
     // 在得分记录满的情况下，只有大于最小的得分，才进行保存。
     if (scoreCount == scoreBoard.len and
         player.score <= scoreBoard[scoreCount - 1].score) return;
+
+    // 插入得分记录后，保存到文件中
+    defer saveScore() catch @panic("save score failed");
 
     // 待插入的分数
     const scoreName = window.dupe(u8, name);
@@ -121,6 +128,53 @@ fn drawTyping() void {
         const pos: zhu.math.Vector = .init(x, window.logicSize.y * 0.8);
         text.drawOption(name, pos, .{ .spacing = 2 });
         if (blink) text.draw("_", pos.addX(width + 4));
+    }
+}
+
+const magic = [2]u8{ 0xB0, 0x0B };
+fn saveScore() !void {
+    var buffer: [1024]u8 = undefined;
+    var stream = std.Io.fixedBufferStream(&buffer);
+    var writer = stream.writer();
+    try writer.writeAll(&magic);
+    //  游戏版本号
+    try writer.writeAll(&.{ 0x00, 0x00 });
+    for (scoreBoard[0..scoreCount]) |value| {
+        const len: u8 = @intCast(value.name.len);
+        try writer.writeByte(len); // 写入长度
+        try writer.writeAll(value.name); // 写入名字
+        try writer.writeAll(std.mem.asBytes(&value.score)); // 写入分数
+    }
+
+    try window.saveAll("save/score.dat", buffer[0..stream.pos]);
+}
+
+fn loadScore() !void {
+    var buffer: [1024]u8 = undefined;
+    const slice = try window.readAll("save/score.dat", &buffer);
+    var stream = std.io.fixedBufferStream(slice);
+    var reader = stream.reader();
+
+    // 1. magic
+    var magicBuf: [magic.len]u8 = undefined;
+    try reader.readNoEof(&magicBuf);
+    if (!std.mem.eql(u8, &magicBuf, &magic)) return;
+
+    // 2. 游戏版本号
+    var version: [2]u8 = undefined;
+    try reader.readNoEof(&version);
+
+    while (true) {
+        const readLen = reader.readByte() catch |e| { // 读取长度
+            if (e == error.EndOfStream) return;
+            return e;
+        };
+        // 读取名字
+        const len = try reader.readAll(nameBuffer[0..readLen]);
+        const score = try reader.readInt(u32, .little); // 读取分数
+        const n = window.dupe(u8, nameBuffer[0..len]);
+        scoreBoard[scoreCount] = .{ .name = n, .score = score };
+        scoreCount += 1;
     }
 }
 
