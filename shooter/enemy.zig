@@ -44,9 +44,14 @@ pub fn init() void {
     bulletBound = .init(bulletSize.scale(-1), window.logicSize);
 }
 
+pub fn restart() void {
+    enemies.clearRetainingCapacity();
+    bullets.clearRetainingCapacity();
+}
+
 pub fn update(delta: f32) void {
     if (spawnTimer.isFinishedAfterUpdate(delta)) { // 每秒生成一个
-        spawnTimer.reset();
+        spawnTimer.elapsed = 0;
         spawnEnemy();
     }
 

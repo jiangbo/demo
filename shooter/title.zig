@@ -15,7 +15,7 @@ pub fn update(delta: f32) void {
     // 计时器闪烁
     if (timer.isFinishedAfterUpdate(delta)) {
         blink = !blink;
-        timer.reset();
+        timer.elapsed = 0;
     }
 }
 

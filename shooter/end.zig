@@ -6,6 +6,7 @@ const text = zhu.text;
 const window = zhu.window;
 
 const player = @import("player.zig");
+const scene = @import("scene.zig");
 
 var isTyping: bool = true;
 var nameUnicode: [20]u21 = undefined;
@@ -19,6 +20,11 @@ const Score = struct { name: []const u8, score: u32 = 0 };
 var scoreBoard: [8]Score = undefined; // 最多显示 8 个
 var scoreIndex: u8 = scoreBoard.len; //没有任何得分记录
 
+pub fn restart() void {
+    isTyping = true;
+    nameIndex = 0;
+}
+
 pub fn handleEvent(event: *const zhu.window.Event) void {
     if (!isTyping or event.type != .CHAR) return;
     if (nameIndex >= nameUnicode.len - 1) return; // 存不下了
@@ -31,13 +37,15 @@ pub fn handleEvent(event: *const zhu.window.Event) void {
 
 pub fn update(delta: f32) void {
     if (isTyping) return updateTyping(delta);
+
+    if (window.isKeyPress(.J)) scene.restart();
 }
 
 fn updateTyping(delta: f32) void {
     // 输入光标闪烁计时器，应该在名称长度判断的前面，因为没有输入也闪烁。
     if (blinkTimer.isFinishedAfterUpdate(delta)) {
         blink = !blink;
-        blinkTimer.reset();
+        blinkTimer.elapsed = 0;
     }
 
     if (nameIndex == 0) return; // 没有输入任何字符的时候，不处理。

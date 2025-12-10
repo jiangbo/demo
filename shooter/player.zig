@@ -22,7 +22,7 @@ const MAX_HEALTH = 3; // 玩家最大生命值
 var position: gfx.Vector = undefined; // 玩家的位置
 var texture: gfx.Texture = undefined; // 玩家的纹理
 var size: gfx.Vector = undefined; // 玩家的尺寸
-var health: u8 = MAX_HEALTH; // 玩家生命值
+var health: u8 = undefined; // 玩家生命值
 
 var bulletTexture: gfx.Texture = undefined; // 子弹的纹理
 var bulletSize: gfx.Vector = undefined; // 子弹的尺寸
@@ -58,23 +58,33 @@ pub fn init() void {
     texture = gfx.loadTexture("assets/image/SpaceShip.png", .init(241, 187));
     // 图片太大了，缩小到四分之一
     size = texture.size().scale(SCALE);
-    position = window.logicSize.sub(size).div(.init(2, 1));
 
     bulletTexture = gfx.loadTexture("assets/image/laser-1.png", .init(81, 126));
     bulletSize = bulletTexture.size().scale(SCALE);
-    bulletTimer.stop(); // 游戏开始就可以发射子弹
+
     for (&bullets) |*bullet| bullet.dead = true; //初始时所有子弹都可用
     // 初始化爆炸动画
     const tex = gfx.loadTexture("assets/effect/explosion.png", .init(288, 32));
     bombFrameAnimation = .init(tex, &bombFrames);
     bombFrameAnimation.loop = false;
 
-    // 初始化玩家生命值
+    // 初始化玩家生命值图标
     healthTexture = gfx.loadTexture("assets/image/Health UI Black.png", .init(32, 32));
-    deadTimer.reset();
-    bombed = false;
 
     item.init();
+    restart();
+}
+
+pub fn restart() void {
+    bombAnimations.clearRetainingCapacity();
+    item.items.clearRetainingCapacity();
+    // 初始化玩家位置
+    position = window.logicSize.sub(size).div(.init(2, 1));
+    bulletTimer.elapsed = 0; // 游戏开始就可以发射子弹
+    deadTimer.elapsed = 0;
+    bombed = false;
+    health = MAX_HEALTH;
+    score = 0;
 }
 
 pub fn update(delta: f32) void {
@@ -128,7 +138,7 @@ pub fn update(delta: f32) void {
             }
         }
         zhu.audio.playSound("assets/sound/laser_shoot4.ogg");
-        bulletTimer.reset(); // 重置计时器，玩家需要等到计时器结束才可以发射。
+        bulletTimer.elapsed = 0; // 重置计时器，玩家需要等到计时器结束才可以发射。
     }
 
     // 限制玩家的移动边界
