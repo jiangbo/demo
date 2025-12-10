@@ -194,5 +194,6 @@ fn drawDebugInfo() void {
 pub fn deinit() void {
     enemy.deinit();
     player.deinit();
+    end.deinit();
     window.free(vertexBuffer);
 }

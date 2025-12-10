@@ -20,6 +20,6 @@ pub fn update(delta: f32) void {
 }
 
 pub fn draw() void {
-    text.drawCenter("太空战机", 0.35, .{ .size = 72, .spacing = 20 });
-    if (blink) text.drawCenter("按J键开始游戏", 0.8, .{ .spacing = 5 });
+    window.drawCenter("太空战机", 0.35, .{ .size = 72, .spacing = 20 });
+    if (blink) window.drawCenter("按J键开始游戏", 0.8, .{ .spacing = 5 });
 }

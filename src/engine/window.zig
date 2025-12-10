@@ -324,6 +324,10 @@ pub fn isAnyRelease() bool {
     return input.anyRelease;
 }
 
+pub fn drawCenter(str: text.String, y: f32, option: text.Option) void {
+    text.drawCenter(str, logicSize.mul(.init(0.5, y)), option);
+}
+
 pub const File = assets.File;
 pub const loadTexture = assets.loadTexture;
 pub const playSound = audio.playSound;

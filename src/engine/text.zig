@@ -4,11 +4,12 @@ const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const batch = @import("batch.zig");
 const font = @import("font.zig");
-const window = @import("window.zig");
 
 const Font = font.Font;
 const Glyph = font.Glyph;
 const Vector = math.Vector2;
+
+pub const String = []const u8;
 
 var zon: font.Font = undefined;
 var texture: gpu.Texture = undefined;
@@ -46,23 +47,27 @@ pub fn drawNumberColor(number: anytype, pos: Vector, color: Color) void {
     drawColor(text, pos, color);
 }
 
-pub fn draw(text: []const u8, position: math.Vector) void {
+pub fn draw(text: String, position: math.Vector) void {
     drawOption(text, position, .{});
 }
 
-pub fn drawCenter(text: []const u8, y: f32, option: Option) void {
+pub fn drawCenter(text: String, pos: Vector, option: Option) void {
     const width = computeTextWidthOption(text, option);
-    const x = (window.logicSize.x - width) / 2;
-    drawOption(text, .init(x, window.logicSize.y * y), option);
+    drawOption(text, .init(pos.x - width / 2, pos.y), option);
 }
 
-pub fn drawFmt(fmt: []const u8, pos: Vector, args: anytype) void {
+pub fn drawRight(text: String, pos: Vector, option: Option) void {
+    const width = computeTextWidthOption(text, option);
+    drawOption(text, .init(pos.x - width, pos.y), option);
+}
+
+pub fn drawFmt(comptime fmt: String, pos: Vector, args: anytype) void {
     var buffer: [1024]u8 = undefined;
     draw(format(&buffer, fmt, args), pos);
 }
 
 const Color = math.Vector4;
-pub fn drawColor(text: []const u8, pos: Vector, color: Color) void {
+pub fn drawColor(text: String, pos: Vector, color: Color) void {
     drawOption(text, pos, .{ .color = color });
 }
 
@@ -74,13 +79,13 @@ pub const Option = struct {
 };
 
 const Utf8View = std.unicode.Utf8View;
-pub fn drawOption(text: []const u8, position: Vector, option: Option) void {
-    var iterator = Utf8View.initUnchecked(text).iterator();
+pub fn drawOption(text: String, position: Vector, option: Option) void {
     const size = option.size orelse textSize;
     const height = zon.metrics.lineHeight * size;
     const offsetY = -zon.metrics.ascender * size;
     var pos = position.addY(offsetY);
 
+    var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {
         if (code == '\n') {
             pos = .init(position.x, pos.y + height);
@@ -102,11 +107,11 @@ pub fn drawOption(text: []const u8, position: Vector, option: Option) void {
     }
 }
 
-pub fn computeTextWidth(text: []const u8) f32 {
+pub fn computeTextWidth(text: String) f32 {
     return computeTextWidthOption(text, .{});
 }
 
-pub fn computeTextWidthOption(text: []const u8, option: Option) f32 {
+pub fn computeTextWidthOption(text: String, option: Option) f32 {
     var width: f32 = 0;
     const sz = option.size orelse textSize; // 提供则获取，没有则获取默认值
     var iterator = Utf8View.initUnchecked(text).iterator();
@@ -126,6 +131,15 @@ pub fn encodeUtf8(buffer: []u8, unicode: []const u21) []u8 {
     return buffer[0..len];
 }
 
-fn format(buf: []u8, fmt: []const u8, args: anytype) []u8 {
+pub fn format(buf: []u8, comptime fmt: String, args: anytype) []u8 {
     return std.fmt.bufPrint(buf, fmt, args) catch @panic("text too long");
+}
+
+var globalBuffer: [1024]u8 = undefined;
+pub fn globalFormat(comptime fmt: String, args: anytype) []u8 {
+    return format(&globalBuffer, fmt, args);
+}
+
+pub fn globalFormatNumber(args: anytype) []u8 {
+    return globalFormat("{d}", .{args});
 }
