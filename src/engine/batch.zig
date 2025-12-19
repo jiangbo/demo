@@ -9,8 +9,8 @@ const Matrix = math.Matrix;
 const Texture = gpu.Texture;
 
 pub var pipeline: gpu.RenderPipeline = undefined;
-pub var usingTexture: gpu.Texture = undefined;
 pub var sampler: gpu.Sampler = undefined;
+var usingTexture: gpu.Texture = undefined;
 
 var bindGroup: gpu.BindGroup = .{};
 var gpuBuffer: gpu.Buffer = undefined;
@@ -67,13 +67,11 @@ pub fn endDraw(pos: Vector2) void {
 
     commands[commandIndex].end = @intCast(vertexBuffer.items.len);
     gpu.updateBuffer(gpuBuffer, vertexBuffer.items);
-    var drawCmd: DrawCommand = undefined;
     for (commands[0 .. commandIndex + 1]) |cmd| {
         switch (cmd.cmd) {
-            .draw => |d| drawCmd = d,
+            .draw => |drawCmd| doDraw(pos, cmd, drawCmd),
             .scissor => |area| gpu.scissor(area),
         }
-        drawInstanced(pos, cmd, drawCmd);
     }
 }
 
@@ -125,7 +123,7 @@ pub fn encodeCommand(cmd: CommandUnion) void {
     commands[commandIndex].start = index;
 }
 
-fn drawInstanced(position: Vector2, cmd: Command, drawCmd: DrawCommand) void {
+fn doDraw(position: Vector2, cmd: Command, drawCmd: DrawCommand) void {
     // 绑定流水线
     gpu.setPipeline(pipeline);
 
