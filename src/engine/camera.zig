@@ -44,7 +44,7 @@ pub fn beginDraw(color: gpu.Color) void {
 }
 
 pub fn debugDraw(area: math.Rect) void {
-    drawRect(area, .{ .x = 1, .z = 1, .w = 0.4 });
+    drawRect(area, .{ .color = .{ .x = 1, .z = 1, .w = 0.4 } });
 }
 
 pub fn draw(texture: gpu.Texture, pos: math.Vector) void {
@@ -55,12 +55,17 @@ pub fn drawFlipX(texture: Texture, pos: Vector, flipX: bool) void {
     drawOption(texture, pos, .{ .flipX = flipX });
 }
 
-pub fn drawRectLine(start: Vector, end: Vector, color: Color) void {
-    if (start.x == end.x) {
-        drawRect(.init(start, .init(end.y - start.y, 1)), color);
-    } else if (start.y == end.y) {
-        drawRect(.init(start, .init(1, end.x - start.x)), color);
-    }
+const LineOption = struct { color: Color = .white, width: f32 = 1 };
+pub fn drawLine(start: Vector, end: Vector, option: LineOption) void {
+    const vector = end.sub(start);
+    const y = start.y - option.width / 2;
+
+    drawOption(whiteTexture, .init(start.x, y), .{
+        .size = .init(vector.length(), option.width),
+        .color = option.color,
+        .radian = vector.atan2(),
+        .pivot = .init(0, 0.5),
+    });
 }
 
 pub fn drawRectBorder(area: Rect, width: f32, color: Color) void {
@@ -73,10 +78,12 @@ pub fn drawRectBorder(area: Rect, width: f32, color: Color) void {
     drawRect(.init(start, size), color); // 右
 }
 
-pub fn drawRect(area: math.Rect, color: Color) void {
+const RectOption = struct { color: Color = .white, radian: f32 = 0 };
+pub fn drawRect(area: math.Rect, option: RectOption) void {
     drawOption(whiteTexture, area.min, .{
         .size = area.size,
-        .color = color,
+        .color = option.color,
+        .radian = option.radian,
     });
 }
 
