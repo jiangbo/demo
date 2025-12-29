@@ -56,6 +56,21 @@ pub fn drawFlipX(texture: Texture, pos: Vector, flipX: bool) void {
 }
 
 const LineOption = struct { color: Color = .white, width: f32 = 1 };
+
+/// 绘制轴对齐的线
+pub fn drawAxisLine(start: Vector, end: Vector, option: LineOption) void {
+    const rectOption = RectOption{ .color = option.color };
+    const halfWidth = -@floor(option.width / 2);
+    if (start.x == end.x) {
+        const size = Vector2.init(option.width, end.y - start.y);
+        drawRect(.init(start.addX(halfWidth), size), rectOption);
+    } else if (start.y == end.y) {
+        const size = Vector2.init(end.x - start.x, option.width);
+        drawRect(.init(start.addY(halfWidth), size), rectOption);
+    }
+}
+
+/// 绘制任意线
 pub fn drawLine(start: Vector, end: Vector, option: LineOption) void {
     const vector = end.sub(start);
     const y = start.y - option.width / 2;
