@@ -2,24 +2,22 @@ const std = @import("std");
 const builtin = @import("builtin");
 const zhu = @import("zhu");
 
-const window = @import("zhu").window;
-// const scene = @import("scene.zig");
+const scene = @import("scene.zig");
 
 var soundBuffer: [20]zhu.audio.Sound = undefined;
 
 pub fn init() void {
     zhu.audio.init(44100, &soundBuffer);
-    // scene.init();
+    scene.init();
 }
 
 pub fn frame(delta: f32) void {
-    _ = delta;
-    // scene.update(delta);
-    // scene.draw();
+    scene.update(delta);
+    scene.draw();
 }
 
 pub fn deinit() void {
-    // scene.deinit();
+    scene.deinit();
     zhu.audio.deinit();
 }
 
@@ -37,7 +35,7 @@ pub fn main() void {
         _ = debugAllocator.deinit();
     };
 
-    window.run(allocator, .{
+    zhu.window.run(allocator, .{
         .title = "幽灵逃生",
         .logicSize = .{ .x = 1280, .y = 720 },
     });

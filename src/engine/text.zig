@@ -109,6 +109,15 @@ pub fn computeTextWidthOption(text: String, option: Option) f32 {
     return width - option.spacing;
 }
 
+pub fn computeTextCount(text: String) u32 {
+    var iterator = Utf8View.initUnchecked(text).iterator();
+    var total: u32 = 0;
+    while (iterator.nextCodepoint()) |code| {
+        if (code != '\n') total += 1;
+    }
+    return total;
+}
+
 pub fn encodeUtf8(buffer: []u8, unicode: []const u21) []u8 {
     var len: usize = 0;
     for (unicode) |code| {
