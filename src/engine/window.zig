@@ -1,4 +1,6 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
 const sk = @import("sokol");
 const math = @import("math.zig");
 const assets = @import("assets.zig");
@@ -114,6 +116,7 @@ pub const WindowInfo = struct {
     title: [:0]const u8,
     logicSize: math.Vector,
     scale: f32 = 1,
+    disableIME: bool = true,
 };
 
 pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
@@ -128,6 +131,8 @@ pub var allocator: std.mem.Allocator = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
 var timer: std.time.Timer = undefined;
 
+pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
+
 const root = @import("root");
 pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
@@ -135,6 +140,12 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     displayArea = .init(.zero, logicSize);
     countingAllocator = CountingAllocator.init(allocs);
     allocator = countingAllocator.allocator();
+
+    if (info.disableIME) {
+        if (builtin.os.tag == .windows) {
+            _ = ImmDisableIME(-1);
+        }
+    }
 
     const size = logicSize.scale(info.scale);
     sk.app.run(.{
