@@ -55,7 +55,7 @@ pub fn drawFlipX(texture: Texture, pos: Vector, flipX: bool) void {
     drawOption(texture, pos, .{ .flipX = flipX });
 }
 
-const LineOption = struct { color: Color = .white, width: f32 = 1 };
+pub const LineOption = struct { color: Color = .white, width: f32 = 1 };
 
 /// 绘制轴对齐的线
 pub fn drawAxisLine(start: Vector, end: Vector, option: LineOption) void {
@@ -83,7 +83,8 @@ pub fn drawLine(start: Vector, end: Vector, option: LineOption) void {
     });
 }
 
-pub fn drawRectBorder(area: Rect, width: f32, color: Color) void {
+pub fn drawRectBorder(area: Rect, width: f32, rectColor: Color) void {
+    const color = RectOption{ .color = rectColor };
     drawRect(.init(area.min, .init(area.size.x, width)), color); // 上
     var start = area.min.addY(area.size.y - width);
     drawRect(.init(start, .init(area.size.x, width)), color); // 下

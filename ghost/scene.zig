@@ -15,7 +15,7 @@ pub fn init() void {
 
     vertexBuffer = window.alloc(camera.Vertex, 5000);
     camera.frameStats(true);
-    camera.init(vertexBuffer);
+    camera.initWithWhiteTexture(vertexBuffer);
 }
 
 pub fn update(delta: f32) void {
@@ -26,7 +26,11 @@ pub fn update(delta: f32) void {
         return window.toggleFullScreen();
     }
 
-    _ = delta;
+    const speed: f32 = std.math.round(400 * delta);
+    if (window.isKeyDown(.UP)) camera.position.y -= speed;
+    if (window.isKeyDown(.DOWN)) camera.position.y += speed;
+    if (window.isKeyDown(.LEFT)) camera.position.x -= speed;
+    if (window.isKeyDown(.RIGHT)) camera.position.x += speed;
 }
 
 pub fn draw() void {
@@ -34,7 +38,27 @@ pub fn draw() void {
     defer camera.endDraw();
     window.keepAspectRatio();
 
+    const gridColor = gfx.color(0.5, 0.5, 0.5, 1);
+    const area = gfx.Rect.init(.zero, window.logicSize.scale(3));
+    drawGrid(area, 80, gridColor);
+    camera.drawRectBorder(area, 10, .white);
+
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
+}
+
+fn drawGrid(area: gfx.Rect, width: f32, lineColor: gfx.Color) void {
+    const max = area.max();
+    const color = camera.LineOption{ .color = lineColor };
+
+    var min = area.min;
+    while (min.x < max.x) : (min.x += width) {
+        camera.drawAxisLine(min, .init(min.x, max.y), color);
+    }
+
+    min = area.min;
+    while (min.y < max.y) : (min.y += width) {
+        camera.drawAxisLine(min, .init(max.x, min.y), color);
+    }
 }
 
 fn drawHelpInfo() void {
