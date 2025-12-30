@@ -337,13 +337,24 @@ pub fn useMouseCursor(path: [:0]const u8) void {
                 .pixels = @bitCast(sk.gfx.asRange(image.data)),
                 .width = image.width,
                 .height = image.height,
-                .cursor_hotspot_x = @divTrunc(image.width, 2),
-                .cursor_hotspot_y = @divTrunc(image.height, 2),
             });
             sk.app.setMouseCursor(cursor);
         }
     }.callback);
 }
+
+pub fn useWindowIcon(path: [:0]const u8) void {
+    assets.loadImage(path, struct {
+        fn callback(image: assets.Image) void {
+            var desc: sk.app.IconDesc = .{};
+            desc.images[0].pixels = @bitCast(sk.gfx.asRange(image.data));
+            desc.images[0].width = image.width;
+            desc.images[0].height = image.height;
+            sk.app.setIcon(desc);
+        }
+    }.callback);
+}
+
 pub fn drawCenter(str: text.String, y: f32, option: text.Option) void {
     text.drawCenter(str, logicSize.mul(.init(0.5, y)), option);
 }
