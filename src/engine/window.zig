@@ -329,7 +329,16 @@ pub fn exit() void {
 pub fn isAnyRelease() bool {
     return input.anyRelease;
 }
+// pub const setMouseCursor = sk.app.setMouseCursor;
+// const MouseCursor = sk.app.MouseCursor;
+// pub fn bindMouseCursor(cursor: MouseCursor, path: [:0]const u8) void {
 
+// assets.File.load(path: [:0]const u8, index: usize, handler: *const fn (Response) []const u8)
+
+//     sk.app.bindMouseCursorImage(cursor, .{ .pixels =  });
+// }
+
+// pub fn showMouseCursor(path: [:0]const u8) void {}
 pub fn drawCenter(str: text.String, y: f32, option: text.Option) void {
     text.drawCenter(str, logicSize.mul(.init(0.5, y)), option);
 }

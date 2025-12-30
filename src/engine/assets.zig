@@ -32,6 +32,23 @@ pub fn loadMusic(path: [:0]const u8, loop: bool) *audio.Music {
     return Music.load(path, loop);
 }
 
+pub const Image = c.stbImage.Image;
+pub const ImageHandler = *const fn (Image) void;
+pub fn loadImage(path: [:0]const u8, handler: ImageHandler) void {
+    File.load(path, 0, struct {
+        fn callback(response: Response) []const u8 {
+            const image = c.stbImage.loadFromMemory(response.data) //
+                catch @panic("load image error");
+            handler(image);
+            return response.allocator.dupe(u8, image.data) catch unreachable;
+        }
+    }.callback);
+}
+
+fn oom() void {
+    @panic("out of memory");
+}
+
 pub const Texture = struct {
     var cache: std.StringHashMapUnmanaged(gfx.Texture) = .empty;
 
