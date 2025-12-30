@@ -33,19 +33,18 @@ pub fn loadMusic(path: [:0]const u8, loop: bool) *audio.Music {
 }
 
 pub const Image = c.stbImage.Image;
-pub const ImageHandler = *const fn (Image) void;
-pub fn loadImage(path: [:0]const u8, handler: ImageHandler) void {
-    File.load(path, 0, struct {
+pub fn loadImage(path: [:0]const u8, handler: fn (Image) void) void {
+    _ = File.load(path, 0, struct {
         fn callback(response: Response) []const u8 {
             const image = c.stbImage.loadFromMemory(response.data) //
                 catch @panic("load image error");
             handler(image);
-            return response.allocator.dupe(u8, image.data) catch unreachable;
+            return response.allocator.dupe(u8, image.data) catch oom();
         }
     }.callback);
 }
 
-fn oom() void {
+fn oom() noreturn {
     @panic("out of memory");
 }
 
