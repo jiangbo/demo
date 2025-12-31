@@ -5,21 +5,20 @@ pub const stbImage = struct {
 
     pub const Image = struct { data: []u8 = &[_]u8{}, width: i32, height: i32 };
 
-    pub fn load(path: [:0]const u8) !Image {
+    pub fn load(path: [:0]const u8) ?Image {
         var width: i32, var height: i32 = .{ 0, 0 };
 
-        const result = stb.stbi_load(path, &width, &height, 0, 4);
-        if (result == null) return error.LoadImageFailed;
+        const result = stb.stbi_load(path, &width, &height, 0, 4) orelse return null;
 
         var image: Image = .{ .width = width, .height = height };
         image.data = @as([*]u8, @ptrCast(result))[0 .. image.width * image.height * 4];
         return image;
     }
 
-    pub fn loadFromMemory(buffer: []const u8) !Image {
+    pub fn loadFromMemory(buffer: []const u8) Image {
         var width: i32, var height: i32 = .{ 0, 0 };
-        const result = stb.stbi_load_from_memory(buffer.ptr, @intCast(buffer.len), &width, &height, 0, 4);
-        if (result == null) return error.LoadImageFailed;
+        const result = stb.stbi_load_from_memory(buffer.ptr, //
+            @intCast(buffer.len), &width, &height, 0, 4).?;
         var image: Image = .{ .width = width, .height = height };
         const size: usize = @intCast(image.width * image.height * 4);
         image.data = @as([*]u8, @ptrCast(result))[0..size];
@@ -44,11 +43,10 @@ pub const stbVorbis = struct {
     pub const Audio = stb.stb_vorbis;
     pub const AudioInfo = stb.stb_vorbis_info;
 
-    pub fn loadFromMemory(data: []const u8) !*Audio {
+    pub fn loadFromMemory(data: []const u8) *Audio {
         var errorCode: c_int = 0;
 
         const vorbis = stb.stb_vorbis_open_memory(data.ptr, @intCast(data.len), &errorCode, null);
-        if (errorCode != 0 or vorbis == null) return error.loadAudioFailed;
         return vorbis.?;
     }
 

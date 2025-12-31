@@ -127,7 +127,6 @@ pub var logicSize: math.Vector = .zero;
 pub var clientSize: math.Vector = .zero;
 pub var ratio: math.Vector = .init(1, 1);
 pub var displayArea: math.Rect = undefined;
-pub var allocator: std.mem.Allocator = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
 var timer: std.time.Timer = undefined;
 
@@ -139,7 +138,7 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     logicSize = info.logicSize;
     displayArea = .init(.zero, logicSize);
     countingAllocator = CountingAllocator.init(allocs);
-    allocator = countingAllocator.allocator();
+    assets.init(countingAllocator.allocator());
 
     if (info.disableIME) {
         if (builtin.os.tag == .windows) {
@@ -162,7 +161,6 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
 export fn windowInit() void {
     clientSize = .init(sk.app.widthf(), sk.app.heightf());
     ratio = clientSize.div(logicSize);
-    assets.init(allocator);
     gpu.init();
     math.setRandomSeed(timer.read());
     call(root, "init", .{});
@@ -310,18 +308,6 @@ pub fn saveAll(path: [:0]const u8, content: []const u8) !void {
     try file.writeAll(content);
 }
 
-pub fn alloc(comptime T: type, n: usize) []T {
-    return allocator.alloc(T, n) catch @panic("out of memory");
-}
-
-pub fn dupe(comptime T: type, m: []const T) []T {
-    return allocator.dupe(T, m) catch @panic("out of memory");
-}
-
-pub fn free(memory: anytype) void {
-    return allocator.free(memory);
-}
-
 pub fn exit() void {
     sk.app.requestQuit();
 }
@@ -330,13 +316,13 @@ pub fn isAnyRelease() bool {
     return input.anyRelease;
 }
 
-pub fn useMouseCursor(path: [:0]const u8) void {
-    assets.loadImage(path, struct {
-        fn callback(image: assets.Image) void {
+pub fn useMouseIcon(path: [:0]const u8) void {
+    assets.loadIcon(path, struct {
+        fn callback(icon: assets.Icon) void {
             const cursor = sk.app.bindMouseCursorImage(.CUSTOM_0, .{
-                .pixels = @bitCast(sk.gfx.asRange(image.data)),
-                .width = image.width,
-                .height = image.height,
+                .pixels = @bitCast(sk.gfx.asRange(icon.data)),
+                .width = icon.width,
+                .height = icon.height,
             });
             sk.app.setMouseCursor(cursor);
         }
@@ -344,12 +330,14 @@ pub fn useMouseCursor(path: [:0]const u8) void {
 }
 
 pub fn useWindowIcon(path: [:0]const u8) void {
-    assets.loadImage(path, struct {
-        fn callback(image: assets.Image) void {
+    assets.loadIcon(path, struct {
+        fn callback(icon: assets.Icon) void {
             var desc: sk.app.IconDesc = .{};
-            desc.images[0].pixels = @bitCast(sk.gfx.asRange(image.data));
-            desc.images[0].width = image.width;
-            desc.images[0].height = image.height;
+            desc.images[0] = .{
+                .pixels = @bitCast(sk.gfx.asRange(icon.data)),
+                .width = icon.width,
+                .height = icon.height,
+            };
             sk.app.setIcon(desc);
         }
     }.callback);
@@ -358,6 +346,10 @@ pub fn useWindowIcon(path: [:0]const u8) void {
 pub fn drawCenter(str: text.String, y: f32, option: text.Option) void {
     text.drawCenter(str, logicSize.mul(.init(0.5, y)), option);
 }
+
+pub const alloc = assets.alloc;
+pub const dupe = assets.dupe;
+pub const free = assets.free;
 
 pub const File = assets.File;
 pub const loadTexture = assets.loadTexture;

@@ -7,8 +7,8 @@ const audio = @import("audio.zig");
 
 var allocator: std.mem.Allocator = undefined;
 
-pub fn init(alloc: std.mem.Allocator) void {
-    allocator = alloc;
+pub fn init(allocator1: std.mem.Allocator) void {
+    allocator = allocator1;
     sk.fetch.setup(.{ .logger = .{ .func = sk.log.func } });
 }
 
@@ -18,6 +18,22 @@ pub fn deinit() void {
     Music.deinit();
     File.deinit();
     sk.fetch.shutdown();
+}
+
+pub fn alloc(comptime T: type, n: usize) []T {
+    return allocator.alloc(T, n) catch oom();
+}
+
+pub fn dupe(comptime T: type, m: []const T) []T {
+    return allocator.dupe(T, m) catch oom();
+}
+
+pub fn free(memory: anytype) void {
+    return allocator.free(memory);
+}
+
+pub fn oom() noreturn {
+    @panic("out of memory");
 }
 
 pub fn loadTexture(path: [:0]const u8, size: gfx.Vector) gfx.Texture {
@@ -32,27 +48,22 @@ pub fn loadMusic(path: [:0]const u8, loop: bool) *audio.Music {
     return Music.load(path, loop);
 }
 
-pub const Image = c.stbImage.Image;
-pub fn loadImage(path: [:0]const u8, handler: fn (Image) void) void {
+pub const Icon = c.stbImage.Image;
+pub fn loadIcon(path: [:0]const u8, handler: fn (Icon) void) void {
     _ = File.load(path, 0, struct {
         fn callback(response: Response) []const u8 {
-            const image = c.stbImage.loadFromMemory(response.data) //
-                catch @panic("load image error");
-            handler(image);
-            return response.allocator.dupe(u8, image.data) catch oom();
+            const icon = c.stbImage.loadFromMemory(response.data);
+            handler(icon);
+            return dupe(u8, icon.data);
         }
     }.callback);
-}
-
-fn oom() noreturn {
-    @panic("out of memory");
 }
 
 pub const Texture = struct {
     var cache: std.StringHashMapUnmanaged(gfx.Texture) = .empty;
 
     pub fn load(path: [:0]const u8, size: gfx.Vector) gfx.Texture {
-        const entry = cache.getOrPut(allocator, path) catch unreachable;
+        const entry = cache.getOrPut(allocator, path) catch oom();
         if (entry.found_existing) return entry.value_ptr.*;
 
         const view = sk.gfx.allocView();
@@ -65,7 +76,7 @@ pub const Texture = struct {
     fn handler(response: Response) []const u8 {
         const data = response.data;
 
-        const image = c.stbImage.loadFromMemory(data) catch unreachable;
+        const image = c.stbImage.loadFromMemory(data);
         defer c.stbImage.unload(image);
         const texture = cache.getPtr(response.path).?;
 
@@ -88,7 +99,7 @@ const Sound = struct {
     var cache: std.StringHashMapUnmanaged(audio.Sound) = .empty;
 
     fn load(path: [:0]const u8, loop: bool) *audio.Sound {
-        const entry = cache.getOrPut(allocator, path) catch unreachable;
+        const entry = cache.getOrPut(allocator, path) catch oom();
         if (entry.found_existing) return entry.value_ptr;
 
         const index = audio.allocSoundBuffer();
@@ -100,7 +111,7 @@ const Sound = struct {
     fn handler(response: Response) []const u8 {
         const data = response.data;
 
-        const stbAudio = c.stbAudio.loadFromMemory(data) catch unreachable;
+        const stbAudio = c.stbAudio.loadFromMemory(data);
         defer c.stbAudio.unload(stbAudio);
         const info = c.stbAudio.getInfo(stbAudio);
 
@@ -123,7 +134,7 @@ const Music = struct {
     var cache: std.StringHashMapUnmanaged(audio.Music) = .empty;
 
     fn load(path: [:0]const u8, loop: bool) *audio.Music {
-        const entry = cache.getOrPut(allocator, path) catch unreachable;
+        const entry = cache.getOrPut(allocator, path) catch oom();
         if (entry.found_existing) return entry.value_ptr;
 
         _ = File.load(path, 0, handler);
@@ -132,8 +143,8 @@ const Music = struct {
     }
 
     fn handler(response: Response) []const u8 {
-        const data = allocator.dupe(u8, response.data) catch unreachable;
-        const stbAudio = c.stbAudio.loadFromMemory(data) catch unreachable;
+        const data = dupe(u8, response.data);
+        const stbAudio = c.stbAudio.loadFromMemory(data);
 
         const value = cache.getPtr(response.path).?;
         value.source = stbAudio;
@@ -178,7 +189,7 @@ pub const File = struct {
     var cache: std.StringHashMapUnmanaged(FileCache) = .empty;
 
     pub fn load(path: [:0]const u8, index: usize, handler: Handler) *FileCache {
-        const entry = cache.getOrPut(allocator, path) catch unreachable;
+        const entry = cache.getOrPut(allocator, path) catch oom();
         if (entry.found_existing) return entry.value_ptr;
 
         entry.value_ptr.* = .{ .index = index, .handler = handler };
