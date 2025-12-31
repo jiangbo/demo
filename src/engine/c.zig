@@ -37,7 +37,7 @@ pub const stbVorbis = struct {
         @cDefine("STB_VORBIS_HEADER_ONLY", {});
         @cDefine("STB_VORBIS_NO_INTEGER_CONVERSION", {});
         @cDefine("STB_VORBIS_NO_STDIO", {});
-        @cInclude("stb_Vorbis.c");
+        @cInclude("stb_vorbis.c");
     });
 
     pub const Audio = stb.stb_vorbis;
