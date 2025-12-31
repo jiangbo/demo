@@ -128,6 +128,7 @@ pub var clientSize: math.Vector = .zero;
 pub var ratio: math.Vector = .init(1, 1);
 pub var displayArea: math.Rect = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
+pub var allocator: std.mem.Allocator = undefined;
 var timer: std.time.Timer = undefined;
 
 pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
@@ -138,7 +139,8 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     logicSize = info.logicSize;
     displayArea = .init(.zero, logicSize);
     countingAllocator = CountingAllocator.init(allocs);
-    assets.init(countingAllocator.allocator());
+    allocator = countingAllocator.allocator();
+    assets.init(allocator);
 
     if (info.disableIME) {
         if (builtin.os.tag == .windows) {
