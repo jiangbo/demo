@@ -8,7 +8,7 @@ const audio = @import("audio.zig");
 const Image = graphics.Image;
 
 var allocator: std.mem.Allocator = undefined;
-var imageCache: std.AutoHashMapUnmanaged(AssetId, Image) = .empty;
+var imageCache: std.AutoHashMapUnmanaged(Id, Image) = .empty;
 
 pub fn init(allocator1: std.mem.Allocator) void {
     allocator = allocator1;
@@ -40,17 +40,15 @@ pub fn oom() noreturn {
     @panic("out of memory");
 }
 
-pub fn loadImage(path: [:0]const u8, width: f32, height: f32) AssetId {
-    const key = assetId(path);
-
-    const entry = imageCache.getOrPut(allocator, key) catch oom();
+pub fn loadImage(path: [:0]const u8, width: f32, height: f32) Image {
+    const entry = imageCache.getOrPut(allocator, id(path)) catch oom();
     if (!entry.found_existing) {
         entry.value_ptr.* = .{
             .texture = Texture.load(path),
             .area = .init(.zero, .init(width, height)),
         };
     }
-    return key;
+    return entry.value_ptr.*;
 }
 
 pub fn loadSound(path: [:0]const u8, loop: bool) *audio.Sound {
@@ -61,16 +59,15 @@ pub fn loadMusic(path: [:0]const u8, loop: bool) *audio.Music {
     return Music.load(path, loop);
 }
 
-pub const AssetId = u32;
-pub fn assetId(name: []const u8) AssetId {
+pub const Id = u32;
+pub fn id(name: []const u8) Id {
     return std.hash.Fnv1a_32.hash(name);
 }
 
 pub fn loadAtlas(atlas: graphics.Atlas) void {
     const size: u32 = @intCast(atlas.images.len + 1); // 多包含一张图集
     imageCache.ensureUnusedCapacity(allocator, size) catch oom();
-    const id = loadImage(atlas.imagePath, atlas.size.x, atlas.size.y);
-    var image = imageCache.get(id).?;
+    var image = loadImage(atlas.imagePath, atlas.size.x, atlas.size.y);
 
     for (atlas.images) |atlasImage| {
         image.area = atlasImage.area;
@@ -78,19 +75,19 @@ pub fn loadAtlas(atlas: graphics.Atlas) void {
     }
 }
 
-pub fn createWhiteImage(comptime key: [:0]const u8) AssetId {
+pub fn createWhiteImage(comptime key: [:0]const u8) Id {
     const data: [64]u8 = @splat(0xFF);
     const image = Texture.makeImage(4, 4, &data);
     const view = sk.gfx.makeView(.{ .texture = .{ .image = image } });
     Texture.cache.put(allocator, key, view) catch oom();
-    imageCache.put(allocator, comptime assetId(key), .{
+    imageCache.put(allocator, comptime id(key), .{
         .texture = view,
         .area = .init(.zero, .{ .x = 4, .y = 4 }),
     }) catch oom();
-    return comptime assetId(key);
+    return comptime id(key);
 }
 
-pub fn getImage(imageId: AssetId) graphics.Image {
+pub fn getImage(imageId: Id) graphics.Image {
     return imageCache.get(imageId).?;
 }
 

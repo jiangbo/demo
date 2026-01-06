@@ -22,8 +22,8 @@ pub const imageDrawCount = batch.imageDrawCount;
 
 pub const loadAtlas = assets.loadAtlas;
 pub const loadImage = assets.loadImage;
-pub const imageId = assets.assetId;
-pub const ImageId = assets.AssetId;
+pub const imageId = assets.id;
+pub const ImageId = assets.Id;
 pub const getImage = assets.getImage;
 
 pub const Frame = struct { area: math.Rect, interval: f32 = 0.1 };
