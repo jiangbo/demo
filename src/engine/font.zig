@@ -5,6 +5,7 @@ const math = @import("math.zig");
 const shader = @import("shader/font.glsl.zig");
 const window = @import("window.zig");
 const batch = @import("batch.zig");
+const graphics = @import("graphics.zig");
 
 pub const Font = struct {
     atlas: struct {
@@ -48,7 +49,7 @@ pub const Rect = struct {
 };
 
 pub var zon: Font = undefined;
-var texture: gpu.Texture = undefined;
+var texture: graphics.Image = undefined;
 var invalidUnicode: u32 = 0x25A0;
 var invalidIndex: usize = 0;
 
@@ -60,7 +61,7 @@ pub var totalDrawCount: u32 = 0;
 
 const initOptions = struct {
     font: Font,
-    texture: gpu.Texture,
+    image: graphics.Image,
     vertexCount: usize = 500,
 };
 
@@ -80,7 +81,7 @@ pub fn init(fontZon: Font) void {
 pub fn initSDF(options: initOptions) void {
     zon = options.font;
     invalidIndex = binarySearch(invalidUnicode).?;
-    texture = options.texture;
+    texture = options.image;
 
     buffer = gpu.createBuffer(.{
         .size = @sizeOf(batch.QuadVertex) * options.vertexCount,

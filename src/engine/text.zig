@@ -21,7 +21,7 @@ pub fn init(fontZon: Font, image: graphics.Image, size: f32) void {
     font.init(fontZon);
     // font.initSDF(.{
     //     .font = fontZon,
-    //     .texture = fontTexture,
+    //     .image = image,
     // });
 }
 
