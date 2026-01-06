@@ -2,7 +2,7 @@ const std = @import("std");
 
 const gpu = @import("gpu.zig");
 const math = @import("math.zig");
-const batch = @import("batch.zig");
+const graphics = @import("graphics.zig");
 const font = @import("font.zig");
 
 const Font = font.Font;
@@ -11,18 +11,18 @@ const Vector = math.Vector2;
 
 pub const String = []const u8;
 
-var texture: gpu.Texture = undefined;
+var fontImage: graphics.ImageId = undefined;
 var textSize: f32 = 18;
 pub var count: u32 = 0;
 
-pub fn init(fontZon: Font, fontTexture: gpu.Texture, size: f32) void {
-    texture = fontTexture;
+pub fn init(fontZon: Font, image: graphics.ImageId, size: f32) void {
+    fontImage = image;
     textSize = size;
-    // font.init(fontZon);
-    font.initSDF(.{
-        .font = fontZon,
-        .texture = fontTexture,
-    });
+    font.init(fontZon);
+    // font.initSDF(.{
+    //     .font = fontZon,
+    //     .texture = fontTexture,
+    // });
 }
 
 pub fn drawNumber(number: anytype, position: Vector) void {
@@ -73,6 +73,8 @@ pub fn drawOption(text: String, position: Vector, option: Option) void {
     const offsetY = -font.zon.metrics.ascender * size;
     var pos = position.addY(offsetY);
 
+    const image = graphics.getImage(fontImage);
+
     var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {
         if (code == '\n') {
@@ -86,8 +88,8 @@ pub fn drawOption(text: String, position: Vector, option: Option) void {
         count += 1;
 
         const target = char.planeBounds.toArea();
-        const tex = texture.mapTexture(char.atlasBounds.toArea());
-        batch.drawOption(tex, pos.add(target.min.scale(size)), .{
+        const tex = image.map(char.atlasBounds.toArea());
+        graphics.draw(tex, pos.add(target.min.scale(size)), .{
             .size = target.size.scale(size),
             .color = option.color,
         });

@@ -4,38 +4,10 @@ const sk = @import("sokol");
 const math = @import("math.zig");
 
 const gfx = sk.gfx;
-
-pub const Texture = struct {
-    view: gfx.View,
-    area: math.Rect = .{},
-
-    pub fn width(self: *const Texture) f32 {
-        return self.size().x;
-    }
-
-    pub fn height(self: *const Texture) f32 {
-        return self.size().y;
-    }
-
-    pub fn size(self: *const Texture) math.Vector2 {
-        return self.area.size;
-    }
-
-    pub fn subTexture(self: *const Texture, area: math.Rect) Texture {
-        return .{ .view = self.view, .area = area.move(self.area.min) };
-    }
-
-    pub fn mapTexture(self: *const Texture, area: math.Rect) Texture {
-        return Texture{ .view = self.view, .area = area };
-    }
-
-    pub fn deinit(self: *Texture) void {
-        sk.gfx.destroyImage(self.image);
-    }
-};
+pub const Texture = gfx.View;
 
 pub fn queryTextureSize(texture: Texture) math.Vector {
-    const image = gfx.queryViewImage(texture.view);
+    const image = gfx.queryViewImage(texture);
     return math.Vector{
         .x = @floatFromInt(gfx.queryImageWidth(image)),
         .y = @floatFromInt(gfx.queryImageHeight(image)),
@@ -46,7 +18,6 @@ pub const RenderPipeline = gfx.Pipeline;
 pub const asRange = gfx.asRange;
 pub const queryBackend = gfx.queryBackend;
 pub const Buffer = gfx.Buffer;
-pub const Color = gfx.Color;
 pub const Sampler = gfx.Sampler;
 pub const ShaderDesc = gfx.ShaderDesc;
 pub const VertexLayoutState = gfx.VertexLayoutState;
@@ -69,9 +40,11 @@ pub fn init() void {
     });
 }
 
-pub fn begin(color: gfx.Color) void {
+pub fn begin(color: math.Vector4) void {
     var action = gfx.PassAction{};
-    action.colors[0] = .{ .load_action = .CLEAR, .clear_value = color };
+
+    const c: sk.gfx.Color = @bitCast(color);
+    action.colors[0] = .{ .load_action = .CLEAR, .clear_value = c };
     gfx.beginPass(.{ .action = action, .swapchain = sk.glue.swapchain() });
 }
 
@@ -99,24 +72,6 @@ pub fn end() void {
 pub fn scissor(area: math.Rect) void {
     const x, const y = .{ area.min.x, area.min.y };
     gfx.applyScissorRectf(x, y, area.size.x, area.size.y, true);
-}
-
-pub fn createTexture(size: math.Vector, data: []const u8) Texture {
-    return Texture{
-        .view = sk.gfx.makeView(.{ .texture = .{
-            .image = gfx.makeImage(.{
-                .data = init: {
-                    var imageData = gfx.ImageData{};
-                    imageData.mip_levels[0] = gfx.asRange(data);
-                    break :init imageData;
-                },
-                .width = @intFromFloat(size.x),
-                .height = @intFromFloat(size.y),
-                .pixel_format = .RGBA8,
-            }),
-        } }),
-        .area = .init(.zero, size),
-    };
 }
 
 pub fn createBuffer(desc: gfx.BufferDesc) Buffer {
@@ -151,7 +106,7 @@ pub const BindGroup = struct {
     }
 
     pub fn setTexture(self: *BindGroup, texture: Texture) void {
-        self.value.views[0] = texture.view;
+        self.value.views[0] = texture;
     }
 
     pub fn setSampler(self: *BindGroup, sampler: sk.gfx.Sampler) void {

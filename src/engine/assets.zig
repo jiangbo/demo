@@ -2,10 +2,13 @@ const std = @import("std");
 
 const sk = @import("sokol");
 const c = @import("c.zig");
-const gfx = @import("graphics.zig");
+const graphics = @import("graphics.zig");
 const audio = @import("audio.zig");
 
+const Image = graphics.Image;
+
 var allocator: std.mem.Allocator = undefined;
+var imageCache: std.AutoHashMapUnmanaged(AssetId, Image) = .empty;
 
 pub fn init(allocator1: std.mem.Allocator) void {
     allocator = allocator1;
@@ -13,6 +16,7 @@ pub fn init(allocator1: std.mem.Allocator) void {
 }
 
 pub fn deinit() void {
+    imageCache.deinit(allocator);
     Texture.cache.deinit(allocator);
     Sound.cache.deinit(allocator);
     Music.deinit();
@@ -36,8 +40,17 @@ pub fn oom() noreturn {
     @panic("out of memory");
 }
 
-pub fn loadTexture(path: [:0]const u8, size: gfx.Vector) gfx.Texture {
-    return Texture.load(path, size);
+pub fn loadImage(path: [:0]const u8, width: f32, height: f32) AssetId {
+    const key = assetId(path);
+
+    const entry = imageCache.getOrPut(allocator, key) catch oom();
+    if (!entry.found_existing) {
+        entry.value_ptr.* = .{
+            .texture = Texture.load(path),
+            .area = .init(.zero, .init(width, height)),
+        };
+    }
+    return key;
 }
 
 pub fn loadSound(path: [:0]const u8, loop: bool) *audio.Sound {
@@ -46,6 +59,39 @@ pub fn loadSound(path: [:0]const u8, loop: bool) *audio.Sound {
 
 pub fn loadMusic(path: [:0]const u8, loop: bool) *audio.Music {
     return Music.load(path, loop);
+}
+
+pub const AssetId = u32;
+pub fn assetId(name: []const u8) AssetId {
+    return std.hash.Fnv1a_32.hash(name);
+}
+
+pub fn loadAtlas(atlas: graphics.Atlas) void {
+    const size: u32 = @intCast(atlas.images.len + 1); // 多包含一张图集
+    imageCache.ensureUnusedCapacity(allocator, size) catch oom();
+    const id = loadImage(atlas.imagePath, atlas.size.x, atlas.size.y);
+    var image = imageCache.get(id).?;
+
+    for (atlas.images) |atlasImage| {
+        image.area = atlasImage.area;
+        imageCache.putAssumeCapacity(atlasImage.id, image);
+    }
+}
+
+pub fn createWhiteImage(comptime key: [:0]const u8) AssetId {
+    const data: [64]u8 = @splat(0xFF);
+    const image = Texture.makeImage(4, 4, &data);
+    const view = sk.gfx.makeView(.{ .texture = .{ .image = image } });
+    Texture.cache.put(allocator, key, view) catch oom();
+    imageCache.put(allocator, comptime assetId(key), .{
+        .texture = view,
+        .area = .init(.zero, .{ .x = 4, .y = 4 }),
+    }) catch oom();
+    return comptime assetId(key);
+}
+
+pub fn getImage(imageId: AssetId) graphics.Image {
+    return imageCache.get(imageId).?;
 }
 
 pub const Icon = c.stbImage.Image;
@@ -60,17 +106,13 @@ pub fn loadIcon(path: [:0]const u8, handler: fn (Icon) void) void {
 }
 
 pub const Texture = struct {
-    var cache: std.StringHashMapUnmanaged(gfx.Texture) = .empty;
+    var cache: std.StringHashMapUnmanaged(graphics.Texture) = .empty;
 
-    pub fn load(path: [:0]const u8, size: gfx.Vector) gfx.Texture {
-        const entry = cache.getOrPut(allocator, path) catch oom();
-        if (entry.found_existing) return entry.value_ptr.*;
-
+    pub fn load(path: [:0]const u8) graphics.Texture {
         const view = sk.gfx.allocView();
+        cache.put(allocator, path, view) catch oom();
         _ = File.load(path, view.id, handler);
-
-        entry.value_ptr.* = .{ .view = view, .area = .init(.zero, size) };
-        return entry.value_ptr.*;
+        return view;
     }
 
     fn handler(response: Response) []const u8 {
@@ -78,20 +120,24 @@ pub const Texture = struct {
 
         const image = c.stbImage.loadFromMemory(data);
         defer c.stbImage.unload(image);
-        const texture = cache.getPtr(response.path).?;
+        const texture = cache.get(response.path).?;
 
-        sk.gfx.initView(texture.view, .{ .texture = .{
-            .image = sk.gfx.makeImage(.{
-                .width = image.width,
-                .height = image.height,
-                .data = init: {
-                    var imageData = sk.gfx.ImageData{};
-                    imageData.mip_levels[0] = sk.gfx.asRange(image.data);
-                    break :init imageData;
-                },
-            }),
+        sk.gfx.initView(texture, .{ .texture = .{
+            .image = makeImage(image.width, image.height, image.data),
         } });
         return &.{};
+    }
+
+    fn makeImage(w: i32, h: i32, data: []const u8) sk.gfx.Image {
+        return sk.gfx.makeImage(.{
+            .width = w,
+            .height = h,
+            .data = init: {
+                var imageData = sk.gfx.ImageData{};
+                imageData.mip_levels[0] = sk.gfx.asRange(data);
+                break :init imageData;
+            },
+        });
     }
 };
 

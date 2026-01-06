@@ -2,20 +2,24 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const window = zhu.window;
-const gfx = zhu.gfx;
+const graphics = zhu.graphics;
 const camera = zhu.camera;
 
 var isHelp = false;
 var isDebug = false;
-var vertexBuffer: []camera.Vertex = undefined;
+var vertexBuffer: []graphics.Vertex = undefined;
+
+const atlas: graphics.Atlas = @import("zon/atlas.zon");
 
 pub fn init() void {
-    const text = gfx.loadTexture("assets/font/font.png", .init(1100, 1100));
-    window.initText(@import("zon/font.zon"), text, 24);
+    const textImage = graphics.loadImage("assets/font.png", 1100, 1100);
+    window.initText(@import("zon/font.zon"), textImage, 24);
 
-    vertexBuffer = window.alloc(camera.Vertex, 5000);
-    camera.frameStats(true);
-    camera.initWithWhiteTexture(vertexBuffer);
+    vertexBuffer = window.alloc(graphics.Vertex, 5000);
+    graphics.frameStats(true);
+    graphics.initWithWhiteTexture(window.logicSize, vertexBuffer);
+
+    graphics.loadAtlas(atlas);
 }
 
 pub fn update(delta: f32) void {
@@ -38,15 +42,15 @@ pub fn draw() void {
     defer camera.endDraw();
     window.keepAspectRatio();
 
-    const gridColor = gfx.color(0.5, 0.5, 0.5, 1);
-    const area = gfx.Rect.init(.zero, window.logicSize.scale(3));
+    const gridColor = graphics.rgb(0.5, 0.5, 0.5);
+    const area = zhu.Rect.init(.zero, window.logicSize.scale(3));
     drawGrid(area, 80, gridColor);
     camera.drawRectBorder(area, 10, .white);
 
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
 
-fn drawGrid(area: gfx.Rect, width: f32, lineColor: gfx.Color) void {
+fn drawGrid(area: zhu.Rect, width: f32, lineColor: zhu.Color) void {
     const max = area.max();
     const color = camera.LineOption{ .color = lineColor };
 
@@ -91,9 +95,9 @@ fn drawDebugInfo() void {
         \\相机：{d:.2}，{d:.2}
     ;
 
-    const stats = camera.queryFrameStats();
+    const stats = graphics.queryFrameStats();
     const text = zhu.format(&buffer, format, .{
-        @tagName(camera.queryBackend()),
+        @tagName(graphics.queryBackend()),
         window.frameRate,
         window.currentSmoothTime * 1000,
         window.frameDeltaPerSecond,

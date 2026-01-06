@@ -12,6 +12,10 @@ zig build -Dtarget=wasm32-emscripten --release=safe
 msdf-atlas-gen.exe -font .\SourceHanSansSC-Medium.otf -yorigin top -charset .\allchars.txt -json font.json -imageout font.png
 ```
 
+```sh
+texturePacker --sheet assets/atlas.png --format json-array --data assets/atlas.json --texturepath assets --ignore-files *font.png --force-publish --padding 2 --trim-sprite-names --disable-rotation --trim-mode None .\assets-02\
+```
+
 ## ASTC 纹理支持
 
 ```zig

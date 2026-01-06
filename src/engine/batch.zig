@@ -55,7 +55,33 @@ pub const Option = struct {
     flipX: bool = false, // 是否水平翻转
 };
 
-pub fn beginDraw(color: gpu.Color) void {
+pub const Image = struct {
+    texture: gpu.Texture,
+    area: math.Rect,
+
+    pub fn width(self: *const Image) f32 {
+        return self.area.size.x;
+    }
+
+    pub fn height(self: *const Image) f32 {
+        return self.area.size.y;
+    }
+
+    pub fn size(self: *const Image) math.Vector2 {
+        return self.area.size;
+    }
+
+    pub fn sub(self: *const Image, area: math.Rect) Image {
+        const moved = area.move(self.area.min);
+        return .{ .texture = self.texture, .area = moved };
+    }
+
+    pub fn map(self: *const Image, area: math.Rect) Image {
+        return .{ .texture = self.texture, .area = area };
+    }
+};
+
+pub fn beginDraw(color: math.Vector4) void {
     gpu.begin(color);
     commandIndex = 0;
     vertexBuffer.clearRetainingCapacity();
@@ -75,16 +101,16 @@ pub fn endDraw(pos: Vector2) void {
     }
 }
 
-pub fn drawOption(texture: Texture, pos: Vector2, option: Option) void {
-    var textureVector: math.Vector4 = texture.area.toVector4();
+pub fn draw(image: Image, position: Vector2, option: Option) void {
+    var textureVector: math.Vector4 = image.area.toVector4();
     if (option.flipX) {
         std.mem.swap(f32, &textureVector.x, &textureVector.z);
     }
 
-    const size = option.size orelse texture.size();
-    var worldPos = pos.sub(size.mul(option.anchor));
+    const size = option.size orelse image.area.size;
+    var worldPos = position.sub(size.mul(option.anchor));
 
-    drawVertices(texture, &.{QuadVertex{
+    drawVertices(image.texture, &.{QuadVertex{
         .position = worldPos.toVector3(0),
         .radian = option.radian,
         .size = size,
@@ -96,7 +122,7 @@ pub fn drawOption(texture: Texture, pos: Vector2, option: Option) void {
 }
 
 pub fn drawVertices(texture: Texture, vertex: []const QuadVertex) void {
-    const changed = texture.view.id != usingTexture.view.id;
+    const changed = texture.id != usingTexture.id;
     if (changed) usingTexture = texture; // 纹理改变，修改使用中的纹理
 
     if (vertexBuffer.items.len == 0) { // 第一次绘制
