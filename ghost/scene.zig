@@ -46,6 +46,9 @@ pub fn draw() void {
     drawGrid(area, 80, gridColor);
     camera.drawRectBorder(area, 10, .white);
 
+    camera.mode = .local;
+    defer camera.mode = .world;
+
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
 

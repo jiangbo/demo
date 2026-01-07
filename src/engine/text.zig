@@ -53,40 +53,6 @@ pub fn searchChar(code: u32) *const BitMapChar {
     return &font.chars[binarySearch(code) orelse invalidIndex];
 }
 
-pub fn drawNumber(number: anytype, position: Vector2) void {
-    drawNumberColor(number, position, .one);
-}
-
-pub fn drawNumberColor(number: anytype, pos: Vector2, color: Color) void {
-    var textBuffer: [15]u8 = undefined;
-    const text = format(&textBuffer, "{d}", .{number});
-    drawColor(text, pos, color);
-}
-
-pub fn draw(text: String, position: math.Vector) void {
-    drawOption(text, position, .{});
-}
-
-pub fn drawCenter(text: String, pos: Vector2, option: Option) void {
-    const width = computeTextWidthOption(text, option);
-    drawOption(text, .init(pos.x - width / 2, pos.y), option);
-}
-
-pub fn drawRight(text: String, pos: Vector2, option: Option) void {
-    const width = computeTextWidthOption(text, option);
-    drawOption(text, .init(pos.x - width, pos.y), option);
-}
-
-pub fn drawFmt(comptime fmt: String, pos: Vector2, args: anytype) void {
-    var buffer: [1024]u8 = undefined;
-    draw(format(&buffer, fmt, args), pos);
-}
-
-const Color = math.Vector4;
-pub fn drawColor(text: String, pos: Vector2, color: Color) void {
-    drawOption(text, pos, .{ .color = color });
-}
-
 pub const Option = struct {
     size: ?f32 = null, // 文字的大小，没有则使用默认值
     color: math.Vector4 = .one, // 文字的颜色
@@ -95,7 +61,7 @@ pub const Option = struct {
 };
 
 const Utf8View = std.unicode.Utf8View;
-pub fn drawOption(text: String, position: Vector2, option: Option) void {
+pub fn draw(text: String, position: Vector2, option: Option) void {
     const scale = if (option.size) |s| s / font.fontSize else fontScale;
     const height = font.lineHeight * scale;
     var pos = position;
