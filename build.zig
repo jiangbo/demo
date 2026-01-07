@@ -168,7 +168,7 @@ const emSource =
     \\    if (!base64) return 0;
     \\
     \\    const binary = atob(base64);
-    \\    if (binary.length > len) return 0;
+    \\    if (binary.length > len) return len - binary.length;
     \\    for (let i = 0; i < binary.length; i++) {
     \\        HEAPU8[out_buf + i] = binary.charCodeAt(i);
     \\    }

@@ -270,22 +270,29 @@ pub fn statFileTime(path: [:0]const u8) i64 {
     return @intCast(stat.mtime);
 }
 
-pub fn readAll(path: [:0]const u8, content: []u8) ![]u8 {
+pub fn readAll(path: [:0]const u8) ![]u8 {
     if (@import("builtin").target.os.tag == .emscripten) {
-        const len = @import("c.zig").em.em_js_file_load(path.ptr, //
-            content.ptr, @intCast(content.len));
-        if (len == 0) return error.FileNotFound;
-
         const value = @import("c.zig").em.my_add(1, 1);
-        _ = value;
+        _ = value; // 防止编译器优化掉，目前不清楚为什么要加这个方法才生效
+        var buffer: [1024]u8 = undefined;
+        const len = readFromJs(path, &buffer);
+        // 长度大于0，读完了内容，直接分配返回。
+        if (len > 0) return dupe(u8, buffer[0..@intCast(len)]);
 
-        return content[0..@as(usize, @intCast(len))];
+        // 长度小于0，没有读完，太长了，分配更大的空间再读一次。
+        const large = alloc(u8, buffer.len + @as(usize, @abs(len)));
+        _ = readFromJs(path, large);
+        return large;
     }
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
+    const max = 1024 * 1024;
+    return try std.fs.cwd().readFileAlloc(allocator, path, max);
+}
 
-    const bytes = try file.readAll(content);
-    return content[0..bytes];
+fn readFromJs(path: [:0]const u8, content: []u8) !i32 {
+    const len = @import("c.zig").em.em_js_file_load(path.ptr, //
+        content.ptr, @intCast(content.len));
+    if (len == 0) return error.FileNotFound;
+    return len;
 }
 
 pub fn saveAll(path: [:0]const u8, content: []const u8) !void {
