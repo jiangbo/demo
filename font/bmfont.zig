@@ -32,10 +32,17 @@ fn doParse(reader: anytype) !void {
 }
 
 fn parseSize(reader: anytype, tag: BlockTag) !usize {
-    const actual = try reader.readEnum(BlockTag, .little);
+    const actual = reader.readEnum(BlockTag, .little) catch |e| {
+        if (e == error.EndOfStream) {
+            std.log.info("==============================", .{});
+            std.log.info("block type: {} , size: {}", .{ tag, 0 });
+            return 0;
+        } else return e;
+    };
     if (actual != tag) return error.unexpectedBlock;
 
     const len = try reader.readInt(i32, .little);
+    std.log.info("==============================", .{});
     std.log.info("block type: {} , size: {}", .{ tag, len });
     return @intCast(len);
 }
@@ -45,7 +52,7 @@ pub var arena: std.mem.Allocator = undefined;
 
 fn parseInfo(reader: anytype, _: usize) !void {
     bmfont.info = .{
-        .fontSize = try reader.readInt(i16, .little),
+        .fontSize = @intCast(@abs(try reader.readInt(i16, .little))),
         .bitField = try reader.readInt(u8, .little),
         .charSet = try reader.readInt(u8, .little),
         .stretchH = try reader.readInt(u16, .little),
@@ -115,6 +122,8 @@ fn parseChar(reader: anytype, size: usize) !void {
             .page = try reader.readInt(u8, .little),
             .chnl = try reader.readInt(u8, .little),
         };
+        // _ = try reader.readInt(u8, .little);
+        // _ = try reader.readInt(u8, .little);
     }
     bmfont.chars = chars;
 }

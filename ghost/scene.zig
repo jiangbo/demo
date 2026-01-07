@@ -12,8 +12,7 @@ var vertexBuffer: []graphics.Vertex = undefined;
 const atlas: graphics.Atlas = @import("zon/atlas.zon");
 
 pub fn init() void {
-    const text = graphics.loadImage("assets/font.png", 1100, 1100);
-    window.initText(@import("zon/font.zon"), text, 24);
+    window.initText(@import("zon/font.zon"), 24);
 
     vertexBuffer = window.alloc(graphics.Vertex, 5000);
     graphics.frameStats(true);

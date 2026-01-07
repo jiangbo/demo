@@ -1,0 +1,65 @@
+.{
+    .images = .{
+        .{
+            // .filename = "effect/184_3",
+            .id = 4001062710,
+            .area = .{
+                .min = .{
+                    .x = 747,
+                    .y = 691,
+                },
+                .size = .{
+                    .x = 704,
+                    .y = 64,
+                },
+            },
+            // .frame = .{
+            //     .x = 951,
+            //     .y = 464,
+            //     .w = 688,
+            //     .h = 64,
+            // },
+            // .rotated = false,
+            // .trimmed = true,
+            // .spriteSourceSize = .{
+            //     .x = 0,
+            //     .y = 0,
+            //     .w = 688,
+            //     .h = 64,
+            // },
+            // .sourceSize = .{
+            //     .w = 704,
+            //     .h = 64,
+            // },
+        },
+
+        .{
+            // .filename = "UI/Textfield_01",
+            .id = 3439197233,
+            .area = .{
+                .min = .{
+                    .x = 3,
+                    .y = 3,
+                },
+                .size = .{
+                    .x = 1976,
+                    .y = 327,
+                },
+            },
+            // .rotated = false,
+            // .trimmed = false,
+            // .spriteSourceSize = .{
+            //     .x = 0,
+            //     .y = 0,
+            //     .w = 1976,
+            //     .h = 327,
+            // },
+            // .sourceSize = .{
+            //     .w = 1976,
+            //     .h = 327,
+            // },
+        },
+    },
+    .imagePath = "assets/atlas.png",
+    .size = .{ .x = 1982, .y = 849 },
+}

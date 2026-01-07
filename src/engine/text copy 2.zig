@@ -3,61 +3,33 @@ const std = @import("std");
 const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const graphics = @import("graphics.zig");
+const font = @import("font.zig");
 
-const Vector2 = math.Vector2;
+const Font = font.Font;
+const Glyph = font.Glyph;
+const Vector = math.Vector2;
+
 pub const String = []const u8;
 
-pub const BitMapFont = struct {
-    imagePath: [:0]const u8,
-    size: math.Vector2,
-    fontSize: f32,
-    lineHeight: f32,
-    chars: []const BitMapChar,
-};
-
-pub const BitMapChar = struct {
-    id: u32,
-    area: math.Rect,
-    offset: Vector2,
-    advance: f32,
-};
-
-var invalidIndex: usize = 0;
-
-var font: BitMapFont = undefined;
 var fontImage: graphics.Image = undefined;
-var fontScale: f32 = 1;
+var textSize: f32 = 18;
 pub var count: u32 = 0;
 
-pub fn initBitMapFont(fontZon: BitMapFont, size: f32) void {
-    font = fontZon;
-    fontImage = graphics.loadImage(font.imagePath, font.size);
-    fontScale = size / font.fontSize;
-    invalidIndex = binarySearch(0x25A0).?;
-    // font.init(fontZon);
+pub fn init(fontZon: Font, image: graphics.Image, size: f32) void {
+    fontImage = image;
+    textSize = size;
+    font.init(fontZon);
     // font.initSDF(.{
     //     .font = fontZon,
     //     .image = image,
     // });
 }
 
-fn binarySearch(unicode: u32) ?usize {
-    return std.sort.binarySearch(BitMapChar, font.chars, unicode, struct {
-        fn compare(a: u32, b: BitMapChar) std.math.Order {
-            return std.math.order(a, b.id);
-        }
-    }.compare);
-}
-
-pub fn searchChar(code: u32) *const BitMapChar {
-    return &font.chars[binarySearch(code) orelse invalidIndex];
-}
-
-pub fn drawNumber(number: anytype, position: Vector2) void {
+pub fn drawNumber(number: anytype, position: Vector) void {
     drawNumberColor(number, position, .one);
 }
 
-pub fn drawNumberColor(number: anytype, pos: Vector2, color: Color) void {
+pub fn drawNumberColor(number: anytype, pos: Vector, color: Color) void {
     var textBuffer: [15]u8 = undefined;
     const text = format(&textBuffer, "{d}", .{number});
     drawColor(text, pos, color);
@@ -67,23 +39,23 @@ pub fn draw(text: String, position: math.Vector) void {
     drawOption(text, position, .{});
 }
 
-pub fn drawCenter(text: String, pos: Vector2, option: Option) void {
+pub fn drawCenter(text: String, pos: Vector, option: Option) void {
     const width = computeTextWidthOption(text, option);
     drawOption(text, .init(pos.x - width / 2, pos.y), option);
 }
 
-pub fn drawRight(text: String, pos: Vector2, option: Option) void {
+pub fn drawRight(text: String, pos: Vector, option: Option) void {
     const width = computeTextWidthOption(text, option);
     drawOption(text, .init(pos.x - width, pos.y), option);
 }
 
-pub fn drawFmt(comptime fmt: String, pos: Vector2, args: anytype) void {
+pub fn drawFmt(comptime fmt: String, pos: Vector, args: anytype) void {
     var buffer: [1024]u8 = undefined;
     draw(format(&buffer, fmt, args), pos);
 }
 
 const Color = math.Vector4;
-pub fn drawColor(text: String, pos: Vector2, color: Color) void {
+pub fn drawColor(text: String, pos: Vector, color: Color) void {
     drawOption(text, pos, .{ .color = color });
 }
 
@@ -95,10 +67,11 @@ pub const Option = struct {
 };
 
 const Utf8View = std.unicode.Utf8View;
-pub fn drawOption(text: String, position: Vector2, option: Option) void {
-    const scale = if (option.size) |s| s / font.fontSize else fontScale;
-    const height = font.lineHeight * scale;
-    var pos = position;
+pub fn drawOption(text: String, position: Vector, option: Option) void {
+    const size = option.size orelse textSize;
+    const height = font.zon.metrics.lineHeight * size;
+    const offsetY = -font.zon.metrics.ascender * size;
+    var pos = position.addY(offsetY);
 
     var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {
@@ -109,15 +82,16 @@ pub fn drawOption(text: String, position: Vector2, option: Option) void {
         if (pos.x > option.maxWidth) {
             pos = .init(position.x, pos.y + height);
         }
-        const char = searchChar(code);
+        const char = font.searchGlyph(code);
         count += 1;
 
-        const image = fontImage.map(char.area);
-        graphics.draw(image, pos.add(char.offset.scale(scale)), .{
-            .size = char.area.size.scale(scale),
+        const target = char.planeBounds.toArea();
+        const image = fontImage.map(char.atlasBounds.toArea());
+        graphics.draw(image, pos.add(target.min.scale(size)), .{
+            .size = target.size.scale(size),
             .color = option.color,
         });
-        pos = pos.addX(char.advance * scale + option.spacing);
+        pos = pos.addX(char.advance * size + option.spacing);
     }
 }
 
@@ -127,7 +101,7 @@ pub fn computeTextWidth(text: String) f32 {
 
 pub fn computeTextWidthOption(text: String, option: Option) f32 {
     var width: f32 = 0;
-    const sz = option.size orelse font.fontSize; // 提供则获取，没有则获取默认值
+    const sz = option.size orelse textSize; // 提供则获取，没有则获取默认值
     var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {
         width += font.searchGlyph(code).advance * sz + option.spacing;

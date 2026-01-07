@@ -372,4 +372,4 @@ pub const isMousePress = input.isMousePress;
 pub const isMouseRelease = input.isMouseRelease;
 pub const isAnyMouseRelease = input.isAnyMouseRelease;
 
-pub const initText = text.init;
+pub const initText = text.initBitMapFont;

@@ -40,12 +40,12 @@ pub fn oom() noreturn {
     @panic("out of memory");
 }
 
-pub fn loadImage(path: [:0]const u8, width: f32, height: f32) Image {
+pub fn loadImage(path: [:0]const u8, size: graphics.Vector2) Image {
     const entry = imageCache.getOrPut(allocator, id(path)) catch oom();
     if (!entry.found_existing) {
         entry.value_ptr.* = .{
             .texture = Texture.load(path),
-            .area = .init(.zero, .init(width, height)),
+            .area = .init(.zero, size),
         };
     }
     return entry.value_ptr.*;
@@ -67,7 +67,7 @@ pub fn id(name: []const u8) Id {
 pub fn loadAtlas(atlas: graphics.Atlas) void {
     const size: u32 = @intCast(atlas.images.len + 1); // 多包含一张图集
     imageCache.ensureUnusedCapacity(allocator, size) catch oom();
-    var image = loadImage(atlas.imagePath, atlas.size.x, atlas.size.y);
+    var image = loadImage(atlas.imagePath, atlas.size);
 
     for (atlas.images) |atlasImage| {
         image.area = atlasImage.area;

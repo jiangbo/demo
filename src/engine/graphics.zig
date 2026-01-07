@@ -11,6 +11,7 @@ pub const frameStats = gpu.frameStats;
 pub const queryFrameStats = gpu.queryFrameStats;
 pub const queryBackend = gpu.queryBackend;
 
+pub const Vector2 = math.Vector2;
 pub const Color = math.Vector4;
 pub const Image = batch.Image;
 pub const Vertex = batch.QuadVertex;
@@ -89,12 +90,12 @@ pub fn color(r: f32, g: f32, b: f32, a: f32) math.Vector4 {
     return .{ .x = r, .y = g, .z = b, .w = a };
 }
 
-pub fn init(size: math.Vector2, buffer: []Vertex) void {
+pub fn init(size: Vector2, buffer: []Vertex) void {
     batch.init(size, buffer);
 }
 
 pub var whiteImage: ImageId = undefined;
-pub fn initWithWhiteTexture(size: math.Vector2, buffer: []Vertex) void {
+pub fn initWithWhiteTexture(size: Vector2, buffer: []Vertex) void {
     init(size, buffer);
     whiteImage = assets.createWhiteImage("engine/white");
 }
@@ -108,7 +109,7 @@ pub fn resetScissor() void {
     batch.encodeCommand(.{ .scissor = .fromMax(.zero, window.clientSize) });
 }
 
-pub fn encodeScaleCommand(scale: math.Vector2) void {
+pub fn encodeScaleCommand(scale: Vector2) void {
     batch.setScale(scale);
     batch.startNewDrawCommand();
 }
