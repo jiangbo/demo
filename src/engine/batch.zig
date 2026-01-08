@@ -9,14 +9,14 @@ const Matrix = math.Matrix;
 const Texture = gpu.Texture;
 
 pub var pipeline: gpu.RenderPipeline = undefined;
-pub var sampler: gpu.Sampler = undefined;
-var usingTexture: gpu.Texture = undefined;
-
-var bindGroup: gpu.BindGroup = .{};
 var gpuBuffer: gpu.Buffer = undefined;
 var vertexBuffer: std.ArrayList(QuadVertex) = .empty;
 
-const DrawCommand = struct { scale: Vector2 = .one, texture: Texture };
+const DrawCommand = struct {
+    position: Vector2 = .zero, // 位置
+    scale: Vector2 = .one, // 缩放
+    texture: Texture = .{}, // 纹理
+};
 const CommandUnion = union(enum) { draw: DrawCommand, scissor: math.Rect };
 const Command = struct { start: u32 = 0, end: u32, cmd: CommandUnion };
 var commands: [16]Command = undefined;
@@ -43,7 +43,6 @@ pub fn init(size: Vector2, buffer: []QuadVertex) void {
 
     const shaderDesc = shader.quadShaderDesc(gpu.queryBackend());
     pipeline = createQuadPipeline(shaderDesc);
-    sampler = gpu.nearestSampler;
 }
 
 pub const Option = struct {
@@ -84,10 +83,11 @@ pub const Image = struct {
 pub fn beginDraw(color: math.Vector4) void {
     gpu.begin(color);
     commandIndex = 0;
+    commands[commandIndex].cmd.draw = .{};
     vertexBuffer.clearRetainingCapacity();
 }
 
-pub fn endDraw(pos: Vector2) void {
+pub fn endDraw(position: Vector2) void {
     defer gpu.end();
     if (vertexBuffer.items.len == 0) return; // 没需要绘制的东西
 
@@ -95,7 +95,7 @@ pub fn endDraw(pos: Vector2) void {
     gpu.updateBuffer(gpuBuffer, vertexBuffer.items);
     for (commands[0 .. commandIndex + 1]) |cmd| {
         switch (cmd.cmd) {
-            .draw => |drawCmd| doDraw(pos, cmd, drawCmd),
+            .draw => |drawCmd| doDraw(position, cmd, drawCmd),
             .scissor => |area| gpu.scissor(area),
         }
     }
@@ -122,19 +122,18 @@ pub fn draw(image: Image, position: Vector2, option: Option) void {
 }
 
 pub fn drawVertices(texture: Texture, vertex: []const QuadVertex) void {
-    const changed = texture.id != usingTexture.id;
-    if (changed) usingTexture = texture; // 纹理改变，修改使用中的纹理
-
-    if (vertexBuffer.items.len == 0) { // 第一次绘制
-        const cmd = CommandUnion{ .draw = .{ .texture = texture } };
-        commands[commandIndex] = .{ .end = 0, .cmd = cmd };
-    } else if (changed) startNewDrawCommand(); // 纹理改变，开始新的命令
+    const drawCommand = &commands[commandIndex].cmd.draw;
+    if (drawCommand.texture.id == 0) {
+        drawCommand.texture = texture; // 还没有绘制任何纹理
+    } else if (texture.id != drawCommand.texture.id) {
+        startNewDrawCommand(); // 纹理改变，开始新的命令
+    }
 
     vertexBuffer.appendSliceAssumeCapacity(vertex);
 }
 
 pub fn startNewDrawCommand() void {
-    encodeCommand(.{ .draw = .{ .texture = usingTexture } });
+    encodeCommand(.{ .draw = .{} });
 }
 
 pub fn setScale(scale: Vector2) void {
@@ -168,11 +167,11 @@ fn doDraw(position: Vector2, cmd: Command, drawCmd: DrawCommand) void {
     });
 
     // 绑定组
+    var bindGroup: gpu.BindGroup = .{};
     bindGroup.setTexture(drawCmd.texture);
     bindGroup.setVertexBuffer(gpuBuffer);
     bindGroup.setVertexOffset(cmd.start * @sizeOf(QuadVertex));
-    bindGroup.setSampler(sampler);
-
+    bindGroup.setSampler(gpu.nearestSampler);
     gpu.setBindGroup(bindGroup);
 
     // 绘制
