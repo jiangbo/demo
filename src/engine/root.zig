@@ -10,7 +10,7 @@ pub const input = @import("input.zig");
 pub const ecs = @import("ecs.zig");
 pub const text = @import("text.zig");
 
-pub const Vector = math.Vector;
+pub const Vector2 = math.Vector2;
 pub const Rect = math.Rect;
 pub const Color = graphics.Color;
 

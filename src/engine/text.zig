@@ -3,8 +3,10 @@ const std = @import("std");
 const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const graphics = @import("graphics.zig");
+const camera = @import("camera.zig");
 
 const Vector2 = math.Vector2;
+const Color = graphics.Color;
 pub const String = []const u8;
 
 pub const BitMapFont = struct {
@@ -60,8 +62,41 @@ pub const Option = struct {
     spacing: f32 = 0, // 文字间的间距
 };
 
+pub fn drawNumber(number: anytype, pos: Vector2) void {
+    drawNumberColor(number, pos, .one);
+}
+
+pub fn drawNumberColor(number: anytype, pos: Vector2, color: Color) void {
+    var textBuffer: [15]u8 = undefined;
+    const string = format(&textBuffer, "{d}", .{number});
+    drawColor(string, pos, color);
+}
+
+pub fn drawText(string: String, pos: math.Vector) void {
+    drawOption(string, pos, .{});
+}
+
+pub fn drawTextCenter(str: String, pos: Vector2, option: Option) void {
+    const width = computeTextWidthOption(str, option);
+    drawOption(str, .init(pos.x - width / 2, pos.y), option);
+}
+
+pub fn drawRight(str: String, pos: Vector2, option: Option) void {
+    const width = computeTextWidthOption(str, option);
+    drawOption(str, .init(pos.x - width, pos.y), option);
+}
+
+pub fn drawFmt(comptime fmt: String, pos: Vector2, args: anytype) void {
+    var buffer: [1024]u8 = undefined;
+    drawOption(format(&buffer, fmt, args), pos);
+}
+
+pub fn drawColor(str: String, pos: Vector2, color: Color) void {
+    drawOption(str, pos, .{ .color = color });
+}
+
 const Utf8View = std.unicode.Utf8View;
-pub fn draw(text: String, position: Vector2, option: Option) void {
+pub fn drawOption(text: String, position: Vector2, option: Option) void {
     const scale = if (option.size) |s| s / font.fontSize else fontScale;
     const height = font.lineHeight * scale;
     var pos = position;
@@ -79,7 +114,9 @@ pub fn draw(text: String, position: Vector2, option: Option) void {
         count += 1;
 
         const image = fontImage.map(char.area);
-        graphics.draw(image, pos.add(char.offset.scale(scale)), .{
+        var worldPos = pos.add(char.offset.scale(scale));
+        if (camera.mode == .local) worldPos = worldPos.add(camera.position);
+        graphics.draw(image, worldPos, .{
             .size = char.area.size.scale(scale),
             .color = option.color,
         });

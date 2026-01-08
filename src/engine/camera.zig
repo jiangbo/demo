@@ -34,11 +34,11 @@ pub fn debugDraw(area: math.Rect) void {
 }
 
 pub fn draw(image: ImageId, pos: math.Vector2) void {
-    drawImageOption(image, pos, .{});
+    drawOption(image, pos, .{});
 }
 
 pub fn drawFlipX(image: ImageId, pos: Vector2, flipX: bool) void {
-    drawImageOption(image, pos, .{ .flipX = flipX });
+    drawOption(image, pos, .{ .flipX = flipX });
 }
 
 pub const LineOption = struct { color: Color = .white, width: f32 = 1 };
@@ -61,7 +61,7 @@ pub fn drawLine(start: Vector2, end: Vector2, option: LineOption) void {
     const vector = end.sub(start);
     const y = start.y - option.width / 2;
 
-    drawImageOption(graphics.whiteImage, .init(start.x, y), .{
+    drawOption(graphics.whiteImage, .init(start.x, y), .{
         .size = .init(vector.length(), option.width),
         .color = option.color,
         .radian = vector.atan2(),
@@ -82,7 +82,7 @@ pub fn drawRectBorder(area: math.Rect, width: f32, c: Color) void {
 
 pub const RectOption = struct { color: Color = .white, radian: f32 = 0 };
 pub fn drawRect(area: math.Rect, option: RectOption) void {
-    drawImageOption(graphics.whiteImage, area.min, .{
+    drawOption(graphics.whiteImage, area.min, .{
         .size = area.size,
         .color = option.color,
         .radian = option.radian,
@@ -90,51 +90,12 @@ pub fn drawRect(area: math.Rect, option: RectOption) void {
 }
 
 pub const Option = graphics.Option;
-pub fn drawImageOption(image: ImageId, pos: Vector2, option: Option) void {
+pub fn drawOption(image: ImageId, pos: Vector2, option: Option) void {
     if (!startDraw) @panic("need begin draw");
 
     var worldPos = pos;
     if (mode == .local) worldPos = pos.add(position);
     graphics.draw(graphics.getImage(image), worldPos, option);
-}
-
-pub fn drawNumber(number: anytype, pos: Vector2) void {
-    drawNumberColor(number, pos, .one);
-}
-
-pub fn drawNumberColor(number: anytype, pos: Vector2, color: Color) void {
-    var textBuffer: [15]u8 = undefined;
-    const string = text.format(&textBuffer, "{d}", .{number});
-    drawTextColor(string, pos, color);
-}
-
-pub fn drawText(string: String, pos: math.Vector) void {
-    drawTextOption(string, pos, .{});
-}
-
-pub fn drawTextCenter(str: String, pos: Vector2, option: Option) void {
-    const width = text.computeTextWidthOption(str, option);
-    drawTextOption(text, .init(pos.x - width / 2, pos.y), option);
-}
-
-pub fn drawTextRight(str: String, pos: Vector2, option: Option) void {
-    const width = text.computeTextWidthOption(str, option);
-    drawTextOption(str, .init(pos.x - width, pos.y), option);
-}
-
-pub fn drawTextFmt(comptime fmt: String, pos: Vector2, args: anytype) void {
-    var buffer: [1024]u8 = undefined;
-    drawTextOption(text.format(&buffer, fmt, args), pos);
-}
-
-pub fn drawTextColor(str: String, pos: Vector2, color: Color) void {
-    drawTextOption(str, pos, .{ .color = color });
-}
-
-pub fn drawTextOption(str: String, pos: Vector2, option: text.Option) void {
-    var worldPos = pos;
-    if (mode == .local) worldPos = pos.add(position);
-    text.draw(str, worldPos, option);
 }
 
 pub fn endDraw() void {
@@ -143,7 +104,6 @@ pub fn endDraw() void {
 }
 
 pub const imageDrawCount = graphics.imageDrawCount;
-pub const computeTextWidth = text.computeTextWidth;
 
 pub fn textDrawCount() usize {
     return text.count;
