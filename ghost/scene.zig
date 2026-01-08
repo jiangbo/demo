@@ -5,11 +5,15 @@ const window = zhu.window;
 const graphics = zhu.graphics;
 const camera = zhu.camera;
 
+const player = @import("player.zig");
+
 var isHelp = false;
 var isDebug = false;
 var vertexBuffer: []graphics.Vertex = undefined;
 
 const atlas: graphics.Atlas = @import("zon/atlas.zon");
+
+pub var worldSize: zhu.Vector2 = undefined; // 世界大小
 
 pub fn init() void {
     window.initText(@import("zon/font.zon"), 24);
@@ -19,6 +23,9 @@ pub fn init() void {
     graphics.initWithWhiteTexture(window.logicSize, vertexBuffer);
 
     graphics.loadAtlas(atlas);
+    worldSize = window.logicSize.scale(3); // 设置世界大小
+
+    player.init(worldSize.scale(0.5)); // 将玩家移动到世界中心
 }
 
 pub fn update(delta: f32) void {
@@ -34,6 +41,9 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.DOWN)) camera.position.y += speed;
     if (window.isKeyDown(.LEFT)) camera.position.x -= speed;
     if (window.isKeyDown(.RIGHT)) camera.position.x += speed;
+
+    player.update(delta, worldSize);
+    cameraFollow(player.position);
 }
 
 pub fn draw() void {
@@ -42,9 +52,11 @@ pub fn draw() void {
     window.keepAspectRatio();
 
     const gridColor = graphics.rgb(0.5, 0.5, 0.5);
-    const area = zhu.Rect.init(.zero, window.logicSize.scale(3));
+    const area = zhu.Rect.init(.zero, worldSize);
     drawGrid(area, 80, gridColor);
     camera.drawRectBorder(area, 10, .white);
+
+    player.draw(); // 玩家绘制
 
     camera.mode = .local;
     defer camera.mode = .world;
@@ -65,6 +77,16 @@ fn drawGrid(area: zhu.Rect, width: f32, lineColor: zhu.Color) void {
     while (min.y < max.y) : (min.y += width) {
         camera.drawAxisLine(min, .init(max.x, min.y), color);
     }
+}
+
+fn cameraFollow(pos: zhu.Vector2) void {
+    // const scaleSize = window.logicSize.div(camera.scale);
+    // const half = scaleSize.scale(0.5);
+    const max = worldSize.sub(window.logicSize).max(.zero);
+    const halfWindowSize = window.logicSize.scale(0.5);
+    const square: zhu.Vector2 = .square(30);
+    camera.position = pos.sub(halfWindowSize);
+    camera.position.clamp(square.scale(-1), max.add(square));
 }
 
 fn drawHelpInfo() void {
