@@ -76,13 +76,13 @@ pub fn loadAtlas(atlas: graphics.Atlas) void {
 }
 
 pub fn createWhiteImage(comptime key: [:0]const u8) Id {
-    const data: [64]u8 = @splat(0xFF);
-    const image = Texture.makeImage(4, 4, &data);
+    const data: [4]u8 = @splat(0xFF);
+    const image = Texture.makeImage(1, 1, &data);
     const view = sk.gfx.makeView(.{ .texture = .{ .image = image } });
     Texture.cache.put(allocator, key, view) catch oom();
     imageCache.put(allocator, comptime id(key), .{
         .texture = view,
-        .area = .init(.zero, .{ .x = 4, .y = 4 }),
+        .area = .init(.zero, .init(1, 1)),
     }) catch oom();
     return comptime id(key);
 }
@@ -125,7 +125,7 @@ pub const Texture = struct {
         return &.{};
     }
 
-    fn makeImage(w: i32, h: i32, data: []const u8) sk.gfx.Image {
+    fn makeImage(w: i32, h: i32, data: anytype) sk.gfx.Image {
         return sk.gfx.makeImage(.{
             .width = w,
             .height = h,
