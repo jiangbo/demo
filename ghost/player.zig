@@ -3,14 +3,13 @@ const zhu = @import("zhu");
 
 const camera = zhu.camera;
 const window = zhu.window;
-const graphics = zhu.graphics;
 
 const maxSpeed = 500;
 
 pub var position: zhu.Vector2 = undefined;
 const size: zhu.Vector2 = .square(20);
 var velocity: zhu.Vector2 = .zero;
-const image = graphics.imageId("sprite/ghost-idle.png");
+const image = zhu.graphics.imageId("sprite/ghost-idle.png");
 
 pub fn init(initPosition: zhu.Vector2) void {
     position = initPosition;

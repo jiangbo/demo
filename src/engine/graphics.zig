@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const gpu = @import("gpu.zig");
-const batch = @import("batch.zig");
 const math = @import("math.zig");
 const assets = @import("assets.zig");
 const window = @import("window.zig");
@@ -13,18 +12,10 @@ pub const queryBackend = gpu.queryBackend;
 
 pub const Vector2 = math.Vector2;
 pub const Color = math.Vector4;
-pub const Image = batch.Image;
-pub const Vertex = batch.QuadVertex;
-pub const draw = batch.draw;
-pub const beginDraw = batch.beginDraw;
-pub const endDraw = batch.endDraw;
-pub const Option = batch.Option;
-pub const imageDrawCount = batch.imageDrawCount;
 
-pub const loadAtlas = assets.loadAtlas;
-pub const loadImage = assets.loadImage;
-pub const imageId = assets.id;
 pub const ImageId = assets.Id;
+pub const createWhiteImage = assets.createWhiteImage;
+pub const loadImage = assets.loadImage;
 pub const getImage = assets.getImage;
 
 pub const Frame = struct { area: math.Rect, interval: f32 = 0.1 };
@@ -76,6 +67,32 @@ pub const FrameAnimation = struct {
     }
 };
 
+pub const Image = struct {
+    texture: gpu.Texture,
+    area: math.Rect,
+
+    pub fn width(self: *const Image) f32 {
+        return self.area.size.x;
+    }
+
+    pub fn height(self: *const Image) f32 {
+        return self.area.size.y;
+    }
+
+    pub fn size(self: *const Image) math.Vector2 {
+        return self.area.size;
+    }
+
+    pub fn sub(self: *const Image, area: math.Rect) Image {
+        const moved = area.move(self.area.min);
+        return .{ .texture = self.texture, .area = moved };
+    }
+
+    pub fn map(self: *const Image, area: math.Rect) Image {
+        return .{ .texture = self.texture, .area = area };
+    }
+};
+
 pub const Atlas = struct {
     imagePath: [:0]const u8,
     size: math.Vector2,
@@ -90,24 +107,28 @@ pub fn color(r: f32, g: f32, b: f32, a: f32) math.Vector4 {
     return .{ .x = r, .y = g, .z = b, .w = a };
 }
 
-pub fn init(size: Vector2, buffer: []Vertex) void {
-    batch.init(size, buffer);
+pub fn imageId(comptime path: [:0]const u8) ImageId {
+    return comptime assets.id(path);
 }
 
-pub var whiteImage: ImageId = undefined;
-pub fn initWithWhiteTexture(size: Vector2, buffer: []Vertex) void {
-    init(size, buffer);
-    whiteImage = assets.createWhiteImage("engine/white");
+pub var textCount: u32 = 0;
+pub fn beginDraw(clearColor: Color) void {
+    gpu.begin(clearColor);
+    textCount = 0;
 }
 
-pub fn scissor(area: math.Rect) void {
-    const min = area.min.mul(window.ratio);
-    const size = area.size.mul(window.ratio);
-    batch.encodeCommand(.{ .scissor = .{ .min = min, .size = size } });
-}
-pub fn resetScissor() void {
-    batch.encodeCommand(.{ .scissor = .fromMax(.zero, window.clientSize) });
-}
+// pub fn init(size: Vector2, buffer: []Vertex) void {
+//     batch.init(size, buffer);
+// }
+
+// pub fn scissor(area: math.Rect) void {
+//     const min = area.min.mul(window.ratio);
+//     const size = area.size.mul(window.ratio);
+//     batch.encodeCommand(.{ .scissor = .{ .min = min, .size = size } });
+// }
+// pub fn resetScissor() void {
+//     batch.encodeCommand(.{ .scissor = .fromMax(.zero, window.clientSize) });
+// }
 
 // pub fn encodeScaleCommand(scale: Vector2) void {
 //     batch.setScale(scale);

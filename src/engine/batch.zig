@@ -3,14 +3,18 @@ const std = @import("std");
 const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const shader = @import("shader/quad.glsl.zig");
+const graphics = @import("graphics.zig");
 
+const Image = graphics.Image;
 const Vector2 = math.Vector2;
 const Matrix = math.Matrix;
 const Texture = gpu.Texture;
 
 pub var pipeline: gpu.RenderPipeline = undefined;
 var gpuBuffer: gpu.Buffer = undefined;
-var vertexBuffer: std.ArrayList(QuadVertex) = .empty;
+var vertexBuffer: std.ArrayList(Vertex) = .empty;
+
+pub var whiteImage: graphics.ImageId = undefined;
 
 const DrawCommand = struct {
     position: Vector2 = .zero, // 位置
@@ -23,7 +27,7 @@ var commands: [16]Command = undefined;
 var commandIndex: u32 = 0;
 var windowSize: Vector2 = undefined;
 
-pub const QuadVertex = extern struct {
+pub const Vertex = extern struct {
     position: math.Vector3, // 顶点坐标
     radian: f32 = 0, // 旋转弧度
     size: math.Vector2, // 大小
@@ -32,17 +36,22 @@ pub const QuadVertex = extern struct {
     color: math.Vector4 = .one, // 顶点颜色
 };
 
-pub fn init(size: Vector2, buffer: []QuadVertex) void {
+pub fn init(size: Vector2, buffer: []Vertex) void {
     windowSize = size;
 
     gpuBuffer = gpu.createBuffer(.{
-        .size = @sizeOf(QuadVertex) * buffer.len,
+        .size = @sizeOf(Vertex) * buffer.len,
         .usage = .{ .stream_update = true },
     });
     vertexBuffer = .initBuffer(buffer);
 
     const shaderDesc = shader.quadShaderDesc(gpu.queryBackend());
     pipeline = createQuadPipeline(shaderDesc);
+}
+
+pub fn initWithWhiteTexture(size: Vector2, buffer: []Vertex) void {
+    init(size, buffer);
+    whiteImage = graphics.createWhiteImage("engine/white");
 }
 
 pub const Option = struct {
@@ -54,34 +63,8 @@ pub const Option = struct {
     flipX: bool = false, // 是否水平翻转
 };
 
-pub const Image = struct {
-    texture: gpu.Texture,
-    area: math.Rect,
-
-    pub fn width(self: *const Image) f32 {
-        return self.area.size.x;
-    }
-
-    pub fn height(self: *const Image) f32 {
-        return self.area.size.y;
-    }
-
-    pub fn size(self: *const Image) math.Vector2 {
-        return self.area.size;
-    }
-
-    pub fn sub(self: *const Image, area: math.Rect) Image {
-        const moved = area.move(self.area.min);
-        return .{ .texture = self.texture, .area = moved };
-    }
-
-    pub fn map(self: *const Image, area: math.Rect) Image {
-        return .{ .texture = self.texture, .area = area };
-    }
-};
-
 pub fn beginDraw(color: math.Vector4) void {
-    gpu.begin(color);
+    graphics.beginDraw(color);
     commandIndex = 0;
     commands[commandIndex].cmd.draw = .{};
     vertexBuffer.clearRetainingCapacity();
@@ -110,7 +93,7 @@ pub fn draw(image: Image, position: Vector2, option: Option) void {
     const size = option.size orelse image.area.size;
     var worldPos = position.sub(size.mul(option.anchor));
 
-    drawVertices(image.texture, &.{QuadVertex{
+    drawVertices(image.texture, &.{Vertex{
         .position = worldPos.toVector3(0),
         .radian = option.radian,
         .size = size,
@@ -121,7 +104,7 @@ pub fn draw(image: Image, position: Vector2, option: Option) void {
     }});
 }
 
-pub fn drawVertices(texture: Texture, vertex: []const QuadVertex) void {
+pub fn drawVertices(texture: Texture, vertex: []const Vertex) void {
     const drawCommand = &commands[commandIndex].cmd.draw;
     if (drawCommand.texture.id == 0) {
         drawCommand.texture = texture; // 还没有绘制任何纹理
@@ -171,7 +154,7 @@ fn doDraw(position: Vector2, cmd: Command, drawCmd: DrawCommand) void {
     var bindGroup: gpu.BindGroup = .{};
     bindGroup.setTexture(drawCmd.texture);
     bindGroup.setVertexBuffer(gpuBuffer);
-    bindGroup.setVertexOffset(cmd.start * @sizeOf(QuadVertex));
+    bindGroup.setVertexOffset(cmd.start * @sizeOf(Vertex));
     bindGroup.setSampler(gpu.nearestSampler);
     gpu.setBindGroup(bindGroup);
 

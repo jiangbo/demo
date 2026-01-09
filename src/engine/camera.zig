@@ -4,6 +4,7 @@ const math = @import("math.zig");
 const text = @import("text.zig");
 const assets = @import("assets.zig");
 const graphics = @import("graphics.zig");
+const batch = @import("batch.zig");
 
 const Color = graphics.Color;
 const Vector2 = math.Vector2;
@@ -24,9 +25,8 @@ pub fn toWindow(worldPosition: Vector2) Vector2 {
 }
 
 pub fn beginDraw(color: Color) void {
-    graphics.beginDraw(color);
+    batch.beginDraw(color);
     startDraw = true;
-    text.count = 0;
 }
 
 pub fn debugDraw(area: math.Rect) void {
@@ -82,29 +82,25 @@ pub fn drawRectBorder(area: math.Rect, width: f32, c: Color) void {
 
 pub const RectOption = struct { color: Color = .white, radian: f32 = 0 };
 pub fn drawRect(area: math.Rect, option: RectOption) void {
-    drawOption(graphics.whiteImage, area.min, .{
+    drawOption(batch.whiteImage, area.min, .{
         .size = area.size,
         .color = option.color,
         .radian = option.radian,
     });
 }
 
-pub const Option = graphics.Option;
+pub const Option = batch.Option;
 pub fn drawOption(image: ImageId, pos: Vector2, option: Option) void {
     if (!startDraw) @panic("need begin draw");
 
     var worldPos = pos;
     if (mode == .local) worldPos = pos.add(position);
-    graphics.draw(graphics.getImage(image), worldPos, option);
+    batch.draw(graphics.getImage(image), worldPos, option);
 }
 
 pub fn endDraw() void {
     startDraw = false;
-    graphics.endDraw(position);
+    batch.endDraw(position);
 }
 
-pub const imageDrawCount = graphics.imageDrawCount;
-
-pub fn textDrawCount() usize {
-    return text.count;
-}
+pub const imageDrawCount = batch.imageDrawCount;

@@ -2,27 +2,28 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const window = zhu.window;
-const graphics = zhu.graphics;
+const batch = zhu.batch;
 const camera = zhu.camera;
 
 const player = @import("player.zig");
 
 var isHelp = false;
 var isDebug = false;
-var vertexBuffer: []graphics.Vertex = undefined;
+var vertexBuffer: []batch.Vertex = undefined;
 
-const atlas: graphics.Atlas = @import("zon/atlas.zon");
+const atlas: zhu.Atlas = @import("zon/atlas.zon");
 
 pub var worldSize: zhu.Vector2 = undefined; // 世界大小
 
 pub fn init() void {
     window.initText(@import("zon/font.zon"), 24);
 
-    vertexBuffer = window.alloc(graphics.Vertex, 5000);
-    graphics.frameStats(true);
-    graphics.initWithWhiteTexture(window.logicSize, vertexBuffer);
+    vertexBuffer = window.alloc(batch.Vertex, 5000);
+    zhu.graphics.frameStats(true);
+    batch.init(window.logicSize, vertexBuffer);
+    batch.whiteImage = zhu.graphics.imageId("white.png");
 
-    graphics.loadAtlas(atlas);
+    zhu.assets.loadAtlas(atlas);
     worldSize = window.logicSize.scale(3); // 设置世界大小
 
     player.init(worldSize.scale(0.5)); // 将玩家移动到世界中心
@@ -51,7 +52,7 @@ pub fn draw() void {
     defer camera.endDraw();
     window.keepAspectRatio();
 
-    const gridColor = graphics.rgb(0.5, 0.5, 0.5);
+    const gridColor = zhu.graphics.rgb(0.5, 0.5, 0.5);
     const area = zhu.Rect.init(.zero, worldSize);
     drawGrid(area, 80, gridColor);
     camera.drawRectBorder(area, 10, .white);
@@ -119,9 +120,9 @@ fn drawDebugInfo() void {
         \\相机：{d:.2}，{d:.2}
     ;
 
-    const stats = graphics.queryFrameStats();
+    const stats = zhu.graphics.queryFrameStats();
     const text = zhu.format(&buffer, format, .{
-        @tagName(graphics.queryBackend()),
+        @tagName(zhu.graphics.queryBackend()),
         window.frameRate,
         window.currentSmoothTime * 1000,
         window.frameDeltaPerSecond,
@@ -131,7 +132,7 @@ fn drawDebugInfo() void {
         stats.num_draw,
         camera.imageDrawCount(),
         // Debug 信息本身的次数也应该统计进去
-        camera.textDrawCount() + debutTextCount,
+        zhu.graphics.textCount + debutTextCount,
         window.countingAllocator.used,
         window.mousePosition.x,
         window.mousePosition.y,

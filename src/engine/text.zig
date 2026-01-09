@@ -3,6 +3,7 @@ const std = @import("std");
 const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const graphics = @import("graphics.zig");
+const batch = @import("batch.zig");
 const camera = @import("camera.zig");
 
 const Vector2 = math.Vector2;
@@ -29,7 +30,6 @@ var invalidIndex: usize = 0;
 var font: BitMapFont = undefined;
 var fontImage: graphics.Image = undefined;
 var fontScale: f32 = 1;
-pub var count: u32 = 0;
 
 pub fn initBitMapFont(fontZon: BitMapFont, size: f32) void {
     font = fontZon;
@@ -111,12 +111,12 @@ pub fn drawOption(text: String, position: Vector2, option: Option) void {
             pos = .init(position.x, pos.y + height);
         }
         const char = searchChar(code);
-        count += 1;
+        graphics.textCount += 1;
 
         const image = fontImage.map(char.area);
         var worldPos = pos.add(char.offset.scale(scale));
         if (camera.mode == .local) worldPos = worldPos.add(camera.position);
-        graphics.draw(image, worldPos, .{
+        batch.draw(image, worldPos, .{
             .size = char.area.size.scale(scale),
             .color = option.color,
         });
