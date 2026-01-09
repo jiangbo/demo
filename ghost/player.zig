@@ -5,13 +5,16 @@ const camera = zhu.camera;
 const window = zhu.window;
 
 const maxSpeed = 500;
+const idleFrames = zhu.graphics.framesX(8, .init(48, 48), 0.1);
+const size = idleFrames[0].area.size.scale(2);
 
 pub var position: zhu.Vector2 = undefined;
-const size: zhu.Vector2 = .square(20);
 var velocity: zhu.Vector2 = .zero;
-const image = zhu.graphics.imageId("sprite/ghost-idle.png");
+var animation: zhu.graphics.FrameAnimation = undefined;
 
 pub fn init(initPosition: zhu.Vector2) void {
+    const imageId = zhu.graphics.imageId("sprite/ghost-idle.png");
+    animation = .init(imageId, &idleFrames);
     position = initPosition;
 }
 
@@ -24,6 +27,8 @@ pub fn update(delta: f32, worldSize: zhu.Vector2) void {
 
     move(delta);
     position.clamp(.zero, worldSize.sub(size));
+
+    animation.update(delta);
 }
 
 fn move(delta: f32) void {
@@ -31,6 +36,8 @@ fn move(delta: f32) void {
 }
 
 pub fn draw() void {
-    camera.drawRectBorder(.init(position, size), 5, .red);
-    camera.draw(image, position);
+    const image = animation.currentImage();
+    zhu.batch.drawOption(image, position, .{
+        .size = size,
+    });
 }

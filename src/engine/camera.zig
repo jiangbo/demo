@@ -95,7 +95,7 @@ pub fn drawOption(image: ImageId, pos: Vector2, option: Option) void {
 
     var worldPos = pos;
     if (mode == .local) worldPos = pos.add(position);
-    batch.draw(graphics.getImage(image), worldPos, option);
+    batch.drawOption(assets.getImage(image), worldPos, option);
 }
 
 pub fn endDraw() void {

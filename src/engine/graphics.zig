@@ -16,7 +16,6 @@ pub const Color = math.Vector4;
 pub const ImageId = assets.Id;
 pub const createWhiteImage = assets.createWhiteImage;
 pub const loadImage = assets.loadImage;
-pub const getImage = assets.getImage;
 
 pub const Frame = struct { area: math.Rect, interval: f32 = 0.1 };
 
@@ -24,15 +23,15 @@ pub const FrameAnimation = struct {
     elapsed: f32 = 0,
     index: u8 = 0,
     loop: bool = true,
-    texture: Texture,
+    image: Image,
     frames: []const Frame,
 
-    pub fn init(texture: Texture, frames: []const Frame) FrameAnimation {
-        return .{ .texture = texture, .frames = frames };
+    pub fn init(image: ImageId, frames: []const Frame) FrameAnimation {
+        return .{ .image = assets.getImage(image), .frames = frames };
     }
 
-    pub fn currentTexture(self: *const FrameAnimation) Texture {
-        return self.texture.subTexture(self.frames[self.index].area);
+    pub fn currentImage(self: *const FrameAnimation) Image {
+        return self.image.sub(self.frames[self.index].area);
     }
 
     pub fn update(self: *FrameAnimation, delta: f32) void {
@@ -66,6 +65,16 @@ pub const FrameAnimation = struct {
         self.elapsed = 0;
     }
 };
+
+pub fn framesX(comptime count: u8, size: Vector2, d: f32) [count]Frame {
+    var result: [count]Frame = undefined;
+    for (&result, 0..) |*frame, i| {
+        const index: f32 = @floatFromInt(i);
+        frame.area = .init(.init(index * size.x, 0), size);
+        frame.interval = d;
+    }
+    return result;
+}
 
 pub const Image = struct {
     texture: gpu.Texture,
@@ -107,12 +116,16 @@ pub fn color(r: f32, g: f32, b: f32, a: f32) math.Vector4 {
     return .{ .x = r, .y = g, .z = b, .w = a };
 }
 
-pub fn imageId(comptime path: [:0]const u8) ImageId {
+pub fn imageId(comptime path: []const u8) ImageId {
     return comptime assets.id(path);
 }
 
+pub fn getImage(comptime path: []const u8) Image {
+    return assets.getImage(imageId(path));
+}
+
 pub var textCount: u32 = 0;
-pub fn beginDraw(clearColor: Color) void {
+pub fn beginDraw(clearColor: math.Vector4) void {
     gpu.begin(clearColor);
     textCount = 0;
 }

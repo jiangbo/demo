@@ -84,7 +84,7 @@ pub fn endDraw(position: Vector2) void {
     }
 }
 
-pub fn draw(image: Image, position: Vector2, option: Option) void {
+pub fn drawOption(image: Image, position: Vector2, option: Option) void {
     var textureVector: math.Vector4 = image.area.toVector4();
     if (option.flipX) {
         std.mem.swap(f32, &textureVector.x, &textureVector.z);
