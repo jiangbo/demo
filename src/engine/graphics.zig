@@ -28,6 +28,7 @@ pub const FrameAnimation = struct {
     loop: bool = true,
     image: Image,
     frames: []const Frame,
+    state: u8 = 0,
 
     pub fn init(image: Image, frames: []const Frame) FrameAnimation {
         return .{ .image = image, .frames = frames };

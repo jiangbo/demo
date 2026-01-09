@@ -129,7 +129,7 @@ fn drawDebugInfo() void {
     ;
 
     const stats = zhu.graphics.queryFrameStats();
-    const text = zhu.format(&buffer, format, .{
+    const text = zhu.text.format(&buffer, format, .{
         @tagName(zhu.graphics.queryBackend()),
         window.frameRate,
         window.currentSmoothTime * 1000,

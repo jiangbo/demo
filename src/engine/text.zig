@@ -161,11 +161,7 @@ pub fn format(buf: []u8, comptime fmt: String, args: anytype) []u8 {
     return std.fmt.bufPrint(buf, fmt, args) catch @panic("text too long");
 }
 
-var globalBuffer: [1024]u8 = undefined;
-pub fn globalFormat(comptime fmt: String, args: anytype) []u8 {
-    return format(&globalBuffer, fmt, args);
-}
-
-pub fn globalFormatNumber(args: anytype) []u8 {
-    return globalFormat("{d}", .{args});
+pub fn nextIndex(str: []const u8, index: usize) usize {
+    const next = std.unicode.utf8ByteSequenceLength(str[index]);
+    return index + (next catch unreachable);
 }

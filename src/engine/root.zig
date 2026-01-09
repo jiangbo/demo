@@ -16,26 +16,12 @@ pub const Vector2 = math.Vector2;
 pub const Rect = math.Rect;
 pub const Color = graphics.Color;
 
-pub fn format(buffer: []u8, comptime fmt: []const u8, args: anytype) []u8 {
-    return std.fmt.bufPrint(buffer, fmt, args) catch unreachable;
-}
-
-pub fn formatZ(buffer: []u8, comptime fmt: []const u8, args: anytype) [:0]u8 {
-    return std.fmt.bufPrintZ(buffer, fmt, args) catch unreachable;
-}
-
-const Utf8View = std.unicode.Utf8View;
-pub fn utf8Len(str: []const u8) usize {
-    const utf8 = Utf8View.init(str) catch unreachable;
-    var count: usize = 0;
-    var it = utf8.iterator();
-    while (it.nextCodepoint()) count += 1;
-    return count;
-}
-
-pub fn utf8NextIndex(str: []const u8, index: usize) usize {
-    const next = std.unicode.utf8ByteSequenceLength(str[index]);
-    return index + (next catch unreachable);
+pub fn nextEnum(E: type, value: anytype) E {
+    const len = @typeInfo(E).@"enum".fields.len;
+    if (@typeInfo(@TypeOf(value)) == .int) {
+        return @enumFromInt((value + 1) % len);
+    }
+    return @enumFromInt((@intFromEnum(value) + 1) % len);
 }
 
 pub const random = math.random;
