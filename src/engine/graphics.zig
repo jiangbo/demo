@@ -19,6 +19,9 @@ pub const loadImage = assets.loadImage;
 
 pub const Frame = struct { area: math.Rect, interval: f32 = 0.1 };
 
+pub fn EnumFrameAnimation(comptime T: type) type {
+    return std.EnumArray(T, FrameAnimation);
+}
 pub const FrameAnimation = struct {
     elapsed: f32 = 0,
     index: u8 = 0,
@@ -26,8 +29,8 @@ pub const FrameAnimation = struct {
     image: Image,
     frames: []const Frame,
 
-    pub fn init(image: ImageId, frames: []const Frame) FrameAnimation {
-        return .{ .image = assets.getImage(image), .frames = frames };
+    pub fn init(image: Image, frames: []const Frame) FrameAnimation {
+        return .{ .image = image, .frames = frames };
     }
 
     pub fn currentImage(self: *const FrameAnimation) Image {

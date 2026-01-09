@@ -9,6 +9,7 @@ const batch = @import("batch.zig");
 const Color = graphics.Color;
 const Vector2 = math.Vector2;
 const ImageId = graphics.ImageId;
+const Image = graphics.Image;
 const String = text.String;
 
 pub var mode: enum { world, local } = .world;
@@ -91,11 +92,17 @@ pub fn drawRect(area: math.Rect, option: RectOption) void {
 
 pub const Option = batch.Option;
 pub fn drawOption(image: ImageId, pos: Vector2, option: Option) void {
+    var worldPos = pos;
+    if (mode == .local) worldPos = pos.add(position);
+    batch.drawOption(assets.getImage(image), worldPos, option);
+}
+
+pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     if (!startDraw) @panic("need begin draw");
 
     var worldPos = pos;
     if (mode == .local) worldPos = pos.add(position);
-    batch.drawOption(assets.getImage(image), worldPos, option);
+    batch.drawOption(image, worldPos, option);
 }
 
 pub fn endDraw() void {

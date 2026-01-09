@@ -52,10 +52,10 @@ pub fn draw() void {
     defer camera.endDraw();
     window.keepAspectRatio();
 
-    const gridColor = zhu.graphics.rgb(0.5, 0.5, 0.5);
-    const area = zhu.Rect.init(.zero, worldSize);
-    drawGrid(area, 80, gridColor);
-    camera.drawRectBorder(area, 10, .white);
+    // const gridColor = zhu.graphics.rgb(0.5, 0.5, 0.5);
+    // const area = zhu.Rect.init(.zero, worldSize);
+    // drawGrid(area, 80, gridColor);
+    // camera.drawRectBorder(area, 10, .white);
 
     player.draw(); // 玩家绘制
 

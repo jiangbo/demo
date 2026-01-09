@@ -83,8 +83,14 @@ pub const Vector2 = extern struct {
         return .{ .x = self.x * scalar, .y = self.y * scalar };
     }
 
+    /// 返回长度，如果不是真正需要长度，考虑使用 length2，避免开方
     pub fn length(self: Vector2) f32 {
         return std.math.sqrt(self.x * self.x + self.y * self.y);
+    }
+
+    /// 返回长度的平方，比 length 性能更好，避免开方
+    pub fn length2(self: Vector2) f32 {
+        return self.x * self.x + self.y * self.y;
     }
 
     pub fn normalize(self: Vector2) Vector2 {

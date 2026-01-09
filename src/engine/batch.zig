@@ -85,9 +85,10 @@ pub fn endDraw(position: Vector2) void {
 }
 
 pub fn drawOption(image: Image, position: Vector2, option: Option) void {
-    var textureVector: math.Vector4 = image.area.toVector4();
+    var imageVector: math.Vector4 = image.area.toVector4();
     if (option.flipX) {
-        std.mem.swap(f32, &textureVector.x, &textureVector.z);
+        imageVector.x += imageVector.z;
+        imageVector.z = -imageVector.z;
     }
 
     const size = option.size orelse image.area.size;
@@ -99,7 +100,7 @@ pub fn drawOption(image: Image, position: Vector2, option: Option) void {
         .size = size,
         // 默认旋转点为中心位置，如果不旋转则传 0
         .pivot = if (option.radian == 0) .zero else option.pivot,
-        .texture = textureVector,
+        .texture = imageVector,
         .color = option.color,
     }});
 }
