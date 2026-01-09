@@ -109,7 +109,8 @@ pub fn resetScissor() void {
     batch.encodeCommand(.{ .scissor = .fromMax(.zero, window.clientSize) });
 }
 
-pub fn encodeScaleCommand(scale: Vector2) void {
-    batch.setScale(scale);
-    batch.startNewDrawCommand();
-}
+// pub fn encodeScaleCommand(scale: Vector2) void {
+//     batch.setScale(scale);
+//     batch.startNewDrawCommand();
+//     要解决开始新的绘制命令后，从哪里获取纹理
+// }

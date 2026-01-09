@@ -127,6 +127,7 @@ pub fn drawVertices(texture: Texture, vertex: []const QuadVertex) void {
         drawCommand.texture = texture; // 还没有绘制任何纹理
     } else if (texture.id != drawCommand.texture.id) {
         startNewDrawCommand(); // 纹理改变，开始新的命令
+        commands[commandIndex].cmd.draw.texture = texture;
     }
 
     vertexBuffer.appendSliceAssumeCapacity(vertex);
