@@ -6,6 +6,7 @@ const batch = zhu.batch;
 const camera = zhu.camera;
 
 const player = @import("player.zig");
+const enemy = @import("enemy.zig");
 
 var isHelp = false;
 var isDebug = false;
@@ -27,8 +28,10 @@ pub fn init() void {
     worldSize = window.logicSize.scale(3); // 设置世界大小
 
     player.init(worldSize.scale(0.5)); // 将玩家移动到世界中心
+    enemy.init();
 }
 
+var pause: bool = false;
 pub fn update(delta: f32) void {
     if (window.isKeyRelease(.H)) isHelp = !isHelp;
     if (window.isKeyRelease(.X)) isDebug = !isDebug;
@@ -43,8 +46,12 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.LEFT)) camera.position.x -= speed;
     if (window.isKeyDown(.RIGHT)) camera.position.x += speed;
 
+    if (window.isKeyRelease(.SPACE)) pause = !pause;
+    if (pause) return; // 暂停，方便录制
+
     player.update(delta, worldSize);
     cameraFollow(player.position);
+    enemy.update(delta);
 }
 
 pub fn draw() void {
@@ -57,6 +64,7 @@ pub fn draw() void {
     // drawGrid(area, 80, gridColor);
     // camera.drawRectBorder(area, 10, .white);
 
+    enemy.draw(); // 敌人绘制
     player.draw(); // 玩家绘制
 
     camera.mode = .local;
