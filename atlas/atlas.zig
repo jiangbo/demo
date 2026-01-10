@@ -6,7 +6,7 @@ pub const Atlas = struct {
 };
 
 pub const AtlasFrame = struct {
-    filename: []const u8,
+    filename: []const u8 = &.{},
     frame: Rect,
     rotated: bool,
     trimmed: bool,
@@ -27,6 +27,5 @@ pub const Meta = struct {
     image: []const u8,
     format: []const u8,
     size: struct { w: i32, h: i32 },
-    scale: []const u8,
-    smartupdate: []const u8,
+    scale: f32,
 };
