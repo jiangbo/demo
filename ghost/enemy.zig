@@ -20,6 +20,8 @@ const circle = zhu.graphics.imageId("circle.png"); // 显示碰撞范围
 
 var animations: zhu.graphics.EnumFrameAnimation(State) = undefined;
 var enemy: Enemy = undefined;
+const spawnFrames = zhu.graphics.framesX(11, .init(64, 64), 0.1);
+var spawnAnimation: zhu.graphics.FrameAnimation = undefined;
 
 pub fn init() void {
     var image = zhu.graphics.getImage("sprite/ghost-Sheet.png");
@@ -39,9 +41,14 @@ pub fn init() void {
         .position = player.position.add(.init(200, 200)),
         .animation = animations.get(.normal),
     };
+    const spawnImage = zhu.graphics.getImage("effect/184_3.png");
+    spawnAnimation = .init(spawnImage, &spawnFrames);
+    spawnAnimation.loop = false;
 }
 
 pub fn update(delta: f32) void {
+    if (!spawnAnimation.isFinishedAfterUpdate(delta)) return;
+
     const dir = player.position.sub(enemy.position);
     const distance = dir.normalize().scale(maxSpeed * delta);
     enemy.position = enemy.position.add(distance);
@@ -59,6 +66,14 @@ pub fn update(delta: f32) void {
 var collided: bool = false;
 
 pub fn draw() void {
+    if (!spawnAnimation.finished()) {
+        const image = spawnAnimation.currentImage();
+        return camera.drawImage(image, enemy.position, .{
+            .size = size,
+            .anchor = .center,
+        });
+    }
+
     const image = enemy.animation.currentImage();
     var option: camera.Option = .{ .size = size, .anchor = .center };
     camera.drawImage(image, enemy.position, option);

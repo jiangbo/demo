@@ -9,6 +9,7 @@ const battle = @import("battle.zig");
 const circle = zhu.graphics.imageId("circle.png"); // 显示碰撞范围
 const maxSpeed = 500;
 const frames = zhu.graphics.framesX(8, .init(48, 48), 0.1);
+const deadFrames = zhu.graphics.framesX(17, .init(64, 64), 0.1);
 pub const size = frames[0].area.size;
 const Status = enum { idle, move };
 
@@ -21,17 +22,26 @@ pub var stats: battle.Stats = .{};
 var hurtTimer: window.Timer = .init(1.5); // 无敌时间
 var velocity: zhu.Vector2 = .zero;
 var animation: zhu.graphics.FrameAnimation = undefined;
+var deadAnimation: zhu.graphics.FrameAnimation = undefined;
 var status: Status = .idle;
 
 pub fn init(initPosition: zhu.Vector2) void {
     idleImage = zhu.graphics.getImage("sprite/ghost-idle.png");
     moveImage = zhu.graphics.getImage("sprite/ghost-move.png");
 
+    const deadImage = zhu.graphics.getImage("effect/1764.png");
+    deadAnimation = .init(deadImage, &deadFrames);
+    deadAnimation.loop = false;
+
     animation = .init(idleImage, &frames);
     position = initPosition;
 }
 
 pub fn update(delta: f32, worldSize: zhu.Vector2) void {
+    if (stats.health == 0) {
+        // 角色已死亡
+        deadAnimation.update(delta);
+    }
     hurtTimer.update(delta);
 
     velocity = velocity.scale(0.9);
@@ -62,11 +72,23 @@ fn move(delta: f32) void {
 }
 
 pub fn draw() void {
+    if (stats.health == 0) {
+        if (deadAnimation.finished()) return; // 动画结束不需要显示
+
+        const image = deadAnimation.currentImage();
+        return camera.drawImage(image, position, .{
+            .size = size.scale(2), // 和角色的显示区域一样大
+            .anchor = .center,
+        });
+    }
+
     camera.drawImage(animation.currentImage(), position, .{
         .size = size.scale(2),
         .flipX = velocity.x < 0,
         .anchor = .center,
     });
+
+    // debug 显示碰撞范围
     camera.drawOption(circle, position, .{
         .color = .{ .y = 1, .w = 0.4 },
         .size = size,
