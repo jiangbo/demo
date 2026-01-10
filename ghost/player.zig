@@ -30,8 +30,7 @@ pub fn init(initPosition: zhu.Vector2) void {
     moveImage = zhu.graphics.getImage("sprite/ghost-move.png");
 
     const deadImage = zhu.graphics.getImage("effect/1764.png");
-    deadAnimation = .init(deadImage, &deadFrames);
-    deadAnimation.loop = false;
+    deadAnimation = .once(deadImage, &deadFrames);
 
     animation = .init(idleImage, &frames);
     position = initPosition;

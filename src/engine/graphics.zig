@@ -34,6 +34,10 @@ pub const FrameAnimation = struct {
         return .{ .image = image, .frames = frames };
     }
 
+    pub fn once(image: Image, frames: []const Frame) FrameAnimation {
+        return .{ .image = image, .frames = frames, .loop = false };
+    }
+
     pub fn currentImage(self: *const FrameAnimation) Image {
         return self.image.sub(self.frames[self.index].area);
     }

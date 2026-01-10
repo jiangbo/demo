@@ -42,8 +42,7 @@ pub fn init() void {
         .animation = animations.get(.normal),
     };
     const spawnImage = zhu.graphics.getImage("effect/184_3.png");
-    spawnAnimation = .init(spawnImage, &spawnFrames);
-    spawnAnimation.loop = false;
+    spawnAnimation = .once(spawnImage, &spawnFrames);
 }
 
 pub fn update(delta: f32) void {
