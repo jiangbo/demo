@@ -40,24 +40,29 @@ pub fn init() void {
 }
 
 pub fn update(delta: f32) void {
-    const dir = player.position.sub(enemy.position);
-    const distance = dir.normalize().scale(maxSpeed * delta);
-    enemy.position = enemy.position.add(distance);
+    // 怪物先不移动，方便看碰撞。
+    // const dir = player.position.sub(enemy.position);
+    // const distance = dir.normalize().scale(maxSpeed * delta);
+    // enemy.position = enemy.position.add(distance);
 
     if (enemy.animation.isFinishedAfterUpdate(delta)) {
         const next = zhu.nextEnum(State, enemy.animation.state);
         enemy.animation = animations.get(next);
     }
-}
-
-pub fn draw() void {
-    const image = enemy.animation.currentImage();
-    camera.drawImage(image, enemy.position, .{ .size = size });
 
     const len = (player.size.x + size.x) * 0.5;
     const len2 = player.position.sub(enemy.position).length2();
-    var color: zhu.Color = .{ .y = 1, .w = 0.4 };
-    if (len2 < comptime len * len) color = .{ .x = 1, .w = 0.4 };
+    collided = len2 < len * len;
+}
+var collided: bool = false;
 
-    camera.drawOption(circle, enemy.position, .{ .color = color });
+pub fn draw() void {
+    const image = enemy.animation.currentImage();
+    var option: camera.Option = .{ .size = size, .anchor = .center };
+    camera.drawImage(image, enemy.position, option);
+
+    option.color = .{ .y = 1, .w = 0.4 };
+    if (collided) option.color = .{ .x = 1, .w = 0.4 };
+
+    camera.drawOption(circle, enemy.position, option);
 }

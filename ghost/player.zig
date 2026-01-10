@@ -7,7 +7,7 @@ const window = zhu.window;
 const circle = zhu.graphics.imageId("circle.png"); // 显示碰撞范围
 const maxSpeed = 500;
 const frames = zhu.graphics.framesX(8, .init(48, 48), 0.1);
-pub const size = frames[0].area.size.scale(2);
+pub const size = frames[0].area.size;
 const Status = enum { idle, move };
 
 var idleImage: zhu.graphics.Image = undefined;
@@ -49,11 +49,13 @@ fn move(delta: f32) void {
 
 pub fn draw() void {
     camera.drawImage(animation.currentImage(), position, .{
-        .size = size,
+        .size = size.scale(2),
         .flipX = velocity.x < 0,
+        .anchor = .center,
     });
     camera.drawOption(circle, position, .{
         .color = .{ .y = 1, .w = 0.4 },
         .size = size,
+        .anchor = .center,
     });
 }
