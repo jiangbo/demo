@@ -14,6 +14,7 @@ const normalFrames = zhu.graphics.framesX(4, .init(32, 32), 0.2);
 const deadFrames = zhu.graphics.framesX(8, .init(32, 32), 0.1);
 const size = deadFrames[0].area.size.scale(2);
 const maxSpeed = 100;
+const circle = zhu.graphics.imageId("circle.png"); // 显示碰撞范围
 
 var animations: zhu.graphics.EnumFrameAnimation(State) = undefined;
 var enemy: Enemy = undefined;
@@ -51,7 +52,12 @@ pub fn update(delta: f32) void {
 
 pub fn draw() void {
     const image = enemy.animation.currentImage();
-    camera.drawImage(image, enemy.position, .{
-        .size = size,
-    });
+    camera.drawImage(image, enemy.position, .{ .size = size });
+
+    const len = (player.size.x + size.x) * 0.5;
+    const len2 = player.position.sub(enemy.position).length2();
+    var color: zhu.Color = .{ .y = 1, .w = 0.4 };
+    if (len2 < comptime len * len) color = .{ .x = 1, .w = 0.4 };
+
+    camera.drawOption(circle, enemy.position, .{ .color = color });
 }

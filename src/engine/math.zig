@@ -199,9 +199,19 @@ pub const Rect = struct {
             point.y >= self.min.y and point.y <= self.max().y;
     }
 
+    /// 两个矩形是否相交
     pub fn intersect(self: Rect, other: Rect) bool {
         return self.min.x < other.max().x and self.max().x > other.min.x and
             self.min.y < other.max().y and self.max().y > other.min.y;
+    }
+
+    /// 按圆形判断是否相交
+    pub fn intersectCircle(self: Rect, other: Rect) bool {
+        std.debug.assert(self.size.x == self.size.y);
+        std.debug.assert(other.size.x == other.size.y);
+        const distance2 = self.center().sub(other.center()).length2();
+        const radiusSum = (self.size.x + other.size.x) * 0.5;
+        return distance2 < std.math.pow(f32, radiusSum, 2);
     }
 
     pub fn toVector4(self: Rect) Vector4 {
