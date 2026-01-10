@@ -3,12 +3,14 @@ const zhu = @import("zhu");
 
 const camera = zhu.camera;
 
+const battle = @import("battle.zig");
 const player = @import("player.zig");
 
 const State = enum { normal, hurt, dead };
 const Enemy = struct {
     position: zhu.Vector2,
     animation: zhu.graphics.FrameAnimation,
+    stats: battle.Stats = .{},
 };
 const normalFrames = zhu.graphics.framesX(4, .init(32, 32), 0.2);
 const deadFrames = zhu.graphics.framesX(8, .init(32, 32), 0.1);
@@ -40,10 +42,9 @@ pub fn init() void {
 }
 
 pub fn update(delta: f32) void {
-    // 怪物先不移动，方便看碰撞。
-    // const dir = player.position.sub(enemy.position);
-    // const distance = dir.normalize().scale(maxSpeed * delta);
-    // enemy.position = enemy.position.add(distance);
+    const dir = player.position.sub(enemy.position);
+    const distance = dir.normalize().scale(maxSpeed * delta);
+    enemy.position = enemy.position.add(distance);
 
     if (enemy.animation.isFinishedAfterUpdate(delta)) {
         const next = zhu.nextEnum(State, enemy.animation.state);
@@ -53,6 +54,7 @@ pub fn update(delta: f32) void {
     const len = (player.size.x + size.x) * 0.5;
     const len2 = player.position.sub(enemy.position).length2();
     collided = len2 < len * len;
+    if (collided) player.hurt(enemy.stats.attack);
 }
 var collided: bool = false;
 

@@ -4,6 +4,8 @@ const zhu = @import("zhu");
 const camera = zhu.camera;
 const window = zhu.window;
 
+const battle = @import("battle.zig");
+
 const circle = zhu.graphics.imageId("circle.png"); // 显示碰撞范围
 const maxSpeed = 500;
 const frames = zhu.graphics.framesX(8, .init(48, 48), 0.1);
@@ -14,6 +16,9 @@ var idleImage: zhu.graphics.Image = undefined;
 var moveImage: zhu.graphics.Image = undefined;
 
 pub var position: zhu.Vector2 = undefined;
+pub var stats: battle.Stats = .{};
+
+var hurtTimer: window.Timer = .init(1.5); // 无敌时间
 var velocity: zhu.Vector2 = .zero;
 var animation: zhu.graphics.FrameAnimation = undefined;
 var status: Status = .idle;
@@ -27,6 +32,8 @@ pub fn init(initPosition: zhu.Vector2) void {
 }
 
 pub fn update(delta: f32, worldSize: zhu.Vector2) void {
+    hurtTimer.update(delta);
+
     velocity = velocity.scale(0.9);
     if (window.isKeyPress(.A)) velocity = .init(-maxSpeed, 0);
     if (window.isKeyPress(.D)) velocity = .init(maxSpeed, 0);
@@ -36,6 +43,13 @@ pub fn update(delta: f32, worldSize: zhu.Vector2) void {
     move(delta);
     position.clamp(.zero, worldSize.sub(size));
     animation.update(delta);
+}
+
+pub fn hurt(damage: u32) void {
+    if (hurtTimer.isRunning()) return; // 受伤后的无敌时间
+
+    stats.health -|= damage; // 扣除生命值
+    hurtTimer.elapsed = 0; // 重置计时器
 }
 
 fn move(delta: f32) void {
@@ -58,4 +72,7 @@ pub fn draw() void {
         .size = size,
         .anchor = .center,
     });
+
+    // 暂时显示生命值在头顶，方便查看
+    zhu.text.drawNumber(stats.health, position.addXY(-24, -48));
 }
