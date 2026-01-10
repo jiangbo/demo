@@ -12,15 +12,15 @@ const Enemy = struct {
     animation: zhu.graphics.FrameAnimation,
     stats: battle.Stats = .{},
 };
-const normalFrames = zhu.graphics.framesX(4, .init(32, 32), 0.2);
-const deadFrames = zhu.graphics.framesX(8, .init(32, 32), 0.1);
+const normalFrames = zhu.graphics.framesX(4, .xy(32, 32), 0.2);
+const deadFrames = zhu.graphics.framesX(8, .xy(32, 32), 0.1);
 const size = deadFrames[0].area.size.scale(2);
 const maxSpeed = 100;
 const circle = zhu.graphics.imageId("circle.png"); // 显示碰撞范围
 
 var animations: zhu.graphics.EnumFrameAnimation(State) = undefined;
 var enemy: Enemy = undefined;
-const spawnFrames = zhu.graphics.framesX(11, .init(64, 64), 0.1);
+const spawnFrames = zhu.graphics.framesX(11, .xy(64, 64), 0.1);
 var spawnAnimation: zhu.graphics.FrameAnimation = undefined;
 
 pub fn init() void {
@@ -38,7 +38,7 @@ pub fn init() void {
     }
 
     enemy = Enemy{
-        .position = player.position.add(.init(200, 200)),
+        .position = player.position.add(.xy(200, 200)),
         .animation = animations.get(.normal),
     };
     const spawnImage = zhu.graphics.getImage("effect/184_3.png");

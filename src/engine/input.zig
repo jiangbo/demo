@@ -23,7 +23,7 @@ pub fn event(ev: *const sk.app.Event) void {
             keyState.unset(keyCode);
             anyRelease = true;
         },
-        .MOUSE_MOVE => mousePosition = .init(ev.mouse_x, ev.mouse_y),
+        .MOUSE_MOVE => mousePosition = .xy(ev.mouse_x, ev.mouse_y),
         .MOUSE_DOWN => mouseState.set(buttonCode),
         .MOUSE_UP => {
             mouseState.unset(buttonCode);

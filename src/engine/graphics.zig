@@ -78,7 +78,7 @@ pub fn framesX(comptime count: u8, size: Vector2, d: f32) [count]Frame {
     var result: [count]Frame = undefined;
     for (&result, 0..) |*frame, i| {
         const index: f32 = @floatFromInt(i);
-        frame.area = .init(.init(index * size.x, 0), size);
+        frame.area = .init(.xy(index * size.x, 0), size);
         frame.interval = d;
     }
     return result;

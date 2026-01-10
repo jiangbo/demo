@@ -104,11 +104,11 @@ pub fn drawOption(text: String, position: Vector2, option: Option) void {
     var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {
         if (code == '\n') {
-            pos = .init(position.x, pos.y + height);
+            pos = .xy(position.x, pos.y + height);
             continue;
         }
         if (pos.x > option.maxWidth) {
-            pos = .init(position.x, pos.y + height);
+            pos = .xy(position.x, pos.y + height);
         }
         const char = searchChar(code);
         graphics.textCount += 1;

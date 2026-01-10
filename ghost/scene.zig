@@ -106,7 +106,7 @@ fn drawHelpInfo() void {
         \\帮助：H  按一次打开，再按一次关闭
     ;
     debutTextCount = zhu.text.computeTextCount(text);
-    zhu.text.drawColor(text, .init(10, 10), .green);
+    zhu.text.drawColor(text, .xy(10, 10), .green);
 }
 
 var debutTextCount: u32 = 0;
@@ -149,7 +149,7 @@ fn drawDebugInfo() void {
     });
 
     debutTextCount = zhu.text.computeTextCount(text);
-    zhu.text.drawColor(text, .init(10, 10), .green);
+    zhu.text.drawColor(text, .xy(10, 10), .green);
 }
 
 pub fn deinit() void {

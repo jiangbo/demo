@@ -8,8 +8,8 @@ const battle = @import("battle.zig");
 
 const circle = zhu.graphics.imageId("circle.png"); // 显示碰撞范围
 const maxSpeed = 500;
-const frames = zhu.graphics.framesX(8, .init(48, 48), 0.1);
-const deadFrames = zhu.graphics.framesX(17, .init(64, 64), 0.1);
+const frames = zhu.graphics.framesX(8, .xy(48, 48), 0.1);
+const deadFrames = zhu.graphics.framesX(17, .xy(64, 64), 0.1);
 pub const size = frames[0].area.size;
 const Status = enum { idle, move };
 
@@ -44,10 +44,10 @@ pub fn update(delta: f32, worldSize: zhu.Vector2) void {
     hurtTimer.update(delta);
 
     velocity = velocity.scale(0.9);
-    if (window.isKeyPress(.A)) velocity = .init(-maxSpeed, 0);
-    if (window.isKeyPress(.D)) velocity = .init(maxSpeed, 0);
-    if (window.isKeyPress(.W)) velocity = .init(0, -maxSpeed);
-    if (window.isKeyPress(.S)) velocity = .init(0, maxSpeed);
+    if (window.isKeyPress(.A)) velocity = .xy(-maxSpeed, 0);
+    if (window.isKeyPress(.D)) velocity = .xy(maxSpeed, 0);
+    if (window.isKeyPress(.W)) velocity = .xy(0, -maxSpeed);
+    if (window.isKeyPress(.S)) velocity = .xy(0, maxSpeed);
 
     move(delta);
     position.clamp(.zero, worldSize.sub(size));

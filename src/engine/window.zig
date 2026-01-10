@@ -125,7 +125,7 @@ pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
 
 pub var logicSize: math.Vector = .zero;
 pub var clientSize: math.Vector = .zero;
-pub var ratio: math.Vector = .init(1, 1);
+pub var ratio: math.Vector = .xy(1, 1);
 pub var displayArea: math.Rect = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
 pub var allocator: std.mem.Allocator = undefined;
@@ -161,7 +161,7 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
 }
 
 export fn windowInit() void {
-    clientSize = .init(sk.app.widthf(), sk.app.heightf());
+    clientSize = .xy(sk.app.widthf(), sk.app.heightf());
     ratio = clientSize.div(logicSize);
     gpu.init();
     math.setRandomSeed(timer.read());
@@ -179,7 +179,7 @@ export fn windowEvent(event: ?*const Event) void {
             const pos = input.mousePosition.sub(displayArea.min);
             mousePosition = pos.mul(logicSize).div(displayArea.size);
         } else if (ev.type == .RESIZED) {
-            clientSize = .init(sk.app.widthf(), sk.app.heightf());
+            clientSize = .xy(sk.app.widthf(), sk.app.heightf());
             ratio = clientSize.div(logicSize);
         }
         call(root, "event", .{ev});
