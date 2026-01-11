@@ -39,11 +39,12 @@ pub fn update(delta: f32) void {
     }
 }
 
-pub fn playerCastSpell(position: zhu.Vector2) void {
-    if (spellAnimation.isRunning()) return;
+pub fn playerCastSpell(position: zhu.Vector2) bool {
+    if (spellAnimation.isRunning()) return false;
 
     spellAnimation.reset();
     spellPosition = position;
+    return true;
 }
 
 pub fn draw() void {

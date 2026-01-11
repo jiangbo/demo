@@ -77,10 +77,10 @@ pub fn draw() void {
     defer camera.endDraw();
     window.keepAspectRatio();
 
-    // const gridColor = zhu.graphics.rgb(0.5, 0.5, 0.5);
-    // const area = zhu.Rect.init(.zero, worldSize);
-    // drawGrid(area, 80, gridColor);
-    // camera.drawRectBorder(area, 10, .white);
+    const gridColor = zhu.graphics.rgb(0.5, 0.5, 0.5);
+    const area = zhu.Rect.init(.zero, worldSize);
+    drawGrid(area, 80, gridColor);
+    camera.drawRectBorder(area, 10, .white);
 
     enemy.draw(); // 敌人绘制
     player.draw(); // 玩家绘制
@@ -88,6 +88,7 @@ pub fn draw() void {
 
     camera.mode = .local;
     defer camera.mode = .world;
+    player.drawStats();
 
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
@@ -98,12 +99,12 @@ fn drawGrid(area: zhu.Rect, width: f32, lineColor: zhu.Color) void {
 
     var min = area.min;
     while (min.x < max.x) : (min.x += width) {
-        camera.drawAxisLine(min, .init(min.x, max.y), color);
+        camera.drawAxisLine(min, .xy(min.x, max.y), color);
     }
 
     min = area.min;
     while (min.y < max.y) : (min.y += width) {
-        camera.drawAxisLine(min, .init(max.x, min.y), color);
+        camera.drawAxisLine(min, .xy(max.x, min.y), color);
     }
 }
 

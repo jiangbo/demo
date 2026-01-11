@@ -49,10 +49,10 @@ pub fn drawAxisLine(start: Vector2, end: Vector2, option: LineOption) void {
     const rectOption = RectOption{ .color = option.color };
     const halfWidth = -@floor(option.width / 2);
     if (start.x == end.x) {
-        const size = Vector2.init(option.width, end.y - start.y);
+        const size = Vector2.xy(option.width, end.y - start.y);
         drawRect(.init(start.addX(halfWidth), size), rectOption);
     } else if (start.y == end.y) {
-        const size = Vector2.init(end.x - start.x, option.width);
+        const size = Vector2.xy(end.x - start.x, option.width);
         drawRect(.init(start.addY(halfWidth), size), rectOption);
     }
 }
