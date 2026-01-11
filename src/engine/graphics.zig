@@ -43,15 +43,20 @@ pub const FrameAnimation = struct {
     }
 
     pub fn onceUpdate(self: *FrameAnimation, delta: f32) void {
-        if (self.index > self.frames.len) return; // 已停止
+        _ = self.isNextOnceUpdate(delta);
+    }
+
+    pub fn isNextOnceUpdate(self: *FrameAnimation, delta: f32) bool {
+        if (self.index > self.frames.len) return false; // 已停止
 
         if (self.index < self.frames.len) {
             self.elapsed += delta;
             const current = self.frames[self.index]; // 当前帧
-            if (self.elapsed < current.interval) return;
+            if (self.elapsed < current.interval) return false;
             self.elapsed -= current.interval;
         }
         self.index += 1;
+        return true;
     }
 
     pub fn isFinishedOnceUpdate(self: *FrameAnimation, delta: f32) bool {

@@ -15,12 +15,12 @@ const Enemy = struct {
 };
 const normalFrames = zhu.graphics.framesX(4, .xy(32, 32), 0.2);
 const deadFrames = zhu.graphics.framesX(8, .xy(32, 32), 0.1);
-const size = deadFrames[0].area.size.scale(2);
 const maxSpeed = 100;
 const circle = zhu.graphics.imageId("circle.png"); // 显示碰撞范围
+pub const size = deadFrames[0].area.size.scale(2);
 
+pub var enemies: std.ArrayList(Enemy) = .empty;
 var animations: zhu.graphics.EnumFrameAnimation(State) = undefined;
-var enemies: std.ArrayList(Enemy) = .empty;
 const spawnFrames = zhu.graphics.framesX(11, .xy(64, 64), 0.1);
 var spawnAnimation: zhu.graphics.FrameAnimation = undefined;
 var spawnTimer: zhu.window.Timer = .init(3); // 三秒生成一批敌人

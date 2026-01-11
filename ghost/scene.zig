@@ -7,6 +7,7 @@ const camera = zhu.camera;
 
 const player = @import("player.zig");
 const enemy = @import("enemy.zig");
+const battle = @import("battle.zig");
 
 var isHelp = false;
 var isDebug = false;
@@ -32,6 +33,7 @@ pub fn init() void {
 
     player.init(worldSize.scale(0.5)); // 将玩家移动到世界中心
     enemy.init();
+    battle.init();
 }
 
 pub fn deinit() void {
@@ -67,6 +69,7 @@ pub fn update(delta: f32) void {
     player.update(delta, worldSize);
     cameraFollow(player.position);
     enemy.update(delta);
+    battle.update(delta);
 }
 
 pub fn draw() void {
@@ -81,6 +84,7 @@ pub fn draw() void {
 
     enemy.draw(); // 敌人绘制
     player.draw(); // 玩家绘制
+    battle.draw(); // 战斗绘制
 
     camera.mode = .local;
     defer camera.mode = .world;

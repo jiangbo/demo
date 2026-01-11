@@ -34,6 +34,8 @@ pub fn init(initPosition: zhu.Vector2) void {
 
     animation = .init(idleImage, &frames);
     position = initPosition;
+
+    stats.attack = 120;
 }
 
 pub fn update(delta: f32, worldSize: zhu.Vector2) void {
@@ -48,6 +50,12 @@ pub fn update(delta: f32, worldSize: zhu.Vector2) void {
     if (window.isKeyPress(.D)) velocity = .xy(maxSpeed, 0);
     if (window.isKeyPress(.W)) velocity = .xy(0, -maxSpeed);
     if (window.isKeyPress(.S)) velocity = .xy(0, maxSpeed);
+
+    // 角色使用魔法
+    if (window.isMouseDown(.LEFT)) {
+        const spellPos = camera.toWorld(window.mousePosition);
+        battle.playerCastSpell(spellPos);
+    }
 
     move(delta);
     position.clamp(.zero, worldSize.sub(size));
