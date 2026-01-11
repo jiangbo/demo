@@ -332,21 +332,31 @@ pub fn isAnyRelease() bool {
     return input.anyRelease;
 }
 
-pub fn useMouseIcon(path: [:0]const u8) void {
-    assets.loadIcon(path, struct {
-        fn callback(icon: assets.Icon) void {
-            const cursor = sk.app.bindMouseCursorImage(.CUSTOM_0, .{
-                .pixels = @bitCast(sk.gfx.asRange(icon.data)),
-                .width = icon.width,
-                .height = icon.height,
-            });
-            sk.app.setMouseCursor(cursor);
+pub const Cursor = sk.app.MouseCursor;
+pub const useMouseIcon = sk.app.setMouseCursor;
+pub fn bindMouseIcon(cursor: Cursor, path: [:0]const u8) void {
+    assets.loadIcon(path, cursor, mouseCallback);
+}
+
+fn mouseCallback(cursor: Cursor, icon: assets.Icon) void {
+    _ = sk.app.bindMouseCursorImage(cursor, .{
+        .pixels = @bitCast(sk.gfx.asRange(icon.data)),
+        .width = icon.width,
+        .height = icon.height,
+    });
+}
+
+pub fn bindAndUseMouseIcon(cursor: Cursor, path: [:0]const u8) void {
+    assets.loadIcon(path, cursor, struct {
+        fn callback(mouseCursor: Cursor, icon: assets.Icon) void {
+            mouseCallback(mouseCursor, icon);
+            useMouseIcon(mouseCursor);
         }
     }.callback);
 }
 
 pub fn useWindowIcon(path: [:0]const u8) void {
-    assets.loadIcon(path, struct {
+    assets.loadIcon(path, 0, struct {
         fn callback(icon: assets.Icon) void {
             var desc: sk.app.IconDesc = .{};
             desc.images[0] = .{

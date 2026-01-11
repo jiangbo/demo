@@ -92,11 +92,15 @@ pub fn getImage(imageId: Id) graphics.Image {
 }
 
 pub const Icon = c.stbImage.Image;
-pub fn loadIcon(path: [:0]const u8, handler: fn (Icon) void) void {
-    _ = File.load(path, 0, struct {
+pub fn loadIcon(
+    path: [:0]const u8,
+    cursor: sk.app.MouseCursor,
+    handler: fn (sk.app.MouseCursor, Icon) void,
+) void {
+    _ = File.load(path, @intCast(@intFromEnum(cursor)), struct {
         fn callback(response: Response) []const u8 {
             const icon = c.stbImage.loadFromMemory(response.data);
-            handler(icon);
+            handler(@enumFromInt(response.index), icon);
             return dupe(u8, icon.data);
         }
     }.callback);

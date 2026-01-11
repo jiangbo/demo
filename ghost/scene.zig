@@ -27,6 +27,9 @@ pub fn init() void {
     zhu.assets.loadAtlas(atlas);
     worldSize = window.logicSize.scale(3); // 设置世界大小
 
+    zhu.window.bindAndUseMouseIcon(.CUSTOM_1, "assets/29.png");
+    zhu.window.bindMouseIcon(.CUSTOM_2, "assets/30.png");
+
     player.init(worldSize.scale(0.5)); // 将玩家移动到世界中心
     enemy.init();
 }
@@ -37,6 +40,8 @@ pub fn deinit() void {
 }
 
 var pause: bool = false;
+var mouse: window.Cursor = .CUSTOM_1;
+var mouseTimer: window.Timer = .init(0.3); // 鼠标切换时间
 pub fn update(delta: f32) void {
     if (window.isKeyRelease(.H)) isHelp = !isHelp;
     if (window.isKeyRelease(.X)) isDebug = !isDebug;
@@ -53,6 +58,11 @@ pub fn update(delta: f32) void {
 
     if (window.isKeyRelease(.SPACE)) pause = !pause;
     if (pause) return; // 暂停，方便录制
+
+    if (mouseTimer.isFinishedLoopUpdate(delta)) {
+        mouse = if (mouse == .CUSTOM_1) .CUSTOM_2 else .CUSTOM_1;
+        window.useMouseIcon(mouse);
+    }
 
     player.update(delta, worldSize);
     cameraFollow(player.position);
