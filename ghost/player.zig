@@ -30,7 +30,7 @@ pub fn init(initPosition: zhu.Vector2) void {
     moveImage = zhu.graphics.getImage("sprite/ghost-move.png");
 
     const deadImage = zhu.graphics.getImage("effect/1764.png");
-    deadAnimation = .once(deadImage, &deadFrames);
+    deadAnimation = .init(deadImage, &deadFrames);
 
     animation = .init(idleImage, &frames);
     position = initPosition;
@@ -39,7 +39,7 @@ pub fn init(initPosition: zhu.Vector2) void {
 pub fn update(delta: f32, worldSize: zhu.Vector2) void {
     if (stats.health == 0) {
         // 角色已死亡
-        deadAnimation.update(delta);
+        return deadAnimation.onceUpdate(delta);
     }
     hurtTimer.update(delta);
 
@@ -51,7 +51,7 @@ pub fn update(delta: f32, worldSize: zhu.Vector2) void {
 
     move(delta);
     position.clamp(.zero, worldSize.sub(size));
-    animation.update(delta);
+    animation.loopUpdate(delta);
 }
 
 pub fn hurt(damage: u32) void {
@@ -72,7 +72,7 @@ fn move(delta: f32) void {
 
 pub fn draw() void {
     if (stats.health == 0) {
-        if (deadAnimation.finished()) return; // 动画结束不需要显示
+        if (!deadAnimation.isRunning()) return; // 动画结束不需要显示
 
         const image = deadAnimation.currentImage();
         return camera.drawImage(image, position, .{

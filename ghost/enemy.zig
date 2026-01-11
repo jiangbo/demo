@@ -11,6 +11,7 @@ const Enemy = struct {
     position: zhu.Vector2,
     animation: zhu.graphics.FrameAnimation,
     stats: battle.Stats = .{},
+    collided: bool = false,
 };
 const normalFrames = zhu.graphics.framesX(4, .xy(32, 32), 0.2);
 const deadFrames = zhu.graphics.framesX(8, .xy(32, 32), 0.1);
@@ -19,9 +20,11 @@ const maxSpeed = 100;
 const circle = zhu.graphics.imageId("circle.png"); // 显示碰撞范围
 
 var animations: zhu.graphics.EnumFrameAnimation(State) = undefined;
-var enemy: Enemy = undefined;
+var enemies: std.ArrayList(Enemy) = .empty;
 const spawnFrames = zhu.graphics.framesX(11, .xy(64, 64), 0.1);
 var spawnAnimation: zhu.graphics.FrameAnimation = undefined;
+var spawnTimer: zhu.window.Timer = .init(3); // 三秒生成一批敌人
+var spawnEnemies: [20]Enemy = undefined; // 一次生成 20 个敌人
 
 pub fn init() void {
     var image = zhu.graphics.getImage("sprite/ghost-Sheet.png");
@@ -31,54 +34,77 @@ pub fn init() void {
     image = zhu.graphics.getImage("sprite/ghostDead-Sheet.png");
     animations.set(.dead, .init(image, &deadFrames));
 
-    // 暂时将动画设置为不重复播放，看看动画切换的效果
-    for (&animations.values, 0..) |*animation, i| {
-        animation.loop = false;
-        animation.state = @intCast(i);
-    }
+    for (&animations.values, 0..) |*a, i| a.state = @intCast(i);
 
-    enemy = Enemy{
-        .position = player.position.add(.xy(200, 200)),
-        .animation = animations.get(.normal),
-    };
     const spawnImage = zhu.graphics.getImage("effect/184_3.png");
-    spawnAnimation = .once(spawnImage, &spawnFrames);
+    spawnAnimation = .initFinished(spawnImage, &spawnFrames);
+}
+
+pub fn deinit() void {
+    enemies.deinit(zhu.window.allocator);
 }
 
 pub fn update(delta: f32) void {
-    if (!spawnAnimation.isFinishedAfterUpdate(delta)) return;
-
-    const dir = player.position.sub(enemy.position);
-    const distance = dir.normalize().scale(maxSpeed * delta);
-    enemy.position = enemy.position.add(distance);
-
-    if (enemy.animation.isFinishedAfterUpdate(delta)) {
-        const next = zhu.nextEnum(State, enemy.animation.state);
-        enemy.animation = animations.get(next);
+    if (spawnTimer.isFinishedAfterUpdate(delta)) {
+        spawnTimer.elapsed = 0;
+        spawnAnimation.reset();
+        doSpawnEnemies();
     }
 
-    const len = (player.size.x + size.x) * 0.5;
-    const len2 = player.position.sub(enemy.position).length2();
-    collided = len2 < len * len;
-    if (collided) player.hurt(enemy.stats.attack);
+    spawnAnimation.onceUpdate(delta);
+    if (spawnAnimation.isJustFinished()) {
+        enemies.appendSlice(zhu.window.allocator, &spawnEnemies) catch unreachable;
+    }
+
+    for (enemies.items) |*enemy| {
+        const dir = player.position.sub(enemy.position);
+        const distance = dir.normalize().scale(maxSpeed * delta);
+        enemy.position = enemy.position.add(distance);
+        if (enemy.animation.isFinishedOnceUpdate(delta)) {
+            const next = zhu.nextEnum(State, enemy.animation.state);
+            enemy.animation = animations.get(next);
+        }
+
+        const len = (player.size.x + size.x) * 0.5;
+        const len2 = player.position.sub(enemy.position).length2();
+        enemy.collided = len2 < len * len;
+        if (enemy.collided) player.hurt(enemy.stats.attack);
+    }
 }
-var collided: bool = false;
+
+fn doSpawnEnemies() void {
+    for (&spawnEnemies) |*enemy| {
+        const windowPos: zhu.Vector2 = .{
+            .x = zhu.randomF32(0, zhu.window.logicSize.x),
+            .y = zhu.randomF32(0, zhu.window.logicSize.y),
+        };
+        enemy.position = camera.toWorld(windowPos);
+        enemy.stats = .{};
+        enemy.animation = animations.get(.normal);
+        const len = normalFrames.len;
+        enemy.animation.index = zhu.randomInt(u8, 0, len);
+    }
+}
 
 pub fn draw() void {
-    if (!spawnAnimation.finished()) {
+    if (spawnAnimation.isRunning()) {
         const image = spawnAnimation.currentImage();
-        return camera.drawImage(image, enemy.position, .{
-            .size = size,
-            .anchor = .center,
-        });
+        for (&spawnEnemies) |enemy| {
+            camera.drawImage(image, enemy.position, .{
+                .size = size,
+                .anchor = .center,
+            });
+        }
     }
 
-    const image = enemy.animation.currentImage();
-    var option: camera.Option = .{ .size = size, .anchor = .center };
-    camera.drawImage(image, enemy.position, option);
+    for (enemies.items) |enemy| {
+        const image = enemy.animation.currentImage();
+        var option: camera.Option = .{ .size = size, .anchor = .center };
+        camera.drawImage(image, enemy.position, option);
 
-    option.color = .{ .y = 1, .w = 0.4 };
-    if (collided) option.color = .{ .x = 1, .w = 0.4 };
+        option.color = .{ .y = 1, .w = 0.4 };
+        if (enemy.collided) option.color = .{ .x = 1, .w = 0.4 };
 
-    camera.drawOption(circle, enemy.position, option);
+        camera.drawOption(circle, enemy.position, option);
+    }
 }

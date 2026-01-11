@@ -25,7 +25,6 @@ pub fn EnumFrameAnimation(comptime T: type) type {
 pub const FrameAnimation = struct {
     elapsed: f32 = 0,
     index: u8 = 0,
-    loop: bool = true,
     image: Image,
     frames: []const Frame,
     state: u8 = 0,
@@ -34,38 +33,52 @@ pub const FrameAnimation = struct {
         return .{ .image = image, .frames = frames };
     }
 
-    pub fn once(image: Image, frames: []const Frame) FrameAnimation {
-        return .{ .image = image, .frames = frames, .loop = false };
+    pub fn initFinished(image: Image, frames: []const Frame) FrameAnimation {
+        const index: u8 = @intCast(frames.len + 1);
+        return .{ .image = image, .frames = frames, .index = index };
     }
 
     pub fn currentImage(self: *const FrameAnimation) Image {
         return self.image.sub(self.frames[self.index].area);
     }
 
-    pub fn update(self: *FrameAnimation, delta: f32) void {
-        _ = self.isFinishedAfterUpdate(delta);
+    pub fn onceUpdate(self: *FrameAnimation, delta: f32) void {
+        if (self.index > self.frames.len) return; // 已停止
+
+        if (self.index < self.frames.len) {
+            self.elapsed += delta;
+            const current = self.frames[self.index]; // 当前帧
+            if (self.elapsed < current.interval) return;
+            self.elapsed -= current.interval;
+        }
+        self.index += 1;
     }
 
-    pub fn isFinishedAfterUpdate(self: *FrameAnimation, delta: f32) bool {
-        if (self.finished()) return true;
+    pub fn isFinishedOnceUpdate(self: *FrameAnimation, delta: f32) bool {
+        self.onceUpdate(delta);
+        return self.index >= self.frames.len;
+    }
 
+    pub fn loopUpdate(self: *FrameAnimation, delta: f32) void {
         self.elapsed += delta;
-        if (self.elapsed < self.frames[self.index].interval) return false;
-
-        self.elapsed -= self.frames[self.index].interval;
+        const current = self.frames[self.index]; // 当前帧
+        if (self.elapsed < current.interval) return;
+        self.elapsed -= current.interval;
         self.index += 1;
-        if (self.loop and self.index == self.frames.len) self.index = 0;
-
-        return !self.loop and self.index == self.frames.len;
+        // 结束了从头开始
+        if (self.index >= self.frames.len) self.index = 0;
     }
 
     pub fn stop(self: *FrameAnimation) void {
-        self.index = @intCast(self.frames.len);
-        self.loop = false;
+        self.index = @intCast(self.frames.len + 1);
     }
 
-    pub fn finished(self: *const FrameAnimation) bool {
-        return !self.loop and self.index == self.frames.len;
+    pub fn isRunning(self: *const FrameAnimation) bool {
+        return self.index < self.frames.len;
+    }
+
+    pub fn isJustFinished(self: *const FrameAnimation) bool {
+        return self.index == self.frames.len;
     }
 
     pub fn reset(self: *FrameAnimation) void {

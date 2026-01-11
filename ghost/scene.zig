@@ -31,6 +31,11 @@ pub fn init() void {
     enemy.init();
 }
 
+pub fn deinit() void {
+    enemy.deinit();
+    window.free(vertexBuffer);
+}
+
 var pause: bool = false;
 pub fn update(delta: f32) void {
     if (window.isKeyRelease(.H)) isHelp = !isHelp;
@@ -150,8 +155,4 @@ fn drawDebugInfo() void {
 
     debutTextCount = zhu.text.computeTextCount(text);
     zhu.text.drawColor(text, .xy(10, 10), .green);
-}
-
-pub fn deinit() void {
-    window.free(vertexBuffer);
 }
