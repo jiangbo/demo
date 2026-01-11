@@ -24,7 +24,7 @@ var animations: zhu.graphics.EnumFrameAnimation(State) = undefined;
 const spawnFrames = zhu.graphics.framesX(11, .xy(64, 64), 0.1);
 var spawnAnimation: zhu.graphics.FrameAnimation = undefined;
 var spawnTimer: zhu.window.Timer = .init(3); // 三秒生成一批敌人
-var spawnEnemies: [20]Enemy = undefined; // 一次生成 20 个敌人
+var spawnEnemies: [10]Enemy = undefined; // 一次生成 10 个敌人
 
 pub fn init() void {
     var image = zhu.graphics.getImage("sprite/ghost-Sheet.png");
