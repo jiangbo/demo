@@ -23,13 +23,20 @@ pub const Timer = struct {
         if (self.elapsed < self.duration) self.elapsed += delta;
     }
 
-    pub fn isRunningAfterUpdate(self: *Timer, delta: f32) bool {
-        self.update(delta);
-        return self.isRunning();
+    pub fn isFinishedLoopUpdate(self: *Timer, delta: f32) bool {
+        self.elapsed += delta;
+        if (self.elapsed < self.duration) return false;
+        self.elapsed -= self.duration;
+        return true;
     }
 
-    pub fn isFinishedAfterUpdate(self: *Timer, delta: f32) bool {
-        return !self.isRunningAfterUpdate(delta);
+    pub fn isRunningOnceUpdate(self: *Timer, delta: f32) bool {
+        self.update(delta);
+        return self.elapsed < self.duration;
+    }
+
+    pub fn isFinishedOnceUpdate(self: *Timer, delta: f32) bool {
+        return !self.isRunningOnceUpdate(delta);
     }
 
     pub fn isRunning(self: *const Timer) bool {

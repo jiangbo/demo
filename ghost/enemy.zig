@@ -45,8 +45,7 @@ pub fn deinit() void {
 }
 
 pub fn update(delta: f32) void {
-    if (spawnTimer.isFinishedAfterUpdate(delta)) {
-        spawnTimer.elapsed = 0;
+    if (spawnTimer.isFinishedLoopUpdate(delta)) {
         spawnAnimation.reset();
         doSpawnEnemies();
     }
