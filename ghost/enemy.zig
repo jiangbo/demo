@@ -105,5 +105,17 @@ pub fn draw() void {
         if (enemy.collided) option.color = .{ .x = 1, .w = 0.4 };
 
         camera.drawOption(circle, enemy.position, option);
+
+        const max = enemy.stats.maxHealth;
+        const percent = zhu.math.percentInt(enemy.stats.health, max);
+        const pos = enemy.position.sub(deadFrames[0].area.size)
+            .addY(size.y - 10);
+
+        var color: zhu.Color = .init(1, 0.65, 0, 1);
+        if (percent > 0.7) color = .green; // 健康
+        if (percent < 0.3) color = .red; // 危险
+        camera.drawRectBorder(.init(pos, .xy(size.x, 10)), 1, color);
+        const rect: zhu.Rect = .init(pos, .xy(size.x * percent, 10));
+        camera.drawRect(rect, .{ .color = color });
     }
 }

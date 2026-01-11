@@ -72,10 +72,10 @@ pub fn drawLine(start: Vector2, end: Vector2, option: LineOption) void {
 
 pub fn drawRectBorder(area: math.Rect, width: f32, c: Color) void {
     const color = RectOption{ .color = c };
-    drawRect(.init(area.min, .init(area.size.x, width)), color); // 上
+    drawRect(.init(area.min, .xy(area.size.x, width)), color); // 上
     var start = area.min.addY(area.size.y - width);
-    drawRect(.init(start, .init(area.size.x, width)), color); // 下
-    const size: Vector2 = .init(width, area.size.y - 2 * width);
+    drawRect(.init(start, .xy(area.size.x, width)), color); // 下
+    const size: Vector2 = .xy(width, area.size.y - 2 * width);
     drawRect(.init(area.min.addY(width), size), color); // 左
     start = area.min.addXY(area.size.x - width, width);
     drawRect(.init(start, size), color); // 右
