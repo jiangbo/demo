@@ -21,6 +21,7 @@ pub var stats: battle.Stats = .{};
 
 var hurtTimer: window.Timer = .init(1.5); // 无敌时间
 var velocity: zhu.Vector2 = .zero;
+var velocityTimer: window.Timer = .init(0.03);
 var animation: zhu.graphics.FrameAnimation = undefined;
 var deadAnimation: zhu.graphics.FrameAnimation = undefined;
 var status: Status = .idle;
@@ -34,8 +35,6 @@ pub fn init(initPosition: zhu.Vector2) void {
 
     animation = .init(idleImage, &frames);
     position = initPosition;
-
-    stats.attack = 120;
 }
 
 pub fn update(delta: f32, worldSize: zhu.Vector2) void {
@@ -45,7 +44,11 @@ pub fn update(delta: f32, worldSize: zhu.Vector2) void {
     }
     hurtTimer.update(delta);
 
-    velocity = velocity.scale(0.9);
+    if (velocityTimer.isFinishedLoopUpdate(delta)) {
+        // 速度衰减不应该和帧率相关
+        velocity = velocity.scale(0.9);
+    }
+
     if (window.isKeyPress(.A)) velocity = .xy(-maxSpeed, 0);
     if (window.isKeyPress(.D)) velocity = .xy(maxSpeed, 0);
     if (window.isKeyPress(.W)) velocity = .xy(0, -maxSpeed);
