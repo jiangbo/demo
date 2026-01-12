@@ -18,7 +18,6 @@ var moveImage: zhu.graphics.Image = undefined;
 
 pub var position: zhu.Vector2 = undefined;
 pub var stats: battle.Stats = .{};
-var mana: u32 = 100;
 
 var hurtTimer: window.Timer = .init(1.5); // 无敌时间
 var velocity: zhu.Vector2 = .zero;
@@ -38,7 +37,6 @@ pub fn init(initPosition: zhu.Vector2) void {
     position = initPosition;
 }
 
-var manaTimer: window.Timer = .init(1); // 每秒回复一次魔法值
 pub fn update(delta: f32, worldSize: zhu.Vector2) void {
     if (stats.health == 0) {
         // 角色已死亡
@@ -51,21 +49,14 @@ pub fn update(delta: f32, worldSize: zhu.Vector2) void {
         velocity = velocity.scale(0.9);
     }
 
-    if (manaTimer.isFinishedLoopUpdate(delta)) {
-        mana += 10;
-        if (mana > 100) mana = 100;
-    }
-
     if (window.isKeyPress(.A)) velocity = .xy(-maxSpeed, 0);
     if (window.isKeyPress(.D)) velocity = .xy(maxSpeed, 0);
     if (window.isKeyPress(.W)) velocity = .xy(0, -maxSpeed);
     if (window.isKeyPress(.S)) velocity = .xy(0, maxSpeed);
 
     // 角色使用魔法
-    if (window.isMouseDown(.LEFT) and mana > 30) {
-        const spellPos = camera.toWorld(window.mousePosition);
-        const cast = battle.playerCastSpell(spellPos);
-        if (cast) mana -= 30;
+    if (window.isMousePress(.LEFT)) {
+        battle.playerCastSpell(camera.toWorld(window.mousePosition));
     }
 
     move(delta);
@@ -112,37 +103,4 @@ pub fn draw() void {
         .size = size,
         .anchor = .center,
     });
-}
-
-const backImage = zhu.graphics.imageId("UI/bar_bg.png");
-const healthBarImage = zhu.graphics.imageId("UI/bar_red.png");
-const healthImage = zhu.graphics.imageId("UI/Red Potion.png");
-const manaBarImage = zhu.graphics.imageId("UI/bar_blue.png");
-const manaImage = zhu.graphics.imageId("UI/Blue Potion.png");
-pub fn drawStats() void {
-
-    // 生命值
-    var pos: zhu.Vector2 = .xy(30, 30);
-    var option: camera.Option = .{
-        .scale = .xy(3, 3),
-        .anchor = .xy(0, 0.5),
-    };
-
-    camera.drawOption(backImage, pos.addX(30), option);
-    var percent = zhu.math.percentInt(stats.health, stats.maxHealth);
-    option.scale.x = option.scale.x * percent;
-    camera.drawOption(healthBarImage, pos.addX(30), option);
-    option.scale = .xy(0.5, 0.5);
-    camera.drawOption(healthImage, pos, option);
-
-    // 法力值
-    pos = .xy(300, 30);
-    option = .{ .scale = .xy(3, 3), .anchor = .xy(0, 0.5) };
-
-    camera.drawOption(backImage, pos.addX(30), option);
-    percent = zhu.math.percentInt(mana, 100);
-    option.scale.x = option.scale.x * percent;
-    camera.drawOption(manaBarImage, pos.addX(30), option);
-    option.scale = .xy(0.5, 0.5);
-    camera.drawOption(manaImage, pos, option);
 }

@@ -82,6 +82,10 @@ pub const FrameAnimation = struct {
         return self.index < self.frames.len;
     }
 
+    pub fn isFinished(self: *const FrameAnimation) bool {
+        return self.index >= self.frames.len;
+    }
+
     pub fn isJustFinished(self: *const FrameAnimation) bool {
         return self.index == self.frames.len;
     }

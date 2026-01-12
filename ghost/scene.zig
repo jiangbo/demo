@@ -88,7 +88,7 @@ pub fn draw() void {
 
     camera.mode = .local;
     defer camera.mode = .world;
-    player.drawStats();
+    battle.drawUI();
 
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
