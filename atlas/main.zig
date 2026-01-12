@@ -50,6 +50,12 @@ pub fn main() !void {
         try images.append(a, image);
     }
 
+    std.mem.sortUnstable(Image, images.items, {}, struct {
+        fn lessThan(_: void, image1: Image, image2: Image) bool {
+            return image1.id < image2.id;
+        }
+    }.lessThan);
+
     const result = Atlas{
         .imagePath = meta.image,
         .size = .{

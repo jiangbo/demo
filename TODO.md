@@ -17,7 +17,7 @@ msdf-atlas-gen.exe -font .\VonwaonBitmap-12px.ttf -yorigin top -chars [0,65536] 
 ```
 
 ```sh
-texturePacker --sheet assets/atlas.png --format json-array --data assets/atlas.json --texturepath assets --ignore-files *font.png --force-publish --padding 2 --trim-sprite-names --disable-rotation --trim-mode None .\assets-02\
+texturePacker --sheet assets/atlas.png --format json-array --data assets/atlas.json --texturepath assets --ignore-files *font.png --force-publish --padding 1 --disable-rotation --trim-mode None .\assets-02\
 ```
 
 ## ASTC 纹理支持
