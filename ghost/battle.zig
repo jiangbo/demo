@@ -91,42 +91,34 @@ pub fn draw() void {
     }
 }
 
-const backImage = zhu.graphics.imageId("UI/bar_bg.png");
-const healthBarImage = zhu.graphics.imageId("UI/bar_red.png");
-const healthImage = zhu.graphics.imageId("UI/Red Potion.png");
-const manaBarImage = zhu.graphics.imageId("UI/bar_blue.png");
-const manaImage = zhu.graphics.imageId("UI/Blue Potion.png");
-const electricImage = zhu.graphics.imageId("UI/Electric-Icon.png");
+const imageId = zhu.graphics.imageId;
 pub fn drawUI() void {
 
     // 生命值
     var pos: zhu.Vector2 = .xy(30, 30);
-    var option: camera.Option = .{
-        .scale = .xy(3, 3),
-        .anchor = .xy(0, 0.5),
-    };
+    var option: camera.Option = .{ .anchor = .xy(0, 0.5) };
 
     const stats = player.stats;
-    camera.drawOption(backImage, pos.addX(30), option);
+    option.size = .xy(198, 21);
+    camera.drawOption(imageId("UI/bar_bg.png"), pos.addX(30), option);
     var percent = zhu.math.percentInt(stats.health, stats.maxHealth);
-    option.scale.x = option.scale.x * percent;
-    camera.drawOption(healthBarImage, pos.addX(30), option);
-    option.scale = .xy(0.5, 0.5);
-    camera.drawOption(healthImage, pos, option);
+    option.size.?.x = option.size.?.x * percent;
+    camera.drawOption(imageId("UI/bar_red.png"), pos.addX(30), option);
+    option.size = .xy(36, 39);
+    camera.drawOption(imageId("UI/Red Potion.png"), pos, option);
 
     // 法力值
     pos = .xy(300, 30);
-    option = .{ .scale = .xy(3, 3), .anchor = .xy(0, 0.5) };
-
-    camera.drawOption(backImage, pos.addX(30), option);
+    option.size = .xy(198, 21);
+    camera.drawOption(imageId("UI/bar_bg.png"), pos.addX(30), option);
     percent = zhu.math.percentInt(mana, 100);
-    option.scale.x = option.scale.x * percent;
-    camera.drawOption(manaBarImage, pos.addX(30), option);
-    option.scale = .xy(0.5, 0.5);
-    camera.drawOption(manaImage, pos, option);
+    option.size.?.x = option.size.?.x * percent;
+    camera.drawOption(imageId("UI/bar_blue.png"), pos.addX(30), option);
+    option.size = .xy(36, 39);
+    camera.drawOption(imageId("UI/Blue Potion.png"), pos, option);
 
     // 冷却时间
-    var image = zhu.assets.getImage(electricImage);
+    var image = zhu.graphics.getImage("UI/Electric-Icon.png");
     const size = image.area.size.scale(0.14);
     pos = .xy(zhu.window.logicSize.x - 300, 30 - size.y / 2);
     camera.drawImage(image, pos, .{
@@ -135,7 +127,9 @@ pub fn drawUI() void {
     });
 
     percent = spellTimer.progress();
-    image.area.size.y = image.area.size.y * percent;
+    image.area.size.y *= percent;
+    const offset = image.area.size.y * (1 - percent);
+    image.area.min.y += offset;
     camera.drawImage(image, pos, .{
         .size = .xy(size.x, size.y * percent),
     });
