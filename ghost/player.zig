@@ -54,11 +54,6 @@ pub fn update(delta: f32, worldSize: zhu.Vector2) void {
     if (window.isKeyPress(.W)) velocity = .xy(0, -maxSpeed);
     if (window.isKeyPress(.S)) velocity = .xy(0, maxSpeed);
 
-    // 角色使用魔法
-    if (window.isMousePress(.LEFT)) {
-        battle.playerCastSpell(camera.toWorld(window.mousePosition));
-    }
-
     move(delta);
     position.clamp(.zero, worldSize.sub(size));
     animation.loopUpdate(delta);

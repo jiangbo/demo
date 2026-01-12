@@ -26,6 +26,7 @@ var manaTimer: zhu.window.Timer = .init(1); // 每秒回复一次魔法值
 pub fn init() void {
     const image = zhu.graphics.getImage("effect/Thunderstrike w blur.png");
     for (&spellAnimations) |*a| a.* = .initFinished(image, &spellFrames);
+    spellTimer.stop(); // 一开始就可以直接使用魔法
 }
 
 pub fn update(delta: f32) void {
@@ -33,6 +34,11 @@ pub fn update(delta: f32) void {
     if (manaTimer.isFinishedLoopUpdate(delta)) {
         mana += 10;
         if (mana > 100) mana = 100;
+    }
+
+    // 角色使用魔法
+    if (zhu.window.isMousePress(.LEFT)) {
+        playerCastSpell(camera.toWorld(zhu.window.mousePosition));
     }
 
     for (&spellPositions, &spellAnimations) |pos, *ani| {
@@ -61,6 +67,7 @@ pub fn playerCastSpell(position: zhu.Vector2) void {
             pos.* = position;
             ani.reset();
             mana -= 30;
+            spellTimer.elapsed = 0;
             return;
         }
     }
@@ -89,6 +96,7 @@ const healthBarImage = zhu.graphics.imageId("UI/bar_red.png");
 const healthImage = zhu.graphics.imageId("UI/Red Potion.png");
 const manaBarImage = zhu.graphics.imageId("UI/bar_blue.png");
 const manaImage = zhu.graphics.imageId("UI/Blue Potion.png");
+const electricImage = zhu.graphics.imageId("UI/Electric-Icon.png");
 pub fn drawUI() void {
 
     // 生命值
@@ -118,4 +126,17 @@ pub fn drawUI() void {
     camera.drawOption(manaImage, pos, option);
 
     // 冷却时间
+    var image = zhu.assets.getImage(electricImage);
+    const size = image.area.size.scale(0.14);
+    pos = .xy(zhu.window.logicSize.x - 300, 30 - size.y / 2);
+    camera.drawImage(image, pos, .{
+        .color = .init(0.3, 0.3, 0.3, 1),
+        .size = size,
+    });
+
+    percent = spellTimer.progress();
+    image.area.size.y = image.area.size.y * percent;
+    camera.drawImage(image, pos, .{
+        .size = .xy(size.x, size.y * percent),
+    });
 }
