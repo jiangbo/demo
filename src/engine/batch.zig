@@ -56,7 +56,6 @@ pub fn initWithWhiteTexture(size: Vector2, buffer: []Vertex) void {
 
 pub const Option = struct {
     size: ?Vector2 = null, // 大小
-    scale: Vector2 = .one, // 缩放
     anchor: Vector2 = .zero, // 锚点
     pivot: Vector2 = .center, // 旋转中心
     radian: f32 = 0, // 旋转弧度
@@ -86,13 +85,12 @@ pub fn endDraw(position: Vector2) void {
 
 pub fn drawOption(image: Image, position: Vector2, option: Option) void {
     const size = (option.size orelse image.area.size.abs());
-    const scaledSize = size.mul(option.scale);
-    var worldPos = position.sub(scaledSize.mul(option.anchor));
+    var worldPos = position.sub(size.mul(option.anchor));
 
     drawVertices(image.texture, &.{Vertex{
         .position = worldPos.toVector3(0),
         .radian = option.radian,
-        .size = scaledSize,
+        .size = size,
         // 默认旋转点为中心位置，如果不旋转则传 0
         .pivot = if (option.radian == 0) .zero else option.pivot,
         .texture = image.area.toVector4(),
