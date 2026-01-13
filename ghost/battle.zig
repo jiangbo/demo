@@ -37,7 +37,7 @@ pub fn update(delta: f32) void {
     }
 
     // 角色使用魔法
-    if (zhu.window.isMousePress(.LEFT)) {
+    if (zhu.window.isMousePress(.LEFT) and player.stats.health > 0) {
         playerCastSpell(camera.toWorld(zhu.window.mousePosition));
     }
 
