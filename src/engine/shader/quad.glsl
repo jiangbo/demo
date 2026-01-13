@@ -4,7 +4,9 @@ layout(binding=0) uniform vs_params {
     vec4 textureVec;
 };
 
-in vec4 vertex_position; // X Y 像素坐标，Z 旋转弧度，W 颜色缩放
+in vec2 vertex_position; // X Y 像素坐标
+in float vertex_radian; // 旋转的弧度
+in float vertex_color_scale; // 颜色缩放
 in vec2 vertex_scale; // 缩放，像素尺寸
 in vec2 vertex_pivot; // 旋转中心，归一化坐标
 in vec4 vertex_texture; // 纹理坐标，xy是偏移量，zw是缩放
@@ -22,8 +24,8 @@ void main() {
     vec2 scaledPivot  = vertex_pivot * vertex_scale;
     vec2 scaled = scaledCorner - scaledPivot;
     // 再应用旋转
-    float cosA = cos(vertex_position.z);
-    float sinA = sin(vertex_position.z);
+    float cosA = cos(vertex_radian);
+    float sinA = sin(vertex_radian);
     vec2 rotated = mat2(cosA, sinA, -sinA, cosA) * scaled;
     // 最后平移回原位
     vec2 localPos = rotated + scaledPivot;
@@ -31,7 +33,7 @@ void main() {
     gl_Position = viewMatrix * depthPosition;
 
     // 纹理
-    color = vertex_color * vertex_position.w;
+    color = vertex_color * vertex_color_scale;
     uv = vertex_texture.xy + corner * vertex_texture.zw;
     uv *= textureVec.xy;
 }

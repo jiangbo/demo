@@ -161,11 +161,13 @@ fn doDraw(position: Vector2, cmd: Command, drawCmd: DrawCommand) void {
 pub fn createQuadPipeline(shaderDesc: gpu.ShaderDesc) gpu.RenderPipeline {
     var vertexLayout = gpu.VertexLayoutState{};
 
-    vertexLayout.attrs[0].format = .FLOAT4;
-    vertexLayout.attrs[1].format = .FLOAT2;
-    vertexLayout.attrs[2].format = .FLOAT2;
-    vertexLayout.attrs[3].format = .FLOAT4;
-    vertexLayout.attrs[4].format = .UBYTE4N;
+    vertexLayout.attrs[0].format = .FLOAT2;
+    vertexLayout.attrs[1].format = .FLOAT;
+    vertexLayout.attrs[2].format = .FLOAT;
+    vertexLayout.attrs[3].format = .FLOAT2;
+    vertexLayout.attrs[4].format = .FLOAT2;
+    vertexLayout.attrs[5].format = .FLOAT4;
+    vertexLayout.attrs[6].format = .UBYTE4N;
     vertexLayout.buffers[0].step_func = .PER_INSTANCE;
 
     return gpu.createPipeline(.{
