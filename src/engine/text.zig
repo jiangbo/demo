@@ -116,7 +116,7 @@ pub fn drawOption(text: String, position: Vector2, option: Option) void {
         const image = fontImage.map(char.area);
         var worldPos = pos.add(char.offset.scale(scale));
         if (camera.mode == .local) worldPos = worldPos.add(camera.position);
-        batch.drawOption(image, worldPos, .{
+        batch.drawImage(image, worldPos, .{
             .size = char.area.size.scale(scale),
             .color = option.color,
         });

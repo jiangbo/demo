@@ -57,11 +57,13 @@ pub fn initWithWhiteTexture(size: Vector2, buffer: []Vertex) void {
 
 pub const Option = struct {
     size: ?Vector2 = null, // 大小
+    scale: Vector2 = .one, // 缩放
     anchor: Vector2 = .zero, // 锚点
     pivot: Vector2 = .center, // 旋转中心
     radian: f32 = 0, // 旋转弧度
     color: graphics.Color = .white, // 颜色
     colorScale: f32 = 1, // 颜色缩放
+    flipX: bool = false, // 水平翻转
 };
 
 pub fn beginDraw(color: graphics.ClearColor) void {
@@ -85,16 +87,23 @@ pub fn endDraw(position: Vector2) void {
     }
 }
 
-pub fn drawOption(image: Image, position: Vector2, option: Option) void {
-    const size = (option.size orelse image.area.size.abs());
+pub fn drawImage(image: Image, position: Vector2, option: Option) void {
+    const size = (option.size orelse image.area.size);
+    const scaledSize = size.mul(option.scale);
+
+    var imageVector: math.Vector4 = image.area.toVector4();
+    if (option.flipX) {
+        imageVector.x += imageVector.z;
+        imageVector.z = -imageVector.z;
+    }
 
     drawVertices(image.texture, &.{Vertex{
-        .position = position.sub(size.mul(option.anchor)),
+        .position = position.sub(scaledSize.mul(option.anchor)),
         .radian = option.radian,
-        .size = size,
+        .size = scaledSize,
         // 默认旋转点为中心位置，如果不旋转则传 0
         .pivot = if (option.radian == 0) .zero else option.pivot,
-        .texture = image.area.toVector4(),
+        .texture = imageVector,
         .color = option.color,
         .colorScale = option.colorScale,
     }});

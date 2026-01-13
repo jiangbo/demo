@@ -94,7 +94,7 @@ pub const Option = batch.Option;
 pub fn drawOption(image: ImageId, pos: Vector2, option: Option) void {
     var worldPos = pos;
     if (mode == .local) worldPos = pos.add(position);
-    batch.drawOption(assets.getImage(image), worldPos, option);
+    batch.drawImage(assets.getImage(image), worldPos, option);
 }
 
 pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
@@ -102,7 +102,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
 
     var worldPos = pos;
     if (mode == .local) worldPos = pos.add(position);
-    batch.drawOption(image, worldPos, option);
+    batch.drawImage(image, worldPos, option);
 }
 
 pub fn endDraw() void {

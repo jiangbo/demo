@@ -86,10 +86,10 @@ pub fn draw() void {
         });
     }
 
-    const image = animation.currentImage().flipX(velocity.x < 0);
-    camera.drawImage(image, position, .{
+    camera.drawImage(animation.currentImage(), position, .{
         .size = size.scale(2),
         .anchor = .center,
+        .flipX = velocity.x < 0,
     });
 
     // debug 显示碰撞范围
