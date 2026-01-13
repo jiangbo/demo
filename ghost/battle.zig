@@ -126,11 +126,11 @@ pub fn drawUI() void {
         .size = size,
     });
 
-    percent = spellTimer.progress();
-    image.area.size.y *= percent;
-    const offset = image.area.size.y * (1 - percent);
-    image.area.min.y += offset;
-    camera.drawImage(image, pos, .{
-        .size = .xy(size.x, size.y * percent),
-    });
+    // percent = spellTimer.progress();
+    // image.area.size.y *= percent;
+    // const offset = image.area.size.y * (1 - percent);
+    // image.area.min.y += offset;
+    // camera.drawImage(image, pos, .{
+    //     .size = .xy(size.x, size.y * percent),
+    // });
 }

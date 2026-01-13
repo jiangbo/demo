@@ -61,7 +61,6 @@ pub const Option = struct {
     pivot: Vector2 = .center, // 旋转中心
     radian: f32 = 0, // 旋转弧度
     color: math.Vector4 = .one, // 颜色
-    flipX: bool = false, // 是否水平翻转
 };
 
 pub fn beginDraw(color: math.Vector4) void {
@@ -86,12 +85,6 @@ pub fn endDraw(position: Vector2) void {
 }
 
 pub fn drawOption(image: Image, position: Vector2, option: Option) void {
-    var imageVector: math.Vector4 = image.area.toVector4();
-    if (option.flipX) {
-        imageVector.x += imageVector.z;
-        imageVector.z = -imageVector.z;
-    }
-
     const size = (option.size orelse image.area.size);
     const scaledSize = size.mul(option.scale);
     var worldPos = position.sub(scaledSize.mul(option.anchor));
@@ -102,7 +95,7 @@ pub fn drawOption(image: Image, position: Vector2, option: Option) void {
         .size = scaledSize,
         // 默认旋转点为中心位置，如果不旋转则传 0
         .pivot = if (option.radian == 0) .zero else option.pivot,
-        .texture = imageVector,
+        .texture = image.area.toVector4(),
         .color = option.color,
     }});
 }

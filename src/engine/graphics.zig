@@ -130,6 +130,14 @@ pub const Image = struct {
     pub fn map(self: *const Image, area: math.Rect) Image {
         return .{ .texture = self.texture, .area = area };
     }
+
+    pub fn flipX(image: *const Image, flip: bool) Image {
+        var copy = image.*;
+        if (!flip) return copy;
+        copy.area.min.x += image.area.size.x;
+        copy.area.size.x = -image.area.size.x;
+        return copy;
+    }
 };
 
 pub const Atlas = struct {

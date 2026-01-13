@@ -49,10 +49,10 @@ pub fn update(delta: f32, worldSize: zhu.Vector2) void {
         velocity = velocity.scale(0.9);
     }
 
-    if (window.isKeyPress(.A)) velocity = .xy(-maxSpeed, 0);
-    if (window.isKeyPress(.D)) velocity = .xy(maxSpeed, 0);
-    if (window.isKeyPress(.W)) velocity = .xy(0, -maxSpeed);
-    if (window.isKeyPress(.S)) velocity = .xy(0, maxSpeed);
+    if (window.isKeyPress(.A)) velocity.x = -maxSpeed;
+    if (window.isKeyPress(.D)) velocity.x = maxSpeed;
+    if (window.isKeyPress(.W)) velocity.y = -maxSpeed;
+    if (window.isKeyPress(.S)) velocity.y = maxSpeed;
 
     move(delta);
     position.clamp(.zero, worldSize.sub(size));
@@ -86,9 +86,9 @@ pub fn draw() void {
         });
     }
 
-    camera.drawImage(animation.currentImage(), position, .{
+    const image = animation.currentImage().flipX(velocity.x < 0);
+    camera.drawImage(image, position, .{
         .size = size.scale(2),
-        .flipX = velocity.x < 0,
         .anchor = .center,
     });
 
