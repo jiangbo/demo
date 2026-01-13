@@ -118,19 +118,11 @@ pub fn drawUI() void {
     camera.drawOption(imageId("UI/Blue Potion.png"), pos, option);
 
     // 冷却时间
-    var image = zhu.graphics.getImage("UI/Electric-Icon.png");
-    const size = image.area.size.scale(0.14);
+    const image = zhu.graphics.getImage("UI/Electric-Icon.png");
+    var size = image.area.size.scale(0.14);
     pos = .xy(zhu.window.logicSize.x - 300, 30 - size.y / 2);
-    camera.drawImage(image, pos, .{
-        .color = .rgb(77, 77, 77),
-        .size = size,
-    });
+    camera.drawImage(image, pos, .{ .size = size });
 
-    // percent = spellTimer.progress();
-    // image.area.size.y *= percent;
-    // const offset = image.area.size.y * (1 - percent);
-    // image.area.min.y += offset;
-    // camera.drawImage(image, pos, .{
-    //     .size = .xy(size.x, size.y * percent),
-    // });
+    size.y = size.y * (1 - spellTimer.progress());
+    camera.drawRect(.init(pos, size), .{ .color = .gray(0, 100) });
 }

@@ -158,17 +158,17 @@ pub const Color = extern struct {
     b: u8,
     a: u8,
 
-    pub const black = Color.rgb(0, 0, 0);
-    pub const white = Color.rgb(255, 255, 255);
-    pub const gray = Color.rgb(128, 128, 128);
+    pub const black = Color.rgb(0, 0, 0); // 黑色
+    pub const white = Color.rgb(255, 255, 255); // 白色
+    pub const midGray = Color.rgb(128, 128, 128); // 中灰色
 
-    pub const red = Color.rgb(255, 0, 0);
-    pub const green = Color.rgb(0, 255, 0);
-    pub const blue = Color.rgb(0, 0, 255);
+    pub const red = Color.rgb(255, 0, 0); // 红色
+    pub const green = Color.rgb(0, 255, 0); // 绿色
+    pub const blue = Color.rgb(0, 0, 255); // 蓝色
 
-    pub const yellow = Color.rgb(255, 255, 0);
-    pub const cyan = Color.rgb(0, 255, 255);
-    pub const magenta = Color.rgb(255, 0, 255);
+    pub const yellow = Color.rgb(255, 255, 0); // 黄色
+    pub const cyan = Color.rgb(0, 255, 255); // 青色
+    pub const magenta = Color.rgb(255, 0, 255); // 品红色
 
     pub fn rgb(r: u8, g: u8, b: u8) Color {
         return .{ .r = r, .g = g, .b = b, .a = 255 };
@@ -178,11 +178,7 @@ pub const Color = extern struct {
         return .{ .r = r, .g = g, .b = b, .a = a };
     }
 
-    pub fn fromGray(v: u8) Color {
-        return .{ .r = v, .g = v, .b = v, .a = 255 };
-    }
-
-    pub fn fromGrayA(v: u8, a: u8) Color {
+    pub fn gray(v: u8, a: u8) Color {
         return .{ .r = v, .g = v, .b = v, .a = a };
     }
 };
