@@ -93,6 +93,10 @@ pub const Vector2 = extern struct {
         return self.x * self.x + self.y * self.y;
     }
 
+    pub fn abs(self: Vector2) Vector2 {
+        return .{ .x = @abs(self.x), .y = @abs(self.y) };
+    }
+
     pub fn normalize(self: Vector2) Vector2 {
         return .{ .x = self.x / self.length(), .y = self.y / self.length() };
     }

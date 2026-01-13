@@ -85,7 +85,7 @@ pub fn endDraw(position: Vector2) void {
 }
 
 pub fn drawOption(image: Image, position: Vector2, option: Option) void {
-    const size = (option.size orelse image.area.size);
+    const size = (option.size orelse image.area.size.abs());
     const scaledSize = size.mul(option.scale);
     var worldPos = position.sub(scaledSize.mul(option.anchor));
 
