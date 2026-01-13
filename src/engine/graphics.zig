@@ -11,7 +11,6 @@ pub const queryFrameStats = gpu.queryFrameStats;
 pub const queryBackend = gpu.queryBackend;
 
 pub const Vector2 = math.Vector2;
-pub const Color = math.Vector4;
 
 pub const ImageId = assets.Id;
 pub const createWhiteImage = assets.createWhiteImage;
@@ -146,14 +145,6 @@ pub const Atlas = struct {
     images: []const struct { id: ImageId, area: math.Rect },
 };
 
-pub fn rgb(r: f32, g: f32, b: f32) math.Vector4 {
-    return color(r, g, b, 1);
-}
-pub const rgba = color;
-pub fn color(r: f32, g: f32, b: f32, a: f32) math.Vector4 {
-    return .{ .x = r, .y = g, .z = b, .w = a };
-}
-
 pub fn imageId(comptime path: []const u8) ImageId {
     return comptime assets.id(path);
 }
@@ -163,10 +154,46 @@ pub fn getImage(comptime path: []const u8) Image {
 }
 
 pub var textCount: u32 = 0;
-pub fn beginDraw(clearColor: math.Vector4) void {
+pub fn beginDraw(clearColor: ClearColor) void {
     gpu.begin(clearColor);
     textCount = 0;
 }
+
+pub const ClearColor = gpu.Color;
+pub const Color = extern struct {
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
+
+    pub const black = Color.rgb(0, 0, 0);
+    pub const white = Color.rgb(255, 255, 255);
+    pub const gray = Color.rgb(128, 128, 128);
+
+    pub const red = Color.rgb(255, 0, 0);
+    pub const green = Color.rgb(0, 255, 0);
+    pub const blue = Color.rgb(0, 0, 255);
+
+    pub const yellow = Color.rgb(255, 255, 0);
+    pub const cyan = Color.rgb(0, 255, 255);
+    pub const magenta = Color.rgb(255, 0, 255);
+
+    pub fn rgb(r: u8, g: u8, b: u8) Color {
+        return .{ .r = r, .g = g, .b = b, .a = 255 };
+    }
+
+    pub fn rgba(r: u8, g: u8, b: u8, a: u8) Color {
+        return .{ .r = r, .g = g, .b = b, .a = a };
+    }
+
+    pub fn fromGray(v: u8) Color {
+        return .{ .r = v, .g = v, .b = v, .a = 255 };
+    }
+
+    pub fn fromGrayA(v: u8, a: u8) Color {
+        return .{ .r = v, .g = v, .b = v, .a = a };
+    }
+};
 
 // pub fn init(size: Vector2, buffer: []Vertex) void {
 //     batch.init(size, buffer);

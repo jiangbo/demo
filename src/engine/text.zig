@@ -57,7 +57,7 @@ pub fn searchChar(code: u32) *const BitMapChar {
 
 pub const Option = struct {
     size: ?f32 = null, // 文字的大小，没有则使用默认值
-    color: math.Vector4 = .one, // 文字的颜色
+    color: graphics.Color = .white, // 文字的颜色
     maxWidth: f32 = std.math.floatMax(f32), // 最大宽度，超过换行
     spacing: f32 = 0, // 文字间的间距
 };

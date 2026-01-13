@@ -101,8 +101,8 @@ pub fn draw() void {
         var option: camera.Option = .{ .size = size, .anchor = .center };
         camera.drawImage(image, enemy.position, option);
 
-        option.color = .{ .y = 1, .w = 0.4 };
-        if (enemy.collided) option.color = .{ .x = 1, .w = 0.4 };
+        option.color = .rgba(0, 255, 0, 100);
+        if (enemy.collided) option.color = .rgba(255, 0, 0, 100);
 
         camera.drawOption(circle, enemy.position, option);
 
@@ -111,7 +111,7 @@ pub fn draw() void {
         const pos = enemy.position.sub(deadFrames[0].area.size)
             .addY(size.y - 10);
 
-        var color: zhu.Color = .init(1, 0.65, 0, 1);
+        var color: zhu.Color = .rgb(255, 165, 0);
         if (percent > 0.7) color = .green; // 健康
         if (percent < 0.3) color = .red; // 危险
         camera.drawRectBorder(.init(pos, .xy(size.x, 10)), 1, color);

@@ -5,6 +5,7 @@ const math = @import("math.zig");
 
 const gfx = sk.gfx;
 pub const Texture = gfx.View;
+pub const Color = gfx.Color;
 
 pub fn queryTextureSize(texture: Texture) math.Vector {
     const image = gfx.queryViewImage(texture);
@@ -40,11 +41,10 @@ pub fn init() void {
     });
 }
 
-pub fn begin(color: math.Vector4) void {
+pub fn begin(color: Color) void {
     var action = gfx.PassAction{};
 
-    const c: sk.gfx.Color = @bitCast(color);
-    action.colors[0] = .{ .load_action = .CLEAR, .clear_value = c };
+    action.colors[0] = .{ .load_action = .CLEAR, .clear_value = color };
     gfx.beginPass(.{ .action = action, .swapchain = sk.glue.swapchain() });
 }
 

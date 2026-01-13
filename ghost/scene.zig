@@ -77,7 +77,7 @@ pub fn draw() void {
     defer camera.endDraw();
     window.keepAspectRatio();
 
-    const gridColor = zhu.graphics.rgb(0.5, 0.5, 0.5);
+    const gridColor = zhu.graphics.Color.gray;
     const area = zhu.Rect.init(.zero, worldSize);
     drawGrid(area, 80, gridColor);
     camera.drawRectBorder(area, 10, .white);

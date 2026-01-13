@@ -28,12 +28,13 @@ var commandIndex: u32 = 0;
 var windowSize: Vector2 = undefined;
 
 pub const Vertex = extern struct {
-    position: math.Vector3, // 顶点坐标
+    position: math.Vector2, // 顶点坐标
     radian: f32 = 0, // 旋转弧度
+    colorScale: f32 = 1, // 颜色缩放
     size: math.Vector2, // 大小
     pivot: math.Vector2 = .zero, // 旋转中心
     texture: math.Vector4, // 纹理坐标
-    color: math.Vector4 = .one, // 顶点颜色
+    color: graphics.Color = .white, // 顶点颜色
 };
 
 pub fn init(size: Vector2, buffer: []Vertex) void {
@@ -59,10 +60,11 @@ pub const Option = struct {
     anchor: Vector2 = .zero, // 锚点
     pivot: Vector2 = .center, // 旋转中心
     radian: f32 = 0, // 旋转弧度
-    color: math.Vector4 = .one, // 颜色
+    color: graphics.Color = .white, // 颜色
+    colorScale: f32 = 1, // 颜色缩放
 };
 
-pub fn beginDraw(color: math.Vector4) void {
+pub fn beginDraw(color: graphics.ClearColor) void {
     graphics.beginDraw(color);
     commandIndex = 0;
     commands[commandIndex].cmd.draw = .{};
@@ -85,16 +87,16 @@ pub fn endDraw(position: Vector2) void {
 
 pub fn drawOption(image: Image, position: Vector2, option: Option) void {
     const size = (option.size orelse image.area.size.abs());
-    var worldPos = position.sub(size.mul(option.anchor));
 
     drawVertices(image.texture, &.{Vertex{
-        .position = worldPos.toVector3(0),
+        .position = position.sub(size.mul(option.anchor)),
         .radian = option.radian,
         .size = size,
         // 默认旋转点为中心位置，如果不旋转则传 0
         .pivot = if (option.radian == 0) .zero else option.pivot,
         .texture = image.area.toVector4(),
         .color = option.color,
+        .colorScale = option.colorScale,
     }});
 }
 
@@ -159,12 +161,11 @@ fn doDraw(position: Vector2, cmd: Command, drawCmd: DrawCommand) void {
 pub fn createQuadPipeline(shaderDesc: gpu.ShaderDesc) gpu.RenderPipeline {
     var vertexLayout = gpu.VertexLayoutState{};
 
-    vertexLayout.attrs[0].format = .FLOAT3;
-    vertexLayout.attrs[1].format = .FLOAT;
+    vertexLayout.attrs[0].format = .FLOAT4;
+    vertexLayout.attrs[1].format = .FLOAT2;
     vertexLayout.attrs[2].format = .FLOAT2;
-    vertexLayout.attrs[3].format = .FLOAT2;
-    vertexLayout.attrs[4].format = .FLOAT4;
-    vertexLayout.attrs[5].format = .FLOAT4;
+    vertexLayout.attrs[3].format = .FLOAT4;
+    vertexLayout.attrs[4].format = .UBYTE4N;
     vertexLayout.buffers[0].step_func = .PER_INSTANCE;
 
     return gpu.createPipeline(.{

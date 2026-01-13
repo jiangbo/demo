@@ -25,7 +25,7 @@ pub fn toWindow(worldPosition: Vector2) Vector2 {
     return worldPosition.sub(position);
 }
 
-pub fn beginDraw(color: Color) void {
+pub fn beginDraw(color: graphics.ClearColor) void {
     batch.beginDraw(color);
     startDraw = true;
 }

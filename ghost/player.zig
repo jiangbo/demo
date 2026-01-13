@@ -94,7 +94,7 @@ pub fn draw() void {
 
     // debug 显示碰撞范围
     camera.drawOption(circle, position, .{
-        .color = .{ .y = 1, .w = 0.4 },
+        .color = .rgba(0, 255, 0, 100),
         .size = size,
         .anchor = .center,
     });

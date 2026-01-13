@@ -86,7 +86,7 @@ pub fn draw() void {
         camera.drawOption(circle, pos, .{
             .anchor = .center,
             .size = spellSize,
-            .color = .{ .y = 1, .w = 0.4 },
+            .color = .rgba(0, 255, 0, 100),
         });
     }
 }
@@ -122,7 +122,7 @@ pub fn drawUI() void {
     const size = image.area.size.scale(0.14);
     pos = .xy(zhu.window.logicSize.x - 300, 30 - size.y / 2);
     camera.drawImage(image, pos, .{
-        .color = .init(0.3, 0.3, 0.3, 1),
+        .color = .rgb(77, 77, 77),
         .size = size,
     });
 
