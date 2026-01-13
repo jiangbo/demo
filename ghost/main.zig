@@ -7,7 +7,7 @@ const scene = @import("scene.zig");
 var soundBuffer: [20]zhu.audio.Sound = undefined;
 
 pub fn init() void {
-    zhu.audio.init(44100, &soundBuffer);
+    zhu.audio.init(44100 / 2, &soundBuffer);
     scene.init();
 }
 

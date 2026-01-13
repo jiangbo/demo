@@ -16,7 +16,7 @@ var vertexBuffer: []batch.Vertex = undefined;
 
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
 
-var isTitleScene: bool = true;
+pub var isTitleScene: bool = true;
 pub var worldSize: zhu.Vector2 = undefined; // 世界大小
 
 pub fn init() void {
