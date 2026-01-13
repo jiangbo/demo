@@ -24,6 +24,14 @@ pub fn nextEnum(E: type, value: anytype) E {
     return @enumFromInt((@intFromEnum(value) + 1) % len);
 }
 
+pub fn sinInt(T: type, angle: f32, min: T, max: T) T {
+    const minF: f32 = @floatFromInt(min);
+    const maxF: f32 = @floatFromInt(max);
+    const half = (maxF - minF) * 0.5;
+    const result = minF + half + @sin(angle) * half;
+    return @intFromFloat(@round(result));
+}
+
 pub const random = math.random;
 pub const randomF32 = math.randomF32;
 pub const randomInt = math.randomInt;
