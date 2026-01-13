@@ -23,6 +23,8 @@ var spellPositions: [4]zhu.Vector2 = undefined;
 var mana: u32 = 100;
 var manaTimer: zhu.window.Timer = .init(1); // 每秒回复一次魔法值
 
+var score: u32 = 78;
+
 pub fn init() void {
     const image = zhu.graphics.getImage("effect/Thunderstrike w blur.png");
     for (&spellAnimations) |*a| a.* = .initFinished(image, &spellFrames);
@@ -125,4 +127,11 @@ pub fn drawUI() void {
 
     size.y = size.y * (1 - spellTimer.progress());
     camera.drawRect(.init(pos, size), .{ .color = .gray(0, 100) });
+
+    // 得分
+    pos = .xy(zhu.window.logicSize.x - 210, 6);
+    camera.drawOption(imageId("UI/Textfield_01.png"), pos, .{
+        .size = .xy(200, 48),
+    });
+    zhu.text.drawFmt("Score: {}", pos.addXY(10, 7), .{score});
 }

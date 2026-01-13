@@ -18,7 +18,7 @@ const atlas: zhu.Atlas = @import("zon/atlas.zon");
 pub var worldSize: zhu.Vector2 = undefined; // 世界大小
 
 pub fn init() void {
-    window.initText(@import("zon/font.zon"), 24);
+    window.initText(@import("zon/font.zon"), 32);
 
     vertexBuffer = window.alloc(batch.Vertex, 5000);
     zhu.graphics.frameStats(true);

@@ -88,7 +88,7 @@ pub fn drawRight(str: String, pos: Vector2, option: Option) void {
 
 pub fn drawFmt(comptime fmt: String, pos: Vector2, args: anytype) void {
     var buffer: [1024]u8 = undefined;
-    drawOption(format(&buffer, fmt, args), pos);
+    drawOption(format(&buffer, fmt, args), pos, .{});
 }
 
 pub fn drawColor(str: String, pos: Vector2, color: Color) void {
