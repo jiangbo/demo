@@ -72,6 +72,8 @@ pub fn update(delta: f32) void {
 }
 
 fn doSpawnEnemies() void {
+    // 播放敌人生成音效
+    zhu.audio.playSound("assets/sound/silly-ghost-sound-242342.ogg");
     for (&spawnEnemies) |*enemy| {
         const windowPos: zhu.Vector2 = .{
             .x = zhu.randomF32(0, zhu.window.logicSize.x),

@@ -34,6 +34,9 @@ pub fn init() void {
     player.init(worldSize.scale(0.5)); // 将玩家移动到世界中心
     enemy.init();
     battle.init();
+
+    zhu.audio.playMusic("assets/bgm/OhMyGhost.ogg");
+    zhu.audio.musicVolume = 0.4;
 }
 
 pub fn deinit() void {

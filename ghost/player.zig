@@ -64,6 +64,13 @@ pub fn hurt(damage: u32) void {
 
     stats.health -|= damage; // 扣除生命值
     hurtTimer.elapsed = 0; // 重置计时器
+    if (stats.health == 0) {
+        // 播放死亡音效
+        zhu.audio.playSound("assets/sound/female-scream-02-89290.ogg");
+    } else {
+        // 播放受伤音效
+        zhu.audio.playSound("assets/sound/hit-flesh-02-266309.ogg");
+    }
 }
 
 fn move(delta: f32) void {

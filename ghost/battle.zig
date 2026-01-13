@@ -64,6 +64,8 @@ pub fn update(delta: f32) void {
 pub fn playerCastSpell(position: zhu.Vector2) void {
     if (mana < 30 or spellTimer.isRunning()) return;
 
+    // 播放攻击音效
+    zhu.audio.playSound("assets/sound/big-thunder.ogg");
     for (&spellPositions, &spellAnimations) |*pos, *ani| {
         if (ani.isFinished()) {
             pos.* = position;
