@@ -63,7 +63,7 @@ pub const Option = struct {
 };
 
 pub fn drawNumber(number: anytype, pos: Vector2) void {
-    drawNumberColor(number, pos, .one);
+    drawNumberColor(number, pos, .white);
 }
 
 pub fn drawNumberColor(number: anytype, pos: Vector2, color: Color) void {

@@ -5,6 +5,7 @@ const window = zhu.window;
 const batch = zhu.batch;
 const camera = zhu.camera;
 
+const title = @import("title.zig");
 const player = @import("player.zig");
 const enemy = @import("enemy.zig");
 const battle = @import("battle.zig");
@@ -15,6 +16,7 @@ var vertexBuffer: []batch.Vertex = undefined;
 
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
 
+var isTitleScene: bool = true;
 pub var worldSize: zhu.Vector2 = undefined; // 世界大小
 
 pub fn init() void {
@@ -31,6 +33,7 @@ pub fn init() void {
     zhu.window.bindAndUseMouseIcon(.CUSTOM_1, "assets/29.png");
     zhu.window.bindMouseIcon(.CUSTOM_2, "assets/30.png");
 
+    title.init();
     player.init(worldSize.scale(0.5)); // 将玩家移动到世界中心
     enemy.init();
     battle.init();
@@ -54,6 +57,8 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
         return window.toggleFullScreen();
     }
+
+    if (isTitleScene) return title.update(delta);
 
     const speed: f32 = std.math.round(400 * delta);
     if (window.isKeyDown(.UP)) camera.position.y -= speed;
@@ -79,6 +84,12 @@ pub fn draw() void {
     camera.beginDraw(.{});
     defer camera.endDraw();
     window.keepAspectRatio();
+
+    if (isTitleScene) {
+        title.draw();
+        if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
+        return;
+    }
 
     const gridColor = zhu.graphics.Color.midGray;
     const area = zhu.Rect.init(.zero, worldSize);
