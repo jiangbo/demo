@@ -7,6 +7,7 @@ const player = @import("player.zig");
 const enemy = @import("enemy.zig");
 const battle = @import("battle.zig");
 
+pub var isPause: bool = false;
 pub var worldSize: zhu.Vector2 = undefined; // 世界大小
 var mouse: zhu.window.Cursor = .CUSTOM_1;
 var mouseTimer: zhu.window.Timer = .init(0.3); // 鼠标切换时间
@@ -29,9 +30,15 @@ pub fn enter() void {
 
     zhu.audio.playMusic("assets/bgm/OhMyGhost.ogg");
     zhu.audio.musicVolume = 0.4;
+    zhu.audio.isPaused = false;
+
+    player.enter(worldSize.scale(0.5));
+    enemy.enter();
+    battle.enter();
 }
 
 pub fn exit() void {
+    camera.position = .zero;
     zhu.window.useMouseIcon(.DEFAULT);
     zhu.audio.stopMusic();
 }
@@ -42,9 +49,11 @@ pub fn update(delta: f32) void {
         zhu.window.useMouseIcon(mouse);
     }
 
-    player.update(delta, worldSize);
-    cameraFollow(player.position);
-    enemy.update(delta);
+    if (!isPause) {
+        player.update(delta, worldSize);
+        cameraFollow(player.position);
+        enemy.update(delta);
+    }
     battle.update(delta);
 }
 

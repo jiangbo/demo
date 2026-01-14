@@ -132,9 +132,6 @@ fn drawButton() void {
         const index: f32 = @floatFromInt(i);
         const pos = buttonPosition.addX(index * 200);
 
-        const buttonArea = zhu.Rect.init(pos, buttonSize);
-        camera.drawRectBorder(buttonArea, 1, .green);
-
         if (i == buttonIndex and buttonState != .normal) {
             if (buttonState == .pressed) {
                 camera.drawOption(button.pressed, pos, .{

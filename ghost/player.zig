@@ -37,6 +37,15 @@ pub fn init(initPosition: zhu.Vector2) void {
     position = initPosition;
 }
 
+pub fn enter(initPosition: zhu.Vector2) void {
+    stats.health = 100;
+    position = initPosition; // 重置位置
+    velocity = .zero;
+    status = .idle;
+    animation.reset();
+    deadAnimation.reset();
+}
+
 pub fn update(delta: f32, worldSize: zhu.Vector2) void {
     if (stats.health == 0) {
         // 角色已死亡

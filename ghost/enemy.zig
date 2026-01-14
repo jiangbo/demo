@@ -40,6 +40,11 @@ pub fn init() void {
     spawnAnimation = .initFinished(spawnImage, &spawnFrames);
 }
 
+pub fn enter() void {
+    spawnTimer.elapsed = 0;
+    enemies.clearRetainingCapacity();
+}
+
 pub fn deinit() void {
     enemies.deinit(zhu.window.allocator);
 }

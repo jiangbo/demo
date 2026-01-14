@@ -30,6 +30,7 @@ pub const Music = struct {
 pub var music: ?Music = null;
 pub var musicVolume: f32 = 1.0;
 pub var soundVolume: f32 = 1.0;
+pub var isPaused: bool = false;
 
 pub fn setVolume(volume: f32) void {
     musicVolume = volume;
@@ -97,13 +98,13 @@ pub fn stopSound(sound: SoundHandle) void {
 export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     const buffer = b[0..@as(usize, @intCast(frames * channels))];
     @memset(buffer, 0); // 清空音乐的缓冲区
+    if (isPaused) return;
 
     fillMusic(buffer, channels);
     fillSound(buffer);
 }
 
 fn fillMusic(buffer: []f32, channels: i32) void {
-    if (musicVolume == 0) return; // 音量为 0，不播放音乐
     // 先处理音乐，目前只支持播放一个音乐。
     var len: usize = 0; // 存储填充的长度
     // 因为有可能循环播放，所以循环添加，直到缓冲区填满。
@@ -120,7 +121,6 @@ fn fillMusic(buffer: []f32, channels: i32) void {
 }
 
 fn fillSound(buffer: []f32) void {
-    if (soundVolume == 0) return; // 音量为 0，不播放声音
     // 填充声音
     for (sounds) |*sound| {
         var len: usize = 0;
