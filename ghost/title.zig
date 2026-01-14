@@ -14,6 +14,7 @@ const Button = struct {
 };
 
 const ButtonState = enum { normal, hover, pressed };
+
 const buttonSize = zhu.Vector2.xy(192, 64);
 const buttonPosition = zhu.Vector2.xy(350, 500);
 const buttons: [3]Button = .{
@@ -35,6 +36,8 @@ const buttons: [3]Button = .{
 };
 var buttonIndex: ?usize = null;
 var buttonState: ButtonState = .normal;
+const creditsText = @embedFile("zon/credits.txt");
+var showCredits: bool = false;
 
 pub fn init() void {}
 
@@ -43,6 +46,11 @@ pub fn deinit() void {}
 var time: f32 = 0;
 pub fn update(delta: f32) void {
     time += delta;
+
+    if (showCredits) {
+        if (zhu.window.isAnyRelease()) showCredits = false;
+        return;
+    }
 
     const mousePos = zhu.window.mousePosition;
 
@@ -54,6 +62,10 @@ pub fn update(delta: f32) void {
         const hover = buttonArea.contains(mousePos);
         const press = zhu.window.isMouseDown(.LEFT);
         if (hover) {
+            if (buttonIndex == null) {
+                // 刚刚进入悬停状态，播放音效
+                zhu.audio.playSound("assets/sound/UI_button12.ogg");
+            }
             if (zhu.window.isMouseRelease(.LEFT)) triggerButton(i);
             buttonIndex = i;
             buttonState = if (press) .pressed else .hover;
@@ -61,23 +73,21 @@ pub fn update(delta: f32) void {
         } else if (!press) {
             buttonState = .normal;
         }
-    }
+    } else if (buttonState != .pressed) buttonIndex = null;
 }
 
 fn triggerButton(index: usize) void {
+    // 播放点击音效
+    zhu.audio.playSound("assets/sound/UI_button08.ogg");
     switch (index) {
         0 => scene.isTitleScene = false, // 开始游戏
-        1 => {
-            // 显示版权信息
-            // zhu.window.changeScene("credits");
-        },
+        1 => showCredits = !showCredits, // 显示版权信息
         2 => zhu.window.exit(), // 退出游戏
         else => unreachable,
     }
 }
 
 pub fn draw() void {
-    drawButton();
 
     // 边框
     var size = zhu.window.logicSize.sub(.xy(60, 60));
@@ -94,6 +104,16 @@ pub fn draw() void {
 
     // 先绘制图片，再绘制文字，减少批量绘制次数
     camera.drawOption(background, basicPos, .{ .size = size });
+    if (showCredits) {
+        const creditsSize = zhu.Vector2.xy(555, 600);
+        const creditsPos = basicPos.addXY(45, -40);
+        camera.drawOption(background, creditsPos, .{ .size = creditsSize });
+        zhu.text.drawOption(creditsText, creditsPos.addXY(20, 40), .{
+            .size = 16,
+        });
+        return;
+    }
+    drawButton();
     camera.drawOption(background, basicPos.addXY(220, 285), .{
         .size = .xy(200, 60),
     });
@@ -111,6 +131,9 @@ fn drawButton() void {
     for (&buttons, 0..buttons.len) |button, i| {
         const index: f32 = @floatFromInt(i);
         const pos = buttonPosition.addX(index * 200);
+
+        const buttonArea = zhu.Rect.init(pos, buttonSize);
+        camera.drawRectBorder(buttonArea, 1, .green);
 
         if (i == buttonIndex and buttonState != .normal) {
             if (buttonState == .pressed) {

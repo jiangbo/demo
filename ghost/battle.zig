@@ -23,7 +23,7 @@ var spellPositions: [4]zhu.Vector2 = undefined;
 var mana: u32 = 100;
 var manaTimer: zhu.window.Timer = .init(1); // 每秒回复一次魔法值
 
-var score: u32 = 78;
+var score: u32 = 0;
 
 pub fn init() void {
     const image = zhu.graphics.getImage("effect/Thunderstrike w blur.png");
@@ -55,6 +55,7 @@ pub fn update(delta: f32) void {
                 if (len2 < len * len) e.stats.health -|= player.stats.attack;
                 if (e.stats.health == 0) {
                     _ = enemy.enemies.swapRemove(iterator.index);
+                    score += 1;
                 }
             }
         }
