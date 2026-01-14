@@ -4,38 +4,10 @@ const zhu = @import("zhu");
 const camera = zhu.camera;
 
 const scene = @import("scene.zig");
+const menu = @import("menu.zig");
 
 const background = zhu.graphics.imageId("UI/Textfield_01.png");
 
-const Button = struct {
-    normal: zhu.graphics.ImageId,
-    hover: zhu.graphics.ImageId,
-    pressed: zhu.graphics.ImageId,
-};
-
-const ButtonState = enum { normal, hover, pressed };
-
-const buttonSize = zhu.Vector2.xy(192, 64);
-const buttonPosition = zhu.Vector2.xy(350, 500);
-const buttons: [3]Button = .{
-    Button{
-        .normal = zhu.graphics.imageId("UI/A_Start1.png"),
-        .hover = zhu.graphics.imageId("UI/A_Start2.png"),
-        .pressed = zhu.graphics.imageId("UI/A_Start3.png"),
-    },
-    Button{
-        .normal = zhu.graphics.imageId("UI/A_Credits1.png"),
-        .hover = zhu.graphics.imageId("UI/A_Credits2.png"),
-        .pressed = zhu.graphics.imageId("UI/A_Credits3.png"),
-    },
-    Button{
-        .normal = zhu.graphics.imageId("UI/A_Quit1.png"),
-        .hover = zhu.graphics.imageId("UI/A_Quit2.png"),
-        .pressed = zhu.graphics.imageId("UI/A_Quit3.png"),
-    },
-};
-var buttonIndex: ?usize = null;
-var buttonState: ButtonState = .normal;
 const creditsText = @embedFile("zon/credits.txt");
 var showCredits: bool = false;
 
@@ -52,38 +24,15 @@ pub fn update(delta: f32) void {
         return;
     }
 
-    const mousePos = zhu.window.mousePosition;
-
-    for (0..buttons.len) |i| {
-        const index: f32 = @floatFromInt(i);
-        const pos = buttonPosition.addX(index * 200);
-        const buttonArea = zhu.Rect.init(pos, buttonSize);
-
-        const hover = buttonArea.contains(mousePos);
-        const press = zhu.window.isMouseDown(.LEFT);
-        if (hover) {
-            if (buttonIndex == null) {
-                // 刚刚进入悬停状态，播放音效
-                zhu.audio.playSound("assets/sound/UI_button12.ogg");
-            }
-            if (zhu.window.isMouseRelease(.LEFT)) triggerButton(i);
-            buttonIndex = i;
-            buttonState = if (press) .pressed else .hover;
-            break;
-        } else if (!press) {
-            buttonState = .normal;
+    if (menu.update()) |event| {
+        // 播放点击音效
+        zhu.audio.playSound("assets/sound/UI_button08.ogg");
+        switch (event) {
+            0 => scene.changeScene(.world), // 开始游戏
+            1 => showCredits = !showCredits, // 显示版权信息
+            2 => zhu.window.exit(), // 退出游戏
+            else => unreachable,
         }
-    } else if (buttonState != .pressed) buttonIndex = null;
-}
-
-fn triggerButton(index: usize) void {
-    // 播放点击音效
-    zhu.audio.playSound("assets/sound/UI_button08.ogg");
-    switch (index) {
-        0 => scene.changeScene(.world), // 开始游戏
-        1 => showCredits = !showCredits, // 显示版权信息
-        2 => zhu.window.exit(), // 退出游戏
-        else => unreachable,
     }
 }
 
@@ -113,7 +62,9 @@ pub fn draw() void {
         });
         return;
     }
-    drawButton();
+
+    menu.draw();
+
     camera.drawOption(background, basicPos.addXY(220, 285), .{
         .size = .xy(200, 60),
     });
@@ -127,25 +78,3 @@ pub fn draw() void {
 }
 
 const imageId = zhu.graphics.imageId;
-fn drawButton() void {
-    for (&buttons, 0..buttons.len) |button, i| {
-        const index: f32 = @floatFromInt(i);
-        const pos = buttonPosition.addX(index * 200);
-
-        if (i == buttonIndex and buttonState != .normal) {
-            if (buttonState == .pressed) {
-                camera.drawOption(button.pressed, pos, .{
-                    .size = buttonSize,
-                });
-            } else if (buttonState == .hover) {
-                camera.drawOption(button.hover, pos, .{
-                    .size = buttonSize,
-                });
-            }
-        } else {
-            camera.drawOption(button.normal, pos, .{
-                .size = buttonSize,
-            });
-        }
-    }
-}
