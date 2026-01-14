@@ -42,6 +42,7 @@ pub fn init() void {
 
 pub fn enter() void {
     spawnTimer.elapsed = 0;
+    spawnAnimation.stop();
     enemies.clearRetainingCapacity();
 }
 
