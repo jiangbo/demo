@@ -125,10 +125,7 @@ fn triggerButton(index: usize) void {
     // 播放点击音效
     zhu.audio.playSound("assets/sound/UI_button08.ogg");
     switch (index) {
-        0 => {
-            world.isPause = !world.isPause; // 暂停游戏
-            zhu.audio.isPaused = world.isPause;
-        },
+        0 => world.togglePause(), // 暂停/继续游戏
         1 => scene.changeScene(.world), // 重新开始游戏
         2 => scene.changeScene(.title), // 返回标题界面
         else => unreachable,

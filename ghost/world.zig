@@ -49,12 +49,19 @@ pub fn update(delta: f32) void {
         zhu.window.useMouseIcon(mouse);
     }
 
+    if (zhu.window.isKeyPress(.SPACE)) togglePause();
+
     if (!isPause) {
         player.update(delta, worldSize);
         cameraFollow(player.position);
         enemy.update(delta);
     }
     battle.update(delta);
+}
+
+pub fn togglePause() void {
+    isPause = !isPause;
+    zhu.audio.isPaused = isPause;
 }
 
 fn cameraFollow(pos: zhu.Vector2) void {
