@@ -351,6 +351,8 @@ fn mouseCallback(cursor: Cursor, icon: assets.Icon) void {
         .pixels = @bitCast(sk.gfx.asRange(icon.data)),
         .width = icon.width,
         .height = icon.height,
+        .cursor_hotspot_x = @divTrunc(icon.width, 2),
+        .cursor_hotspot_y = @divTrunc(icon.height, 2),
     });
 }
 

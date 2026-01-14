@@ -15,7 +15,7 @@ var vertexBuffer: []batch.Vertex = undefined;
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
 
 const sceneType = enum { title, world };
-var currentScene: sceneType = .title;
+var currentScene: sceneType = .world;
 
 pub fn init() void {
     window.initText(@import("zon/font.zon"), 32);
@@ -28,6 +28,7 @@ pub fn init() void {
 
     world.init();
     title.init();
+    world.enter();
 }
 
 pub fn deinit() void {
@@ -36,11 +37,11 @@ pub fn deinit() void {
 }
 
 pub fn changeScene(newScene: sceneType) void {
-    // 退出当前场景
-    if (currentScene == .world) world.exit();
     currentScene = newScene;
-    // 进入新场景
-    if (currentScene == .world) world.enter();
+    switch (currentScene) {
+        .title => title.enter(),
+        .world => world.enter(),
+    }
 }
 
 pub fn update(delta: f32) void {

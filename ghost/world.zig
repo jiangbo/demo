@@ -29,18 +29,11 @@ pub fn enter() void {
     zhu.window.bindMouseIcon(.CUSTOM_2, "assets/30.png");
 
     zhu.audio.playMusic("assets/bgm/OhMyGhost.ogg");
-    zhu.audio.musicVolume = 0.4;
     zhu.audio.paused = false;
 
     player.enter(worldSize.scale(0.5));
     enemy.enter();
     battle.enter();
-}
-
-pub fn exit() void {
-    camera.position = .zero;
-    zhu.window.useMouseIcon(.DEFAULT);
-    zhu.audio.playMusic("assets/bgm/Spooky music.ogg");
 }
 
 pub fn update(delta: f32) void {
@@ -61,7 +54,7 @@ pub fn update(delta: f32) void {
 
 pub fn togglePause() void {
     paused = !paused;
-    zhu.audio.paused = paused;
+    zhu.audio.pauseMusic();
 }
 
 fn cameraFollow(pos: zhu.Vector2) void {

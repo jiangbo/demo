@@ -7,6 +7,7 @@ const scene = @import("scene.zig");
 const world = @import("world.zig");
 const player = @import("player.zig");
 const enemy = @import("enemy.zig");
+const menu = @import("menu.zig");
 
 pub const Stats = struct {
     health: u32 = 100, // 生命值
@@ -38,10 +39,33 @@ pub fn enter() void {
     spellTimer.stop();
     score = 0;
     world.paused = false;
+    menu.menuIndex = 1;
+}
+
+var modifyTime: i64 = 0;
+fn reloadIfChanged() void {
+    const menuTime = zhu.window.statFileTime("ghost/zon/menu.zon");
+
+    if (menuTime > modifyTime) {
+        std.log.info("menu reload", .{});
+        menu.reload();
+        modifyTime = menuTime;
+    }
 }
 
 pub fn update(delta: f32) void {
-    const press = updateButton();
+    // reloadIfChanged();
+
+    if (menu.update()) |event| {
+        switch (event) {
+            0 => world.togglePause(), // 暂停/继续游戏
+            1 => scene.changeScene(.world), // 重新开始游戏
+            2 => scene.changeScene(.title), // 返回标题界面
+            else => unreachable,
+        }
+        return;
+    }
+
     if (world.paused) return;
 
     spellTimer.update(delta);
@@ -51,7 +75,7 @@ pub fn update(delta: f32) void {
     }
 
     // 角色使用魔法
-    const canCastSpell = !press and zhu.window.isMouseRelease(.LEFT);
+    const canCastSpell = zhu.window.isMouseRelease(.LEFT);
     if (canCastSpell and player.stats.health > 0) {
         playerCastSpell(camera.toWorld(zhu.window.mousePosition));
     }
@@ -91,47 +115,6 @@ fn playerCastSpell(position: zhu.Vector2) void {
     }
 }
 
-fn updateButton() bool {
-    const mousePos = zhu.window.mousePosition;
-
-    var isTriggered = false;
-    for (0..buttons.len) |i| {
-        const index: f32 = @floatFromInt(i);
-        const pos = buttonPosition.addX(index * 96);
-        const buttonArea = zhu.Rect.init(pos, buttonSize);
-
-        const hover = buttonArea.contains(mousePos);
-        const press = zhu.window.isMouseDown(.LEFT);
-        if (hover) {
-            if (buttonIndex == null) {
-                // 刚刚进入悬停状态，播放音效
-                zhu.audio.playSound("assets/sound/UI_button12.ogg");
-            }
-            buttonIndex = i;
-            buttonState = if (press) .pressed else .hover;
-            if (zhu.window.isMouseRelease(.LEFT)) {
-                triggerButton(i);
-                isTriggered = true;
-            }
-            break;
-        } else if (!press) {
-            buttonState = .normal;
-        }
-    } else if (buttonState != .pressed) buttonIndex = null;
-    return isTriggered;
-}
-
-fn triggerButton(index: usize) void {
-    // 播放点击音效
-    zhu.audio.playSound("assets/sound/UI_button08.ogg");
-    switch (index) {
-        0 => world.togglePause(), // 暂停/继续游戏
-        1 => scene.changeScene(.world), // 重新开始游戏
-        2 => scene.changeScene(.title), // 返回标题界面
-        else => unreachable,
-    }
-}
-
 pub fn draw() void {
     for (&spellPositions, &spellAnimations) |pos, ani| {
         if (ani.isFinished()) continue;
@@ -146,61 +129,9 @@ pub fn draw() void {
 
 const imageId = zhu.graphics.imageId;
 
-const Button = struct {
-    normal: zhu.graphics.ImageId,
-    hover: zhu.graphics.ImageId,
-    pressed: zhu.graphics.ImageId,
-};
-
-const ButtonState = enum { normal, hover, pressed };
-
-const buttonSize = zhu.Vector2.xy(96, 32);
-const buttonPosition = zhu.Vector2.xy(990, 685);
-const buttons: [3]Button = .{
-    Button{
-        .normal = zhu.graphics.imageId("UI/A_Pause1.png"),
-        .hover = zhu.graphics.imageId("UI/A_Pause2.png"),
-        .pressed = zhu.graphics.imageId("UI/A_Pause3.png"),
-    },
-    Button{
-        .normal = zhu.graphics.imageId("UI/A_Restart1.png"),
-        .hover = zhu.graphics.imageId("UI/A_Restart2.png"),
-        .pressed = zhu.graphics.imageId("UI/A_Restart3.png"),
-    },
-    Button{
-        .normal = zhu.graphics.imageId("UI/A_Back1.png"),
-        .hover = zhu.graphics.imageId("UI/A_Back2.png"),
-        .pressed = zhu.graphics.imageId("UI/A_Back3.png"),
-    },
-};
-var buttonIndex: ?usize = null;
-var buttonState: ButtonState = .normal;
-
-fn drawButton() void {
-    for (&buttons, 0..buttons.len) |button, i| {
-        const index: f32 = @floatFromInt(i);
-        const pos = buttonPosition.addX(index * 96);
-
-        if (i == buttonIndex and buttonState != .normal) {
-            if (buttonState == .pressed) {
-                camera.drawOption(button.pressed, pos, .{
-                    .size = buttonSize,
-                });
-            } else if (buttonState == .hover) {
-                camera.drawOption(button.hover, pos, .{
-                    .size = buttonSize,
-                });
-            }
-        } else {
-            camera.drawOption(button.normal, pos, .{
-                .size = buttonSize,
-            });
-        }
-    }
-}
-
 pub fn drawUI() void {
-    drawButton();
+    menu.draw();
+
     // 生命值
     var pos: zhu.Vector2 = .xy(30, 30);
     var option: camera.Option = .{ .anchor = .xy(0, 0.5) };

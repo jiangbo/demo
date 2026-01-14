@@ -21,9 +21,21 @@ const Menu = struct {
 const ButtonState = enum { normal, hover, pressed };
 
 const menus: []const Menu = @import("zon/menu.zon");
+// pub var menus: []const Menu = &.{};
 pub var menuIndex: u8 = 0;
 var buttonIndex: ?usize = null;
 var buttonState: ButtonState = .normal;
+
+pub fn reload() void {
+    const parseZon = std.zon.parse.fromSlice;
+    const content = zhu.window.readAll("ghost/zon/menu.zon") catch unreachable;
+    defer zhu.window.free(content);
+    const c = zhu.window.allocator.dupeZ(u8, content) catch unreachable;
+    defer zhu.window.free(c);
+    const npc = parseZon([]Menu, zhu.window.allocator, c, null, .{});
+    zhu.window.free(menus);
+    menus = npc catch @panic("error parse zon");
+}
 
 pub fn update() ?u8 {
     const menu = menus[menuIndex];
@@ -62,9 +74,9 @@ pub fn draw() void {
         const index: f32 = @floatFromInt(i);
         const pos = position.add(menu.offset.scale(index));
 
-        // const buttonPos = pos.add(button.offset);
-        // const area = zhu.Rect.init(buttonPos, button.size);
-        // camera.drawRectBorder(area, 1, .green);
+        const buttonPos = pos.add(button.offset);
+        const area = zhu.Rect.init(buttonPos, button.size);
+        camera.drawRectBorder(area, 1, .green);
 
         if (i == buttonIndex and buttonState != .normal) {
             if (buttonState == .pressed) {

@@ -12,7 +12,14 @@ const creditsText = @embedFile("zon/credits.txt");
 var showCredits: bool = false;
 
 pub fn init() void {
+    enter();
+}
+
+pub fn enter() void {
+    camera.position = .zero;
+    zhu.window.useMouseIcon(.DEFAULT);
     zhu.audio.playMusic("assets/bgm/Spooky music.ogg");
+    menu.menuIndex = 0;
 }
 
 var time: f32 = 0;
