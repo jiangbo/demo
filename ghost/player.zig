@@ -44,6 +44,7 @@ pub fn enter(initPosition: zhu.Vector2) void {
     status = .idle;
     animation.reset();
     deadAnimation.reset();
+    hurtTimer.stop();
 }
 
 pub fn update(delta: f32, worldSize: zhu.Vector2) void {
@@ -102,16 +103,10 @@ pub fn draw() void {
         });
     }
 
+    if (hurtTimer.isRunning() and hurtTimer.isEvenStep(0.2)) return;
     camera.drawImage(animation.currentImage(), position, .{
         .size = size.scale(2),
         .anchor = .center,
         .flipX = velocity.x < 0,
-    });
-
-    // debug 显示碰撞范围
-    camera.drawOption(circle, position, .{
-        .color = .rgba(0, 255, 0, 100),
-        .size = size,
-        .anchor = .center,
     });
 }

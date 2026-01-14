@@ -144,12 +144,6 @@ pub fn draw() void {
             .anchor = .center,
             .size = spellSize,
         });
-
-        camera.drawOption(circle, pos, .{
-            .anchor = .center,
-            .size = spellSize,
-            .color = .rgba(0, 255, 0, 100),
-        });
     }
 }
 

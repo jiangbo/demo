@@ -106,13 +106,10 @@ pub fn draw() void {
 
     for (enemies.items) |enemy| {
         const image = enemy.animation.currentImage();
-        var option: camera.Option = .{ .size = size, .anchor = .center };
-        camera.drawImage(image, enemy.position, option);
-
-        option.color = .rgba(0, 255, 0, 100);
-        if (enemy.collided) option.color = .rgba(255, 0, 0, 100);
-
-        camera.drawOption(circle, enemy.position, option);
+        camera.drawImage(image, enemy.position, .{
+            .size = size,
+            .anchor = .center,
+        });
 
         const max = enemy.stats.maxHealth;
         const percent = zhu.math.percentInt(enemy.stats.health, max);

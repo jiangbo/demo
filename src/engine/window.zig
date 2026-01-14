@@ -43,6 +43,14 @@ pub const Timer = struct {
         return self.elapsed < self.duration;
     }
 
+    pub fn stepIndex(self: *const Timer, interval: f32) usize {
+        return @intFromFloat(@trunc(self.elapsed / interval));
+    }
+
+    pub fn isEvenStep(self: *Timer, interval: f32) bool {
+        return self.stepIndex(interval) & 1 == 0;
+    }
+
     pub fn progress(self: *const Timer) f32 {
         return self.elapsed / self.duration;
     }

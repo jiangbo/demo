@@ -40,7 +40,7 @@ pub fn enter() void {
 pub fn exit() void {
     camera.position = .zero;
     zhu.window.useMouseIcon(.DEFAULT);
-    zhu.audio.stopMusic();
+    zhu.audio.playMusic("assets/bgm/Spooky music.ogg");
 }
 
 pub fn update(delta: f32) void {

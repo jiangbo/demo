@@ -39,9 +39,9 @@ var buttonState: ButtonState = .normal;
 const creditsText = @embedFile("zon/credits.txt");
 var showCredits: bool = false;
 
-pub fn init() void {}
-
-pub fn deinit() void {}
+pub fn init() void {
+    zhu.audio.playMusic("assets/bgm/Spooky music.ogg");
+}
 
 var time: f32 = 0;
 pub fn update(delta: f32) void {
