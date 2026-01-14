@@ -80,7 +80,7 @@ fn triggerButton(index: usize) void {
     // 播放点击音效
     zhu.audio.playSound("assets/sound/UI_button08.ogg");
     switch (index) {
-        0 => scene.isTitleScene = false, // 开始游戏
+        0 => scene.changeScene(.world), // 开始游戏
         1 => showCredits = !showCredits, // 显示版权信息
         2 => zhu.window.exit(), // 退出游戏
         else => unreachable,

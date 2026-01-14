@@ -6,9 +6,7 @@ const batch = zhu.batch;
 const camera = zhu.camera;
 
 const title = @import("title.zig");
-const player = @import("player.zig");
-const enemy = @import("enemy.zig");
-const battle = @import("battle.zig");
+const world = @import("world.zig");
 
 var isHelp = false;
 var isDebug = false;
@@ -16,8 +14,8 @@ var vertexBuffer: []batch.Vertex = undefined;
 
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
 
-pub var isTitleScene: bool = true;
-pub var worldSize: zhu.Vector2 = undefined; // 世界大小
+const sceneType = enum { title, world };
+var currentScene: sceneType = .title;
 
 pub fn init() void {
     window.initText(@import("zon/font.zon"), 32);
@@ -26,30 +24,25 @@ pub fn init() void {
     zhu.graphics.frameStats(true);
     batch.init(window.logicSize, vertexBuffer);
     batch.whiteImage = zhu.graphics.imageId("white.png");
-
     zhu.assets.loadAtlas(atlas);
-    worldSize = window.logicSize.scale(3); // 设置世界大小
 
-    zhu.window.bindAndUseMouseIcon(.CUSTOM_1, "assets/29.png");
-    zhu.window.bindMouseIcon(.CUSTOM_2, "assets/30.png");
-
+    world.init();
     title.init();
-    player.init(worldSize.scale(0.5)); // 将玩家移动到世界中心
-    enemy.init();
-    battle.init();
-
-    zhu.audio.playMusic("assets/bgm/OhMyGhost.ogg");
-    zhu.audio.musicVolume = 0.4;
 }
 
 pub fn deinit() void {
-    enemy.deinit();
+    world.deinit();
     window.free(vertexBuffer);
 }
 
-var pause: bool = false;
-var mouse: window.Cursor = .CUSTOM_1;
-var mouseTimer: window.Timer = .init(0.3); // 鼠标切换时间
+pub fn changeScene(newScene: sceneType) void {
+    // 退出当前场景
+    if (currentScene == .world) world.exit();
+    currentScene = newScene;
+    // 进入新场景
+    if (currentScene == .world) world.enter();
+}
+
 pub fn update(delta: f32) void {
     if (window.isKeyRelease(.H)) isHelp = !isHelp;
     if (window.isKeyRelease(.X)) isDebug = !isDebug;
@@ -58,26 +51,10 @@ pub fn update(delta: f32) void {
         return window.toggleFullScreen();
     }
 
-    if (isTitleScene) return title.update(delta);
-
-    const speed: f32 = std.math.round(400 * delta);
-    if (window.isKeyDown(.UP)) camera.position.y -= speed;
-    if (window.isKeyDown(.DOWN)) camera.position.y += speed;
-    if (window.isKeyDown(.LEFT)) camera.position.x -= speed;
-    if (window.isKeyDown(.RIGHT)) camera.position.x += speed;
-
-    if (window.isKeyRelease(.SPACE)) pause = !pause;
-    if (pause) return; // 暂停，方便录制
-
-    if (mouseTimer.isFinishedLoopUpdate(delta)) {
-        mouse = if (mouse == .CUSTOM_1) .CUSTOM_2 else .CUSTOM_1;
-        window.useMouseIcon(mouse);
+    switch (currentScene) {
+        .title => title.update(delta),
+        .world => world.update(delta),
     }
-
-    player.update(delta, worldSize);
-    cameraFollow(player.position);
-    enemy.update(delta);
-    battle.update(delta);
 }
 
 pub fn draw() void {
@@ -85,51 +62,11 @@ pub fn draw() void {
     defer camera.endDraw();
     window.keepAspectRatio();
 
-    if (isTitleScene) {
-        title.draw();
-        if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
-        return;
+    switch (currentScene) {
+        .title => title.draw(),
+        .world => world.draw(),
     }
-
-    const gridColor = zhu.graphics.Color.midGray;
-    const area = zhu.Rect.init(.zero, worldSize);
-    drawGrid(area, 80, gridColor);
-    camera.drawRectBorder(area, 10, .white);
-
-    enemy.draw(); // 敌人绘制
-    player.draw(); // 玩家绘制
-    battle.draw(); // 战斗绘制
-
-    camera.mode = .local;
-    defer camera.mode = .world;
-    battle.drawUI();
-
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
-}
-
-fn drawGrid(area: zhu.Rect, width: f32, lineColor: zhu.Color) void {
-    const max = area.max();
-    const color = camera.LineOption{ .color = lineColor };
-
-    var min = area.min;
-    while (min.x < max.x) : (min.x += width) {
-        camera.drawAxisLine(min, .xy(min.x, max.y), color);
-    }
-
-    min = area.min;
-    while (min.y < max.y) : (min.y += width) {
-        camera.drawAxisLine(min, .xy(max.x, min.y), color);
-    }
-}
-
-fn cameraFollow(pos: zhu.Vector2) void {
-    // const scaleSize = window.logicSize.div(camera.scale);
-    // const half = scaleSize.scale(0.5);
-    const max = worldSize.sub(window.logicSize).max(.zero);
-    const halfWindowSize = window.logicSize.scale(0.5);
-    const square: zhu.Vector2 = .square(30);
-    camera.position = pos.sub(halfWindowSize);
-    camera.position.clamp(square.scale(-1), max.add(square));
 }
 
 fn drawHelpInfo() void {
