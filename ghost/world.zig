@@ -7,7 +7,7 @@ const player = @import("player.zig");
 const enemy = @import("enemy.zig");
 const battle = @import("battle.zig");
 
-pub var isPause: bool = false;
+pub var paused: bool = false;
 pub var worldSize: zhu.Vector2 = undefined; // 世界大小
 var mouse: zhu.window.Cursor = .CUSTOM_1;
 var mouseTimer: zhu.window.Timer = .init(0.3); // 鼠标切换时间
@@ -30,7 +30,7 @@ pub fn enter() void {
 
     zhu.audio.playMusic("assets/bgm/OhMyGhost.ogg");
     zhu.audio.musicVolume = 0.4;
-    zhu.audio.isPaused = false;
+    zhu.audio.paused = false;
 
     player.enter(worldSize.scale(0.5));
     enemy.enter();
@@ -51,7 +51,7 @@ pub fn update(delta: f32) void {
 
     if (zhu.window.isKeyPress(.SPACE)) togglePause();
 
-    if (!isPause) {
+    if (!paused) {
         player.update(delta, worldSize);
         cameraFollow(player.position);
         enemy.update(delta);
@@ -60,8 +60,8 @@ pub fn update(delta: f32) void {
 }
 
 pub fn togglePause() void {
-    isPause = !isPause;
-    zhu.audio.isPaused = isPause;
+    paused = !paused;
+    zhu.audio.paused = paused;
 }
 
 fn cameraFollow(pos: zhu.Vector2) void {

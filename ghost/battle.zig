@@ -37,12 +37,12 @@ pub fn enter() void {
     mana = 100;
     spellTimer.stop();
     score = 0;
-    world.isPause = false;
+    world.paused = false;
 }
 
 pub fn update(delta: f32) void {
     const press = updateButton();
-    if (world.isPause) return;
+    if (world.paused) return;
 
     spellTimer.update(delta);
     if (manaTimer.isFinishedLoopUpdate(delta)) {
