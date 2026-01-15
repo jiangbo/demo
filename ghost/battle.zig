@@ -80,20 +80,26 @@ pub fn update(delta: f32) void {
         playerCastSpell(camera.toWorld(zhu.window.mousePosition));
     }
 
-    for (&spellPositions, &spellAnimations) |pos, *ani| {
-        if (ani.isFinished()) continue;
+    for (&spellPositions, &spellAnimations) |pos, *animation| {
+        if (animation.isFinished()) continue;
 
-        const changed = ani.isNextOnceUpdate(delta);
-        if (changed and ani.index == spellDamageIndex) {
-            var iterator = std.mem.reverseIterator(enemy.enemies.items);
-            while (iterator.nextPtr()) |e| {
-                const len = (spellSize.x + enemy.size.x) * 0.5;
-                const len2 = pos.sub(e.position).length2();
-                if (len2 < len * len) e.stats.health -|= player.stats.attack;
+        // 如果动画状态未改变，或者不是伤害帧则跳过
+        const changed = animation.isNextOnceUpdate(delta);
+        if (!changed or animation.index != spellDamageIndex) continue;
+
+        for (enemy.enemies.items) |*e| {
+            const state = e.animation.getEnumState(enemy.State);
+            if (state == .dead) continue; // 死亡状态不检测碰撞
+
+            const len = (spellSize.x + enemy.size.x) * 0.5;
+            const len2 = pos.sub(e.position).length2();
+            if (len2 < len * len) {
+                // 命中敌人，造成伤害
+                e.stats.health -|= player.stats.attack;
                 if (e.stats.health == 0) {
-                    _ = enemy.enemies.swapRemove(iterator.index);
                     score += 1;
-                }
+                    e.animation = enemy.animations.get(.dead);
+                } else e.animation = enemy.animations.get(.hurt);
             }
         }
     }
@@ -104,10 +110,10 @@ fn playerCastSpell(position: zhu.Vector2) void {
 
     // 播放攻击音效
     zhu.audio.playSound("assets/sound/big-thunder.ogg");
-    for (&spellPositions, &spellAnimations) |*pos, *ani| {
-        if (ani.isFinished()) {
+    for (&spellPositions, &spellAnimations) |*pos, *animation| {
+        if (animation.isFinished()) {
             pos.* = position;
-            ani.reset();
+            animation.reset();
             mana -= 30;
             spellTimer.elapsed = 0;
             return;
@@ -116,10 +122,10 @@ fn playerCastSpell(position: zhu.Vector2) void {
 }
 
 pub fn draw() void {
-    for (&spellPositions, &spellAnimations) |pos, ani| {
-        if (ani.isFinished()) continue;
+    for (&spellPositions, &spellAnimations) |pos, animation| {
+        if (animation.isFinished()) continue;
 
-        const image = ani.currentImage();
+        const image = animation.currentImage();
         camera.drawImage(image, pos, .{
             .anchor = .center,
             .size = spellSize,

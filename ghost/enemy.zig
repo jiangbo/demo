@@ -6,12 +6,11 @@ const camera = zhu.camera;
 const battle = @import("battle.zig");
 const player = @import("player.zig");
 
-const State = enum { normal, hurt, dead };
+pub const State = enum { normal, hurt, dead };
 const Enemy = struct {
     position: zhu.Vector2,
     animation: zhu.graphics.FrameAnimation,
     stats: battle.Stats = .{},
-    collided: bool = false,
 };
 const normalFrames = zhu.graphics.framesX(4, .xy(32, 32), 0.2);
 const deadFrames = zhu.graphics.framesX(8, .xy(32, 32), 0.1);
@@ -20,7 +19,7 @@ const circle = zhu.graphics.imageId("circle.png"); // 显示碰撞范围
 pub const size = deadFrames[0].area.size.scale(2);
 
 pub var enemies: std.ArrayList(Enemy) = .empty;
-var animations: zhu.graphics.EnumFrameAnimation(State) = undefined;
+pub var animations: zhu.graphics.EnumFrameAnimation(State) = undefined;
 const spawnFrames = zhu.graphics.framesX(11, .xy(64, 64), 0.1);
 var spawnAnimation: zhu.graphics.FrameAnimation = undefined;
 var spawnTimer: zhu.window.Timer = .init(3); // 三秒生成一批敌人
@@ -51,6 +50,23 @@ pub fn deinit() void {
 }
 
 pub fn update(delta: f32) void {
+
+    // 敌人的动画处理
+    var iterator = std.mem.reverseIterator(enemies.items);
+    while (iterator.nextPtr()) |enemy| {
+        const state = enemy.animation.getEnumState(State);
+        switch (state) {
+            .normal => enemy.animation.loopUpdate(delta),
+            .hurt => if (enemy.animation.isFinishedOnceUpdate(delta)) {
+                enemy.animation = animations.get(.normal);
+            },
+            .dead => if (enemy.animation.isFinishedOnceUpdate(delta)) {
+                _ = enemies.swapRemove(iterator.index);
+            },
+        }
+    }
+    if (player.stats.health == 0) return;
+
     if (spawnTimer.isFinishedLoopUpdate(delta)) {
         spawnAnimation.reset();
         doSpawnEnemies();
@@ -65,15 +81,10 @@ pub fn update(delta: f32) void {
         const dir = player.position.sub(enemy.position);
         const distance = dir.normalize().scale(maxSpeed * delta);
         enemy.position = enemy.position.add(distance);
-        if (enemy.animation.isFinishedOnceUpdate(delta)) {
-            const next = zhu.nextEnum(State, enemy.animation.state);
-            enemy.animation = animations.get(next);
-        }
 
         const len = (player.size.x + size.x) * 0.5;
         const len2 = player.position.sub(enemy.position).length2();
-        enemy.collided = len2 < len * len;
-        if (enemy.collided) player.hurt(enemy.stats.attack);
+        if (len2 < len * len) player.hurt(enemy.stats.attack);
     }
 }
 

@@ -73,6 +73,10 @@ pub const FrameAnimation = struct {
         if (self.index >= self.frames.len) self.index = 0;
     }
 
+    pub fn getEnumState(self: *const FrameAnimation, T: type) T {
+        return @enumFromInt(self.state);
+    }
+
     pub fn stop(self: *FrameAnimation) void {
         self.index = @intCast(self.frames.len + 1);
     }
