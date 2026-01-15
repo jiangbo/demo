@@ -5,6 +5,7 @@ const camera = zhu.camera;
 const window = zhu.window;
 
 const battle = @import("battle.zig");
+const menu = @import("menu.zig");
 
 const circle = zhu.graphics.imageId("circle.png"); // 显示碰撞范围
 const maxSpeed = 500;
@@ -50,7 +51,9 @@ pub fn enter(initPosition: zhu.Vector2) void {
 pub fn update(delta: f32, worldSize: zhu.Vector2) void {
     if (stats.health == 0) {
         // 角色已死亡
-        return deadAnimation.onceUpdate(delta);
+        if (deadAnimation.isFinishedOnceUpdate(delta)) {
+            menu.menuIndex = 2;
+        }
     }
     hurtTimer.update(delta);
 

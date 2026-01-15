@@ -9,6 +9,7 @@ const Button = struct {
     normal: zhu.graphics.ImageId,
     hover: zhu.graphics.ImageId,
     pressed: zhu.graphics.ImageId,
+    event: u8,
 };
 
 const Menu = struct {
@@ -55,7 +56,7 @@ pub fn update() ?u8 {
                 // 刚刚进入悬停状态，播放音效
                 zhu.audio.playSound("assets/sound/UI_button12.ogg");
             }
-            if (zhu.window.isMouseRelease(.LEFT)) return @intCast(i);
+            if (zhu.window.isMouseRelease(.LEFT)) return button.event;
             buttonIndex = i;
             buttonState = if (press) .pressed else .hover;
             break;
