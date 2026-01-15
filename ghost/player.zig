@@ -78,6 +78,7 @@ pub fn hurt(damage: u32) void {
     stats.health -|= damage; // 扣除生命值
     hurtTimer.elapsed = 0; // 重置计时器
     if (stats.health == 0) {
+        battle.saveHighScore();
         // 播放死亡音效
         zhu.audio.playSound("assets/sound/female-scream-02-89290.ogg");
     } else {

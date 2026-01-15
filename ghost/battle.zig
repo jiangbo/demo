@@ -26,6 +26,7 @@ var spellPositions: [4]zhu.Vector2 = undefined;
 var mana: u32 = 100;
 var manaTimer: zhu.window.Timer = .init(1); // 每秒回复一次魔法值
 
+pub var highScore: u32 = 0;
 var score: u32 = 0;
 
 pub fn init() void {
@@ -102,6 +103,16 @@ pub fn update(delta: f32) void {
                 } else e.animation = enemy.animations.get(.hurt);
             }
         }
+    }
+}
+
+pub fn saveHighScore() void {
+    if (score > highScore) {
+        highScore = score;
+        const bytes = std.mem.toBytes(score);
+        zhu.window.saveAll("high.save", &bytes) catch {
+            std.log.info("save high score error", .{});
+        };
     }
 }
 

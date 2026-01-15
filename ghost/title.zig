@@ -5,6 +5,7 @@ const camera = zhu.camera;
 
 const scene = @import("scene.zig");
 const menu = @import("menu.zig");
+const battle = @import("battle.zig");
 
 const background = zhu.graphics.imageId("UI/Textfield_01.png");
 
@@ -13,6 +14,12 @@ var showCredits: bool = false;
 
 pub fn init() void {
     enter();
+    const bytes = zhu.window.readAll("high.save") catch {
+        battle.highScore = 0;
+        return;
+    };
+    defer zhu.window.free(bytes);
+    battle.highScore = std.mem.bytesToValue(u32, bytes);
 }
 
 pub fn enter() void {
@@ -20,6 +27,7 @@ pub fn enter() void {
     zhu.window.useMouseIcon(.DEFAULT);
     zhu.audio.playMusic("assets/bgm/Spooky music.ogg");
     menu.menuIndex = 0;
+    battle.saveHighScore();
 }
 
 var time: f32 = 0;
@@ -72,16 +80,16 @@ pub fn draw() void {
 
     menu.draw();
 
-    camera.drawOption(background, basicPos.addXY(220, 285), .{
-        .size = .xy(200, 60),
+    camera.drawOption(background, basicPos.addXY(200, 285), .{
+        .size = .xy(232, 60),
     });
 
     var pos = basicPos.addXY(150, 80);
     zhu.text.drawOption("幽 灵 逃 生", pos, .{ .size = 64 });
 
-    pos = basicPos.addXY(240, 300);
+    pos = basicPos.addXY(220, 300);
     zhu.text.drawText("最高分：", pos);
-    zhu.text.drawNumber(77, pos.addX(125));
+    zhu.text.drawNumber(battle.highScore, pos.addX(125));
 }
 
 const imageId = zhu.graphics.imageId;

@@ -15,7 +15,7 @@ var vertexBuffer: []batch.Vertex = undefined;
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
 
 const sceneType = enum { title, world };
-var currentScene: sceneType = .world;
+var currentScene: sceneType = .title;
 
 pub fn init() void {
     window.initText(@import("zon/font.zon"), 32);
@@ -28,7 +28,6 @@ pub fn init() void {
 
     world.init();
     title.init();
-    world.enter();
 }
 
 pub fn deinit() void {

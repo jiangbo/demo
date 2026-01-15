@@ -22,6 +22,7 @@ pub fn init() void {
 
 pub fn deinit() void {
     enemy.deinit();
+    battle.saveHighScore();
 }
 
 pub fn enter() void {
