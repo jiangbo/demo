@@ -13,7 +13,7 @@ var mouse: zhu.window.Cursor = .CUSTOM_1;
 var mouseTimer: zhu.Timer = .init(0.3); // 鼠标切换时间
 
 pub fn init() void {
-    worldSize = zhu.window.logicSize.scale(3); // 设置世界大小
+    worldSize = zhu.window.size.scale(3); // 设置世界大小
 
     player.init(worldSize.scale(0.5)); // 将玩家移动到世界中心
     enemy.init();
@@ -67,8 +67,8 @@ pub fn togglePause() void {
 fn cameraFollow(pos: zhu.Vector2) void {
     // const scaleSize = window.logicSize.div(camera.scale);
     // const half = scaleSize.scale(0.5);
-    const max = worldSize.sub(zhu.window.logicSize).max(.zero);
-    const halfWindowSize = zhu.window.logicSize.scale(0.5);
+    const max = worldSize.sub(zhu.window.size).max(.zero);
+    const halfWindowSize = zhu.window.size.scale(0.5);
     const square: zhu.Vector2 = .square(30);
     camera.position = pos.sub(halfWindowSize);
     camera.position.clamp(square.scale(-1), max.add(square));

@@ -101,7 +101,7 @@ pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
     if (@hasDecl(object, name)) @call(.auto, @field(object, name), args);
 }
 
-pub var logicSize: math.Vector = .zero;
+pub var size: math.Vector = .zero;
 pub var clientSize: math.Vector = .zero;
 pub var ratio: math.Vector = .xy(1, 1);
 pub var displayArea: math.Rect = undefined;
@@ -116,8 +116,8 @@ pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
 const root = @import("root");
 pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
-    logicSize = info.logicSize;
-    displayArea = .init(.zero, logicSize);
+    size = info.logicSize;
+    displayArea = .init(.zero, size);
     alignment = info.alignment;
     scaleMode = info.scaleMode;
     countingAllocator = CountingAllocator.init(allocs);
@@ -130,11 +130,11 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
         }
     }
 
-    const size = logicSize.scale(info.scale);
+    const scaledSize = size.scale(info.scale);
     sk.app.run(.{
         .window_title = info.title,
-        .width = @as(i32, @intFromFloat(size.x)),
-        .height = @as(i32, @intFromFloat(size.y)),
+        .width = @as(i32, @intFromFloat(scaledSize.x)),
+        .height = @as(i32, @intFromFloat(scaledSize.y)),
         .init_cb = windowInit,
         .event_cb = windowEvent,
         .frame_cb = windowFrame,
@@ -144,7 +144,7 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
 
 export fn windowInit() void {
     clientSize = .xy(sk.app.widthf(), sk.app.heightf());
-    ratio = clientSize.div(logicSize);
+    ratio = clientSize.div(size);
     gpu.init();
     math.setRandomSeed(timer.read());
     call(root, "init", .{});
@@ -159,10 +159,10 @@ export fn windowEvent(event: ?*const Event) void {
         if (ev.type == .MOUSE_MOVE) {
             mouseMoved = true;
             const pos = input.mousePosition.sub(displayArea.min);
-            mousePosition = pos.mul(logicSize).div(displayArea.size);
+            mousePosition = pos.mul(size).div(displayArea.size);
         } else if (ev.type == .RESIZED) {
             clientSize = .xy(sk.app.widthf(), sk.app.heightf());
-            ratio = clientSize.div(logicSize);
+            ratio = clientSize.div(size);
         }
         call(root, "event", .{ev});
     }
@@ -172,9 +172,9 @@ pub fn keepAspectRatio() void {
     switch (scaleMode) {
         // 无缩放，1:1 显示逻辑尺寸，两边黑边
         .none => {
-            const pos = clientSize.sub(logicSize).mul(alignment);
-            displayArea = .init(pos, logicSize);
-            sk.gfx.applyViewportf(pos.x, pos.y, logicSize.x, logicSize.y, true);
+            const pos = clientSize.sub(size).mul(alignment);
+            displayArea = .init(pos, size);
+            sk.gfx.applyViewportf(pos.x, pos.y, size.x, size.y, true);
         },
         // 拉伸缩放，填满整个客户端区域
         .stretch => {
@@ -183,14 +183,14 @@ pub fn keepAspectRatio() void {
         },
         // 适配缩放，等比缩放加黑边
         .fit => {
-            const minSize = logicSize.scale(@min(ratio.x, ratio.y));
+            const minSize = size.scale(@min(ratio.x, ratio.y));
             const pos = clientSize.sub(minSize).mul(alignment);
             displayArea = .init(pos, minSize);
             sk.gfx.applyViewportf(pos.x, pos.y, minSize.x, minSize.y, true);
         },
         // 填充缩放，等比缩放超出屏幕
         .fill => {
-            const maxSize = logicSize.scale(@max(ratio.x, ratio.y));
+            const maxSize = size.scale(@max(ratio.x, ratio.y));
             const pos = clientSize.sub(maxSize).mul(alignment);
             displayArea = .init(pos, maxSize);
             sk.gfx.applyViewportf(pos.x, pos.y, maxSize.x, maxSize.y, true);
@@ -198,7 +198,7 @@ pub fn keepAspectRatio() void {
         // 整数缩放，自动计算最近的整数倍
         .integer => {
             const scale: f32 = @trunc(@min(ratio.x, ratio.y));
-            const intSize = logicSize.scale(scale);
+            const intSize = size.scale(scale);
             const pos = clientSize.sub(intSize).mul(alignment);
             displayArea = .init(pos, intSize);
             sk.gfx.applyViewportf(pos.x, pos.y, intSize.x, intSize.y, true);
@@ -400,7 +400,7 @@ pub fn useWindowIcon(path: [:0]const u8) void {
 }
 
 pub fn drawCenter(str: text.String, y: f32, option: text.Option) void {
-    text.drawCenter(str, logicSize.mul(.init(0.5, y)), option);
+    text.drawCenter(str, size.mul(.init(0.5, y)), option);
 }
 
 pub const alloc = assets.alloc;

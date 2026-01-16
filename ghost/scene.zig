@@ -22,7 +22,7 @@ pub fn init() void {
 
     vertexBuffer = window.alloc(batch.Vertex, 5000);
     zhu.graphics.frameStats(true);
-    batch.init(window.logicSize, vertexBuffer);
+    batch.init(window.size, vertexBuffer);
     batch.whiteImage = zhu.graphics.imageId("white.png");
     zhu.assets.loadAtlas(atlas);
 

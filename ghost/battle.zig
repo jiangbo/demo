@@ -161,14 +161,14 @@ pub fn drawUI() void {
     // 冷却时间
     const image = zhu.graphics.getImage("UI/Electric-Icon.png");
     var size = image.area.size.scale(0.14);
-    pos = .xy(zhu.window.logicSize.x - 300, 30 - size.y / 2);
+    pos = .xy(zhu.window.size.x - 300, 30 - size.y / 2);
     camera.drawImage(image, pos, .{ .size = size });
 
     size.y = size.y * (1 - spellTimer.progress());
     camera.drawRect(.init(pos, size), .{ .color = .gray(0, 100) });
 
     // 得分
-    pos = .xy(zhu.window.logicSize.x - 210, 6);
+    pos = .xy(zhu.window.size.x - 210, 6);
     camera.drawOption(imageId("UI/Textfield_01.png"), pos, .{
         .size = .xy(200, 48),
     });

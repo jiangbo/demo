@@ -55,7 +55,7 @@ pub fn update(delta: f32) void {
 pub fn draw() void {
 
     // 边框
-    var size = zhu.window.logicSize.sub(.xy(60, 60));
+    var size = zhu.window.size.sub(.xy(60, 60));
     camera.drawRectBorder(.init(.xy(30, 30), size), 10, .{
         .r = zhu.math.sinInt(u8, time * 0.9, 100, 255),
         .g = zhu.math.sinInt(u8, time * 0.8, 100, 255),
@@ -65,7 +65,7 @@ pub fn draw() void {
 
     // 标题
     const basicPos = zhu.Vector2.xy(320, 100); // 定位位置
-    size = zhu.window.logicSize.div(.xy(2, 3));
+    size = zhu.window.size.div(.xy(2, 3));
 
     // 先绘制图片，再绘制文字，减少批量绘制次数
     camera.drawOption(background, basicPos, .{ .size = size });

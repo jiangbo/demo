@@ -93,8 +93,8 @@ fn doSpawnEnemies() void {
     zhu.audio.playSound("assets/sound/silly-ghost-sound-242342.ogg");
     for (&spawnEnemies) |*enemy| {
         const windowPos: zhu.Vector2 = .{
-            .x = zhu.randomF32(0, zhu.window.logicSize.x),
-            .y = zhu.randomF32(0, zhu.window.logicSize.y),
+            .x = zhu.randomF32(0, zhu.window.size.x),
+            .y = zhu.randomF32(0, zhu.window.size.y),
         };
         enemy.position = camera.toWorld(windowPos);
         enemy.stats = .{};
