@@ -285,12 +285,25 @@ pub fn statFileTime(path: [:0]const u8) i64 {
     return @intCast(stat.mtime);
 }
 
+pub fn readBuffer(path: [:0]const u8, buffer: []u8) ![]u8 {
+    if (@import("builtin").target.os.tag == .emscripten) {
+        const value = @import("c.zig").em.my_add(1, 1);
+        _ = value; // 防止编译器优化掉，目前不清楚为什么要加这个方法才生效
+        const len = try readFromJs(path, &buffer);
+        // 长度大于0，读完了内容，直接分配返回。
+        if (len > 0) return buffer[0..@intCast(len)];
+        // 长度小于0，没有读完，太长了。
+        return error.BufferTooSmall;
+    }
+    return std.fs.cwd().readFile(path, buffer);
+}
+
 pub fn readAll(path: [:0]const u8) ![]u8 {
     if (@import("builtin").target.os.tag == .emscripten) {
         const value = @import("c.zig").em.my_add(1, 1);
         _ = value; // 防止编译器优化掉，目前不清楚为什么要加这个方法才生效
         var buffer: [1024]u8 = undefined;
-        const len = readFromJs(path, &buffer);
+        const len = try readFromJs(path, &buffer);
         // 长度大于0，读完了内容，直接分配返回。
         if (len > 0) return dupe(u8, buffer[0..@intCast(len)]);
 

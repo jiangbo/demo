@@ -15,11 +15,11 @@ var showCredits: bool = false;
 pub fn init() void {
     zhu.window.bindAndUseMouseIcon("assets/pointer_c_shaded.png", .{});
     enter();
-    const bytes = zhu.window.readAll("high.save") catch {
+    var buffer: [4]u8 = undefined;
+    const bytes = zhu.window.readBuffer("high.save", &buffer) catch {
         battle.highScore = 0;
         return;
     };
-    defer zhu.window.free(bytes);
     battle.highScore = std.mem.bytesToValue(u32, bytes);
 }
 
