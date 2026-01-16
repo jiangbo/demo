@@ -104,7 +104,7 @@ pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
 pub var size: math.Vector = .zero;
 pub var clientSize: math.Vector = .zero;
 pub var ratio: math.Vector = .xy(1, 1);
-pub var displayArea: math.Rect = undefined;
+pub var viewRect: math.Rect = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
 pub var allocator: std.mem.Allocator = undefined;
 pub var alignment: math.Vector2 = .center; // 默认居中
@@ -117,7 +117,7 @@ const root = @import("root");
 pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
     size = info.logicSize;
-    displayArea = .init(.zero, size);
+    viewRect = .init(.zero, size);
     alignment = info.alignment;
     scaleMode = info.scaleMode;
     countingAllocator = CountingAllocator.init(allocs);
@@ -158,8 +158,8 @@ export fn windowEvent(event: ?*const Event) void {
         input.event(ev);
         if (ev.type == .MOUSE_MOVE) {
             mouseMoved = true;
-            const pos = input.mousePosition.sub(displayArea.min);
-            mousePosition = pos.mul(size).div(displayArea.size);
+            const pos = input.mousePosition.sub(viewRect.min);
+            mousePosition = pos.mul(size).div(viewRect.size);
         } else if (ev.type == .RESIZED) {
             clientSize = .xy(sk.app.widthf(), sk.app.heightf());
             ratio = clientSize.div(size);
@@ -171,27 +171,27 @@ export fn windowEvent(event: ?*const Event) void {
 pub fn keepAspectRatio() void {
     switch (scaleMode) {
         .none => {
-            displayArea = .init(clientSize.sub(size).mul(alignment), size);
+            viewRect = .init(clientSize.sub(size).mul(alignment), size);
         },
-        .stretch => displayArea = .init(.zero, clientSize),
+        .stretch => viewRect = .init(.zero, clientSize),
         .fit => {
             const minSize = size.scale(@min(ratio.x, ratio.y));
             const position = clientSize.sub(minSize).mul(alignment);
-            displayArea = .init(position, minSize);
+            viewRect = .init(position, minSize);
         },
         .fill => {
             const maxSize = size.scale(@max(ratio.x, ratio.y));
             const position = clientSize.sub(maxSize).mul(alignment);
-            displayArea = .init(position, maxSize);
+            viewRect = .init(position, maxSize);
         },
         .integer => {
             const intSize = size.scale(@trunc(@min(ratio.x, ratio.y)));
             const position = clientSize.sub(intSize).mul(alignment);
-            displayArea = .init(position, intSize);
+            viewRect = .init(position, intSize);
         },
     }
-    sk.gfx.applyViewportf(displayArea.min.x, displayArea.min.y, //
-        displayArea.size.x, displayArea.size.y, true);
+    sk.gfx.applyViewportf(viewRect.min.x, viewRect.min.y, //
+        viewRect.size.x, viewRect.size.y, true);
 }
 
 pub var frameRate: u32 = 0;
