@@ -170,40 +170,28 @@ export fn windowEvent(event: ?*const Event) void {
 
 pub fn keepAspectRatio() void {
     switch (scaleMode) {
-        // 无缩放，1:1 显示逻辑尺寸，两边黑边
         .none => {
-            const pos = clientSize.sub(size).mul(alignment);
-            displayArea = .init(pos, size);
-            sk.gfx.applyViewportf(pos.x, pos.y, size.x, size.y, true);
+            displayArea = .init(clientSize.sub(size).mul(alignment), size);
         },
-        // 拉伸缩放，填满整个客户端区域
-        .stretch => {
-            displayArea = .init(.zero, clientSize);
-            sk.gfx.applyViewportf(0, 0, clientSize.x, clientSize.y, true);
-        },
-        // 适配缩放，等比缩放加黑边
+        .stretch => displayArea = .init(.zero, clientSize),
         .fit => {
             const minSize = size.scale(@min(ratio.x, ratio.y));
-            const pos = clientSize.sub(minSize).mul(alignment);
-            displayArea = .init(pos, minSize);
-            sk.gfx.applyViewportf(pos.x, pos.y, minSize.x, minSize.y, true);
+            const position = clientSize.sub(minSize).mul(alignment);
+            displayArea = .init(position, minSize);
         },
-        // 填充缩放，等比缩放超出屏幕
         .fill => {
             const maxSize = size.scale(@max(ratio.x, ratio.y));
-            const pos = clientSize.sub(maxSize).mul(alignment);
-            displayArea = .init(pos, maxSize);
-            sk.gfx.applyViewportf(pos.x, pos.y, maxSize.x, maxSize.y, true);
+            const position = clientSize.sub(maxSize).mul(alignment);
+            displayArea = .init(position, maxSize);
         },
-        // 整数缩放，自动计算最近的整数倍
         .integer => {
-            const scale: f32 = @trunc(@min(ratio.x, ratio.y));
-            const intSize = size.scale(scale);
-            const pos = clientSize.sub(intSize).mul(alignment);
-            displayArea = .init(pos, intSize);
-            sk.gfx.applyViewportf(pos.x, pos.y, intSize.x, intSize.y, true);
+            const intSize = size.scale(@trunc(@min(ratio.x, ratio.y)));
+            const position = clientSize.sub(intSize).mul(alignment);
+            displayArea = .init(position, intSize);
         },
     }
+    sk.gfx.applyViewportf(displayArea.min.x, displayArea.min.y, //
+        displayArea.size.x, displayArea.size.y, true);
 }
 
 pub var frameRate: u32 = 0;
