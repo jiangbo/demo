@@ -132,6 +132,7 @@ pub const WindowInfo = struct {
     logicSize: math.Vector,
     scale: f32 = 1,
     disableIME: bool = true,
+    alignment: math.Vector = .xy(0.5, 0.5),
 };
 
 pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
@@ -144,6 +145,7 @@ pub var ratio: math.Vector = .xy(1, 1);
 pub var displayArea: math.Rect = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
 pub var allocator: std.mem.Allocator = undefined;
+pub var alignment: math.Vector2 = .center; // 默认居中
 var timer: std.time.Timer = undefined;
 
 pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
@@ -153,6 +155,7 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
     logicSize = info.logicSize;
     displayArea = .init(.zero, logicSize);
+    alignment = info.alignment;
     countingAllocator = CountingAllocator.init(allocs);
     allocator = countingAllocator.allocator();
     assets.init(allocator);
@@ -203,7 +206,7 @@ export fn windowEvent(event: ?*const Event) void {
 
 pub fn keepAspectRatio() void {
     const minSize = logicSize.scale(@min(ratio.x, ratio.y));
-    const pos = clientSize.sub(minSize).scale(0.5);
+    const pos = clientSize.sub(minSize).mul(alignment);
     displayArea = .init(pos, minSize);
     sk.gfx.applyViewportf(pos.x, pos.y, minSize.x, minSize.y, true);
 }
