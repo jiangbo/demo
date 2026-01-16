@@ -127,12 +127,27 @@ pub fn toggleFullScreen() void {
     sk.app.toggleFullscreen();
 }
 
+/// 缩放模式枚举
+pub const ScaleMode = enum {
+    /// 无缩放，使用原始尺寸
+    none,
+    /// 拉伸缩放，忽略宽高比填满屏幕
+    stretch,
+    /// 适配缩放，保持宽高比可能有黑边
+    fit,
+    /// 填充缩放，保持宽高比可能超出屏幕
+    fill,
+    /// 整数缩放，整数倍数（无滤镜失真）
+    integer,
+};
+
 pub const WindowInfo = struct {
     title: [:0]const u8,
     logicSize: math.Vector,
     scale: f32 = 1,
+    scaleMode: ScaleMode = .stretch,
     disableIME: bool = true,
-    alignment: math.Vector = .xy(0.5, 0.5),
+    alignment: math.Vector = .center,
 };
 
 pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
@@ -146,6 +161,7 @@ pub var displayArea: math.Rect = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
 pub var allocator: std.mem.Allocator = undefined;
 pub var alignment: math.Vector2 = .center; // 默认居中
+pub var scaleMode: ScaleMode = .stretch; // 当前缩放模式
 var timer: std.time.Timer = undefined;
 
 pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
@@ -156,6 +172,7 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     logicSize = info.logicSize;
     displayArea = .init(.zero, logicSize);
     alignment = info.alignment;
+    scaleMode = info.scaleMode;
     countingAllocator = CountingAllocator.init(allocs);
     allocator = countingAllocator.allocator();
     assets.init(allocator);
@@ -205,10 +222,41 @@ export fn windowEvent(event: ?*const Event) void {
 }
 
 pub fn keepAspectRatio() void {
-    const minSize = logicSize.scale(@min(ratio.x, ratio.y));
-    const pos = clientSize.sub(minSize).mul(alignment);
-    displayArea = .init(pos, minSize);
-    sk.gfx.applyViewportf(pos.x, pos.y, minSize.x, minSize.y, true);
+    switch (scaleMode) {
+        // 无缩放，1:1 显示逻辑尺寸，两边黑边
+        .none => {
+            const pos = clientSize.sub(logicSize).mul(alignment);
+            displayArea = .init(pos, logicSize);
+            sk.gfx.applyViewportf(pos.x, pos.y, logicSize.x, logicSize.y, true);
+        },
+        // 拉伸缩放，填满整个客户端区域
+        .stretch => {
+            displayArea = .init(.zero, clientSize);
+            sk.gfx.applyViewportf(0, 0, clientSize.x, clientSize.y, true);
+        },
+        // 适配缩放，等比缩放加黑边
+        .fit => {
+            const minSize = logicSize.scale(@min(ratio.x, ratio.y));
+            const pos = clientSize.sub(minSize).mul(alignment);
+            displayArea = .init(pos, minSize);
+            sk.gfx.applyViewportf(pos.x, pos.y, minSize.x, minSize.y, true);
+        },
+        // 填充缩放，等比缩放超出屏幕
+        .fill => {
+            const maxSize = logicSize.scale(@max(ratio.x, ratio.y));
+            const pos = clientSize.sub(maxSize).mul(alignment);
+            displayArea = .init(pos, maxSize);
+            sk.gfx.applyViewportf(pos.x, pos.y, maxSize.x, maxSize.y, true);
+        },
+        // 整数缩放，自动计算最近的整数倍
+        .integer => {
+            const scale: f32 = @trunc(@min(ratio.x, ratio.y));
+            const intSize = logicSize.scale(scale);
+            const pos = clientSize.sub(intSize).mul(alignment);
+            displayArea = .init(pos, intSize);
+            sk.gfx.applyViewportf(pos.x, pos.y, intSize.x, intSize.y, true);
+        },
+    }
 }
 
 pub var frameRate: u32 = 0;
