@@ -103,7 +103,6 @@ pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
 
 pub var size: math.Vector = .zero;
 pub var clientSize: math.Vector = .zero;
-pub var ratio: math.Vector = .xy(1, 1);
 pub var viewRect: math.Rect = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
 pub var allocator: std.mem.Allocator = undefined;
@@ -144,7 +143,6 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
 
 export fn windowInit() void {
     clientSize = .xy(sk.app.widthf(), sk.app.heightf());
-    ratio = clientSize.div(size);
     gpu.init();
     math.setRandomSeed(timer.read());
     call(root, "init", .{});
@@ -158,11 +156,10 @@ export fn windowEvent(event: ?*const Event) void {
         input.event(ev);
         if (ev.type == .MOUSE_MOVE) {
             mouseMoved = true;
-            const pos = input.mousePosition.sub(viewRect.min);
-            mousePosition = pos.mul(size).div(viewRect.size);
+            const position = input.mousePosition.sub(viewRect.min);
+            mousePosition = position.mul(size).div(viewRect.size);
         } else if (ev.type == .RESIZED) {
             clientSize = .xy(sk.app.widthf(), sk.app.heightf());
-            ratio = clientSize.div(size);
             computeViewRect();
         }
         call(root, "event", .{ev});
@@ -170,6 +167,7 @@ export fn windowEvent(event: ?*const Event) void {
 }
 
 fn computeViewRect() void {
+    const ratio = clientSize.div(size);
     switch (scaleMode) {
         .none => {
             viewRect = .init(clientSize.sub(size).mul(alignment), size);
