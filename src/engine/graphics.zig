@@ -151,7 +151,7 @@ pub fn getImage(comptime path: []const u8) Image {
 
 pub var textCount: u32 = 0;
 pub fn beginDraw(clearColor: ClearColor) void {
-    gpu.begin(clearColor);
+    gpu.begin(clearColor, window.viewRect);
     textCount = 0;
 }
 

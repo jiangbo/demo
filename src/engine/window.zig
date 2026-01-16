@@ -108,7 +108,7 @@ pub var viewRect: math.Rect = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
 pub var allocator: std.mem.Allocator = undefined;
 pub var alignment: math.Vector2 = .center; // 默认居中
-pub var scaleMode: ScaleMode = .stretch; // 当前缩放模式
+var scaleMode: ScaleMode = .stretch; // 当前缩放模式
 var timer: std.time.Timer = undefined;
 
 pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
@@ -163,12 +163,13 @@ export fn windowEvent(event: ?*const Event) void {
         } else if (ev.type == .RESIZED) {
             clientSize = .xy(sk.app.widthf(), sk.app.heightf());
             ratio = clientSize.div(size);
+            computeViewRect();
         }
         call(root, "event", .{ev});
     }
 }
 
-pub fn keepAspectRatio() void {
+fn computeViewRect() void {
     switch (scaleMode) {
         .none => {
             viewRect = .init(clientSize.sub(size).mul(alignment), size);
@@ -190,8 +191,11 @@ pub fn keepAspectRatio() void {
             viewRect = .init(position, intSize);
         },
     }
-    sk.gfx.applyViewportf(viewRect.min.x, viewRect.min.y, //
-        viewRect.size.x, viewRect.size.y, true);
+}
+
+pub fn setScaleMode(mode: ScaleMode) void {
+    scaleMode = mode;
+    computeViewRect();
 }
 
 pub var frameRate: u32 = 0;

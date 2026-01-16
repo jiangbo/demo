@@ -60,7 +60,6 @@ pub fn update(delta: f32) void {
 pub fn draw() void {
     camera.beginDraw(.{});
     defer camera.endDraw();
-    window.keepAspectRatio();
 
     switch (currentScene) {
         .title => title.draw(),

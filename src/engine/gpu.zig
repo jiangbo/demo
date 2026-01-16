@@ -41,11 +41,12 @@ pub fn init() void {
     });
 }
 
-pub fn begin(color: Color) void {
+pub fn begin(color: Color, viewRect: math.Rect) void {
     var action = gfx.PassAction{};
-
     action.colors[0] = .{ .load_action = .CLEAR, .clear_value = color };
     gfx.beginPass(.{ .action = action, .swapchain = sk.glue.swapchain() });
+    sk.gfx.applyViewportf(viewRect.min.x, viewRect.min.y, //
+        viewRect.size.x, viewRect.size.y, true);
 }
 
 pub fn setPipeline(pipeline: RenderPipeline) void {
