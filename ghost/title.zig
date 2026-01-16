@@ -13,6 +13,7 @@ const creditsText = @embedFile("zon/credits.txt");
 var showCredits: bool = false;
 
 pub fn init() void {
+    zhu.window.bindAndUseMouseIcon("assets/pointer_c_shaded.png", .{});
     enter();
     const bytes = zhu.window.readAll("high.save") catch {
         battle.highScore = 0;
@@ -91,5 +92,3 @@ pub fn draw() void {
     zhu.text.drawText("最高分：", pos);
     zhu.text.drawNumber(battle.highScore, pos.addX(125));
 }
-
-const imageId = zhu.graphics.imageId;

@@ -342,25 +342,34 @@ pub fn isAnyRelease() bool {
 
 pub const Cursor = sk.app.MouseCursor;
 pub const useMouseIcon = sk.app.setMouseCursor;
-pub fn bindMouseIcon(cursor: Cursor, path: [:0]const u8) void {
-    assets.loadIcon(path, cursor, mouseCallback);
+pub const CursorDesc = extern struct {
+    cursor: Cursor = .CUSTOM_1,
+    offset: extern struct { x: i16 = 0, y: i16 = 0 } = .{},
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == @sizeOf(u64));
+    }
+};
+pub fn bindMouseIcon(path: [:0]const u8, desc: CursorDesc) void {
+    assets.loadIcon(path, @bitCast(desc), mouseCallback);
 }
 
-fn mouseCallback(cursor: Cursor, icon: assets.Icon) void {
-    _ = sk.app.bindMouseCursorImage(cursor, .{
+fn mouseCallback(handle: u64, icon: assets.Icon) void {
+    const cursorDesc: CursorDesc = @bitCast(handle);
+    _ = sk.app.bindMouseCursorImage(cursorDesc.cursor, .{
         .pixels = @bitCast(sk.gfx.asRange(icon.data)),
         .width = icon.width,
         .height = icon.height,
-        .cursor_hotspot_x = @divTrunc(icon.width, 2),
-        .cursor_hotspot_y = @divTrunc(icon.height, 2),
+        .cursor_hotspot_x = cursorDesc.offset.x,
+        .cursor_hotspot_y = cursorDesc.offset.y,
     });
 }
 
-pub fn bindAndUseMouseIcon(cursor: Cursor, path: [:0]const u8) void {
-    assets.loadIcon(path, cursor, struct {
-        fn callback(mouseCursor: Cursor, icon: assets.Icon) void {
-            mouseCallback(mouseCursor, icon);
-            useMouseIcon(mouseCursor);
+pub fn bindAndUseMouseIcon(path: [:0]const u8, desc: CursorDesc) void {
+    assets.loadIcon(path, @bitCast(desc), struct {
+        fn callback(handle: u64, icon: assets.Icon) void {
+            mouseCallback(handle, icon);
+            const cursorDesc: CursorDesc = @bitCast(handle);
+            useMouseIcon(cursorDesc.cursor);
         }
     }.callback);
 }

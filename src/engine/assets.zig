@@ -6,6 +6,7 @@ const graphics = @import("graphics.zig");
 const audio = @import("audio.zig");
 
 const Image = graphics.Image;
+const Path = [:0]const u8;
 
 var allocator: std.mem.Allocator = undefined;
 var imageCache: std.AutoHashMapUnmanaged(Id, Image) = .empty;
@@ -40,7 +41,7 @@ pub fn oom() noreturn {
     @panic("out of memory");
 }
 
-pub fn loadImage(path: [:0]const u8, size: graphics.Vector2) Image {
+pub fn loadImage(path: Path, size: graphics.Vector2) Image {
     const entry = imageCache.getOrPut(allocator, id(path)) catch oom();
     if (!entry.found_existing) {
         entry.value_ptr.* = .{
@@ -51,11 +52,11 @@ pub fn loadImage(path: [:0]const u8, size: graphics.Vector2) Image {
     return entry.value_ptr.*;
 }
 
-pub fn loadSound(path: [:0]const u8, loop: bool) *audio.Sound {
+pub fn loadSound(path: Path, loop: bool) *audio.Sound {
     return Sound.load(path, loop);
 }
 
-pub fn loadMusic(path: [:0]const u8, loop: bool) *audio.Music {
+pub fn loadMusic(path: Path, loop: bool) *audio.Music {
     return Music.load(path, loop);
 }
 
@@ -92,15 +93,12 @@ pub fn getImage(imageId: Id) graphics.Image {
 }
 
 pub const Icon = c.stbImage.Image;
-pub fn loadIcon(
-    path: [:0]const u8,
-    cursor: sk.app.MouseCursor,
-    handler: fn (sk.app.MouseCursor, Icon) void,
-) void {
-    _ = File.load(path, @intCast(@intFromEnum(cursor)), struct {
+const IconHandler = fn (u64, Icon) void;
+pub fn loadIcon(path: Path, handle: u64, handler: IconHandler) void {
+    _ = File.load(path, handle, struct {
         fn callback(response: Response) []const u8 {
             const icon = c.stbImage.loadFromMemory(response.data);
-            handler(@enumFromInt(response.index), icon);
+            handler(response.index, icon);
             return dupe(u8, icon.data);
         }
     }.callback);
@@ -109,7 +107,7 @@ pub fn loadIcon(
 pub const Texture = struct {
     var cache: std.StringHashMapUnmanaged(graphics.Texture) = .empty;
 
-    pub fn load(path: [:0]const u8) graphics.Texture {
+    pub fn load(path: Path) graphics.Texture {
         const view = sk.gfx.allocView();
         cache.put(allocator, path, view) catch oom();
         _ = File.load(path, view.id, handler);
@@ -145,7 +143,7 @@ pub const Texture = struct {
 const Sound = struct {
     var cache: std.StringHashMapUnmanaged(audio.Sound) = .empty;
 
-    fn load(path: [:0]const u8, loop: bool) *audio.Sound {
+    fn load(path: Path, loop: bool) *audio.Sound {
         const entry = cache.getOrPut(allocator, path) catch oom();
         if (entry.found_existing) return entry.value_ptr;
 
@@ -180,7 +178,7 @@ const Sound = struct {
 const Music = struct {
     var cache: std.StringHashMapUnmanaged(audio.Music) = .empty;
 
-    fn load(path: [:0]const u8, loop: bool) *audio.Music {
+    fn load(path: Path, loop: bool) *audio.Music {
         const entry = cache.getOrPut(allocator, path) catch oom();
         if (entry.found_existing) return entry.value_ptr;
 
@@ -217,7 +215,7 @@ var loadingBuffer: [5 * 1024 * 1024]u8 = undefined;
 const SkCallback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
 pub const Response = struct {
     allocator: std.mem.Allocator = undefined,
-    index: usize = undefined,
+    index: u64 = undefined,
     path: [:0]const u8,
     data: []const u8 = &.{},
 };
@@ -228,14 +226,14 @@ pub const File = struct {
 
     const FileCache = struct {
         state: FileState = .init,
-        index: usize,
+        index: u64,
         data: []const u8 = &.{},
         handler: Handler = undefined,
     };
 
     var cache: std.StringHashMapUnmanaged(FileCache) = .empty;
 
-    pub fn load(path: [:0]const u8, index: usize, handler: Handler) *FileCache {
+    pub fn load(path: Path, index: u64, handler: Handler) *FileCache {
         const entry = cache.getOrPut(allocator, path) catch oom();
         if (entry.found_existing) return entry.value_ptr;
 

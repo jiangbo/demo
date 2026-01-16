@@ -43,20 +43,7 @@ pub fn enter() void {
     menu.menuIndex = 1;
 }
 
-var modifyTime: i64 = 0;
-fn reloadIfChanged() void {
-    const menuTime = zhu.window.statFileTime("ghost/zon/menu.zon");
-
-    if (menuTime > modifyTime) {
-        std.log.info("menu reload", .{});
-        menu.reload();
-        modifyTime = menuTime;
-    }
-}
-
 pub fn update(delta: f32) void {
-    // reloadIfChanged();
-
     if (menu.update()) |event| {
         switch (event) {
             0 => world.togglePause(), // 暂停/继续游戏

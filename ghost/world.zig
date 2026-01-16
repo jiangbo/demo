@@ -26,8 +26,14 @@ pub fn deinit() void {
 }
 
 pub fn enter() void {
-    zhu.window.bindAndUseMouseIcon(.CUSTOM_1, "assets/29.png");
-    zhu.window.bindMouseIcon(.CUSTOM_2, "assets/30.png");
+    zhu.window.bindAndUseMouseIcon("assets/29.png", .{
+        .cursor = .CUSTOM_2,
+        .offset = .{ .x = 16, .y = 16 },
+    });
+    zhu.window.bindMouseIcon("assets/30.png", .{
+        .cursor = .CUSTOM_3,
+        .offset = .{ .x = 16, .y = 16 },
+    });
 
     zhu.audio.playMusic("assets/bgm/OhMyGhost.ogg");
     zhu.audio.paused = false;
@@ -39,7 +45,7 @@ pub fn enter() void {
 
 pub fn update(delta: f32) void {
     if (mouseTimer.isFinishedLoopUpdate(delta)) {
-        mouse = if (mouse == .CUSTOM_1) .CUSTOM_2 else .CUSTOM_1;
+        mouse = if (mouse == .CUSTOM_2) .CUSTOM_3 else .CUSTOM_2;
         zhu.window.useMouseIcon(mouse);
     }
 
