@@ -20,9 +20,9 @@ var moveImage: zhu.graphics.Image = undefined;
 pub var position: zhu.Vector2 = undefined;
 pub var stats: battle.Stats = .{};
 
-var hurtTimer: window.Timer = .init(1.5); // 无敌时间
+var hurtTimer: zhu.Timer = .init(1.5); // 无敌时间
 var velocity: zhu.Vector2 = .zero;
-var velocityTimer: window.Timer = .init(0.03);
+var velocityTimer: zhu.Timer = .init(0.03);
 var animation: zhu.graphics.FrameAnimation = undefined;
 var deadAnimation: zhu.graphics.FrameAnimation = undefined;
 var status: Status = .idle;

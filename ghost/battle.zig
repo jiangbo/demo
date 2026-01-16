@@ -20,12 +20,11 @@ const spellFrames = zhu.graphics.framesX(13, .xy(64, 64), 0.1);
 const spellDamageIndex = 6; // 动画第 6 帧造成伤害，视觉效果好一点
 const spellSize = spellFrames[0].area.size.scale(3);
 
-var spellTimer: zhu.window.Timer = .init(2);
+var spellTimer: zhu.Timer = .init(2);
 var spellAnimations: [4]zhu.graphics.FrameAnimation = undefined;
 var spellPositions: [4]zhu.Vector2 = undefined;
 var mana: u32 = 100;
-var manaTimer: zhu.window.Timer = .init(1); // 每秒回复一次魔法值
-
+var manaTimer: zhu.Timer = .init(1); // 每秒回复一次魔法值
 pub var highScore: u32 = 0;
 var score: u32 = 0;
 

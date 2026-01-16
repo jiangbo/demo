@@ -10,7 +10,7 @@ const battle = @import("battle.zig");
 pub var paused: bool = false;
 pub var worldSize: zhu.Vector2 = undefined; // 世界大小
 var mouse: zhu.window.Cursor = .CUSTOM_1;
-var mouseTimer: zhu.window.Timer = .init(0.3); // 鼠标切换时间
+var mouseTimer: zhu.Timer = .init(0.3); // 鼠标切换时间
 
 pub fn init() void {
     worldSize = zhu.window.logicSize.scale(3); // 设置世界大小

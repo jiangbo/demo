@@ -11,6 +11,7 @@ pub const input = @import("input.zig");
 pub const ecs = @import("ecs.zig");
 pub const text = @import("text.zig");
 
+pub const Timer = math.Timer;
 pub const Atlas = graphics.Atlas;
 pub const Vector2 = math.Vector2;
 pub const Rect = math.Rect;

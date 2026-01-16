@@ -25,6 +25,59 @@ pub const EightDirection =enum { up, down, left, right,
 // zig fmt: on
 pub const epsilon = 1e-4;
 
+pub const Timer = struct {
+    duration: f32,
+    elapsed: f32 = 0,
+
+    pub fn init(duration: f32) Timer {
+        return Timer{ .duration = duration };
+    }
+
+    pub fn update(self: *Timer, delta: f32) void {
+        if (self.elapsed < self.duration) self.elapsed += delta;
+    }
+
+    pub fn isFinishedLoopUpdate(self: *Timer, delta: f32) bool {
+        self.elapsed += delta;
+        if (self.elapsed < self.duration) return false;
+        self.elapsed -= self.duration;
+        return true;
+    }
+
+    pub fn isRunningOnceUpdate(self: *Timer, delta: f32) bool {
+        self.update(delta);
+        return self.elapsed < self.duration;
+    }
+
+    pub fn isFinishedOnceUpdate(self: *Timer, delta: f32) bool {
+        return !self.isRunningOnceUpdate(delta);
+    }
+
+    pub fn isRunning(self: *const Timer) bool {
+        return self.elapsed < self.duration;
+    }
+
+    pub fn stepIndex(self: *const Timer, interval: f32) usize {
+        return @intFromFloat(@trunc(self.elapsed / interval));
+    }
+
+    pub fn isEvenStep(self: *Timer, interval: f32) bool {
+        return self.stepIndex(interval) & 1 == 0;
+    }
+
+    pub fn progress(self: *const Timer) f32 {
+        return self.elapsed / self.duration;
+    }
+
+    pub fn restart(self: *Timer) void {
+        self.elapsed = self.elapsed - self.duration;
+    }
+
+    pub fn stop(self: *Timer) void {
+        self.elapsed = self.duration;
+    }
+};
+
 pub fn percentInt(a: anytype, b: anytype) f32 {
     const aa: f32 = @floatFromInt(a);
     return aa / @as(f32, @floatFromInt(b));
