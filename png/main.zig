@@ -115,10 +115,10 @@ fn parseData(allocator: std.mem.Allocator, header: Header, chunk: Chunk) !void {
             },
             .average => {
                 // 手动算第一个像素
-                current[0] = previous[0] / 2;
-                current[1] = previous[1] / 2;
-                current[2] = previous[2] / 2;
-                current[3] = previous[3] / 2;
+                current[0] +%= previous[0] / 2;
+                current[1] +%= previous[1] / 2;
+                current[2] +%= previous[2] / 2;
+                current[3] +%= previous[3] / 2;
 
                 const left = current[0 .. current.len - 4];
                 for (current[4..], left, previous[4..]) |*c, l, p|
