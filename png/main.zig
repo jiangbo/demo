@@ -1,5 +1,4 @@
 const std = @import("std");
-const PNG = @import("png.zig").PNG;
 
 const raw = @embedFile("pointer_c_shaded.png");
 const signature = [8]u8{ 137, 80, 78, 71, 13, 10, 26, 10 };
@@ -99,7 +98,7 @@ fn parseData(allocator: std.mem.Allocator, header: Header, chunk: Chunk) !void {
     defer allocator.free(imageData);
 
     var index: usize = 0;
-    var previous: []u8 = &.{};
+    var prior: []u8 = &.{};
     for (0..header.height) |_| {
         const filterEnum = try reader.takeEnum(FilterEnum, .big);
         std.log.info("filter: {}", .{filterEnum});
@@ -111,36 +110,30 @@ fn parseData(allocator: std.mem.Allocator, header: Header, chunk: Chunk) !void {
                 for (current[4..], left) |*c, l| c.* +%= l;
             },
             .up => {
-                for (current, previous) |*c, p| c.* +%= p;
+                for (current, prior) |*c, p| c.* +%= p;
             },
             .average => {
                 // 手动算第一个像素
-                current[0] +%= previous[0] / 2;
-                current[1] +%= previous[1] / 2;
-                current[2] +%= previous[2] / 2;
-                current[3] +%= previous[3] / 2;
+                for (0..4) |i| current[i] +%= prior[i] / 2;
 
                 const left = current[0 .. current.len - 4];
-                for (current[4..], left, previous[4..]) |*c, l, p|
+                for (current[4..], left, prior[4..]) |*c, l, p|
                     c.* +%= ((l + p) / 2);
             },
             .paeth => {
                 // 手动算第一个像素
-                current[0] = paeth(0, previous[0], 0);
-                current[1] = paeth(0, previous[1], 0);
-                current[2] = paeth(0, previous[2], 0);
-                current[3] = paeth(0, previous[3], 0);
+                for (0..4) |i| current[i] +%= paeth(0, prior[i], 0);
 
                 const left = current[0 .. current.len - 4];
-                const previousLeft = previous[0 .. previous.len - 4];
+                const priorLeft = prior[0 .. prior.len - 4];
 
-                for (current[4..], left, previous[4..], previousLeft) |*c, l, p, pl|
+                for (current[4..], left, prior[4..], priorLeft) |*c, l, p, pl|
                     c.* +%= paeth(l, p, pl);
             },
         }
         @memcpy(imageData[index..][0..current.len], current);
         index += current.len;
-        previous = current;
+        prior = current;
     }
 
     const image = Image.init(header.width, header.height, imageData);
