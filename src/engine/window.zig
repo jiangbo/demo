@@ -123,10 +123,8 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     allocator = countingAllocator.allocator();
     assets.init(allocator);
 
-    if (info.disableIME) {
-        if (builtin.os.tag == .windows) {
-            _ = ImmDisableIME(-1);
-        }
+    if (info.disableIME and builtin.os.tag == .windows) {
+        _ = ImmDisableIME(-1);
     }
 
     const scaledSize = size.scale(info.scale);
