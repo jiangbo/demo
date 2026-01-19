@@ -1,7 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const camera = zhu.camera;
+const batch = zhu.batch;
 
 const player = @import("player.zig");
 const enemy = @import("enemy.zig");
@@ -70,36 +70,36 @@ fn cameraFollow(pos: zhu.Vector2) void {
     const max = worldSize.sub(zhu.window.size).max(.zero);
     const halfWindowSize = zhu.window.size.scale(0.5);
     const square: zhu.Vector2 = .square(30);
-    camera.position = pos.sub(halfWindowSize);
-    camera.position.clamp(square.scale(-1), max.add(square));
+    zhu.camera.position = pos.sub(halfWindowSize);
+    zhu.camera.position.clamp(square.scale(-1), max.add(square));
 }
 
 pub fn draw() void {
     const gridColor = zhu.graphics.Color.midGray;
     const area = zhu.Rect.init(.zero, worldSize);
     drawGrid(area, 80, gridColor);
-    camera.drawRectBorder(area, 10, .white);
+    batch.drawRectBorder(area, 10, .white);
 
     enemy.draw(); // 敌人绘制
     player.draw(); // 玩家绘制
     battle.draw(); // 战斗绘制
 
-    camera.modeEnum = .window;
-    defer camera.modeEnum = .world;
+    zhu.camera.modeEnum = .window;
+    defer zhu.camera.modeEnum = .world;
     battle.drawUI();
 }
 
 fn drawGrid(area: zhu.Rect, width: f32, lineColor: zhu.Color) void {
     const max = area.max();
-    const color = camera.LineOption{ .color = lineColor };
+    const color = batch.LineOption{ .color = lineColor };
 
     var min = area.min;
     while (min.x < max.x) : (min.x += width) {
-        camera.drawAxisLine(min, .xy(min.x, max.y), color);
+        batch.drawAxisLine(min, .xy(min.x, max.y), color);
     }
 
     min = area.min;
     while (min.y < max.y) : (min.y += width) {
-        camera.drawAxisLine(min, .xy(max.x, min.y), color);
+        batch.drawAxisLine(min, .xy(max.x, min.y), color);
     }
 }

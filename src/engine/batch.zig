@@ -5,8 +5,11 @@ const math = @import("math.zig");
 const shader = @import("shader/quad.glsl.zig");
 const graphics = @import("graphics.zig");
 const camera = @import("camera.zig");
+const assets = @import("assets.zig");
 
 const Image = graphics.Image;
+const ImageId = graphics.ImageId;
+const Color = graphics.Color;
 const Vector2 = math.Vector2;
 const Matrix = math.Matrix;
 const Texture = gpu.Texture;
@@ -88,7 +91,76 @@ pub fn endDraw() void {
     }
 }
 
+pub fn debugDraw(area: math.Rect) void {
+    drawRect(area, .{ .color = .{ .x = 1, .z = 1, .w = 0.4 } });
+}
+
+pub fn draw(image: ImageId, pos: math.Vector2) void {
+    drawOption(image, pos, .{});
+}
+
+pub fn drawFlipX(image: ImageId, pos: Vector2, flipX: bool) void {
+    drawOption(image, pos, .{ .flipX = flipX });
+}
+
+pub const LineOption = struct { color: Color = .white, width: f32 = 1 };
+
+/// 绘制轴对齐的线
+pub fn drawAxisLine(start: Vector2, end: Vector2, option: LineOption) void {
+    const rectOption = RectOption{ .color = option.color };
+    const halfWidth = -@floor(option.width / 2);
+    if (start.x == end.x) {
+        const size = Vector2.xy(option.width, end.y - start.y);
+        drawRect(.init(start.addX(halfWidth), size), rectOption);
+    } else if (start.y == end.y) {
+        const size = Vector2.xy(end.x - start.x, option.width);
+        drawRect(.init(start.addY(halfWidth), size), rectOption);
+    }
+}
+
+/// 绘制任意线
+pub fn drawLine(start: Vector2, end: Vector2, option: LineOption) void {
+    const vector = end.sub(start);
+    const y = start.y - option.width / 2;
+
+    drawOption(graphics.whiteImage, .init(start.x, y), .{
+        .size = .init(vector.length(), option.width),
+        .color = option.color,
+        .radian = vector.atan2(),
+        .pivot = .init(0, 0.5),
+    });
+}
+
+pub fn drawRectBorder(area: math.Rect, width: f32, c: Color) void {
+    const color = RectOption{ .color = c };
+    drawRect(.init(area.min, .xy(area.size.x, width)), color); // 上
+    var start = area.min.addY(area.size.y - width);
+    drawRect(.init(start, .xy(area.size.x, width)), color); // 下
+    const size: Vector2 = .xy(width, area.size.y - 2 * width);
+    drawRect(.init(area.min.addY(width), size), color); // 左
+    start = area.min.addXY(area.size.x - width, width);
+    drawRect(.init(start, size), color); // 右
+}
+
+pub const RectOption = struct { color: Color = .white, radian: f32 = 0 };
+pub fn drawRect(area: math.Rect, option: RectOption) void {
+    drawOption(whiteImage, area.min, .{
+        .size = area.size,
+        .color = option.color,
+        .radian = option.radian,
+    });
+}
+
+pub fn drawOption(image: ImageId, pos: Vector2, option: Option) void {
+    drawImage(assets.getImage(image), pos, option);
+}
+
 pub fn drawImage(image: Image, position: Vector2, option: Option) void {
+    var worldPos = position;
+    if (camera.modeEnum == .window) {
+        worldPos = camera.position.add(position);
+    }
+
     const size = (option.size orelse image.area.size);
     const scaledSize = size.mul(option.scale);
 
@@ -99,7 +171,7 @@ pub fn drawImage(image: Image, position: Vector2, option: Option) void {
     }
 
     drawVertices(image.texture, &.{Vertex{
-        .position = position.sub(scaledSize.mul(option.anchor)),
+        .position = worldPos.sub(scaledSize.mul(option.anchor)),
         .radian = option.radian,
         .size = scaledSize,
         // 默认旋转点为中心位置，如果不旋转则传 0

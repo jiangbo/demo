@@ -1,7 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const camera = zhu.camera;
+const batch = zhu.batch;
 const window = zhu.window;
 
 const battle = @import("battle.zig");
@@ -101,14 +101,14 @@ pub fn draw() void {
         if (!deadAnimation.isRunning()) return; // 动画结束不需要显示
 
         const image = deadAnimation.currentImage();
-        return camera.drawImage(image, position, .{
+        return batch.drawImage(image, position, .{
             .size = size.scale(2), // 和角色的显示区域一样大
             .anchor = .center,
         });
     }
 
     if (hurtTimer.isRunning() and hurtTimer.isEvenStep(0.2)) return;
-    camera.drawImage(animation.currentImage(), position, .{
+    batch.drawImage(animation.currentImage(), position, .{
         .size = size.scale(2),
         .anchor = .center,
         .flipX = velocity.x < 0,

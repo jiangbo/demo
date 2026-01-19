@@ -1,7 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const camera = zhu.camera;
+const batch = zhu.batch;
 
 const Button = struct {
     offset: zhu.Vector2,
@@ -65,16 +65,16 @@ pub fn draw() void {
 
         if (i == buttonIndex and buttonState != .normal) {
             if (buttonState == .pressed) {
-                camera.drawOption(button.pressed, pos, .{
+                batch.drawOption(button.pressed, pos, .{
                     .size = menu.buttonSize,
                 });
             } else if (buttonState == .hover) {
-                camera.drawOption(button.hover, pos, .{
+                batch.drawOption(button.hover, pos, .{
                     .size = menu.buttonSize,
                 });
             }
         } else {
-            camera.drawOption(button.normal, pos, .{
+            batch.drawOption(button.normal, pos, .{
                 .size = menu.buttonSize,
             });
         }
