@@ -12,7 +12,7 @@ const ImageId = graphics.ImageId;
 const Image = graphics.Image;
 const String = text.String;
 
-pub var mode: enum { world, local } = .world;
+pub var modeEnum: enum { world, window } = .world;
 pub var position: Vector2 = .zero;
 
 var startDraw: bool = false;
@@ -93,7 +93,7 @@ pub fn drawRect(area: math.Rect, option: RectOption) void {
 pub const Option = batch.Option;
 pub fn drawOption(image: ImageId, pos: Vector2, option: Option) void {
     var worldPos = pos;
-    if (mode == .local) worldPos = pos.add(position);
+    if (modeEnum == .window) worldPos = pos.add(position);
     batch.drawImage(assets.getImage(image), worldPos, option);
 }
 
@@ -101,7 +101,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     if (!startDraw) @panic("need begin draw");
 
     var worldPos = pos;
-    if (mode == .local) worldPos = pos.add(position);
+    if (modeEnum == .window) worldPos = pos.add(position);
     batch.drawImage(image, worldPos, option);
 }
 

@@ -84,8 +84,8 @@ pub fn draw() void {
     player.draw(); // 玩家绘制
     battle.draw(); // 战斗绘制
 
-    camera.mode = .local;
-    defer camera.mode = .world;
+    camera.modeEnum = .window;
+    defer camera.modeEnum = .world;
     battle.drawUI();
 }
 
