@@ -58,8 +58,8 @@ pub fn update(delta: f32) void {
 }
 
 pub fn draw() void {
-    camera.beginDraw(.{});
-    defer camera.endDraw();
+    zhu.batch.beginDraw(.black);
+    defer zhu.batch.endDraw();
 
     switch (currentScene) {
         .title => title.draw(),
@@ -108,7 +108,7 @@ fn drawDebugInfo() void {
         stats.size_append_buffer + stats.size_update_buffer,
         stats.size_apply_uniforms,
         stats.num_draw,
-        camera.imageDrawCount(),
+        zhu.batch.imageDrawCount(),
         // Debug 信息本身的次数也应该统计进去
         zhu.graphics.textCount + debutTextCount,
         window.countingAllocator.used,

@@ -1,7 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const camera = zhu.camera;
+const batch = zhu.batch;
 
 const scene = @import("scene.zig");
 const menu = @import("menu.zig");
@@ -24,7 +24,7 @@ pub fn init() void {
 }
 
 pub fn enter() void {
-    camera.position = .zero;
+    zhu.camera.position = .zero;
     zhu.window.useMouseIcon(.DEFAULT);
     zhu.audio.playMusic("assets/bgm/Spooky music.ogg");
     menu.menuIndex = 0;
@@ -56,11 +56,11 @@ pub fn draw() void {
 
     // 边框
     var size = zhu.window.size.sub(.xy(60, 60));
-    camera.drawRectBorder(.init(.xy(30, 30), size), 10, .{
-        .r = zhu.math.sinInt(u8, time * 0.9, 100, 255),
-        .g = zhu.math.sinInt(u8, time * 0.8, 100, 255),
-        .b = zhu.math.sinInt(u8, time * 0.7, 100, 255),
-        .a = 255,
+    batch.drawRectBorder(.init(.xy(30, 30), size), 10, .{
+        .r = 0.5 + @sin(time * 0.9) * 0.5,
+        .g = 0.5 + @sin(time * 0.8) * 0.5,
+        .b = 0.5 + @sin(time * 0.7) * 0.5,
+        .a = 1.0,
     });
 
     // 标题
@@ -68,11 +68,11 @@ pub fn draw() void {
     size = zhu.window.size.div(.xy(2, 3));
 
     // 先绘制图片，再绘制文字，减少批量绘制次数
-    camera.drawOption(background, basicPos, .{ .size = size });
+    batch.drawOption(background, basicPos, .{ .size = size });
     if (showCredits) {
         const creditsSize = zhu.Vector2.xy(555, 600);
         const creditsPos = basicPos.addXY(45, -40);
-        camera.drawOption(background, creditsPos, .{ .size = creditsSize });
+        batch.drawOption(background, creditsPos, .{ .size = creditsSize });
         zhu.text.drawOption(creditsText, creditsPos.addXY(20, 40), .{
             .size = 16,
         });
@@ -81,7 +81,7 @@ pub fn draw() void {
 
     menu.draw();
 
-    camera.drawOption(background, basicPos.addXY(200, 285), .{
+    batch.drawOption(background, basicPos.addXY(200, 285), .{
         .size = .xy(232, 60),
     });
 

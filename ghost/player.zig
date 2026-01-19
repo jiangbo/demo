@@ -1,7 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const camera = zhu.camera;
+const batch = zhu.batch;
 const window = zhu.window;
 
 const battle = @import("battle.zig");
@@ -27,7 +27,7 @@ var animation: zhu.graphics.FrameAnimation = undefined;
 var deadAnimation: zhu.graphics.FrameAnimation = undefined;
 var status: Status = .idle;
 
-pub fn init(initPosition: zhu.Vector2) void {
+pub fn init() void {
     idleImage = zhu.graphics.getImage("sprite/ghost-idle.png");
     moveImage = zhu.graphics.getImage("sprite/ghost-move.png");
 
@@ -35,12 +35,12 @@ pub fn init(initPosition: zhu.Vector2) void {
     deadAnimation = .init(deadImage, &deadFrames);
 
     animation = .init(idleImage, &frames);
-    position = initPosition;
+    position = zhu.camera.worldSize.scale(0.5);
 }
 
-pub fn enter(initPosition: zhu.Vector2) void {
+pub fn enter() void {
     stats.health = 100;
-    position = initPosition; // 重置位置
+    position = zhu.camera.worldSize.scale(0.5); // 将玩家移动到世界中心;
     velocity = .zero;
     status = .idle;
     animation.reset();
@@ -48,7 +48,7 @@ pub fn enter(initPosition: zhu.Vector2) void {
     hurtTimer.stop();
 }
 
-pub fn update(delta: f32, worldSize: zhu.Vector2) void {
+pub fn update(delta: f32) void {
     if (stats.health == 0) {
         // 角色已死亡
         if (deadAnimation.isFinishedOnceUpdate(delta)) {
@@ -68,7 +68,7 @@ pub fn update(delta: f32, worldSize: zhu.Vector2) void {
     if (window.isKeyPress(.S)) velocity.y = maxSpeed;
 
     move(delta);
-    position.clamp(.zero, worldSize.sub(size));
+    position.clamp(.zero, zhu.camera.worldSize.sub(size));
     animation.loopUpdate(delta);
 }
 
@@ -101,14 +101,14 @@ pub fn draw() void {
         if (!deadAnimation.isRunning()) return; // 动画结束不需要显示
 
         const image = deadAnimation.currentImage();
-        return camera.drawImage(image, position, .{
+        return batch.drawImage(image, position, .{
             .size = size.scale(2), // 和角色的显示区域一样大
             .anchor = .center,
         });
     }
 
     if (hurtTimer.isRunning() and hurtTimer.isEvenStep(0.2)) return;
-    camera.drawImage(animation.currentImage(), position, .{
+    batch.drawImage(animation.currentImage(), position, .{
         .size = size.scale(2),
         .anchor = .center,
         .flipX = velocity.x < 0,

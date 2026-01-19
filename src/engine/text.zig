@@ -4,7 +4,6 @@ const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const graphics = @import("graphics.zig");
 const batch = @import("batch.zig");
-const camera = @import("camera.zig");
 
 const Vector2 = math.Vector2;
 const Color = graphics.Color;
@@ -114,9 +113,7 @@ pub fn drawOption(text: String, position: Vector2, option: Option) void {
         graphics.textCount += 1;
 
         const image = fontImage.map(char.area);
-        var worldPos = pos.add(char.offset.scale(scale));
-        if (camera.mode == .local) worldPos = worldPos.add(camera.position);
-        batch.drawImage(image, worldPos, .{
+        batch.drawImage(image, pos.add(char.offset.scale(scale)), .{
             .size = char.area.size.scale(scale),
             .color = option.color,
         });

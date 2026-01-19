@@ -1,7 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const camera = zhu.camera;
+const batch = zhu.batch;
 
 const battle = @import("battle.zig");
 const player = @import("player.zig");
@@ -96,7 +96,7 @@ fn doSpawnEnemies() void {
             .x = zhu.randomF32(0, zhu.window.size.x),
             .y = zhu.randomF32(0, zhu.window.size.y),
         };
-        enemy.position = camera.toWorld(windowPos);
+        enemy.position = zhu.camera.toWorld(windowPos);
         enemy.stats = .{};
         enemy.animation = animations.get(.normal);
         const len = normalFrames.len;
@@ -108,7 +108,7 @@ pub fn draw() void {
     if (spawnAnimation.isRunning()) {
         const image = spawnAnimation.currentImage();
         for (&spawnEnemies) |enemy| {
-            camera.drawImage(image, enemy.position, .{
+            batch.drawImage(image, enemy.position, .{
                 .size = size,
                 .anchor = .center,
             });
@@ -117,7 +117,7 @@ pub fn draw() void {
 
     for (enemies.items) |enemy| {
         const image = enemy.animation.currentImage();
-        camera.drawImage(image, enemy.position, .{
+        batch.drawImage(image, enemy.position, .{
             .size = size,
             .anchor = .center,
         });
@@ -130,8 +130,8 @@ pub fn draw() void {
         var color: zhu.Color = .rgb(255, 165, 0);
         if (percent > 0.7) color = .green; // 健康
         if (percent < 0.3) color = .red; // 危险
-        camera.drawRectBorder(.init(pos, .xy(size.x, 10)), 1, color);
+        batch.drawRectBorder(.init(pos, .xy(size.x, 10)), 1, color);
         const rect: zhu.Rect = .init(pos, .xy(size.x * percent, 10));
-        camera.drawRect(rect, .{ .color = color });
+        batch.drawRect(rect, .{ .color = color });
     }
 }

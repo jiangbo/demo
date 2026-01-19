@@ -6,7 +6,7 @@ layout(binding=0) uniform vs_params {
 
 in vec2 vertex_position; // X Y 像素坐标
 in float vertex_radian; // 旋转的弧度
-in float vertex_color_scale; // 颜色缩放
+in float padding; // 占位
 in vec2 vertex_scale; // 缩放，像素尺寸
 in vec2 vertex_pivot; // 旋转中心，归一化坐标
 in vec4 vertex_texture; // 纹理坐标，xy是偏移量，zw是缩放
@@ -33,7 +33,7 @@ void main() {
     gl_Position = viewMatrix * depthPosition;
 
     // 纹理
-    color = vertex_color * vertex_color_scale;
+    color = vertex_color;
     uv = vertex_texture.xy + corner * vertex_texture.zw;
     uv *= textureVec.xy;
 }
