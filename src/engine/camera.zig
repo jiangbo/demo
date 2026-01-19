@@ -15,19 +15,12 @@ const String = text.String;
 pub var modeEnum: enum { world, window } = .world;
 pub var position: Vector2 = .zero;
 
-var startDraw: bool = false;
-
 pub fn toWorld(windowPosition: Vector2) Vector2 {
     return windowPosition.add(position);
 }
 
 pub fn toWindow(worldPosition: Vector2) Vector2 {
     return worldPosition.sub(position);
-}
-
-pub fn beginDraw(color: graphics.ClearColor) void {
-    batch.beginDraw(color);
-    startDraw = true;
 }
 
 pub fn debugDraw(area: math.Rect) void {
@@ -98,16 +91,7 @@ pub fn drawOption(image: ImageId, pos: Vector2, option: Option) void {
 }
 
 pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
-    if (!startDraw) @panic("need begin draw");
-
     var worldPos = pos;
     if (modeEnum == .window) worldPos = pos.add(position);
     batch.drawImage(image, worldPos, option);
 }
-
-pub fn endDraw() void {
-    startDraw = false;
-    batch.endDraw(position);
-}
-
-pub const imageDrawCount = batch.imageDrawCount;

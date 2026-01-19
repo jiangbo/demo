@@ -4,6 +4,7 @@ const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const shader = @import("shader/quad.glsl.zig");
 const graphics = @import("graphics.zig");
+const camera = @import("camera.zig");
 
 const Image = graphics.Image;
 const Vector2 = math.Vector2;
@@ -73,7 +74,7 @@ pub fn beginDraw(color: graphics.ClearColor) void {
     vertexBuffer.clearRetainingCapacity();
 }
 
-pub fn endDraw(position: Vector2) void {
+pub fn endDraw() void {
     defer gpu.end();
     if (vertexBuffer.items.len == 0) return; // 没需要绘制的东西
 
@@ -81,7 +82,7 @@ pub fn endDraw(position: Vector2) void {
     gpu.updateBuffer(gpuBuffer, vertexBuffer.items);
     for (commands[0 .. commandIndex + 1]) |cmd| {
         switch (cmd.cmd) {
-            .draw => |drawCmd| doDraw(position, cmd, drawCmd),
+            .draw => |drawCmd| doDraw(cmd, drawCmd),
             .scissor => |area| gpu.scissor(area),
         }
     }
@@ -137,14 +138,14 @@ pub fn encodeCommand(cmd: CommandUnion) void {
     commands[commandIndex].start = index;
 }
 
-fn doDraw(position: Vector2, cmd: Command, drawCmd: DrawCommand) void {
+fn doDraw(cmd: Command, drawCmd: DrawCommand) void {
     // 绑定流水线
     gpu.setPipeline(pipeline);
 
     // 处理 uniform 变量
     const x, const y = .{ windowSize.x, windowSize.y };
     const orth = math.Matrix.orthographic(x, y, 0, 1);
-    const pos = position.scale(-1).toVector3(0);
+    const pos = camera.position.scale(-1).toVector3(0);
     const translate = math.Matrix.translateVec(pos);
     const scaleMatrix = math.Matrix.scaleVec(drawCmd.scale.toVector3(1));
     const view = math.Matrix.mul(scaleMatrix, translate);
