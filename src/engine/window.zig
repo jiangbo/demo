@@ -75,7 +75,7 @@ pub fn toggleFullScreen() void {
 }
 
 /// 缩放模式枚举
-pub const ScaleMode = enum {
+pub const ScaleEnum = enum {
     /// 无缩放，使用原始尺寸
     none,
     /// 拉伸缩放，忽略宽高比填满屏幕
@@ -91,8 +91,7 @@ pub const ScaleMode = enum {
 pub const WindowInfo = struct {
     title: [:0]const u8,
     logicSize: math.Vector,
-    scale: f32 = 1,
-    scaleMode: ScaleMode = .stretch,
+    scaleEnum: ScaleEnum = .stretch,
     disableIME: bool = true,
     alignment: math.Vector = .center,
 };
@@ -107,7 +106,7 @@ pub var viewRect: math.Rect = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
 pub var allocator: std.mem.Allocator = undefined;
 pub var alignment: math.Vector2 = .center; // 默认居中
-var scaleMode: ScaleMode = .stretch; // 当前缩放模式
+var scaleEnum: ScaleEnum = .stretch; // 当前缩放模式
 var timer: std.time.Timer = undefined;
 
 pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
@@ -118,7 +117,7 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     size = info.logicSize;
     viewRect = .init(.zero, size);
     alignment = info.alignment;
-    scaleMode = info.scaleMode;
+    scaleEnum = info.scaleEnum;
     countingAllocator = CountingAllocator.init(allocs);
     allocator = countingAllocator.allocator();
     assets.init(allocator);
@@ -127,11 +126,10 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
         _ = ImmDisableIME(-1);
     }
 
-    const scaledSize = size.scale(info.scale);
     sk.app.run(.{
         .window_title = info.title,
-        .width = @as(i32, @intFromFloat(scaledSize.x)),
-        .height = @as(i32, @intFromFloat(scaledSize.y)),
+        .width = @intFromFloat(size.x),
+        .height = @intFromFloat(size.y),
         .init_cb = windowInit,
         .event_cb = windowEvent,
         .frame_cb = windowFrame,
@@ -164,9 +162,9 @@ export fn windowEvent(event: ?*const Event) void {
     }
 }
 
-fn computeViewRect() void {
+pub fn computeViewRect() void {
     const ratio = clientSize.div(size);
-    switch (scaleMode) {
+    switch (scaleEnum) {
         .none => {
             viewRect = .init(clientSize.sub(size).mul(alignment), size);
         },
@@ -187,11 +185,6 @@ fn computeViewRect() void {
             viewRect = .init(position, intSize);
         },
     }
-}
-
-pub fn setScaleMode(mode: ScaleMode) void {
-    scaleMode = mode;
-    computeViewRect();
 }
 
 pub var frameRate: u32 = 0;

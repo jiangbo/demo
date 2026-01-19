@@ -38,6 +38,6 @@ pub fn main() void {
     zhu.window.run(allocator, .{
         .title = "幽灵逃生",
         .logicSize = .{ .x = 1280, .y = 720 },
-        .scaleMode = .integer,
+        .scaleEnum = .integer,
     });
 }
