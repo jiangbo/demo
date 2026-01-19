@@ -72,7 +72,7 @@ pub const Option = struct {
     flipX: bool = false, // 水平翻转
 };
 
-pub fn beginDraw(color: graphics.ClearColor) void {
+pub fn beginDraw(color: graphics.Color) void {
     graphics.beginDraw(color);
     commandIndex = 0;
     commands[commandIndex].cmd.draw = .{};
@@ -251,7 +251,7 @@ pub fn createQuadPipeline(shaderDesc: gpu.ShaderDesc) gpu.RenderPipeline {
     vertexLayout.attrs[3].format = .FLOAT2;
     vertexLayout.attrs[4].format = .FLOAT2;
     vertexLayout.attrs[5].format = .FLOAT4;
-    vertexLayout.attrs[6].format = .UBYTE4N;
+    vertexLayout.attrs[6].format = .FLOAT4;
     vertexLayout.buffers[0].step_func = .PER_INSTANCE;
 
     return gpu.createPipeline(.{

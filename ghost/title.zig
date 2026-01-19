@@ -57,10 +57,10 @@ pub fn draw() void {
     // 边框
     var size = zhu.window.size.sub(.xy(60, 60));
     batch.drawRectBorder(.init(.xy(30, 30), size), 10, .{
-        .r = zhu.math.sinInt(u8, time * 0.9, 100, 255),
-        .g = zhu.math.sinInt(u8, time * 0.8, 100, 255),
-        .b = zhu.math.sinInt(u8, time * 0.7, 100, 255),
-        .a = 255,
+        .r = 0.5 + @sin(time * 0.9) * 0.5,
+        .g = 0.5 + @sin(time * 0.8) * 0.5,
+        .b = 0.5 + @sin(time * 0.7) * 0.5,
+        .a = 1.0,
     });
 
     // 标题

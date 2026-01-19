@@ -150,39 +150,37 @@ pub fn getImage(comptime path: []const u8) Image {
 }
 
 pub var textCount: u32 = 0;
-pub fn beginDraw(clearColor: ClearColor) void {
-    gpu.begin(clearColor, window.viewRect);
+pub fn beginDraw(clearColor: Color) void {
+    gpu.begin(@bitCast(clearColor), window.viewRect);
     textCount = 0;
 }
 
-pub const ClearColor = gpu.Color;
 pub const Color = extern struct {
-    r: u8,
-    g: u8,
-    b: u8,
-    a: u8,
+    r: f32,
+    g: f32,
+    b: f32,
+    a: f32,
 
     pub const black = Color.rgb(0, 0, 0); // 黑色
-    pub const white = Color.rgb(255, 255, 255); // 白色
-    pub const midGray = Color.rgb(128, 128, 128); // 中灰色
+    pub const white = Color.rgb(1, 1, 1); // 白色
+    pub const midGray = Color.rgb(0.5, 0.5, 0.5); // 中灰色
 
-    pub const red = Color.rgb(255, 0, 0); // 红色
-    pub const green = Color.rgb(0, 255, 0); // 绿色
-    pub const blue = Color.rgb(0, 0, 255); // 蓝色
+    pub const red = Color.rgb(1, 0, 0); // 红色
+    pub const green = Color.rgb(0, 1, 0); // 绿色
+    pub const blue = Color.rgb(0, 0, 1); // 蓝色
 
-    pub const yellow = Color.rgb(255, 255, 0); // 黄色
-    pub const cyan = Color.rgb(0, 255, 255); // 青色
-    pub const magenta = Color.rgb(255, 0, 255); // 品红色
-
-    pub fn rgb(r: u8, g: u8, b: u8) Color {
-        return .{ .r = r, .g = g, .b = b, .a = 255 };
+    pub const yellow = Color.rgb(1, 1, 0); // 黄色
+    pub const cyan = Color.rgb(0, 1, 1); // 青色
+    pub const magenta = Color.rgb(1, 0, 1); // 品红色
+    pub fn rgb(r: f32, g: f32, b: f32) Color {
+        return .{ .r = r, .g = g, .b = b, .a = 1 };
     }
 
-    pub fn rgba(r: u8, g: u8, b: u8, a: u8) Color {
+    pub fn rgba(r: f32, g: f32, b: f32, a: f32) Color {
         return .{ .r = r, .g = g, .b = b, .a = a };
     }
 
-    pub fn gray(v: u8, a: u8) Color {
+    pub fn gray(v: f32, a: f32) Color {
         return .{ .r = v, .g = v, .b = v, .a = a };
     }
 };

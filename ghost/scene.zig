@@ -58,7 +58,7 @@ pub fn update(delta: f32) void {
 }
 
 pub fn draw() void {
-    zhu.batch.beginDraw(.{});
+    zhu.batch.beginDraw(.black);
     defer zhu.batch.endDraw();
 
     switch (currentScene) {
