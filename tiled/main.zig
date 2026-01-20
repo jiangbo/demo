@@ -76,6 +76,7 @@ pub fn main() !void {
 
     const layers: []Layer = try a.alloc(Layer, tiledMap.layers.len);
 
+    var layerCount: usize = 0;
     for (layers, tiledMap.layers) |*layer, old| {
         var layerEnum: LayerEnum = .tile;
         var width: u32, var height: u32 = .{ 0, 0 };
@@ -124,6 +125,8 @@ pub fn main() !void {
             .repeatX = old.repeatx orelse false,
             .repeatY = old.repeaty orelse false,
         };
+
+        if (layer.visible) layerCount += 1;
     }
 
     const tileSets: []TileSetRef = try a.alloc(TileSetRef, tiledMap.tilesets.len);
@@ -137,7 +140,7 @@ pub fn main() !void {
     const map: Map = .{
         .height = tiledMap.height,
         .width = tiledMap.width,
-        .layers = layers,
+        .layers = layers[0..layerCount],
         .tileWidth = tiledMap.tilewidth,
         .tileHeight = tiledMap.tileheight,
         .tileSets = tileSets,

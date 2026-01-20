@@ -3,12 +3,14 @@ const zhu = @import("zhu");
 
 const window = zhu.window;
 const batch = zhu.batch;
+const tiled = zhu.extend.tiled;
 
 var isHelp = false;
 var isDebug = false;
 var vertexBuffer: []batch.Vertex = undefined;
 
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
+const level1: tiled.Map = @import("zon/level1.zon");
 
 pub fn init() void {
     // window.initText(@import("zon/font.zon"), 32);
@@ -34,14 +36,13 @@ pub fn update(delta: f32) void {
     _ = delta;
 }
 
-const back = zhu.graphics.imageId("textures/Layers/back.png");
-const middle = zhu.graphics.imageId("textures/Layers/middle.png");
-
 pub fn draw() void {
     batch.beginDraw(.black);
 
-    batch.draw(back, .zero);
-    batch.draw(middle, .zero);
+    for (level1.layers) |*layer| {
+        if (layer.type != .image) continue;
+        batch.draw(layer.image, .zero);
+    }
 
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
     batch.endDraw();

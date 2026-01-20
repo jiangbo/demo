@@ -10,6 +10,9 @@ pub const math = @import("math.zig");
 pub const input = @import("input.zig");
 pub const ecs = @import("ecs.zig");
 pub const text = @import("text.zig");
+pub const extend = struct {
+    pub const tiled = @import("extend/tiled.zig");
+};
 
 pub const Timer = math.Timer;
 pub const Atlas = graphics.Atlas;
