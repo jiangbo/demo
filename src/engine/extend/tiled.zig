@@ -17,8 +17,8 @@ pub const Layer = struct {
     image: u32,
     type: LayerEnum,
 
-    width: u32 = 0,
-    height: u32 = 0,
+    width: f32 = 0,
+    height: f32 = 0,
     opacity: f32,
     visible: bool,
 

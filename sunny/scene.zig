@@ -33,19 +33,44 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
         return window.toggleFullScreen();
     }
-    _ = delta;
+
+    const distance: f32 = std.math.round(300 * delta);
+    zhu.camera.control(distance);
 }
 
 pub fn draw() void {
     batch.beginDraw(.black);
 
     for (level1.layers) |*layer| {
-        if (layer.type != .image) continue;
-        batch.draw(layer.image, .zero);
+        switch (layer.type) {
+            .image => drawImageLayer(layer),
+            else => {},
+        }
     }
 
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
     batch.endDraw();
+}
+
+fn drawImageLayer(layer: *const tiled.Layer) void {
+    zhu.camera.modeEnum = .window;
+    defer zhu.camera.modeEnum = .world;
+
+    if (layer.repeatY) {
+        const posY = zhu.camera.position.y * layer.parallaxY;
+        var y = -@mod(posY, layer.height);
+        while (y < window.size.y) : (y += layer.height) {
+            batch.draw(layer.image, .xy(0, y));
+        }
+    }
+
+    if (layer.repeatX) {
+        const posX = zhu.camera.position.x * layer.parallaxX;
+        var x = -@mod(posX, layer.width);
+        while (x < window.size.x) : (x += layer.width) {
+            batch.draw(layer.image, .xy(x, 0));
+        }
+    }
 }
 
 fn drawHelpInfo() void {
