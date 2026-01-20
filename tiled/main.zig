@@ -15,7 +15,7 @@ const LayerEnum = enum { image, tile, object };
 
 const Layer = struct {
     id: u32,
-    name: []const u8,
+    image: u32,
     type: LayerEnum,
 
     width: u32 = 0,
@@ -80,10 +80,12 @@ pub fn main() !void {
         var layerEnum: LayerEnum = .tile;
         var width: u32, var height: u32 = .{ 0, 0 };
         var objects: []Object = &.{};
+        var image: u32 = 0;
         if (std.mem.eql(u8, "imagelayer", old.type)) {
             layerEnum = .image;
             width = old.imagewidth orelse 0;
             height = old.imageheight orelse 0;
+            image = std.hash.Fnv1a_32.hash(old.image.?[3..]);
         } else if (std.mem.eql(u8, "tilelayer", old.type)) {
             layerEnum = .tile;
             width = old.width orelse 0;
@@ -109,7 +111,7 @@ pub fn main() !void {
 
         layer.* = Layer{
             .id = old.id,
-            .name = old.name,
+            .image = image,
             .type = layerEnum,
             .width = width,
             .height = height,
