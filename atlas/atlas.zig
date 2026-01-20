@@ -28,4 +28,5 @@ pub const Meta = struct {
     format: []const u8,
     size: struct { w: i32, h: i32 },
     scale: f32,
+    related_multi_packs: []const u8 = &.{},
 };
