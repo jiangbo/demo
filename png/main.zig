@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const raw = @embedFile("atlas.png");
+const raw = @embedFile("atlas1.png");
 const signature = [8]u8{ 137, 80, 78, 71, 13, 10, 26, 10 };
 
 const ChunkEnum = enum(u32) {
@@ -38,10 +38,7 @@ const Header = extern struct {
     interlace: u8,
 };
 
-const Chunk = struct {
-    chunkEnum: ChunkEnum,
-    data: []u8,
-};
+const Chunk = struct { chunkEnum: ChunkEnum, data: []u8 };
 
 pub fn main() !void {
     var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
@@ -61,18 +58,39 @@ pub fn main() !void {
     var compressData: std.ArrayList(u8) = .empty;
     defer compressData.deinit(allocator);
 
+    var rgbPalette: []u8 = &.{};
+    var trans: []u8 = &.{};
+    var palette: []u8 = &.{};
+    defer allocator.free(palette);
+
     while (chunk.chunkEnum != .IEND) {
         chunk = try readChunk(&reader);
         switch (chunk.chunkEnum) {
             .IDAT => try compressData.appendSlice(allocator, chunk.data),
+            .PLTE => rgbPalette = chunk.data,
+            .tRNS => trans = chunk.data,
             else => {},
+        }
+    }
+    if (header.colorEnum == .indexed) {
+        palette = try allocator.alloc(u8, rgbPalette.len / 3 * 4);
+        for (0..palette.len / 4) |i| {
+            palette[i * 4 + 0] = rgbPalette[i * 3 + 0];
+            palette[i * 4 + 1] = rgbPalette[i * 3 + 1];
+            palette[i * 4 + 2] = rgbPalette[i * 3 + 2];
+            const alpha = if (i < trans.len) trans[i] else 255;
+            palette[i * 4 + 3] = alpha;
         }
     }
 
     const capacity = header.width * header.height * 4;
     const pixelData = try allocator.alloc(u8, capacity);
     defer allocator.free(pixelData);
-    try parseData(pixelData, header, compressData.items);
+    switch (header.colorEnum) {
+        .trueColorAlpha => try parseRgba(pixelData, header, compressData.items),
+        .indexed => try parseIndexed(pixelData, header, compressData.items, palette),
+        else => return error.UnsupportedColorType,
+    }
 
     const image = Image.init(header.width, header.height, pixelData);
     try image.write("my.ppm");
@@ -93,7 +111,42 @@ fn readChunk(reader: *std.io.Reader) !Chunk {
     return .{ .chunkEnum = chunkEnum, .data = data };
 }
 
-fn parseData(pixelData: []u8, header: Header, compressData: []u8) !void {
+fn parseIndexed(data: []u8, header: Header, compress: []u8, palette: []u8) !void {
+    std.log.info("compress data len: {}", .{compress.len});
+
+    var reader = std.Io.Reader.fixed(compress);
+    var decompressBuffer: [std.compress.flate.max_window_len]u8 = undefined;
+    const Decompress = std.compress.flate.Decompress;
+    var decompress = Decompress.init(&reader, .zlib, &decompressBuffer);
+
+    const start: usize = header.width * header.height * 3;
+
+    for (0..header.height) |y| {
+        const filterEnum = try decompress.reader.takeEnum(FilterEnum, .big);
+        // std.log.info("filter: {}", .{filterEnum});
+        const current = try decompress.reader.take(header.width);
+        const offset = start + y * header.width;
+
+        switch (filterEnum) {
+            .none => @memcpy(data[offset..][0..header.width], current),
+            else => return error.OnlyNoneIndexedSupported,
+        }
+    }
+    std.log.info("decompress data len: {}", .{header.width * header.height});
+
+    // 将索引转换为RGBA
+    for (data[start..], 0..) |pixel, index| {
+        const pixelIndex = @as(usize, pixel) * 4;
+        data[index * 4 + 0] = palette[pixelIndex + 0];
+        data[index * 4 + 1] = palette[pixelIndex + 1];
+        data[index * 4 + 2] = palette[pixelIndex + 2];
+        data[index * 4 + 3] = palette[pixelIndex + 3];
+    }
+}
+
+fn parseRgba(pixelData: []u8, header: Header, compressData: []u8) !void {
+    std.log.info("compress data len: {}", .{compressData.len});
+
     var reader = std.Io.Reader.fixed(compressData);
     var decompressBuffer: [std.compress.flate.max_window_len]u8 = undefined;
     const Decompress = std.compress.flate.Decompress;
@@ -103,7 +156,7 @@ fn parseData(pixelData: []u8, header: Header, compressData: []u8) !void {
     var prior: []u8 = &.{};
     for (0..header.height) |index| {
         const filterEnum = try decompress.reader.takeEnum(FilterEnum, .big);
-        std.log.info("filter: {}", .{filterEnum});
+        // std.log.info("filter: {}", .{filterEnum});
         const current = try decompress.reader.take(lineLen);
         const dest = pixelData[index * lineLen ..][0..lineLen];
         switch (filterEnum) {
@@ -139,6 +192,7 @@ fn parseData(pixelData: []u8, header: Header, compressData: []u8) !void {
         }
         prior = dest;
     }
+    std.log.info("decompress data len: {}", .{pixelData.len});
 }
 
 fn paeth(a: u8, b: u8, c: u8) u8 {
