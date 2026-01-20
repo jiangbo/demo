@@ -141,7 +141,7 @@ fn parseData(allocator: std.mem.Allocator, header: Header, chunk: Chunk) !void {
 }
 
 fn paeth(a: u8, b: u8, c: u8) u8 {
-    const p = @as(i10, a) + b - c;
+    const p = @as(i16, a) + b - c;
     const pa = @abs(p - a);
     const pb = @abs(p - b);
     const pc = @abs(p - c);

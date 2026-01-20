@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     const exeModule = b.createModule(.{
-        .root_source_file = b.path("ghost/main.zig"),
+        .root_source_file = b.path("sunny/main.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
