@@ -89,11 +89,12 @@ pub const ScaleEnum = enum {
 };
 
 pub const WindowInfo = struct {
-    title: [:0]const u8,
-    logicSize: math.Vector,
-    scaleEnum: ScaleEnum = .stretch,
-    disableIME: bool = true,
-    alignment: math.Vector = .center,
+    title: [:0]const u8, // 窗口标题
+    size: math.Vector, // 窗口大小
+    logicSize: ?math.Vector = null, // 逻辑大小，默认和窗口大小相同
+    scaleEnum: ScaleEnum = .stretch, // 缩放模式
+    disableIME: bool = true, // 禁用输入法
+    alignment: math.Vector = .center, // 对齐方式
 };
 
 pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
@@ -114,7 +115,7 @@ pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
 const root = @import("root");
 pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     timer = std.time.Timer.start() catch unreachable;
-    size = info.logicSize;
+    size = info.logicSize orelse info.size;
     viewRect = .init(.zero, size);
     alignment = info.alignment;
     scaleEnum = info.scaleEnum;
@@ -128,8 +129,8 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
 
     sk.app.run(.{
         .window_title = info.title,
-        .width = @intFromFloat(size.x),
-        .height = @intFromFloat(size.y),
+        .width = @intFromFloat(info.size.x),
+        .height = @intFromFloat(info.size.y),
         .init_cb = windowInit,
         .event_cb = windowEvent,
         .frame_cb = windowFrame,
@@ -139,6 +140,7 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
 
 export fn windowInit() void {
     clientSize = .xy(sk.app.widthf(), sk.app.heightf());
+    computeViewRect();
     gpu.init();
     math.setRandomSeed(timer.read());
     call(root, "init", .{});
