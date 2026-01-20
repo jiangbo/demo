@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const raw = @embedFile("pointer_c_shaded.png");
+const raw = @embedFile("atlas.png");
 const signature = [8]u8{ 137, 80, 78, 71, 13, 10, 26, 10 };
 
 const ChunkEnum = enum(u32) {
@@ -29,8 +29,8 @@ const FilterEnum = enum(u8) {
 };
 
 const Header = extern struct {
-    width: u32 align(1),
-    height: u32 align(1),
+    width: u32,
+    height: u32,
     bitDepth: u8,
     colorEnum: ColorEnum,
     compression: u8,
@@ -58,13 +58,24 @@ pub fn main() !void {
     std.mem.byteSwapAllFields(Header, &header);
     std.log.info("header: {any}", .{header});
 
+    var compressData: std.ArrayList(u8) = .empty;
+    defer compressData.deinit(allocator);
+
     while (chunk.chunkEnum != .IEND) {
         chunk = try readChunk(&reader);
         switch (chunk.chunkEnum) {
-            .IDAT => try parseData(allocator, header, chunk),
+            .IDAT => try compressData.appendSlice(allocator, chunk.data),
             else => {},
         }
     }
+
+    const capacity = header.width * header.height * 4;
+    const pixelData = try allocator.alloc(u8, capacity);
+    defer allocator.free(pixelData);
+    try parseData(pixelData, header, compressData.items);
+
+    const image = Image.init(header.width, header.height, pixelData);
+    try image.write("my.ppm");
 }
 
 fn readChunk(reader: *std.io.Reader) !Chunk {
@@ -82,62 +93,52 @@ fn readChunk(reader: *std.io.Reader) !Chunk {
     return .{ .chunkEnum = chunkEnum, .data = data };
 }
 
-fn parseData(allocator: std.mem.Allocator, header: Header, chunk: Chunk) !void {
-    var reader = std.Io.Reader.fixed(chunk.data);
-    var decompress = std.compress.flate.Decompress.init(&reader, .zlib, &.{});
+fn parseData(pixelData: []u8, header: Header, compressData: []u8) !void {
+    var reader = std.Io.Reader.fixed(compressData);
+    var decompressBuffer: [std.compress.flate.max_window_len]u8 = undefined;
+    const Decompress = std.compress.flate.Decompress;
+    var decompress = Decompress.init(&reader, .zlib, &decompressBuffer);
+    const lineLen = header.width * 4;
 
-    var aw: std.Io.Writer.Allocating = .init(allocator);
-    defer aw.deinit();
-
-    const len = try decompress.reader.streamRemaining(&aw.writer);
-    std.log.info("decompress len: {}", .{len});
-    reader = std.Io.Reader.fixed(aw.written());
-
-    const capacity = header.width * header.height * 4;
-    var imageData = try allocator.alloc(u8, capacity);
-    defer allocator.free(imageData);
-
-    var index: usize = 0;
     var prior: []u8 = &.{};
-    for (0..header.height) |_| {
-        const filterEnum = try reader.takeEnum(FilterEnum, .big);
+    for (0..header.height) |index| {
+        const filterEnum = try decompress.reader.takeEnum(FilterEnum, .big);
         std.log.info("filter: {}", .{filterEnum});
-        const current = try reader.take(4 * header.width);
+        const current = try decompress.reader.take(lineLen);
+        const dest = pixelData[index * lineLen ..][0..lineLen];
         switch (filterEnum) {
-            .none => {},
+            .none => @memcpy(dest, current),
             .sub => {
-                const left = current[0 .. current.len - 4];
-                for (current[4..], left) |*c, l| c.* +%= l;
+                for (0..4) |i| dest[i] = current[i];
+                const left = dest[0 .. dest.len - 4];
+                for (current[4..], left, dest[4..]) |c, l, *d| {
+                    d.* = c +% l;
+                }
             },
             .up => {
-                for (current, prior) |*c, p| c.* +%= p;
+                for (current, prior, dest) |c, p, *d| d.* = c +% p;
             },
             .average => {
                 // 手动算第一个像素
-                for (0..4) |i| current[i] +%= prior[i] / 2;
+                for (0..4) |i| dest[i] = current[i] + (prior[i] / 2);
 
-                const left = current[0 .. current.len - 4];
-                for (current[4..], left, prior[4..]) |*c, l, p|
-                    c.* +%= ((l + p) / 2);
+                const left = dest[0 .. dest.len - 4];
+                for (current[4..], left, prior[4..], dest[4..]) |c, l, p, *d|
+                    d.* = c +% ((l + p) / 2);
             },
             .paeth => {
                 // 手动算第一个像素
-                for (0..4) |i| current[i] +%= paeth(0, prior[i], 0);
+                for (0..4) |i| dest[i] = current[i] +% paeth(0, prior[i], 0);
 
-                const left = current[0 .. current.len - 4];
+                const left = dest[0 .. dest.len - 4];
                 const priorLeft = prior[0 .. prior.len - 4];
 
-                for (current[4..], left, prior[4..], priorLeft) |*c, l, p, pl|
-                    c.* +%= paeth(l, p, pl);
+                for (current[4..], left, prior[4..], priorLeft, dest[4..]) |c, l, p, pl, *d|
+                    d.* = c +% paeth(l, p, pl);
             },
         }
-        @memcpy(imageData[index..][0..current.len], current);
-        index += current.len;
-        prior = current;
+        prior = dest;
     }
-
-    const image = Image.init(header.width, header.height, imageData);
-    try image.write("my.ppm");
 }
 
 fn paeth(a: u8, b: u8, c: u8) u8 {
