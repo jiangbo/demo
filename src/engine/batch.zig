@@ -34,7 +34,7 @@ var windowSize: Vector2 = undefined;
 pub const Vertex = extern struct {
     position: math.Vector2, // 顶点坐标
     radian: f32 = 0, // 旋转弧度
-    colorScale: f32 = 1, // 颜色缩放
+    padding: f32 = 1, // 颜色缩放
     size: math.Vector2, // 大小
     pivot: math.Vector2 = .zero, // 旋转中心
     texture: math.Vector4, // 纹理坐标
@@ -68,7 +68,6 @@ pub const Option = struct {
     pivot: Vector2 = .center, // 旋转中心
     radian: f32 = 0, // 旋转弧度
     color: graphics.Color = .white, // 颜色
-    colorScale: f32 = 1, // 颜色缩放
     flipX: bool = false, // 水平翻转
 };
 
@@ -180,7 +179,6 @@ pub fn drawImage(image: Image, position: Vector2, option: Option) void {
         .pivot = if (option.radian == 0) .zero else option.pivot,
         .texture = imageVector,
         .color = option.color,
-        .colorScale = option.colorScale,
     }});
 }
 
