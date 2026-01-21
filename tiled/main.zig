@@ -1,11 +1,11 @@
 const std = @import("std");
 const tiled = @import("tiled.zig");
 
-const Vector2 = struct { x: u32, y: u32 };
+const Vector2 = struct { x: i32, y: i32 };
 
 const Map = struct {
-    height: u32,
-    width: u32,
+    height: i32,
+    width: i32,
 
     tileSize: Vector2,
     layers: []Layer,
@@ -22,7 +22,7 @@ const Layer = struct {
     width: u32 = 0,
     height: u32 = 0,
 
-    offset: struct { x: i32, y: i32 },
+    offset: Vector2,
 
     // tile 层特有
     data: []const u32,
@@ -39,20 +39,10 @@ const Layer = struct {
 };
 
 pub const Object = struct {
-    id: u32,
-    name: []const u8,
-    type: []const u8,
-
     gid: u32,
-
-    x: f32,
-    y: f32,
-
-    width: f32,
-    height: f32,
-
+    position: Vector2,
+    size: Vector2,
     rotation: f32,
-    visible: bool,
 };
 
 pub const TileSet = struct {
@@ -61,8 +51,6 @@ pub const TileSet = struct {
     max: u32,
     images: []u32,
 };
-
-// pub const TileSet = tiled.TileSet;
 
 pub fn main() !void {
     var debugAllocator: std.heap.DebugAllocator(.{}) = .init;
@@ -104,16 +92,10 @@ pub fn main() !void {
             objects = try a.alloc(Object, old.objects.?.len);
             for (objects, old.objects.?) |*object, obj| {
                 object.* = Object{
-                    .id = obj.id,
-                    .name = obj.name,
-                    .type = obj.type,
                     .gid = obj.gid.?,
-                    .x = obj.x,
-                    .y = obj.y,
-                    .width = obj.width,
-                    .height = obj.height,
+                    .position = .{ .x = obj.x, .y = obj.y },
+                    .size = .{ .x = obj.width, .y = obj.height },
                     .rotation = obj.rotation,
-                    .visible = obj.visible,
                 };
             }
         } else return error.invalidLayerType;

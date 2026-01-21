@@ -41,20 +41,10 @@ pub const Layer = struct {
 };
 
 pub const Object = struct {
-    id: u32,
-    name: []const u8,
-    type: []const u8,
-
     gid: u32,
-
-    x: f32,
-    y: f32,
-
-    width: f32,
-    height: f32,
-
+    position: Vector2,
+    size: Vector2,
     rotation: f32,
-    visible: bool,
 };
 
 pub const TileSet = struct {

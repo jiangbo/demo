@@ -10,7 +10,8 @@ var tiles: std.ArrayList(tiled.Tile) = .empty;
 
 pub fn init() void {
     for (level1.layers) |layer| {
-        if (layer.type == .tile) parseTileLayer(&layer);
+        if (layer.type == .tile) parseTileLayer(&layer) //
+        else if (layer.type == .object) parseObjectLayer(&layer);
     }
 }
 
@@ -19,8 +20,6 @@ pub fn deinit() void {
 }
 
 fn parseTileLayer(layer: *const tiled.Layer) void {
-    const width: u32 = @intFromFloat(layer.width);
-
     var firstImage = zhu.assets.getImage(level1.tileSets[0].images[0]);
     for (layer.data, 0..) |tileIndex, index| {
         if (tileIndex == 0) continue;
@@ -29,8 +28,8 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
             if (tileIndex < tileSet.max) break :blk tileSet;
         } else unreachable;
 
-        const x: f32 = @floatFromInt(index % width);
-        const y: f32 = @floatFromInt(index / width);
+        const x: f32 = @floatFromInt(index % level1.width);
+        const y: f32 = @floatFromInt(index / level1.width);
         var pos = level1.tileSize.mul(.xy(x, y));
 
         var image: zhu.graphics.Image = undefined;
@@ -47,6 +46,22 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
         tiles.append(zhu.assets.allocator, .{
             .image = image,
             .position = pos,
+        }) catch @panic("oom, can't append tile");
+    }
+}
+
+fn parseObjectLayer(layer: *const tiled.Layer) void {
+    for (layer.objects) |object| {
+        const tileSet = blk: for (level1.tileSets) |tileSet| {
+            if (object.gid < tileSet.max) break :blk tileSet;
+        } else unreachable;
+
+        const id = object.gid - tileSet.min;
+        const image = zhu.assets.getImage(tileSet.images[id]);
+
+        tiles.append(zhu.assets.allocator, .{
+            .image = image.sub(.init(.zero, object.size)),
+            .position = object.position.addY(-object.size.y),
         }) catch @panic("oom, can't append tile");
     }
 }

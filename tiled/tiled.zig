@@ -2,8 +2,8 @@ const std = @import("std");
 
 pub const TiledMap = struct {
     compressionlevel: ?i32,
-    height: u32,
-    width: u32,
+    height: i32,
+    width: i32,
 
     infinite: bool,
 
@@ -18,8 +18,8 @@ pub const TiledMap = struct {
     tiledversion: []const u8,
     version: []const u8,
 
-    tilewidth: u32,
-    tileheight: u32,
+    tilewidth: i32,
+    tileheight: i32,
 
     tilesets: []TilesetRef,
 
@@ -65,12 +65,11 @@ pub const TiledObject = struct {
 
     gid: ?u32 = null, // tile object 才有
 
-    x: f32,
-    y: f32,
+    x: i32,
+    y: i32,
 
-    width: f32,
-    height: f32,
-
+    width: i32,
+    height: i32,
     rotation: f32,
     visible: bool,
 };
