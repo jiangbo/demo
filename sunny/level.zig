@@ -12,23 +12,30 @@ pub fn init() void {
     for (level1.layers) |layer| {
         if (layer.type != .tile) continue;
 
-        const image = zhu.assets.getImage(layer.image);
         const width: u32 = @intFromFloat(layer.width);
 
         for (layer.data, 0..) |tileIndex, index| {
             if (tileIndex == 0) continue;
-            if (tileIndex > 575) {
-                std.log.info("tile index: {}", .{tileIndex});
-                continue;
+
+            const tileSet = blk: for (level1.tileSets) |tileSet| {
+                if (tileIndex < tileSet.max) break :blk tileSet;
+            } else unreachable;
+
+            var image: zhu.graphics.Image = undefined;
+            const i = tileIndex - tileSet.min;
+            if (tileSet.columns == 0) {
+                image = zhu.assets.getImage(tileSet.images[i]);
+            } else {
+                const area = tiled.imageArea(i, level1.tileSize, tileSet.columns);
+                image = zhu.assets.getImage(tileSet.images[0]).sub(area);
             }
 
             const x: f32 = @floatFromInt(index % width);
             const y: f32 = @floatFromInt(index / width);
 
-            const area = computeTileArea(tileIndex - 1, 16, 16, 25);
             tiles.append(zhu.assets.allocator, .{
-                .image = image.sub(area),
-                .position = .xy(x * 16, y * 16),
+                .image = image,
+                .position = level1.tileSize.mul(.xy(x, y)),
             }) catch @panic("oom, can't append tile");
         }
     }
@@ -67,13 +74,4 @@ fn drawImageLayer(layer: *const tiled.Layer) void {
             batch.draw(layer.image, .xy(x, 0));
         }
     }
-}
-
-fn computeTileArea(index: u32, tileWidth: f32, tileHeight: f32, width: u32) zhu.Rect {
-    const x: f32 = @floatFromInt(index % width);
-    const y: f32 = @floatFromInt(index / width);
-    return zhu.Rect{
-        .min = .xy(x * tileWidth, y * tileHeight),
-        .size = .xy(tileWidth, tileHeight),
-    };
 }

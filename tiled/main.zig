@@ -1,14 +1,15 @@
 const std = @import("std");
 const tiled = @import("tiled.zig");
 
+const Vector2 = struct { x: u32, y: u32 };
+
 const Map = struct {
     height: u32,
     width: u32,
 
-    tileWidth: u32,
-    tileHeight: u32,
+    tileSize: Vector2,
     layers: []Layer,
-    tileSets: []TileSetRef,
+    tileSets: []TileSet,
 };
 
 const LayerEnum = enum { image, tile, object };
@@ -20,8 +21,6 @@ const Layer = struct {
 
     width: u32 = 0,
     height: u32 = 0,
-    opacity: f32,
-    visible: bool,
 
     // tile 层特有
     data: []const u32,
@@ -54,7 +53,14 @@ pub const Object = struct {
     visible: bool,
 };
 
-pub const TileSetRef = struct { firstGid: u32, source: []const u8 };
+pub const TileSet = struct {
+    columns: u32,
+    min: u32,
+    max: u32,
+    images: []u32,
+};
+
+// pub const TileSet = tiled.TileSet;
 
 pub fn main() !void {
     var debugAllocator: std.heap.DebugAllocator(.{}) = .init;
@@ -69,10 +75,10 @@ pub fn main() !void {
     std.log.info("file name: {s}", .{name});
 
     const max = std.math.maxInt(usize);
-    const content = try std.fs.cwd().readFileAlloc(a, name, max);
+    var content = try std.fs.cwd().readFileAlloc(a, name, max);
 
-    const j = std.json;
-    const tiledMap = try j.parseFromSliceLeaky(tiled.TiledMap, a, content, .{});
+    const parseJson = std.json.parseFromSliceLeaky;
+    const tiledMap = try parseJson(tiled.TiledMap, a, content, .{ .ignore_unknown_fields = true });
 
     const layers: []Layer = try a.alloc(Layer, tiledMap.layers.len);
 
@@ -116,8 +122,6 @@ pub fn main() !void {
             .type = layerEnum,
             .width = width,
             .height = height,
-            .opacity = old.opacity,
-            .visible = old.visible,
             .data = old.data orelse &.{},
             .objects = objects,
             .parallaxX = old.parallaxx orelse 1.0,
@@ -126,14 +130,55 @@ pub fn main() !void {
             .repeatY = old.repeaty orelse false,
         };
 
-        if (layer.visible) layerCount += 1;
+        if (old.visible) layerCount += 1;
     }
 
-    const tileSets: []TileSetRef = try a.alloc(TileSetRef, tiledMap.tilesets.len);
-    for (tileSets, tiledMap.tilesets) |*ts, old| {
-        ts.* = TileSetRef{
-            .firstGid = old.firstgid,
-            .source = old.source,
+    // 获取 tmx 文件所在的目录
+    const nameDir = std.fs.path.dirname(name) orelse ".";
+    var dir = try std.fs.cwd().openDir(nameDir, .{});
+    defer dir.close();
+
+    const tileSets: []TileSet = try a.alloc(TileSet, tiledMap.tilesets.len);
+    for (tileSets, tiledMap.tilesets, 0..) |*ts, old, index| {
+        // ts.* = TileSetRef{
+        //     .firstgid = old.firstgid,
+        //     .source = old.source,
+        // };
+
+        // 读取 tileset 文件
+        content = try dir.readFileAlloc(a, old.source, max);
+        std.log.info("read tileSet: {s}", .{old.source});
+        const tileSet = try parseJson(tiled.TileSet, a, content, .{});
+
+        if (tileSet.columns > 0) {
+            std.log.info("Loaded tileset: {s} ({}x{} tiles)", .{ tileSet.name, tileSet.columns, tileSet.tilecount / tileSet.columns });
+        } else {
+            std.log.info("Loaded tileset: {s} ({} tiles - collection)", .{ tileSet.name, tileSet.tilecount });
+        }
+
+        var maxId: u32 = 0;
+        if (index == tileSets.len - 1) {
+            maxId = tiledMap.tilesets[index].firstgid + tileSet.tilecount;
+        } else {
+            maxId = tiledMap.tilesets[index + 1].firstgid;
+        }
+
+        var images: []u32 = &.{};
+        if (tileSet.image.len != 0) {
+            images = try a.alloc(u32, 1);
+            images[0] = std.hash.Fnv1a_32.hash(tileSet.image[3..]);
+        } else {
+            images = try a.alloc(u32, tileSet.tiles.len);
+            for (images, tileSet.tiles) |*img, tile| {
+                img.* = std.hash.Fnv1a_32.hash(tile.image[3..]);
+            }
+        }
+
+        ts.* = TileSet{
+            .columns = tileSet.columns,
+            .min = tiledMap.tilesets[index].firstgid,
+            .max = maxId,
+            .images = images,
         };
     }
 
@@ -141,8 +186,7 @@ pub fn main() !void {
         .height = tiledMap.height,
         .width = tiledMap.width,
         .layers = layers[0..layerCount],
-        .tileWidth = tiledMap.tilewidth,
-        .tileHeight = tiledMap.tileheight,
+        .tileSize = .{ .x = tiledMap.tilewidth, .y = tiledMap.tileheight },
         .tileSets = tileSets,
     };
 
