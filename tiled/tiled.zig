@@ -45,8 +45,8 @@ pub const Layer = struct {
     parallaxy: ?f32 = null,
     repeatx: ?bool = null,
     repeaty: ?bool = null,
-    offsetx: ?i32 = null,
-    offsety: ?i32 = null,
+    offsetx: i32 = 0,
+    offsety: i32 = 0,
 
     // tilelayer
     width: ?u32 = null,
@@ -93,6 +93,7 @@ pub const TileSet = struct {
     tileheight: u32,
     tilewidth: u32,
     tiles: []Tile = &.{},
+    objectalignment: []const u8 = &.{},
     grid: ?Grid = null,
     type: ?[]const u8 = null,
     version: ?[]const u8 = null,

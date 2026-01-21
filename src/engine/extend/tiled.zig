@@ -25,6 +25,8 @@ pub const Layer = struct {
     width: f32 = 0,
     height: f32 = 0,
 
+    offset: Vector2,
+
     // tile 层特有
     data: []const u32,
 
@@ -67,8 +69,8 @@ pub const Tile = struct {
     position: graphics.Vector2,
 };
 
-pub fn imageArea(index: u32, size: Vector2, tilePerRow: u32) Rect {
-    const x: f32 = @floatFromInt(index % tilePerRow);
-    const y: f32 = @floatFromInt(index / tilePerRow);
+pub fn tileArea(index: u32, size: Vector2, columns: u32) Rect {
+    const x: f32 = @floatFromInt(index % columns);
+    const y: f32 = @floatFromInt(index / columns);
     return Rect.init(size.mul(.xy(x, y)), size);
 }

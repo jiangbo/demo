@@ -22,6 +22,8 @@ const Layer = struct {
     width: u32 = 0,
     height: u32 = 0,
 
+    offset: struct { x: i32, y: i32 },
+
     // tile 层特有
     data: []const u32,
 
@@ -122,6 +124,7 @@ pub fn main() !void {
             .type = layerEnum,
             .width = width,
             .height = height,
+            .offset = .{ .x = old.offsetx, .y = old.offsety },
             .data = old.data orelse &.{},
             .objects = objects,
             .parallaxX = old.parallaxx orelse 1.0,
@@ -140,25 +143,22 @@ pub fn main() !void {
 
     const tileSets: []TileSet = try a.alloc(TileSet, tiledMap.tilesets.len);
     for (tileSets, tiledMap.tilesets, 0..) |*ts, old, index| {
-        // ts.* = TileSetRef{
-        //     .firstgid = old.firstgid,
-        //     .source = old.source,
-        // };
 
-        // 读取 tileset 文件
+        // 读取 tileSet 文件
         content = try dir.readFileAlloc(a, old.source, max);
         std.log.info("read tileSet: {s}", .{old.source});
         const tileSet = try parseJson(tiled.TileSet, a, content, .{});
 
         if (tileSet.columns > 0) {
-            std.log.info("Loaded tileset: {s} ({}x{} tiles)", .{ tileSet.name, tileSet.columns, tileSet.tilecount / tileSet.columns });
+            std.log.info("Loaded tileSet: {s} ({}x{} tiles)", .{ tileSet.name, tileSet.columns, tileSet.tilecount / tileSet.columns });
         } else {
-            std.log.info("Loaded tileset: {s} ({} tiles - collection)", .{ tileSet.name, tileSet.tilecount });
+            std.log.info("Loaded tileSet: {s} ({} tiles - collection)", .{ tileSet.name, tileSet.tilecount });
         }
 
+        const min = tiledMap.tilesets[index].firstgid;
         var maxId: u32 = 0;
         if (index == tileSets.len - 1) {
-            maxId = tiledMap.tilesets[index].firstgid + tileSet.tilecount;
+            maxId = min + tileSet.tilecount;
         } else {
             maxId = tiledMap.tilesets[index + 1].firstgid;
         }
@@ -168,9 +168,10 @@ pub fn main() !void {
             images = try a.alloc(u32, 1);
             images[0] = std.hash.Fnv1a_32.hash(tileSet.image[3..]);
         } else {
-            images = try a.alloc(u32, tileSet.tiles.len);
-            for (images, tileSet.tiles) |*img, tile| {
-                img.* = std.hash.Fnv1a_32.hash(tile.image[3..]);
+            images = try a.alloc(u32, maxId - min);
+            @memset(images, 0);
+            for (tileSet.tiles) |tile| {
+                images[tile.id] = std.hash.Fnv1a_32.hash(tile.image[3..]);
             }
         }
 
