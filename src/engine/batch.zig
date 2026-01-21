@@ -175,8 +175,7 @@ pub fn drawImage(image: Image, position: Vector2, option: Option) void {
         .position = worldPos.sub(scaledSize.mul(option.anchor)),
         .radian = option.radian,
         .size = scaledSize,
-        // 默认旋转点为中心位置，如果不旋转则传 0
-        .pivot = if (option.radian == 0) .zero else option.pivot,
+        .pivot = option.pivot,
         .texture = imageVector,
         .color = option.color,
     }});
