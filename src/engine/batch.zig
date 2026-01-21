@@ -34,7 +34,7 @@ var windowSize: Vector2 = undefined;
 pub const Vertex = extern struct {
     position: math.Vector2, // 顶点坐标
     radian: f32 = 0, // 旋转弧度
-    padding: f32 = 1, // 颜色缩放
+    padding: f32 = 1,
     size: math.Vector2, // 大小
     pivot: math.Vector2 = .zero, // 旋转中心
     texture: math.Vector4, // 纹理坐标
