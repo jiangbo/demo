@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const graphics = @import("../graphics.zig");
+
 pub const Map = struct {
     height: u32,
     width: u32,
@@ -52,4 +54,15 @@ pub const Object = struct {
     visible: bool,
 };
 
-pub const TileSetRef = struct { firstGid: u32, source: []const u8 };
+pub const TileSetRef = struct {
+    firstGid: u32,
+    source: []const u8,
+
+    // TODO
+    max: u32 = 0,
+};
+
+pub const Tile = struct {
+    image: graphics.Image,
+    position: graphics.Vector2,
+};

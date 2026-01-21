@@ -8,7 +8,7 @@ const audio = @import("audio.zig");
 const Image = graphics.Image;
 const Path = [:0]const u8;
 
-var allocator: std.mem.Allocator = undefined;
+pub var allocator: std.mem.Allocator = undefined;
 var imageCache: std.AutoHashMapUnmanaged(Id, Image) = .empty;
 
 pub fn init(allocator1: std.mem.Allocator) void {

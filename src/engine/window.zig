@@ -105,7 +105,6 @@ pub var size: math.Vector = .zero;
 pub var clientSize: math.Vector = .zero;
 pub var viewRect: math.Rect = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
-pub var allocator: std.mem.Allocator = undefined;
 pub var alignment: math.Vector2 = .center; // 默认居中
 var scaleEnum: ScaleEnum = .stretch; // 当前缩放模式
 var timer: std.time.Timer = undefined;
@@ -120,8 +119,7 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     alignment = info.alignment;
     scaleEnum = info.scaleEnum;
     countingAllocator = CountingAllocator.init(allocs);
-    allocator = countingAllocator.allocator();
-    assets.init(allocator);
+    assets.init(countingAllocator.allocator());
 
     if (info.disableIME and builtin.os.tag == .windows) {
         _ = ImmDisableIME(-1);
@@ -294,7 +292,7 @@ pub fn readAll(path: [:0]const u8) ![]u8 {
         return large;
     }
     const max = 1024 * 1024;
-    return try std.fs.cwd().readFileAlloc(allocator, path, max);
+    return try std.fs.cwd().readFileAlloc(assets.allocator, path, max);
 }
 
 fn readFromJs(path: [:0]const u8, content: []u8) !i32 {

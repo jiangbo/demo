@@ -19,9 +19,12 @@ pub fn init() void {
     zhu.batch.init(window.size, vertexBuffer);
     zhu.batch.whiteImage = zhu.graphics.imageId("white.png");
     zhu.assets.loadAtlas(atlas);
+
+    level.init();
 }
 
 pub fn deinit() void {
+    level.deinit();
     window.free(vertexBuffer);
 }
 
