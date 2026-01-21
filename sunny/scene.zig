@@ -2,23 +2,22 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const window = zhu.window;
-const batch = zhu.batch;
-const tiled = zhu.extend.tiled;
+
+const level = @import("level.zig");
 
 var isHelp = false;
 var isDebug = false;
-var vertexBuffer: []batch.Vertex = undefined;
+var vertexBuffer: []zhu.batch.Vertex = undefined;
 
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
-const level1: tiled.Map = @import("zon/level1.zon");
 
 pub fn init() void {
     // window.initText(@import("zon/font.zon"), 32);
 
-    vertexBuffer = window.alloc(batch.Vertex, 5000);
+    vertexBuffer = window.alloc(zhu.batch.Vertex, 5000);
     zhu.graphics.frameStats(true);
-    batch.init(window.size, vertexBuffer);
-    batch.whiteImage = zhu.graphics.imageId("white.png");
+    zhu.batch.init(window.size, vertexBuffer);
+    zhu.batch.whiteImage = zhu.graphics.imageId("white.png");
     zhu.assets.loadAtlas(atlas);
 }
 
@@ -39,38 +38,12 @@ pub fn update(delta: f32) void {
 }
 
 pub fn draw() void {
-    batch.beginDraw(.black);
+    zhu.batch.beginDraw(.black);
 
-    for (level1.layers) |*layer| {
-        switch (layer.type) {
-            .image => drawImageLayer(layer),
-            else => {},
-        }
-    }
+    level.draw();
 
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
-    batch.endDraw();
-}
-
-fn drawImageLayer(layer: *const tiled.Layer) void {
-    zhu.camera.modeEnum = .window;
-    defer zhu.camera.modeEnum = .world;
-
-    if (layer.repeatY) {
-        const posY = zhu.camera.position.y * layer.parallaxY;
-        var y = -@mod(posY, layer.height);
-        while (y < window.size.y) : (y += layer.height) {
-            batch.draw(layer.image, .xy(0, y));
-        }
-    }
-
-    if (layer.repeatX) {
-        const posX = zhu.camera.position.x * layer.parallaxX;
-        var x = -@mod(posX, layer.width);
-        while (x < window.size.x) : (x += layer.width) {
-            batch.draw(layer.image, .xy(x, 0));
-        }
-    }
+    zhu.batch.endDraw();
 }
 
 fn drawHelpInfo() void {
@@ -113,7 +86,7 @@ fn drawDebugInfo() void {
         stats.size_append_buffer + stats.size_update_buffer,
         stats.size_apply_uniforms,
         stats.num_draw,
-        batch.imageDrawCount(),
+        zhu.batch.imageDrawCount(),
         // Debug 信息本身的次数也应该统计进去
         zhu.graphics.textCount + debutTextCount,
         window.countingAllocator.used,
