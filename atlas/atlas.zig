@@ -12,6 +12,7 @@ pub const AtlasFrame = struct {
     trimmed: bool,
     spriteSourceSize: Rect,
     sourceSize: struct { w: i32, h: i32 },
+    pivot: struct { x: f32, y: f32 },
 };
 
 pub const Rect = struct {
