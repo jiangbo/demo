@@ -97,11 +97,11 @@ pub fn debugDraw(area: math.Rect) void {
 }
 
 pub fn draw(image: ImageId, pos: math.Vector2) void {
-    drawOption(image, pos, .{});
+    drawImageId(image, pos, .{});
 }
 
 pub fn drawFlipX(image: ImageId, pos: Vector2, flipX: bool) void {
-    drawOption(image, pos, .{ .flipX = flipX });
+    drawImageId(image, pos, .{ .flipX = flipX });
 }
 
 pub const LineOption = struct { color: Color = .white, width: f32 = 1 };
@@ -124,7 +124,7 @@ pub fn drawLine(start: Vector2, end: Vector2, option: LineOption) void {
     const vector = end.sub(start);
     const y = start.y - option.width / 2;
 
-    drawOption(graphics.whiteImage, .init(start.x, y), .{
+    drawImageId(graphics.whiteImage, .init(start.x, y), .{
         .size = .init(vector.length(), option.width),
         .color = option.color,
         .radian = vector.atan2(),
@@ -145,14 +145,14 @@ pub fn drawRectBorder(area: math.Rect, width: f32, c: Color) void {
 
 pub const RectOption = struct { color: Color = .white, radian: f32 = 0 };
 pub fn drawRect(area: math.Rect, option: RectOption) void {
-    drawOption(whiteImage, area.min, .{
+    drawImageId(whiteImage, area.min, .{
         .size = area.size,
         .color = option.color,
         .radian = option.radian,
     });
 }
 
-pub fn drawOption(image: ImageId, pos: Vector2, option: Option) void {
+pub fn drawImageId(image: ImageId, pos: Vector2, option: Option) void {
     drawImage(assets.getImage(image), pos, option);
 }
 
