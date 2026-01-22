@@ -6,6 +6,8 @@ const batch = zhu.batch;
 const tiled = zhu.extend.tiled;
 
 const level1: tiled.Map = @import("zon/level1.zon");
+var texture: zhu.graphics.Texture = undefined;
+var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
 var tiles: std.ArrayList(tiled.Tile) = .empty;
 
 pub fn init() void {
@@ -17,10 +19,12 @@ pub fn init() void {
 
 pub fn deinit() void {
     tiles.deinit(zhu.assets.allocator);
+    tileVertexes.deinit(zhu.assets.allocator);
 }
 
 fn parseTileLayer(layer: *const tiled.Layer) void {
     var firstImage = zhu.assets.getImage(level1.tileSets[0].images[0]);
+    texture = firstImage.texture;
     for (layer.data, 0..) |tileIndex, index| {
         if (tileIndex == 0) continue;
 
@@ -43,9 +47,10 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
             image = firstImage.sub(area);
         }
 
-        tiles.append(zhu.assets.allocator, .{
-            .image = image,
+        tileVertexes.append(zhu.assets.allocator, .{
             .position = pos,
+            .size = image.area.size,
+            .texture = image.area.toVector4(),
         }) catch @panic("oom, can't append tile");
     }
 }
@@ -70,6 +75,8 @@ pub fn draw() void {
     for (level1.layers) |*layer| {
         if (layer.type == .image) drawImageLayer(layer);
     }
+
+    batch.drawVertices(texture, tileVertexes.items);
 
     for (tiles.items) |tile| {
         batch.drawImage(tile.image, tile.position, .{});
