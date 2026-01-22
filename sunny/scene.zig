@@ -5,8 +5,8 @@ const window = zhu.window;
 
 const level = @import("level.zig");
 
-var isHelp = false;
-var isDebug = false;
+var help = false;
+var debug = false;
 var vertexBuffer: []zhu.batch.Vertex = undefined;
 
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
@@ -29,8 +29,8 @@ pub fn deinit() void {
 }
 
 pub fn update(delta: f32) void {
-    if (window.isKeyRelease(.H)) isHelp = !isHelp;
-    if (window.isKeyRelease(.X)) isDebug = !isDebug;
+    if (window.isKeyRelease(.H)) help = !help;
+    if (window.isKeyRelease(.X)) debug = !debug;
 
     if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
         return window.toggleFullScreen();
@@ -45,7 +45,7 @@ pub fn draw() void {
 
     level.draw();
 
-    if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
+    if (help) drawHelpInfo() else if (debug) window.drawDebugInfo();
     zhu.batch.endDraw();
 }
 
@@ -56,49 +56,5 @@ fn drawHelpInfo() void {
         \\确定：F，取消：Q，菜单：E
         \\帮助：H  按一次打开，再按一次关闭
     ;
-    debutTextCount = zhu.text.computeTextCount(text);
-    zhu.text.drawColor(text, .xy(10, 10), .green);
-}
-
-var debutTextCount: u32 = 0;
-fn drawDebugInfo() void {
-    var buffer: [1024]u8 = undefined;
-    const format =
-        \\后端：{s}
-        \\帧率：{}
-        \\平滑：{d:.2}
-        \\帧时：{d:.2}
-        \\用时：{d:.2}
-        \\显存：{}
-        \\常量：{}
-        \\绘制：{}
-        \\图片：{}
-        \\文字：{}
-        \\内存：{}
-        \\鼠标：{d:.2}，{d:.2}
-        \\相机：{d:.2}，{d:.2}
-    ;
-
-    const stats = zhu.graphics.queryFrameStats();
-    const text = zhu.text.format(&buffer, format, .{
-        @tagName(zhu.graphics.queryBackend()),
-        window.frameRate,
-        window.currentSmoothTime * 1000,
-        window.frameDeltaPerSecond,
-        window.usedDeltaPerSecond,
-        stats.size_append_buffer + stats.size_update_buffer,
-        stats.size_apply_uniforms,
-        stats.num_draw,
-        zhu.batch.imageDrawCount(),
-        // Debug 信息本身的次数也应该统计进去
-        zhu.graphics.textCount + debutTextCount,
-        window.countingAllocator.used,
-        window.mousePosition.x,
-        window.mousePosition.y,
-        zhu.camera.position.x,
-        zhu.camera.position.y,
-    });
-
-    debutTextCount = zhu.text.computeTextCount(text);
     zhu.text.drawColor(text, .xy(10, 10), .green);
 }

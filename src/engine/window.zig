@@ -8,6 +8,8 @@ const audio = @import("audio.zig");
 const input = @import("input.zig");
 const text = @import("text.zig");
 const gpu = @import("gpu.zig");
+const graphics = @import("graphics.zig");
+const batch = @import("batch.zig");
 
 pub const Event = sk.app.Event;
 
@@ -187,9 +189,9 @@ pub fn computeViewRect() void {
     }
 }
 
-pub var frameRate: u32 = 0;
-pub var frameDeltaPerSecond: f32 = 0;
-pub var usedDeltaPerSecond: f32 = 0;
+var frameRate: u32 = 0;
+var frameDeltaPerSecond: f32 = 0;
+var usedDeltaPerSecond: f32 = 0;
 
 var frameRateTime: u64 = 0;
 var frameRateCount: u64 = 0;
@@ -201,7 +203,7 @@ const smoothFrameTime: [4]f32 = .{
     @as(f32, 1) / 144, // 144 帧
     @as(f32, 1) / 240, // 240 帧
 };
-pub var currentSmoothTime: f32 = 0;
+var currentSmoothTime: f32 = 0;
 var lastTime: u64 = 0;
 
 export fn windowFrame() void {
@@ -254,6 +256,46 @@ pub fn frameCount() u64 {
 
 pub fn relativeTime() u64 {
     return timer.read();
+}
+
+var debutTextCount: u32 = 0;
+pub fn drawDebugInfo() void {
+    var buffer: [1024]u8 = undefined;
+    const format =
+        \\后端：{s}
+        \\帧率：{}
+        \\平滑：{d:.2}
+        \\帧时：{d:.2}
+        \\用时：{d:.2}
+        \\显存：{}
+        \\常量：{}
+        \\绘制：{}
+        \\图片：{}
+        \\文字：{}
+        \\内存：{}
+        \\鼠标：{d:.2}，{d:.2}
+    ;
+
+    const stats = graphics.queryFrameStats();
+    const t = text.format(&buffer, format, .{
+        @tagName(graphics.queryBackend()),
+        frameRate,
+        currentSmoothTime * 1000,
+        frameDeltaPerSecond,
+        usedDeltaPerSecond,
+        stats.size_append_buffer + stats.size_update_buffer,
+        stats.size_apply_uniforms,
+        stats.num_draw,
+        batch.imageDrawCount(),
+        // Debug 信息本身的次数也应该统计进去
+        graphics.textCount + debutTextCount,
+        countingAllocator.used,
+        mousePosition.x,
+        mousePosition.y,
+    });
+
+    debutTextCount = text.computeTextCount(t);
+    text.drawColor(t, .xy(10, 10), .green);
 }
 
 pub fn statFileTime(path: [:0]const u8) i64 {
