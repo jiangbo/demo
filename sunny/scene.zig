@@ -81,6 +81,7 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
     }
 }
 
+var pause: bool = true; // 启动时暂停，方便截图
 pub fn update(delta: f32) void {
     if (window.isKeyRelease(.H)) help = !help;
     if (window.isKeyRelease(.X)) debug = !debug;
@@ -88,10 +89,12 @@ pub fn update(delta: f32) void {
     if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
         return window.toggleFullScreen();
     }
+    if (window.isKeyRelease(.SPACE)) pause = !pause;
 
     const distance: f32 = std.math.round(300 * delta);
     zhu.camera.control(distance);
 
+    if (pause) return;
     player.update(delta);
 }
 

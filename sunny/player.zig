@@ -8,6 +8,7 @@ const maxSpeed = 120; // 最大速度
 const size: zhu.Vector2 = .xy(32, 32);
 var image: zhu.graphics.Image = undefined;
 
+var force: zhu.Vector2 = .xy(0, 980); // 角色的受力
 var velocity: zhu.Vector2 = .zero;
 var position: zhu.Vector2 = undefined;
 var state: State = .idle;
@@ -21,6 +22,10 @@ pub fn init(pos: zhu.Vector2) void {
 
 pub fn update(delta: f32) void {
     state.update(delta);
+
+    velocity = velocity.add(force.scale(delta));
+    velocity.x = std.math.clamp(velocity.x, -maxSpeed, maxSpeed);
+    position = position.add(velocity.scale(delta));
 }
 
 pub fn draw() void {
@@ -64,13 +69,10 @@ const IdleState = struct {
         std.log.info("enter idle", .{});
     }
 
-    fn update(delta: f32) void {
+    fn update(_: f32) void {
         if (zhu.window.isAnyKeyDown(&.{ .A, .D })) {
             changeState(.walk);
-        } else {
-            velocity.x *= factor;
-            position = position.add(velocity.scale(delta));
-        }
+        } else velocity.x *= factor; // 减速
     }
 };
 
@@ -79,19 +81,17 @@ const WalkState = struct {
         std.log.info("enter walk", .{});
     }
 
-    fn update(delta: f32) void {
+    fn update(_: f32) void {
         if (zhu.window.isKeyDown(.A)) {
             if (velocity.x > 0) velocity.x = 0;
-            velocity.x -= moveForce * delta;
+            force.x = -moveForce;
         } else if (zhu.window.isKeyDown(.D)) {
             if (velocity.x < 0) velocity.x = 0;
-            velocity.x += moveForce * delta;
+            force.x = moveForce;
         } else {
-            return changeState(.idle);
+            force.x = 0;
+            changeState(.idle);
         }
-
-        velocity.x = std.math.clamp(velocity.x, -maxSpeed, maxSpeed);
-        position = position.add(velocity.scale(delta));
     }
 };
 const JumpState = struct {};
