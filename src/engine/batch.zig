@@ -100,10 +100,6 @@ pub fn draw(image: ImageId, pos: math.Vector2) void {
     drawImageId(image, pos, .{});
 }
 
-pub fn drawFlipX(image: ImageId, pos: Vector2, flipX: bool) void {
-    drawImageId(image, pos, .{ .flipX = flipX });
-}
-
 pub const LineOption = struct { color: Color = .white, width: f32 = 1 };
 
 /// 绘制轴对齐的线
