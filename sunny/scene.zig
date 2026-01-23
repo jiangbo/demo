@@ -7,25 +7,13 @@ const level = @import("level.zig");
 
 var help = false;
 var debug = false;
-var vertexBuffer: []zhu.batch.Vertex = undefined;
-
-const atlas: zhu.Atlas = @import("zon/atlas.zon");
 
 pub fn init() void {
-    // window.initText(@import("zon/font.zon"), 32);
-
-    vertexBuffer = window.alloc(zhu.batch.Vertex, 5000);
-    zhu.graphics.frameStats(true);
-    zhu.batch.init(window.size, vertexBuffer);
-    zhu.batch.whiteImage = zhu.graphics.imageId("white.png");
-    zhu.assets.loadAtlas(atlas);
-
     level.init();
 }
 
 pub fn deinit() void {
     level.deinit();
-    window.free(vertexBuffer);
 }
 
 pub fn update(delta: f32) void {

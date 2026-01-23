@@ -4,10 +4,20 @@ const zhu = @import("zhu");
 
 const scene = @import("scene.zig");
 
+var vertexBuffer: []zhu.batch.Vertex = undefined;
 var soundBuffer: [20]zhu.audio.Sound = undefined;
+
+const atlas: zhu.Atlas = @import("zon/atlas.zon");
 
 pub fn init() void {
     zhu.audio.init(44100 / 2, &soundBuffer);
+    // window.initText(@import("zon/font.zon"), 32);
+
+    vertexBuffer = zhu.window.alloc(zhu.batch.Vertex, 5000);
+    zhu.graphics.frameStats(true);
+    zhu.batch.init(zhu.window.size, vertexBuffer);
+    zhu.batch.whiteImage = zhu.graphics.imageId("white.png");
+    zhu.assets.loadAtlas(atlas);
     scene.init();
 }
 
@@ -17,6 +27,7 @@ pub fn frame(delta: f32) void {
 }
 
 pub fn deinit() void {
+    zhu.window.free(vertexBuffer);
     scene.deinit();
     zhu.audio.deinit();
 }
