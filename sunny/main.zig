@@ -13,7 +13,7 @@ pub fn init() void {
     zhu.audio.init(44100 / 2, &soundBuffer);
     // window.initText(@import("zon/font.zon"), 32);
 
-    vertexBuffer = zhu.window.alloc(zhu.batch.Vertex, 5000);
+    vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 5000);
     zhu.graphics.frameStats(true);
     zhu.assets.loadAtlas(atlas);
     zhu.batch.init(zhu.window.size, vertexBuffer);
@@ -28,7 +28,7 @@ pub fn frame(delta: f32) void {
 
 pub fn deinit() void {
     scene.deinit();
-    zhu.window.free(vertexBuffer);
+    zhu.assets.free(vertexBuffer);
     zhu.audio.deinit();
 }
 

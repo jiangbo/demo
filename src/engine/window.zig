@@ -326,10 +326,10 @@ pub fn readAll(path: [:0]const u8) ![]u8 {
         var buffer: [1024]u8 = undefined;
         const len = try readFromJs(path, &buffer);
         // 长度大于0，读完了内容，直接分配返回。
-        if (len > 0) return dupe(u8, buffer[0..@intCast(len)]);
+        if (len > 0) return assets.oomDupe(u8, buffer[0..@intCast(len)]);
 
         // 长度小于0，没有读完，太长了，分配更大的空间再读一次。
-        const large = alloc(u8, buffer.len + @as(usize, @abs(len)));
+        const large = assets.oomAlloc(u8, buffer.len + @as(usize, @abs(len)));
         _ = readFromJs(path, large);
         return large;
     }
@@ -425,10 +425,6 @@ pub fn useWindowIcon(path: [:0]const u8) void {
 pub fn drawCenter(str: text.String, y: f32, option: text.Option) void {
     text.drawCenter(str, size.mul(.init(0.5, y)), option);
 }
-
-pub const alloc = assets.alloc;
-pub const dupe = assets.dupe;
-pub const free = assets.free;
 
 pub const File = assets.File;
 pub const loadTexture = assets.loadTexture;

@@ -25,11 +25,11 @@ pub fn deinit() void {
     sk.fetch.shutdown();
 }
 
-pub fn alloc(comptime T: type, n: usize) []T {
+pub fn oomAlloc(comptime T: type, n: usize) []T {
     return allocator.alloc(T, n) catch oom();
 }
 
-pub fn dupe(comptime T: type, m: []const T) []T {
+pub fn oomDupe(comptime T: type, m: []const T) []T {
     return allocator.dupe(T, m) catch oom();
 }
 
@@ -99,7 +99,7 @@ pub fn loadIcon(path: Path, handle: u64, handler: IconHandler) void {
         fn callback(response: Response) []const u8 {
             const icon = c.stbImage.loadFromMemory(response.data);
             handler(response.index, icon);
-            return dupe(u8, icon.data);
+            return oomDupe(u8, icon.data);
         }
     }.callback);
 }
@@ -188,7 +188,7 @@ const Music = struct {
     }
 
     fn handler(response: Response) []const u8 {
-        const data = dupe(u8, response.data);
+        const data = oomDupe(u8, response.data);
         const stbAudio = c.stbAudio.loadFromMemory(data);
 
         const value = cache.getPtr(response.path).?;
