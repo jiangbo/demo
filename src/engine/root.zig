@@ -20,6 +20,14 @@ pub const Vector2 = math.Vector2;
 pub const Rect = math.Rect;
 pub const Color = graphics.Color;
 
+pub fn imageId(comptime path: []const u8) graphics.ImageId {
+    return comptime assets.id(path);
+}
+
+pub fn getImage(comptime path: []const u8) graphics.Image {
+    return assets.getImage(imageId(path));
+}
+
 pub fn nextEnum(E: type, value: anytype) E {
     const len = @typeInfo(E).@"enum".fields.len;
     if (@typeInfo(@TypeOf(value)) == .int) {

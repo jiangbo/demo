@@ -141,14 +141,6 @@ pub const Atlas = struct {
     images: []const struct { id: ImageId, area: math.Rect },
 };
 
-pub fn imageId(comptime path: []const u8) ImageId {
-    return comptime assets.id(path);
-}
-
-pub fn getImage(comptime path: []const u8) Image {
-    return assets.getImage(imageId(path));
-}
-
 pub var textCount: u32 = 0;
 pub fn beginDraw(clearColor: Color) void {
     gpu.begin(@bitCast(clearColor), window.viewRect);

@@ -5,6 +5,8 @@ const window = zhu.window;
 const batch = zhu.batch;
 const tiled = zhu.extend.tiled;
 
+const player = @import("player.zig");
+
 var help = false;
 var debug = false;
 
@@ -65,6 +67,11 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
         } else unreachable;
 
         const id = object.gid - tileSet.min;
+        if (id == 1) {
+            // 角色，目前特殊处理一下，后续想想角色应该加入到地图还是单独管理
+            player.init(object.position.addY(-object.size.y));
+            continue;
+        }
         const image = zhu.assets.getImage(tileSet.images[id]);
 
         tiles.append(zhu.assets.allocator, .{
@@ -84,10 +91,13 @@ pub fn update(delta: f32) void {
 
     const distance: f32 = std.math.round(300 * delta);
     zhu.camera.control(distance);
+
+    player.update(delta);
 }
 
 pub fn draw() void {
     zhu.batch.beginDraw(.black);
+    defer zhu.batch.endDraw();
 
     for (level.layers) |*layer| {
         if (layer.type == .image) drawImageLayer(layer);
@@ -99,8 +109,9 @@ pub fn draw() void {
         batch.drawImage(tile.image, tile.position, .{});
     }
 
+    player.draw();
+
     if (help) drawHelpInfo() else if (debug) window.drawDebugInfo();
-    zhu.batch.endDraw();
 }
 
 fn drawImageLayer(layer: *const tiled.Layer) void {
