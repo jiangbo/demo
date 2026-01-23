@@ -5,7 +5,6 @@ const math = @import("math.zig");
 const assets = @import("assets.zig");
 const window = @import("window.zig");
 
-pub const Texture = gpu.Texture;
 pub const frameStats = gpu.frameStats;
 pub const queryFrameStats = gpu.queryFrameStats;
 pub const queryBackend = gpu.queryBackend;
@@ -13,8 +12,6 @@ pub const queryBackend = gpu.queryBackend;
 pub const Vector2 = math.Vector2;
 
 pub const ImageId = assets.Id;
-pub const createWhiteImage = assets.createWhiteImage;
-pub const loadImage = assets.loadImage;
 
 pub const Frame = struct { area: math.Rect, interval: f32 = 0.1 };
 

@@ -6,7 +6,6 @@ const batch = zhu.batch;
 const tiled = zhu.extend.tiled;
 
 const level: tiled.Map = @import("zon/level1.zon");
-var texture: zhu.graphics.Texture = undefined;
 var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
 var tiles: std.ArrayList(tiled.Tile) = .empty;
 
@@ -26,7 +25,6 @@ pub fn deinit() void {
 
 fn parseTileLayer(layer: *const tiled.Layer) void {
     var firstImage = zhu.assets.getImage(level.tileSets[0].images[0]);
-    texture = firstImage.texture;
     for (layer.data, 0..) |tileIndex, index| {
         if (tileIndex == 0) continue;
 

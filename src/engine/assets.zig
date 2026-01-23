@@ -105,9 +105,9 @@ pub fn loadIcon(path: Path, handle: u64, handler: IconHandler) void {
 }
 
 pub const Texture = struct {
-    var cache: std.StringHashMapUnmanaged(graphics.Texture) = .empty;
+    var cache: std.StringHashMapUnmanaged(sk.gfx.View) = .empty;
 
-    pub fn load(path: Path) graphics.Texture {
+    pub fn load(path: Path) sk.gfx.View {
         const view = sk.gfx.allocView();
         cache.put(allocator, path, view) catch oom();
         _ = File.load(path, view.id, handler);
