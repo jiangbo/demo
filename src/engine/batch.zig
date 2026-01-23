@@ -18,7 +18,7 @@ pub var pipeline: gpu.RenderPipeline = undefined;
 var gpuBuffer: gpu.Buffer = undefined;
 var vertexBuffer: std.ArrayList(Vertex) = .empty;
 
-pub var whiteImage: graphics.ImageId = undefined;
+pub var whiteImage: graphics.Image = undefined;
 
 const DrawCommand = struct {
     position: Vector2 = .zero, // 位置
@@ -120,7 +120,7 @@ pub fn drawLine(start: Vector2, end: Vector2, option: LineOption) void {
     const vector = end.sub(start);
     const y = start.y - option.width / 2;
 
-    drawImageId(graphics.whiteImage, .init(start.x, y), .{
+    drawImage(graphics.whiteImage, .init(start.x, y), .{
         .size = .init(vector.length(), option.width),
         .color = option.color,
         .radian = vector.atan2(),
@@ -141,7 +141,7 @@ pub fn drawRectBorder(area: math.Rect, width: f32, c: Color) void {
 
 pub const RectOption = struct { color: Color = .white, radian: f32 = 0 };
 pub fn drawRect(area: math.Rect, option: RectOption) void {
-    drawImageId(whiteImage, area.min, .{
+    drawImage(whiteImage, area.min, .{
         .size = area.size,
         .color = option.color,
         .radian = option.radian,

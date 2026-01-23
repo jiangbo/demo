@@ -76,7 +76,7 @@ pub fn loadAtlas(atlas: graphics.Atlas) void {
     }
 }
 
-pub fn createWhiteImage(comptime key: [:0]const u8) Id {
+pub fn createWhiteImage(comptime key: [:0]const u8) Image {
     const data: [4]u8 = @splat(0xFF);
     const image = Texture.makeImage(1, 1, &data);
     const view = sk.gfx.makeView(.{ .texture = .{ .image = image } });
@@ -85,7 +85,7 @@ pub fn createWhiteImage(comptime key: [:0]const u8) Id {
         .texture = view,
         .area = .init(.zero, .init(1, 1)),
     }) catch oom();
-    return comptime id(key);
+    return imageCache.get(comptime id(key)).?;
 }
 
 pub fn getImage(imageId: Id) graphics.Image {
