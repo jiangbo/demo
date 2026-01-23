@@ -27,8 +27,8 @@ pub fn frame(delta: f32) void {
 }
 
 pub fn deinit() void {
-    zhu.window.free(vertexBuffer);
     scene.deinit();
+    zhu.window.free(vertexBuffer);
     zhu.audio.deinit();
 }
 
