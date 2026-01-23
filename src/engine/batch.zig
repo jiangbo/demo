@@ -152,14 +152,14 @@ pub fn drawRect(area: math.Rect, option: RectOption) void {
     });
 }
 
-pub fn drawImageId(image: ImageId, pos: Vector2, option: Option) void {
-    drawImage(assets.getImage(image), pos, option);
+pub fn drawImageId(id: ImageId, pos: Vector2, option: Option) void {
+    drawImage(assets.getImage(id), pos, option);
 }
 
-pub fn drawImage(image: Image, position: Vector2, option: Option) void {
-    var worldPos = position;
+pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
+    var worldPos = pos;
     if (camera.modeEnum == .window) {
-        worldPos = camera.position.add(position);
+        worldPos = camera.position.add(pos);
     }
 
     const size = (option.size orelse image.area.size);
