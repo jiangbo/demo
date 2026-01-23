@@ -12,18 +12,16 @@ const ImageId = graphics.ImageId;
 const Color = graphics.Color;
 const Vector2 = math.Vector2;
 const Matrix = math.Matrix;
-const Texture = gpu.Texture;
 
 pub var pipeline: gpu.RenderPipeline = undefined;
 var gpuBuffer: gpu.Buffer = undefined;
-var vertexBuffer: std.ArrayList(Vertex) = .empty;
-
+pub var vertexBuffer: std.ArrayList(Vertex) = .empty;
 pub var whiteImage: graphics.Image = undefined;
 
 const DrawCommand = struct {
     position: Vector2 = .zero, // 位置
     scale: Vector2 = .one, // 缩放
-    texture: Texture = .{}, // 纹理
+    texture: gpu.Texture = .{}, // 纹理
 };
 const CommandUnion = union(enum) { draw: DrawCommand, scissor: math.Rect };
 const Command = struct { start: u32 = 0, end: u32, cmd: CommandUnion };
@@ -37,7 +35,7 @@ pub const Vertex = extern struct {
     padding: f32 = 1,
     size: math.Vector2, // 大小
     pivot: math.Vector2 = .zero, // 旋转中心
-    texture: math.Vector4, // 纹理坐标
+    texturePosition: math.Vector4, // 纹理坐标
     color: graphics.Color = .white, // 顶点颜色
 };
 
@@ -161,32 +159,28 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     const size = (option.size orelse image.area.size);
     const scaledSize = size.mul(option.scale);
 
-    var imageVector: math.Vector4 = image.area.toVector4();
+    var imageVector: math.Vector4 = image.area.toTexturePosition();
     if (option.flipX) {
         imageVector.x += imageVector.z;
         imageVector.z = -imageVector.z;
     }
 
-    drawVertices(image.texture, &.{Vertex{
+    var drawCommand = &commands[commandIndex].cmd.draw;
+    if (drawCommand.texture.id == 0) {
+        drawCommand.texture = image.texture; // 还没有绘制任何纹理
+    } else if (image.texture.id != drawCommand.texture.id) {
+        startNewDrawCommand(); // 纹理改变，开始新的命令
+        commands[commandIndex].cmd.draw.texture = image.texture;
+    }
+
+    vertexBuffer.appendSliceAssumeCapacity(&.{Vertex{
         .position = worldPos.sub(scaledSize.mul(option.anchor)),
         .radian = option.radian,
         .size = scaledSize,
         .pivot = option.pivot,
-        .texture = imageVector,
+        .texturePosition = imageVector,
         .color = option.color,
     }});
-}
-
-pub fn drawVertices(texture: Texture, vertex: []const Vertex) void {
-    const drawCommand = &commands[commandIndex].cmd.draw;
-    if (drawCommand.texture.id == 0) {
-        drawCommand.texture = texture; // 还没有绘制任何纹理
-    } else if (texture.id != drawCommand.texture.id) {
-        startNewDrawCommand(); // 纹理改变，开始新的命令
-        commands[commandIndex].cmd.draw.texture = texture;
-    }
-
-    vertexBuffer.appendSliceAssumeCapacity(vertex);
 }
 
 pub fn startNewDrawCommand() void {

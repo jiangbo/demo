@@ -279,7 +279,7 @@ pub const Rect = struct {
         return distance2 < std.math.pow(f32, radiusSum, 2);
     }
 
-    pub fn toVector4(self: Rect) Vector4 {
+    pub fn toTexturePosition(self: Rect) Vector4 {
         return .init(self.min.x, self.min.y, self.size.x, self.size.y);
     }
 };

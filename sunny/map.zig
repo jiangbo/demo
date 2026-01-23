@@ -13,7 +13,6 @@ var tiles: std.ArrayList(tiled.Tile) = .empty;
 pub var playerStart: zhu.Vector2 = .zero;
 
 pub fn init() void {
-    tiled.tileSize = level.tileSize;
     for (level.layers) |layer| {
         if (layer.type == .tile) parseTileLayer(&layer) //
         else if (layer.type == .object) parseObjectLayer(&layer);
@@ -53,7 +52,7 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
         tileVertexes.append(zhu.assets.allocator, .{
             .position = pos,
             .size = image.area.size,
-            .texture = image.area.toVector4(),
+            .texturePosition = image.area.toTexturePosition(),
         }) catch @panic("oom, can't append tile");
     }
 }
@@ -84,7 +83,7 @@ pub fn draw() void {
         if (layer.type == .image) drawImageLayer(layer);
     }
 
-    batch.drawVertices(texture, tileVertexes.items);
+    batch.vertexBuffer.appendSliceAssumeCapacity(tileVertexes.items);
 
     for (tiles.items) |tile| {
         batch.drawImage(tile.image, tile.position, .{});
