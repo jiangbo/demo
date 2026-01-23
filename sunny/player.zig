@@ -1,6 +1,8 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
+const tiled = zhu.extend.tiled;
+
 const moveForce = 200; // 移动力
 const factor = 0.85; // 减速因子
 const maxSpeed = 120; // 最大速度
@@ -10,7 +12,7 @@ var image: zhu.graphics.Image = undefined;
 
 var force: zhu.Vector2 = .xy(0, 980); // 角色的受力
 var velocity: zhu.Vector2 = .zero;
-var position: zhu.Vector2 = undefined;
+pub var position: zhu.Vector2 = undefined;
 var state: State = .idle;
 
 pub fn init(pos: zhu.Vector2) void {
@@ -26,6 +28,8 @@ pub fn update(delta: f32) void {
     velocity = velocity.add(force.scale(delta));
     velocity.x = std.math.clamp(velocity.x, -maxSpeed, maxSpeed);
     position = position.add(velocity.scale(delta));
+
+    // const tilePosition = toPosition.div(tiled.tileSize);
 }
 
 pub fn draw() void {
