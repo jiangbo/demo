@@ -31,7 +31,7 @@ pub fn draw() void {
 
 const State = union(enum) {
     idle: IdleState,
-    // walk: WalkState,
+    walk: WalkState,
     // jump: JumpState,
     // fall: FallState,
 
@@ -54,9 +54,29 @@ const State = union(enum) {
     }
 };
 
+fn changeState(newState: State) void {
+    state = newState;
+    state.enter();
+}
+
 const IdleState = struct {
     fn enter() void {
         std.log.info("enter idle", .{});
+    }
+
+    fn update(delta: f32) void {
+        if (zhu.window.isAnyKeyDown(&.{ .A, .D })) {
+            changeState(.walk);
+        } else {
+            velocity.x *= factor;
+            position = position.add(velocity.scale(delta));
+        }
+    }
+};
+
+const WalkState = struct {
+    fn enter() void {
+        std.log.info("enter walk", .{});
     }
 
     fn update(delta: f32) void {
@@ -67,15 +87,12 @@ const IdleState = struct {
             if (velocity.x < 0) velocity.x = 0;
             velocity.x += moveForce * delta;
         } else {
-            // 没有按的时候，减少速度
-            velocity.x *= factor;
+            return changeState(.idle);
         }
 
         velocity.x = std.math.clamp(velocity.x, -maxSpeed, maxSpeed);
         position = position.add(velocity.scale(delta));
     }
 };
-
-const WalkState = struct {};
 const JumpState = struct {};
 const FallState = struct {};
