@@ -48,7 +48,8 @@ pub fn main() void {
 
     zhu.window.run(allocator, .{
         .title = "阳光岛",
-        .size = .xy(640, 360),
+        .size = .xy(1280, 720),
+        .logicSize = .xy(640, 360),
         .scaleEnum = .integer,
     });
 }

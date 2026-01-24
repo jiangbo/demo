@@ -9,6 +9,7 @@ const moveForce = 200; // 移动力
 const factor = 0.85; // 减速因子
 const maxSpeed = 120; // 最大速度
 const gravity = 980; // 重力
+const jumpForce = 350.0; // 跳跃力
 
 const size: zhu.Vector2 = .xy(32, 32);
 var image: zhu.graphics.Image = undefined;
@@ -33,7 +34,7 @@ pub fn update(delta: f32) void {
     const toPosition = position.add(velocity.scale(delta));
 
     const clamped = map.clamp(position, toPosition, size);
-    std.log.info("old: {}, new: {}, clamped: {}", .{ position, toPosition, clamped });
+    // std.log.info("old: {}, new: {}, clamped: {}", .{ position, toPosition, clamped });
     if (clamped.x == position.x) velocity.x = 0;
     if (clamped.y == position.y) velocity.y = 0;
     position = clamped;
@@ -48,8 +49,8 @@ pub fn draw() void {
 const State = union(enum) {
     idle: IdleState,
     walk: WalkState,
-    // jump: JumpState,
-    // fall: FallState,
+    jump: JumpState,
+    fall: FallState,
 
     fn enter(self: State) void {
         switch (self) {
@@ -81,7 +82,9 @@ const IdleState = struct {
     }
 
     fn update(_: f32) void {
-        if (zhu.window.isAnyKeyDown(&.{ .A, .D })) {
+        if (zhu.window.isAnyKeyPress(&.{ .W, .SPACE })) {
+            changeState(.jump);
+        } else if (zhu.window.isAnyKeyDown(&.{ .A, .D })) {
             changeState(.walk);
         } else velocity.x *= factor; // 减速
     }
@@ -93,7 +96,9 @@ const WalkState = struct {
     }
 
     fn update(_: f32) void {
-        if (zhu.window.isKeyDown(.A)) {
+        if (zhu.window.isAnyKeyPress(&.{ .W, .SPACE })) {
+            changeState(.jump);
+        } else if (zhu.window.isKeyDown(.A)) {
             if (velocity.x > 0) velocity.x = 0;
             force.x = -moveForce;
         } else if (zhu.window.isKeyDown(.D)) {
@@ -105,5 +110,26 @@ const WalkState = struct {
         }
     }
 };
-const JumpState = struct {};
-const FallState = struct {};
+const JumpState = struct {
+    fn enter() void {
+        std.log.info("enter jump", .{});
+        velocity.y = -jumpForce;
+    }
+
+    fn update(_: f32) void {
+        if (velocity.y > 0) {
+            changeState(.fall);
+        }
+    }
+};
+const FallState = struct {
+    fn enter() void {
+        std.log.info("enter fall", .{});
+    }
+
+    fn update(_: f32) void {
+        if (velocity.y == 0) {
+            changeState(.idle);
+        }
+    }
+};
