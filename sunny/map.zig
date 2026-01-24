@@ -98,7 +98,9 @@ pub fn tileIndexToWorld(index: usize) zhu.Vector2 {
 }
 
 pub fn clamp(old: Vector2, new: Vector2, size: Vector2) Vector2 {
-    return .xy(clampX(old, new, size).x, clampY(old, new, size).y);
+    const clampedX = clampX(old, .xy(new.x, old.y), size);
+    const clampedY = clampY(old, .xy(old.x, new.y), size);
+    return .xy(clampedX.x, clampedY.y);
 }
 
 const epsilon = zhu.Vector2.one.scale(-zhu.math.epsilon);
