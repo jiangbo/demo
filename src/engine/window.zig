@@ -427,13 +427,6 @@ pub fn drawCenter(str: text.String, y: f32, option: text.Option) void {
     text.drawCenter(str, size.mul(.init(0.5, y)), option);
 }
 
-pub const File = assets.File;
-pub const loadTexture = assets.loadTexture;
-pub const playSound = audio.playSound;
-pub const playMusic = audio.playMusic;
-pub const stopMusic = audio.stopMusic;
-pub const random = math.random;
-
 pub const isKeyDown = input.isKeyDown;
 pub const isAnyKeyDown = input.isAnyKeyDown;
 pub const isKeyPress = input.isKeyPress;
