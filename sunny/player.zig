@@ -19,6 +19,7 @@ var force: zhu.Vector2 = .xy(0, gravity);
 var velocity: zhu.Vector2 = .zero;
 pub var position: zhu.Vector2 = undefined;
 var state: State = .idle;
+var flip: bool = false;
 
 pub fn init(pos: zhu.Vector2) void {
     position = pos;
@@ -102,7 +103,7 @@ const IdleState = struct {
 
     fn draw() void {
         batch.drawImage(animation.currentImage(), position, .{
-            .flipX = velocity.x < 0,
+            .flipX = flip,
         });
     }
 };
@@ -128,9 +129,11 @@ const WalkState = struct {
         } else if (zhu.window.isKeyDown(.A)) {
             if (velocity.x > 0) velocity.x = 0;
             force.x = -moveForce;
+            flip = true;
         } else if (zhu.window.isKeyDown(.D)) {
             if (velocity.x < 0) velocity.x = 0;
             force.x = moveForce;
+            flip = false;
         } else {
             force.x = 0;
             changeState(.idle);
@@ -139,7 +142,7 @@ const WalkState = struct {
 
     fn draw() void {
         batch.drawImage(animation.currentImage(), position, .{
-            .flipX = velocity.x < 0,
+            .flipX = flip,
         });
     }
 };
@@ -162,9 +165,7 @@ const JumpState = struct {
     }
 
     fn draw() void {
-        batch.drawImage(jumpImage, position, .{
-            .flipX = velocity.x < 0,
-        });
+        batch.drawImage(jumpImage, position, .{ .flipX = flip });
     }
 };
 const FallState = struct {
@@ -185,8 +186,6 @@ const FallState = struct {
     }
 
     fn draw() void {
-        batch.drawImage(fallImage, position, .{
-            .flipX = velocity.x < 0,
-        });
+        batch.drawImage(fallImage, position, .{ .flipX = flip });
     }
 };
