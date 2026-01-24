@@ -3,14 +3,17 @@ const zhu = @import("zhu");
 
 const tiled = zhu.extend.tiled;
 
+const map = @import("map.zig");
+
 const moveForce = 200; // 移动力
 const factor = 0.85; // 减速因子
 const maxSpeed = 120; // 最大速度
+const gravity = 980; // 重力
 
 const size: zhu.Vector2 = .xy(32, 32);
 var image: zhu.graphics.Image = undefined;
 
-var force: zhu.Vector2 = .xy(0, 980); // 角色的受力
+var force: zhu.Vector2 = .xy(0, gravity);
 var velocity: zhu.Vector2 = .zero;
 pub var position: zhu.Vector2 = undefined;
 var state: State = .idle;
@@ -27,9 +30,12 @@ pub fn update(delta: f32) void {
 
     velocity = velocity.add(force.scale(delta));
     velocity.x = std.math.clamp(velocity.x, -maxSpeed, maxSpeed);
-    position = position.add(velocity.scale(delta));
+    const toPosition = position.add(velocity.scale(delta));
 
-    // const tilePosition = toPosition.div(tiled.tileSize);
+    const clamped = map.clamp(position, toPosition, size);
+    if (clamped.x == position.x) velocity.x = 0;
+    if (clamped.y == position.y) velocity.y = 0;
+    position = clamped;
 }
 
 pub fn draw() void {

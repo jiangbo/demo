@@ -3,6 +3,7 @@ const std = @import("std");
 const graphics = @import("../graphics.zig");
 const math = @import("../math.zig");
 
+pub const Position = struct { x: u32, y: u32 };
 const Vector2 = math.Vector2;
 const Rect = math.Rect;
 

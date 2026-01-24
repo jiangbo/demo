@@ -233,6 +233,7 @@ export fn windowFrame() void {
         } else currentSmoothTime = delta; // 没有找到平滑的时间
     }
 
+    if (currentSmoothTime > 0.1) currentSmoothTime = 0.1;
     call(root, "frame", .{currentSmoothTime});
     input.lastKeyState = input.keyState;
     input.lastMouseState = input.mouseState;

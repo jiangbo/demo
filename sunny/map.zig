@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const window = zhu.window;
 const batch = zhu.batch;
 const tiled = zhu.extend.tiled;
+const Vector2 = zhu.Vector2;
 
 const level: tiled.Map = @import("zon/level1.zon");
 var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
@@ -74,6 +75,85 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
             .position = object.position.addY(-object.size.y),
         }) catch @panic("oom, can't append tile");
     }
+}
+
+pub fn worldToTilePosition(pos: zhu.Vector2) tiled.Position {
+    const tilePos = pos.div(level.tileSize).floor();
+    const x: u32 = @intFromFloat(tilePos.x);
+    const y: u32 = @intFromFloat(tilePos.y);
+    return .{ .x = x, .y = y };
+}
+
+pub fn worldToTileIndex(pos: zhu.Vector2) usize {
+    const tilePos = worldToTilePosition(pos);
+    if (tilePos.x < 0 or tilePos.y < 0) return 0;
+    if (tilePos.x >= level.width or tilePos.y >= level.height) return 0;
+    return tilePos.y * level.width + tilePos.x;
+}
+
+pub fn tileIndexToWorld(index: usize) zhu.Vector2 {
+    const x: f32 = @floatFromInt(index % level.width);
+    const y: f32 = @floatFromInt(index / level.width);
+    return level.tileSize.mul(.xy(x, y));
+}
+
+pub fn clamp(old: Vector2, new: Vector2, size: Vector2) Vector2 {
+    return .xy(clampX(old, new, size).x, clampY(old, new, size).y);
+}
+
+const epsilon = zhu.Vector2.one.scale(-zhu.math.epsilon);
+fn clampX(old: Vector2, new: Vector2, size: Vector2) Vector2 {
+    const sz = size.add(epsilon);
+
+    if (new.x < old.x) { // 向左移动
+        var tileIndex = worldToTileIndex(new);
+        if (level.states[tileIndex] == 1) { // 左上角碰撞
+            return tileIndexToWorld(tileIndex + 1);
+        }
+        tileIndex = worldToTileIndex(new.addY(sz.y));
+        if (level.states[tileIndex] == 1) { // 左下角碰撞
+            return tileIndexToWorld(tileIndex + 1);
+        }
+    } else if (new.x > old.x) { // 向右移动
+        const offset = level.tileSize.x - size.x;
+        var tileIndex = worldToTileIndex(new.addX(sz.x));
+        if (level.states[tileIndex] == 1) { // 右上角碰撞
+            return tileIndexToWorld(tileIndex - 1).addX(offset);
+        }
+        tileIndex = worldToTileIndex(new.add(sz));
+        if (level.states[tileIndex] == 1) { // 右下角碰撞
+            return tileIndexToWorld(tileIndex - 1).addX(offset);
+        }
+    }
+    return new;
+}
+
+fn clampY(old: Vector2, new: Vector2, size: Vector2) Vector2 {
+    const w = level.width;
+
+    const sz = size.add(epsilon);
+    if (new.y < old.y) { // 向上移动
+        var tileIndex = worldToTileIndex(new);
+        if (level.states[tileIndex] == 1) { // 左上角碰撞
+            return tileIndexToWorld(tileIndex + w);
+        }
+        tileIndex = worldToTileIndex(new.addX(sz.x));
+        if (level.states[tileIndex] == 1) { // 右上角碰撞
+            return tileIndexToWorld(tileIndex + w);
+        }
+    } else if (new.y > old.y) { // 向下移动
+        var tileIndex = worldToTileIndex(new.addY(sz.y));
+        const offset = level.tileSize.y - size.y;
+        if (level.states[tileIndex] == 1) {
+            return tileIndexToWorld(tileIndex - w).addY(offset);
+        }
+
+        tileIndex = worldToTileIndex(new.add(sz));
+        if (level.states[tileIndex] == 1) {
+            return tileIndexToWorld(tileIndex - w).addY(offset);
+        }
+    }
+    return new;
 }
 
 pub fn draw() void {
