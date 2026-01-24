@@ -99,9 +99,6 @@ pub fn main() !void {
     const len: usize = @intCast(tiledMap.width * tiledMap.height);
     const outputStates = try a.alloc(u32, len);
     for (layers[3].data, outputStates) |tile, *state| {
-        if (states[tile] != 0) {
-            std.log.info("state: {}", .{states[tile]});
-        }
         state.* = states[tile];
     }
 
@@ -175,11 +172,13 @@ fn parseTileSet(a: Allocator, tileMap: tiled.TiledMap, name: []const u8) ![]Orig
         if (tileSet.image.len != 0) {
             images = try a.alloc(u32, 1);
             images[0] = std.hash.Fnv1a_32.hash(tileSet.image[3..]);
+            std.log.info("image: {s}, id: {}", .{ tileSet.image[3..], images[0] });
         } else {
             images = try a.alloc(u32, maxId - min);
             @memset(images, 0);
             for (tileSet.tiles) |tile| {
                 images[tile.id] = std.hash.Fnv1a_32.hash(tile.image[3..]);
+                std.log.info("image: {s}, id: {}", .{ tile.image[3..], images[tile.id] });
             }
         }
 

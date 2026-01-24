@@ -6,11 +6,25 @@ const batch = zhu.batch;
 const tiled = zhu.extend.tiled;
 const Vector2 = zhu.Vector2;
 
+pub const ObjectEnum = enum(u32) {
+    player = zhu.imageId("textures/Actors/foxy.png"),
+    eagle = zhu.imageId("textures/Actors/eagle-attack.png"),
+    frog = zhu.imageId("textures/Actors/frog.png"),
+    opossum = zhu.imageId("textures/Actors/opossum.png"),
+    skull = zhu.imageId("textures/Props/skulls.png"),
+    spikes = zhu.imageId("textures/Props/spikes-top.png"),
+    cherry = zhu.imageId("textures/Items/cherry.png"),
+    gem = zhu.imageId("textures/Items/gem.png"),
+};
+
+pub const Object = struct {
+    type: ObjectEnum,
+    position: Vector2,
+    size: Vector2,
+};
 const level: tiled.Map = @import("zon/level1.zon");
 var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
-var tiles: std.ArrayList(tiled.Tile) = .empty;
-
-pub var playerStart: zhu.Vector2 = .zero;
+pub var objects: std.ArrayList(Object) = .empty;
 
 pub fn init() void {
     for (level.layers) |layer| {
@@ -20,7 +34,7 @@ pub fn init() void {
 }
 
 pub fn deinit() void {
-    tiles.deinit(zhu.assets.allocator);
+    objects.deinit(zhu.assets.allocator);
     tileVertexes.deinit(zhu.assets.allocator);
 }
 
@@ -62,17 +76,12 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
             if (object.gid < tileSet.max) break :blk tileSet;
         } else unreachable;
 
-        const id = object.gid - tileSet.min;
-        if (id == 1) {
-            // 角色，目前特殊处理一下，后续想想角色应该加入到地图还是单独管理
-            playerStart = object.position.addY(-object.size.y);
-            continue;
-        }
-        const image = zhu.assets.getImage(tileSet.images[id]);
+        const index = object.gid - tileSet.min;
 
-        tiles.append(zhu.assets.allocator, .{
-            .image = image.sub(.init(.zero, object.size)),
+        objects.append(zhu.assets.allocator, .{
+            .type = @enumFromInt(tileSet.images[index]),
             .position = object.position.addY(-object.size.y),
+            .size = object.size,
         }) catch @panic("oom, can't append tile");
     }
 }
@@ -164,10 +173,6 @@ pub fn draw() void {
     }
 
     batch.vertexBuffer.appendSliceAssumeCapacity(tileVertexes.items);
-
-    for (tiles.items) |tile| {
-        batch.drawImage(tile.image, tile.position, .{});
-    }
 
     for (0..level.height) |y| {
         for (0..level.width) |x| {

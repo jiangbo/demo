@@ -7,13 +7,21 @@ const tiled = zhu.extend.tiled;
 
 const map = @import("map.zig");
 const player = @import("player.zig");
+const object = @import("object.zig");
 
 var help = false;
 var debug = false;
 
 pub fn init() void {
     map.init();
-    player.init(map.playerStart);
+
+    for (map.objects.items, 0..) |obj, index| {
+        if (obj.type != .player) continue;
+        player.init(obj.position);
+        _ = map.objects.swapRemove(index);
+        break;
+    }
+    object.init(map.objects.items);
 }
 
 pub fn deinit() void {
@@ -32,6 +40,7 @@ pub fn update(delta: f32) void {
     zhu.camera.control(distance);
 
     player.update(delta);
+    object.update(delta);
 }
 
 pub fn draw() void {
@@ -39,6 +48,7 @@ pub fn draw() void {
     defer zhu.batch.endDraw();
 
     map.draw();
+    object.draw();
     player.draw();
 
     if (help) drawHelpInfo() else if (debug) window.drawDebugInfo();
