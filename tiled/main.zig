@@ -9,6 +9,7 @@ const Map = struct {
 
     tileSize: Vector2,
     layers: []Layer,
+    states: []u32,
     tileSets: []TileSet,
 };
 
@@ -52,6 +53,25 @@ pub const TileSet = struct {
     images: []u32,
 };
 
+pub const OriginTileSet = struct {
+    columns: u32,
+    min: u32,
+    max: u32,
+    images: []u32,
+    states: []u32,
+
+    fn toOutputTileSet(self: OriginTileSet) TileSet {
+        return TileSet{
+            .columns = self.columns,
+            .min = self.min,
+            .max = self.max,
+            .images = self.images,
+        };
+    }
+};
+
+const parseJson = std.json.parseFromSliceLeaky;
+const Allocator = std.mem.Allocator;
 pub fn main() !void {
     var debugAllocator: std.heap.DebugAllocator(.{}) = .init;
     defer _ = debugAllocator.deinit();
@@ -65,11 +85,116 @@ pub fn main() !void {
     std.log.info("file name: {s}", .{name});
 
     const max = std.math.maxInt(usize);
-    var content = try std.fs.cwd().readFileAlloc(a, name, max);
+    const content = try std.fs.cwd().readFileAlloc(a, name, max);
+    const tiledMap = try parseJson(tiled.TiledMap, a, content, .{});
 
-    const parseJson = std.json.parseFromSliceLeaky;
-    const tiledMap = try parseJson(tiled.TiledMap, a, content, .{ .ignore_unknown_fields = true });
+    const tileSets = try parseTileSet(a, tiledMap, name);
+    const outputTileSets = try a.alloc(TileSet, tileSets.len);
+    for (tileSets, 0..) |ts, i| {
+        outputTileSets[i] = ts.toOutputTileSet();
+    }
+    const layers = try parseLayers(a, tiledMap);
 
+    // 检测碰撞属性
+    const len: usize = @intCast(tiledMap.width * tiledMap.height);
+    const outputStates = try a.alloc(u32, len);
+    for (layers[3].data, outputStates) |tile, *state| {
+        if (states[tile] != 0) {
+            std.log.info("state: {}", .{states[tile]});
+        }
+        state.* = states[tile];
+    }
+
+    const map: Map = .{
+        .height = tiledMap.height,
+        .width = tiledMap.width,
+        .layers = layers,
+        .tileSize = .{ .x = tiledMap.tilewidth, .y = tiledMap.tileheight },
+        .tileSets = outputTileSets,
+        .states = outputStates,
+    };
+
+    // 写入 font.zon 文件
+    const outputName = try std.mem.replaceOwned(u8, a, name, ".tmj", ".zon");
+    const file = try std.fs.cwd().createFile(outputName, .{});
+    defer file.close();
+    var buffer: [4096]u8 = undefined;
+    var writer = file.writer(&buffer);
+    try std.zon.stringify.serialize(map, .{}, &writer.interface);
+    try writer.interface.flush();
+}
+
+var states: []u32 = &.{};
+fn parseTileSet(a: Allocator, tileMap: tiled.TiledMap, name: []const u8) ![]OriginTileSet {
+    // 获取 tmx 文件所在的目录
+    const nameDir = std.fs.path.dirname(name) orelse ".";
+    var dir = try std.fs.cwd().openDir(nameDir, .{});
+    defer dir.close();
+
+    const last = tileMap.tilesets[tileMap.tilesets.len - 1];
+    states = try a.alloc(u32, last.firstgid + 1024);
+    @memset(states, 0);
+
+    const max = std.math.maxInt(u32);
+    const tileSets = try a.alloc(OriginTileSet, tileMap.tilesets.len);
+    for (tileSets, tileMap.tilesets, 0..) |*ts, old, index| {
+
+        // 读取 tileSet 文件
+        const content = try dir.readFileAlloc(a, old.source, max);
+        std.log.info("read tileSet: {s}", .{old.source});
+        const tileSet = try parseJson(tiled.TileSet, a, content, .{});
+
+        if (tileSet.columns > 0) {
+            std.log.info("Loaded tileSet: {s} ({}x{} tiles)", .{ tileSet.name, tileSet.columns, tileSet.tilecount / tileSet.columns });
+        } else {
+            std.log.info("Loaded tileSet: {s} ({} tiles - collection)", .{ tileSet.name, tileSet.tilecount });
+        }
+
+        const min = tileMap.tilesets[index].firstgid;
+        var maxId: u32 = 0;
+        if (index == tileSets.len - 1) {
+            maxId = min + tileSet.tilecount;
+        } else {
+            maxId = tileMap.tilesets[index + 1].firstgid;
+        }
+
+        for (tileSet.tiles) |tile| {
+            if (tile.properties.len == 0) continue;
+
+            const property = tile.properties[0];
+            if (!std.mem.eql(u8, property.name, "solid")) continue;
+
+            if (property.value.bool) {
+                const id = tile.id + min;
+                std.log.info("id: {}", .{id});
+                states[id] = 1;
+            }
+        }
+
+        var images: []u32 = &.{};
+        if (tileSet.image.len != 0) {
+            images = try a.alloc(u32, 1);
+            images[0] = std.hash.Fnv1a_32.hash(tileSet.image[3..]);
+        } else {
+            images = try a.alloc(u32, maxId - min);
+            @memset(images, 0);
+            for (tileSet.tiles) |tile| {
+                images[tile.id] = std.hash.Fnv1a_32.hash(tile.image[3..]);
+            }
+        }
+
+        ts.* = OriginTileSet{
+            .columns = tileSet.columns,
+            .min = tileMap.tilesets[index].firstgid,
+            .max = maxId,
+            .images = images,
+            .states = states,
+        };
+    }
+    return tileSets;
+}
+
+fn parseLayers(a: Allocator, tiledMap: tiled.TiledMap) ![]Layer {
     const layers: []Layer = try a.alloc(Layer, tiledMap.layers.len);
 
     var layerCount: usize = 0;
@@ -118,67 +243,5 @@ pub fn main() !void {
         if (old.visible) layerCount += 1;
     }
 
-    // 获取 tmx 文件所在的目录
-    const nameDir = std.fs.path.dirname(name) orelse ".";
-    var dir = try std.fs.cwd().openDir(nameDir, .{});
-    defer dir.close();
-
-    const tileSets: []TileSet = try a.alloc(TileSet, tiledMap.tilesets.len);
-    for (tileSets, tiledMap.tilesets, 0..) |*ts, old, index| {
-
-        // 读取 tileSet 文件
-        content = try dir.readFileAlloc(a, old.source, max);
-        std.log.info("read tileSet: {s}", .{old.source});
-        const tileSet = try parseJson(tiled.TileSet, a, content, .{});
-
-        if (tileSet.columns > 0) {
-            std.log.info("Loaded tileSet: {s} ({}x{} tiles)", .{ tileSet.name, tileSet.columns, tileSet.tilecount / tileSet.columns });
-        } else {
-            std.log.info("Loaded tileSet: {s} ({} tiles - collection)", .{ tileSet.name, tileSet.tilecount });
-        }
-
-        const min = tiledMap.tilesets[index].firstgid;
-        var maxId: u32 = 0;
-        if (index == tileSets.len - 1) {
-            maxId = min + tileSet.tilecount;
-        } else {
-            maxId = tiledMap.tilesets[index + 1].firstgid;
-        }
-
-        var images: []u32 = &.{};
-        if (tileSet.image.len != 0) {
-            images = try a.alloc(u32, 1);
-            images[0] = std.hash.Fnv1a_32.hash(tileSet.image[3..]);
-        } else {
-            images = try a.alloc(u32, maxId - min);
-            @memset(images, 0);
-            for (tileSet.tiles) |tile| {
-                images[tile.id] = std.hash.Fnv1a_32.hash(tile.image[3..]);
-            }
-        }
-
-        ts.* = TileSet{
-            .columns = tileSet.columns,
-            .min = tiledMap.tilesets[index].firstgid,
-            .max = maxId,
-            .images = images,
-        };
-    }
-
-    const map: Map = .{
-        .height = tiledMap.height,
-        .width = tiledMap.width,
-        .layers = layers[0..layerCount],
-        .tileSize = .{ .x = tiledMap.tilewidth, .y = tiledMap.tileheight },
-        .tileSets = tileSets,
-    };
-
-    // 写入 font.zon 文件
-    const outputName = try std.mem.replaceOwned(u8, a, name, ".tmj", ".zon");
-    const file = try std.fs.cwd().createFile(outputName, .{});
-    defer file.close();
-    var buffer: [4096]u8 = undefined;
-    var writer = file.writer(&buffer);
-    try std.zon.stringify.serialize(map, .{}, &writer.interface);
-    try writer.interface.flush();
+    return layers[0..layerCount];
 }

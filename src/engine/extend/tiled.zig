@@ -13,6 +13,7 @@ pub const Map = struct {
     tileSize: graphics.Vector2,
     layers: []const Layer,
     tileSets: []const TileSet,
+    states: []const u8,
 };
 
 pub const LayerEnum = enum { image, tile, object };

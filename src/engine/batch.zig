@@ -91,7 +91,7 @@ pub fn endDraw() void {
 }
 
 pub fn debugDraw(area: math.Rect) void {
-    drawRect(area, .{ .color = .{ .x = 1, .z = 1, .w = 0.4 } });
+    drawRect(area, .{ .color = .rgba(1, 0, 1, 0.4) });
 }
 
 pub fn draw(image: ImageId, pos: math.Vector2) void {

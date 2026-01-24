@@ -86,6 +86,17 @@ pub fn draw() void {
     for (tiles.items) |tile| {
         batch.drawImage(tile.image, tile.position, .{});
     }
+
+    for (0..level.height) |y| {
+        for (0..level.width) |x| {
+            const index = y * level.width + x;
+            const state = level.states[index];
+            if (state == 0) continue;
+
+            const pos = level.tileSize.mul(.xy(@floatFromInt(x), @floatFromInt(y)));
+            batch.debugDraw(.init(pos, level.tileSize));
+        }
+    }
 }
 
 fn drawImageLayer(layer: *const tiled.Layer) void {
