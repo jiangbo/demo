@@ -76,6 +76,10 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
             if (object.gid < tileSet.max) break :blk tileSet;
         } else unreachable;
 
+        if (object.gid == 0) {
+            std.log.info("todo 0 gid, position: {}", .{object.position});
+            continue;
+        }
         const index = object.gid - tileSet.min;
 
         objects.append(zhu.assets.allocator, .{

@@ -65,13 +65,15 @@ pub const TiledObject = struct {
 
     gid: ?u32 = null, // tile object 才有
 
-    x: i32,
-    y: i32,
+    x: f32,
+    y: f32,
 
-    width: i32,
-    height: i32,
+    width: f32,
+    height: f32,
     rotation: f32,
     visible: bool,
+    point: bool = false,
+    properties: []Property = &.{},
 };
 
 pub const TilesetRef = struct {

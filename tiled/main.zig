@@ -41,8 +41,8 @@ const Layer = struct {
 
 pub const Object = struct {
     gid: u32,
-    position: Vector2,
-    size: Vector2,
+    position: struct { x: f32, y: f32 },
+    size: struct { x: f32, y: f32 },
     rotation: f32,
 };
 
@@ -163,7 +163,6 @@ fn parseTileSet(a: Allocator, tileMap: tiled.TiledMap, name: []const u8) ![]Orig
 
             if (property.value.bool) {
                 const id = tile.id + min;
-                std.log.info("id: {}", .{id});
                 states[id] = 1;
             }
         }
@@ -216,7 +215,7 @@ fn parseLayers(a: Allocator, tiledMap: tiled.TiledMap) ![]Layer {
             objects = try a.alloc(Object, old.objects.?.len);
             for (objects, old.objects.?) |*object, obj| {
                 object.* = Object{
-                    .gid = obj.gid.?,
+                    .gid = obj.gid orelse 0,
                     .position = .{ .x = obj.x, .y = obj.y },
                     .size = .{ .x = obj.width, .y = obj.height },
                     .rotation = obj.rotation,
