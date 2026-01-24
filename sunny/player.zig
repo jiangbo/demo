@@ -1,6 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
+const batch = zhu.batch;
 const tiled = zhu.extend.tiled;
 
 const map = @import("map.zig");
@@ -22,7 +23,10 @@ var state: State = .idle;
 pub fn init(pos: zhu.Vector2) void {
     position = pos;
     const foxy = zhu.getImage("textures/Actors/foxy.png");
+
     image = foxy.sub(.init(.zero, size));
+    inline for (std.meta.fields(State)) |field| field.type.init();
+
     state.enter();
 }
 
@@ -41,9 +45,7 @@ pub fn update(delta: f32) void {
 }
 
 pub fn draw() void {
-    zhu.batch.drawImage(image, position, .{
-        .flipX = velocity.x < 0,
-    });
+    state.draw();
 }
 
 const State = union(enum) {
@@ -77,25 +79,50 @@ fn changeState(newState: State) void {
 }
 
 const IdleState = struct {
+    var animation: zhu.graphics.FrameAnimation = undefined;
+    const frames = zhu.graphics.loopFramesX(4, size, 0.2);
+
+    pub fn init() void {
+        const idleImage = image.sub(.init(.zero, .xy(32, 128)));
+        animation = .init(idleImage, &frames);
+    }
+
     fn enter() void {
         std.log.info("enter idle", .{});
     }
 
-    fn update(_: f32) void {
+    fn update(delta: f32) void {
+        animation.loopUpdate(delta);
         if (zhu.window.isAnyKeyPress(&.{ .W, .SPACE })) {
             changeState(.jump);
         } else if (zhu.window.isAnyKeyDown(&.{ .A, .D })) {
             changeState(.walk);
         } else velocity.x *= factor; // 减速
     }
+
+    fn draw() void {
+        batch.drawImage(animation.currentImage(), position, .{
+            .flipX = velocity.x < 0,
+        });
+    }
 };
 
 const WalkState = struct {
+    var animation: zhu.graphics.FrameAnimation = undefined;
+    const frames = zhu.graphics.loopFramesX(6, size, 0.1);
+
+    pub fn init() void {
+        const walkImage = image.sub(.init(.xy(0, 32), .xy(32, 198)));
+        animation = .init(walkImage, &frames);
+    }
+
     fn enter() void {
         std.log.info("enter walk", .{});
     }
 
-    fn update(_: f32) void {
+    fn update(delta: f32) void {
+        animation.loopUpdate(delta);
+
         if (zhu.window.isAnyKeyPress(&.{ .W, .SPACE })) {
             changeState(.jump);
         } else if (zhu.window.isKeyDown(.A)) {
@@ -109,8 +136,20 @@ const WalkState = struct {
             changeState(.idle);
         }
     }
+
+    fn draw() void {
+        batch.drawImage(animation.currentImage(), position, .{
+            .flipX = velocity.x < 0,
+        });
+    }
 };
 const JumpState = struct {
+    var jumpImage: zhu.graphics.Image = undefined;
+
+    pub fn init() void {
+        jumpImage = image.sub(.init(.xy(0, 160), size));
+    }
+
     fn enter() void {
         std.log.info("enter jump", .{});
         velocity.y = -jumpForce;
@@ -121,8 +160,20 @@ const JumpState = struct {
             changeState(.fall);
         }
     }
+
+    fn draw() void {
+        batch.drawImage(jumpImage, position, .{
+            .flipX = velocity.x < 0,
+        });
+    }
 };
 const FallState = struct {
+    var fallImage: zhu.graphics.Image = undefined;
+
+    pub fn init() void {
+        fallImage = image.sub(.init(.xy(32, 160), size));
+    }
+
     fn enter() void {
         std.log.info("enter fall", .{});
     }
@@ -131,5 +182,11 @@ const FallState = struct {
         if (velocity.y == 0) {
             changeState(.idle);
         }
+    }
+
+    fn draw() void {
+        batch.drawImage(fallImage, position, .{
+            .flipX = velocity.x < 0,
+        });
     }
 };

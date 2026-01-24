@@ -106,6 +106,18 @@ pub fn framesX(comptime count: u8, size: Vector2, d: f32) [count]Frame {
     return result;
 }
 
+pub fn loopFramesX(comptime count: u8, size: Vector2, d: f32) //
+[count + count - 2]Frame {
+    var result: [count + count - 2]Frame = undefined;
+    for (&result, 0..) |*frame, i| {
+        var index: f32 = @floatFromInt(i);
+        if (i >= count) index = @floatFromInt(count + count - 2 - i);
+        frame.area = .init(.xy(index * size.x, 0), size);
+        frame.interval = d;
+    }
+    return result;
+}
+
 pub const Image = struct {
     texture: gpu.Texture,
     area: math.Rect,
