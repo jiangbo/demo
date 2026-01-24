@@ -105,11 +105,11 @@ pub fn loadIcon(path: Path, handle: u64, handler: IconHandler) void {
 }
 
 pub const Texture = struct {
-    var cache: std.StringHashMapUnmanaged(sk.gfx.View) = .empty;
+    var cache: std.AutoHashMapUnmanaged(Id, sk.gfx.View) = .empty;
 
     pub fn load(path: Path) sk.gfx.View {
         const view = sk.gfx.allocView();
-        cache.put(allocator, path, view) catch oom();
+        cache.put(allocator, id(path), view) catch oom();
         _ = File.load(path, view.id, handler);
         return view;
     }
@@ -117,12 +117,12 @@ pub const Texture = struct {
     fn handler(response: Response) []const u8 {
         const data = response.data;
 
-        const image = c.stbImage.loadFromMemory(data);
-        defer c.stbImage.unload(image);
-        const texture = cache.get(response.path).?;
+        const img = c.stbImage.loadFromMemory(data);
+        defer c.stbImage.unload(img);
+        const view: sk.gfx.View = .{ .id = @intCast(response.index) };
 
-        sk.gfx.initView(texture, .{ .texture = .{
-            .image = makeImage(image.width, image.height, image.data),
+        sk.gfx.initView(view, .{ .texture = .{
+            .image = makeImage(img.width, img.height, img.data),
         } });
         return &.{};
     }
@@ -141,10 +141,10 @@ pub const Texture = struct {
 };
 
 const Sound = struct {
-    var cache: std.StringHashMapUnmanaged(audio.Sound) = .empty;
+    var cache: std.AutoHashMapUnmanaged(Id, audio.Sound) = .empty;
 
     fn load(path: Path, loop: bool) *audio.Sound {
-        const entry = cache.getOrPut(allocator, path) catch oom();
+        const entry = cache.getOrPut(allocator, id(path)) catch oom();
         if (entry.found_existing) return entry.value_ptr;
 
         const index = audio.allocSoundBuffer();
@@ -160,7 +160,7 @@ const Sound = struct {
         defer c.stbAudio.unload(stbAudio);
         const info = c.stbAudio.getInfo(stbAudio);
 
-        var sound = cache.getPtr(response.path).?;
+        var sound = cache.getPtr(id(response.path)).?;
 
         sound.channels = @intCast(info.channels);
 
@@ -176,10 +176,10 @@ const Sound = struct {
 };
 
 const Music = struct {
-    var cache: std.StringHashMapUnmanaged(audio.Music) = .empty;
+    var cache: std.AutoHashMapUnmanaged(Id, audio.Music) = .empty;
 
     fn load(path: Path, loop: bool) *audio.Music {
-        const entry = cache.getOrPut(allocator, path) catch oom();
+        const entry = cache.getOrPut(allocator, id(path)) catch oom();
         if (entry.found_existing) return entry.value_ptr;
 
         _ = File.load(path, 0, handler);
@@ -191,7 +191,7 @@ const Music = struct {
         const data = oomDupe(u8, response.data);
         const stbAudio = c.stbAudio.loadFromMemory(data);
 
-        const value = cache.getPtr(response.path).?;
+        const value = cache.getPtr(id(response.path)).?;
         value.source = stbAudio;
         value.state = .playing;
         audio.music = value.*;
@@ -231,10 +231,10 @@ pub const File = struct {
         handler: Handler = undefined,
     };
 
-    var cache: std.StringHashMapUnmanaged(FileCache) = .empty;
+    var cache: std.AutoHashMapUnmanaged(Id, FileCache) = .empty;
 
     pub fn load(path: Path, index: u64, handler: Handler) *FileCache {
-        const entry = cache.getOrPut(allocator, path) catch oom();
+        const entry = cache.getOrPut(allocator, id(path)) catch oom();
         if (entry.found_existing) return entry.value_ptr;
 
         entry.value_ptr.* = .{ .index = index, .handler = handler };
@@ -260,7 +260,7 @@ pub const File = struct {
         const path = std.mem.span(res.path);
         std.log.info("loaded from: {s}", .{path});
 
-        const value = cache.getPtr(path) orelse return;
+        const value = cache.getPtr(id(path)) orelse return;
         const data = @as([*]const u8, @ptrCast(res.data.ptr));
         const response: Response = .{
             .allocator = allocator,
