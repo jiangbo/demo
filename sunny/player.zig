@@ -44,6 +44,7 @@ pub fn update(delta: f32) void {
     if (clamped.y == position.y) velocity.y = 0;
     position = clamped;
     zhu.camera.directFollow(position);
+    zhu.camera.position = zhu.camera.position.round();
 }
 
 pub fn draw() void {

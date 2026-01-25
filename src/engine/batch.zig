@@ -56,7 +56,7 @@ pub fn init(size: Vector2, buffer: []Vertex) void {
 
 pub fn initWithWhiteTexture(size: Vector2, buffer: []Vertex) void {
     init(size, buffer);
-    whiteImage = graphics.createWhiteImage("engine/white");
+    whiteImage = assets.createWhiteImage("engine/white");
 }
 
 pub const Option = struct {
