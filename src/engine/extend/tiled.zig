@@ -4,7 +4,7 @@ const assets = @import("../assets.zig");
 const graphics = @import("../graphics.zig");
 const math = @import("../math.zig");
 
-pub const Position = struct { x: u32, y: u32 };
+pub const TilePosition = struct { x: u32, y: u32 };
 const Vector2 = math.Vector2;
 const Rect = math.Rect;
 

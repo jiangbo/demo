@@ -61,13 +61,13 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
         const tileSetRef = map.getTileSetRefByGid(gid);
         const tileSet = map.getTileSetByRef(tileSetRef);
         const columns = tileSet.columns; // 单图片瓦片集的列数
-        const id = gid - tileSetRef.firstGid;
-        const tile = tiled.getTileById(tileSet, id);
+        const localId = gid - tileSetRef.firstGid;
+        const tile = tiled.getTileById(tileSet, localId);
         if (columns == 0) {
             image = zhu.assets.getImage(tile.?.image);
             pos.y = pos.y - image.area.size.y + level.tileSize.y;
         } else {
-            const area = tiled.tileArea(id, level.tileSize, columns);
+            const area = tiled.tileArea(localId, level.tileSize, columns);
             image = firstImage.sub(area);
         }
 
@@ -104,7 +104,7 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
     }
 }
 
-pub fn worldToTilePosition(pos: zhu.Vector2) tiled.Position {
+pub fn worldToTilePosition(pos: zhu.Vector2) tiled.TilePosition {
     const tilePos = pos.div(level.tileSize).floor();
     const x: u32 = @intFromFloat(tilePos.x);
     const y: u32 = @intFromFloat(tilePos.y);
