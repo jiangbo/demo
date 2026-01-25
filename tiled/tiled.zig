@@ -15,7 +15,7 @@ pub const Map = struct {
     /// 地图是否具有无限维度
     infinite: bool,
     /// 图层数组 (包含瓦片层、对象层、组等)
-    layers: []const Layer,
+    layers: []Layer,
     /// 每个新图层的自动递增 ID
     nextlayerid: i32,
     /// 每个新放置对象的自动递增 ID
@@ -61,7 +61,7 @@ pub const Layer = struct {
     /// 压缩算法 (zlib, gzip, zstd 或空，仅限瓦片图层)
     compression: ?[]const u8 = null,
     /// 瓦片数据 (无符号整数数组 GIDs 或 base64 编码字符串，仅限瓦片图层)
-    data: ?std.json.Value = null,
+    data: []u32 = &.{},
     /// 物体绘制顺序 (topdown (默认) 或 index，仅限对象层 objectgroup)
     draworder: ?[]const u8 = "topdown",
     /// 数据编码格式 (csv (默认) 或 base64，仅限瓦片图层)
@@ -69,7 +69,7 @@ pub const Layer = struct {
     /// 行数。对于固定大小地图，与地图高度相同 (仅限瓦片图层)
     height: ?i32 = null,
     /// 唯一的增量 ID，在所有图层中唯一
-    id: i32 = 0,
+    id: u32 = 0,
     /// 该图层使用的图像路径 (仅限图像图层 imagelayer)
     image: ?[]const u8 = null,
     /// 图像高度 (像素，仅限图像图层)
@@ -77,7 +77,7 @@ pub const Layer = struct {
     /// 图像宽度 (像素，仅限图像图层)
     imagewidth: ?i32 = null,
     /// 子图层数组 (仅限图层组 group)
-    layers: ?[]const Layer = null,
+    layers: ?[]Layer = null,
     /// 是否在编辑器中被锁定 (自 1.8.2，默认: false)
     locked: bool = false,
     /// 分配给该图层的名称

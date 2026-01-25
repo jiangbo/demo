@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const assets = @import("../assets.zig");
 const graphics = @import("../graphics.zig");
 const math = @import("../math.zig");
 
@@ -13,9 +14,9 @@ pub const Map = struct {
 
     tileSize: graphics.Vector2,
     layers: []const Layer,
-    tileSets: []const TileSet,
-    states: []const u8,
+    tileSetRefs: []const TileSetRef,
 };
+pub const TileSetRef = struct { id: u32, firstGid: u32, max: u32 };
 
 pub const LayerEnum = enum { image, tile, object };
 
@@ -42,24 +43,89 @@ pub const Layer = struct {
     repeatY: bool = false,
 };
 
-pub const Object = struct {
-    gid: u32,
-    position: Vector2,
-    size: Vector2,
-    rotation: f32,
+pub const PropertyEnum = enum {
+    string,
+    int,
+    float,
+    bool,
+};
+
+pub const PropertyValue = union(PropertyEnum) {
+    string: []const u8, // 字符串值
+    int: i32, // 整数值
+    float: f32, // 浮点数值
+    bool: bool, // 布尔值
+};
+
+pub const Property = struct {
+    name: []const u8, // 属性名称
+    value: PropertyValue, // 具体的属性值
 };
 
 pub const TileSet = struct {
+    id: u32,
     columns: u32,
-    min: u32,
-    max: u32,
-    images: []const u32,
+    tileCount: i32,
+    image: u32,
+    tiles: []const Tile,
 };
 
-pub const Tile = struct {
-    image: graphics.Image,
-    position: graphics.Vector2,
+const Tile = struct {
+    id: i32,
+    image: u32,
+    objectGroup: ?ObjectGroup = null,
+    properties: []const Property,
 };
+
+pub const ObjectGroup = struct {
+    visible: bool, // 是否可见
+    objects: []const Object, // 物体数组 (物体层用)
+};
+
+pub const Object = struct {
+    gid: u32 = 0,
+    position: Vector2, // 像素坐标
+    size: Vector2, // 像素宽高
+    point: bool = false, // 是否为点物体
+    properties: []const Property = &.{}, // 物体自定义属性
+    rotation: f32, // 顺时针旋转角度
+};
+
+pub var map: Map = undefined;
+pub var tileSets: []const TileSet = &.{};
+
+pub fn getTileSetByRef(ref: TileSetRef) TileSet {
+    for (tileSets) |ts| if (ts.id == ref.id) return ts;
+    unreachable;
+}
+
+pub fn getTileSetRefByGid(gid: u32) TileSetRef {
+    for (map.tileSetRefs) |ref| {
+        if (gid < ref.max) return ref;
+    } else unreachable;
+}
+
+pub fn getTileSetByGid(gid: u32) TileSet {
+    return getTileSetByRef(getTileSetRefByGid(gid));
+}
+
+pub fn getTileByGId(objectId: u32) Tile {
+    for (map.tileSetRefs) |ref| {
+        if (objectId < ref.max) {
+            const tileSet = getTileSetByRef(ref);
+            const id = objectId - ref.firstGid;
+            for (tileSet.tiles) |tile| {
+                if (id == tile.id) return tile;
+            }
+        }
+    } else unreachable;
+}
+
+pub fn getTileById(tileSet: TileSet, id: u32) Tile {
+    for (tileSet.tiles) |tile| {
+        if (id == tile.id) return tile;
+    } else unreachable;
+}
 
 pub fn tileArea(index: u32, size: Vector2, columns: u32) Rect {
     const x: f32 = @floatFromInt(index % columns);

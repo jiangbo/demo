@@ -3,17 +3,18 @@ const std = @import("std");
 const parsed = @import("parsed.zig");
 const tiled = @import("tiled.zig");
 
+const Vector2 = struct { x: f32, y: f32 };
+
 const TileSet = struct {
     id: u32,
-    columns: i32,
-    tileCount: i32,
-    max: u32 = 0,
+    columns: u32,
+    tileCount: u32,
     image: u32,
     tiles: []const Tile,
 };
 
 const Tile = struct {
-    id: i32,
+    id: u32,
     image: u32,
     objectGroup: ?ObjectGroup = null,
     properties: []const parsed.Property,
@@ -26,18 +27,16 @@ pub const ObjectGroup = struct {
 };
 
 pub const Object = struct {
-    x: f32, // 像素坐标 X
-    y: f32, // 像素坐标 Y
-    width: f32, // 像素宽度
-    height: f32, // 像素高度
+    gid: u32 = 0,
+    position: Vector2, // 像素坐标
+    size: Vector2, // 像素宽高
     point: bool = false, // 是否为点物体
-    // properties: ?[]const parsed.Property = null, // 物体自定义属性
+    properties: []const parsed.Property = &.{}, // 物体自定义属性
     rotation: f32, // 顺时针旋转角度
 };
 
 var allocator: std.mem.Allocator = undefined;
 pub fn main() !void {
-    @setEvalBranchQuota(10000);
     var debug: std.heap.DebugAllocator(.{}) = .init;
     defer _ = debug.deinit();
     var arena = std.heap.ArenaAllocator.init(debug.allocator());
@@ -101,8 +100,8 @@ fn parseTileSet(id: u32, value: tiled.Tileset) !TileSet {
 
     return .{
         .id = id,
-        .columns = value.columns,
-        .tileCount = value.tilecount,
+        .columns = @intCast(value.columns),
+        .tileCount = @intCast(value.tilecount),
         .image = imageId,
         .tiles = tiles,
     };
@@ -124,7 +123,7 @@ fn parseTiles(tiles: []tiled.TileDefinition) ![]Tile {
         if (tile.objectgroup) |g| group = try parseObjectGroup(g);
 
         result[index] = .{
-            .id = tile.id,
+            .id = @intCast(tile.id),
             .image = imageId,
             .properties = propertes,
             .objectGroup = group,
@@ -145,10 +144,8 @@ fn parseObjects(objects: []tiled.Object) ![]Object {
         result[i] = .{
             .point = object.point,
             .rotation = object.rotation,
-            .x = object.x,
-            .y = object.y,
-            .width = object.width,
-            .height = object.height,
+            .position = .{ .x = object.x, .y = object.y },
+            .size = .{ .x = object.width, .y = object.height },
         };
     }
     return result;

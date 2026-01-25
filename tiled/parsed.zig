@@ -25,7 +25,6 @@ pub const PropertyValue = union(PropertyEnum) {
 
 pub const Property = struct {
     name: []const u8, // 属性名称
-    type: []const u8 = "string", // 属性类型说明
     // propertyType: ?[]const u8 = null, // 自定义类型名 (class使用)
     value: PropertyValue, // 具体的属性值
 };

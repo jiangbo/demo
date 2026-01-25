@@ -23,10 +23,15 @@ pub const Object = struct {
     size: Vector2,
 };
 const level: tiled.Map = @import("zon/level1.zon");
+const tileSets: []const tiled.TileSet = @import("zon/tile.zon");
 var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
 pub var objects: std.ArrayList(Object) = .empty;
+var states: []u8 = &.{};
 
 pub fn init() void {
+    tiled.tileSets = tileSets;
+    tiled.map = level;
+    states = zhu.assets.oomAlloc(u8, level.width * level.height);
     for (level.layers) |layer| {
         if (layer.type == .tile) parseTileLayer(&layer) //
         else if (layer.type == .object) parseObjectLayer(&layer);
@@ -36,26 +41,27 @@ pub fn init() void {
 pub fn deinit() void {
     objects.deinit(zhu.assets.allocator);
     tileVertexes.deinit(zhu.assets.allocator);
+    zhu.assets.free(states);
 }
 
 fn parseTileLayer(layer: *const tiled.Layer) void {
-    var firstImage = zhu.assets.getImage(level.tileSets[0].images[0]);
-    for (layer.data, 0..) |tileIndex, index| {
-        if (tileIndex == 0) continue;
-
-        const tileSet = blk: for (level.tileSets) |tileSet| {
-            if (tileIndex < tileSet.max) break :blk tileSet;
-        } else unreachable;
+    const firstTileSet = tiled.getTileSetByRef(level.tileSetRefs[0]);
+    var firstImage = zhu.assets.getImage(firstTileSet.image);
+    for (layer.data, 0..) |gid, index| {
+        if (gid == 0) continue;
 
         const x: f32 = @floatFromInt(index % level.width);
         const y: f32 = @floatFromInt(index / level.width);
         var pos = level.tileSize.mul(.xy(x, y));
 
         var image: zhu.graphics.Image = undefined;
-        const id = tileIndex - tileSet.min;
+        const tileSetRef = tiled.getTileSetRefByGid(gid);
+        const tileSet = tiled.getTileSetByRef(tileSetRef);
         const columns = tileSet.columns; // 单图片瓦片集的列数
+        const id = gid - tileSetRef.firstGid;
         if (columns == 0) {
-            image = zhu.assets.getImage(tileSet.images[id]);
+            const tile = tiled.getTileById(tileSet, id);
+            image = zhu.assets.getImage(tile.image);
             pos.y = pos.y - image.area.size.y + level.tileSize.y;
         } else {
             const area = tiled.tileArea(id, level.tileSize, columns);
@@ -72,18 +78,13 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
 
 fn parseObjectLayer(layer: *const tiled.Layer) void {
     for (layer.objects) |object| {
-        const tileSet = blk: for (level.tileSets) |tileSet| {
-            if (object.gid < tileSet.max) break :blk tileSet;
-        } else unreachable;
-
         if (object.gid == 0) {
             std.log.info("todo 0 gid, position: {}", .{object.position});
             continue;
         }
-        const index = object.gid - tileSet.min;
-
+        const tile = tiled.getTileByGId(object.gid);
         objects.append(zhu.assets.allocator, .{
-            .type = @enumFromInt(tileSet.images[index]),
+            .type = @enumFromInt(tile.image),
             .position = object.position.addY(-object.size.y),
             .size = object.size,
         }) catch @panic("oom, can't append tile");
@@ -122,21 +123,21 @@ fn clampX(old: Vector2, new: Vector2, size: Vector2) Vector2 {
 
     if (new.x < old.x) { // 向左移动
         var tileIndex = worldToTileIndex(new);
-        if (level.states[tileIndex] == 1) { // 左上角碰撞
+        if (states[tileIndex] == 1) { // 左上角碰撞
             return tileIndexToWorld(tileIndex + 1);
         }
         tileIndex = worldToTileIndex(new.addY(sz.y));
-        if (level.states[tileIndex] == 1) { // 左下角碰撞
+        if (states[tileIndex] == 1) { // 左下角碰撞
             return tileIndexToWorld(tileIndex + 1);
         }
     } else if (new.x > old.x) { // 向右移动
         const offset = level.tileSize.x - size.x;
         var tileIndex = worldToTileIndex(new.addX(sz.x));
-        if (level.states[tileIndex] == 1) { // 右上角碰撞
+        if (states[tileIndex] == 1) { // 右上角碰撞
             return tileIndexToWorld(tileIndex - 1).addX(offset);
         }
         tileIndex = worldToTileIndex(new.add(sz));
-        if (level.states[tileIndex] == 1) { // 右下角碰撞
+        if (states[tileIndex] == 1) { // 右下角碰撞
             return tileIndexToWorld(tileIndex - 1).addX(offset);
         }
     }
@@ -149,22 +150,22 @@ fn clampY(old: Vector2, new: Vector2, size: Vector2) Vector2 {
     const sz = size.add(epsilon);
     if (new.y < old.y) { // 向上移动
         var tileIndex = worldToTileIndex(new);
-        if (level.states[tileIndex] == 1) { // 左上角碰撞
+        if (states[tileIndex] == 1) { // 左上角碰撞
             return tileIndexToWorld(tileIndex + w);
         }
         tileIndex = worldToTileIndex(new.addX(sz.x));
-        if (level.states[tileIndex] == 1) { // 右上角碰撞
+        if (states[tileIndex] == 1) { // 右上角碰撞
             return tileIndexToWorld(tileIndex + w);
         }
     } else if (new.y > old.y) { // 向下移动
         var tileIndex = worldToTileIndex(new.addY(sz.y));
         const offset = level.tileSize.y - size.y;
-        if (level.states[tileIndex] == 1) {
+        if (states[tileIndex] == 1) {
             return tileIndexToWorld(tileIndex - w).addY(offset);
         }
 
         tileIndex = worldToTileIndex(new.add(sz));
-        if (level.states[tileIndex] == 1) {
+        if (states[tileIndex] == 1) {
             return tileIndexToWorld(tileIndex - w).addY(offset);
         }
     }
@@ -181,7 +182,7 @@ pub fn draw() void {
     for (0..level.height) |y| {
         for (0..level.width) |x| {
             const index = y * level.width + x;
-            const state = level.states[index];
+            const state = states[index];
             if (state == 0) continue;
 
             const pos = level.tileSize.mul(.xy(@floatFromInt(x), @floatFromInt(y)));
