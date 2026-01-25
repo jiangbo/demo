@@ -22,20 +22,21 @@ pub const Object = struct {
     position: Vector2,
     size: Vector2,
 };
-const level: tiled.TileMap = @import("zon/level1.zon");
+const level1: tiled.Map = @import("zon/level1.zon");
 const tileSets: []const tiled.TileSet = @import("zon/tile.zon");
-var map: tiled.Map = undefined;
+var map: tiled.Map = level1;
 
 var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
 pub var objects: std.ArrayList(Object) = .empty;
 var states: []u8 = &.{};
 
 pub fn init() void {
-    map = .init(level, tileSets);
-    states = zhu.assets.oomAlloc(u8, level.width * level.height);
+    map.tileSets = tileSets;
+    states = zhu.assets.oomAlloc(u8, map.width * map.height);
     @memset(states, 0);
+    zhu.camera.worldSize = map.size();
 
-    for (level.layers) |layer| {
+    for (map.layers) |layer| {
         if (layer.type == .tile) parseTileLayer(&layer) //
         else if (layer.type == .object) parseObjectLayer(&layer);
     }
@@ -48,14 +49,14 @@ pub fn deinit() void {
 }
 
 fn parseTileLayer(layer: *const tiled.Layer) void {
-    const firstTileSet = map.getTileSetByRef(level.tileSetRefs[0]);
+    const firstTileSet = map.getTileSetByRef(map.tileSetRefs[0]);
     var firstImage = zhu.assets.getImage(firstTileSet.image);
     for (layer.data, 0..) |gid, index| {
         if (gid == 0) continue;
 
-        const x: f32 = @floatFromInt(index % level.width);
-        const y: f32 = @floatFromInt(index / level.width);
-        var pos = level.tileSize.mul(.xy(x, y));
+        const x: f32 = @floatFromInt(index % map.width);
+        const y: f32 = @floatFromInt(index / map.width);
+        var pos = map.tileSize.mul(.xy(x, y));
 
         var image: zhu.graphics.Image = undefined;
         const tileSetRef = map.getTileSetRefByGid(gid);
@@ -65,7 +66,7 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
 
         if (tileSet.columns == 0) { // 单图片瓦片集的列数
             image = zhu.assets.getImage(tile.?.image);
-            pos.y = pos.y - image.area.size.y + level.tileSize.y;
+            pos.y = pos.y - image.area.size.y + map.tileSize.y;
         } else {
             const area = map.tileArea(localId, tileSet.columns);
             image = firstImage.sub(area);
@@ -104,26 +105,6 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
     }
 }
 
-pub fn worldToTilePosition(pos: zhu.Vector2) tiled.TilePosition {
-    const tilePos = pos.div(level.tileSize).floor();
-    const x: u32 = @intFromFloat(tilePos.x);
-    const y: u32 = @intFromFloat(tilePos.y);
-    return .{ .x = x, .y = y };
-}
-
-pub fn worldToTileIndex(pos: zhu.Vector2) usize {
-    const tilePos = worldToTilePosition(pos);
-    if (tilePos.x < 0 or tilePos.y < 0) return 0;
-    if (tilePos.x >= level.width or tilePos.y >= level.height) return 0;
-    return tilePos.y * level.width + tilePos.x;
-}
-
-pub fn tileIndexToWorld(index: usize) zhu.Vector2 {
-    const x: f32 = @floatFromInt(index % level.width);
-    const y: f32 = @floatFromInt(index / level.width);
-    return level.tileSize.mul(.xy(x, y));
-}
-
 pub fn clamp(old: Vector2, new: Vector2, size: Vector2) Vector2 {
     const clampedX = clampX(old, .xy(new.x, old.y), size);
     const clampedY = clampY(old, .xy(old.x, new.y), size);
@@ -135,71 +116,71 @@ fn clampX(old: Vector2, new: Vector2, size: Vector2) Vector2 {
     const sz = size.add(epsilon);
 
     if (new.x < old.x) { // 向左移动
-        var tileIndex = worldToTileIndex(new);
+        var tileIndex = map.worldToTileIndex(new);
         if (states[tileIndex] == 1) { // 左上角碰撞
-            return tileIndexToWorld(tileIndex + 1);
+            return map.tileIndexToWorld(tileIndex + 1);
         }
-        tileIndex = worldToTileIndex(new.addY(sz.y));
+        tileIndex = map.worldToTileIndex(new.addY(sz.y));
         if (states[tileIndex] == 1) { // 左下角碰撞
-            return tileIndexToWorld(tileIndex + 1);
+            return map.tileIndexToWorld(tileIndex + 1);
         }
     } else if (new.x > old.x) { // 向右移动
-        const offset = level.tileSize.x - size.x;
-        var tileIndex = worldToTileIndex(new.addX(sz.x));
+        const offset = map.tileSize.x - size.x;
+        var tileIndex = map.worldToTileIndex(new.addX(sz.x));
         if (states[tileIndex] == 1) { // 右上角碰撞
-            return tileIndexToWorld(tileIndex - 1).addX(offset);
+            return map.tileIndexToWorld(tileIndex - 1).addX(offset);
         }
-        tileIndex = worldToTileIndex(new.add(sz));
+        tileIndex = map.worldToTileIndex(new.add(sz));
         if (states[tileIndex] == 1) { // 右下角碰撞
-            return tileIndexToWorld(tileIndex - 1).addX(offset);
+            return map.tileIndexToWorld(tileIndex - 1).addX(offset);
         }
     }
     return new;
 }
 
 fn clampY(old: Vector2, new: Vector2, size: Vector2) Vector2 {
-    const w = level.width;
+    const w = map.width;
 
     const sz = size.add(epsilon);
     if (new.y < old.y) { // 向上移动
-        var tileIndex = worldToTileIndex(new);
+        var tileIndex = map.worldToTileIndex(new);
         if (states[tileIndex] == 1) { // 左上角碰撞
-            return tileIndexToWorld(tileIndex + w);
+            return map.tileIndexToWorld(tileIndex + w);
         }
-        tileIndex = worldToTileIndex(new.addX(sz.x));
+        tileIndex = map.worldToTileIndex(new.addX(sz.x));
         if (states[tileIndex] == 1) { // 右上角碰撞
-            return tileIndexToWorld(tileIndex + w);
+            return map.tileIndexToWorld(tileIndex + w);
         }
     } else if (new.y > old.y) { // 向下移动
-        var tileIndex = worldToTileIndex(new.addY(sz.y));
-        const offset = level.tileSize.y - size.y;
+        var tileIndex = map.worldToTileIndex(new.addY(sz.y));
+        const offset = map.tileSize.y - size.y;
         if (states[tileIndex] == 1) {
-            return tileIndexToWorld(tileIndex - w).addY(offset);
+            return map.tileIndexToWorld(tileIndex - w).addY(offset);
         }
 
-        tileIndex = worldToTileIndex(new.add(sz));
+        tileIndex = map.worldToTileIndex(new.add(sz));
         if (states[tileIndex] == 1) {
-            return tileIndexToWorld(tileIndex - w).addY(offset);
+            return map.tileIndexToWorld(tileIndex - w).addY(offset);
         }
     }
     return new;
 }
 
 pub fn draw() void {
-    for (level.layers) |*layer| {
+    for (map.layers) |*layer| {
         if (layer.type == .image) drawImageLayer(layer);
     }
 
     batch.vertexBuffer.appendSliceAssumeCapacity(tileVertexes.items);
 
-    for (0..level.height) |y| {
-        for (0..level.width) |x| {
-            const index = y * level.width + x;
+    for (0..map.height) |y| {
+        for (0..map.width) |x| {
+            const index = y * map.width + x;
             const state = states[index];
             if (state == 0) continue;
 
-            const pos = level.tileSize.mul(.xy(@floatFromInt(x), @floatFromInt(y)));
-            batch.debugDraw(.init(pos, level.tileSize));
+            const pos = map.tileSize.mul(.xy(@floatFromInt(x), @floatFromInt(y)));
+            batch.debugDraw(.init(pos, map.tileSize));
         }
     }
 }

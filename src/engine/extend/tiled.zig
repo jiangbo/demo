@@ -8,13 +8,77 @@ pub const TilePosition = struct { x: u32, y: u32 };
 const Vector2 = math.Vector2;
 const Rect = math.Rect;
 
-pub const TileMap = struct {
+pub const Map = struct {
     height: u32,
     width: u32,
 
     tileSize: graphics.Vector2,
     layers: []const Layer,
     tileSetRefs: []const TileSetRef,
+
+    tileSets: []const TileSet = &.{},
+
+    pub fn size(self: Map) Vector2 {
+        return self.tilePositionToWorld(self.width, self.height);
+    }
+
+    pub fn tilePositionToWorld(self: Map, x: usize, y: usize) Vector2 {
+        const floatX: f32 = @floatFromInt(x);
+        return self.tileSize.mul(.xy(floatX, @floatFromInt(y)));
+    }
+
+    pub fn worldToTilePosition(self: Map, pos: Vector2) TilePosition {
+        const tilePos = pos.div(self.tileSize).floor();
+        const x: u32 = @intFromFloat(tilePos.x);
+        return .{ .x = x, .y = @intFromFloat(tilePos.y) };
+    }
+
+    pub fn worldToTileIndex(self: Map, pos: Vector2) usize {
+        const tilePos = self.worldToTilePosition(pos);
+        if (tilePos.x < 0 or tilePos.y < 0) return 0;
+        if (tilePos.x >= self.width) return 0;
+        if (tilePos.y >= self.height) return 0;
+        return tilePos.y * self.width + tilePos.x;
+    }
+
+    pub fn tileIndexToWorld(self: Map, index: usize) Vector2 {
+        const x: f32 = @floatFromInt(index % self.width);
+        const y: f32 = @floatFromInt(index / self.width);
+        return self.tileSize.mul(.xy(x, y));
+    }
+
+    pub fn getTileSetByRef(self: Map, ref: TileSetRef) TileSet {
+        for (self.tileSets) |ts| if (ts.id == ref.id) return ts;
+        unreachable;
+    }
+
+    pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {
+        for (self.tileSetRefs) |ref| {
+            if (gid < ref.max) return ref;
+        } else unreachable;
+    }
+
+    pub fn getTileSetByGid(self: Map, gid: u32) TileSet {
+        return self.getTileSetByRef(self.getTileSetRefByGid(gid));
+    }
+
+    pub fn getTileByGId(self: Map, gid: u32) Tile {
+        for (self.tileSetRefs) |ref| {
+            if (gid < ref.max) {
+                const tileSet = self.getTileSetByRef(ref);
+                const id = gid - ref.firstGid;
+                for (tileSet.tiles) |tile| {
+                    if (id == tile.id) return tile;
+                }
+            }
+        } else unreachable;
+    }
+
+    pub fn tileArea(self: Map, index: u32, columns: u32) Rect {
+        const x: f32 = @floatFromInt(index % columns);
+        const y: f32 = @floatFromInt(index / columns);
+        return .init(self.tileSize.mul(.xy(x, y)), self.tileSize);
+    }
 };
 pub const TileSetRef = struct { id: u32, firstGid: u32, max: u32 };
 
@@ -96,47 +160,4 @@ pub const Object = struct {
     point: bool = false, // 是否为点物体
     properties: []const Property = &.{}, // 物体自定义属性
     rotation: f32, // 顺时针旋转角度
-};
-
-pub const Map = struct {
-    map: TileMap,
-    tileSets: []const TileSet,
-
-    pub fn init(map: TileMap, tileSets: []const TileSet) Map {
-        return Map{ .map = map, .tileSets = tileSets };
-    }
-
-    pub fn getTileSetByRef(self: Map, ref: TileSetRef) TileSet {
-        for (self.tileSets) |ts| if (ts.id == ref.id) return ts;
-        unreachable;
-    }
-
-    pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {
-        for (self.map.tileSetRefs) |ref| {
-            if (gid < ref.max) return ref;
-        } else unreachable;
-    }
-
-    pub fn getTileSetByGid(self: Map, gid: u32) TileSet {
-        return self.getTileSetByRef(self.getTileSetRefByGid(gid));
-    }
-
-    pub fn getTileByGId(self: Map, gid: u32) Tile {
-        for (self.map.tileSetRefs) |ref| {
-            if (gid < ref.max) {
-                const tileSet = self.getTileSetByRef(ref);
-                const id = gid - ref.firstGid;
-                for (tileSet.tiles) |tile| {
-                    if (id == tile.id) return tile;
-                }
-            }
-        } else unreachable;
-    }
-
-    pub fn tileArea(self: Map, index: u32, columns: u32) Rect {
-        const x: f32 = @floatFromInt(index % columns);
-        const y: f32 = @floatFromInt(index / columns);
-        const size = self.map.tileSize;
-        return Rect.init(size.mul(.xy(x, y)), size);
-    }
 };

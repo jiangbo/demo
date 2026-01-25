@@ -10,7 +10,7 @@ const moveForce = 200; // 移动力
 const factor = 0.85; // 减速因子
 const maxSpeed = 120; // 最大速度
 const gravity = 980; // 重力
-const jumpForce = 350.0; // 跳跃力
+const jumpVelocity = 350.0; // 跳跃速度
 
 const size: zhu.Vector2 = .xy(32, 32);
 var image: zhu.graphics.Image = undefined;
@@ -43,6 +43,7 @@ pub fn update(delta: f32) void {
     if (clamped.x == position.x) velocity.x = 0;
     if (clamped.y == position.y) velocity.y = 0;
     position = clamped;
+    zhu.camera.directFollow(position);
 }
 
 pub fn draw() void {
@@ -155,7 +156,7 @@ const JumpState = struct {
 
     fn enter() void {
         std.log.info("enter jump", .{});
-        velocity.y = -jumpForce;
+        velocity.y = -jumpVelocity;
     }
 
     fn update(_: f32) void {
