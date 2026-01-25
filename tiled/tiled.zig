@@ -18,8 +18,8 @@ pub const TiledMap = struct {
     tiledversion: []const u8,
     version: []const u8,
 
-    tilewidth: i32,
-    tileheight: i32,
+    tilewidth: f32,
+    tileheight: f32,
 
     tilesets: []TilesetRef,
 
@@ -45,8 +45,8 @@ pub const Layer = struct {
     parallaxy: ?f32 = null,
     repeatx: ?bool = null,
     repeaty: ?bool = null,
-    offsetx: i32 = 0,
-    offsety: i32 = 0,
+    offsetx: f32 = 0,
+    offsety: f32 = 0,
 
     // tilelayer
     width: ?u32 = null,

@@ -1,7 +1,7 @@
 const std = @import("std");
 const tiled = @import("tiled.zig");
 
-const Vector2 = struct { x: i32, y: i32 };
+const Vector2 = struct { x: f32, y: f32 };
 
 const Map = struct {
     height: i32,
@@ -41,8 +41,8 @@ const Layer = struct {
 
 pub const Object = struct {
     gid: u32,
-    position: struct { x: f32, y: f32 },
-    size: struct { x: f32, y: f32 },
+    position: Vector2,
+    size: Vector2,
     rotation: f32,
 };
 
