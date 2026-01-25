@@ -8,7 +8,7 @@ pub const Position = struct { x: u32, y: u32 };
 const Vector2 = math.Vector2;
 const Rect = math.Rect;
 
-pub const Map = struct {
+pub const TileMap = struct {
     height: u32,
     width: u32,
 
@@ -91,35 +91,41 @@ pub const Object = struct {
     rotation: f32, // 顺时针旋转角度
 };
 
-pub var map: Map = undefined;
-pub var tileSets: []const TileSet = &.{};
+pub const Map = struct {
+    map: TileMap,
+    tileSets: []const TileSet,
 
-pub fn getTileSetByRef(ref: TileSetRef) TileSet {
-    for (tileSets) |ts| if (ts.id == ref.id) return ts;
-    unreachable;
-}
+    pub fn init(map: TileMap, tileSets: []const TileSet) Map {
+        return Map{ .map = map, .tileSets = tileSets };
+    }
 
-pub fn getTileSetRefByGid(gid: u32) TileSetRef {
-    for (map.tileSetRefs) |ref| {
-        if (gid < ref.max) return ref;
-    } else unreachable;
-}
+    pub fn getTileSetByRef(self: Map, ref: TileSetRef) TileSet {
+        for (self.tileSets) |ts| if (ts.id == ref.id) return ts;
+        unreachable;
+    }
 
-pub fn getTileSetByGid(gid: u32) TileSet {
-    return getTileSetByRef(getTileSetRefByGid(gid));
-}
+    pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {
+        for (self.map.tileSetRefs) |ref| {
+            if (gid < ref.max) return ref;
+        } else unreachable;
+    }
 
-pub fn getTileByGId(objectId: u32) Tile {
-    for (map.tileSetRefs) |ref| {
-        if (objectId < ref.max) {
-            const tileSet = getTileSetByRef(ref);
-            const id = objectId - ref.firstGid;
-            for (tileSet.tiles) |tile| {
-                if (id == tile.id) return tile;
+    pub fn getTileSetByGid(self: Map, gid: u32) TileSet {
+        return self.getTileSetByRef(self.getTileSetRefByGid(gid));
+    }
+
+    pub fn getTileByGId(self: Map, objectId: u32) Tile {
+        for (self.map.tileSetRefs) |ref| {
+            if (objectId < ref.max) {
+                const tileSet = self.getTileSetByRef(ref);
+                const id = objectId - ref.firstGid;
+                for (tileSet.tiles) |tile| {
+                    if (id == tile.id) return tile;
+                }
             }
-        }
-    } else unreachable;
-}
+        } else unreachable;
+    }
+};
 
 pub fn getTileById(tileSet: TileSet, id: u32) Tile {
     for (tileSet.tiles) |tile| {

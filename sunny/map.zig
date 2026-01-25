@@ -22,15 +22,16 @@ pub const Object = struct {
     position: Vector2,
     size: Vector2,
 };
-const level: tiled.Map = @import("zon/level1.zon");
+const level: tiled.TileMap = @import("zon/level1.zon");
 const tileSets: []const tiled.TileSet = @import("zon/tile.zon");
+var map: tiled.Map = undefined;
+
 var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
 pub var objects: std.ArrayList(Object) = .empty;
 var states: []u8 = &.{};
 
 pub fn init() void {
-    tiled.tileSets = tileSets;
-    tiled.map = level;
+    map = .init(level, tileSets);
     states = zhu.assets.oomAlloc(u8, level.width * level.height);
     for (level.layers) |layer| {
         if (layer.type == .tile) parseTileLayer(&layer) //
@@ -45,7 +46,7 @@ pub fn deinit() void {
 }
 
 fn parseTileLayer(layer: *const tiled.Layer) void {
-    const firstTileSet = tiled.getTileSetByRef(level.tileSetRefs[0]);
+    const firstTileSet = map.getTileSetByRef(level.tileSetRefs[0]);
     var firstImage = zhu.assets.getImage(firstTileSet.image);
     for (layer.data, 0..) |gid, index| {
         if (gid == 0) continue;
@@ -55,8 +56,8 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
         var pos = level.tileSize.mul(.xy(x, y));
 
         var image: zhu.graphics.Image = undefined;
-        const tileSetRef = tiled.getTileSetRefByGid(gid);
-        const tileSet = tiled.getTileSetByRef(tileSetRef);
+        const tileSetRef = map.getTileSetRefByGid(gid);
+        const tileSet = map.getTileSetByRef(tileSetRef);
         const columns = tileSet.columns; // 单图片瓦片集的列数
         const id = gid - tileSetRef.firstGid;
         if (columns == 0) {
@@ -82,7 +83,7 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
             std.log.info("todo 0 gid, position: {}", .{object.position});
             continue;
         }
-        const tile = tiled.getTileByGId(object.gid);
+        const tile = map.getTileByGId(object.gid);
         objects.append(zhu.assets.allocator, .{
             .type = @enumFromInt(tile.image),
             .position = object.position.addY(-object.size.y),
