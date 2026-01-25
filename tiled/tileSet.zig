@@ -1,0 +1,235 @@
+const std = @import("std");
+
+const parsed = @import("parsed.zig");
+const tiled = @import("tiled.zig");
+
+const TileSet = struct {
+    id: u32,
+    columns: i32,
+    tileCount: i32,
+    max: u32 = 0,
+    image: u32,
+    tiles: []const Tile,
+};
+
+const Tile = struct {
+    id: i32,
+    image: u32,
+    objectGroup: ?ObjectGroup = null,
+    properties: []const parsed.Property,
+};
+
+pub const ObjectGroup = struct {
+    visible: bool, // 是否可见
+    objects: []const Object, // 物体数组 (物体层用)
+    // properties: ?[]const parsed.Property = null, // 图层自定义属性
+};
+
+pub const Object = struct {
+    x: f32, // 像素坐标 X
+    y: f32, // 像素坐标 Y
+    width: f32, // 像素宽度
+    height: f32, // 像素高度
+    point: bool = false, // 是否为点物体
+    // properties: ?[]const parsed.Property = null, // 物体自定义属性
+    rotation: f32, // 顺时针旋转角度
+};
+
+var allocator: std.mem.Allocator = undefined;
+pub fn main() !void {
+    @setEvalBranchQuota(10000);
+    var debug: std.heap.DebugAllocator(.{}) = .init;
+    defer _ = debug.deinit();
+    var arena = std.heap.ArenaAllocator.init(debug.allocator());
+    defer arena.deinit();
+    allocator = arena.allocator();
+
+    // 必须要指定一个目录
+    const args = try std.process.argsAlloc(allocator);
+    if (args.len != 2) return error.invalidArgs;
+    const path = args[1];
+
+    var dir = try std.fs.cwd().openDir(path, .{ .iterate = true });
+    defer dir.close();
+
+    var tileSets: std.ArrayListUnmanaged(TileSet) = .empty;
+
+    var it = dir.iterate();
+    const max = std.math.maxInt(usize);
+    while (try it.next()) |entry| {
+        if (entry.kind != .file) continue;
+        const name = entry.name;
+        if (!std.mem.endsWith(u8, name, ".tsj")) continue;
+        const id = std.hash.Fnv1a_32.hash(name);
+        std.log.info("====================================================", .{});
+        std.log.info("name: {s}, id: {}", .{ name, id });
+
+        const content = try dir.readFileAlloc(allocator, name, max);
+        const parse = std.json.parseFromSliceLeaky;
+        const source = try parse(tiled.Tileset, allocator, content, .{});
+        try tileSets.append(allocator, try parseTileSet(id, source));
+    }
+    std.log.info("====================================================", .{});
+
+    const outFile = try dir.createFile("tile.zon", .{ .truncate = true });
+    defer outFile.close();
+    var buffer: [4096]u8 = undefined;
+    var writer = outFile.writer(&buffer);
+    try std.zon.stringify.serialize(tileSets.items, .{}, &writer.interface);
+    try writer.interface.flush();
+}
+
+const hash = std.hash.Fnv1a_32.hash;
+fn parseTileSet(id: u32, value: tiled.Tileset) !TileSet {
+    var tiles: []Tile = &.{};
+    if (value.tiles) |t| tiles = try parseTiles(t);
+
+    if (value.columns > 0) {
+        const count = @divExact(value.tilecount, value.columns);
+        const fmt = "tileSet: {s} ({}x{} tiles), len: {}";
+        std.log.info(fmt, .{ value.name, value.columns, count, tiles.len });
+    } else {
+        const fmt = "tileSet: {s} ({} tiles - collection), len: {}";
+        std.log.info(fmt, .{ value.name, value.tilecount, tiles.len });
+    }
+
+    var imageId: u32 = 0;
+    if (value.image) |img| {
+        imageId = hash(img[3..]);
+        std.log.info("image: {s}, id: {}", .{ img[3..], imageId });
+    }
+
+    return .{
+        .id = id,
+        .columns = value.columns,
+        .tileCount = value.tilecount,
+        .image = imageId,
+        .tiles = tiles,
+    };
+}
+
+fn parseTiles(tiles: []tiled.TileDefinition) ![]Tile {
+    const result = try allocator.alloc(Tile, tiles.len);
+    for (tiles, 0..) |tile, index| {
+        var imageId: u32 = 0;
+        if (tile.image) |img| {
+            imageId = hash(img[3..]);
+            std.log.info("image: {s}, id: {}", .{ img[3..], imageId });
+        }
+
+        var propertes: []parsed.Property = &.{};
+        if (tile.properties) |p| propertes = try parseProperties(p);
+
+        var group: ?ObjectGroup = null;
+        if (tile.objectgroup) |g| group = try parseObjectGroup(g);
+
+        result[index] = .{
+            .id = tile.id,
+            .image = imageId,
+            .properties = propertes,
+            .objectGroup = group,
+        };
+    }
+    return result;
+}
+
+fn parseObjectGroup(value: tiled.Layer) !ObjectGroup {
+    var objects: []Object = &.{};
+    if (value.objects) |obj| objects = try parseObjects(obj);
+    return .{ .visible = value.visible, .objects = objects };
+}
+
+fn parseObjects(objects: []tiled.Object) ![]Object {
+    const result = try allocator.alloc(Object, objects.len);
+    for (objects, 0..) |object, i| {
+        result[i] = .{
+            .point = object.point,
+            .rotation = object.rotation,
+            .x = object.x,
+            .y = object.y,
+            .width = object.width,
+            .height = object.height,
+        };
+    }
+    return result;
+}
+
+fn convertPoints(value: ?[]const tiled.Point) !?[]const parsed.Point {
+    if (value) |points| {
+        const result = try allocator.alloc(parsed.Point, points.len);
+        for (points, 0..) |point, i| {
+            result[i] = .{ .x = point.x, .y = point.y };
+        }
+        return result;
+    }
+    return null;
+}
+
+fn convertText(value: ?tiled.Text) !?parsed.Text {
+    if (value) |text| {
+        return parsed.Text{
+            .bold = text.bold,
+            .color = text.color,
+            .fontFamily = text.fontfamily,
+            .halign = text.halign,
+            .italic = text.italic,
+            .kerning = text.kerning,
+            .pixelSize = text.pixelsize,
+            .strikeout = text.strikeout,
+            .text = text.text,
+            .underline = text.underline,
+            .valign = text.valign,
+            .wrap = text.wrap,
+        };
+    }
+    return null;
+}
+
+fn parseProperties(properties: []tiled.Property) ![]parsed.Property {
+    const result = try allocator.alloc(parsed.Property, properties.len);
+    for (properties, 0..) |property, i| {
+        result[i] = .{
+            .name = property.name,
+            .value = parsePropertyValue(property),
+        };
+    }
+    return result;
+}
+
+const toEnum = std.meta.stringToEnum;
+fn parsePropertyValue(property: tiled.Property) parsed.PropertyValue {
+    return switch (toEnum(parsed.PropertyEnum, property.type).?) {
+        .string => .{ .string = property.value.string },
+        .int => .{ .int = @intCast(property.value.integer) },
+        .float => .{ .float = @floatCast(property.value.float) },
+        .bool => .{ .bool = property.value.bool },
+    };
+}
+
+fn convertTileData(value: ?std.json.Value) ![]u32 {
+    if (value) |v| {
+        switch (v) {
+            .array => return try convertJsonArrayToTiles(v),
+            else => {},
+        }
+    }
+    return &.{};
+}
+
+fn convertJsonArrayToTiles(value: std.json.Value) ![]u32 {
+    return switch (value) {
+        .array => |arr| blk: {
+            const items = arr.items;
+            const result = try allocator.alloc(u32, items.len);
+            for (items, 0..) |entry, i| {
+                result[i] = switch (entry) {
+                    .integer => |v| @intCast(v),
+                    .float => |v| @intFromFloat(v),
+                    else => return error.InvalidTileData,
+                };
+            }
+            break :blk result;
+        },
+        else => error.InvalidTileData,
+    };
+}
