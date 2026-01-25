@@ -60,14 +60,14 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
         var image: zhu.graphics.Image = undefined;
         const tileSetRef = map.getTileSetRefByGid(gid);
         const tileSet = map.getTileSetByRef(tileSetRef);
-        const columns = tileSet.columns; // 单图片瓦片集的列数
         const localId = gid - tileSetRef.firstGid;
-        const tile = tiled.getTileById(tileSet, localId);
-        if (columns == 0) {
+        const tile = tileSet.getTileByLocalId(localId);
+
+        if (tileSet.columns == 0) { // 单图片瓦片集的列数
             image = zhu.assets.getImage(tile.?.image);
             pos.y = pos.y - image.area.size.y + level.tileSize.y;
         } else {
-            const area = tiled.tileArea(localId, level.tileSize, columns);
+            const area = map.tileArea(localId, tileSet.columns);
             image = firstImage.sub(area);
         }
 

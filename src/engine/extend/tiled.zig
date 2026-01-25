@@ -69,6 +69,12 @@ pub const TileSet = struct {
     tileCount: i32,
     image: u32,
     tiles: []const Tile,
+
+    pub fn getTileByLocalId(self: TileSet, id: u32) ?Tile {
+        for (self.tiles) |tile| {
+            if (id == tile.id) return tile;
+        } else return null;
+    }
 };
 
 pub const Tile = struct {
@@ -126,16 +132,11 @@ pub const Map = struct {
             }
         } else unreachable;
     }
+
+    pub fn tileArea(self: Map, index: u32, columns: u32) Rect {
+        const x: f32 = @floatFromInt(index % columns);
+        const y: f32 = @floatFromInt(index / columns);
+        const size = self.map.tileSize;
+        return Rect.init(size.mul(.xy(x, y)), size);
+    }
 };
-
-pub fn getTileById(tileSet: TileSet, id: u32) ?Tile {
-    for (tileSet.tiles) |tile| {
-        if (id == tile.id) return tile;
-    } else return null;
-}
-
-pub fn tileArea(index: u32, size: Vector2, columns: u32) Rect {
-    const x: f32 = @floatFromInt(index % columns);
-    const y: f32 = @floatFromInt(index / columns);
-    return Rect.init(size.mul(.xy(x, y)), size);
-}
