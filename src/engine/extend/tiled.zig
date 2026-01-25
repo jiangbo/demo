@@ -71,7 +71,7 @@ pub const TileSet = struct {
     tiles: []const Tile,
 };
 
-const Tile = struct {
+pub const Tile = struct {
     id: i32,
     image: u32,
     objectGroup: ?ObjectGroup = null,
@@ -115,11 +115,11 @@ pub const Map = struct {
         return self.getTileSetByRef(self.getTileSetRefByGid(gid));
     }
 
-    pub fn getTileByGId(self: Map, objectId: u32) Tile {
+    pub fn getTileByGId(self: Map, gid: u32) Tile {
         for (self.map.tileSetRefs) |ref| {
-            if (objectId < ref.max) {
+            if (gid < ref.max) {
                 const tileSet = self.getTileSetByRef(ref);
-                const id = objectId - ref.firstGid;
+                const id = gid - ref.firstGid;
                 for (tileSet.tiles) |tile| {
                     if (id == tile.id) return tile;
                 }
@@ -128,10 +128,10 @@ pub const Map = struct {
     }
 };
 
-pub fn getTileById(tileSet: TileSet, id: u32) Tile {
+pub fn getTileById(tileSet: TileSet, id: u32) ?Tile {
     for (tileSet.tiles) |tile| {
         if (id == tile.id) return tile;
-    } else unreachable;
+    } else return null;
 }
 
 pub fn tileArea(index: u32, size: Vector2, columns: u32) Rect {

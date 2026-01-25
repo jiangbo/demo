@@ -62,9 +62,9 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
         const tileSet = map.getTileSetByRef(tileSetRef);
         const columns = tileSet.columns; // 单图片瓦片集的列数
         const id = gid - tileSetRef.firstGid;
+        const tile = tiled.getTileById(tileSet, id);
         if (columns == 0) {
-            const tile = tiled.getTileById(tileSet, id);
-            image = zhu.assets.getImage(tile.image);
+            image = zhu.assets.getImage(tile.?.image);
             pos.y = pos.y - image.area.size.y + level.tileSize.y;
         } else {
             const area = tiled.tileArea(id, level.tileSize, columns);
@@ -76,6 +76,16 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
             .size = image.area.size,
             .texturePosition = image.area.toTexturePosition(),
         }) catch @panic("oom, can't append tile");
+
+        if (tile) |t| parseProperties(index, t); // 解析碰撞信息
+    }
+}
+
+fn parseProperties(index: usize, tile: tiled.Tile) void {
+    for (tile.properties) |property| {
+        if (!std.mem.eql(u8, property.name, "solid")) continue;
+
+        if (property.value.bool) states[index] = 1;
     }
 }
 
