@@ -22,6 +22,7 @@ pub const LayerEnum = enum { image, tile, object };
 
 pub const Layer = struct {
     id: u32,
+    name: []const u8,
     image: u32,
     type: LayerEnum,
 

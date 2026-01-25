@@ -33,6 +33,8 @@ var states: []u8 = &.{};
 pub fn init() void {
     map = .init(level, tileSets);
     states = zhu.assets.oomAlloc(u8, level.width * level.height);
+    @memset(states, 0);
+
     for (level.layers) |layer| {
         if (layer.type == .tile) parseTileLayer(&layer) //
         else if (layer.type == .object) parseObjectLayer(&layer);

@@ -18,6 +18,7 @@ const TiledMap = struct {
 const LayerEnum = enum { image, tile, object };
 const Layer = struct {
     id: u32,
+    name: []const u8,
     image: u32,
     type: LayerEnum,
     width: f32,
@@ -132,6 +133,7 @@ fn parseLayers(layers: []tiled.Layer) ![]Layer {
 
         layer.* = Layer{
             .id = old.id,
+            .name = old.name,
             .image = image,
             .type = layerEnum,
             .width = @floatFromInt(width),
