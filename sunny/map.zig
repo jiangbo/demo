@@ -34,7 +34,7 @@ pub fn init() void {
     map.tileSets = tileSets;
     states = zhu.assets.oomAlloc(u8, map.width * map.height);
     @memset(states, 0);
-    zhu.camera.worldSize = map.size();
+    zhu.camera.bound = map.size();
 
     for (map.layers) |layer| {
         if (layer.type == .tile) parseTileLayer(&layer) //

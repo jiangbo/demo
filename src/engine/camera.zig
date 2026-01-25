@@ -7,7 +7,7 @@ const Vector2 = math.Vector2;
 
 pub var modeEnum: enum { world, window } = .world;
 pub var position: Vector2 = .zero;
-pub var worldSize: Vector2 = undefined;
+pub var bound: Vector2 = undefined;
 
 pub fn toWorld(windowPosition: Vector2) Vector2 {
     return windowPosition.add(position);
@@ -25,11 +25,10 @@ pub fn control(distance: f32) void {
 }
 
 pub fn directFollow(pos: Vector2) void {
-    // const scaleSize = window.logicSize.div(camera.scale);
+    // const scaleSize = window.size.div(scale);
     // const half = scaleSize.scale(0.5);
-    const max = worldSize.sub(window.size).max(.zero);
     const halfWindowSize = window.size.scale(0.5);
-    const square: Vector2 = .square(30);
+    const max = bound.sub(window.size).max(.zero);
     position = pos.sub(halfWindowSize);
-    position.clamp(square.scale(-1), max.add(square));
+    position.clamp(.zero, max);
 }

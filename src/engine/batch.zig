@@ -51,7 +51,7 @@ pub fn init(size: Vector2, buffer: []Vertex) void {
     const shaderDesc = shader.quadShaderDesc(gpu.queryBackend());
     pipeline = createQuadPipeline(shaderDesc);
 
-    camera.worldSize = size; // 初始化摄像机的世界大小
+    camera.bound = size; // 初始化摄像机的边界
 }
 
 pub fn initWithWhiteTexture(size: Vector2, buffer: []Vertex) void {
