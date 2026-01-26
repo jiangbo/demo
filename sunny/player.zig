@@ -22,6 +22,9 @@ pub var position: zhu.Vector2 = undefined;
 var state: State = .idle;
 var flip: bool = false;
 
+const maxHealth: u8 = 3;
+var health: u8 = maxHealth;
+
 pub fn init(pos: zhu.Vector2) void {
     position = pos;
     const foxy = zhu.getImage("textures/Actors/foxy.png");
@@ -39,17 +42,25 @@ pub fn update(delta: f32) void {
     velocity.x = std.math.clamp(velocity.x, -maxSpeed, maxSpeed);
     const toPosition = position.add(velocity.scale(delta));
 
-    const clamped = map.clamp(position, toPosition, size);
-    // std.log.info("old: {}, new: {}, clamped: {}", .{ position, toPosition, clamped });
-    if (clamped.x == position.x) velocity.x = 0;
-    if (clamped.y == position.y) velocity.y = 0;
-    position = clamped;
+    if (state == .dead) position = toPosition else {
+        const clamped = map.clamp(position, toPosition, size);
+        // std.log.info("old: {}, new: {}, clamped: {}", .{ position, toPosition, clamped });
+        if (clamped.x == position.x) velocity.x = 0;
+        if (clamped.y == position.y) velocity.y = 0;
+        position = clamped;
+    }
+
     zhu.camera.directFollow(position);
     zhu.camera.position = zhu.camera.position.round();
 
     // 模拟受伤
     if (zhu.window.isKeyPress(.K)) {
-        changeState(.hurt);
+        health -|= 1;
+        if (health == 0) {
+            changeState(.dead);
+        } else {
+            changeState(.hurt);
+        }
     }
 }
 
@@ -63,6 +74,7 @@ const State = union(enum) {
     jump: JumpState,
     fall: FallState,
     hurt: HurtState,
+    dead: DeadState,
 
     fn enter(self: State) void {
         switch (self) {
@@ -229,6 +241,29 @@ const HurtState = struct {
 
     fn draw() void {
         const hurtImage = animation.currentImage();
-        batch.drawImage(hurtImage, position, .{ .flipX = flip });
+        batch.drawImage(hurtImage, position, .{});
+    }
+};
+
+const DeadState = struct {
+    var animation: zhu.graphics.FrameAnimation = undefined;
+    const frames = zhu.graphics.framesX(2, size, 0.1);
+
+    pub fn init() void {
+        const hurtImage = image.sub(.init(.xy(0, 128), .xy(64, 32)));
+        animation = .init(hurtImage, &frames);
+    }
+
+    fn enter() void {
+        std.log.info("enter dead", .{});
+        velocity = .xy(0, -200);
+    }
+
+    fn update(delta: f32) void {
+        animation.loopUpdate(delta);
+    }
+
+    fn draw() void {
+        batch.drawImage(animation.currentImage(), position, .{});
     }
 };
