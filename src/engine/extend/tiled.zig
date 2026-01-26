@@ -16,8 +16,6 @@ pub const Map = struct {
     layers: []const Layer,
     tileSetRefs: []const TileSetRef,
 
-    tileSets: []const TileSet = &.{},
-
     pub fn size(self: Map) Vector2 {
         return self.tilePositionToWorld(self.width, self.height);
     }
@@ -47,11 +45,6 @@ pub const Map = struct {
         return self.tileSize.mul(.xy(x, y));
     }
 
-    pub fn getTileSetByRef(self: Map, ref: TileSetRef) TileSet {
-        for (self.tileSets) |ts| if (ts.id == ref.id) return ts;
-        unreachable;
-    }
-
     pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {
         for (self.tileSetRefs) |ref| {
             if (gid < ref.max) return ref;
@@ -65,11 +58,8 @@ pub const Map = struct {
     pub fn getTileByGId(self: Map, gid: u32) Tile {
         for (self.tileSetRefs) |ref| {
             if (gid < ref.max) {
-                const tileSet = self.getTileSetByRef(ref);
-                const id = gid - ref.firstGid;
-                for (tileSet.tiles) |tile| {
-                    if (id == tile.id) return tile;
-                }
+                const tileSet = getTileSetByRef(ref);
+                return tileSet.tiles[gid - ref.firstGid];
             }
         } else unreachable;
     }
@@ -142,7 +132,7 @@ pub const TileSet = struct {
 };
 
 pub const Tile = struct {
-    id: i32,
+    id: u32,
     image: u32,
     objectGroup: ?ObjectGroup = null,
     properties: []const Property,
@@ -161,3 +151,18 @@ pub const Object = struct {
     properties: []const Property = &.{}, // 物体自定义属性
     rotation: f32, // 顺时针旋转角度
 };
+
+pub var tileSets: []const TileSet = &.{};
+
+pub fn getTileSetByRef(ref: TileSetRef) TileSet {
+    for (tileSets) |ts| if (ts.id == ref.id) return ts;
+    unreachable;
+}
+
+pub fn getTileByImageId(id: graphics.ImageId) Tile {
+    for (tileSets) |ts| {
+        for (ts.tiles) |tile| {
+            if (tile.image == id) return tile;
+        }
+    } else unreachable;
+}

@@ -21,18 +21,15 @@ pub const Object = struct {
     type: ObjectEnum,
     position: Vector2,
     size: Vector2,
-    tileObject: ?tiled.Object,
 };
-const level1: tiled.Map = @import("zon/level1.zon");
+const map: tiled.Map = @import("zon/level1.zon");
 const tileSets: []const tiled.TileSet = @import("zon/tile.zon");
-var map: tiled.Map = level1;
-
 var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
 pub var objects: std.ArrayList(Object) = .empty;
 var states: []u8 = &.{};
 
 pub fn init() void {
-    map.tileSets = tileSets;
+    tiled.tileSets = tileSets;
     states = zhu.assets.oomAlloc(u8, map.width * map.height);
     @memset(states, 0);
     zhu.camera.bound = map.size();
@@ -50,7 +47,7 @@ pub fn deinit() void {
 }
 
 fn parseTileLayer(layer: *const tiled.Layer) void {
-    const firstTileSet = map.getTileSetByRef(map.tileSetRefs[0]);
+    const firstTileSet = tiled.getTileSetByRef(map.tileSetRefs[0]);
     var firstImage = zhu.assets.getImage(firstTileSet.image);
     for (layer.data, 0..) |gid, index| {
         if (gid == 0) continue;
@@ -61,7 +58,7 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
 
         var image: zhu.graphics.Image = undefined;
         const tileSetRef = map.getTileSetRefByGid(gid);
-        const tileSet = map.getTileSetByRef(tileSetRef);
+        const tileSet = tiled.getTileSetByRef(tileSetRef);
         const localId = gid - tileSetRef.firstGid;
         const tile = tileSet.getTileByLocalId(localId);
 
@@ -99,14 +96,10 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
         }
         const tile = map.getTileByGId(object.gid);
 
-        var tileObject: ?tiled.Object = null;
-        if (tile.objectGroup) |group| tileObject = group.objects[0];
-
         objects.append(zhu.assets.allocator, .{
             .type = @enumFromInt(tile.image),
             .position = object.position.addY(-object.size.y),
             .size = object.size,
-            .tileObject = tileObject,
         }) catch @panic("oom, can't append tile");
     }
 }

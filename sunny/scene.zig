@@ -3,7 +3,6 @@ const zhu = @import("zhu");
 
 const window = zhu.window;
 const batch = zhu.batch;
-const tiled = zhu.extend.tiled;
 
 const map = @import("map.zig");
 const player = @import("player.zig");
@@ -17,7 +16,7 @@ pub fn init() void {
 
     for (map.objects.items, 0..) |obj, index| {
         if (obj.type != .player) continue;
-        player.init(obj.position, obj.size, obj.tileObject.?);
+        player.init(obj.position, obj.size);
         _ = map.objects.swapRemove(index);
         break;
     }

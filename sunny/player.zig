@@ -15,6 +15,7 @@ const hurtVelocity: zhu.Vector2 = .xy(-100, -150);
 
 const imageSize: zhu.Vector2 = .xy(32, 32);
 var viewSize: zhu.Vector2 = undefined;
+var tile: tiled.Tile = undefined;
 var tiledObject: tiled.Object = undefined;
 var image: zhu.graphics.Image = undefined;
 
@@ -27,13 +28,14 @@ var flip: bool = false;
 const maxHealth: u8 = 3;
 var health: u8 = maxHealth;
 
-pub fn init(pos: zhu.Vector2, size: zhu.Vector2, object: tiled.Object) void {
+pub fn init(pos: zhu.Vector2, size: zhu.Vector2) void {
     position = pos;
     viewSize = size;
-    tiledObject = object;
+    const imageId = zhu.imageId("textures/Actors/foxy.png");
+    tile = tiled.getTileByImageId(imageId);
+    tiledObject = tile.objectGroup.?.objects[0];
 
-    const foxy = zhu.getImage("textures/Actors/foxy.png");
-    image = foxy.sub(.init(.zero, imageSize));
+    image = zhu.assets.getImage(imageId).sub(.init(.zero, imageSize));
     inline for (std.meta.fields(State)) |field| field.type.init();
 
     state.enter();
