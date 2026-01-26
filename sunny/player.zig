@@ -15,6 +15,7 @@ const hurtVelocity: zhu.Vector2 = .xy(-100, -150);
 
 const imageSize: zhu.Vector2 = .xy(32, 32);
 var viewSize: zhu.Vector2 = undefined;
+var tiledObject: tiled.Object = undefined;
 var image: zhu.graphics.Image = undefined;
 
 var force: zhu.Vector2 = .xy(0, gravity);
@@ -26,11 +27,12 @@ var flip: bool = false;
 const maxHealth: u8 = 3;
 var health: u8 = maxHealth;
 
-pub fn init(pos: zhu.Vector2, size: zhu.Vector2) void {
+pub fn init(pos: zhu.Vector2, size: zhu.Vector2, object: tiled.Object) void {
     position = pos;
     viewSize = size;
-    const foxy = zhu.getImage("textures/Actors/foxy.png");
+    tiledObject = object;
 
+    const foxy = zhu.getImage("textures/Actors/foxy.png");
     image = foxy.sub(.init(.zero, imageSize));
     inline for (std.meta.fields(State)) |field| field.type.init();
 
@@ -68,6 +70,11 @@ pub fn update(delta: f32) void {
 
 pub fn draw() void {
     state.draw();
+    // 绘制角色的碰撞框
+    const pos = position.add(tiledObject.position);
+    batch.drawRect(.init(pos, tiledObject.size), .{
+        .color = .rgba(0, 1, 0, 0.4),
+    });
 }
 
 pub fn drawPlayer(img: zhu.graphics.Image) void {
