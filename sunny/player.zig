@@ -13,7 +13,8 @@ const gravity = 980; // 重力
 const jumpSpeed = 350.0; // 跳跃速度
 const hurtVelocity: zhu.Vector2 = .xy(-100, -150);
 
-const size: zhu.Vector2 = .xy(32, 32);
+const imageSize: zhu.Vector2 = .xy(32, 32);
+var viewSize: zhu.Vector2 = undefined;
 var image: zhu.graphics.Image = undefined;
 
 var force: zhu.Vector2 = .xy(0, gravity);
@@ -25,11 +26,12 @@ var flip: bool = false;
 const maxHealth: u8 = 3;
 var health: u8 = maxHealth;
 
-pub fn init(pos: zhu.Vector2) void {
+pub fn init(pos: zhu.Vector2, size: zhu.Vector2) void {
     position = pos;
+    viewSize = size;
     const foxy = zhu.getImage("textures/Actors/foxy.png");
 
-    image = foxy.sub(.init(.zero, size));
+    image = foxy.sub(.init(.zero, imageSize));
     inline for (std.meta.fields(State)) |field| field.type.init();
 
     state.enter();
@@ -43,7 +45,7 @@ pub fn update(delta: f32) void {
     const toPosition = position.add(velocity.scale(delta));
 
     if (state == .dead) position = toPosition else {
-        const clamped = map.clamp(position, toPosition, size);
+        const clamped = map.clamp(position, toPosition, viewSize);
         // std.log.info("old: {}, new: {}, clamped: {}", .{ position, toPosition, clamped });
         if (clamped.x == position.x) velocity.x = 0;
         if (clamped.y == position.y) velocity.y = 0;
@@ -66,6 +68,10 @@ pub fn update(delta: f32) void {
 
 pub fn draw() void {
     state.draw();
+}
+
+pub fn drawPlayer(img: zhu.graphics.Image) void {
+    batch.drawImage(img, position, .{ .flipX = flip, .size = viewSize });
 }
 
 const State = union(enum) {
@@ -102,7 +108,7 @@ fn changeState(newState: State) void {
 
 const IdleState = struct {
     var animation: zhu.graphics.FrameAnimation = undefined;
-    const frames = zhu.graphics.loopFramesX(4, size, 0.2);
+    const frames = zhu.graphics.loopFramesX(4, imageSize, 0.2);
 
     pub fn init() void {
         const idleImage = image.sub(.init(.zero, .xy(32, 128)));
@@ -124,15 +130,13 @@ const IdleState = struct {
     }
 
     fn draw() void {
-        batch.drawImage(animation.currentImage(), position, .{
-            .flipX = flip,
-        });
+        drawPlayer(animation.currentImage());
     }
 };
 
 const WalkState = struct {
     var animation: zhu.graphics.FrameAnimation = undefined;
-    const frames = zhu.graphics.loopFramesX(6, size, 0.1);
+    const frames = zhu.graphics.loopFramesX(6, imageSize, 0.1);
 
     pub fn init() void {
         const walkImage = image.sub(.init(.xy(0, 32), .xy(32, 198)));
@@ -162,16 +166,14 @@ const WalkState = struct {
     }
 
     fn draw() void {
-        batch.drawImage(animation.currentImage(), position, .{
-            .flipX = flip,
-        });
+        drawPlayer(animation.currentImage());
     }
 };
 const JumpState = struct {
     var jumpImage: zhu.graphics.Image = undefined;
 
     pub fn init() void {
-        jumpImage = image.sub(.init(.xy(0, 160), size));
+        jumpImage = image.sub(.init(.xy(0, 160), imageSize));
     }
 
     fn enter() void {
@@ -186,14 +188,14 @@ const JumpState = struct {
     }
 
     fn draw() void {
-        batch.drawImage(jumpImage, position, .{ .flipX = flip });
+        drawPlayer(jumpImage);
     }
 };
 const FallState = struct {
     var fallImage: zhu.graphics.Image = undefined;
 
     pub fn init() void {
-        fallImage = image.sub(.init(.xy(32, 160), size));
+        fallImage = image.sub(.init(.xy(32, 160), imageSize));
     }
 
     fn enter() void {
@@ -207,13 +209,13 @@ const FallState = struct {
     }
 
     fn draw() void {
-        batch.drawImage(fallImage, position, .{ .flipX = flip });
+        drawPlayer(fallImage);
     }
 };
 
 const HurtState = struct {
     var animation: zhu.graphics.FrameAnimation = undefined;
-    const frames = zhu.graphics.framesX(2, size, 0.1);
+    const frames = zhu.graphics.framesX(2, imageSize, 0.1);
     var timer: zhu.Timer = .init(0.4);
 
     pub fn init() void {
@@ -240,14 +242,13 @@ const HurtState = struct {
     }
 
     fn draw() void {
-        const hurtImage = animation.currentImage();
-        batch.drawImage(hurtImage, position, .{});
+        drawPlayer(animation.currentImage());
     }
 };
 
 const DeadState = struct {
     var animation: zhu.graphics.FrameAnimation = undefined;
-    const frames = zhu.graphics.framesX(2, size, 0.1);
+    const frames = zhu.graphics.framesX(2, imageSize, 0.1);
 
     pub fn init() void {
         const hurtImage = image.sub(.init(.xy(0, 128), .xy(64, 32)));
@@ -264,6 +265,6 @@ const DeadState = struct {
     }
 
     fn draw() void {
-        batch.drawImage(animation.currentImage(), position, .{});
+        drawPlayer(animation.currentImage());
     }
 };

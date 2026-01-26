@@ -17,7 +17,7 @@ pub fn init() void {
 
     for (map.objects.items, 0..) |obj, index| {
         if (obj.type != .player) continue;
-        player.init(obj.position);
+        player.init(obj.position, obj.size);
         _ = map.objects.swapRemove(index);
         break;
     }
