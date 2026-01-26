@@ -21,6 +21,7 @@ pub const Object = struct {
     type: ObjectEnum,
     position: Vector2,
     size: Vector2,
+    object: ?tiled.Object,
 };
 const map: tiled.Map = @import("zon/level1.zon");
 const tileSets: []const tiled.TileSet = @import("zon/tile.zon");
@@ -96,10 +97,13 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
         }
         const tile = map.getTileByGId(object.gid).?;
 
+        var obj: ?tiled.Object = null;
+        if (tile.objectGroup) |group| obj = group.objects[0];
         objects.append(zhu.assets.allocator, .{
             .type = @enumFromInt(tile.id),
             .position = object.position.addY(-object.size.y),
             .size = object.size,
+            .object = obj,
         }) catch @panic("oom, can't append tile");
     }
 }

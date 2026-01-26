@@ -2,9 +2,11 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const batch = zhu.batch;
+const tiled = zhu.extend.tiled;
 
 const map = @import("map.zig");
 const getImage = zhu.assets.getImage;
+const player = @import("player.zig");
 
 const gemFrames = zhu.graphics.framesX(5, .xy(15, 13), 0.2);
 const cherryFrames = zhu.graphics.loopFramesX(5, .xy(21, 21), 0.2);
@@ -56,7 +58,15 @@ pub fn update(delta: f32) void {
     opossumAnimation.loopUpdate(delta);
     eagleAnimation.loopUpdate(delta);
     frogAnimations.getPtr(frogState).loopUpdate(delta);
+
+    // for (items) |item| {
+    //     updateCollision(&item, delta);
+    // }
 }
+
+// fn updateCollision(item: *map.Object, delta: f32) void {
+
+// }
 
 pub fn draw() void {
     for (items) |item| {
@@ -70,5 +80,10 @@ pub fn draw() void {
         };
 
         if (image) |img| batch.drawImage(img, item.position, .{});
+
+        // 显示碰撞框
+        if (item.object == null) continue;
+        const obj = item.object.?;
+        batch.debugDraw(.init(item.position.add(obj.position), obj.size));
     }
 }
