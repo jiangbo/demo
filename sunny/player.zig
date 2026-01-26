@@ -10,7 +10,8 @@ const moveForce = 200; // 移动力
 const factor = 0.85; // 减速因子
 const maxSpeed = 120; // 最大速度
 const gravity = 980; // 重力
-const jumpVelocity = 350.0; // 跳跃速度
+const jumpSpeed = 350.0; // 跳跃速度
+const hurtVelocity: zhu.Vector2 = .xy(-100, -150);
 
 const size: zhu.Vector2 = .xy(32, 32);
 var image: zhu.graphics.Image = undefined;
@@ -45,6 +46,11 @@ pub fn update(delta: f32) void {
     position = clamped;
     zhu.camera.directFollow(position);
     zhu.camera.position = zhu.camera.position.round();
+
+    // 模拟受伤
+    if (zhu.window.isKeyPress(.K)) {
+        changeState(.hurt);
+    }
 }
 
 pub fn draw() void {
@@ -56,6 +62,7 @@ const State = union(enum) {
     walk: WalkState,
     jump: JumpState,
     fall: FallState,
+    hurt: HurtState,
 
     fn enter(self: State) void {
         switch (self) {
@@ -92,6 +99,7 @@ const IdleState = struct {
 
     fn enter() void {
         std.log.info("enter idle", .{});
+        force.x = 0; // 停止水平受力
     }
 
     fn update(delta: f32) void {
@@ -137,7 +145,6 @@ const WalkState = struct {
             force.x = moveForce;
             flip = false;
         } else {
-            force.x = 0;
             changeState(.idle);
         }
     }
@@ -157,7 +164,7 @@ const JumpState = struct {
 
     fn enter() void {
         std.log.info("enter jump", .{});
-        velocity.y = -jumpVelocity;
+        velocity.y = -jumpSpeed;
     }
 
     fn update(_: f32) void {
@@ -189,5 +196,39 @@ const FallState = struct {
 
     fn draw() void {
         batch.drawImage(fallImage, position, .{ .flipX = flip });
+    }
+};
+
+const HurtState = struct {
+    var animation: zhu.graphics.FrameAnimation = undefined;
+    const frames = zhu.graphics.framesX(2, size, 0.1);
+    var timer: zhu.Timer = .init(0.4);
+
+    pub fn init() void {
+        const hurtImage = image.sub(.init(.xy(0, 128), .xy(64, 32)));
+        animation = .init(hurtImage, &frames);
+    }
+
+    fn enter() void {
+        std.log.info("enter hurt", .{});
+        var vel = hurtVelocity;
+        if (flip) vel.x = -vel.x;
+        velocity = .xy(vel.x, velocity.y + vel.y);
+        timer.elapsed = 0; // 重置计时器
+    }
+
+    fn update(delta: f32) void {
+        animation.loopUpdate(delta);
+
+        if (velocity.y == 0) {
+            changeState(.idle);
+        } else if (timer.isFinishedOnceUpdate(delta)) {
+            changeState(.fall);
+        }
+    }
+
+    fn draw() void {
+        const hurtImage = animation.currentImage();
+        batch.drawImage(hurtImage, position, .{ .flipX = flip });
     }
 };
