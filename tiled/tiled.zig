@@ -269,7 +269,7 @@ pub const TileDefinition = struct {
     /// 动画帧数组
     animation: ?[]const Frame = null,
     /// 瓦片的局部 ID
-    id: i32 = 0,
+    id: u32 = 0,
     /// 代表该瓦片的图像路径 (仅限图像集合瓦片集)
     image: ?[]const u8 = null,
     /// 瓦片图像的高度 (像素)

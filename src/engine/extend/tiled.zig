@@ -55,11 +55,11 @@ pub const Map = struct {
         return self.getTileSetByRef(self.getTileSetRefByGid(gid));
     }
 
-    pub fn getTileByGId(self: Map, gid: u32) Tile {
+    pub fn getTileByGId(self: Map, gid: u32) ?Tile {
         for (self.tileSetRefs) |ref| {
             if (gid < ref.max) {
-                const tileSet = getTileSetByRef(ref);
-                return tileSet.tiles[gid - ref.firstGid];
+                const ts = getTileSetByRef(ref);
+                return ts.getTileByLocalId(gid - ref.firstGid);
             }
         } else unreachable;
     }
@@ -125,6 +125,7 @@ pub const TileSet = struct {
     tiles: []const Tile,
 
     pub fn getTileByLocalId(self: TileSet, id: u32) ?Tile {
+        if (self.columns == 0) return self.tiles[id];
         for (self.tiles) |tile| {
             if (id == tile.id) return tile;
         } else return null;
@@ -133,7 +134,6 @@ pub const TileSet = struct {
 
 pub const Tile = struct {
     id: u32,
-    image: u32,
     objectGroup: ?ObjectGroup = null,
     properties: []const Property,
 };
@@ -161,8 +161,6 @@ pub fn getTileSetByRef(ref: TileSetRef) TileSet {
 
 pub fn getTileByImageId(id: graphics.ImageId) Tile {
     for (tileSets) |ts| {
-        for (ts.tiles) |tile| {
-            if (tile.image == id) return tile;
-        }
+        for (ts.tiles) |tile| if (tile.id == id) return tile;
     } else unreachable;
 }

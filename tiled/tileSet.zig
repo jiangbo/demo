@@ -15,7 +15,6 @@ const TileSet = struct {
 
 const Tile = struct {
     id: u32,
-    image: u32,
     objectGroup: ?ObjectGroup = null,
     properties: []const parsed.Property,
 };
@@ -81,7 +80,13 @@ pub fn main() !void {
 const hash = std.hash.Fnv1a_32.hash;
 fn parseTileSet(id: u32, value: tiled.Tileset) !TileSet {
     var tiles: []Tile = &.{};
-    if (value.tiles) |t| tiles = try parseTiles(t);
+    if (value.tiles) |t| {
+        if (value.columns == 0) {
+            tiles = try parseTilesCollection(t);
+        } else {
+            tiles = try parseTilesSingle(t);
+        }
+    }
 
     if (value.columns > 0) {
         const count = @divExact(value.tilecount, value.columns);
@@ -107,7 +112,7 @@ fn parseTileSet(id: u32, value: tiled.Tileset) !TileSet {
     };
 }
 
-fn parseTiles(tiles: []tiled.TileDefinition) ![]Tile {
+fn parseTilesSingle(tiles: []tiled.TileDefinition) ![]Tile {
     const result = try allocator.alloc(Tile, tiles.len);
     for (tiles, 0..) |tile, index| {
         var imageId: u32 = 0;
@@ -123,8 +128,34 @@ fn parseTiles(tiles: []tiled.TileDefinition) ![]Tile {
         if (tile.objectgroup) |g| group = try parseObjectGroup(g);
 
         result[index] = .{
-            .id = @intCast(tile.id),
-            .image = imageId,
+            .id = tile.id,
+            .properties = propertes,
+            .objectGroup = group,
+        };
+    }
+    return result;
+}
+
+fn parseTilesCollection(tiles: []tiled.TileDefinition) ![]Tile {
+    const last = tiles[tiles.len - 1];
+    const result = try allocator.alloc(Tile, last.id + 1);
+    @memset(result, std.mem.zeroes(Tile));
+
+    for (tiles) |tile| {
+        var imageId: u32 = 0;
+        if (tile.image) |img| {
+            imageId = hash(img[3..]);
+            std.log.info("image: {s}, id: {}", .{ img[3..], imageId });
+        }
+
+        var propertes: []parsed.Property = &.{};
+        if (tile.properties) |p| propertes = try parseProperties(p);
+
+        var group: ?ObjectGroup = null;
+        if (tile.objectgroup) |g| group = try parseObjectGroup(g);
+
+        result[tile.id] = .{
+            .id = imageId,
             .properties = propertes,
             .objectGroup = group,
         };

@@ -60,10 +60,10 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
         const tileSetRef = map.getTileSetRefByGid(gid);
         const tileSet = tiled.getTileSetByRef(tileSetRef);
         const localId = gid - tileSetRef.firstGid;
-        const tile = tileSet.getTileByLocalId(localId);
 
+        const tile = tileSet.getTileByLocalId(localId);
         if (tileSet.columns == 0) { // 单图片瓦片集的列数
-            image = zhu.assets.getImage(tile.?.image);
+            image = zhu.assets.getImage(tile.?.id);
             pos.y = pos.y - image.area.size.y + map.tileSize.y;
         } else {
             const area = map.tileArea(localId, tileSet.columns);
@@ -94,10 +94,10 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
             std.log.info("todo 0 gid, position: {}", .{object.position});
             continue;
         }
-        const tile = map.getTileByGId(object.gid);
+        const tile = map.getTileByGId(object.gid).?;
 
         objects.append(zhu.assets.allocator, .{
-            .type = @enumFromInt(tile.image),
+            .type = @enumFromInt(tile.id),
             .position = object.position.addY(-object.size.y),
             .size = object.size,
         }) catch @panic("oom, can't append tile");
