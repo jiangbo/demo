@@ -16,6 +16,17 @@ var cherryAnimation: zhu.graphics.FrameAnimation = undefined;
 var opossumAnimation: zhu.graphics.FrameAnimation = undefined;
 var eagleAnimation: zhu.graphics.FrameAnimation = undefined;
 
+const frogEnum = enum { idle, jump, fall };
+const frogIdleFrames = zhu.graphics.framesX(4, .xy(35, 32), 0.3);
+const frogJumpFrames: [1]zhu.graphics.Frame = .{
+    .{ .area = .init(.xy(35, 32), .xy(35, 32)), .interval = 0.1 },
+};
+const frogFallFrames: [1]zhu.graphics.Frame = .{
+    .{ .area = .init(.xy(70, 32), .xy(35, 32)), .interval = 0.1 },
+};
+var frogAnimations: zhu.graphics.EnumFrameAnimation(frogEnum) = undefined;
+var frogState: frogEnum = .idle;
+
 var items: []map.Object = undefined;
 
 pub fn init(objects: []map.Object) void {
@@ -32,6 +43,11 @@ pub fn init(objects: []map.Object) void {
 
     const eagleImage = getImage(@intFromEnum(map.ObjectEnum.eagle));
     eagleAnimation = .init(eagleImage, &eagleFrames);
+
+    const frogImage = getImage(@intFromEnum(map.ObjectEnum.frog));
+    frogAnimations.set(.idle, .init(frogImage, &frogIdleFrames));
+    frogAnimations.set(.jump, .init(frogImage, &frogJumpFrames));
+    frogAnimations.set(.fall, .init(frogImage, &frogFallFrames));
 }
 
 pub fn update(delta: f32) void {
@@ -39,6 +55,7 @@ pub fn update(delta: f32) void {
     cherryAnimation.loopUpdate(delta);
     opossumAnimation.loopUpdate(delta);
     eagleAnimation.loopUpdate(delta);
+    frogAnimations.getPtr(frogState).loopUpdate(delta);
 }
 
 pub fn draw() void {
@@ -48,11 +65,10 @@ pub fn draw() void {
             .cherry => cherryAnimation.currentImage(),
             .opossum => opossumAnimation.currentImage(),
             .eagle => eagleAnimation.currentImage(),
+            .frog => frogAnimations.get(frogState).currentImage(),
             else => null,
         };
 
-        if (image) |img| {
-            batch.drawImage(img, item.position, .{});
-        }
+        if (image) |img| batch.drawImage(img, item.position, .{});
     }
 }
