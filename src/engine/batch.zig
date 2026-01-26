@@ -139,10 +139,23 @@ pub fn drawRectBorder(area: math.Rect, width: f32, c: Color) void {
 
 pub const RectOption = struct { color: Color = .white, radian: f32 = 0 };
 pub fn drawRect(area: math.Rect, option: RectOption) void {
-    drawImage(whiteImage, area.min, .{
+    const white = whiteImage.sub(.init(.xy(0, 4), .xy(4, 4)));
+    drawImage(white, area.min, .{
         .size = area.size,
         .color = option.color,
         .radian = option.radian,
+    });
+}
+
+pub const TriangleOption = struct {
+    color: Color = .white,
+    flip: bool = false,
+};
+pub fn drawTriangle(area: math.Rect, option: TriangleOption) void {
+    drawImage(whiteImage, area.min, .{
+        .size = area.size,
+        .color = option.color,
+        .flipX = option.flip,
     });
 }
 
