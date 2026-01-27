@@ -20,9 +20,9 @@ var tiledObject: tiled.Object = undefined;
 var image: zhu.graphics.Image = undefined;
 
 var force: zhu.Vector2 = .xy(0, gravity);
-var velocity: zhu.Vector2 = .zero;
+pub var velocity: zhu.Vector2 = .zero;
 pub var position: zhu.Vector2 = undefined;
-var state: State = .idle;
+pub var state: State = .idle;
 var flip: bool = false;
 
 const maxHealth: u8 = 3;
@@ -73,6 +73,11 @@ pub fn update(delta: f32) void {
 pub fn collideRect() zhu.Rect {
     const pos = position.add(tiledObject.position);
     return .init(pos, tiledObject.size);
+}
+
+pub fn hurt() void {
+    health -|= 1;
+    if (health == 0) changeState(.dead) else changeState(.hurt);
 }
 
 pub fn draw() void {

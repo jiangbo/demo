@@ -270,6 +270,13 @@ pub const Rect = struct {
             self.min.y < other.max().y and self.max().y > other.min.y;
     }
 
+    /// 返回重叠区域
+    pub fn overlapArea(self: Rect, other: Rect) Rect {
+        const overlapMin = self.min.max(other.min);
+        const overlapMax = self.max().min(other.max());
+        return Rect.fromMax(overlapMin, overlapMax);
+    }
+
     /// 按圆形判断是否相交
     pub fn intersectCircle(self: Rect, other: Rect) bool {
         std.debug.assert(self.size.x == self.size.y);
