@@ -4,7 +4,6 @@ const gpu = @import("gpu.zig");
 const math = @import("math.zig");
 const shader = @import("shader/quad.glsl.zig");
 const graphics = @import("graphics.zig");
-const camera = @import("camera.zig");
 const assets = @import("assets.zig");
 
 const Image = graphics.Image;
@@ -28,6 +27,7 @@ pub const Command = struct {
     commandEnum: CommandEnum = .draw, // 命令类型
 };
 var commandBuffer: std.ArrayList(Command) = .empty;
+pub var camera: Camera = undefined;
 
 pub const Vertex = extern struct {
     position: math.Vector2, // 顶点坐标
@@ -39,9 +39,7 @@ pub const Vertex = extern struct {
     color: graphics.Color = .white, // 顶点颜色
 };
 
-var windowSize: Vector2 = undefined;
-
-pub fn init(size: Vector2, vertexes: []Vertex, commands: []Command) void {
+pub fn init(vertexes: []Vertex, commands: []Command) void {
     gpuBuffer = gpu.createBuffer(.{
         .size = @sizeOf(Vertex) * vertexes.len,
         .usage = .{ .stream_update = true },
@@ -52,8 +50,7 @@ pub fn init(size: Vector2, vertexes: []Vertex, commands: []Command) void {
     const shaderDesc = shader.quadShaderDesc(gpu.queryBackend());
     pipeline = createQuadPipeline(shaderDesc);
 
-    windowSize = size;
-    camera.bound = size; // 初始化摄像机的边界
+    camera = Camera.init();
 }
 
 pub fn initWithWhiteTexture(size: Vector2, buffer: []Vertex) void {
@@ -178,16 +175,16 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     const size = (option.size orelse image.area.size);
     const scaledSize = size.mul(option.scale);
 
-    var imageVector: math.Vector4 = image.area.toTexturePosition();
+    var imageVector = image.area.toTexturePosition();
     if (option.flipX) {
         imageVector.x += imageVector.z;
         imageVector.z = -imageVector.z;
     }
 
-    var drawCommand = currentCommand();
-    if (drawCommand.texture.id == 0) {
-        drawCommand.texture = image.texture; // 还没有绘制任何纹理
-    } else if (image.texture.id != drawCommand.texture.id) {
+    var command = currentCommand();
+    if (command.texture.id == 0) {
+        command.texture = image.texture; // 还没有绘制任何纹理
+    } else if (image.texture.id != command.texture.id) {
         startNewDrawCommand(); // 纹理改变，开始新的命令
         currentCommand().texture = image.texture;
     }
@@ -208,23 +205,12 @@ pub fn startNewDrawCommand() void {
     commandBuffer.appendAssumeCapacity(.{ .start = index });
 }
 
-pub fn setScale(scale: Vector2) void {
-    currentCommand().scale = scale;
-}
-
-// pub fn encodeCommand(cmd: Command) void {
-//     const index: u32 = @intCast(vertexBuffer.items.len);
-//     currentCommand().end = index;
-//     currentCommand().cmd = cmd;
-//     currentCommand().start = index;
-// }
-
 fn doDraw(cmd: Command) void {
     // 绑定流水线
     gpu.setPipeline(pipeline);
 
     // 处理 uniform 变量
-    const x, const y = .{ windowSize.x, windowSize.y };
+    const x, const y = .{ camera.size.x, camera.size.y };
     const orth = math.Matrix.orthographic(x, y, 0, 1);
     const pos = camera.position.scale(-1).toVector3(0);
     const translate = math.Matrix.translateVec(pos);
@@ -249,7 +235,7 @@ fn doDraw(cmd: Command) void {
     gpu.drawInstanced(cmd.end - cmd.start);
 }
 
-pub fn createQuadPipeline(shaderDesc: gpu.ShaderDesc) gpu.RenderPipeline {
+fn createQuadPipeline(shaderDesc: gpu.ShaderDesc) gpu.RenderPipeline {
     var vertexLayout = gpu.VertexLayoutState{};
 
     vertexLayout.attrs[0].format = .FLOAT2;
@@ -280,3 +266,38 @@ pub fn createQuadPipeline(shaderDesc: gpu.ShaderDesc) gpu.RenderPipeline {
 pub fn imageDrawCount() usize {
     return commandBuffer.items.len;
 }
+
+pub const Camera = struct {
+    const window = @import("window.zig");
+
+    modeEnum: enum { world, window } = .world,
+    position: Vector2 = .zero,
+    size: Vector2 = undefined,
+    bound: Vector2 = undefined,
+
+    pub fn init() Camera {
+        return .{ .size = window.size, .bound = window.size };
+    }
+
+    pub fn toWorld(self: Camera, windowPosition: Vector2) Vector2 {
+        return windowPosition.add(self.position);
+    }
+
+    pub fn toWindow(self: Camera, worldPosition: Vector2) Vector2 {
+        return worldPosition.sub(self.position);
+    }
+
+    pub fn control(self: *Camera, distance: f32) void {
+        if (window.isKeyDown(.UP)) self.position.y -= distance;
+        if (window.isKeyDown(.DOWN)) self.position.y += distance;
+        if (window.isKeyDown(.LEFT)) self.position.x -= distance;
+        if (window.isKeyDown(.RIGHT)) self.position.x += distance;
+    }
+
+    pub fn directFollow(self: *Camera, pos: Vector2) void {
+        const halfWindowSize = self.size.scale(0.5);
+        const max = self.bound.sub(self.size).max(.zero);
+        self.position = pos.sub(halfWindowSize);
+        self.position.clamp(.zero, max);
+    }
+};

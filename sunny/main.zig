@@ -17,7 +17,7 @@ pub fn init() void {
     vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 5000);
     zhu.graphics.frameStats(true);
     zhu.assets.loadAtlas(atlas);
-    zhu.batch.init(zhu.window.size, vertexBuffer, &commandBuffer);
+    zhu.batch.init(vertexBuffer, &commandBuffer);
     zhu.batch.whiteImage = zhu.getImage("white.png");
     scene.init();
 }

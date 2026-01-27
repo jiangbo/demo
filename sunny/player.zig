@@ -56,8 +56,8 @@ pub fn update(delta: f32) void {
         position = clamped;
     }
 
-    zhu.camera.directFollow(position);
-    zhu.camera.position = zhu.camera.position.round();
+    batch.camera.directFollow(position);
+    batch.camera.position = batch.camera.position.round();
 
     // 模拟受伤
     if (zhu.window.isKeyPress(.K)) {

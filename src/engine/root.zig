@@ -5,7 +5,6 @@ pub const assets = @import("assets.zig");
 pub const audio = @import("audio.zig");
 pub const graphics = @import("graphics.zig");
 pub const batch = @import("batch.zig");
-pub const camera = @import("camera.zig");
 pub const math = @import("math.zig");
 pub const input = @import("input.zig");
 pub const ecs = @import("ecs.zig");

@@ -35,9 +35,6 @@ pub fn update(delta: f32) void {
         return window.toggleFullScreen();
     }
 
-    const distance: f32 = std.math.round(300 * delta);
-    zhu.camera.control(distance);
-
     player.update(delta);
     object.update(delta);
 }

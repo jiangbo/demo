@@ -33,7 +33,7 @@ pub fn init() void {
     tiled.tileSets = tileSets;
     states = zhu.assets.oomAlloc(u8, map.width * map.height);
     @memset(states, 0);
-    zhu.camera.bound = map.size();
+    batch.camera.bound = map.size();
 
     for (map.layers) |layer| {
         if (layer.type == .tile) parseTileLayer(&layer) //
@@ -189,11 +189,11 @@ pub fn draw() void {
 }
 
 fn drawImageLayer(layer: *const tiled.Layer) void {
-    zhu.camera.modeEnum = .window;
-    defer zhu.camera.modeEnum = .world;
+    batch.camera.modeEnum = .window;
+    defer batch.camera.modeEnum = .world;
 
     if (layer.repeatY) {
-        const posY = zhu.camera.position.y * layer.parallaxY;
+        const posY = batch.camera.position.y * layer.parallaxY;
         var y = -@mod(posY, layer.height);
         while (y < window.size.y) : (y += layer.height) {
             batch.draw(layer.image, layer.offset.addXY(0, y));
@@ -201,7 +201,7 @@ fn drawImageLayer(layer: *const tiled.Layer) void {
     }
 
     if (layer.repeatX) {
-        const posX = zhu.camera.position.x * layer.parallaxX;
+        const posX = batch.camera.position.x * layer.parallaxX;
         var x = -@mod(posX, layer.width);
         while (x < window.size.x) : (x += layer.width) {
             batch.draw(layer.image, layer.offset.addXY(x, 0));
