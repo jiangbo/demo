@@ -12,6 +12,7 @@ pub const ObjectEnum = enum(u32) {
     frog = zhu.imageId("textures/Actors/frog.png"),
     opossum = zhu.imageId("textures/Actors/opossum.png"),
     skull = zhu.imageId("textures/Props/skulls.png"),
+    spike = zhu.imageId("textures/Props/spikes.png"),
     spikeTop = zhu.imageId("textures/Props/spikes-top.png"),
     cherry = zhu.imageId("textures/Items/cherry.png"),
     gem = zhu.imageId("textures/Items/gem.png"),
@@ -66,6 +67,9 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
         if (tileSet.columns == 0) { // 单图片瓦片集的列数
             image = zhu.assets.getImage(tile.?.id);
             pos.y = pos.y - image.area.size.y + map.tileSize.y;
+            if (tile.?.id == @intFromEnum(ObjectEnum.spike)) {
+                parseTileSpike(tile.?, pos);
+            }
         } else {
             const area = map.tileArea(localId, tileSet.columns);
             image = firstImage.sub(area);
@@ -79,6 +83,16 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
 
         if (tile) |t| parseProperties(index, t); // 解析碰撞信息
     }
+}
+
+fn parseTileSpike(tile: tiled.Tile, pos: zhu.Vector2) void {
+    const object = tile.objectGroup.?.objects[0];
+    objects.append(zhu.assets.allocator, .{
+        .type = @enumFromInt(tile.id),
+        .position = pos,
+        .size = object.size,
+        .object = object,
+    }) catch @panic("oom, can't append tile");
 }
 
 fn parseProperties(index: usize, tile: tiled.Tile) void {

@@ -118,7 +118,7 @@ pub fn update(delta: f32) void {
                         _ = objects.swapRemove(iterator.index);
                     } else player.hurt();
                 },
-                .spikeTop => player.hurt(),
+                .spike, .spikeTop => player.hurt(),
                 else => unreachable,
             }
         }
