@@ -429,14 +429,14 @@ pub fn drawCenter(str: text.String, y: f32, option: text.Option) void {
 
 pub const isKeyDown = input.isKeyDown;
 pub const isAnyKeyDown = input.isAnyKeyDown;
-pub const isKeyPress = input.isKeyPress;
-pub const isAnyKeyPress = input.isAnyKeyPress;
-pub const isKeyRelease = input.isKeyRelease;
-pub const isAnyKeyRelease = input.isAnyKeyRelease;
+pub const isKeyPressed = input.isKeyPressed;
+pub const isAnyKeyPressed = input.isAnyKeyPressed;
+pub const isKeyReleased = input.isKeyReleased;
+pub const isAnyKeyReleased = input.isAnyKeyReleased;
 
 pub const isMouseDown = input.isMouseDown;
-pub const isMousePress = input.isMousePress;
-pub const isMouseRelease = input.isMouseRelease;
-pub const isAnyMouseRelease = input.isAnyMouseRelease;
+pub const isMousePressed = input.isMousePressed;
+pub const isMouseReleased = input.isMouseReleased;
+pub const isAnyMouseReleased = input.isAnyMouseReleased;
 
 pub const initText = text.initBitMapFont;

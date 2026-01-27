@@ -131,7 +131,7 @@ const IdleState = struct {
 
     fn update(delta: f32) void {
         animation.loopUpdate(delta);
-        if (zhu.window.isAnyKeyPress(&.{ .W, .SPACE })) {
+        if (zhu.window.isAnyKeyPressed(&.{ .W, .SPACE })) {
             changeState(.jump);
         } else if (zhu.window.isAnyKeyDown(&.{ .A, .D })) {
             changeState(.walk);
@@ -159,7 +159,7 @@ const WalkState = struct {
     fn update(delta: f32) void {
         animation.loopUpdate(delta);
 
-        if (zhu.window.isAnyKeyPress(&.{ .W, .SPACE })) {
+        if (zhu.window.isAnyKeyPressed(&.{ .W, .SPACE })) {
             changeState(.jump);
         } else if (zhu.window.isKeyDown(.A)) {
             if (velocity.x > 0) velocity.x = 0;

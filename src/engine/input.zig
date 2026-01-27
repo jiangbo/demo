@@ -42,18 +42,18 @@ pub fn isMouseDown(button: sk.app.Mousebutton) bool {
     return mouseState.isSet(code);
 }
 
-pub fn isMousePress(button: sk.app.Mousebutton) bool {
+pub fn isMousePressed(button: sk.app.Mousebutton) bool {
     const code: usize = @intCast(@intFromEnum(button));
     return !lastMouseState.isSet(code) and mouseState.isSet(code);
 }
 
-pub fn isMouseRelease(button: sk.app.Mousebutton) bool {
+pub fn isMouseReleased(button: sk.app.Mousebutton) bool {
     const code: usize = @intCast(@intFromEnum(button));
     return lastMouseState.isSet(code) and !mouseState.isSet(code);
 }
 
-pub fn isAnyMouseRelease(buttons: []const sk.app.Mousebutton) bool {
-    for (buttons) |button| if (isMouseRelease(button)) return true;
+pub fn isAnyMouseReleased(buttons: []const sk.app.Mousebutton) bool {
+    for (buttons) |button| if (isMouseReleased(button)) return true;
     return false;
 }
 
@@ -66,22 +66,22 @@ pub fn isAnyKeyDown(keys: []const KeyCode) bool {
     return false;
 }
 
-pub fn isKeyPress(keyCode: KeyCode) bool {
+pub fn isKeyPressed(keyCode: KeyCode) bool {
     const key: usize = @intCast(@intFromEnum(keyCode));
     return !lastKeyState.isSet(key) and keyState.isSet(key);
 }
 
-pub fn isAnyKeyPress(keys: []const KeyCode) bool {
-    for (keys) |key| if (isKeyPress(key)) return true;
+pub fn isAnyKeyPressed(keys: []const KeyCode) bool {
+    for (keys) |key| if (isKeyPressed(key)) return true;
     return false;
 }
 
-pub fn isKeyRelease(keyCode: KeyCode) bool {
+pub fn isKeyReleased(keyCode: KeyCode) bool {
     const key: usize = @intCast(@intFromEnum(keyCode));
     return lastKeyState.isSet(key) and !keyState.isSet(key);
 }
 
-pub fn isAnyKeyRelease(keys: []const KeyCode) bool {
-    for (keys) |key| if (isKeyRelease(key)) return true;
+pub fn isAnyKeyReleased(keys: []const KeyCode) bool {
+    for (keys) |key| if (isKeyReleased(key)) return true;
     return false;
 }

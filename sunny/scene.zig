@@ -28,10 +28,10 @@ pub fn deinit() void {
 }
 
 pub fn update(delta: f32) void {
-    if (window.isKeyRelease(.H)) help = !help;
-    if (window.isKeyRelease(.X)) debug = !debug;
+    if (window.isKeyReleased(.H)) help = !help;
+    if (window.isKeyReleased(.X)) debug = !debug;
 
-    if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
+    if (window.isKeyDown(.LEFT_ALT) and window.isKeyReleased(.ENTER)) {
         return window.toggleFullScreen();
     }
 
