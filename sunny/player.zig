@@ -62,6 +62,8 @@ pub fn update(delta: f32) void {
         position = clamped;
     }
 
+    std.log.info("velocity: {}", .{velocity});
+
     batch.camera.directFollow(position);
     batch.camera.position = batch.camera.position.round();
 }
@@ -133,7 +135,7 @@ const IdleState = struct {
 
     fn enter() void {
         std.log.info("enter idle", .{});
-        force.x = 0; // 停止水平受力
+        force.x = 0;
     }
 
     fn update(delta: f32) void {
@@ -165,17 +167,18 @@ const WalkState = struct {
 
     fn update(delta: f32) void {
         animation.loopUpdate(delta);
+        force.x = 0;
 
-        if (velocity.y > 0) {
-            changeState(.fall);
-        } else if (zhu.window.isAnyKeyPressed(&.{ .W, .SPACE })) {
+        if (velocity.y > 0) return changeState(.fall);
+
+        if (zhu.window.isAnyKeyPressed(&.{ .W, .SPACE })) {
             changeState(.jump);
-        } else if (zhu.window.isKeyDown(.A)) {
-            if (velocity.x > 0) velocity.x = 0;
+        }
+
+        if (zhu.window.isKeyDown(.A)) {
             force.x = -moveForce;
             flip = true;
         } else if (zhu.window.isKeyDown(.D)) {
-            if (velocity.x < 0) velocity.x = 0;
             force.x = moveForce;
             flip = false;
         } else {
