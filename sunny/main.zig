@@ -5,6 +5,7 @@ const zhu = @import("zhu");
 const scene = @import("scene.zig");
 
 var vertexBuffer: []zhu.batch.Vertex = undefined;
+var commandBuffer: [16]zhu.batch.Command = undefined;
 var soundBuffer: [20]zhu.audio.Sound = undefined;
 
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
@@ -16,7 +17,7 @@ pub fn init() void {
     vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 5000);
     zhu.graphics.frameStats(true);
     zhu.assets.loadAtlas(atlas);
-    zhu.batch.init(zhu.window.size, vertexBuffer);
+    zhu.batch.init(zhu.window.size, vertexBuffer, &commandBuffer);
     zhu.batch.whiteImage = zhu.getImage("white.png");
     scene.init();
 }

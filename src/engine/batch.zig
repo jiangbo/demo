@@ -18,16 +18,16 @@ var gpuBuffer: gpu.Buffer = undefined;
 pub var vertexBuffer: std.ArrayList(Vertex) = .empty;
 pub var whiteImage: graphics.Image = undefined;
 
-const DrawCommand = struct {
+const CommandEnum = enum { draw, scissor };
+pub const Command = struct {
+    start: u32 = 0, // 起始顶点索引
+    end: u32 = 0, // 结束顶点索引
+    texture: gpu.Texture = .{}, // 纹理
     position: Vector2 = .zero, // 位置
     scale: Vector2 = .one, // 缩放
-    texture: gpu.Texture = .{}, // 纹理
+    commandEnum: CommandEnum = .draw, // 命令类型
 };
-const CommandUnion = union(enum) { draw: DrawCommand, scissor: math.Rect };
-const Command = struct { start: u32 = 0, end: u32, cmd: CommandUnion };
-var commands: [16]Command = undefined;
-var commandIndex: u32 = 0;
-var windowSize: Vector2 = undefined;
+var commandBuffer: std.ArrayList(Command) = .empty;
 
 pub const Vertex = extern struct {
     position: math.Vector2, // 顶点坐标
@@ -39,18 +39,20 @@ pub const Vertex = extern struct {
     color: graphics.Color = .white, // 顶点颜色
 };
 
-pub fn init(size: Vector2, buffer: []Vertex) void {
-    windowSize = size;
+var windowSize: Vector2 = undefined;
 
+pub fn init(size: Vector2, vertexes: []Vertex, commands: []Command) void {
     gpuBuffer = gpu.createBuffer(.{
-        .size = @sizeOf(Vertex) * buffer.len,
+        .size = @sizeOf(Vertex) * vertexes.len,
         .usage = .{ .stream_update = true },
     });
-    vertexBuffer = .initBuffer(buffer);
+    vertexBuffer = .initBuffer(vertexes);
+    commandBuffer = .initBuffer(commands);
 
     const shaderDesc = shader.quadShaderDesc(gpu.queryBackend());
     pipeline = createQuadPipeline(shaderDesc);
 
+    windowSize = size;
     camera.bound = size; // 初始化摄像机的边界
 }
 
@@ -71,23 +73,27 @@ pub const Option = struct {
 
 pub fn beginDraw(color: graphics.Color) void {
     graphics.beginDraw(color);
-    commandIndex = 0;
-    commands[commandIndex].cmd.draw = .{};
     vertexBuffer.clearRetainingCapacity();
+    commandBuffer.clearRetainingCapacity();
+    commandBuffer.appendAssumeCapacity(.{});
 }
 
 pub fn endDraw() void {
     defer gpu.end();
     if (vertexBuffer.items.len == 0) return; // 没需要绘制的东西
 
-    commands[commandIndex].end = @intCast(vertexBuffer.items.len);
+    currentCommand().end = @intCast(vertexBuffer.items.len);
     gpu.updateBuffer(gpuBuffer, vertexBuffer.items);
-    for (commands[0 .. commandIndex + 1]) |cmd| {
-        switch (cmd.cmd) {
-            .draw => |drawCmd| doDraw(cmd, drawCmd),
-            .scissor => |area| gpu.scissor(area),
+    for (commandBuffer.items) |cmd| {
+        switch (cmd.commandEnum) {
+            .draw => doDraw(cmd),
+            .scissor => gpu.scissor(.init(cmd.position, cmd.scale)),
         }
     }
+}
+
+pub fn currentCommand() *Command {
+    return &commandBuffer.items[commandBuffer.items.len - 1];
 }
 
 pub fn debugDraw(area: math.Rect) void {
@@ -178,12 +184,12 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
         imageVector.z = -imageVector.z;
     }
 
-    var drawCommand = &commands[commandIndex].cmd.draw;
+    var drawCommand = currentCommand();
     if (drawCommand.texture.id == 0) {
         drawCommand.texture = image.texture; // 还没有绘制任何纹理
     } else if (image.texture.id != drawCommand.texture.id) {
         startNewDrawCommand(); // 纹理改变，开始新的命令
-        commands[commandIndex].cmd.draw.texture = image.texture;
+        currentCommand().texture = image.texture;
     }
 
     vertexBuffer.appendSliceAssumeCapacity(&.{Vertex{
@@ -197,22 +203,23 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
 }
 
 pub fn startNewDrawCommand() void {
-    encodeCommand(.{ .draw = .{} });
+    const index: u32 = @intCast(vertexBuffer.items.len);
+    currentCommand().end = index;
+    commandBuffer.appendAssumeCapacity(.{ .start = index });
 }
 
 pub fn setScale(scale: Vector2) void {
-    commands[commandIndex].cmd.draw.scale = scale;
+    currentCommand().scale = scale;
 }
 
-pub fn encodeCommand(cmd: CommandUnion) void {
-    const index: u32 = @intCast(vertexBuffer.items.len);
-    commands[commandIndex].end = index;
-    commandIndex += 1;
-    commands[commandIndex].cmd = cmd;
-    commands[commandIndex].start = index;
-}
+// pub fn encodeCommand(cmd: Command) void {
+//     const index: u32 = @intCast(vertexBuffer.items.len);
+//     currentCommand().end = index;
+//     currentCommand().cmd = cmd;
+//     currentCommand().start = index;
+// }
 
-fn doDraw(cmd: Command, drawCmd: DrawCommand) void {
+fn doDraw(cmd: Command) void {
     // 绑定流水线
     gpu.setPipeline(pipeline);
 
@@ -221,10 +228,10 @@ fn doDraw(cmd: Command, drawCmd: DrawCommand) void {
     const orth = math.Matrix.orthographic(x, y, 0, 1);
     const pos = camera.position.scale(-1).toVector3(0);
     const translate = math.Matrix.translateVec(pos);
-    const scaleMatrix = math.Matrix.scaleVec(drawCmd.scale.toVector3(1));
+    const scaleMatrix = math.Matrix.scaleVec(cmd.scale.toVector3(1));
     const view = math.Matrix.mul(scaleMatrix, translate);
 
-    const size = gpu.queryTextureSize(drawCmd.texture);
+    const size = gpu.queryTextureSize(cmd.texture);
     gpu.setUniform(shader.UB_vs_params, .{
         .viewMatrix = math.Matrix.mul(orth, view).mat,
         .textureVec = [4]f32{ 1 / size.x, 1 / size.y, 1, 1 },
@@ -232,7 +239,7 @@ fn doDraw(cmd: Command, drawCmd: DrawCommand) void {
 
     // 绑定组
     var bindGroup: gpu.BindGroup = .{};
-    bindGroup.setTexture(drawCmd.texture);
+    bindGroup.setTexture(cmd.texture);
     bindGroup.setVertexBuffer(gpuBuffer);
     bindGroup.setVertexOffset(cmd.start * @sizeOf(Vertex));
     bindGroup.setSampler(gpu.nearestSampler);
@@ -271,5 +278,5 @@ pub fn createQuadPipeline(shaderDesc: gpu.ShaderDesc) gpu.RenderPipeline {
 }
 
 pub fn imageDrawCount() usize {
-    return commandIndex + 1;
+    return commandBuffer.items.len;
 }
