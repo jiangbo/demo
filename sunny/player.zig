@@ -46,10 +46,14 @@ pub fn update(delta: f32) void {
 
     velocity = velocity.add(force.scale(delta));
     velocity.x = std.math.clamp(velocity.x, -maxSpeed, maxSpeed);
-    const toPosition = position.add(velocity.scale(delta));
+    var toPosition = position.add(velocity.scale(delta));
+    // 角色不移动到屏幕外
+    const max = batch.camera.bound.x - tiledObject.size.x;
+    toPosition.x = std.math.clamp(toPosition.x, 0, max);
 
     if (state == .dead) position = toPosition else {
-        const clamped = map.clamp(position, toPosition, viewSize);
+        const size = tiledObject.size;
+        const clamped = map.clamp(position, toPosition, size);
         // std.log.info("old: {}, new: {}, clamped: {}", .{ position, toPosition, clamped });
         if (clamped.x == position.x) velocity.x = 0;
         if (clamped.y == position.y) velocity.y = 0;
@@ -61,8 +65,7 @@ pub fn update(delta: f32) void {
 }
 
 pub fn collideRect() zhu.Rect {
-    const pos = position.add(tiledObject.position);
-    return .init(pos, tiledObject.size);
+    return .init(position, tiledObject.size);
 }
 
 pub fn hurt() void {
@@ -73,14 +76,14 @@ pub fn hurt() void {
 pub fn draw() void {
     state.draw();
     // 绘制角色的碰撞框
-    const pos = position.add(tiledObject.position);
-    batch.drawRect(.init(pos, tiledObject.size), .{
+    batch.drawRect(.init(position, tiledObject.size), .{
         .color = .rgba(0, 1, 0, 0.4),
     });
 }
 
 pub fn drawPlayer(img: zhu.graphics.Image) void {
-    batch.drawImage(img, position, .{ .flipX = flip, .size = viewSize });
+    const pos = position.sub(tiledObject.position);
+    batch.drawImage(img, pos, .{ .flipX = flip, .size = viewSize });
 }
 
 const State = union(enum) {
