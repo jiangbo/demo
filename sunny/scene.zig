@@ -20,7 +20,7 @@ pub fn init() void {
         _ = map.objects.swapRemove(index);
         break;
     }
-    object.init(map.objects.items);
+    object.init(map.objects);
 }
 
 pub fn deinit() void {

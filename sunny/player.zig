@@ -70,6 +70,11 @@ pub fn update(delta: f32) void {
     }
 }
 
+pub fn collideRect() zhu.Rect {
+    const pos = position.add(tiledObject.position);
+    return .init(pos, tiledObject.size);
+}
+
 pub fn draw() void {
     state.draw();
     // 绘制角色的碰撞框

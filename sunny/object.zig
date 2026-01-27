@@ -12,12 +12,13 @@ const gemFrames = zhu.graphics.framesX(5, .xy(15, 13), 0.2);
 const cherryFrames = zhu.graphics.loopFramesX(5, .xy(21, 21), 0.2);
 const opossumFrames = zhu.graphics.framesX(6, .xy(36, 28), 0.1);
 const eagleFrames = zhu.graphics.framesX(4, .xy(40, 41), 0.15);
+const itemFrames = zhu.graphics.framesX(5, .xy(32, 32), 0.1);
 
 var gemAnimation: zhu.graphics.FrameAnimation = undefined;
 var cherryAnimation: zhu.graphics.FrameAnimation = undefined;
 var opossumAnimation: zhu.graphics.FrameAnimation = undefined;
 var eagleAnimation: zhu.graphics.FrameAnimation = undefined;
-
+var itemAnimation: zhu.graphics.FrameAnimation = undefined;
 const frogEnum = enum { idle, jump, fall };
 const frogIdleFrames = zhu.graphics.framesX(4, .xy(35, 32), 0.3);
 const frogJumpFrames: [1]zhu.graphics.Frame = .{
@@ -29,10 +30,17 @@ const frogFallFrames: [1]zhu.graphics.Frame = .{
 var frogAnimations: zhu.graphics.EnumFrameAnimation(frogEnum) = undefined;
 var frogState: frogEnum = .idle;
 
-var items: []map.Object = undefined;
+const Animation = struct {
+    center: zhu.Vector2, // 需要播放的中心点
+    effect: zhu.graphics.FrameAnimation,
+};
 
-pub fn init(objects: []map.Object) void {
-    items = objects;
+var effectArray: [10]Animation = undefined;
+var effectAnimations: std.ArrayList(Animation) = undefined;
+var objects: std.ArrayList(map.Object) = undefined;
+
+pub fn init(obj: std.ArrayList(map.Object)) void {
+    objects = obj;
 
     const gemImage = getImage(@intFromEnum(map.ObjectEnum.gem));
     gemAnimation = .init(gemImage, &gemFrames);
@@ -50,6 +58,10 @@ pub fn init(objects: []map.Object) void {
     frogAnimations.set(.idle, .init(frogImage, &frogIdleFrames));
     frogAnimations.set(.jump, .init(frogImage, &frogJumpFrames));
     frogAnimations.set(.fall, .init(frogImage, &frogFallFrames));
+
+    const itemImage = zhu.getImage("textures/FX/item-feedback.png");
+    itemAnimation = .init(itemImage, &itemFrames);
+    effectAnimations = .initBuffer(&effectArray);
 }
 
 pub fn update(delta: f32) void {
@@ -59,17 +71,44 @@ pub fn update(delta: f32) void {
     eagleAnimation.loopUpdate(delta);
     frogAnimations.getPtr(frogState).loopUpdate(delta);
 
-    // for (items) |item| {
-    //     updateCollision(&item, delta);
-    // }
+    { // 特效动画
+        var iterator = std.mem.reverseIterator(effectAnimations.items);
+        while (iterator.nextPtr()) |animation| {
+            if (animation.effect.isFinishedOnceUpdate(delta)) {
+                _ = effectAnimations.swapRemove(iterator.index);
+            }
+        }
+    }
+
+    const playerRect = player.collideRect();
+    var iterator = std.mem.reverseIterator(objects.items);
+    while (iterator.nextPtr()) |item| {
+        // 检测碰撞框
+        if (item.object == null) continue;
+        const obj = item.object.?;
+        const pos = item.position.add(obj.position);
+        const rect = zhu.Rect.init(pos, obj.size); // 碰撞区域
+        if (playerRect.intersect(rect)) {
+            // 玩家与物体发生碰撞，根据不同对象，不同处理。
+            switch (item.type) {
+                .gem, .cherry => collideGem(item, rect.center()),
+                else => {},
+            }
+            _ = objects.swapRemove(iterator.index);
+        }
+    }
 }
 
-// fn updateCollision(item: *map.Object, delta: f32) void {
-
-// }
+fn collideGem(_: *map.Object, center: zhu.Vector2) void {
+    // 播放特效动画
+    effectAnimations.appendAssumeCapacity(.{
+        .center = center,
+        .effect = itemAnimation,
+    });
+}
 
 pub fn draw() void {
-    for (items) |item| {
+    for (objects.items) |item| {
         const image: ?zhu.graphics.Image = switch (item.type) {
             .gem => gemAnimation.currentImage(),
             .cherry => cherryAnimation.currentImage(),
@@ -85,5 +124,11 @@ pub fn draw() void {
         if (item.object == null) continue;
         const obj = item.object.?;
         batch.debugDraw(.init(item.position.add(obj.position), obj.size));
+    }
+
+    // 绘制特效动画
+    for (effectAnimations.items) |animation| {
+        const img = animation.effect.currentImage();
+        batch.drawImage(img, animation.center, .{ .anchor = .center });
     }
 }
