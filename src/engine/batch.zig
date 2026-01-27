@@ -12,11 +12,6 @@ const Color = graphics.Color;
 const Vector2 = math.Vector2;
 const Matrix = math.Matrix;
 
-pub var pipeline: gpu.RenderPipeline = undefined;
-var gpuBuffer: gpu.Buffer = undefined;
-pub var vertexBuffer: std.ArrayList(Vertex) = .empty;
-pub var whiteImage: graphics.Image = undefined;
-
 const CommandEnum = enum { draw, scissor };
 pub const Command = struct {
     start: u32 = 0, // 起始顶点索引
@@ -26,8 +21,6 @@ pub const Command = struct {
     scale: Vector2 = .one, // 缩放
     commandEnum: CommandEnum = .draw, // 命令类型
 };
-var commandBuffer: std.ArrayList(Command) = .empty;
-pub var camera: Camera = undefined;
 
 pub const Vertex = extern struct {
     position: math.Vector2, // 顶点坐标
@@ -38,6 +31,14 @@ pub const Vertex = extern struct {
     texturePosition: math.Vector4, // 纹理坐标
     color: graphics.Color = .white, // 顶点颜色
 };
+
+pub var pipeline: gpu.RenderPipeline = undefined;
+pub var vertexBuffer: std.ArrayList(Vertex) = .empty;
+pub var whiteImage: graphics.Image = undefined;
+pub var camera: Camera = undefined;
+
+var commandBuffer: std.ArrayList(Command) = .empty;
+var gpuBuffer: gpu.Buffer = undefined;
 
 pub fn init(vertexes: []Vertex, commands: []Command) void {
     gpuBuffer = gpu.createBuffer(.{
