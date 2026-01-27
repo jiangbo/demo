@@ -58,16 +58,6 @@ pub fn update(delta: f32) void {
 
     batch.camera.directFollow(position);
     batch.camera.position = batch.camera.position.round();
-
-    // 模拟受伤
-    if (zhu.window.isKeyPress(.K)) {
-        health -|= 1;
-        if (health == 0) {
-            changeState(.dead);
-        } else {
-            changeState(.hurt);
-        }
-    }
 }
 
 pub fn collideRect() zhu.Rect {
