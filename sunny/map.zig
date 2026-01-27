@@ -111,7 +111,9 @@ fn parseProperties(index: usize, tile: tiled.Tile) void {
     for (tile.properties) |property| {
         if (std.mem.eql(u8, property.name, "solid")) {
             if (property.value.bool) tileStates[index] = .solid;
-        } else if (std.mem.eql(u8, property.name, "solid")) {
+        } else if (std.mem.eql(u8, property.name, "unisolid")) {
+            if (property.value.bool) tileStates[index] = .uniSolid;
+        } else if (std.mem.eql(u8, property.name, "slope")) {
             const value = property.value.string;
             tileStates[index] =
                 if (std.mem.eql(u8, value, "0_1")) .slope_0_1 //
@@ -193,12 +195,12 @@ fn clampY(old: Vector2, new: Vector2, size: Vector2) Vector2 {
     } else if (new.y > old.y) { // 向下移动
         var tileIndex = map.worldToTileIndex(new.addY(sz.y));
         const offset = map.tileSize.y - size.y;
-        if (tileStates[tileIndex] == .solid) {
+        if (tileStates[tileIndex] == .solid or tileStates[tileIndex] == .uniSolid) {
             return map.tileIndexToWorld(tileIndex - w).addY(offset);
         }
 
         tileIndex = map.worldToTileIndex(new.add(sz));
-        if (tileStates[tileIndex] == .solid) {
+        if (tileStates[tileIndex] == .solid or tileStates[tileIndex] == .uniSolid) {
             return map.tileIndexToWorld(tileIndex - w).addY(offset);
         }
     }
