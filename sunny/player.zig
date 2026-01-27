@@ -27,6 +27,7 @@ var flip: bool = false;
 
 const maxHealth: u8 = 3;
 var health: u8 = maxHealth;
+var hurtTimer: zhu.Timer = .init(2.0); // 受伤的间隔时间
 
 pub fn init(pos: zhu.Vector2, size: zhu.Vector2) void {
     position = pos;
@@ -42,6 +43,7 @@ pub fn init(pos: zhu.Vector2, size: zhu.Vector2) void {
 }
 
 pub fn update(delta: f32) void {
+    hurtTimer.update(delta);
     state.update(delta);
 
     velocity = velocity.add(force.scale(delta));
@@ -69,7 +71,9 @@ pub fn collideRect() zhu.Rect {
 }
 
 pub fn hurt() void {
+    if (hurtTimer.isRunning()) return; // 受伤间隔时间内，忽略伤害
     health -|= 1;
+    hurtTimer.elapsed = 0; // 重置计时器
     if (health == 0) changeState(.dead) else changeState(.hurt);
 }
 

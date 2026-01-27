@@ -12,7 +12,7 @@ pub const ObjectEnum = enum(u32) {
     frog = zhu.imageId("textures/Actors/frog.png"),
     opossum = zhu.imageId("textures/Actors/opossum.png"),
     skull = zhu.imageId("textures/Props/skulls.png"),
-    spikes = zhu.imageId("textures/Props/spikes-top.png"),
+    spike = zhu.imageId("textures/Props/spikes-top.png"),
     cherry = zhu.imageId("textures/Items/cherry.png"),
     gem = zhu.imageId("textures/Items/gem.png"),
 };

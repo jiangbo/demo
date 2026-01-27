@@ -22,6 +22,9 @@ var eagleAnimation: zhu.graphics.FrameAnimation = undefined;
 var itemAnimation: zhu.graphics.FrameAnimation = undefined;
 var deadAnimation: zhu.graphics.FrameAnimation = undefined;
 
+var skullImage: zhu.graphics.Image = undefined;
+var spikeImage: zhu.graphics.Image = undefined;
+
 const frogEnum = enum { idle, jump, fall };
 const frogIdleFrames = zhu.graphics.framesX(4, .xy(35, 32), 0.3);
 const frogJumpFrames: [1]zhu.graphics.Frame = .{
@@ -67,6 +70,9 @@ pub fn init(obj: std.ArrayList(map.Object)) void {
     const deadImage = zhu.getImage("textures/FX/enemy-deadth.png");
     deadAnimation = .init(deadImage, &deadFrames);
     effectAnimations = .initBuffer(&effectArray);
+
+    skullImage = getImage(@intFromEnum(map.ObjectEnum.skull));
+    spikeImage = getImage(@intFromEnum(map.ObjectEnum.spike));
 }
 
 pub fn update(delta: f32) void {
@@ -97,44 +103,43 @@ pub fn update(delta: f32) void {
         const rect = zhu.Rect.init(pos, obj.size); // 碰撞区域
         if (playerRect.intersect(rect)) {
             // 玩家与物体发生碰撞，根据不同对象，不同处理。
-            const delete = blk: switch (item.type) {
-                .gem, .cherry => collideItem(item, rect.center()),
+            switch (item.type) {
+                .gem, .cherry => {
+                    collideItem(item, rect.center());
+                    _ = objects.swapRemove(iterator.index);
+                },
                 .opossum, .eagle, .frog => {
                     const area = playerRect.overlapArea(rect);
                     if (playerRect.center().y < area.center().y and
                         area.size.x > area.size.y)
                     {
                         // 从上方碰撞，击败敌人
-                        break :blk collideEnemy(item, rect.center());
-                    } else {
-                        player.hurt();
-                        break :blk false;
-                    }
+                        collideEnemy(item, rect.center());
+                        _ = objects.swapRemove(iterator.index);
+                    } else player.hurt();
                 },
-                else => false,
-            };
-            if (delete) _ = objects.swapRemove(iterator.index);
+                .spike => player.hurt(),
+                else => unreachable,
+            }
         }
     }
 }
 
-fn collideItem(_: *map.Object, center: zhu.Vector2) bool {
+fn collideItem(_: *map.Object, center: zhu.Vector2) void {
     // 播放特效动画
     effectAnimations.appendAssumeCapacity(.{
         .center = center,
         .effect = itemAnimation,
     });
-    return true;
 }
 
-fn collideEnemy(_: *map.Object, center: zhu.Vector2) bool {
+fn collideEnemy(_: *map.Object, center: zhu.Vector2) void {
     // 播放特效动画
     effectAnimations.appendAssumeCapacity(.{
         .center = center,
         .effect = deadAnimation,
     });
     player.velocity.y = -300; // 弹起
-    return true;
 }
 
 pub fn draw() void {
@@ -145,6 +150,8 @@ pub fn draw() void {
             .opossum => opossumAnimation.currentImage(),
             .eagle => eagleAnimation.currentImage(),
             .frog => frogAnimations.get(frogState).currentImage(),
+            .skull => skullImage,
+            .spike => spikeImage,
             else => null,
         };
 
