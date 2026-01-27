@@ -62,8 +62,6 @@ pub fn update(delta: f32) void {
         position = clamped;
     }
 
-    std.log.info("velocity: {}", .{velocity});
-
     batch.camera.directFollow(position);
     batch.camera.position = batch.camera.position.round();
 }

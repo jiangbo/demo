@@ -72,7 +72,7 @@ pub fn init(obj: std.ArrayList(map.Object)) void {
     effectAnimations = .initBuffer(&effectArray);
 
     skullImage = getImage(@intFromEnum(map.ObjectEnum.skull));
-    spikeImage = getImage(@intFromEnum(map.ObjectEnum.spike));
+    spikeImage = getImage(@intFromEnum(map.ObjectEnum.spikeTop));
 }
 
 pub fn update(delta: f32) void {
@@ -118,7 +118,7 @@ pub fn update(delta: f32) void {
                         _ = objects.swapRemove(iterator.index);
                     } else player.hurt();
                 },
-                .spike => player.hurt(),
+                .spikeTop => player.hurt(),
                 else => unreachable,
             }
         }
@@ -151,7 +151,7 @@ pub fn draw() void {
             .eagle => eagleAnimation.currentImage(),
             .frog => frogAnimations.get(frogState).currentImage(),
             .skull => skullImage,
-            .spike => spikeImage,
+            .spikeTop => spikeImage,
             else => null,
         };
 
