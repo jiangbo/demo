@@ -23,11 +23,19 @@ pub const TileEnum = enum {
     solid,
     uniSolid,
     slope_0_1,
-    slope_1_0,
     slope_0_2,
-    slope_2_1,
     slope_1_2,
+    slope_1_0,
     slope_2_0,
+    slope_2_1,
+
+    pub fn isSlope(self: TileEnum) bool {
+        return switch (self) {
+            .slope_0_1, .slope_0_2, .slope_1_2 => true,
+            .slope_1_0, .slope_2_0, .slope_2_1 => true,
+            else => false,
+        };
+    }
 };
 
 pub const Object = struct {
@@ -148,7 +156,7 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
 
 pub fn clamp(old: Vector2, new: Vector2, size: Vector2) Vector2 {
     const clampedX = clampX(old, .xy(new.x, old.y), size);
-    const clampedY = clampY(old, .xy(old.x, new.y), size);
+    const clampedY = clampY(old, .xy(clampedX.x, new.y), size);
     return .xy(clampedX.x, clampedY.y);
 }
 
@@ -192,21 +200,40 @@ fn clampY(old: Vector2, new: Vector2, size: Vector2) Vector2 {
         if (tileStates[tileIndex] == .solid) { // 右上角碰撞
             return map.tileIndexToWorld(tileIndex + w);
         }
-    } else if (new.y > old.y) { // 向下移动
-        var tileIndex = map.worldToTileIndex(new.addY(sz.y));
+    } else { // 可能向下移动，或者斜坡
+        var tileIndex = map.worldToTileIndex(new.addY(sz.y)); // 左下角
         const offset = map.tileSize.y - size.y;
         var tileType = tileStates[tileIndex];
         if (tileType == .solid or tileType == .uniSolid) {
             return map.tileIndexToWorld(tileIndex - w).addY(offset);
         }
 
-        tileIndex = map.worldToTileIndex(new.add(sz));
+        tileIndex = map.worldToTileIndex(new.add(sz)); // 右下角
         tileType = tileStates[tileIndex];
         if (tileType == .solid or tileType == .uniSolid) {
             return map.tileIndexToWorld(tileIndex - w).addY(offset);
         }
     }
     return new;
+}
+
+///
+/// 计算斜坡在指定宽度处的高度
+///
+/// width: 相对于瓦片左侧的宽度
+/// tileEnum: 瓦片类型
+///
+fn getHeightAtWidth(width: f32, tileEnum: TileEnum) f32 {
+    const x = width / map.tileSize.x;
+    return switch (tileEnum) {
+        .slope_0_1 => x * map.tileSize.y,
+        .slope_0_2 => x * map.tileSize.y * 0.5,
+        .slope_2_1 => (x * 0.5 + 0.5) * map.tileSize.y,
+        .slope_1_0 => (1.0 - x) * map.tileSize.y,
+        .slope_2_0 => (1.0 - x) * 0.5 * map.tileSize.y,
+        .slope_1_2 => ((1.0 - x) * 0.5 + 0.5) * map.tileSize.y,
+        else => 0.0,
+    };
 }
 
 pub fn draw() void {

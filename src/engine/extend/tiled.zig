@@ -4,7 +4,14 @@ const assets = @import("../assets.zig");
 const graphics = @import("../graphics.zig");
 const math = @import("../math.zig");
 
-pub const TilePosition = struct { x: u32, y: u32 };
+pub const Position = struct {
+    x: u32,
+    y: u32,
+
+    pub fn xy(x: u32, y: u32) Position {
+        return .{ .x = x, .y = y };
+    }
+};
 const Vector2 = math.Vector2;
 const Rect = math.Rect;
 
@@ -17,15 +24,26 @@ pub const Map = struct {
     tileSetRefs: []const TileSetRef,
 
     pub fn size(self: Map) Vector2 {
-        return self.tilePositionToWorld(self.width, self.height);
+        return self.tilePositionToWorld(.xy(self.width, self.height));
     }
 
-    pub fn tilePositionToWorld(self: Map, x: usize, y: usize) Vector2 {
-        const floatX: f32 = @floatFromInt(x);
-        return self.tileSize.mul(.xy(floatX, @floatFromInt(y)));
+    pub fn tilePositionToWorld(self: Map, pos: Position) Vector2 {
+        const floatX: f32 = @floatFromInt(pos.x);
+        return self.tileSize.mul(.xy(floatX, @floatFromInt(pos.y)));
     }
 
-    pub fn worldToTilePosition(self: Map, pos: Vector2) TilePosition {
+    pub fn tileIndexToWorld(self: Map, index: usize) Vector2 {
+        const x: f32 = @floatFromInt(index % self.width);
+        const y: f32 = @floatFromInt(index / self.width);
+        return self.tileSize.mul(.xy(x, y));
+    }
+
+    pub fn worldToTileStart(self: Map, pos: Vector2) Vector2 {
+        const tilePos = self.worldToTilePosition(pos);
+        return self.tilePositionToWorld(tilePos);
+    }
+
+    pub fn worldToTilePosition(self: Map, pos: Vector2) Position {
         const tilePos = pos.div(self.tileSize).floor();
         const x: u32 = @intFromFloat(tilePos.x);
         return .{ .x = x, .y = @intFromFloat(tilePos.y) };
@@ -37,12 +55,6 @@ pub const Map = struct {
         if (tilePos.x >= self.width) return 0;
         if (tilePos.y >= self.height) return 0;
         return tilePos.y * self.width + tilePos.x;
-    }
-
-    pub fn tileIndexToWorld(self: Map, index: usize) Vector2 {
-        const x: f32 = @floatFromInt(index % self.width);
-        const y: f32 = @floatFromInt(index / self.width);
-        return self.tileSize.mul(.xy(x, y));
     }
 
     pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {
