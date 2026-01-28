@@ -246,18 +246,17 @@ fn clampDown(new: Vector2, size: Vector2) Vector2 {
 }
 
 fn clampSlope(old: Vector2, clampedX: Vector2, size: Vector2) Vector2 {
-    const index = map.worldToTileIndex(clampedX);
-    if (clampedX.x > old.x) return rightSlope(clampedX, size, index);
-    if (clampedX.x < old.x) return leftSlope(clampedX, size, index);
+    if (clampedX.x > old.x) return rightSlope(clampedX, size);
+    if (clampedX.x < old.x) return leftSlope(clampedX, size);
     return clampedX;
 }
 
-fn leftSlope(new: Vector2, size: Vector2, index: usize) Vector2 {
-    std.log.info("enter left slope", .{});
+fn leftSlope(new: Vector2, size: Vector2) Vector2 {
     const sz = size.add(epsilon);
 
     const pos = new.addY(sz.y); // 左下角坐标
     const startPos = map.worldToTileStart(pos); // 左下角所在瓦片坐标
+    const index = map.worldToTileIndex(pos);
 
     const width = pos.x - startPos.x;
     const height = getHeightAtWidth(width, tileStates[index]);
@@ -265,13 +264,12 @@ fn leftSlope(new: Vector2, size: Vector2, index: usize) Vector2 {
     return .xy(new.x, y - size.y);
 }
 
-fn rightSlope(new: Vector2, size: Vector2, index: usize) Vector2 {
-    std.log.info("enter right slope", .{});
-
+fn rightSlope(new: Vector2, size: Vector2) Vector2 {
     const sz = size.add(epsilon);
 
     const pos = new.add(sz); // 右下角坐标
-    const startPos = map.worldToTileStart(pos); // 右下角所在瓦
+    const startPos = map.worldToTileStart(pos); // 右下角所在瓦片坐标
+    const index = map.worldToTileIndex(pos);
 
     const width = pos.x - startPos.x;
     const height = getHeightAtWidth(width, tileStates[index]);
