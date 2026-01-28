@@ -155,64 +155,76 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
 }
 
 pub fn clamp(old: Vector2, new: Vector2, size: Vector2) Vector2 {
-    const clampedX = clampX(old, .xy(new.x, old.y), size);
-    const clampedY = clampY(old, .xy(clampedX.x, new.y), size);
+    const newX = zhu.Vector2.xy(new.x, old.y);
+    const clampedX = if (new.x < old.x) clampLeft(newX, size) //
+        else if (new.x > old.x) clampRight(newX, size) else newX;
+
+    const newY = zhu.Vector2.xy(old.x, new.y);
+    const clampedY = if (new.y < old.y) clampUp(newY, size) //
+        else if (new.y > old.y) clampDown(newY, size) else newY;
+
     return .xy(clampedX.x, clampedY.y);
 }
 
 const epsilon = zhu.Vector2.one.scale(-zhu.math.epsilon);
-fn clampX(old: Vector2, new: Vector2, size: Vector2) Vector2 {
+fn clampLeft(new: Vector2, size: Vector2) Vector2 {
     const sz = size.add(epsilon);
 
-    if (new.x < old.x) { // 向左移动
-        var tileIndex = map.worldToTileIndex(new);
-        if (tileStates[tileIndex] == .solid) { // 左上角碰撞
-            return map.tileIndexToWorld(tileIndex + 1);
-        }
-        tileIndex = map.worldToTileIndex(new.addY(sz.y));
-        if (tileStates[tileIndex] == .solid) { // 左下角碰撞
-            return map.tileIndexToWorld(tileIndex + 1);
-        }
-    } else if (new.x > old.x) { // 向右移动
-        const offset = map.tileSize.x - size.x;
-        var tileIndex = map.worldToTileIndex(new.addX(sz.x));
-        if (tileStates[tileIndex] == .solid) { // 右上角碰撞
-            return map.tileIndexToWorld(tileIndex - 1).addX(offset);
-        }
-        tileIndex = map.worldToTileIndex(new.add(sz));
-        if (tileStates[tileIndex] == .solid) { // 右下角碰撞
-            return map.tileIndexToWorld(tileIndex - 1).addX(offset);
-        }
+    var tileIndex = map.worldToTileIndex(new);
+    if (tileStates[tileIndex] == .solid) { // 左上角碰撞
+        return map.tileIndexToWorld(tileIndex + 1);
+    }
+    tileIndex = map.worldToTileIndex(new.addY(sz.y));
+    if (tileStates[tileIndex] == .solid) { // 左下角碰撞
+        return map.tileIndexToWorld(tileIndex + 1);
     }
     return new;
 }
 
-fn clampY(old: Vector2, new: Vector2, size: Vector2) Vector2 {
-    const w = map.width;
-
+fn clampRight(new: Vector2, size: Vector2) Vector2 {
     const sz = size.add(epsilon);
-    if (new.y < old.y) { // 向上移动
-        var tileIndex = map.worldToTileIndex(new);
-        if (tileStates[tileIndex] == .solid) { // 左上角碰撞
-            return map.tileIndexToWorld(tileIndex + w);
-        }
-        tileIndex = map.worldToTileIndex(new.addX(sz.x));
-        if (tileStates[tileIndex] == .solid) { // 右上角碰撞
-            return map.tileIndexToWorld(tileIndex + w);
-        }
-    } else { // 可能向下移动，或者斜坡
-        var tileIndex = map.worldToTileIndex(new.addY(sz.y)); // 左下角
-        const offset = map.tileSize.y - size.y;
-        var tileType = tileStates[tileIndex];
-        if (tileType == .solid or tileType == .uniSolid) {
-            return map.tileIndexToWorld(tileIndex - w).addY(offset);
-        }
 
-        tileIndex = map.worldToTileIndex(new.add(sz)); // 右下角
-        tileType = tileStates[tileIndex];
-        if (tileType == .solid or tileType == .uniSolid) {
-            return map.tileIndexToWorld(tileIndex - w).addY(offset);
-        }
+    var tileIndex = map.worldToTileIndex(new.addX(sz.x));
+    if (tileStates[tileIndex] == .solid) { // 右上角碰撞
+        const offset = map.tileSize.x - size.x;
+        return map.tileIndexToWorld(tileIndex - 1).addX(offset);
+    }
+    tileIndex = map.worldToTileIndex(new.add(sz));
+    if (tileStates[tileIndex] == .solid) { // 右下角碰撞
+        const offset = map.tileSize.x - size.x;
+        return map.tileIndexToWorld(tileIndex - 1).addX(offset);
+    }
+    return new;
+}
+
+fn clampUp(new: Vector2, size: Vector2) Vector2 {
+    const sz = size.add(epsilon);
+
+    var tileIndex = map.worldToTileIndex(new);
+    if (tileStates[tileIndex] == .solid) { // 左上角碰撞
+        return map.tileIndexToWorld(tileIndex + map.width);
+    }
+    tileIndex = map.worldToTileIndex(new.addX(sz.x));
+    if (tileStates[tileIndex] == .solid) { // 右上角碰撞
+        return map.tileIndexToWorld(tileIndex + map.width);
+    }
+    return new;
+}
+
+fn clampDown(new: Vector2, size: Vector2) Vector2 {
+    const sz = size.add(epsilon);
+
+    var tileIndex = map.worldToTileIndex(new.addY(sz.y)); // 左下角
+    const offset = map.tileSize.y - size.y;
+    var tileType = tileStates[tileIndex];
+    if (tileType == .solid or tileType == .uniSolid) {
+        return map.tileIndexToWorld(tileIndex - map.width).addY(offset);
+    }
+
+    tileIndex = map.worldToTileIndex(new.add(sz)); // 右下角
+    tileType = tileStates[tileIndex];
+    if (tileType == .solid or tileType == .uniSolid) {
+        return map.tileIndexToWorld(tileIndex - map.width).addY(offset);
     }
     return new;
 }
