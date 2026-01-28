@@ -28,10 +28,10 @@ var spikeImage: zhu.graphics.Image = undefined;
 const frogEnum = enum { idle, jump, fall };
 const frogIdleFrames = zhu.graphics.framesX(4, .xy(35, 32), 0.3);
 const frogJumpFrames: [1]zhu.graphics.Frame = .{
-    .{ .area = .init(.xy(35, 32), .xy(35, 32)), .interval = 0.1 },
+    .{ .area = .init(.xy(35, 32), .xy(35, 32)) },
 };
 const frogFallFrames: [1]zhu.graphics.Frame = .{
-    .{ .area = .init(.xy(70, 32), .xy(35, 32)), .interval = 0.1 },
+    .{ .area = .init(.xy(70, 32), .xy(35, 32)) },
 };
 var frogAnimations: zhu.graphics.EnumAnimation(frogEnum) = undefined;
 var frogState: frogEnum = .idle;
