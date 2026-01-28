@@ -46,6 +46,7 @@ pub fn update(delta: f32) void {
     hurtTimer.update(delta);
     state.update(delta);
 
+    std.log.info("velocity: {}", .{velocity});
     velocity = velocity.add(force.scale(delta));
     velocity.x = std.math.clamp(velocity.x, -maxSpeed, maxSpeed);
     var toPosition = position.add(velocity.scale(delta));

@@ -18,25 +18,7 @@ pub const ObjectEnum = enum(u32) {
     gem = zhu.imageId("textures/Items/gem.png"),
 };
 
-pub const TileEnum = enum {
-    normal,
-    solid,
-    uniSolid,
-    slope_0_1,
-    slope_0_2,
-    slope_1_2,
-    slope_1_0,
-    slope_2_0,
-    slope_2_1,
-
-    pub fn isSlope(self: TileEnum) bool {
-        return switch (self) {
-            .slope_0_1, .slope_0_2, .slope_1_2 => true,
-            .slope_1_0, .slope_2_0, .slope_2_1 => true,
-            else => false,
-        };
-    }
-};
+pub const TileEnum = enum { normal, solid, uniSolid };
 
 pub const Object = struct {
     type: ObjectEnum,
@@ -121,16 +103,6 @@ fn parseProperties(index: usize, tile: tiled.Tile) void {
             if (property.value.bool) tileStates[index] = .solid;
         } else if (std.mem.eql(u8, property.name, "unisolid")) {
             if (property.value.bool) tileStates[index] = .uniSolid;
-        } else if (std.mem.eql(u8, property.name, "slope")) {
-            const value = property.value.string;
-            tileStates[index] =
-                if (std.mem.eql(u8, value, "0_1")) .slope_0_1 //
-                else if (std.mem.eql(u8, value, "1_0")) .slope_1_0 //
-                else if (std.mem.eql(u8, value, "0_2")) .slope_0_2 //
-                else if (std.mem.eql(u8, value, "2_0")) .slope_2_0 //
-                else if (std.mem.eql(u8, value, "2_1")) .slope_2_1 //
-                else if (std.mem.eql(u8, value, "1_2")) .slope_1_2 //
-                else unreachable; //
         } else tileStates[index] = .normal;
     }
 }
@@ -161,21 +133,9 @@ pub fn clamp(old: Vector2, new: Vector2, size: Vector2) Vector2 {
 
     const newY = zhu.Vector2.xy(old.x, new.y);
     const clampedY = if (new.y < old.y) clampUp(newY, size) //
-        else if (isSlope(old, size) or isSlope(clampedX, size))
-            clampSlope(old, clampedX, size) //
-        else
-            clampDown(newY, size);
+        else if (new.y > old.y) clampDown(newY, size) else newY;
 
     return .xy(clampedX.x, clampedY.y);
-}
-
-fn isSlope(position: Vector2, size: Vector2) bool {
-    const sz = size.add(epsilon);
-    var index = map.worldToTileIndex(position.add(sz));
-    if (tileStates[index].isSlope()) return true;
-
-    index = map.worldToTileIndex(position.addY(sz.y));
-    return tileStates[index].isSlope();
 }
 
 const epsilon = zhu.Vector2.one.scale(-zhu.math.epsilon);
@@ -243,60 +203,6 @@ fn clampDown(new: Vector2, size: Vector2) Vector2 {
     }
 
     return new;
-}
-
-const player = @import("player.zig");
-fn clampSlope(old: Vector2, clampedX: Vector2, size: Vector2) Vector2 {
-    if (clampedX.x > old.x) return rightSlope(clampedX, size);
-    if (clampedX.x < old.x) return leftSlope(clampedX, size);
-    return clampedX;
-}
-
-fn leftSlope(new: Vector2, size: Vector2) Vector2 {
-    const sz = size.add(epsilon);
-    player.velocity.y = 0;
-
-    const pos = new.addY(sz.y); // 左下角坐标
-    const startPos = map.worldToTileStart(pos); // 左下角所在瓦片坐标
-    const index = map.worldToTileIndex(pos);
-
-    const width = pos.x - startPos.x;
-    const height = getHeightAtWidth(width, tileStates[index]);
-    const y = startPos.y + map.tileSize.y - height;
-    return .xy(new.x, y - size.y);
-}
-
-fn rightSlope(new: Vector2, size: Vector2) Vector2 {
-    const sz = size.add(epsilon);
-    player.velocity.y = 0;
-
-    const pos = new.add(sz); // 右下角坐标
-    const startPos = map.worldToTileStart(pos); // 右下角所在瓦片坐标
-    const index = map.worldToTileIndex(pos);
-
-    const width = pos.x - startPos.x;
-    const height = getHeightAtWidth(width, tileStates[index]);
-    const y = startPos.y + map.tileSize.y - height;
-    return .xy(new.x, y - size.y);
-}
-
-///
-/// 计算斜坡在指定宽度处的高度
-///
-/// width: 相对于瓦片左侧的宽度
-/// tileEnum: 瓦片类型
-///
-fn getHeightAtWidth(width: f32, tileEnum: TileEnum) f32 {
-    const x = width / map.tileSize.x;
-    return switch (tileEnum) {
-        .slope_0_1 => x * map.tileSize.y,
-        .slope_0_2 => x * map.tileSize.y * 0.5,
-        .slope_2_1 => (x * 0.5 + 0.5) * map.tileSize.y,
-        .slope_1_0 => (1.0 - x) * map.tileSize.y,
-        .slope_2_0 => (1.0 - x) * 0.5 * map.tileSize.y,
-        .slope_1_2 => ((1.0 - x) * 0.5 + 0.5) * map.tileSize.y,
-        else => 0,
-    };
 }
 
 pub fn draw() void {
