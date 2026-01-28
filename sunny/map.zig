@@ -161,9 +161,21 @@ pub fn clamp(old: Vector2, new: Vector2, size: Vector2) Vector2 {
 
     const newY = zhu.Vector2.xy(old.x, new.y);
     const clampedY = if (new.y < old.y) clampUp(newY, size) //
-        else if (new.y > old.y) clampDown(newY, size) else newY;
+        else if (isSlope(old, size) or isSlope(clampedX, size))
+            clampSlope(old, clampedX, size) //
+        else
+            clampDown(newY, size);
 
     return .xy(clampedX.x, clampedY.y);
+}
+
+fn isSlope(position: Vector2, size: Vector2) bool {
+    const sz = size.add(epsilon);
+    var index = map.worldToTileIndex(position.add(sz));
+    if (tileStates[index].isSlope()) return true;
+
+    index = map.worldToTileIndex(position.addY(sz.y));
+    return tileStates[index].isSlope();
 }
 
 const epsilon = zhu.Vector2.one.scale(-zhu.math.epsilon);
@@ -219,44 +231,52 @@ fn clampDown(new: Vector2, size: Vector2) Vector2 {
 
     var tileIndex = map.worldToTileIndex(new.addY(sz.y)); // 左下角
     const offset = map.tileSize.y - size.y;
-    const tileLeft = tileStates[tileIndex];
-    if (tileLeft == .solid or tileLeft == .uniSolid) {
+    var tileEnum = tileStates[tileIndex];
+    if (tileEnum == .solid or tileEnum == .uniSolid) {
         return map.tileIndexToWorld(tileIndex - map.width).addY(offset);
     }
 
     tileIndex = map.worldToTileIndex(new.add(sz)); // 右下角
-    const tileRight = tileStates[tileIndex];
-    if (tileRight == .solid or tileRight == .uniSolid) {
+    tileEnum = tileStates[tileIndex];
+    if (tileEnum == .solid or tileEnum == .uniSolid) {
         return map.tileIndexToWorld(tileIndex - map.width).addY(offset);
     }
 
     return new;
 }
 
-fn clampSlope(new: Vector2, size: Vector2, tileEnum: TileEnum) Vector2 {
+fn clampSlope(old: Vector2, clampedX: Vector2, size: Vector2) Vector2 {
+    const index = map.worldToTileIndex(clampedX);
+    if (clampedX.x > old.x) return rightSlope(clampedX, size, index);
+    if (clampedX.x < old.x) return leftSlope(clampedX, size, index);
+    return clampedX;
+}
+
+fn leftSlope(new: Vector2, size: Vector2, index: usize) Vector2 {
+    std.log.info("enter left slope", .{});
     const sz = size.add(epsilon);
 
-    const posLeft = new.addY(sz.y);
-    const indexLeft = map.worldToTileIndex(posLeft); // 左下角
-    if (tileStates[indexLeft] == tileEnum) {
-        const tilePos = map.tileIndexToWorld(indexLeft);
-        const relativeX = new.x - tilePos.x;
-        const height = getHeightAtWidth(relativeX, tileEnum);
-        const clampedY = tilePos.y + height - size.y;
-        return .xy(new.x, clampedY);
-    }
+    const pos = new.addY(sz.y); // 左下角坐标
+    const startPos = map.worldToTileStart(pos); // 左下角所在瓦片坐标
 
-    const posRight = new.add(sz);
-    const indexRight = map.worldToTileIndex(posRight); // 右下角
-    if (tileStates[indexRight] == tileEnum) {
-        const tilePos = map.tileIndexToWorld(indexRight);
-        const relativeX = new.x + size.x - tilePos.x;
-        const height = getHeightAtWidth(relativeX, tileEnum);
-        const clampedY = tilePos.y + height - size.y;
-        return .xy(new.x, clampedY);
-    }
+    const width = pos.x - startPos.x;
+    const height = getHeightAtWidth(width, tileStates[index]);
+    const y = startPos.y + map.tileSize.y - height;
+    return .xy(new.x, y - size.y);
+}
 
-    return new;
+fn rightSlope(new: Vector2, size: Vector2, index: usize) Vector2 {
+    std.log.info("enter right slope", .{});
+
+    const sz = size.add(epsilon);
+
+    const pos = new.add(sz); // 右下角坐标
+    const startPos = map.worldToTileStart(pos); // 右下角所在瓦
+
+    const width = pos.x - startPos.x;
+    const height = getHeightAtWidth(width, tileStates[index]);
+    const y = startPos.y + map.tileSize.y - height;
+    return .xy(new.x, y - size.y);
 }
 
 ///
@@ -274,7 +294,7 @@ fn getHeightAtWidth(width: f32, tileEnum: TileEnum) f32 {
         .slope_1_0 => (1.0 - x) * map.tileSize.y,
         .slope_2_0 => (1.0 - x) * 0.5 * map.tileSize.y,
         .slope_1_2 => ((1.0 - x) * 0.5 + 0.5) * map.tileSize.y,
-        else => 0.0,
+        else => 0,
     };
 }
 
