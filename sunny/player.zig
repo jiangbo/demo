@@ -123,7 +123,7 @@ fn changeState(newState: State) void {
 }
 
 const IdleState = struct {
-    var animation: zhu.graphics.FrameAnimation = undefined;
+    var animation: zhu.graphics.Animation = undefined;
     const frames = zhu.graphics.loopFramesX(4, imageSize, 0.2);
 
     pub fn init() void {
@@ -151,7 +151,7 @@ const IdleState = struct {
 };
 
 const WalkState = struct {
-    var animation: zhu.graphics.FrameAnimation = undefined;
+    var animation: zhu.graphics.Animation = undefined;
     const frames = zhu.graphics.loopFramesX(6, imageSize, 0.1);
 
     pub fn init() void {
@@ -233,7 +233,7 @@ const FallState = struct {
 };
 
 const HurtState = struct {
-    var animation: zhu.graphics.FrameAnimation = undefined;
+    var animation: zhu.graphics.Animation = undefined;
     const frames = zhu.graphics.framesX(2, imageSize, 0.1);
     var timer: zhu.Timer = .init(0.4);
 
@@ -266,7 +266,7 @@ const HurtState = struct {
 };
 
 const DeadState = struct {
-    var animation: zhu.graphics.FrameAnimation = undefined;
+    var animation: zhu.graphics.Animation = undefined;
     const frames = zhu.graphics.framesX(2, imageSize, 0.1);
 
     pub fn init() void {

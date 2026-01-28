@@ -15,12 +15,12 @@ const eagleFrames = zhu.graphics.framesX(4, .xy(40, 41), 0.15);
 const itemFrames = zhu.graphics.framesX(5, .xy(32, 32), 0.1);
 const deadFrames = zhu.graphics.framesX(6, .xy(40, 41), 0.1);
 
-var gemAnimation: zhu.graphics.FrameAnimation = undefined;
-var cherryAnimation: zhu.graphics.FrameAnimation = undefined;
-var opossumAnimation: zhu.graphics.FrameAnimation = undefined;
-var eagleAnimation: zhu.graphics.FrameAnimation = undefined;
-var itemAnimation: zhu.graphics.FrameAnimation = undefined;
-var deadAnimation: zhu.graphics.FrameAnimation = undefined;
+var gemAnimation: zhu.graphics.Animation = undefined;
+var cherryAnimation: zhu.graphics.Animation = undefined;
+var opossumAnimation: zhu.graphics.Animation = undefined;
+var eagleAnimation: zhu.graphics.Animation = undefined;
+var itemAnimation: zhu.graphics.Animation = undefined;
+var deadAnimation: zhu.graphics.Animation = undefined;
 
 var skullImage: zhu.graphics.Image = undefined;
 var spikeImage: zhu.graphics.Image = undefined;
@@ -33,12 +33,12 @@ const frogJumpFrames: [1]zhu.graphics.Frame = .{
 const frogFallFrames: [1]zhu.graphics.Frame = .{
     .{ .area = .init(.xy(70, 32), .xy(35, 32)), .interval = 0.1 },
 };
-var frogAnimations: zhu.graphics.EnumFrameAnimation(frogEnum) = undefined;
+var frogAnimations: zhu.graphics.EnumAnimation(frogEnum) = undefined;
 var frogState: frogEnum = .idle;
 
 const Animation = struct {
     center: zhu.Vector2, // 需要播放的中心点
-    effect: zhu.graphics.FrameAnimation,
+    effect: zhu.graphics.Animation,
 };
 
 var effectArray: [10]Animation = undefined;
