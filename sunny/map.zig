@@ -174,9 +174,20 @@ fn clampLeft(new: Vector2, size: Vector2) Vector2 {
     if (tileStates[tileIndex] == .solid) { // 左上角碰撞
         return map.tileIndexToWorld(tileIndex + 1);
     }
-    tileIndex = map.worldToTileIndex(new.addY(sz.y));
+
+    const bottomLeft = new.addY(sz.y);
+    tileIndex = map.worldToTileIndex(bottomLeft);
     if (tileStates[tileIndex] == .solid) { // 左下角碰撞
         return map.tileIndexToWorld(tileIndex + 1);
+    } else if (tileStates[tileIndex].isSlope()) {
+        // 处理斜坡碰撞
+        const tileStart = map.worldToTileStart(bottomLeft);
+        const width = bottomLeft.x - tileStart.x;
+        const height = getHeightAtWidth(width, tileStates[tileIndex]);
+        if (height > 0) { // 有斜坡高度
+            const slopeY = tileStart.y + map.tileSize.y - size.y - height;
+            if (new.y > slopeY) return .xy(new.x, slopeY);
+        }
     }
     return new;
 }
@@ -185,14 +196,24 @@ fn clampRight(new: Vector2, size: Vector2) Vector2 {
     const sz = size.add(epsilon);
 
     var tileIndex = map.worldToTileIndex(new.addX(sz.x));
+    const offsetX = map.tileSize.x - size.x;
     if (tileStates[tileIndex] == .solid) { // 右上角碰撞
-        const offset = map.tileSize.x - size.x;
-        return map.tileIndexToWorld(tileIndex - 1).addX(offset);
+        return map.tileIndexToWorld(tileIndex - 1).addX(offsetX);
     }
-    tileIndex = map.worldToTileIndex(new.add(sz));
+
+    const bottomRight = new.add(sz);
+    tileIndex = map.worldToTileIndex(bottomRight);
     if (tileStates[tileIndex] == .solid) { // 右下角碰撞
-        const offset = map.tileSize.x - size.x;
-        return map.tileIndexToWorld(tileIndex - 1).addX(offset);
+        return map.tileIndexToWorld(tileIndex - 1).addX(offsetX);
+    } else if (tileStates[tileIndex].isSlope()) {
+        // 处理斜坡碰撞
+        const tileStart = map.worldToTileStart(bottomRight);
+        const width = bottomRight.x - tileStart.x;
+        const height = getHeightAtWidth(width, tileStates[tileIndex]);
+        if (height > 0) { // 有斜坡高度
+            const slopeY = tileStart.y + map.tileSize.y - size.y - height;
+            if (new.y > slopeY) return .xy(new.x, slopeY);
+        }
     }
     return new;
 }
@@ -214,17 +235,33 @@ fn clampUp(new: Vector2, size: Vector2) Vector2 {
 fn clampDown(new: Vector2, size: Vector2) Vector2 {
     const sz = size.add(epsilon);
 
-    var tileIndex = map.worldToTileIndex(new.addY(sz.y)); // 左下角
+    const posLeft = new.addY(sz.y);
+    const indexLeft = map.worldToTileIndex(posLeft); // 左下角
     const offset = map.tileSize.y - size.y;
-    var tileType = tileStates[tileIndex];
-    if (tileType == .solid or tileType == .uniSolid) {
-        return map.tileIndexToWorld(tileIndex - map.width).addY(offset);
+    const tileLeft = tileStates[indexLeft];
+    if (tileLeft == .solid or tileLeft == .uniSolid) {
+        return map.tileIndexToWorld(indexLeft - map.width).addY(offset);
     }
 
-    tileIndex = map.worldToTileIndex(new.add(sz)); // 右下角
-    tileType = tileStates[tileIndex];
-    if (tileType == .solid or tileType == .uniSolid) {
-        return map.tileIndexToWorld(tileIndex - map.width).addY(offset);
+    const posRight = new.add(sz);
+    const indexRight = map.worldToTileIndex(posRight); // 右下角
+    const tileRight = tileStates[indexRight];
+    if (tileRight == .solid or tileRight == .uniSolid) {
+        return map.tileIndexToWorld(indexRight - map.width).addY(offset);
+    }
+
+    if (!tileLeft.isSlope() and !tileRight.isSlope()) return new;
+
+    // 处理斜坡碰撞
+    const widthLeft = posLeft.x - map.tileIndexToWorld(indexLeft).x;
+    const widthRight = posRight.x - map.tileIndexToWorld(indexRight).x;
+    const heightLeft = getHeightAtWidth(widthLeft, tileLeft);
+    const heightRight = getHeightAtWidth(widthRight, tileRight);
+    const height = @max(heightLeft, heightRight);
+    if (height > 0) { // 有斜坡高度
+        const start = map.worldToTileStart(posRight);
+        const slopeY = start.y + offset - height;
+        if (new.y > slopeY) return .xy(new.x, slopeY);
     }
     return new;
 }
