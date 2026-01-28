@@ -195,12 +195,14 @@ fn clampY(old: Vector2, new: Vector2, size: Vector2) Vector2 {
     } else if (new.y > old.y) { // 向下移动
         var tileIndex = map.worldToTileIndex(new.addY(sz.y));
         const offset = map.tileSize.y - size.y;
-        if (tileStates[tileIndex] == .solid or tileStates[tileIndex] == .uniSolid) {
+        var tileType = tileStates[tileIndex];
+        if (tileType == .solid or tileType == .uniSolid) {
             return map.tileIndexToWorld(tileIndex - w).addY(offset);
         }
 
         tileIndex = map.worldToTileIndex(new.add(sz));
-        if (tileStates[tileIndex] == .solid or tileStates[tileIndex] == .uniSolid) {
+        tileType = tileStates[tileIndex];
+        if (tileType == .solid or tileType == .uniSolid) {
             return map.tileIndexToWorld(tileIndex - w).addY(offset);
         }
     }
