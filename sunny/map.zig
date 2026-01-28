@@ -179,15 +179,6 @@ fn clampLeft(new: Vector2, size: Vector2) Vector2 {
     tileIndex = map.worldToTileIndex(bottomLeft);
     if (tileStates[tileIndex] == .solid) { // 左下角碰撞
         return map.tileIndexToWorld(tileIndex + 1);
-    } else if (tileStates[tileIndex].isSlope()) {
-        // 处理斜坡碰撞
-        const tileStart = map.worldToTileStart(bottomLeft);
-        const width = bottomLeft.x - tileStart.x;
-        const height = getHeightAtWidth(width, tileStates[tileIndex]);
-        if (height > 0) { // 有斜坡高度
-            const slopeY = tileStart.y + map.tileSize.y - size.y - height;
-            if (new.y > slopeY) return .xy(new.x, slopeY);
-        }
     }
     return new;
 }
@@ -205,15 +196,6 @@ fn clampRight(new: Vector2, size: Vector2) Vector2 {
     tileIndex = map.worldToTileIndex(bottomRight);
     if (tileStates[tileIndex] == .solid) { // 右下角碰撞
         return map.tileIndexToWorld(tileIndex - 1).addX(offsetX);
-    } else if (tileStates[tileIndex].isSlope()) {
-        // 处理斜坡碰撞
-        const tileStart = map.worldToTileStart(bottomRight);
-        const width = bottomRight.x - tileStart.x;
-        const height = getHeightAtWidth(width, tileStates[tileIndex]);
-        if (height > 0) { // 有斜坡高度
-            const slopeY = tileStart.y + map.tileSize.y - size.y - height;
-            if (new.y > slopeY) return .xy(new.x, slopeY);
-        }
     }
     return new;
 }
@@ -235,34 +217,45 @@ fn clampUp(new: Vector2, size: Vector2) Vector2 {
 fn clampDown(new: Vector2, size: Vector2) Vector2 {
     const sz = size.add(epsilon);
 
+    var tileIndex = map.worldToTileIndex(new.addY(sz.y)); // 左下角
+    const offset = map.tileSize.y - size.y;
+    const tileLeft = tileStates[tileIndex];
+    if (tileLeft == .solid or tileLeft == .uniSolid) {
+        return map.tileIndexToWorld(tileIndex - map.width).addY(offset);
+    }
+
+    tileIndex = map.worldToTileIndex(new.add(sz)); // 右下角
+    const tileRight = tileStates[tileIndex];
+    if (tileRight == .solid or tileRight == .uniSolid) {
+        return map.tileIndexToWorld(tileIndex - map.width).addY(offset);
+    }
+
+    return new;
+}
+
+fn clampSlope(new: Vector2, size: Vector2, tileEnum: TileEnum) Vector2 {
+    const sz = size.add(epsilon);
+
     const posLeft = new.addY(sz.y);
     const indexLeft = map.worldToTileIndex(posLeft); // 左下角
-    const offset = map.tileSize.y - size.y;
-    const tileLeft = tileStates[indexLeft];
-    if (tileLeft == .solid or tileLeft == .uniSolid) {
-        return map.tileIndexToWorld(indexLeft - map.width).addY(offset);
+    if (tileStates[indexLeft] == tileEnum) {
+        const tilePos = map.tileIndexToWorld(indexLeft);
+        const relativeX = new.x - tilePos.x;
+        const height = getHeightAtWidth(relativeX, tileEnum);
+        const clampedY = tilePos.y + height - size.y;
+        return .xy(new.x, clampedY);
     }
 
     const posRight = new.add(sz);
     const indexRight = map.worldToTileIndex(posRight); // 右下角
-    const tileRight = tileStates[indexRight];
-    if (tileRight == .solid or tileRight == .uniSolid) {
-        return map.tileIndexToWorld(indexRight - map.width).addY(offset);
+    if (tileStates[indexRight] == tileEnum) {
+        const tilePos = map.tileIndexToWorld(indexRight);
+        const relativeX = new.x + size.x - tilePos.x;
+        const height = getHeightAtWidth(relativeX, tileEnum);
+        const clampedY = tilePos.y + height - size.y;
+        return .xy(new.x, clampedY);
     }
 
-    if (!tileLeft.isSlope() and !tileRight.isSlope()) return new;
-
-    // 处理斜坡碰撞
-    const widthLeft = posLeft.x - map.tileIndexToWorld(indexLeft).x;
-    const widthRight = posRight.x - map.tileIndexToWorld(indexRight).x;
-    const heightLeft = getHeightAtWidth(widthLeft, tileLeft);
-    const heightRight = getHeightAtWidth(widthRight, tileRight);
-    const height = @max(heightLeft, heightRight);
-    if (height > 0) { // 有斜坡高度
-        const start = map.worldToTileStart(posRight);
-        const slopeY = start.y + offset - height;
-        if (new.y > slopeY) return .xy(new.x, slopeY);
-    }
     return new;
 }
 
