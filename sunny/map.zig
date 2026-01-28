@@ -245,6 +245,7 @@ fn clampDown(new: Vector2, size: Vector2) Vector2 {
     return new;
 }
 
+const player = @import("player.zig");
 fn clampSlope(old: Vector2, clampedX: Vector2, size: Vector2) Vector2 {
     if (clampedX.x > old.x) return rightSlope(clampedX, size);
     if (clampedX.x < old.x) return leftSlope(clampedX, size);
@@ -253,6 +254,7 @@ fn clampSlope(old: Vector2, clampedX: Vector2, size: Vector2) Vector2 {
 
 fn leftSlope(new: Vector2, size: Vector2) Vector2 {
     const sz = size.add(epsilon);
+    player.velocity.y = 0;
 
     const pos = new.addY(sz.y); // 左下角坐标
     const startPos = map.worldToTileStart(pos); // 左下角所在瓦片坐标
@@ -266,6 +268,7 @@ fn leftSlope(new: Vector2, size: Vector2) Vector2 {
 
 fn rightSlope(new: Vector2, size: Vector2) Vector2 {
     const sz = size.add(epsilon);
+    player.velocity.y = 0;
 
     const pos = new.add(sz); // 右下角坐标
     const startPos = map.worldToTileStart(pos); // 右下角所在瓦片坐标
