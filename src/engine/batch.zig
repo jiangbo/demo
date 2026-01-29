@@ -308,13 +308,11 @@ pub const Camera = struct {
     pub fn smoothFollow(self: *Camera, pos: Vector2, smooth: f32) void {
         const target = pos.sub(self.size.scale(0.5));
         const distance = target.sub(self.position);
-        if (distance.length2() < 1) {
-            self.position = target;
-        } else {
-            var offset = distance.scale(smooth);
-            if (offset.length2() < 1) offset = offset.sign();
-            self.position = self.position.add(offset);
-        }
+
+        if (@abs(distance.x) < 1) self.position.x = target.x //
+        else self.position.x += distance.x * smooth;
+        if (@abs(distance.y) < 1) self.position.y = target.y //
+        else self.position.y += distance.y * smooth;
 
         self.clampBound();
     }
