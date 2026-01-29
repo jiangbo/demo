@@ -73,6 +73,13 @@ pub fn init(obj: std.ArrayList(map.Object)) void {
 
     skullImage = getImage(@intFromEnum(map.ObjectEnum.skull));
     spikeImage = getImage(@intFromEnum(map.ObjectEnum.spikeTop));
+
+    for (objects.items) |*object| {
+        switch (object.type) {
+            .opossum => object.velocity = .xy(-80, 0),
+            else => {},
+        }
+    }
 }
 
 pub fn update(delta: f32) void {
@@ -88,6 +95,14 @@ pub fn update(delta: f32) void {
             if (animation.effect.isFinishedOnceUpdate(delta)) {
                 _ = effectAnimations.swapRemove(iterator.index);
             }
+        }
+    }
+
+    // AI 行为
+    for (objects.items) |*object| {
+        switch (object.type) {
+            .opossum => updateOpossum(object, delta),
+            else => {},
         }
     }
 
@@ -125,6 +140,15 @@ pub fn update(delta: f32) void {
     }
 }
 
+fn updateOpossum(object: *map.Object, delta: f32) void {
+    const offset = object.velocity.scale(delta);
+    object.position = object.position.add(offset);
+    const max = object.initPosition.x;
+    if (object.position.x < max - 200 or object.position.x > max) {
+        object.velocity.x = -object.velocity.x;
+    }
+}
+
 fn collideItem(_: *map.Object, center: zhu.Vector2) void {
     // 播放特效动画
     effectAnimations.appendAssumeCapacity(.{
@@ -155,7 +179,11 @@ pub fn draw() void {
             else => null,
         };
 
-        if (image) |img| batch.drawImage(img, item.position, .{});
+        if (image) |img| {
+            batch.drawImage(img, item.position, .{
+                .flipX = item.velocity.x > 0,
+            });
+        }
 
         // 显示碰撞框
         if (item.object == null) continue;

@@ -22,7 +22,9 @@ pub const TileEnum = enum { normal, solid, uniSolid };
 
 pub const Object = struct {
     type: ObjectEnum,
+    initPosition: Vector2 = .zero,
     position: Vector2,
+    velocity: Vector2 = .zero,
     size: Vector2,
     object: ?tiled.Object,
 };
@@ -92,6 +94,7 @@ fn parseTileSpike(tile: tiled.Tile, pos: zhu.Vector2) void {
     objects.append(zhu.assets.allocator, .{
         .type = @enumFromInt(tile.id),
         .position = pos,
+        .initPosition = pos,
         .size = object.size,
         .object = object,
     }) catch @panic("oom, can't append tile");
@@ -120,6 +123,7 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
         objects.append(zhu.assets.allocator, .{
             .type = @enumFromInt(tile.id),
             .position = object.position.addY(-object.size.y),
+            .initPosition = object.position.addY(-object.size.y),
             .size = object.size,
             .object = obj,
         }) catch @panic("oom, can't append tile");
