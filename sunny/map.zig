@@ -132,6 +132,18 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
     }
 }
 
+pub fn isTouchLadder(pos: Vector2, size: Vector2) bool {
+    const topLeft = pos;
+    const topRight = pos.addX(size.x);
+    const bottomLeft = pos.addY(size.y);
+    const bottomRight = pos.add(size);
+
+    return tileStates[map.worldToTileIndex(topLeft)] == .ladder or
+        tileStates[map.worldToTileIndex(topRight)] == .ladder or
+        tileStates[map.worldToTileIndex(bottomLeft)] == .ladder or
+        tileStates[map.worldToTileIndex(bottomRight)] == .ladder;
+}
+
 pub fn clamp(old: Vector2, new: Vector2, size: Vector2) Vector2 {
     const newX = zhu.Vector2.xy(new.x, old.y);
     const clampedX = if (new.x < old.x) clampLeft(newX, size) //

@@ -60,11 +60,14 @@ pub fn update(delta: f32) void {
         if (clamped.y == position.y) velocity.y = 0;
         position = clamped;
     }
+    if (state == .climb) {
+        if (toPosition.y > position.y) changeState(.idle);
+        velocity = .zero;
+    } else force.y = gravity;
 
-    batch.camera.directFollow(position, delta * 4);
+    batch.camera.directFollow(position);
     batch.camera.position = batch.camera.position.round();
 }
-var changed: bool = false;
 
 pub fn collideRect() zhu.Rect {
     return .init(position, tiledObject.size);
@@ -93,6 +96,7 @@ const State = union(enum) {
     fall: FallState,
     hurt: HurtState,
     dead: DeadState,
+    climb: ClimbState,
 
     fn enter(self: State) void {
         switch (self) {
@@ -134,6 +138,12 @@ const IdleState = struct {
 
     fn update(delta: f32) void {
         animation.loopUpdate(delta);
+
+        if (map.isTouchLadder(position, tiledObject.size) and
+            zhu.window.isKeyDown(.W))
+        {
+            changeState(.climb);
+        }
         if (zhu.window.isKeyPressed(.SPACE)) {
             changeState(.jump);
         } else if (zhu.window.isAnyKeyDown(&.{ .A, .D })) {
@@ -277,6 +287,47 @@ const DeadState = struct {
 
     fn update(delta: f32) void {
         animation.loopUpdate(delta);
+    }
+
+    fn draw() void {
+        drawPlayer(animation.currentImage());
+    }
+};
+
+const ClimbState = struct {
+    var animation: zhu.graphics.Animation = undefined;
+    const frames = zhu.graphics.loopFramesX(4, imageSize, 0.1);
+    const speed = 100;
+
+    pub fn init() void {
+        const climbImage = image.sub(.init(.xy(0, 64), .xy(128, 32)));
+        animation = .init(climbImage, &frames);
+    }
+
+    fn enter() void {
+        std.log.info("enter climb", .{});
+        velocity = .zero;
+        force = .zero;
+    }
+
+    fn update(delta: f32) void {
+        if (zhu.window.isKeyDown(.W)) {
+            velocity.y = -speed;
+        } else if (zhu.window.isKeyDown(.S)) {
+            velocity.y = speed;
+        } else if (zhu.window.isKeyDown(.A)) {
+            velocity.x = -speed;
+        } else if (zhu.window.isKeyDown(.D)) {
+            velocity.x = speed;
+        } else velocity = .zero;
+
+        if (velocity.x != 0 or velocity.y != 0) {
+            animation.loopUpdate(delta);
+        }
+
+        if (!map.isTouchLadder(position, tiledObject.size)) {
+            changeState(.fall);
+        }
     }
 
     fn draw() void {
