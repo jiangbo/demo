@@ -144,6 +144,20 @@ pub fn isTouchLadder(pos: Vector2, size: Vector2) bool {
         tileStates[map.worldToTileIndex(bottomRight)] == .ladder;
 }
 
+pub fn isTopLadder(pos: Vector2, size: Vector2) bool {
+    const centerX = pos.x + size.x / 2;
+    const point = zhu.Vector2.xy(centerX, pos.y + size.y);
+    return tileStates[map.worldToTileIndex(point)] == .ladder;
+}
+
+pub fn canClimb(pos: Vector2, size: Vector2) bool {
+    const bottomLeft = pos.addY(size.y);
+    const bottomRight = pos.add(size);
+
+    return tileStates[map.worldToTileIndex(bottomLeft)] == .ladder and
+        tileStates[map.worldToTileIndex(bottomRight)] == .ladder;
+}
+
 pub fn clamp(old: Vector2, new: Vector2, size: Vector2) Vector2 {
     const newX = zhu.Vector2.xy(new.x, old.y);
     const clampedX = if (new.x < old.x) clampLeft(newX, size) //

@@ -55,10 +55,21 @@ pub fn update(delta: f32) void {
 
     if (state == .dead) position = toPosition else {
         const size = tiledObject.size;
-        const clamped = map.clamp(position, toPosition, size);
-        if (clamped.x == position.x) velocity.x = 0;
-        if (clamped.y == position.y) velocity.y = 0;
-        position = clamped;
+        const onTop = map.isTopLadder(toPosition, size);
+        if (state != .climb and onTop) {
+            velocity.y = 0;
+            position = .xy(toPosition.x, position.y);
+            const canClimb = map.canClimb(toPosition, size);
+            if (zhu.window.isKeyDown(.S) and canClimb) {
+                changeState(.climb);
+                position = toPosition;
+            }
+        } else {
+            const clamped = map.clamp(position, toPosition, size);
+            if (clamped.x == position.x) velocity.x = 0;
+            if (clamped.y == position.y) velocity.y = 0;
+            position = clamped;
+        }
     }
     if (state == .climb) {
         if (toPosition.y > position.y) changeState(.idle);
