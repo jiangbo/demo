@@ -162,6 +162,14 @@ pub const Vector2 = extern struct {
         return .{ .x = self.x / self.length(), .y = self.y / self.length() };
     }
 
+    pub fn sign(self: Vector2) Vector2 {
+        return .{ .x = std.math.sign(self.x), .y = std.math.sign(self.y) };
+    }
+
+    pub fn ceil(self: Vector2) Vector2 {
+        return .{ .x = @ceil(self.x), .y = @ceil(self.y) };
+    }
+
     pub fn round(self: Vector2) Vector2 {
         return .{ .x = @round(self.x), .y = @round(self.y) };
     }
@@ -201,6 +209,13 @@ pub const Vector2 = extern struct {
 
     pub fn atan2(self: Vector2) f32 {
         return std.math.atan2(self.y, self.x);
+    }
+
+    pub fn mix(self: Vector2, other: Vector2, t: f32) Vector2 {
+        return .{
+            .x = std.math.lerp(self.x, other.x, t),
+            .y = std.math.lerp(self.y, other.y, t),
+        };
     }
 };
 

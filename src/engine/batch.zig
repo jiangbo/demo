@@ -295,10 +295,27 @@ pub const Camera = struct {
         if (window.isKeyDown(.RIGHT)) self.position.x += distance;
     }
 
-    pub fn directFollow(self: *Camera, pos: Vector2) void {
-        const halfWindowSize = self.size.scale(0.5);
+    pub fn clampBound(self: *Camera) void {
         const max = self.bound.sub(self.size).max(.zero);
-        self.position = pos.sub(halfWindowSize);
         self.position.clamp(.zero, max);
+    }
+
+    pub fn directFollow(self: *Camera, pos: Vector2) void {
+        self.position = pos.sub(self.size.scale(0.5));
+        self.clampBound();
+    }
+
+    pub fn smoothFollow(self: *Camera, pos: Vector2, smooth: f32) void {
+        const target = pos.sub(self.size.scale(0.5));
+        const distance = target.sub(self.position);
+        if (distance.length2() < 1) {
+            self.position = target;
+        } else {
+            var offset = distance.scale(smooth);
+            if (offset.length2() < 1) offset = offset.sign();
+            self.position = self.position.add(offset);
+        }
+
+        self.clampBound();
     }
 };

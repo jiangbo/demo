@@ -46,7 +46,6 @@ pub fn update(delta: f32) void {
     hurtTimer.update(delta);
     state.update(delta);
 
-    std.log.info("velocity: {}", .{velocity});
     velocity = velocity.add(force.scale(delta));
     velocity.x = std.math.clamp(velocity.x, -maxSpeed, maxSpeed);
     var toPosition = position.add(velocity.scale(delta));
@@ -63,9 +62,10 @@ pub fn update(delta: f32) void {
         position = clamped;
     }
 
-    batch.camera.directFollow(position);
+    batch.camera.smoothFollow(position, delta * 4);
     batch.camera.position = batch.camera.position.round();
 }
+var changed: bool = false;
 
 pub fn collideRect() zhu.Rect {
     return .init(position, tiledObject.size);
