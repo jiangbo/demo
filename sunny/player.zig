@@ -80,10 +80,6 @@ pub fn hurt() void {
 
 pub fn draw() void {
     state.draw();
-    // 绘制角色的碰撞框
-    batch.drawRect(.init(position, tiledObject.size), .{
-        .color = .rgba(0, 1, 0, 0.4),
-    });
 }
 
 pub fn drawPlayer(img: zhu.graphics.Image) void {

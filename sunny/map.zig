@@ -215,17 +215,6 @@ pub fn draw() void {
     }
 
     batch.vertexBuffer.appendSliceAssumeCapacity(tileVertexes.items);
-
-    for (0..map.height) |y| {
-        for (0..map.width) |x| {
-            const index = y * map.width + x;
-            const state = tileStates[index];
-            if (state == .normal) continue;
-
-            const pos = map.tileSize.mul(.xy(@floatFromInt(x), @floatFromInt(y)));
-            batch.debugDraw(.init(pos, map.tileSize));
-        }
-    }
 }
 
 fn drawImageLayer(layer: *const tiled.Layer) void {

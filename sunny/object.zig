@@ -77,6 +77,7 @@ pub fn init(obj: std.ArrayList(map.Object)) void {
     for (objects.items) |*object| {
         switch (object.type) {
             .opossum => object.velocity = .xy(-80, 0),
+            .eagle => object.velocity = .xy(0, -60),
             else => {},
         }
     }
@@ -102,6 +103,8 @@ pub fn update(delta: f32) void {
     for (objects.items) |*object| {
         switch (object.type) {
             .opossum => updateOpossum(object, delta),
+            .eagle => updateEagle(object, delta),
+            // .frog => updateFrog(object, delta),
             else => {},
         }
     }
@@ -149,6 +152,15 @@ fn updateOpossum(object: *map.Object, delta: f32) void {
     }
 }
 
+fn updateEagle(object: *map.Object, delta: f32) void {
+    const offset = object.velocity.scale(delta);
+    object.position = object.position.add(offset);
+    const max = object.initPosition.y;
+    if (object.position.y > max or object.position.y < max - 80) {
+        object.velocity.y = -object.velocity.y;
+    }
+}
+
 fn collideItem(_: *map.Object, center: zhu.Vector2) void {
     // 播放特效动画
     effectAnimations.appendAssumeCapacity(.{
@@ -179,16 +191,9 @@ pub fn draw() void {
             else => null,
         };
 
-        if (image) |img| {
-            batch.drawImage(img, item.position, .{
-                .flipX = item.velocity.x > 0,
-            });
-        }
-
-        // 显示碰撞框
-        if (item.object == null) continue;
-        const obj = item.object.?;
-        batch.debugDraw(.init(item.position.add(obj.position), obj.size));
+        if (image) |img| batch.drawImage(img, item.position, .{
+            .flipX = item.velocity.x > 0,
+        });
     }
 
     // 绘制特效动画
