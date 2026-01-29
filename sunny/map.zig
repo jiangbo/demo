@@ -18,7 +18,7 @@ pub const ObjectEnum = enum(u32) {
     gem = zhu.imageId("textures/Items/gem.png"),
 };
 
-pub const TileEnum = enum { normal, solid, uniSolid };
+pub const TileEnum = enum { normal, solid, uniSolid, ladder };
 
 pub const Object = struct {
     type: ObjectEnum,
@@ -106,6 +106,8 @@ fn parseProperties(index: usize, tile: tiled.Tile) void {
             if (property.value.bool) tileStates[index] = .solid;
         } else if (std.mem.eql(u8, property.name, "unisolid")) {
             if (property.value.bool) tileStates[index] = .uniSolid;
+        } else if (std.mem.eql(u8, property.name, "ladder")) {
+            if (property.value.bool) tileStates[index] = .ladder;
         } else tileStates[index] = .normal;
     }
 }

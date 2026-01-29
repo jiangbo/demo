@@ -56,7 +56,6 @@ pub fn update(delta: f32) void {
     if (state == .dead) position = toPosition else {
         const size = tiledObject.size;
         const clamped = map.clamp(position, toPosition, size);
-        // std.log.info("old: {}, new: {}, clamped: {}", .{ position, toPosition, clamped });
         if (clamped.x == position.x) velocity.x = 0;
         if (clamped.y == position.y) velocity.y = 0;
         position = clamped;
@@ -135,7 +134,7 @@ const IdleState = struct {
 
     fn update(delta: f32) void {
         animation.loopUpdate(delta);
-        if (zhu.window.isAnyKeyPressed(&.{ .W, .SPACE })) {
+        if (zhu.window.isKeyPressed(.SPACE)) {
             changeState(.jump);
         } else if (zhu.window.isAnyKeyDown(&.{ .A, .D })) {
             changeState(.walk);
