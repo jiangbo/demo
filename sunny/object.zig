@@ -104,7 +104,7 @@ pub fn update(delta: f32) void {
         switch (object.type) {
             .opossum => updateOpossum(object, delta),
             .eagle => updateEagle(object, delta),
-            // .frog => updateFrog(object, delta),
+            .frog => updateFrog(object, delta),
             else => {},
         }
     }
@@ -161,6 +161,33 @@ fn updateEagle(object: *map.Object, delta: f32) void {
     }
 }
 
+const gravity = 980; // 重力
+var jumpTimer: zhu.Timer = .init(2.5);
+var jumpRight: bool = true;
+fn updateFrog(object: *map.Object, delta: f32) void {
+    if (jumpTimer.isFinishedLoopUpdate(delta)) {
+        const max = object.initPosition.x - 10;
+        if (object.position.x > max) jumpRight = false;
+        if (object.position.x < max - 90) jumpRight = true;
+
+        const x: f32 = if (jumpRight) 1 else -1;
+        object.velocity = .xy(50 * x, -350);
+    }
+
+    const pos = object.position.add(object.object.?.position);
+    object.velocity.y = object.velocity.y + gravity * delta;
+    const toPosition = pos.add(object.velocity.scale(delta));
+
+    const size = object.object.?.size;
+    const clamped = map.clamp(pos, toPosition, size);
+    if (clamped.y == pos.y) object.velocity = .zero;
+
+    object.position = clamped.sub(object.object.?.position);
+
+    frogState = if (object.velocity.y == 0) .idle //
+        else if (object.velocity.y < 0) .jump else .fall;
+}
+
 fn collideItem(_: *map.Object, center: zhu.Vector2) void {
     // 播放特效动画
     effectAnimations.appendAssumeCapacity(.{
@@ -191,9 +218,11 @@ pub fn draw() void {
             else => null,
         };
 
-        if (image) |img| batch.drawImage(img, item.position, .{
-            .flipX = item.velocity.x > 0,
-        });
+        if (image) |img| {
+            var flip = item.velocity.x > 0;
+            if (item.type == .frog) flip = jumpRight;
+            batch.drawImage(img, item.position, .{ .flipX = flip });
+        }
     }
 
     // 绘制特效动画
