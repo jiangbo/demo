@@ -61,7 +61,7 @@ pub fn update(delta: f32) void {
         position = clamped;
     }
 
-    batch.camera.smoothFollow(position, delta * 4);
+    batch.camera.directFollow(position, delta * 4);
     batch.camera.position = batch.camera.position.round();
 }
 var changed: bool = false;
