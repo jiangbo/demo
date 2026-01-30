@@ -113,6 +113,18 @@ pub fn draw() void {
     // 绘制得分
     const pos: zhu.Vector2 = .xy(zhu.window.size.x - 100, 10);
     zhu.text.drawFmt("Score: {}", pos, .{score});
+
+    // 绘制生命值
+    const startPos: zhu.Vector2 = .xy(10, 10);
+    const healthId = zhu.imageId("textures/UI/Heart.png");
+    const backId = zhu.imageId("textures/UI/Heart-bg.png");
+    for (0..maxHealth) |index| {
+        const imageId = if (index < health) healthId else backId;
+        const i: f32 = @floatFromInt(index);
+        batch.drawImageId(imageId, startPos.addX(25 * i), .{
+            .size = .xy(20, 18), // 图片太大，缩小显示
+        });
+    }
 }
 
 pub fn drawPlayer(img: zhu.graphics.Image) void {
