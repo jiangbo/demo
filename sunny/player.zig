@@ -27,7 +27,8 @@ pub var state: State = .idle;
 var flip: bool = false;
 
 const maxHealth: u8 = 3;
-var health: u8 = maxHealth;
+pub var health: u8 = maxHealth;
+pub var score: u32 = 0;
 var hurtTimer: zhu.Timer = .initFinished(2.0); // 受伤的间隔时间
 
 pub fn init(pos: zhu.Vector2, size: zhu.Vector2) void {
@@ -95,6 +96,10 @@ pub fn hurt() void {
     health -|= 1;
     hurtTimer.elapsed = 0; // 重置计时器
     if (health == 0) changeState(.dead) else changeState(.hurt);
+}
+
+pub fn heal() void {
+    if (health < maxHealth) health += 1;
 }
 
 pub fn draw() void {

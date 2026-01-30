@@ -134,6 +134,7 @@ pub fn update(delta: f32) void {
                         // 从上方碰撞，击败敌人
                         collideEnemy(item, rect.center());
                         _ = objects.swapRemove(iterator.index);
+                        player.score += 10;
                         zhu.audio.playSound("assets/audio/punch2a.ogg");
                     } else player.hurt();
                 },
@@ -197,12 +198,16 @@ fn updateFrog(object: *map.Object, delta: f32) void {
     }
 }
 
-fn collideItem(_: *map.Object, center: zhu.Vector2) void {
+fn collideItem(object: *map.Object, center: zhu.Vector2) void {
     // 播放特效动画
     effectAnimations.appendAssumeCapacity(.{
         .center = center,
         .effect = itemAnimation,
     });
+
+    if (object.type == .gem) player.score += 5 //
+    else if (object.type == .cherry) player.heal();
+
     zhu.audio.playSound("assets/audio/poka01.ogg");
 }
 

@@ -11,14 +11,28 @@ const object = @import("object.zig");
 var help = false;
 var debug = false;
 
+const Session = extern struct {
+    level: u8 = 0,
+    health: u8 = 3,
+    score: u32 = 0,
+    highScore: u32 = 0,
+};
+
+const savePath = "save/save.dat";
 var level: u8 = 0;
+var highScore: u32 = 0;
 
 pub fn init() void {
-    map.init(level);
+    const session = loadSession();
+    level = session.level;
+    highScore = session.highScore;
+    map.init(session.level);
 
     for (map.objects.items, 0..) |obj, index| {
         if (obj.type != .player) continue;
         player.init(obj.position, obj.size);
+        player.health = session.health;
+        player.score = session.score;
         _ = map.objects.swapRemove(index);
         break;
     }
@@ -27,8 +41,34 @@ pub fn init() void {
     zhu.audio.playMusic("assets/audio/hurry_up_and_run.ogg");
 }
 
+fn loadSession() Session {
+    var buffer: [64]u8 = undefined;
+    const content = zhu.window.readBuffer(savePath, &buffer) catch {
+        return .{};
+    };
+
+    var reader = std.Io.Reader.fixed(content);
+    return reader.takeStruct(Session, .little) catch unreachable;
+}
+
+fn saveSession() !void {
+    const session = Session{
+        .level = level,
+        .health = player.health,
+        .score = player.score,
+        .highScore = @max(player.score, highScore),
+    };
+
+    var buffer: [64]u8 = undefined;
+    var writer = std.Io.Writer.fixed(&buffer);
+    try writer.writeStruct(session, .little);
+
+    try zhu.window.saveAll(savePath, buffer[0..writer.end]);
+}
+
 pub fn changeNextLevel() void {
     level += 1;
+    saveSession() catch unreachable;
     init();
 }
 
