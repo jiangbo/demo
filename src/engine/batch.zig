@@ -309,11 +309,18 @@ pub const Camera = struct {
         const target = pos.sub(self.size.scale(0.5));
         const distance = target.sub(self.position);
 
-        if (@abs(distance.x) < 1) self.position.x = target.x //
-        else self.position.x += distance.x * smooth;
-        if (@abs(distance.y) < 1) self.position.y = target.y //
-        else self.position.y += distance.y * smooth;
+        const clampedSmooth = std.math.clamp(smooth, 0, 1);
+        if (@abs(distance.x) < 1) self.position.x = target.x else {
+            var moved = distance.x * clampedSmooth;
+            if (@abs(moved) < 1) moved = math.ceilAway(moved);
+            self.position.x += moved;
+        }
 
+        if (@abs(distance.y) < 1) self.position.y = target.y else {
+            var moved = distance.y * clampedSmooth;
+            if (@abs(moved) < 1) moved = math.ceilAway(moved);
+            self.position.y += moved;
+        }
         self.clampBound();
     }
 };

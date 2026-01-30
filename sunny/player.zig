@@ -76,7 +76,7 @@ pub fn update(delta: f32) void {
         velocity = .zero;
     } else force.y = gravity;
 
-    batch.camera.directFollow(position);
+    batch.camera.smoothFollow(position, delta * 4);
     batch.camera.position = batch.camera.position.round();
 }
 

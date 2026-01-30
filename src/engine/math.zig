@@ -91,6 +91,10 @@ pub fn sinInt(T: type, angle: f32, min: T, max: T) T {
     return @intFromFloat(@round(result));
 }
 
+pub fn ceilAway(value: f32) f32 {
+    return if (value > 0) @ceil(value) else @floor(value);
+}
+
 pub const Vector = Vector2;
 pub const Vector2 = extern struct {
     x: f32 = 0,
