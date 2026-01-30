@@ -5,6 +5,7 @@ const batch = zhu.batch;
 const tiled = zhu.extend.tiled;
 
 const map = @import("map.zig");
+const scene = @import("scene.zig");
 
 const moveForce = 200; // 移动力
 const factor = 0.85; // 减速因子
@@ -71,6 +72,11 @@ pub fn update(delta: f32) void {
             position = clamped;
         }
     }
+
+    if (map.nextLevelArea) |area| { // 角色进入下一关
+        if (area.contains(position)) scene.changeNextLevel();
+    }
+
     if (state == .climb) {
         if (toPosition.y > position.y) changeState(.idle);
         velocity = .zero;

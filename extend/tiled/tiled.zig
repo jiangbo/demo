@@ -83,7 +83,7 @@ pub const Layer = struct {
     /// 分配给该图层的名称
     name: []const u8,
     /// 物体数组 (仅限对象层 objectgroup)
-    objects: ?[]Object = null,
+    objects: []Object = &.{},
     /// 水平图层偏移 (像素，默认: 0)
     offsetx: f32 = 0,
     /// 垂直图层偏移 (像素，默认: 0)
@@ -155,7 +155,7 @@ pub const Object = struct {
     /// 坐标点数组 (如果该物体是折线 polyline)
     polyline: ?[]const Point = null,
     /// 自定义属性数组
-    properties: ?[]const Property = null,
+    properties: []Property = &.{},
     /// 顺时针旋转角度 (度数)
     rotation: f32,
     /// 模板文件的引用 (如果是模板实例)

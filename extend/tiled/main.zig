@@ -1,5 +1,6 @@
 const std = @import("std");
 const tiled = @import("tiled.zig");
+const parsed = @import("parsed.zig");
 
 const parseJson = std.json.parseFromSliceLeaky;
 const Vector2 = struct { x: f32, y: f32 };
@@ -44,6 +45,7 @@ pub const Object = struct {
     gid: u32,
     position: Vector2,
     size: Vector2,
+    properties: []const parsed.Property,
     rotation: f32,
 };
 const TileSet = struct { id: u32, firstGid: u32, max: u32 };
@@ -120,12 +122,13 @@ fn parseLayers(layers: []tiled.Layer) ![]Layer {
             height = old.height orelse 0;
         } else if (std.mem.eql(u8, "objectgroup", old.type)) {
             layerEnum = .object;
-            objects = try allocator.alloc(Object, old.objects.?.len);
-            for (objects, old.objects.?) |*object, obj| {
-                object.* = Object{
+            objects = try allocator.alloc(Object, old.objects.len);
+            for (objects, old.objects) |*new, obj| {
+                new.* = Object{
                     .gid = obj.gid orelse 0,
                     .position = .{ .x = obj.x, .y = obj.y },
                     .size = .{ .x = obj.width, .y = obj.height },
+                    .properties = try parseProperties(obj.properties),
                     .rotation = obj.rotation,
                 };
             }
@@ -151,4 +154,25 @@ fn parseLayers(layers: []tiled.Layer) ![]Layer {
     }
 
     return result[0..layerCount];
+}
+
+fn parseProperties(properties: []tiled.Property) ![]parsed.Property {
+    const result = try allocator.alloc(parsed.Property, properties.len);
+    for (properties, 0..) |property, i| {
+        result[i] = .{
+            .name = property.name,
+            .value = parsePropertyValue(property),
+        };
+    }
+    return result;
+}
+
+const toEnum = std.meta.stringToEnum;
+fn parsePropertyValue(property: tiled.Property) parsed.PropertyValue {
+    return switch (toEnum(parsed.PropertyEnum, property.type).?) {
+        .string => .{ .string = property.value.string },
+        .int => .{ .int = @intCast(property.value.integer) },
+        .float => .{ .float = @floatCast(property.value.float) },
+        .bool => .{ .bool = property.value.bool },
+    };
 }

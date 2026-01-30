@@ -28,14 +28,27 @@ pub const Object = struct {
     size: Vector2,
     object: ?tiled.Object,
 };
-const map: tiled.Map = @import("zon/level1.zon");
+const maps: []const tiled.Map = @import("zon/level.zon");
+var map = maps[0];
 const tileSets: []const tiled.TileSet = @import("zon/tile.zon");
 var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
 pub var objects: std.ArrayList(Object) = .empty;
 var tileStates: []TileEnum = &.{};
 
-pub fn init() void {
+pub var nextLevelArea: ?zhu.Rect = null;
+
+pub fn init(level: u8) void {
     tiled.tileSets = tileSets;
+
+    if (tileStates.len != 0) { // 如果存在之前的数据，则先释放
+        zhu.assets.free(tileStates);
+        tileVertexes.clearRetainingCapacity();
+        objects.clearRetainingCapacity();
+        nextLevelArea = null;
+    }
+
+    map = maps[level];
+
     tileStates = zhu.assets.oomAlloc(TileEnum, map.width * map.height);
     @memset(tileStates, .normal);
     batch.camera.bound = map.size();
@@ -115,7 +128,17 @@ fn parseProperties(index: usize, tile: tiled.Tile) void {
 fn parseObjectLayer(layer: *const tiled.Layer) void {
     for (layer.objects) |object| {
         if (object.gid == 0) {
-            std.log.info("todo 0 gid, position: {}", .{object.position});
+            if (object.properties.len != 0) {
+                const property = object.properties[0];
+                if (std.mem.eql(u8, property.name, "tag") and
+                    std.mem.eql(u8, property.value.string, "next_level"))
+                {
+                    nextLevelArea = zhu.Rect{
+                        .min = object.position,
+                        .size = object.size,
+                    };
+                }
+            } else std.log.info("gid 0, position: {}", .{object.position});
             continue;
         }
         const tile = map.getTileByGId(object.gid).?;

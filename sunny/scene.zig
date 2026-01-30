@@ -11,8 +11,10 @@ const object = @import("object.zig");
 var help = false;
 var debug = false;
 
+var level: u8 = 0;
+
 pub fn init() void {
-    map.init();
+    map.init(level);
 
     for (map.objects.items, 0..) |obj, index| {
         if (obj.type != .player) continue;
@@ -23,6 +25,11 @@ pub fn init() void {
     object.init(map.objects);
 
     zhu.audio.playMusic("assets/audio/hurry_up_and_run.ogg");
+}
+
+pub fn changeNextLevel() void {
+    level += 1;
+    init();
 }
 
 pub fn deinit() void {
