@@ -139,7 +139,6 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
 }
 
 export fn windowInit() void {
-    clientSize = .xy(sk.app.widthf(), sk.app.heightf());
     computeViewRect();
     gpu.init();
     math.setRandomSeed(timer.read());
@@ -148,6 +147,7 @@ export fn windowInit() void {
 
 pub var mouseMoved: bool = false;
 pub var mousePosition: math.Vector = .zero;
+pub var resized: bool = false;
 
 export fn windowEvent(event: ?*const Event) void {
     if (event) |ev| {
@@ -156,15 +156,14 @@ export fn windowEvent(event: ?*const Event) void {
             mouseMoved = true;
             const position = input.mousePosition.sub(viewRect.min);
             mousePosition = position.mul(size).div(viewRect.size);
-        } else if (ev.type == .RESIZED) {
-            clientSize = .xy(sk.app.widthf(), sk.app.heightf());
-            computeViewRect();
-        }
+        } else if (ev.type == .RESIZED) resized = true;
+
         call(root, "event", .{ev});
     }
 }
 
 pub fn computeViewRect() void {
+    clientSize = .xy(sk.app.widthf(), sk.app.heightf());
     const ratio = clientSize.div(size);
     switch (scaleEnum) {
         .none => {
@@ -234,6 +233,7 @@ export fn windowFrame() void {
     }
 
     if (currentSmoothTime > 0.1) currentSmoothTime = 0.1;
+    if (resized) computeViewRect();
     call(root, "frame", .{currentSmoothTime});
     input.lastKeyState = input.keyState;
     input.lastMouseState = input.mouseState;
@@ -243,6 +243,7 @@ export fn windowFrame() void {
     // 执行更新和渲染消耗的时间，单位为纳秒
     usedDelta = timer.read() - start;
     lastTime = start; // 记录上一帧的时间
+    resized = false;
 }
 
 export fn windowDeinit() void {
