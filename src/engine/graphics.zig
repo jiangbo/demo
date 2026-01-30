@@ -137,10 +137,6 @@ pub const Image = struct {
         const moved = area.move(self.area.min);
         return .{ .texture = self.texture, .area = moved };
     }
-
-    pub fn map(self: *const Image, area: math.Rect) Image {
-        return .{ .texture = self.texture, .area = area };
-    }
 };
 
 pub const Atlas = struct {

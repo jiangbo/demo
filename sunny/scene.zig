@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const window = zhu.window;
 const batch = zhu.batch;
 
+const title = @import("title.zig");
 const map = @import("map.zig");
 const player = @import("player.zig");
 const object = @import("object.zig");
@@ -18,8 +19,13 @@ const Session = extern struct {
 const savePath = "save/save.dat";
 var level: u8 = 0;
 var highScore: u32 = 0;
+var isTitle: bool = true; // 是否标题场景
 
 pub fn init() void {
+    if (isTitle) title.init() else start();
+}
+
+fn start() void {
     const session = loadSession();
     level = session.level;
     highScore = session.highScore;
@@ -78,6 +84,8 @@ pub fn update(delta: f32) void {
         return window.toggleFullScreen();
     }
 
+    if (isTitle) return title.update(delta);
+
     player.update(delta);
     object.update(delta);
 }
@@ -85,6 +93,8 @@ pub fn update(delta: f32) void {
 pub fn draw() void {
     zhu.batch.beginDraw(.black);
     defer zhu.batch.endDraw();
+
+    if (isTitle) return title.draw();
 
     map.draw();
     object.draw();
