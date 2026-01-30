@@ -18,7 +18,9 @@ pub fn init() void {
     zhu.graphics.frameStats(true);
     zhu.assets.loadAtlas(atlas);
     zhu.batch.init(vertexBuffer, &commandBuffer);
-    zhu.batch.whiteImage = zhu.getImage("white.png");
+    const whiteCircle = zhu.getImage("circle.png");
+    const area: zhu.Rect = .init(.xy(16, 16), .xy(32, 32));
+    zhu.batch.whiteImage = whiteCircle.sub(area);
     scene.init();
 }
 
