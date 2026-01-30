@@ -8,9 +8,6 @@ const map = @import("map.zig");
 const player = @import("player.zig");
 const object = @import("object.zig");
 
-var help = false;
-var debug = false;
-
 const Session = extern struct {
     level: u8 = 0,
     health: u8 = 3,
@@ -77,9 +74,6 @@ pub fn deinit() void {
 }
 
 pub fn update(delta: f32) void {
-    if (window.isKeyReleased(.H)) help = !help;
-    if (window.isKeyReleased(.X)) debug = !debug;
-
     if (window.isKeyDown(.LEFT_ALT) and window.isKeyReleased(.ENTER)) {
         return window.toggleFullScreen();
     }
@@ -95,8 +89,6 @@ pub fn draw() void {
     map.draw();
     object.draw();
     player.draw();
-
-    if (help) drawHelpInfo() else if (debug) window.drawDebugInfo();
 }
 
 fn drawHelpInfo() void {

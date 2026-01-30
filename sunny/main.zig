@@ -8,11 +8,11 @@ var vertexBuffer: []zhu.batch.Vertex = undefined;
 var commandBuffer: [16]zhu.batch.Command = undefined;
 var soundBuffer: [20]zhu.audio.Sound = undefined;
 
+const font: zhu.text.BitMapFont = @import("zon/font.zon");
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
 
 pub fn init() void {
     zhu.audio.init(44100 / 2, &soundBuffer);
-    // window.initText(@import("zon/font.zon"), 32);
 
     vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 5000);
     zhu.graphics.frameStats(true);
@@ -21,6 +21,9 @@ pub fn init() void {
     const whiteCircle = zhu.getImage("circle.png");
     const area: zhu.Rect = .init(.xy(16, 16), .xy(32, 32));
     zhu.batch.whiteImage = whiteCircle.sub(area);
+
+    const fontImage = zhu.getImage("font.png");
+    zhu.text.initBitMapFont(fontImage, font, 16);
     scene.init();
 }
 

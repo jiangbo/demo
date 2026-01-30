@@ -106,6 +106,13 @@ pub fn draw() void {
     if (hurtTimer.isRunning()) { // 受伤时闪烁效果
         if (hurtTimer.isEvenStep(0.15)) state.draw();
     } else state.draw();
+
+    batch.camera.modeEnum = .window;
+    defer batch.camera.modeEnum = .world;
+
+    // 绘制得分
+    const pos: zhu.Vector2 = .xy(zhu.window.size.x - 100, 10);
+    zhu.text.drawFmt("Score: {}", pos, .{score});
 }
 
 pub fn drawPlayer(img: zhu.graphics.Image) void {

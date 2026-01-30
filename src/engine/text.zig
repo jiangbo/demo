@@ -5,13 +5,12 @@ const math = @import("math.zig");
 const graphics = @import("graphics.zig");
 const batch = @import("batch.zig");
 
+const Image = graphics.Image;
 const Vector2 = math.Vector2;
 const Color = graphics.Color;
 pub const String = []const u8;
 
 pub const BitMapFont = struct {
-    imagePath: [:0]const u8,
-    size: math.Vector2,
     fontSize: f32,
     lineHeight: f32,
     chars: []const BitMapChar,
@@ -30,11 +29,11 @@ var font: BitMapFont = undefined;
 var fontImage: graphics.Image = undefined;
 var fontScale: f32 = 1;
 
-pub fn initBitMapFont(fontZon: BitMapFont, size: f32) void {
-    font = fontZon;
-    fontImage = graphics.loadImage(font.imagePath, font.size);
+pub fn initBitMapFont(image: Image, zon: BitMapFont, size: f32) void {
+    font = zon;
+    fontImage = image;
     fontScale = size / font.fontSize;
-    invalidIndex = binarySearch(0x25A0).?;
+    invalidIndex = binarySearch('?').?;
     // font.init(fontZon);
     // font.initSDF(.{
     //     .font = fontZon,
@@ -112,7 +111,7 @@ pub fn drawOption(text: String, position: Vector2, option: Option) void {
         const char = searchChar(code);
         graphics.textCount += 1;
 
-        const image = fontImage.map(char.area);
+        const image = fontImage.sub(char.area);
         batch.drawImage(image, pos.add(char.offset.scale(scale)), .{
             .size = char.area.size.scale(scale),
             .color = option.color,
