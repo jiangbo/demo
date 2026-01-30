@@ -134,6 +134,7 @@ pub fn update(delta: f32) void {
                         // 从上方碰撞，击败敌人
                         collideEnemy(item, rect.center());
                         _ = objects.swapRemove(iterator.index);
+                        zhu.audio.playSound("assets/audio/punch2a.ogg");
                     } else player.hurt();
                 },
                 .spike, .spikeTop => player.hurt(),
@@ -184,8 +185,16 @@ fn updateFrog(object: *map.Object, delta: f32) void {
 
     object.position = clamped.sub(object.object.?.position);
 
+    const oldState = frogState;
     frogState = if (object.velocity.y == 0) .idle //
         else if (object.velocity.y < 0) .jump else .fall;
+    if (oldState == .fall and frogState == .idle) { // 刚刚落地
+        // 距离足够近才播放声音
+        const length2 = clamped.sub(player.position).length2();
+        if (length2 < 200 * 200) {
+            zhu.audio.playSound("assets/audio/frog_quak-81741.ogg");
+        }
+    }
 }
 
 fn collideItem(_: *map.Object, center: zhu.Vector2) void {
@@ -194,6 +203,7 @@ fn collideItem(_: *map.Object, center: zhu.Vector2) void {
         .center = center,
         .effect = itemAnimation,
     });
+    zhu.audio.playSound("assets/audio/poka01.ogg");
 }
 
 fn collideEnemy(_: *map.Object, center: zhu.Vector2) void {

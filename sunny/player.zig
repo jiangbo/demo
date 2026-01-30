@@ -217,6 +217,7 @@ const JumpState = struct {
     fn enter() void {
         std.log.info("enter jump", .{});
         velocity.y = -jumpSpeed;
+        zhu.audio.playSound("assets/audio/cartoon-jump-6462.ogg");
     }
 
     fn update(_: f32) void {
@@ -267,6 +268,7 @@ const HurtState = struct {
         if (flip) vel.x = -vel.x;
         velocity = .xy(vel.x, velocity.y + vel.y);
         timer.elapsed = 0; // 重置计时器
+        zhu.audio.playSound("assets/audio/monster.ogg");
     }
 
     fn update(delta: f32) void {
@@ -296,6 +298,7 @@ const DeadState = struct {
     fn enter() void {
         std.log.info("enter dead", .{});
         velocity = .xy(0, -200);
+        zhu.audio.playSound("assets/audio/dead-8bit-41400.ogg");
     }
 
     fn update(delta: f32) void {

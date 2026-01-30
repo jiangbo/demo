@@ -21,6 +21,8 @@ pub fn init() void {
         break;
     }
     object.init(map.objects);
+
+    zhu.audio.playMusic("assets/audio/hurry_up_and_run.ogg");
 }
 
 pub fn deinit() void {
