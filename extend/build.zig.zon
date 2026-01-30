@@ -1,0 +1,11 @@
+.{
+    .name = .extend,
+    .version = "0.0.0",
+    .fingerprint = 0x3bb9492cb1f6f4e3,
+    .minimum_zig_version = "0.15.1",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+}

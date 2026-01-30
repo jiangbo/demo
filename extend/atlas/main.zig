@@ -40,6 +40,7 @@ pub fn main() !void {
         const filename = entry.key_ptr.*;
         var image: Image = undefined;
         image.id = std.hash.Fnv1a_32.hash(filename);
+        std.log.info("{s} -> {}", .{ filename, image.id });
         if (checkIdRepeat.contains(image.id)) {
             std.debug.panic("{s},{} repeat", .{ filename, image.id });
         } else try checkIdRepeat.put(a, image.id, {});
@@ -57,7 +58,7 @@ pub fn main() !void {
     }.lessThan);
 
     const result = Atlas{
-        .imagePath = meta.image,
+        .imagePath = "assets/atlas.png",
         .size = .{
             .x = meta.size.w,
             .y = meta.size.h,
