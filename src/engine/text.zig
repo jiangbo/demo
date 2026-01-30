@@ -11,7 +11,7 @@ const Color = graphics.Color;
 pub const String = []const u8;
 
 pub const BitMapFont = struct {
-    fontSize: f32,
+    size: f32,
     lineHeight: f32,
     chars: []const BitMapChar,
 };
@@ -20,19 +20,20 @@ pub const BitMapChar = struct {
     id: u32,
     area: math.Rect,
     offset: Vector2,
-    advance: f32,
 };
 
 var invalidIndex: usize = 0;
 
 var font: BitMapFont = undefined;
 var fontImage: graphics.Image = undefined;
-var fontScale: f32 = 1;
+var fontScale: f32 = undefined;
+var halfAdvance: f32 = undefined; // 英文只需要前进半个距离
 
 pub fn initBitMapFont(image: Image, zon: BitMapFont, size: f32) void {
     font = zon;
     fontImage = image;
-    fontScale = size / font.fontSize;
+    fontScale = size / font.size;
+    halfAdvance = font.size / 2;
     invalidIndex = binarySearch('?').?;
     // font.init(fontZon);
     // font.initSDF(.{
@@ -95,7 +96,7 @@ pub fn drawColor(str: String, pos: Vector2, color: Color) void {
 
 const Utf8View = std.unicode.Utf8View;
 pub fn drawOption(text: String, position: Vector2, option: Option) void {
-    const scale = if (option.size) |s| s / font.fontSize else fontScale;
+    const scale = if (option.size) |s| s / font.size else fontScale;
     const height = font.lineHeight * scale;
     var pos = position;
 
@@ -116,7 +117,9 @@ pub fn drawOption(text: String, position: Vector2, option: Option) void {
             .size = char.area.size.scale(scale),
             .color = option.color,
         });
-        pos = pos.addX(char.advance * scale + option.spacing);
+
+        const advance = if (char.id < 128) halfAdvance else font.size;
+        pos = pos.addX(advance * scale + option.spacing);
     }
 }
 

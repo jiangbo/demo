@@ -25,23 +25,20 @@ pub fn main() !void {
     var buffer: [4096]u8 = undefined;
     var writer = file.writer(&buffer);
 
+    const size = font.bmfont.info.fontSize;
+    const halfSize = @divExact(size, 2);
     const chars = try allocator.alloc(BitMapChar, font.bmfont.chars.len);
     for (chars, font.bmfont.chars) |*value, char| {
         value.id = char.id;
         value.area.min = .{ .x = char.x, .y = char.y };
         value.area.size = .{ .x = char.width, .y = char.height };
         value.offset = .{ .x = char.xOffset, .y = char.yOffset };
-        value.advance = char.xAdvance;
+        const advance = if (char.id < 128) halfSize else size;
+        if (char.xAdvance != advance) @panic("advance error");
     }
 
-    const path = font.bmfont.pages[0];
     const result = BitMapFont{
-        .imagePath = try std.fmt.allocPrint(allocator, "assets/{s}", .{path}),
-        .size = .{
-            .x = @floatFromInt(font.bmfont.common.scaleW),
-            .y = @floatFromInt(font.bmfont.common.scaleH),
-        },
-        .fontSize = @floatFromInt(font.bmfont.info.fontSize),
+        .size = @floatFromInt(font.bmfont.info.fontSize),
         .lineHeight = font.bmfont.common.lineHeight,
         .chars = chars,
     };
@@ -51,9 +48,7 @@ pub fn main() !void {
 }
 
 const BitMapFont = struct {
-    imagePath: []const u8,
-    size: struct { x: f32, y: f32 },
-    fontSize: f32,
+    size: f32,
     lineHeight: u16,
     chars: []const BitMapChar,
 };
@@ -64,5 +59,4 @@ const BitMapChar = struct {
     id: u32,
     area: struct { min: Vec2, size: Vec2 },
     offset: Vec2i,
-    advance: i16,
 };
