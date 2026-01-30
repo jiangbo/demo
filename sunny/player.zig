@@ -27,7 +27,7 @@ var flip: bool = false;
 
 const maxHealth: u8 = 3;
 var health: u8 = maxHealth;
-var hurtTimer: zhu.Timer = .init(2.0); // 受伤的间隔时间
+var hurtTimer: zhu.Timer = .initFinished(2.0); // 受伤的间隔时间
 
 pub fn init(pos: zhu.Vector2, size: zhu.Vector2) void {
     position = pos;
@@ -92,7 +92,9 @@ pub fn hurt() void {
 }
 
 pub fn draw() void {
-    state.draw();
+    if (hurtTimer.isRunning()) { // 受伤时闪烁效果
+        if (hurtTimer.isEvenStep(0.15)) state.draw();
+    } else state.draw();
 }
 
 pub fn drawPlayer(img: zhu.graphics.Image) void {

@@ -33,6 +33,10 @@ pub const Timer = struct {
         return Timer{ .duration = duration };
     }
 
+    pub fn initFinished(duration: f32) Timer {
+        return Timer{ .duration = duration, .elapsed = duration };
+    }
+
     pub fn update(self: *Timer, delta: f32) void {
         if (self.elapsed < self.duration) self.elapsed += delta;
     }
