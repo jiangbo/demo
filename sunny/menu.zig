@@ -74,7 +74,5 @@ pub fn draw() void {
         } else {
             batch.drawImageId(button.normal, pos, .{});
         }
-
-        batch.drawRectBorder(.init(pos, .xy(96, 32)), 1, .green);
     }
 }

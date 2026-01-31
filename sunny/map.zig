@@ -28,7 +28,7 @@ pub const Object = struct {
     size: Vector2,
     object: ?tiled.Object,
 };
-const maps: []const tiled.Map = @import("zon/level.zon");
+pub const maps: []const tiled.Map = @import("zon/level.zon");
 pub var map = maps[0];
 const tileSets: []const tiled.TileSet = @import("zon/tile.zon");
 var tileVertexes: std.ArrayList(batch.Vertex) = .empty;

@@ -79,9 +79,16 @@ fn saveSession() !void {
 }
 
 pub fn changeNextLevel() void {
-    session.level += 1;
-    saveSession() catch unreachable;
-    init();
+    if (session.level + 1 == map.maps.len) {
+        // 最后一关
+        win = true;
+        state = .over;
+        menu.menuIndex = 2;
+    } else {
+        session.level += 1;
+        saveSession() catch unreachable;
+        init();
+    }
 }
 
 fn backToTitle() void {

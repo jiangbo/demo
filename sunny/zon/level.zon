@@ -7020,7 +7020,7 @@
                         .gid = 0,
                         .position = .{ .x = 881, .y = 71 },
                         .size = .{ .x = 14, .y = 73 },
-                        .properties = .{},
+                        .properties = .{.{ .name = "tag", .value = .{ .string = "next_level" } }},
                         .rotation = 0,
                     },
                     .{
