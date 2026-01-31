@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const batch = zhu.batch;
 
 const menu = @import("menu.zig");
+const scene = @import("scene.zig");
 
 const Background = struct {
     image: zhu.graphics.Image,
@@ -25,6 +26,7 @@ const Background = struct {
 
 var far: Background = undefined;
 var mid: Background = undefined;
+var showHelp: bool = false;
 
 pub fn init() void {
     far = .{ .image = zhu.getImage("textures/Layers/back.png") };
@@ -37,7 +39,20 @@ pub fn update(delta: f32) void {
     far.update(delta, 20);
     mid.update(delta, 60);
 
-    _ = menu.update();
+    if (showHelp) {
+        if (zhu.window.isAnyRelease()) showHelp = false;
+        return;
+    }
+
+    if (menu.update()) |event| {
+        switch (event) {
+            0 => scene.start(), // 开始游戏
+            1 => scene.load(), // 加载存档
+            2 => showHelp = true, // 显示帮助
+            3 => zhu.window.exit(), // 退出游戏
+            else => unreachable,
+        }
+    }
 }
 
 pub fn draw() void {
@@ -45,11 +60,24 @@ pub fn draw() void {
     mid.draw(96);
 
     const titleImageId = zhu.imageId("textures/UI/title-screen.png");
-    const pos = zhu.window.size.scale(0.5).addY(-50);
-    batch.drawImageId(titleImageId, pos, .{
+    const center = zhu.window.size.scale(0.5);
+    batch.drawImageId(titleImageId, center.addY(-50), .{
         .scale = .xy(2, 2),
         .anchor = .center,
     });
 
     menu.draw();
+    // 底部信息栏
+    const strPos: zhu.Vector2 = .xy(center.x, zhu.window.size.y - 26);
+    zhu.text.drawTextCenter("SunnyLand Credits: XXX - 2025", strPos, .{
+        .color = .rgba(0.8, 0.8, 0.8, 1),
+    });
+    if (!showHelp) return;
+
+    // 绘制帮助界面
+    const helpImageId = zhu.imageId("textures/UI/instructions.png");
+    batch.drawImageId(helpImageId, center, .{
+        .scale = .xy(2, 2),
+        .anchor = .center,
+    });
 }

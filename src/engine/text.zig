@@ -71,18 +71,18 @@ pub fn drawNumberColor(number: anytype, pos: Vector2, color: Color) void {
     drawColor(string, pos, color);
 }
 
-pub fn drawText(string: String, pos: math.Vector) void {
+pub fn draw(string: String, pos: math.Vector) void {
     drawOption(string, pos, .{});
 }
 
 pub fn drawTextCenter(str: String, pos: Vector2, option: Option) void {
     const width = computeTextWidthOption(str, option);
-    drawOption(str, .init(pos.x - width / 2, pos.y), option);
+    drawOption(str, .xy(pos.x - width / 2, pos.y), option);
 }
 
 pub fn drawRight(str: String, pos: Vector2, option: Option) void {
     const width = computeTextWidthOption(str, option);
-    drawOption(str, .init(pos.x - width, pos.y), option);
+    drawOption(str, .xy(pos.x - width, pos.y), option);
 }
 
 pub fn drawFmt(comptime fmt: String, pos: Vector2, args: anytype) void {
@@ -129,10 +129,11 @@ pub fn computeTextWidth(text: String) f32 {
 
 pub fn computeTextWidthOption(text: String, option: Option) f32 {
     var width: f32 = 0;
-    const sz = option.size orelse font.fontSize; // 提供则获取，没有则获取默认值
+    const scale = if (option.size) |s| s / font.size else fontScale;
     var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {
-        width += font.searchGlyph(code).advance * sz + option.spacing;
+        const advance = if (code < 128) halfAdvance else font.size;
+        width += advance * scale + option.spacing;
     }
     return width - option.spacing;
 }

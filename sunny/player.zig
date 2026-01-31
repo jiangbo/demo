@@ -183,13 +183,13 @@ const IdleState = struct {
         animation.loopUpdate(delta);
 
         if (map.isTouchLadder(position, tiledObject.size) and
-            zhu.window.isKeyDown(.W))
+            zhu.window.isAnyKeyDown(&.{ .W, .DOWN }))
         {
             changeState(.climb);
         }
         if (zhu.window.isKeyPressed(.SPACE)) {
             changeState(.jump);
-        } else if (zhu.window.isAnyKeyDown(&.{ .A, .D })) {
+        } else if (zhu.window.isAnyKeyDown(&.{ .A, .D, .LEFT, .RIGHT })) {
             changeState(.walk);
         } else velocity.x *= factor; // 减速
     }
@@ -218,14 +218,14 @@ const WalkState = struct {
 
         if (velocity.y > 0) return changeState(.fall);
 
-        if (zhu.window.isAnyKeyPressed(&.{ .W, .SPACE })) {
+        if (zhu.window.isAnyKeyPressed(&.{.SPACE})) {
             changeState(.jump);
         }
 
-        if (zhu.window.isKeyDown(.A)) {
+        if (zhu.window.isAnyKeyDown(&.{ .A, .LEFT })) {
             force.x = -moveForce;
             flip = true;
-        } else if (zhu.window.isKeyDown(.D)) {
+        } else if (zhu.window.isAnyKeyDown(&.{ .D, .RIGHT })) {
             force.x = moveForce;
             flip = false;
         } else {

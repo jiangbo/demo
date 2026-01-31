@@ -17,18 +17,12 @@ const Session = extern struct {
 };
 
 const savePath = "save/save.dat";
-var level: u8 = 0;
-var highScore: u32 = 0;
+var session: Session = .{};
 var isTitle: bool = true; // 是否标题场景
 
 pub fn init() void {
-    if (isTitle) title.init() else start();
-}
+    if (isTitle) return title.init();
 
-fn start() void {
-    const session = loadSession();
-    level = session.level;
-    highScore = session.highScore;
     map.init(session.level);
 
     for (map.objects.items, 0..) |obj, index| {
@@ -44,6 +38,18 @@ fn start() void {
     zhu.audio.playMusic("assets/audio/hurry_up_and_run.ogg");
 }
 
+pub fn start() void {
+    isTitle = false;
+    session = .{};
+    init();
+}
+
+pub fn load() void {
+    isTitle = false;
+    session = loadSession();
+    init();
+}
+
 fn loadSession() Session {
     var buffer: [64]u8 = undefined;
     const content = zhu.window.readBuffer(savePath, &buffer) catch {
@@ -55,12 +61,9 @@ fn loadSession() Session {
 }
 
 fn saveSession() !void {
-    const session = Session{
-        .level = level,
-        .health = player.health,
-        .score = player.score,
-        .highScore = @max(player.score, highScore),
-    };
+    session.health = player.health;
+    session.score = player.score;
+    session.highScore = @max(player.score, session.highScore);
 
     var buffer: [64]u8 = undefined;
     var writer = std.Io.Writer.fixed(&buffer);
@@ -70,7 +73,7 @@ fn saveSession() !void {
 }
 
 pub fn changeNextLevel() void {
-    level += 1;
+    session.level += 1;
     saveSession() catch unreachable;
     init();
 }
