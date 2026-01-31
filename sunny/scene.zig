@@ -22,8 +22,10 @@ const StateEnum = enum { title, play, pause, over };
 const savePath = "save/save.dat";
 var session: Session = .{};
 var state: StateEnum = .title;
+var win: bool = false;
 
 pub fn init() void {
+    batch.camera.position = .zero;
     if (state == .title) return title.init();
 
     menu.menuIndex = 1;
@@ -84,6 +86,7 @@ pub fn changeNextLevel() void {
 
 fn backToTitle() void {
     state = .title;
+    std.log.info("back to title", .{});
     init();
 }
 
@@ -99,22 +102,31 @@ pub fn update(delta: f32) void {
     switch (state) {
         .title => title.update(delta),
         .play => {
+            // 玩家死亡
+            if (player.position.y > map.map.size().y + 10) {
+                state = .over;
+                menu.menuIndex = 2;
+            }
             player.update(delta);
             object.update(delta);
             if (zhu.window.isKeyReleased(.ESCAPE)) state = .pause;
         },
-        .pause => {
-            if (menu.update()) |event| {
-                switch (event) {
-                    0 => state = .play, // 继续游戏
-                    1 => saveSession() catch unreachable, // 保存存档
-                    2 => backToTitle(), // 返回标题
-                    3 => zhu.window.exit(), // 退出游戏
-                    else => unreachable,
-                }
+        .pause => if (menu.update()) |event| {
+            switch (event) {
+                0 => state = .play, // 继续游戏
+                1 => saveSession() catch unreachable, // 保存存档
+                2 => backToTitle(), // 返回标题
+                3 => zhu.window.exit(), // 退出游戏
+                else => unreachable,
             }
         },
-        .over => {},
+        .over => if (menu.update()) |event| {
+            switch (event) {
+                0 => backToTitle(), // 返回标题
+                1 => start(), // 重新开始
+                else => unreachable,
+            }
+        },
     }
 }
 
@@ -128,12 +140,38 @@ pub fn draw() void {
     object.draw();
     player.draw();
 
+    batch.camera.modeEnum = .window;
+    defer batch.camera.modeEnum = .world;
+
     if (state == .pause) {
         const size = zhu.window.size;
         const pos: zhu.Vector2 = .xy(size.x * 0.5, size.y * 0.2);
         zhu.text.drawTextCenter("PAUSE", pos, .{ .size = 32 });
         menu.draw();
-    }
+    } else if (state == .over) drawOver();
+}
+
+fn drawOver() void {
+    const str = if (win) "YOU WIN! CONGRATS!" else "YOU DIED! TRY AGAIN!";
+    const color: zhu.Color = if (win) .green else .red;
+
+    const size = zhu.window.size;
+    var pos: zhu.Vector2 = .xy(size.x * 0.5, size.y * 0.3);
+    zhu.text.drawTextCenter(str, pos, .{
+        .size = 48,
+        .color = color,
+    });
+
+    var buffer: [128]u8 = undefined;
+    var text = zhu.text.format(&buffer, "Score: {}", .{player.score});
+    pos = .xy(size.x * 0.5, size.y * 0.5);
+    zhu.text.drawTextCenter(text, pos, .{ .size = 32 });
+
+    text = zhu.text.format(&buffer, "High Score: {}", .{session.highScore});
+    pos = .xy(size.x * 0.5, size.y * 0.6);
+    zhu.text.drawTextCenter(text, pos, .{ .size = 32 });
+
+    menu.draw();
 }
 
 fn drawHelpInfo() void {
