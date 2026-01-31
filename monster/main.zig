@@ -2,6 +2,8 @@ const std = @import("std");
 const builtin = @import("builtin");
 const zhu = @import("zhu");
 
+const gui = @import("gui.zig");
+
 var vertexBuffer: []zhu.batch.Vertex = undefined;
 var commandBuffer: [16]zhu.batch.Command = undefined;
 var soundBuffer: [20]zhu.audio.Sound = undefined;
@@ -12,13 +14,23 @@ pub fn init() void {
     vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 5000);
     zhu.graphics.frameStats(true);
     zhu.batch.init(vertexBuffer, &commandBuffer);
+    gui.init();
+}
+
+pub fn event(ev: *const zhu.window.Event) void {
+    gui.event(ev);
 }
 
 pub fn frame(delta: f32) void {
-    _ = delta;
+    gui.update(delta);
+
+    zhu.batch.beginDraw(.black);
+    gui.draw();
+    zhu.batch.endDraw();
 }
 
 pub fn deinit() void {
+    gui.deinit();
     zhu.assets.free(vertexBuffer);
     zhu.audio.deinit();
 }
