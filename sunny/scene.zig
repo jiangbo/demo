@@ -6,6 +6,7 @@ const batch = zhu.batch;
 
 const title = @import("title.zig");
 const map = @import("map.zig");
+const menu = @import("menu.zig");
 const player = @import("player.zig");
 const object = @import("object.zig");
 
@@ -16,13 +17,16 @@ const Session = extern struct {
     highScore: u32 = 0,
 };
 
+const StateEnum = enum { title, play, pause, over };
+
 const savePath = "save/save.dat";
 var session: Session = .{};
-var isTitle: bool = true; // 是否标题场景
+var state: StateEnum = .title;
 
 pub fn init() void {
-    if (isTitle) return title.init();
+    if (state == .title) return title.init();
 
+    menu.menuIndex = 1;
     map.init(session.level);
 
     for (map.objects.items, 0..) |obj, index| {
@@ -39,13 +43,13 @@ pub fn init() void {
 }
 
 pub fn start() void {
-    isTitle = false;
+    state = .play;
     session = .{};
     init();
 }
 
 pub fn load() void {
-    isTitle = false;
+    state = .play;
     session = loadSession();
     init();
 }
@@ -78,6 +82,11 @@ pub fn changeNextLevel() void {
     init();
 }
 
+fn backToTitle() void {
+    state = .title;
+    init();
+}
+
 pub fn deinit() void {
     map.deinit();
 }
@@ -87,21 +96,44 @@ pub fn update(delta: f32) void {
         return window.toggleFullScreen();
     }
 
-    if (isTitle) return title.update(delta);
-
-    player.update(delta);
-    object.update(delta);
+    switch (state) {
+        .title => title.update(delta),
+        .play => {
+            player.update(delta);
+            object.update(delta);
+            if (zhu.window.isKeyReleased(.ESCAPE)) state = .pause;
+        },
+        .pause => {
+            if (menu.update()) |event| {
+                switch (event) {
+                    0 => state = .play, // 继续游戏
+                    1 => saveSession() catch unreachable, // 保存存档
+                    2 => backToTitle(), // 返回标题
+                    3 => zhu.window.exit(), // 退出游戏
+                    else => unreachable,
+                }
+            }
+        },
+        .over => {},
+    }
 }
 
 pub fn draw() void {
     zhu.batch.beginDraw(.black);
     defer zhu.batch.endDraw();
 
-    if (isTitle) return title.draw();
+    if (state == .title) return title.draw();
 
     map.draw();
     object.draw();
     player.draw();
+
+    if (state == .pause) {
+        const size = zhu.window.size;
+        const pos: zhu.Vector2 = .xy(size.x * 0.5, size.y * 0.2);
+        zhu.text.drawTextCenter("PAUSE", pos, .{ .size = 32 });
+        menu.draw();
+    }
 }
 
 fn drawHelpInfo() void {

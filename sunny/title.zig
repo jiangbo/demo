@@ -33,6 +33,7 @@ pub fn init() void {
     mid = .{ .image = zhu.getImage("textures/Layers/middle.png") };
 
     zhu.audio.playMusic("assets/audio/platformer_level03_loop.ogg");
+    menu.menuIndex = 0;
 }
 
 pub fn update(delta: f32) void {
