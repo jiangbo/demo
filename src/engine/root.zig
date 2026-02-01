@@ -19,12 +19,12 @@ pub const Vector2 = math.Vector2;
 pub const Rect = math.Rect;
 pub const Color = graphics.Color;
 
-pub fn imageId(comptime path: []const u8) graphics.ImageId {
+pub fn id(comptime path: []const u8) assets.Id {
     return comptime assets.id(path);
 }
 
 pub fn getImage(comptime path: []const u8) graphics.Image {
-    return assets.getImage(imageId(path));
+    return assets.getImage(id(path));
 }
 
 pub fn nextEnum(E: type, value: anytype) E {

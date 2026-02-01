@@ -77,7 +77,11 @@ pub fn beginDraw(color: graphics.Color) void {
 }
 
 pub fn endDraw() void {
-    defer gpu.end();
+    flush();
+    commit();
+}
+
+pub fn flush() void {
     if (vertexBuffer.items.len == 0) return; // 没需要绘制的东西
 
     currentCommand().end = @intCast(vertexBuffer.items.len);
@@ -89,6 +93,8 @@ pub fn endDraw() void {
         }
     }
 }
+
+pub const commit = gpu.end;
 
 pub fn currentCommand() *Command {
     return &commandBuffer.items[commandBuffer.items.len - 1];

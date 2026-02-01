@@ -168,11 +168,19 @@ pub const Object = struct {
 };
 
 pub var backgroundColor: ?graphics.Color = null;
-pub var tileSets: []const TileSet = &.{};
+var tileSets: []const TileSet = &.{};
+
+pub fn init(ts: []const TileSet) void {
+    tileSets = ts;
+}
+
+pub fn getTileSetById(id: assets.Id) TileSet {
+    for (tileSets) |ts| if (ts.id == id) return ts;
+    unreachable;
+}
 
 pub fn getTileSetByRef(ref: TileSetRef) TileSet {
-    for (tileSets) |ts| if (ts.id == ref.id) return ts;
-    unreachable;
+    return getTileSetById(ref.id);
 }
 
 pub fn getTileByImageId(id: graphics.ImageId) Tile {
