@@ -19,7 +19,7 @@ pub const PropertyValue = union(PropertyEnum) {
     bool: bool, // 布尔值
     // color: []const u8, // 颜色值 (#RRGGBB)
     // file: []const u8, // 文件路径
-    object: i32, // 引用物体 ID
+    object: i64, // 引用物体 ID
     // class: []const u8, // Tiled 1.8+ 类类型
 };
 

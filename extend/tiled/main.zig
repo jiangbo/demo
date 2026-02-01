@@ -74,8 +74,15 @@ pub fn main() !void {
             maxGid = tiledMap.tilesets[index + 1].firstgid;
         }
 
+        var tileSetName = old.source.?;
+        if (std.mem.startsWith(u8, tileSetName, "tileset/")) {
+            tileSetName = tileSetName[8..];
+        }
+        const id = std.hash.Fnv1a_32.hash(tileSetName);
+
+        std.log.info("{s} ----> {}", .{ tileSetName, id });
         tileSet.* = TileSet{
-            .id = std.hash.Fnv1a_32.hash(old.source.?),
+            .id = id,
             .firstGid = old.firstgid,
             .max = maxGid,
         };

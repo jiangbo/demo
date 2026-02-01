@@ -104,8 +104,9 @@ fn parseTileSet(id: u32, value: tiled.Tileset) !TileSet {
 
     var imageId: u32 = 0;
     if (value.image) |img| {
-        imageId = hash(img[3..]);
-        std.log.info("image: {s}, id: {}", .{ img[3..], imageId });
+        const i = std.mem.indexOf(u8, img, "texture").?;
+        imageId = hash(img[i..]);
+        std.log.info("image: {s}, id: {}", .{ img[i..], imageId });
     }
 
     return .{
@@ -122,8 +123,9 @@ fn parseTilesSingle(tiles: []tiled.TileDefinition) ![]Tile {
     for (tiles, 0..) |tile, index| {
         var imageId: u32 = 0;
         if (tile.image) |img| {
-            imageId = hash(img[3..]);
-            std.log.info("image: {s}, id: {}", .{ img[3..], imageId });
+            const i = std.mem.indexOf(u8, img, "texture").?;
+            imageId = hash(img[i..]);
+            std.log.info("image: {s}, id: {}", .{ img[i..], imageId });
         }
 
         var propertes: []parsed.Property = &.{};
@@ -149,8 +151,9 @@ fn parseTilesCollection(tiles: []tiled.TileDefinition) ![]Tile {
     for (tiles) |tile| {
         var imageId: u32 = 0;
         if (tile.image) |img| {
-            imageId = hash(img[3..]);
-            std.log.info("image: {s}, id: {}", .{ img[3..], imageId });
+            const i = std.mem.indexOf(u8, img, "texture").?;
+            imageId = hash(img[i..]);
+            std.log.info("image: {s}, id: {}", .{ img[i..], imageId });
         }
 
         var propertes: []parsed.Property = &.{};
@@ -235,6 +238,7 @@ fn parsePropertyValue(property: tiled.Property) parsed.PropertyValue {
         .int => .{ .int = @intCast(property.value.integer) },
         .float => .{ .float = @floatCast(property.value.float) },
         .bool => .{ .bool = property.value.bool },
+        .object => .{ .object = property.value.integer },
     };
 }
 
