@@ -5,7 +5,11 @@ const zhu = @import("zhu");
 const gui = @import("cimgui");
 
 pub fn init() void {
-    sk.imgui.setup(.{ .logger = .{ .func = sk.log.func } });
+    sk.imgui.setup(.{
+        .logger = .{ .func = sk.log.func },
+        .no_default_font = true,
+        .ini_filename = "assets/imgui.ini",
+    });
 
     const io = gui.igGetIO();
     const font = io.*.Fonts;
@@ -14,7 +18,6 @@ pub fn init() void {
         "assets/VonwaonBitmap-16px.ttf", 16, null, range);
 
     if (chineseFont == null) @panic("failed to load font");
-    io.*.FontDefault = chineseFont;
 }
 
 pub fn event(ev: *const zhu.window.Event) void {
