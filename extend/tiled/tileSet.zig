@@ -30,13 +30,20 @@ pub const ObjectGroup = struct {
     // properties: ?[]const parsed.Property = null, // 图层自定义属性
 };
 
+const ObjectExtend = packed struct(u8) {
+    flipX: bool = false, // 水平翻转
+    flipY: bool = false, // 垂直翻转
+    rotation: bool = false, // 旋转90度
+    padding: u5 = 0,
+};
+
 pub const Object = struct {
     gid: u32 = 0,
     position: Vector2, // 像素坐标
     size: Vector2, // 像素宽高
     point: bool = false, // 是否为点物体
     properties: []const parsed.Property = &.{}, // 物体自定义属性
-    rotation: f32, // 顺时针旋转角度
+    extend: ObjectExtend, // 扩展信息
 };
 
 var allocator: std.mem.Allocator = undefined;
@@ -214,7 +221,7 @@ fn parseObjects(objects: []tiled.Object) ![]Object {
     for (objects, 0..) |object, i| {
         result[i] = .{
             .point = object.point,
-            .rotation = object.rotation,
+            .extend = .{},
             .position = .{ .x = object.x, .y = object.y },
             .size = .{ .x = object.width, .y = object.height },
         };

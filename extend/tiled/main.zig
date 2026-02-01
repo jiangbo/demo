@@ -42,12 +42,19 @@ const Layer = struct {
     repeatY: bool = false,
 };
 
+const ObjectExtend = packed struct(u8) {
+    flipX: bool = false, // 水平翻转
+    flipY: bool = false, // 垂直翻转
+    rotation: bool = false, // 旋转90度
+    padding: u5 = 0,
+};
+
 pub const Object = struct {
     gid: u32,
     position: Vector2,
     size: Vector2,
     properties: []const parsed.Property,
-    rotation: f32,
+    extend: ObjectExtend, // 扩展信息
 };
 const TileSet = struct { id: u32, firstGid: u32, max: u32 };
 
@@ -135,12 +142,17 @@ fn parseLayers(layers: []tiled.Layer) ![]Layer {
             layerEnum = .object;
             objects = try allocator.alloc(Object, old.objects.len);
             for (objects, old.objects) |*new, obj| {
+                const gid = obj.gid orelse 0;
                 new.* = Object{
-                    .gid = obj.gid orelse 0,
+                    .gid = gid & 0x1FFFFFFF,
                     .position = .{ .x = obj.x, .y = obj.y },
                     .size = .{ .x = obj.width, .y = obj.height },
                     .properties = try parseProperties(obj.properties),
-                    .rotation = obj.rotation,
+                    .extend = .{
+                        .flipX = (gid & 0x80000000) != 0,
+                        .flipY = (gid & 0x40000000) != 0,
+                        .rotation = (gid & 0x20000000) != 0,
+                    },
                 };
             }
         } else return error.invalidLayerType;

@@ -22,7 +22,7 @@ pub const Animation = struct {
     index: u8 = 0,
     image: Image,
     frames: []const Frame,
-    state: u8 = 0,
+    extend: u8 = 0,
 
     pub fn init(image: Image, frames: []const Frame) Animation {
         return .{ .image = image, .frames = frames };
@@ -136,6 +136,11 @@ pub const Image = struct {
     pub fn sub(self: *const Image, area: math.Rect) Image {
         const moved = area.move(self.area.min);
         return .{ .texture = self.texture, .area = moved };
+    }
+
+    pub fn toTexturePosition(self: Image) math.Vector4 {
+        const rect = self.area;
+        return .init(rect.min.x, rect.min.y, rect.size.x, rect.size.y);
     }
 };
 

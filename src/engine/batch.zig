@@ -182,7 +182,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     const size = (option.size orelse image.area.size);
     const scaledSize = size.mul(option.scale);
 
-    var imageVector = image.area.toTexturePosition();
+    var imageVector = image.toTexturePosition();
     if (option.flipX) {
         imageVector.x += imageVector.z;
         imageVector.z = -imageVector.z;

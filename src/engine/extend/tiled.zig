@@ -159,13 +159,20 @@ pub const ObjectGroup = struct {
     objects: []const Object, // 物体数组 (物体层用)
 };
 
+pub const ObjectExtend = packed struct(u8) {
+    flipX: bool = false, // 水平翻转
+    flipY: bool = false, // 垂直翻转
+    rotation: bool = false, // 旋转90度
+    padding: u5 = 0,
+};
+
 pub const Object = struct {
     gid: u32 = 0,
     position: Vector2, // 像素坐标
     size: Vector2, // 像素宽高
     point: bool = false, // 是否为点物体
     properties: []const Property = &.{}, // 物体自定义属性
-    rotation: f32, // 顺时针旋转角度
+    extend: ObjectExtend, // 扩展信息
 };
 
 pub var backgroundColor: ?graphics.Color = null;

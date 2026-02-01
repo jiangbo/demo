@@ -308,10 +308,6 @@ pub const Rect = struct {
         const radiusSum = (self.size.x + other.size.x) * 0.5;
         return distance2 < std.math.pow(f32, radiusSum, 2);
     }
-
-    pub fn toTexturePosition(self: Rect) Vector4 {
-        return .init(self.min.x, self.min.y, self.size.x, self.size.y);
-    }
 };
 
 // pub const Rectangle1 = struct {

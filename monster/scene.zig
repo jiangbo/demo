@@ -9,8 +9,9 @@ const map = level;
 const Animation = struct {
     position: zhu.Vector2,
     value: zhu.graphics.Animation,
+    extend: tiled.ObjectExtend = .{},
 };
-var animations: std.MultiArrayList(Animation) = .empty;
+var animations: std.ArrayList(Animation) = .empty;
 
 var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
 
@@ -18,8 +19,6 @@ pub fn init() void {
     tiled.backgroundColor = level.backgroundColor;
 
     for (level.layers) |*layer| {
-        std.log.info("layer name: {s}", .{layer.name});
-
         switch (layer.type) {
             .tile => parseTileLayer(layer),
             .object => parseObjectLayer(layer),
@@ -27,12 +26,11 @@ pub fn init() void {
         }
     }
 
-    animations.sortUnstable(struct {
-        positions: []const zhu.Vector2,
-        pub fn lessThan(ctx: @This(), a: usize, b: usize) bool {
-            return ctx.positions[a].y < ctx.positions[b].y;
+    std.mem.sortUnstable(Animation, animations.items, {}, struct {
+        fn lessThan(_: void, a: Animation, b: Animation) bool {
+            return a.position.y < b.position.y;
         }
-    }{ .positions = animations.items(.position) });
+    }.lessThan);
 }
 
 pub fn deinit() void {
@@ -58,7 +56,11 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
 
         const tile = tileSet.getTileByLocalId(localId);
         if (tile != null and tile.?.animation.len > 0) {
-            addAnimations(pos, tileSet.image, tile.?);
+            image = zhu.assets.getImage(tileSet.image);
+            animations.append(zhu.assets.allocator, .{
+                .position = pos,
+                .value = .init(image, tile.?.animation),
+            }) catch @panic("oom, can't append animation");
             continue;
         }
 
@@ -73,19 +75,11 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
         tileVertexes.append(zhu.assets.allocator, .{
             .position = pos,
             .size = image.area.size,
-            .texturePosition = image.area.toTexturePosition(),
+            .texturePosition = image.toTexturePosition(),
         }) catch @panic("oom, can't append tile");
 
         // if (tile) |t| parseProperties(index, t); // 解析碰撞信息
     }
-}
-
-fn addAnimations(pos: zhu.Vector2, id: zhu.Id, tile: tiled.Tile) void {
-    const image = zhu.assets.getImage(id);
-    animations.append(zhu.assets.allocator, .{
-        .position = pos,
-        .value = .init(image, tile.animation),
-    }) catch @panic("oom, can't append animation");
 }
 
 fn parseObjectLayer(layer: *const tiled.Layer) void {
@@ -112,22 +106,30 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
             tileVertexes.append(zhu.assets.allocator, .{
                 .position = pos,
                 .size = object.size,
-                .texturePosition = image.area.toTexturePosition(),
+                .texturePosition = image.toTexturePosition(),
             }) catch @panic("oom, can't append tile");
-        } else addAnimations(pos, tileSet.image, tile.?);
+        } else {
+            const image = zhu.assets.getImage(tileSet.image);
+            animations.append(zhu.assets.allocator, .{
+                .position = pos,
+                .value = .init(image, tile.?.animation),
+                .extend = object.extend,
+            }) catch @panic("oom, can't append animation");
+        }
     }
 }
 
 pub fn update(delta: f32) void {
-    for (animations.items(.value)) |*value| value.loopUpdate(delta);
+    for (animations.items) |*item| item.value.loopUpdate(delta);
 }
 
 pub fn draw() void {
     batch.currentCommand().texture = batch.whiteImage.texture;
     batch.vertexBuffer.appendSliceAssumeCapacity(tileVertexes.items);
 
-    const positions = animations.items(.position);
-    for (positions, animations.items(.value)) |pos, value| {
-        batch.drawImage(value.currentImage(), pos, .{});
+    for (animations.items) |item| {
+        batch.drawImage(item.value.currentImage(), item.position, .{
+            .flipX = item.extend.flipX,
+        });
     }
 }
