@@ -68,6 +68,11 @@ pub fn main() !void {
         try tileSets.append(allocator, try parseTileSet(id, source));
     }
     std.log.info("====================================================", .{});
+    std.mem.sort(TileSet, tileSets.items, {}, struct {
+        fn lessThan(_: void, a: TileSet, b: TileSet) bool {
+            return a.id < b.id;
+        }
+    }.lessThan);
 
     const outFile = try dir.createFile("tile.zon", .{ .truncate = true });
     defer outFile.close();
@@ -164,8 +169,7 @@ fn parseTilesCollection(tiles: []tiled.TileDefinition) ![]Tile {
 }
 
 fn parseObjectGroup(value: tiled.Layer) !ObjectGroup {
-    var objects: []Object = &.{};
-    if (value.objects) |obj| objects = try parseObjects(obj);
+    const objects = try parseObjects(value.objects);
     return .{ .visible = value.visible, .objects = objects };
 }
 

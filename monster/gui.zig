@@ -30,7 +30,7 @@ pub fn update(delta: f32) void {
         .dpi_scale = sk.app.dpiScale(),
     });
 
-    gui.igShowDemoWindow(&flag);
+    // gui.igShowDemoWindow(&flag);
 
     if (gui.igBegin("怪物战争", &flag, gui.ImGuiWindowFlags_None)) {
         _ = gui.igText("ImGui 版本：%s", gui.IMGUI_VERSION);

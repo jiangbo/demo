@@ -19,6 +19,7 @@ pub const Map = struct {
     height: u32,
     width: u32,
 
+    backgroundColor: ?graphics.Color = null,
     tileSize: graphics.Vector2,
     layers: []const Layer,
     tileSetRefs: []const TileSetRef,
@@ -115,6 +116,7 @@ pub const PropertyEnum = enum {
     int,
     float,
     bool,
+    object,
 };
 
 pub const PropertyValue = union(PropertyEnum) {
@@ -122,6 +124,7 @@ pub const PropertyValue = union(PropertyEnum) {
     int: i32, // 整数值
     float: f32, // 浮点数值
     bool: bool, // 布尔值
+    object: i32, // 引用物体 ID
 };
 
 pub const Property = struct {
@@ -164,6 +167,7 @@ pub const Object = struct {
     rotation: f32, // 顺时针旋转角度
 };
 
+pub var backgroundColor: ?graphics.Color = null;
 pub var tileSets: []const TileSet = &.{};
 
 pub fn getTileSetByRef(ref: TileSetRef) TileSet {

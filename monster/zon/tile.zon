@@ -1,0 +1,232 @@
+.{
+    .{
+        .id = 180977641,
+        .columns = 8,
+        .tileCount = 16,
+        .image = 4181430353,
+        .tiles = .{.{
+            .id = 0,
+            .objectGroup = null,
+            .properties = .{},
+        }},
+    },
+    .{
+        .id = 403602410,
+        .columns = 8,
+        .tileCount = 16,
+        .image = 463899698,
+        .tiles = .{ .{
+            .id = 0,
+            .objectGroup = null,
+            .properties = .{},
+        }, .{
+            .id = 8,
+            .objectGroup = null,
+            .properties = .{},
+        } },
+    },
+    .{
+        .id = 1228320441,
+        .columns = 0,
+        .tileCount = 12,
+        .image = 0,
+        .tiles = .{
+            .{
+                .id = 3565053368,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 2824322577,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 2876359390,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 1638491831,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 3229894448,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 1823019691,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 1127847486,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 1075913841,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 2332085095,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 684344238,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 3442094912,
+                .objectGroup = null,
+                .properties = .{.{ .name = "place", .value = .{ .string = "melee" } }},
+            },
+            .{
+                .id = 1734481621,
+                .objectGroup = null,
+                .properties = .{.{ .name = "place", .value = .{ .string = "range" } }},
+            },
+        },
+    },
+    .{
+        .id = 1679314967,
+        .columns = 12,
+        .tileCount = 36,
+        .image = 891492543,
+        .tiles = .{
+            .{
+                .id = 0,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 12,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 24,
+                .objectGroup = null,
+                .properties = .{},
+            },
+        },
+    },
+    .{
+        .id = 1984848828,
+        .columns = 8,
+        .tileCount = 32,
+        .image = 718607936,
+        .tiles = .{
+            .{
+                .id = 0,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 8,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 16,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 24,
+                .objectGroup = null,
+                .properties = .{},
+            },
+        },
+    },
+    .{
+        .id = 2495310090,
+        .columns = 20,
+        .tileCount = 640,
+        .image = 541756212,
+        .tiles = .{
+            .{
+                .id = 81,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 82,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 83,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 84,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 86,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 87,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 88,
+                .objectGroup = null,
+                .properties = .{},
+            },
+            .{
+                .id = 89,
+                .objectGroup = null,
+                .properties = .{},
+            },
+        },
+    },
+    .{
+        .id = 2884371162,
+        .columns = 8,
+        .tileCount = 16,
+        .image = 301376850,
+        .tiles = .{ .{
+            .id = 0,
+            .objectGroup = null,
+            .properties = .{},
+        }, .{
+            .id = 8,
+            .objectGroup = null,
+            .properties = .{},
+        } },
+    },
+    .{
+        .id = 3008858793,
+        .columns = 12,
+        .tileCount = 24,
+        .image = 1301893513,
+        .tiles = .{.{
+            .id = 0,
+            .objectGroup = null,
+            .properties = .{},
+        }},
+    },
+    .{
+        .id = 3102821806,
+        .columns = 8,
+        .tileCount = 24,
+        .image = 3729074382,
+        .tiles = .{.{
+            .id = 0,
+            .objectGroup = null,
+            .properties = .{},
+        }},
+    },
+}

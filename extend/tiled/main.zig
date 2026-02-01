@@ -10,6 +10,7 @@ var allocator: std.mem.Allocator = undefined;
 const TiledMap = struct {
     height: i32,
     width: i32,
+    backgroundColor: ?Color = null,
 
     tileSize: Vector2,
     layers: []Layer,
@@ -79,6 +80,8 @@ pub fn main() !void {
             .max = maxGid,
         };
     }
+    var color: ?Color = null;
+    if (tiledMap.backgroundcolor) |c| color = parseColor(c);
 
     const map = TiledMap{
         .height = tiledMap.height,
@@ -89,6 +92,7 @@ pub fn main() !void {
             .y = @floatFromInt(tiledMap.tileheight),
         },
         .tileSetRefs = tileSets,
+        .backgroundColor = color,
     };
 
     // 写入 font.zon 文件
@@ -174,5 +178,26 @@ fn parsePropertyValue(property: tiled.Property) parsed.PropertyValue {
         .int => .{ .int = @intCast(property.value.integer) },
         .float => .{ .float = @floatCast(property.value.float) },
         .bool => .{ .bool = property.value.bool },
+        .object => .{ .object = @intCast(property.value.integer) },
+    };
+}
+
+pub const Color = struct { r: f32, g: f32, b: f32, a: f32 };
+
+pub fn parseColor(hexStr: []const u8) Color {
+    const hex = if (hexStr[0] == '#') hexStr[1..] else hexStr;
+
+    // 验证长度（必须是 6 或 8）
+    std.debug.assert(hex.len == 6 or hex.len == 8);
+
+    // 将十六进制字符串解析为 u32
+    const value = std.fmt.parseInt(u32, hex, 16) catch unreachable;
+    const alpha: u32 = if (hex.len == 6) 255 else value & 0xFF;
+    const rbg = if (hex.len == 6) value else value >> 8;
+    return Color{
+        .r = @as(f32, @floatFromInt((rbg >> 16) & 0xFF)) / 255.0,
+        .g = @as(f32, @floatFromInt((rbg >> 8) & 0xFF)) / 255.0,
+        .b = @as(f32, @floatFromInt(rbg & 0xFF)) / 255.0,
+        .a = @as(f32, @floatFromInt(alpha)) / 255.0,
     };
 }
