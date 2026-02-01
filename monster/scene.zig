@@ -17,15 +17,22 @@ var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
 pub fn init() void {
     tiled.backgroundColor = level.backgroundColor;
 
-    for (level.layers) |layer| {
+    for (level.layers) |*layer| {
         std.log.info("layer name: {s}", .{layer.name});
 
         switch (layer.type) {
-            .tile => parseTileLayer(&layer),
-            .object => {},
+            .tile => parseTileLayer(layer),
+            .object => parseObjectLayer(layer),
             else => unreachable,
         }
     }
+
+    animations.sortUnstable(struct {
+        positions: []const zhu.Vector2,
+        pub fn lessThan(ctx: @This(), a: usize, b: usize) bool {
+            return ctx.positions[a].y < ctx.positions[b].y;
+        }
+    }{ .positions = animations.items(.position) });
 }
 
 pub fn deinit() void {
@@ -51,7 +58,7 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
 
         const tile = tileSet.getTileByLocalId(localId);
         if (tile != null and tile.?.animation.len > 0) {
-            parseAnimations(pos, tileSet.image, tile.?);
+            addAnimations(pos, tileSet.image, tile.?);
             continue;
         }
 
@@ -73,12 +80,39 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
     }
 }
 
-fn parseAnimations(pos: zhu.Vector2, id: zhu.Id, tile: tiled.Tile) void {
+fn addAnimations(pos: zhu.Vector2, id: zhu.Id, tile: tiled.Tile) void {
     const image = zhu.assets.getImage(id);
     animations.append(zhu.assets.allocator, .{
         .position = pos,
         .value = .init(image, tile.animation),
     }) catch @panic("oom, can't append animation");
+}
+
+fn parseObjectLayer(layer: *const tiled.Layer) void {
+    for (layer.objects) |object| {
+        if (object.gid == 0) {
+            std.log.info("gid 0, position: {}", .{object.position});
+            continue;
+        }
+
+        const tileSetRef = map.getTileSetRefByGid(object.gid);
+        const tileSet = tiled.getTileSetByRef(tileSetRef);
+        const localId = object.gid - tileSetRef.firstGid;
+
+        const tile = tileSet.getTileByLocalId(localId);
+
+        if (tile == null) {
+            std.log.info("tile is null, gid: {}", .{object.gid});
+            continue;
+        }
+
+        const pos = object.position.addY(-object.size.y);
+        if (tileSet.image == 0) {
+            std.log.info("tileSet image id is 0, gid: {}", .{object.gid});
+            continue;
+        }
+        addAnimations(pos, tileSet.image, tile.?);
+    }
 }
 
 pub fn update(delta: f32) void {
