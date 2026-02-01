@@ -107,11 +107,14 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
         }
 
         const pos = object.position.addY(-object.size.y);
-        if (tileSet.image == 0) {
-            std.log.info("tileSet image id is 0, gid: {}", .{object.gid});
-            continue;
-        }
-        addAnimations(pos, tileSet.image, tile.?);
+        if (tileSet.columns == 0) {
+            const image = zhu.assets.getImage(tile.?.id);
+            tileVertexes.append(zhu.assets.allocator, .{
+                .position = pos,
+                .size = object.size,
+                .texturePosition = image.area.toTexturePosition(),
+            }) catch @panic("oom, can't append tile");
+        } else addAnimations(pos, tileSet.image, tile.?);
     }
 }
 
