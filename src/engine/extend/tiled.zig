@@ -151,6 +151,7 @@ pub const Tile = struct {
     id: u32,
     objectGroup: ?ObjectGroup = null,
     properties: []const Property,
+    animation: []const graphics.Frame = &.{},
 };
 
 pub const ObjectGroup = struct {

@@ -19,6 +19,7 @@ pub const Vector2 = math.Vector2;
 pub const Rect = math.Rect;
 pub const Color = graphics.Color;
 
+pub const Id = assets.Id;
 pub fn id(comptime path: []const u8) assets.Id {
     return comptime assets.id(path);
 }

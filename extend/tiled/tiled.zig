@@ -211,7 +211,7 @@ pub const Tileset = struct {
     /// 瓦片集的类 (自 1.9 起，可选)
     class: ?[]const u8 = null,
     /// 瓦片集中的列数
-    columns: i32 = 0,
+    columns: u32 = 0,
     /// 渲染此瓦片集时的填充模式 (stretch (默认) 或 preserve-aspect-fit)
     fillmode: []const u8 = "stretch",
     /// 对应于集合中第一个瓦片的全局 ID (GID)
@@ -239,11 +239,11 @@ pub const Tileset = struct {
     /// 地形定义数组 (可选)
     terrains: ?[]const Terrain = null,
     /// 此瓦片集中的瓦片数量
-    tilecount: i32 = 0,
+    tilecount: u32 = 0,
     /// 用于保存文件的 Tiled 版本
     tiledversion: ?[]const u8 = null,
     /// 此集合中瓦片的最大高度
-    tileheight: i32 = 0,
+    tileheight: u32 = 0,
     /// 瓦片偏移 (可选)
     tileoffset: ?TileOffset = null,
     /// 渲染瓦片大小时使用的参考 (tile (默认) 或 grid)
@@ -251,7 +251,7 @@ pub const Tileset = struct {
     /// 特殊瓦片定义的数组 (可选)
     tiles: ?[]TileDefinition = null,
     /// 此集合中瓦片的最大宽度
-    tilewidth: i32 = 0,
+    tilewidth: u32 = 0,
     /// 允许的变换 (可选)
     transformations: ?Transformations = null,
     /// 透明颜色 (#RRGGBB，可选)
@@ -267,7 +267,7 @@ pub const Tileset = struct {
 /// 瓦片定义 (Tileset 中的具体瓦片特殊设置)
 pub const TileDefinition = struct {
     /// 动画帧数组
-    animation: ?[]const Frame = null,
+    animation: []Frame = &.{},
     /// 瓦片的局部 ID
     id: u32 = 0,
     /// 代表该瓦片的图像路径 (仅限图像集合瓦片集)
@@ -333,7 +333,7 @@ pub const Frame = struct {
     /// 帧持续时间 (毫秒)
     duration: i32,
     /// 代表该帧的局部瓦片 ID
-    tileid: i32,
+    tileid: u32,
 };
 
 /// 地形定义

@@ -13,10 +13,15 @@ const TileSet = struct {
     tiles: []const Tile,
 };
 
+const zero = Vector2{ .x = 0, .y = 0 };
+const one = Vector2{ .x = 1, .y = 1 };
+pub const Rect = struct { min: Vector2 = zero, size: Vector2 = one };
+pub const Frame = struct { rect: Rect, duration: f32 = 0.1 };
 const Tile = struct {
     id: u32,
     objectGroup: ?ObjectGroup = null,
     properties: []const parsed.Property,
+    animation: []const Frame,
 };
 
 pub const ObjectGroup = struct {
@@ -64,7 +69,7 @@ pub fn main() !void {
 
         const content = try dir.readFileAlloc(allocator, name, max);
         const parse = std.json.parseFromSliceLeaky;
-        const source = try parse(tiled.Tileset, allocator, content, .{});
+        source = try parse(tiled.Tileset, allocator, content, .{});
         try tileSets.append(allocator, try parseTileSet(id, source));
     }
     std.log.info("====================================================", .{});
@@ -83,6 +88,7 @@ pub fn main() !void {
 }
 
 const hash = std.hash.Fnv1a_32.hash;
+var source: tiled.Tileset = undefined;
 fn parseTileSet(id: u32, value: tiled.Tileset) !TileSet {
     var tiles: []Tile = &.{};
     if (value.tiles) |t| {
@@ -138,6 +144,7 @@ fn parseTilesSingle(tiles: []tiled.TileDefinition) ![]Tile {
             .id = tile.id,
             .properties = propertes,
             .objectGroup = group,
+            .animation = try parseAnimation(tile.animation),
         };
     }
     return result;
@@ -166,9 +173,35 @@ fn parseTilesCollection(tiles: []tiled.TileDefinition) ![]Tile {
             .id = imageId,
             .properties = propertes,
             .objectGroup = group,
+            .animation = try parseAnimation(tile.animation),
         };
     }
     return result;
+}
+
+fn parseAnimation(frames: []tiled.Frame) ![]Frame {
+    const result = try allocator.alloc(Frame, frames.len);
+
+    for (frames, 0..) |frame, i| {
+        result[i] = .{
+            .rect = parseRectFromId(frame.tileid),
+            .duration = @as(f32, @floatFromInt(frame.duration)) / 1000.0,
+        };
+    }
+    return result;
+}
+
+fn parseRectFromId(id: u32) Rect {
+    return .{
+        .min = .{
+            .x = @floatFromInt((id % source.columns) * source.tilewidth),
+            .y = @floatFromInt((id / source.columns) * source.tileheight),
+        },
+        .size = .{
+            .x = @floatFromInt(source.tilewidth),
+            .y = @floatFromInt(source.tileheight),
+        },
+    };
 }
 
 fn parseObjectGroup(value: tiled.Layer) !ObjectGroup {

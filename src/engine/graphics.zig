@@ -13,7 +13,7 @@ pub const Vector2 = math.Vector2;
 
 pub const ImageId = assets.Id;
 
-pub const Frame = struct { area: math.Rect, interval: f32 = 0.1 };
+pub const Frame = struct { rect: math.Rect, duration: f32 = 0.1 };
 pub fn EnumAnimation(comptime T: type) type {
     return std.EnumArray(T, Animation);
 }
@@ -34,7 +34,7 @@ pub const Animation = struct {
     }
 
     pub fn currentImage(self: *const Animation) Image {
-        return self.image.sub(self.frames[self.index].area);
+        return self.image.sub(self.frames[self.index].rect);
     }
 
     pub fn onceUpdate(self: *Animation, delta: f32) void {
@@ -47,8 +47,8 @@ pub const Animation = struct {
         if (self.index < self.frames.len) {
             self.elapsed += delta;
             const current = self.frames[self.index]; // 当前帧
-            if (self.elapsed < current.interval) return false;
-            self.elapsed -= current.interval;
+            if (self.elapsed < current.duration) return false;
+            self.elapsed -= current.duration;
         }
         self.index += 1;
         return true;
@@ -62,8 +62,8 @@ pub const Animation = struct {
     pub fn loopUpdate(self: *Animation, delta: f32) void {
         self.elapsed += delta;
         const current = self.frames[self.index]; // 当前帧
-        if (self.elapsed < current.interval) return;
-        self.elapsed -= current.interval;
+        if (self.elapsed < current.duration) return;
+        self.elapsed -= current.duration;
         self.index += 1;
         // 结束了从头开始
         if (self.index >= self.frames.len) self.index = 0;

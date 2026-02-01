@@ -6,6 +6,11 @@ const tiled = zhu.extend.tiled;
 
 const level: tiled.Map = @import("zon/level1.zon");
 const map = level;
+const Animation = struct {
+    position: zhu.Vector2,
+    value: zhu.graphics.Animation,
+};
+var animations: std.MultiArrayList(Animation) = .empty;
 
 var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
 
@@ -25,6 +30,7 @@ pub fn init() void {
 
 pub fn deinit() void {
     tileVertexes.deinit(zhu.assets.allocator);
+    animations.deinit(zhu.assets.allocator);
 }
 
 fn parseTileLayer(layer: *const tiled.Layer) void {
@@ -44,6 +50,11 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
         const localId = gid - tileSetRef.firstGid;
 
         const tile = tileSet.getTileByLocalId(localId);
+        if (tile != null and tile.?.animation.len > 0) {
+            parseAnimations(pos, tileSet.image, tile.?);
+            continue;
+        }
+
         if (tileSet.columns == 0) { // 单图片瓦片集的列数
             image = zhu.assets.getImage(tile.?.id);
             pos.y = pos.y - image.area.size.y + map.tileSize.y;
@@ -62,11 +73,24 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
     }
 }
 
+fn parseAnimations(pos: zhu.Vector2, id: zhu.Id, tile: tiled.Tile) void {
+    const image = zhu.assets.getImage(id);
+    animations.append(zhu.assets.allocator, .{
+        .position = pos,
+        .value = .init(image, tile.animation),
+    }) catch @panic("oom, can't append animation");
+}
+
 pub fn update(delta: f32) void {
-    _ = delta;
+    for (animations.items(.value)) |*value| value.loopUpdate(delta);
 }
 
 pub fn draw() void {
     batch.currentCommand().texture = batch.whiteImage.texture;
     batch.vertexBuffer.appendSliceAssumeCapacity(tileVertexes.items);
+
+    const positions = animations.items(.position);
+    for (positions, animations.items(.value)) |pos, value| {
+        batch.drawImage(value.currentImage(), pos, .{});
+    }
 }
