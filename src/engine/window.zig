@@ -181,9 +181,12 @@ pub fn computeViewRect() void {
             viewRect = .init(position, maxSize);
         },
         .integer => {
-            const intSize = size.scale(@trunc(@min(ratio.x, ratio.y)));
-            const position = clientSize.sub(intSize).mul(alignment);
-            viewRect = .init(position, intSize);
+            const scale = @min(ratio.x, ratio.y);
+            if (scale < 1) viewRect = .init(.zero, clientSize) else {
+                const intSize = size.scale(@trunc(scale));
+                const position = clientSize.sub(intSize).mul(alignment);
+                viewRect = .init(position, intSize);
+            }
         },
     }
 }
