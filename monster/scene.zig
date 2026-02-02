@@ -14,10 +14,13 @@ pub fn init() void {
     image = image.sub(.init(.zero, .xy(192, 192)));
 
     const wolf = ecs.reg.createEntity();
-    ecs.reg.add(wolf, image);
+    ecs.reg.add(wolf, com.Sprite{
+        .image = image,
+        .offset = .xy(-96, -128),
+        .flip = true,
+    });
     ecs.reg.add(wolf, com.Position{ .x = 400, .y = 300 });
-
-    // registry_.emplace<engine::component::SpriteComponent>(enemy, std::move(sprite), glm::vec2(192, 192), glm::vec2(-96, -128));
+    ecs.reg.add(wolf, com.Velocity{ .v = .xy(20, 0) });
 }
 
 pub fn deinit() void {
@@ -27,18 +30,27 @@ pub fn deinit() void {
 
 pub fn update(delta: f32) void {
     map.update(delta);
+
+    var view = ecs.reg.view(.{ com.Position, com.Velocity });
+    while (view.next()) |entity| {
+        const position = view.getPtr(entity, com.Position);
+        const velocity = view.get(entity, com.Velocity);
+        position.* = position.*.add(velocity.v.scale(delta));
+    }
 }
 
 pub fn draw() void {
     map.draw();
 
-    var view = ecs.reg.view(.{ com.Image, com.Position });
+    var view = ecs.reg.view(.{ com.Sprite, com.Position });
     while (view.next()) |entity| {
-        const image = view.get(entity, com.Image);
+        const sprite = view.get(entity, com.Sprite);
         const position = view.get(entity, com.Position);
-        zhu.batch.drawImage(image, position, .{});
-
-        const rect: zhu.Rect = .init(position, image.rect.size);
+        const pos = position.add(sprite.offset);
+        zhu.batch.drawImage(sprite.image, pos, .{
+            .flipX = sprite.flip,
+        });
+        const rect: zhu.Rect = .init(pos, sprite.image.rect.size);
         zhu.batch.drawRectBorder(rect, 2, .green);
     }
 
