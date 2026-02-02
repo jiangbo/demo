@@ -145,7 +145,7 @@ pub const Object = struct {
     /// 以像素为单位的高度
     height: f32,
     /// 唯一的增量 ID
-    id: i32,
+    id: u32,
     /// 物体名称
     name: []const u8,
     /// 是否将该物体标记为点

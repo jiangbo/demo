@@ -2101,7 +2101,7 @@
             .data = .{},
             .objects = .{
                 .{
-                    .gid = 0,
+                    .gid = 67,
                     .position = .{ .x = -54.666668, .y = 993.3333 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{ .{ .name = "next", .value = .{ .object = 68 } }, .{ .name = "start", .value = .{ .bool = true } } },
@@ -2113,7 +2113,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 68,
                     .position = .{ .x = 125.333336, .y = 984 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 69 } }},
@@ -2125,7 +2125,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 69,
                     .position = .{ .x = 410.66666, .y = 916 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 70 } }},
@@ -2137,7 +2137,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 70,
                     .position = .{ .x = 398.66666, .y = 860 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 71 } }},
@@ -2149,7 +2149,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 71,
                     .position = .{ .x = 289.33334, .y = 790.6667 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 72 } }},
@@ -2161,7 +2161,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 72,
                     .position = .{ .x = 346.66666, .y = 725.3333 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 73 } }},
@@ -2173,7 +2173,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 73,
                     .position = .{ .x = 364, .y = 612 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 74 } }},
@@ -2185,7 +2185,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 74,
                     .position = .{ .x = 678.6667, .y = 589.3333 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 75 } }},
@@ -2197,7 +2197,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 75,
                     .position = .{ .x = 644, .y = 533.3333 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 76 } }},
@@ -2209,7 +2209,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 76,
                     .position = .{ .x = 549.3333, .y = 461.33334 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 77 } }},
@@ -2221,7 +2221,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 77,
                     .position = .{ .x = 350.66666, .y = 354.66666 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 0 } }},
@@ -2233,7 +2233,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 78,
                     .position = .{ .x = 890.6667, .y = 1294.6666 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{ .{ .name = "next", .value = .{ .object = 79 } }, .{ .name = "start", .value = .{ .bool = true } } },
@@ -2245,7 +2245,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 79,
                     .position = .{ .x = 894.6667, .y = 969.3333 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{ .{ .name = "next", .value = .{ .object = 86 } }, .{ .name = "next2", .value = .{ .object = 80 } } },
@@ -2257,7 +2257,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 80,
                     .position = .{ .x = 1053.3334, .y = 966.6667 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 81 } }},
@@ -2269,7 +2269,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 81,
                     .position = .{ .x = 1178.6666, .y = 926.6667 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 82 } }},
@@ -2281,7 +2281,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 82,
                     .position = .{ .x = 1254.6666, .y = 910.6667 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 83 } }},
@@ -2293,7 +2293,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 83,
                     .position = .{ .x = 1264, .y = 721.3333 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 84 } }},
@@ -2305,7 +2305,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 84,
                     .position = .{ .x = 1120, .y = 668 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 85 } }},
@@ -2317,7 +2317,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 85,
                     .position = .{ .x = 1106.6666, .y = 585.3333 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 75 } }},
@@ -2329,7 +2329,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 86,
                     .position = .{ .x = 993.3333, .y = 865.3333 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 87 } }},
@@ -2341,7 +2341,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 87,
                     .position = .{ .x = 996, .y = 733.3333 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 84 } }},
@@ -2353,7 +2353,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 88,
                     .position = .{ .x = 1642.6666, .y = 160 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{ .{ .name = "next", .value = .{ .object = 89 } }, .{ .name = "start", .value = .{ .bool = true } } },
@@ -2365,7 +2365,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 89,
                     .position = .{ .x = 1497.3334, .y = 158.66667 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 91 } }},
@@ -2377,7 +2377,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 91,
                     .position = .{ .x = 1321.3334, .y = 298.66666 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 92 } }},
@@ -2389,7 +2389,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 92,
                     .position = .{ .x = 1141.3334, .y = 348 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 93 } }},
@@ -2401,7 +2401,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 93,
                     .position = .{ .x = 1078.6666, .y = 469.33334 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 94 } }},
@@ -2413,7 +2413,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 94,
                     .position = .{ .x = 976, .y = 472 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 95 } }},
@@ -2425,7 +2425,7 @@
                     },
                 },
                 .{
-                    .gid = 0,
+                    .gid = 95,
                     .position = .{ .x = 864, .y = 412 },
                     .size = .{ .x = 0, .y = 0 },
                     .properties = .{.{ .name = "next", .value = .{ .object = 75 } }},

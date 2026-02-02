@@ -130,6 +130,10 @@ pub const PropertyValue = union(PropertyEnum) {
 pub const Property = struct {
     name: []const u8, // 属性名称
     value: PropertyValue, // 具体的属性值
+
+    pub fn is(self: Property, name: []const u8) bool {
+        return std.mem.eql(u8, self.name, name);
+    }
 };
 
 pub const TileSet = struct {

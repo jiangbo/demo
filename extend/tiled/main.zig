@@ -142,7 +142,7 @@ fn parseLayers(layers: []tiled.Layer) ![]Layer {
             layerEnum = .object;
             objects = try allocator.alloc(Object, old.objects.len);
             for (objects, old.objects) |*new, obj| {
-                const gid = obj.gid orelse 0;
+                const gid = obj.gid orelse obj.id;
                 new.* = Object{
                     .gid = gid & 0x1FFFFFFF,
                     .position = .{ .x = obj.x, .y = obj.y },
