@@ -18,9 +18,14 @@ const Path = struct {
     point: zhu.Vector2, // 路径点位置
     next: u8 = 0, // 终点没有下一个路径点
     next2: u8 = 0, // 可选的第二条分支路径
+
+    pub fn randomNext(self: Path) u8 {
+        if (self.next2 == 0) return self.next;
+        return if (zhu.randomBool()) self.next else self.next2;
+    }
 };
-var paths: std.AutoHashMapUnmanaged(u16, Path) = .empty;
-var startPaths: [10]u8 = undefined; // 最多 10 条起始路径
+pub var paths: std.AutoHashMapUnmanaged(u8, Path) = .empty;
+pub var startPaths: [10]u8 = undefined; // 最多 10 条起始路径
 
 pub fn init() void {
     tiled.backgroundColor = data.backgroundColor;
@@ -53,8 +58,8 @@ pub fn deinit() void {
 
 fn parsePathLayer(layer: *const tiled.Layer) void {
     for (layer.objects) |object| {
+        var path: Path = .{ .point = object.position };
         for (object.properties) |prop| {
-            var path: Path = .{ .point = object.position };
             if (prop.is("next")) {
                 path.next = @intCast(prop.value.object);
             } else if (prop.is("next2")) {
@@ -66,10 +71,9 @@ fn parsePathLayer(layer: *const tiled.Layer) void {
                     break;
                 } else unreachable;
             }
-
-            paths.put(zhu.assets.allocator, @intCast(object.gid), path) //
-            catch @panic("oom, can't put path");
         }
+        paths.put(zhu.assets.allocator, @intCast(object.gid), path) //
+        catch @panic("oom, can't put path");
     }
 }
 

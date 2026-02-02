@@ -127,12 +127,11 @@ pub fn drawAxisLine(start: Vector2, end: Vector2, option: LineOption) void {
 pub fn drawLine(start: Vector2, end: Vector2, option: LineOption) void {
     const vector = end.sub(start);
     const y = start.y - option.width / 2;
-
-    drawImage(graphics.whiteImage, .init(start.x, y), .{
-        .size = .init(vector.length(), option.width),
+    drawImage(whiteImage, .xy(start.x, y), .{
+        .size = .xy(vector.length(), option.width),
         .color = option.color,
         .radian = vector.atan2(),
-        .pivot = .init(0, 0.5),
+        .pivot = .xy(0, 0.5),
     });
 }
 
