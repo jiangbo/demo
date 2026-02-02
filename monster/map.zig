@@ -105,7 +105,7 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
 
         if (tileSet.columns == 0) { // 单图片瓦片集的列数
             image = zhu.assets.getImage(tile.?.id);
-            pos.y = pos.y - image.area.size.y + data.tileSize.y;
+            pos.y = pos.y - image.rect.size.y + data.tileSize.y;
         } else {
             const area = data.tileArea(localId, tileSet.columns);
             image = tileImage.sub(area);
@@ -113,7 +113,7 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
 
         tileVertexes.append(zhu.assets.allocator, .{
             .position = pos,
-            .size = image.area.size,
+            .size = image.rect.size,
             .texturePosition = image.toTexturePosition(),
         }) catch @panic("oom, can't append tile");
 

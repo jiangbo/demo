@@ -178,7 +178,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
         worldPos = camera.position.add(pos);
     }
 
-    const size = (option.size orelse image.area.size);
+    const size = (option.size orelse image.rect.size);
     const scaledSize = size.mul(option.scale);
 
     var imageVector = image.toTexturePosition();

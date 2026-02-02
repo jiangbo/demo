@@ -46,8 +46,8 @@ pub fn main() !void {
         } else try checkIdRepeat.put(a, image.id, {});
 
         const frame = (try j.parseFromValue(atlas.AtlasFrame, a, entry.value_ptr.*, .{})).value;
-        image.area.min = .{ .x = frame.frame.x, .y = frame.frame.y };
-        image.area.size = .{ .x = frame.frame.w, .y = frame.frame.h };
+        image.rect.min = .{ .x = frame.frame.x, .y = frame.frame.y };
+        image.rect.size = .{ .x = frame.frame.w, .y = frame.frame.h };
         try images.append(a, image);
     }
 
@@ -73,7 +73,7 @@ pub fn main() !void {
 const Vec2 = struct { x: i32, y: i32 };
 const Image = struct {
     id: u32,
-    area: struct { min: Vec2, size: Vec2 },
+    rect: struct { min: Vec2, size: Vec2 },
 };
 pub const Atlas = struct {
     imagePath: []const u8,

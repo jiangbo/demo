@@ -119,27 +119,27 @@ pub fn loopFramesX(comptime count: u8, size: Vector2, d: f32) //
 
 pub const Image = struct {
     texture: gpu.Texture,
-    area: math.Rect,
+    rect: math.Rect,
 
     pub fn width(self: *const Image) f32 {
-        return self.area.size.x;
+        return self.rect.size.x;
     }
 
     pub fn height(self: *const Image) f32 {
-        return self.area.size.y;
+        return self.rect.size.y;
     }
 
     pub fn size(self: *const Image) math.Vector2 {
-        return self.area.size;
+        return self.rect.size;
     }
 
-    pub fn sub(self: *const Image, area: math.Rect) Image {
-        const moved = area.move(self.area.min);
-        return .{ .texture = self.texture, .area = moved };
+    pub fn sub(self: *const Image, rect: math.Rect) Image {
+        const moved = rect.move(self.rect.min);
+        return .{ .texture = self.texture, .rect = moved };
     }
 
     pub fn toTexturePosition(self: Image) math.Vector4 {
-        const rect = self.area;
+        const rect = self.rect;
         return .init(rect.min.x, rect.min.y, rect.size.x, rect.size.y);
     }
 };
@@ -147,7 +147,7 @@ pub const Image = struct {
 pub const Atlas = struct {
     imagePath: [:0]const u8,
     size: math.Vector2,
-    images: []const struct { id: ImageId, area: math.Rect },
+    images: []const struct { id: ImageId, rect: math.Rect },
 };
 
 pub var textCount: u32 = 0;

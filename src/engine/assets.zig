@@ -46,7 +46,7 @@ pub fn loadImage(path: Path, size: graphics.Vector2) Image {
     if (!entry.found_existing) {
         entry.value_ptr.* = .{
             .texture = Texture.load(path),
-            .area = .init(.zero, size),
+            .rect = .init(.zero, size),
         };
     }
     return entry.value_ptr.*;
@@ -71,7 +71,7 @@ pub fn loadAtlas(atlas: graphics.Atlas) void {
     var image = loadImage(atlas.imagePath, atlas.size);
 
     for (atlas.images) |atlasImage| {
-        image.area = atlasImage.area;
+        image.rect = atlasImage.rect;
         imageCache.putAssumeCapacity(atlasImage.id, image);
     }
 }

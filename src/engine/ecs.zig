@@ -555,7 +555,7 @@ pub fn hashTypeId(T: type) TypeId {
 }
 
 pub var registry: Registry = undefined;
-pub var w = &registry;
+pub var reg = &registry;
 pub fn init(allocator: std.mem.Allocator) void {
     registry = Registry.init(allocator);
 }
