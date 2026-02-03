@@ -450,14 +450,14 @@ pub const Registry = struct {
         inline for (types) |T| self.clear(T);
     }
 
-    pub fn view(self: *Registry, types: anytype) View(types, .{}, .{}) {
-        return self.viewOption(types, .{}, .{});
+    pub fn view(self: *Registry, types: anytype) View(types, .{}) {
+        return self.viewOption(types, .{});
     }
     // zig fmt: off
-    pub fn viewOption(self: *Registry, includes: anytype, excludes: anytype,
-        comptime opt: ViewOption) View(includes, excludes, opt) {
+    pub fn viewOption(self: *Registry, includes: anytype,
+        comptime option: ViewOption) View(includes, option) {
     // zig fmt: on
-        return View(includes, excludes, opt).init(self);
+        return View(includes, option).init(self);
     }
 };
 
@@ -465,42 +465,39 @@ pub const ViewOption = struct {
     reverse: bool = false,
     useFirst: bool = false, // use shortest or first?
 };
-pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
+pub fn View(includes: anytype, option: ViewOption) type {
     const Index = Entity.Index;
     return struct {
-        reg: *Registry,
+        registry: *Registry,
         slice: []Index = &.{},
         index: Index,
 
         pub fn init(r: *Registry) @This() {
             var slice = r.assure(includes[0]).dense.items;
-            if (!opt.useFirst) {
+            if (!option.useFirst) {
                 inline for (includes) |T| {
                     const entities = r.assure(T).dense.items;
                     if (entities.len < slice.len) slice = entities;
                 }
             }
-            const index = if (opt.reverse) slice.len - 1 else 0;
-            return .{ .reg = r, .slice = slice, .index = @intCast(index) };
+            const i = if (option.reverse) slice.len - 1 else 0;
+            return .{ .registry = r, .slice = slice, .index = @intCast(i) };
         }
 
         pub fn next(self: *@This()) ?Index {
             blk: while (self.index < self.slice.len) {
                 const entity = self.slice[self.index];
-                if (opt.reverse) self.index -%= 1 else self.index += 1;
+                if (option.reverse) self.index -%= 1 else self.index += 1;
 
                 inline for (includes) |T| {
                     if (!self.has(entity, T)) continue :blk;
-                }
-                inline for (excludes) |T| {
-                    if (self.has(entity, T)) continue :blk;
                 }
                 return entity;
             } else return null;
         }
 
         pub fn assure(self: *@This(), T: type) *SparseMap(T) {
-            return self.reg.assure(T);
+            return self.registry.assure(T);
         }
 
         pub fn get(self: *@This(), entity: Index, T: type) T {
@@ -512,37 +509,37 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
         }
 
         pub fn getPtr(self: *@This(), entity: Index, T: type) *T {
-            return self.reg.assure(T).get(entity);
+            return self.assure(T).get(entity);
         }
 
         pub fn tryGetPtr(self: *@This(), entity: Index, T: type) ?*T {
-            return self.reg.assure(T).tryGet(entity);
+            return self.assure(T).tryGet(entity);
         }
 
         pub fn has(self: *const @This(), entity: Index, T: type) bool {
-            return self.reg.assure(T).has(entity);
+            return self.registry.assure(T).has(entity);
         }
 
         pub fn is(self: *const @This(), entity: Index, T: type) bool {
-            const e = self.reg.getIdentityEntity(T) orelse return false;
+            const e = self.registry.getIdentityEntity(T) orelse return false;
             return e.index == entity;
         }
 
         pub fn add(self: *@This(), entity: Index, value: anytype) void {
-            const map = self.assure(@TypeOf(value));
-            map.add(self.reg.allocator, entity, value) catch oom();
+            const map = self.registry.assure(@TypeOf(value));
+            map.add(self.registry.allocator, entity, value) catch oom();
         }
 
         pub fn toEntity(self: *const @This(), index: Index) Entity {
-            return self.reg.entities.toEntity(index).?;
+            return self.registry.entities.toEntity(index).?;
         }
 
         pub fn remove(self: *@This(), entity: Index, T: type) void {
-            _ = self.reg.assure(T).swapRemove(entity);
+            _ = self.registry.assure(T).swapRemove(entity);
         }
 
         pub fn destroy(self: *@This(), entity: Index) void {
-            self.reg.destroyEntity(self.toEntity(entity));
+            self.registry.destroyEntity(self.toEntity(entity));
         }
     };
 }
@@ -552,19 +549,4 @@ fn oom() noreturn {
 }
 pub fn hashTypeId(T: type) TypeId {
     return comptime std.hash.Fnv1a_32.hash(@typeName(T));
-}
-
-pub var registry: Registry = undefined;
-pub var reg = &registry;
-pub fn init(allocator: std.mem.Allocator) void {
-    registry = Registry.init(allocator);
-}
-
-pub fn clear() void {
-    registry.deinit();
-    registry = Registry.init(registry.allocator);
-}
-
-pub fn deinit() void {
-    registry.deinit();
 }
