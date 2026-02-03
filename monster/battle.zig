@@ -31,62 +31,37 @@ pub fn cleanInvalidTarget(reg: *ecs.Registry) void {
 /// 给无目标的实体选择一个攻击目标。
 ///
 pub fn selectTarget(reg: *ecs.Registry) void {
-    selectTargetForPlayer(reg);
-    selectTargetForEnemy(reg);
+    selectAttackTarget(reg);
 }
 
-fn selectTargetForPlayer(reg: *ecs.Registry) void {
-    var view = reg.view(.{ com.Player, com.Position, com.AttackRange });
-    while (view.next()) |player| {
-        if (view.has(player, com.Target)) continue; // 已经有目标了
+fn selectAttackTarget(reg: *ecs.Registry) void {
+    var view = reg.view(.{ com.Position, com.AttackRange });
+    while (view.next()) |entity| {
+        if (view.has(entity, com.Target)) continue; // 已经有目标了
 
-        const pos = view.get(player, com.Position);
-        const range = view.get(player, com.AttackRange).v + 20; // 目标的中心
+        const pos = view.get(entity, com.Position);
+        const range = view.get(entity, com.AttackRange).v + 20; // 目标的中心
         const range2 = range * range;
 
-        var enemyView = reg.view(.{ com.Enemy, com.Position });
-        var closestEnemy: ?zhu.ecs.Entity.Index = null;
+        var closestTarget: ?zhu.ecs.Entity.Index = null; // 找最近的敌方
         var closestLength2: f32 = std.math.floatMax(f32);
 
-        while (enemyView.next()) |enemy| {
-            const enemyPos = enemyView.get(enemy, com.Position);
-            const length2 = pos.sub(enemyPos).length2();
+        const isEnemy = view.has(entity, com.Enemy);
+        var targetView = reg.view(.{com.Position});
+        while (targetView.next()) |target| {
+            if (isEnemy == view.has(target, com.Enemy)) continue; // 同一边的
+
+            const targetPos = targetView.get(target, com.Position);
+            const length2 = pos.sub(targetPos).length2();
             if (length2 <= range2 and length2 < closestLength2) {
-                closestEnemy = enemy;
+                closestTarget = target;
                 closestLength2 = length2;
             }
         }
-        if (closestEnemy) |enemy| {
-            view.add(player, com.Target{ .v = view.toEntity(enemy) });
-            std.log.debug("player: {} select enemy: {}", .{ player, enemy });
-        }
-    }
-}
 
-fn selectTargetForEnemy(reg: *ecs.Registry) void {
-    var view = reg.view(.{ com.Enemy, com.Position, com.AttackRange });
-    while (view.next()) |enemy| {
-        if (view.has(enemy, com.Target)) continue; // 已经有目标了
-
-        const pos = view.get(enemy, com.Position);
-        const range = view.get(enemy, com.AttackRange).v + 20; // 目标的中心
-        const range2 = range * range;
-
-        var playerView = reg.view(.{ com.Player, com.Position });
-        var closestPlayer: ?zhu.ecs.Entity.Index = null;
-        var closestLength2: f32 = std.math.floatMax(f32);
-
-        while (playerView.next()) |player| {
-            const playerPos = playerView.get(player, com.Position);
-            const length2 = pos.sub(playerPos).length2();
-            if (length2 <= range2 and length2 < closestLength2) {
-                closestPlayer = player;
-                closestLength2 = length2;
-            }
-        }
-        if (closestPlayer) |player| {
-            view.add(enemy, com.Target{ .v = view.toEntity(player) });
-            std.log.debug("enemy: {} select player: {}", .{ enemy, player });
+        if (closestTarget) |target| {
+            view.add(entity, com.Target{ .v = view.toEntity(target) });
+            std.log.debug("entity: {} select target: {}", .{ entity, target });
         }
     }
 }
