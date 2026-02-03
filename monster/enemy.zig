@@ -76,3 +76,29 @@ pub fn followPath(registry: *ecs.Registry) void {
         view.add(entity, face);
     }
 }
+
+pub fn move(registry: *ecs.Registry, delta: f32) void {
+    var view = registry.view(.{ com.Position, com.Velocity });
+    while (view.next()) |entity| {
+        // 先移动
+        const position = view.getPtr(entity, com.Position);
+        const velocity = view.get(entity, com.Velocity);
+        position.* = position.*.add(velocity.v.scale(delta));
+
+        // 再检查是否被阻挡
+        var blockView = registry.view(.{ com.Position, com.Blocker });
+        while (blockView.next()) |blocker| {
+            const pos = blockView.get(blocker, com.Position);
+            if (pos.sub(position.*).length2() > 40 * 40) continue;
+
+            const block = blockView.getPtr(blocker, com.Blocker);
+            if (block.current < block.max) {
+                view.remove(entity, com.Velocity);
+                const ent = blockView.toEntity(blocker);
+                view.add(entity, com.BlockBy{ .entity = ent });
+                block.current += 1;
+                break;
+            }
+        }
+    }
+}

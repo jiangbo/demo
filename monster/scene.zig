@@ -35,7 +35,7 @@ pub fn update(delta: f32) void {
 
     updateAnimation(delta);
     map.update(delta);
-    updateMove(delta);
+    enemy.move(&registry, delta);
     enemy.followPath(&registry);
 
     // 处理到达终点的敌人
@@ -52,31 +52,6 @@ fn updateAnimation(delta: f32) void {
         if (animation.isNextLoopUpdate(delta)) {
             const sprite = view.getPtr(entity, com.Sprite);
             sprite.image = animation.subImage(sprite.image.size);
-        }
-    }
-}
-
-fn updateMove(delta: f32) void {
-    var view = registry.view(.{ com.Position, com.Velocity });
-    while (view.next()) |entity| {
-        const position = view.getPtr(entity, com.Position);
-        const velocity = view.get(entity, com.Velocity);
-        position.* = position.*.add(velocity.v.scale(delta));
-
-        // 检查是否被阻挡
-        var blockView = registry.view(.{ com.Position, com.Blocker });
-        while (blockView.next()) |blocker| {
-            const pos = blockView.get(blocker, com.Position);
-            if (pos.sub(position.*).length2() > 40 * 40) continue;
-
-            const block = blockView.getPtr(blocker, com.Blocker);
-            if (block.current < block.max) {
-                view.remove(entity, com.Velocity);
-                const ent = blockView.toEntity(blocker);
-                view.add(entity, com.BlockBy{ .entity = ent });
-                block.current += 1;
-                break;
-            }
         }
     }
 }
