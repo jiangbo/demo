@@ -29,21 +29,27 @@ const zon: std.EnumArray(Enum, Player) = @import("zon/player.zon");
 
 pub fn spawn(registry: *ecs.Registry, playerEnum: Enum) void {
     const value = zon.get(playerEnum);
-    const playerEntity = registry.createEntity();
-    registry.add(playerEntity, zhu.window.mousePosition);
+    const player = registry.createEntity();
+    registry.add(player, zhu.window.mousePosition);
+    registry.add(player, com.Player{});
 
     const path = value.image.path;
     const image = zhu.assets.loadImage(path, value.image.size);
-    registry.add(playerEntity, com.Sprite{
+    registry.add(player, com.Sprite{
         .image = image.sub(.init(.zero, value.size)),
         .offset = value.offset,
         .flip = value.faceRight,
     });
 
     if (value.block != 0) {
-        registry.add(playerEntity, com.Blocker{ .max = value.block });
+        registry.add(player, com.Blocker{ .max = value.block });
     }
 
     const animation: Animation = .init(image, value.animations[0]);
-    registry.add(playerEntity, animation);
+    registry.add(player, animation);
+
+    // 添加攻击范围组件
+    if (value.playerEnum != .witch) {
+        registry.add(player, com.AttackRange{ .v = value.range });
+    }
 }

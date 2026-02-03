@@ -3,8 +3,8 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 pub const Entity = struct {
-    const Index = u16;
-    const Version = u16;
+    pub const Index = u16;
+    pub const Version = u16;
     const invalid = std.math.maxInt(Index);
 
     index: Index,
@@ -480,7 +480,7 @@ pub fn View(includes: anytype, option: ViewOption) type {
                     if (entities.len < slice.len) slice = entities;
                 }
             }
-            const i = if (option.reverse) slice.len - 1 else 0;
+            const i = if (option.reverse) slice.len -| 1 else 0;
             return .{ .registry = r, .slice = slice, .index = @intCast(i) };
         }
 

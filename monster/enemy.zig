@@ -24,6 +24,8 @@ const Enemy = struct {
     animations: []const []const zhu.graphics.Frame = &.{},
 };
 
+pub const stateEnum = enum { idle, walk, damage, attack };
+
 const zon: []const Enemy = @import("zon/enemy.zon");
 
 pub fn spawn(registry: *ecs.Registry) void {
@@ -48,8 +50,11 @@ pub fn spawn(registry: *ecs.Registry) void {
                 .flip = value.faceRight,
             });
 
-            const ani: Animation = .init(image, value.animations[0]);
-            registry.add(enemy, ani);
+            const frames = value.animations[@intFromEnum(stateEnum.walk)];
+            registry.add(enemy, Animation.init(image, frames));
+
+            // 添加攻击范围组件
+            registry.add(enemy, com.AttackRange{ .v = value.range });
         }
     }
 }
@@ -95,10 +100,28 @@ pub fn move(registry: *ecs.Registry, delta: f32) void {
             if (block.current < block.max) {
                 view.remove(entity, com.Velocity);
                 const ent = blockView.toEntity(blocker);
-                view.add(entity, com.BlockBy{ .entity = ent });
+                view.add(entity, com.BlockBy{ .v = ent });
                 block.current += 1;
                 break;
             }
+        }
+    }
+}
+
+pub fn attack(registry: *ecs.Registry, delta: f32) void {
+    var view = registry.view(.{ com.Position, com.Enemy, com.AttackTimer });
+    while (view.next()) |entity| {
+        const enemy = view.getPtr(entity, com.Enemy);
+        const pos = view.get(entity, com.Position);
+        enemy.target.point; // 目标位置
+
+        var attackTimer = view.getPtr(entity, com.AttackTimer);
+        attackTimer.time += delta;
+        if (attackTimer.time < enemy.interval) continue;
+
+        if (pos.sub(enemy.target.point).length2() <= enemy.range * enemy.range) {
+            // 发起攻击
+            attackTimer.time = 0;
         }
     }
 }

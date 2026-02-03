@@ -7,7 +7,7 @@ const gui = @import("gui.zig");
 const scene = @import("scene.zig");
 
 var vertexBuffer: []zhu.batch.Vertex = undefined;
-var commandBuffer: [16]zhu.batch.Command = undefined;
+var commandBuffer: [32]zhu.batch.Command = undefined;
 var soundBuffer: [20]zhu.audio.Sound = undefined;
 const tileSets: []const tiled.TileSet = @import("zon/tile.zon");
 const atlas: zhu.Atlas = @import("zon/atlas.zon");

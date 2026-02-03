@@ -7,6 +7,7 @@ const map = @import("map.zig");
 const com = @import("component.zig");
 const enemy = @import("enemy.zig");
 const player = @import("player.zig");
+const battle = @import("battle.zig");
 
 var registry: ecs.Registry = undefined;
 // var timer: zhu.Timer = .init(10);
@@ -15,8 +16,6 @@ pub fn init() void {
     registry = .init(zhu.assets.allocator);
     map.init();
     enemy.spawn(&registry);
-
-    player.spawn(&registry, .warrior);
 }
 
 pub fn deinit() void {
@@ -33,8 +32,14 @@ pub fn update(delta: f32) void {
         player.spawn(&registry, .archer);
     }
 
+    // 更新动画事件，切换显示的图片
     updateAnimation(delta);
+    // 地图更新，地图上的动画等。
     map.update(delta);
+
+    battle.cleanInvalidTarget(&registry);
+    battle.selectTarget(&registry);
+
     enemy.move(&registry, delta);
     enemy.followPath(&registry);
 
