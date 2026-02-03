@@ -5,6 +5,7 @@ const ecs = zhu.ecs;
 
 const com = @import("component.zig");
 
+const Animation = zhu.graphics.Animation;
 pub const Enum = enum { warrior, archer, lancer, witch };
 const Player = struct {
     playerEnum: Enum,
@@ -17,10 +18,11 @@ const Player = struct {
     interval: f32,
     block: u8,
     cost: u8,
-    image: struct { path: [:0]const u8, size: zhu.Vector2 },
     faceRight: bool,
     size: zhu.Vector2,
     offset: zhu.Vector2,
+    image: struct { path: [:0]const u8, size: zhu.Vector2 },
+    animations: []const []const zhu.graphics.Frame = &.{},
 };
 
 const zon: std.EnumArray(Enum, Player) = @import("zon/player.zon");
@@ -37,4 +39,7 @@ pub fn spawn(registry: *ecs.Registry, playerEnum: Enum) void {
         .offset = value.offset,
         .flip = value.faceRight,
     });
+
+    const animation: Animation = .init(image, value.animations[0]);
+    registry.add(playerEntity, animation);
 }

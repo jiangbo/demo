@@ -10,6 +10,7 @@ const level: tiled.Map = @import("zon/level1.zon");
 const data = level;
 const Animation = struct {
     position: zhu.Vector2,
+    size: zhu.Vector2,
     value: zhu.graphics.Animation,
     extend: tiled.ObjectExtend = .{},
 };
@@ -90,6 +91,7 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
             image = zhu.assets.getImage(tileSet.image);
             animations.append(zhu.assets.allocator, .{
                 .position = pos,
+                .size = data.tileSize,
                 .value = .init(image, tile.?.animation),
             }) catch @panic("oom, can't append animation");
             continue;
@@ -143,6 +145,7 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
             const image = zhu.assets.getImage(tileSet.image);
             animations.append(zhu.assets.allocator, .{
                 .position = pos,
+                .size = object.size,
                 .value = .init(image, tile.?.animation),
                 .extend = object.extend,
             }) catch @panic("oom, can't append animation");
@@ -159,7 +162,7 @@ pub fn draw() void {
     batch.vertexBuffer.appendSliceAssumeCapacity(tileVertexes.items);
 
     for (animations.items) |item| {
-        batch.drawImage(item.value.currentImage(), item.position, .{
+        batch.drawImage(item.value.currentImage(item.size), item.position, .{
             .flipX = item.extend.flipX,
         });
     }

@@ -15,8 +15,7 @@ const TileSet = struct {
 
 const zero = Vector2{ .x = 0, .y = 0 };
 const one = Vector2{ .x = 1, .y = 1 };
-pub const Rect = struct { min: Vector2 = zero, size: Vector2 = one };
-pub const Frame = struct { rect: Rect, duration: f32 = 0.1 };
+pub const Frame = struct { offset: Vector2, duration: f32 = 0.1 };
 const Tile = struct {
     id: u32,
     objectGroup: ?ObjectGroup = null,
@@ -191,23 +190,17 @@ fn parseAnimation(frames: []tiled.Frame) ![]Frame {
 
     for (frames, 0..) |frame, i| {
         result[i] = .{
-            .rect = parseRectFromId(frame.tileid),
+            .offset = parseRectFromId(frame.tileid),
             .duration = @as(f32, @floatFromInt(frame.duration)) / 1000.0,
         };
     }
     return result;
 }
 
-fn parseRectFromId(id: u32) Rect {
+fn parseRectFromId(id: u32) Vector2 {
     return .{
-        .min = .{
-            .x = @floatFromInt((id % source.columns) * source.tilewidth),
-            .y = @floatFromInt((id / source.columns) * source.tileheight),
-        },
-        .size = .{
-            .x = @floatFromInt(source.tilewidth),
-            .y = @floatFromInt(source.tileheight),
-        },
+        .x = @floatFromInt((id % source.columns) * source.tilewidth),
+        .y = @floatFromInt((id / source.columns) * source.tileheight),
     };
 }
 

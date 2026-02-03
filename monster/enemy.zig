@@ -5,6 +5,7 @@ const ecs = zhu.ecs;
 
 const com = @import("component.zig");
 const map = @import("map.zig");
+const Animation = zhu.graphics.Animation;
 
 const Enemy = struct {
     enemyEnum: enum { slime, wolf, goblin, darkWitch },
@@ -16,10 +17,11 @@ const Enemy = struct {
     interval: f32,
     speed: f32,
     ranged: bool,
-    image: struct { path: [:0]const u8, size: zhu.Vector2 },
     faceRight: bool,
     size: zhu.Vector2,
     offset: zhu.Vector2,
+    image: struct { path: [:0]const u8, size: zhu.Vector2 },
+    animations: []const []const zhu.graphics.Frame = &.{},
 };
 
 const zon: []const Enemy = @import("zon/enemy.zon");
@@ -45,6 +47,9 @@ pub fn spawn(registry: *ecs.Registry) void {
                 .offset = value.offset,
                 .flip = value.faceRight,
             });
+
+            const ani: Animation = .init(image, value.animations[0]);
+            registry.add(enemy, ani);
         }
     }
 }

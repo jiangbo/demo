@@ -13,7 +13,7 @@ pub const Vector2 = math.Vector2;
 
 pub const ImageId = assets.Id;
 
-pub const Frame = struct { rect: math.Rect, duration: f32 = 0.1 };
+pub const Frame = struct { offset: Vector2, duration: f32 = 0.1 };
 pub fn EnumAnimation(comptime T: type) type {
     return std.EnumArray(T, Animation);
 }
@@ -29,12 +29,13 @@ pub const Animation = struct {
     }
 
     pub fn initFinished(image: Image, frames: []const Frame) Animation {
-        const index: u8 = @intCast(frames.len + 1);
-        return .{ .image = image, .frames = frames, .index = index };
+        const idx: u8 = @intCast(frames.len + 1);
+        return .{ .image = image, .frames = frames, .index = idx };
     }
 
-    pub fn currentImage(self: *const Animation) Image {
-        return self.image.sub(self.frames[self.index].rect);
+    pub fn currentImage(self: *const Animation, size: Vector2) Image {
+        const offset = self.frames[self.index].offset;
+        return self.image.sub(.init(offset, size));
     }
 
     pub fn onceUpdate(self: *Animation, delta: f32) void {
@@ -60,13 +61,18 @@ pub const Animation = struct {
     }
 
     pub fn loopUpdate(self: *Animation, delta: f32) void {
+        _ = self.isNextLoopUpdate(delta);
+    }
+
+    pub fn isNextLoopUpdate(self: *Animation, delta: f32) bool {
         self.elapsed += delta;
         const current = self.frames[self.index]; // 当前帧
-        if (self.elapsed < current.duration) return;
+        if (self.elapsed < current.duration) return false;
         self.elapsed -= current.duration;
         self.index += 1;
         // 结束了从头开始
         if (self.index >= self.frames.len) self.index = 0;
+        return true;
     }
 
     pub fn getEnumState(self: *const Animation, T: type) T {

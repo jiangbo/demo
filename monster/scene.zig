@@ -33,22 +33,34 @@ pub fn update(delta: f32) void {
         player.spawn(&registry, .archer);
     }
 
+    var view = registry.view(.{zhu.graphics.Animation});
+    while (view.next()) |entity| {
+        const ani = view.getPtr(entity, zhu.graphics.Animation);
+        if (ani.isNextLoopUpdate(delta)) {
+            const sprite = view.getPtr(entity, com.Sprite);
+            sprite.image = ani.currentImage(sprite.image.rect.size);
+        }
+    }
+
     map.update(delta);
 
+    move(delta);
     enemy.followPath(&registry);
-
-    var view = registry.view(.{ com.Position, com.Velocity });
-    while (view.next()) |entity| {
-        const position = view.getPtr(entity, com.Position);
-        const velocity = view.get(entity, com.Velocity);
-        position.* = position.*.add(velocity.v.scale(delta));
-    }
 
     // 处理到达终点的敌人
     for (registry.getEvents(ecs.Entity)) |entity| {
         registry.destroyEntity(entity);
     }
     registry.clearEvent(ecs.Entity);
+}
+
+fn move(delta: f32) void {
+    var view = registry.view(.{ com.Position, com.Velocity });
+    while (view.next()) |entity| {
+        const position = view.getPtr(entity, com.Position);
+        const velocity = view.get(entity, com.Velocity);
+        position.* = position.*.add(velocity.v.scale(delta));
+    }
 }
 
 pub fn draw() void {
@@ -66,8 +78,8 @@ pub fn draw() void {
         const position = view.get(entity, com.Position);
         const pos = position.add(sprite.offset);
 
-        const velocity = view.tryGet(entity, com.Velocity);
         var flip = sprite.flip;
+        const velocity = view.tryGet(entity, com.Velocity);
         if (velocity) |vel| flip = (vel.v.x < 0) != flip;
         zhu.batch.drawImage(sprite.image, pos, .{ .flipX = !flip });
     }
@@ -86,5 +98,5 @@ pub fn draw() void {
         }
     }
 
-    std.log.info("command len: {}", .{zhu.batch.imageDrawCount()});
+    // std.log.info("command len: {}", .{zhu.batch.imageDrawCount()});
 }
