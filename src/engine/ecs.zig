@@ -533,8 +533,8 @@ pub fn View(includes: anytype, excludes: anytype, opt: ViewOption) type {
             map.add(self.reg.allocator, entity, value) catch oom();
         }
 
-        pub fn toEntity(self: *const @This(), index: Index) ?Entity {
-            return self.reg.entities.toEntity(index);
+        pub fn toEntity(self: *const @This(), index: Index) Entity {
+            return self.reg.entities.toEntity(index).?;
         }
 
         pub fn remove(self: *@This(), entity: Index, T: type) void {

@@ -4,6 +4,8 @@ const zhu = @import("zhu");
 const batch = zhu.batch;
 const tiled = zhu.extend.tiled;
 
+const com = @import("component.zig");
+
 const level: tiled.Map = @import("zon/level1.zon");
 const data = level;
 const Animation = struct {
@@ -14,17 +16,7 @@ const Animation = struct {
 var animations: std.ArrayList(Animation) = .empty;
 var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
 
-const Path = struct {
-    point: zhu.Vector2, // 路径点位置
-    next: u8 = 0, // 终点没有下一个路径点
-    next2: u8 = 0, // 可选的第二条分支路径
-
-    pub fn randomNext(self: Path) u8 {
-        if (self.next2 == 0) return self.next;
-        return if (zhu.randomBool()) self.next else self.next2;
-    }
-};
-pub var paths: std.AutoHashMapUnmanaged(u8, Path) = .empty;
+pub var paths: std.AutoHashMapUnmanaged(u8, com.Path) = .empty;
 pub var startPaths: [10]u8 = undefined; // 最多 10 条起始路径
 
 pub fn init() void {
@@ -58,7 +50,7 @@ pub fn deinit() void {
 
 fn parsePathLayer(layer: *const tiled.Layer) void {
     for (layer.objects) |object| {
-        var path: Path = .{ .point = object.position };
+        var path: com.Path = .{ .point = object.position };
         for (object.properties) |prop| {
             if (prop.is("next")) {
                 path.next = @intCast(prop.value.object);

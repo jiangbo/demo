@@ -9,3 +9,16 @@ pub const Sprite = struct {
 };
 pub const Position = zhu.Vector2;
 pub const Velocity = struct { v: zhu.Vector2 };
+
+pub const Path = struct {
+    point: zhu.Vector2, // 路径点位置
+    next: u8 = 0, // 终点没有下一个路径点
+    next2: u8 = 0, // 可选的第二条分支路径
+
+    pub fn randomNext(self: Path) u8 {
+        if (self.next2 == 0) return self.next;
+        return if (zhu.randomBool()) self.next else self.next2;
+    }
+};
+
+pub const Enemy = struct { target: Path, speed: f32 };
