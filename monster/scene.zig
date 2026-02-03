@@ -5,34 +5,15 @@ const ecs = zhu.ecs;
 
 const map = @import("map.zig");
 const com = @import("component.zig");
+const enemy = @import("enemy.zig");
 
 var registry: ecs.Registry = undefined;
-var timer: zhu.Timer = .init(2);
+// var timer: zhu.Timer = .init(10);
 
 pub fn init() void {
     registry = .init(zhu.assets.allocator);
     map.init();
-}
-
-fn spawnEnemy() void {
-    var image = zhu.assets.loadImage("assets/textures/Enemy/wolf.png", .xy(5760, 768));
-    image = image.sub(.init(.zero, .xy(192, 192)));
-
-    for (map.startPaths) |startId| {
-        if (startId == 0) break;
-
-        const start = map.paths.get(startId).?;
-        const enemy = registry.createEntity();
-        registry.add(enemy, start.point);
-        registry.add(enemy, com.Velocity{ .v = .zero });
-        registry.add(enemy, com.Enemy{ .target = start, .speed = 40 });
-
-        registry.add(enemy, com.Sprite{
-            .image = image,
-            .offset = .xy(-96, -128),
-            .flip = false,
-        });
-    }
+    enemy.spawn(&registry);
 }
 
 pub fn deinit() void {
@@ -41,11 +22,11 @@ pub fn deinit() void {
 }
 
 pub fn update(delta: f32) void {
-    if (timer.isFinishedLoopUpdate(delta)) spawnEnemy();
+    // if (timer.isFinishedLoopUpdate(delta)) enemy.spawn(&registry);
 
     map.update(delta);
 
-    followPath();
+    enemy.followPath(&registry);
 
     var view = registry.view(.{ com.Position, com.Velocity });
     while (view.next()) |entity| {
@@ -61,29 +42,14 @@ pub fn update(delta: f32) void {
     registry.clearEvent(ecs.Entity);
 }
 
-pub fn followPath() void {
-    var view = registry.view(.{ com.Position, com.Enemy });
-    while (view.next()) |entity| {
-        // 当前位置和目标位置是否足够靠近
-        const enemy = view.getPtr(entity, com.Enemy);
-        const pos = view.get(entity, com.Position);
-        if (enemy.target.point.sub(pos).length2() > 25) continue;
-
-        // 到达目标位置，转向，即更新速度
-        const nextPathId = enemy.target.randomNext();
-        if (nextPathId == 0) { // 到达终点，销毁实体
-            registry.addEvent(view.toEntity(entity));
-            continue;
-        }
-        enemy.target = map.paths.get(nextPathId).?;
-        const velocity = view.getPtr(entity, com.Velocity);
-        const direction = enemy.target.point.sub(pos).normalize();
-        velocity.v = direction.scale(enemy.speed);
-    }
-}
-
 pub fn draw() void {
     map.draw();
+
+    // registry.sort(com.Sprite, struct {
+    //     pub fn lessThan(a: com.Sprite, b: com.Sprite) bool {
+    //         return a.image.texture.id < b.image.texture.id;
+    //     }
+    // }.lessThan);
 
     var view = registry.view(.{ com.Sprite, com.Position, com.Velocity });
     while (view.next()) |entity| {
@@ -99,14 +65,16 @@ pub fn draw() void {
     for (map.startPaths) |start| {
         if (start == 0) break;
 
-        var prev = map.paths.get(start).?;
-        while (prev.next != 0) {
-            const next = map.paths.get(prev.next).?;
-            zhu.batch.drawLine(prev.point, next.point, .{
+        var previous = map.paths.get(start).?;
+        while (previous.next != 0) {
+            const next = map.paths.get(previous.next).?;
+            zhu.batch.drawLine(previous.point, next.point, .{
                 .color = .red,
                 .width = 4,
             });
-            prev = next;
+            previous = next;
         }
     }
+
+    std.log.info("command len: {}", .{zhu.batch.imageDrawCount()});
 }
