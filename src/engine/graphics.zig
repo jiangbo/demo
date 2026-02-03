@@ -33,7 +33,7 @@ pub const Animation = struct {
         return .{ .image = image, .frames = frames, .index = idx };
     }
 
-    pub fn currentImage(self: *const Animation, size: Vector2) Image {
+    pub fn subImage(self: *const Animation, size: Vector2) Image {
         const offset = self.frames[self.index].offset;
         return self.image.sub(.init(offset, size));
     }
@@ -125,27 +125,26 @@ pub fn loopFramesX(comptime count: u8, size: Vector2, d: f32) //
 
 pub const Image = struct {
     texture: gpu.Texture,
-    rect: math.Rect,
+    offset: math.Vector2 = .zero,
+    size: math.Vector2,
 
     pub fn width(self: *const Image) f32 {
-        return self.rect.size.x;
+        return self.size.x;
     }
 
     pub fn height(self: *const Image) f32 {
-        return self.rect.size.y;
-    }
-
-    pub fn size(self: *const Image) math.Vector2 {
-        return self.rect.size;
+        return self.size.y;
     }
 
     pub fn sub(self: *const Image, rect: math.Rect) Image {
-        const moved = rect.move(self.rect.min);
-        return .{ .texture = self.texture, .rect = moved };
+        var copy = self.*;
+        copy.offset = self.offset.add(rect.min);
+        copy.size = rect.size;
+        return copy;
     }
 
     pub fn toTexturePosition(self: Image) math.Vector4 {
-        const rect = self.rect;
+        const rect = math.Rect{ .min = self.offset, .size = self.size };
         return .init(rect.min.x, rect.min.y, rect.size.x, rect.size.y);
     }
 };

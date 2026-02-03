@@ -38,7 +38,7 @@ pub fn update(delta: f32) void {
         const ani = view.getPtr(entity, zhu.graphics.Animation);
         if (ani.isNextLoopUpdate(delta)) {
             const sprite = view.getPtr(entity, com.Sprite);
-            sprite.image = ani.currentImage(sprite.image.rect.size);
+            sprite.image = ani.subImage(sprite.image.size);
         }
     }
 

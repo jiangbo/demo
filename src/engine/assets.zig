@@ -44,10 +44,8 @@ pub fn oom() noreturn {
 pub fn loadImage(path: Path, size: graphics.Vector2) Image {
     const entry = imageCache.getOrPut(allocator, id(path)) catch oom();
     if (!entry.found_existing) {
-        entry.value_ptr.* = .{
-            .texture = Texture.load(path),
-            .rect = .init(.zero, size),
-        };
+        const texture = Texture.load(path);
+        entry.value_ptr.* = .{ .texture = texture, .size = size };
     }
     return entry.value_ptr.*;
 }
@@ -71,7 +69,8 @@ pub fn loadAtlas(atlas: graphics.Atlas) void {
     var image = loadImage(atlas.imagePath, atlas.size);
 
     for (atlas.images) |atlasImage| {
-        image.rect = atlasImage.rect;
+        image.offset = atlasImage.rect.min;
+        image.size = atlasImage.rect.size;
         imageCache.putAssumeCapacity(atlasImage.id, image);
     }
 }
