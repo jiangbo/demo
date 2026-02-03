@@ -40,6 +40,10 @@ pub fn spawn(registry: *ecs.Registry, playerEnum: Enum) void {
         .flip = value.faceRight,
     });
 
+    if (value.block != 0) {
+        registry.add(playerEntity, com.Blocker{ .max = value.block });
+    }
+
     const animation: Animation = .init(image, value.animations[0]);
     registry.add(playerEntity, animation);
 }

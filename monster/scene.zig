@@ -33,18 +33,9 @@ pub fn update(delta: f32) void {
         player.spawn(&registry, .archer);
     }
 
-    var view = registry.view(.{zhu.graphics.Animation});
-    while (view.next()) |entity| {
-        const ani = view.getPtr(entity, zhu.graphics.Animation);
-        if (ani.isNextLoopUpdate(delta)) {
-            const sprite = view.getPtr(entity, com.Sprite);
-            sprite.image = ani.subImage(sprite.image.size);
-        }
-    }
-
+    updateAnimation(delta);
     map.update(delta);
-
-    move(delta);
+    updateMove(delta);
     enemy.followPath(&registry);
 
     // 处理到达终点的敌人
@@ -54,12 +45,39 @@ pub fn update(delta: f32) void {
     registry.clearEvent(ecs.Entity);
 }
 
-fn move(delta: f32) void {
+fn updateAnimation(delta: f32) void {
+    var view = registry.view(.{zhu.graphics.Animation});
+    while (view.next()) |entity| {
+        const animation = view.getPtr(entity, zhu.graphics.Animation);
+        if (animation.isNextLoopUpdate(delta)) {
+            const sprite = view.getPtr(entity, com.Sprite);
+            sprite.image = animation.subImage(sprite.image.size);
+        }
+    }
+}
+
+fn updateMove(delta: f32) void {
     var view = registry.view(.{ com.Position, com.Velocity });
     while (view.next()) |entity| {
         const position = view.getPtr(entity, com.Position);
         const velocity = view.get(entity, com.Velocity);
         position.* = position.*.add(velocity.v.scale(delta));
+
+        // 检查是否被阻挡
+        var blockView = registry.view(.{ com.Position, com.Blocker });
+        while (blockView.next()) |blocker| {
+            const pos = blockView.get(blocker, com.Position);
+            if (pos.sub(position.*).length2() > 40 * 40) continue;
+
+            const block = blockView.getPtr(blocker, com.Blocker);
+            if (block.current < block.max) {
+                view.remove(entity, com.Velocity);
+                const ent = blockView.toEntity(blocker);
+                view.add(entity, com.BlockBy{ .entity = ent });
+                block.current += 1;
+                break;
+            }
+        }
     }
 }
 
@@ -79,8 +97,8 @@ pub fn draw() void {
         const pos = position.add(sprite.offset);
 
         var flip = sprite.flip;
-        const velocity = view.tryGet(entity, com.Velocity);
-        if (velocity) |vel| flip = (vel.v.x < 0) != flip;
+        const face = view.tryGet(entity, com.Face);
+        if (face) |f| flip = (f == .Left) != flip;
         zhu.batch.drawImage(sprite.image, pos, .{ .flipX = !flip });
     }
 

@@ -22,3 +22,6 @@ pub const Path = struct {
 };
 
 pub const Enemy = struct { target: Path, speed: f32 };
+pub const Face = enum { Left, Right };
+pub const Blocker = struct { max: u8, current: u8 = 0 };
+pub const BlockBy = struct { entity: zhu.ecs.Entity };

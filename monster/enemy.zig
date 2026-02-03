@@ -55,7 +55,7 @@ pub fn spawn(registry: *ecs.Registry) void {
 }
 
 pub fn followPath(registry: *ecs.Registry) void {
-    var view = registry.view(.{ com.Position, com.Enemy });
+    var view = registry.view(.{ com.Position, com.Enemy, com.Velocity });
     while (view.next()) |entity| {
         // 当前位置和目标位置是否足够靠近
         const enemy = view.getPtr(entity, com.Enemy);
@@ -72,5 +72,7 @@ pub fn followPath(registry: *ecs.Registry) void {
         const velocity = view.getPtr(entity, com.Velocity);
         const direction = enemy.target.point.sub(pos).normalize();
         velocity.v = direction.scale(enemy.speed);
+        const face: com.Face = if (direction.x < 0) .Left else .Right;
+        view.add(entity, face);
     }
 }
