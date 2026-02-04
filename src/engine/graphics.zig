@@ -75,8 +75,8 @@ pub const Animation = struct {
         return true;
     }
 
-    pub fn getEnumState(self: *const Animation, T: type) T {
-        return @enumFromInt(self.state);
+    pub fn getEnumExtend(self: *const Animation, T: type) T {
+        return @enumFromInt(self.extend);
     }
 
     pub fn stop(self: *Animation) void {
@@ -128,24 +128,16 @@ pub const Image = struct {
     offset: math.Vector2 = .zero,
     size: math.Vector2,
 
-    pub fn width(self: *const Image) f32 {
-        return self.size.x;
-    }
-
-    pub fn height(self: *const Image) f32 {
-        return self.size.y;
-    }
-
     pub fn sub(self: *const Image, rect: math.Rect) Image {
-        var copy = self.*;
-        copy.offset = self.offset.add(rect.min);
-        copy.size = rect.size;
-        return copy;
+        return Image{
+            .texture = self.texture,
+            .offset = self.offset.add(rect.min),
+            .size = rect.size,
+        };
     }
 
     pub fn toTexturePosition(self: Image) math.Vector4 {
-        const rect = math.Rect{ .min = self.offset, .size = self.size };
-        return .init(rect.min.x, rect.min.y, rect.size.x, rect.size.y);
+        return .initSize(self.offset, self.size);
     }
 };
 

@@ -244,6 +244,10 @@ pub const Vector4 = extern struct {
     pub fn init(x: f32, y: f32, z: f32, w: f32) Vector4 {
         return .{ .x = x, .y = y, .z = z, .w = w };
     }
+
+    pub fn initSize(pos: Vector2, size: Vector2) Vector4 {
+        return .{ .x = pos.x, .y = pos.y, .z = size.x, .w = size.y };
+    }
 };
 
 pub const Vector3 = extern struct {
