@@ -1,6 +1,8 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
+const Entity = zhu.ecs.Entity;
+
 pub const Image = zhu.graphics.Image;
 pub const Sprite = struct {
     image: Image,
@@ -25,6 +27,11 @@ pub const Enemy = struct { target: Path, speed: f32 };
 pub const Player = struct {}; // 占位符
 pub const Face = enum { Left, Right };
 pub const Blocker = struct { max: u8, current: u8 = 0 };
-pub const BlockBy = struct { v: zhu.ecs.Entity };
-pub const Target = struct { v: zhu.ecs.Entity };
+pub const BlockBy = struct { v: Entity };
+
+pub const StateEnum = enum { idle, walk, damage, attack, ranged };
+
+pub const Target = struct { v: Entity };
 pub const AttackRange = struct { v: f32 };
+pub const AttackTimer = struct { v: zhu.Timer }; // 攻击计时器
+pub const AttackEvent = struct { attacker: Entity, target: Entity };

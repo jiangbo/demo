@@ -5,7 +5,7 @@ const ecs = zhu.ecs;
 
 const com = @import("component.zig");
 const map = @import("map.zig");
-const Animation = zhu.graphics.Animation;
+const Animation = zhu.graphics.MultiAnimation;
 
 const Enemy = struct {
     enemyEnum: enum { slime, wolf, goblin, darkWitch },
@@ -23,8 +23,6 @@ const Enemy = struct {
     image: struct { path: [:0]const u8, size: zhu.Vector2 },
     animations: []const []const zhu.graphics.Frame = &.{},
 };
-
-pub const stateEnum = enum { idle, walk, damage, attack };
 
 const zon: []const Enemy = @import("zon/enemy.zon");
 
@@ -50,8 +48,9 @@ pub fn spawn(registry: *ecs.Registry) void {
                 .flip = value.faceRight,
             });
 
-            const frames = value.animations[@intFromEnum(stateEnum.walk)];
-            registry.add(enemy, Animation.init(image, frames));
+            var animation: Animation = .init(image, value.animations);
+            animation.change(@intFromEnum(com.StateEnum.walk));
+            registry.add(enemy, animation);
 
             // 添加攻击范围组件
             registry.add(enemy, com.AttackRange{ .v = value.range });

@@ -14,21 +14,34 @@ pub const Vector2 = math.Vector2;
 pub const ImageId = assets.Id;
 
 pub const Frame = struct { offset: Vector2, duration: f32 = 0.1 };
+pub const Frames = []const Frame;
 pub fn EnumAnimation(comptime T: type) type {
     return std.EnumArray(T, Animation);
 }
+pub const MultiAnimation = struct {
+    frames: []const Frames,
+    v: Animation,
+
+    pub fn init(image: Image, frames: []const Frames) MultiAnimation {
+        return .{ .frames = frames, .v = .init(image, frames[0]) };
+    }
+
+    pub fn change(self: *MultiAnimation, index: u8) void {
+        self.v = .init(self.v.image, self.frames[index]);
+    }
+};
 pub const Animation = struct {
     elapsed: f32 = 0,
     index: u8 = 0,
     image: Image,
-    frames: []const Frame,
+    frames: Frames,
     extend: u8 = 0,
 
-    pub fn init(image: Image, frames: []const Frame) Animation {
+    pub fn init(image: Image, frames: Frames) Animation {
         return .{ .image = image, .frames = frames };
     }
 
-    pub fn initFinished(image: Image, frames: []const Frame) Animation {
+    pub fn initFinished(image: Image, frames: Frames) Animation {
         const idx: u8 = @intCast(frames.len + 1);
         return .{ .image = image, .frames = frames, .index = idx };
     }

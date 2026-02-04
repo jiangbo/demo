@@ -37,26 +37,53 @@ pub fn update(delta: f32) void {
     // 地图更新，地图上的动画等。
     map.update(delta);
 
-    battle.cleanInvalidTarget(&registry);
-    battle.selectTarget(&registry);
-
     enemy.move(&registry, delta);
     enemy.followPath(&registry);
+
+    battle.cleanAttackTimerIfDone(&registry, delta);
+    battle.cleanInvalidTarget(&registry);
+    battle.attack(&registry);
+
+    // 处理攻击事件
+    for (registry.getEvents(com.AttackEvent)) |event| {
+        // 目前先播放一个攻击动画
+        const attacker = event.attacker;
+        const ani = registry.getPtr(attacker, zhu.MultiAnimation);
+        ani.change(@intFromEnum(com.StateEnum.attack));
+
+        registry.add(attacker, com.AttackTimer{ .v = .init(2) });
+    }
 
     // 处理到达终点的敌人
     for (registry.getEvents(ecs.Entity)) |entity| {
         registry.destroyEntity(entity);
     }
     registry.clearEvent(ecs.Entity);
+    registry.clearEvent(com.AttackEvent);
 }
 
 fn updateAnimation(delta: f32) void {
-    var view = registry.view(.{zhu.graphics.Animation});
-    while (view.next()) |entity| {
-        const animation = view.getPtr(entity, zhu.graphics.Animation);
-        if (animation.isNextLoopUpdate(delta)) {
-            const sprite = view.getPtr(entity, com.Sprite);
-            sprite.image = animation.subImage(sprite.image.size);
+    var view = registry.view(.{zhu.MultiAnimation});
+    while (view.next()) |ent| {
+        const animation = view.getPtr(ent, zhu.MultiAnimation);
+        if (!animation.v.isNextOnceUpdate(delta)) continue; // 动画未跳到下一帧
+
+        if (animation.v.isRunning()) { // 动画还在运行，并且切换到下一帧了。
+            const sprite = view.getPtr(ent, com.Sprite);
+            sprite.image = animation.v.subImage(sprite.image.size);
+            continue;
+        }
+
+        // 动画播放结束，切换动画，需要根据角色和敌人来区分
+        if (view.has(ent, com.Enemy)) {
+            // 敌人需要区分是否被阻挡
+            if (view.has(ent, com.BlockBy)) {
+                animation.change(@intFromEnum(com.StateEnum.idle));
+            } else {
+                animation.change(@intFromEnum(com.StateEnum.walk));
+            }
+        } else {
+            animation.change(@intFromEnum(com.StateEnum.idle));
         }
     }
 }

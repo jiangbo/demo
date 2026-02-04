@@ -5,6 +5,22 @@ const ecs = zhu.ecs;
 const com = @import("component.zig");
 
 ///
+///  删除已经结束的攻击计时器。
+///
+pub fn cleanAttackTimerIfDone(reg: *ecs.Registry, delta: f32) void {
+    var view = reg.viewOption(.{com.AttackTimer}, .{
+        .reverse = true, // 倒序遍历，因为可能会移除组件
+    });
+
+    while (view.next()) |entity| {
+        const timer = view.getPtr(entity, com.AttackTimer);
+        if (timer.v.isFinishedOnceUpdate(delta)) {
+            view.remove(entity, com.AttackTimer);
+        }
+    }
+}
+
+///
 /// 验证攻击目标是否死亡，是否在攻击范围内。
 ///
 pub fn cleanInvalidTarget(reg: *ecs.Registry) void {
@@ -28,16 +44,20 @@ pub fn cleanInvalidTarget(reg: *ecs.Registry) void {
 }
 
 ///
-/// 给无目标的实体选择一个攻击目标。
+/// 攻击
 ///
-pub fn selectTarget(reg: *ecs.Registry) void {
-    selectAttackTarget(reg);
-}
-
-fn selectAttackTarget(reg: *ecs.Registry) void {
+pub fn attack(reg: *ecs.Registry) void {
     var view = reg.view(.{ com.Position, com.AttackRange });
     while (view.next()) |entity| {
-        if (view.has(entity, com.Target)) continue; // 已经有目标了
+        if (view.has(entity, com.AttackTimer)) continue; // 攻击冷却中
+
+        if (view.tryGet(entity, com.Target)) |target| {
+            reg.addEvent(com.AttackEvent{ // 已经有目标了，直接攻击
+                .attacker = view.toEntity(entity),
+                .target = target.v,
+            });
+            continue;
+        }
 
         const pos = view.get(entity, com.Position);
         const range = view.get(entity, com.AttackRange).v + 20; // 目标的中心
@@ -61,7 +81,11 @@ fn selectAttackTarget(reg: *ecs.Registry) void {
 
         if (closestTarget) |target| {
             view.add(entity, com.Target{ .v = view.toEntity(target) });
-            std.log.debug("entity: {} select target: {}", .{ entity, target });
+            std.log.debug("entity: {} attack: {}", .{ entity, target });
+            reg.addEvent(com.AttackEvent{ // 找到了目标，攻击
+                .attacker = view.toEntity(entity),
+                .target = view.toEntity(target),
+            });
         }
     }
 }

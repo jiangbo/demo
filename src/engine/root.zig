@@ -18,6 +18,9 @@ pub const Atlas = graphics.Atlas;
 pub const Vector2 = math.Vector2;
 pub const Rect = math.Rect;
 pub const Color = graphics.Color;
+pub const Animation = graphics.Animation;
+pub const MultiAnimation = graphics.MultiAnimation;
+pub const EnumAnimation = graphics.EnumAnimation;
 
 pub const Id = assets.Id;
 pub fn id(comptime path: []const u8) assets.Id {
