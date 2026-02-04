@@ -48,8 +48,8 @@ pub fn update(delta: f32) void {
     for (registry.getEvents(com.AttackEvent)) |event| {
         // 目前先播放一个攻击动画
         const attacker = event.attacker;
-        const ani = registry.getPtr(attacker, zhu.MultiAnimation);
-        ani.change(@intFromEnum(com.StateEnum.attack));
+        const animation = registry.getPtr(attacker, zhu.Animation);
+        animation.play(@intFromEnum(com.StateEnum.attack));
 
         registry.add(attacker, com.AttackTimer{ .v = .init(2) });
     }
@@ -63,14 +63,14 @@ pub fn update(delta: f32) void {
 }
 
 fn updateAnimation(delta: f32) void {
-    var view = registry.view(.{zhu.MultiAnimation});
+    var view = registry.view(.{zhu.Animation});
     while (view.next()) |ent| {
-        const animation = view.getPtr(ent, zhu.MultiAnimation);
-        if (!animation.v.isNextOnceUpdate(delta)) continue; // 动画未跳到下一帧
+        const animation = view.getPtr(ent, zhu.Animation);
+        if (!animation.isNextOnceUpdate(delta)) continue; // 动画未跳到下一帧
 
-        if (animation.v.isRunning()) { // 动画还在运行，并且切换到下一帧了。
+        if (animation.isRunning()) { // 动画还在运行，并且切换到下一帧了。
             const sprite = view.getPtr(ent, com.Sprite);
-            sprite.image = animation.v.subImage(sprite.image.size);
+            sprite.image = animation.subImage(sprite.image.size);
             continue;
         }
 
@@ -78,12 +78,12 @@ fn updateAnimation(delta: f32) void {
         if (view.has(ent, com.Enemy)) {
             // 敌人需要区分是否被阻挡
             if (view.has(ent, com.BlockBy)) {
-                animation.change(@intFromEnum(com.StateEnum.idle));
+                animation.play(@intFromEnum(com.StateEnum.idle));
             } else {
-                animation.change(@intFromEnum(com.StateEnum.walk));
+                animation.play(@intFromEnum(com.StateEnum.walk));
             }
         } else {
-            animation.change(@intFromEnum(com.StateEnum.idle));
+            animation.play(@intFromEnum(com.StateEnum.idle));
         }
     }
 }

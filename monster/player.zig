@@ -5,7 +5,6 @@ const ecs = zhu.ecs;
 
 const com = @import("component.zig");
 
-const Animation = zhu.graphics.MultiAnimation;
 pub const Enum = enum { warrior, archer, lancer, witch };
 const Player = struct {
     playerEnum: Enum,
@@ -45,7 +44,7 @@ pub fn spawn(registry: *ecs.Registry, playerEnum: Enum) void {
         registry.add(player, com.Blocker{ .max = value.block });
     }
 
-    const animation: Animation = .init(image, value.animations);
+    const animation: zhu.Animation = .init(image, value.animations);
     registry.add(player, animation);
 
     // 添加攻击范围组件

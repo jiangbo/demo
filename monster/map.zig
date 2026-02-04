@@ -92,7 +92,7 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
             animations.append(zhu.assets.allocator, .{
                 .position = pos,
                 .size = data.tileSize,
-                .value = .init(image, tile.?.animation),
+                .value = .initOne(image, &tile.?.animation),
             }) catch @panic("oom, can't append animation");
             continue;
         }
@@ -146,7 +146,7 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
             animations.append(zhu.assets.allocator, .{
                 .position = pos,
                 .size = object.size,
-                .value = .init(image, tile.?.animation),
+                .value = .initOne(image, &tile.?.animation),
                 .extend = object.extend,
             }) catch @panic("oom, can't append animation");
         }

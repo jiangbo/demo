@@ -5,7 +5,7 @@ const ecs = zhu.ecs;
 
 const com = @import("component.zig");
 const map = @import("map.zig");
-const Animation = zhu.graphics.MultiAnimation;
+const Animation = zhu.graphics.Animation;
 
 const Enemy = struct {
     enemyEnum: enum { slime, wolf, goblin, darkWitch },
@@ -49,7 +49,7 @@ pub fn spawn(registry: *ecs.Registry) void {
             });
 
             var animation: Animation = .init(image, value.animations);
-            animation.change(@intFromEnum(com.StateEnum.walk));
+            animation.play(@intFromEnum(com.StateEnum.walk));
             registry.add(enemy, animation);
 
             // 添加攻击范围组件

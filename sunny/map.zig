@@ -102,7 +102,7 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
     }
 }
 
-fn parseTileSpike(tile: tiled.Tile, pos: zhu.Vector2) void {
+fn parseTileSpike(tile: *const tiled.Tile, pos: zhu.Vector2) void {
     const object = tile.objectGroup.?.objects[0];
     objects.append(zhu.assets.allocator, .{
         .type = @enumFromInt(tile.id),
