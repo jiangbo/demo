@@ -48,7 +48,7 @@ pub fn spawn(registry: *ecs.Registry) void {
                 .flip = value.faceRight,
             });
 
-            var animation: Animation = .init(image, value.animations);
+            var animation = Animation.initSource(image, value.animations);
             animation.play(@intFromEnum(com.StateEnum.walk));
             registry.add(enemy, animation);
 

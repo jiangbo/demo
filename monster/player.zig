@@ -44,7 +44,7 @@ pub fn spawn(registry: *ecs.Registry, playerEnum: Enum) void {
         registry.add(player, com.Blocker{ .max = value.block });
     }
 
-    const animation: zhu.Animation = .init(image, value.animations);
+    const animation = zhu.Animation.initSource(image, value.animations);
     registry.add(player, animation);
 
     // 添加攻击范围组件
