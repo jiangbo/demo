@@ -489,6 +489,7 @@ pub fn View(includes: anytype, option: ViewOption) type {
                 const entity = self.slice[self.index];
                 if (option.reverse) self.index -%= 1 else self.index += 1;
 
+                if (includes.len == 1) return entity;
                 inline for (includes) |T| {
                     if (!self.has(entity, T)) continue :blk;
                 }
