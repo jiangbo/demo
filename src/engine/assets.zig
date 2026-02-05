@@ -146,7 +146,7 @@ const Sound = struct {
         const entry = cache.getOrPut(allocator, id(path)) catch oom();
         if (entry.found_existing) return entry.value_ptr;
 
-        const index = audio.allocSoundBuffer();
+        const index = audio.allocSoundIndex();
         entry.value_ptr.* = .{ .loop = loop, .handle = index };
         _ = File.load(path, index, handler);
         return entry.value_ptr;
@@ -170,7 +170,7 @@ const Sound = struct {
 
         sound.state = .playing;
         audio.sounds[response.index] = sound.*;
-        return @ptrCast(sound.source);
+        return std.mem.sliceAsBytes(sound.source);
     }
 };
 
@@ -226,7 +226,7 @@ pub const File = struct {
     const FileCache = struct {
         state: FileState = .init,
         index: u64,
-        data: []const u8 = &.{},
+        managed: []const u8 = &.{},
         handler: Handler = undefined,
     };
 
@@ -269,13 +269,13 @@ pub const File = struct {
         };
 
         value.state = .loaded;
-        value.data = value.handler(response);
+        value.managed = value.handler(response);
         value.state = .handled;
     }
 
     pub fn deinit() void {
         var iterator = cache.valueIterator();
-        while (iterator.next()) |value| allocator.free(value.data);
+        while (iterator.next()) |value| allocator.free(value.managed);
         cache.deinit(allocator);
     }
 };

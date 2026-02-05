@@ -71,20 +71,20 @@ pub const SoundHandle = usize;
 
 pub fn playSound(path: [:0]const u8) void {
     const sound = assets.loadSound(path, false).*;
-    if (sound.state == .playing) sounds[allocSoundBuffer()] = sound;
+    if (sound.state == .playing) sounds[allocSoundIndex()] = sound;
 }
 
 pub fn playSoundLoop(path: [:0]const u8) SoundHandle {
     const sound = assets.loadSound(path, true).*;
     var index = sound.handle;
     if (sound.state == .playing) {
-        index = allocSoundBuffer();
+        index = allocSoundIndex();
         sounds[index] = sound;
     }
     return index;
 }
 
-pub fn allocSoundBuffer() usize {
+pub fn allocSoundIndex() usize {
     for (sounds, 0..) |*sound, index| {
         if (sound.state == .stopped) return index;
     }
