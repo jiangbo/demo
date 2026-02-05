@@ -21,9 +21,10 @@ pub const Animation = struct {
     pub const Clip = []const Frame;
 
     elapsed: f32 = 0,
-    index: u8 = 0,
+    index: u16 = 0,
     image: Image,
     clip: Clip,
+    extend: u32 = 0,
 
     sourceIndex: u8 = 0,
     sourceLength: u8 = 0,
