@@ -24,9 +24,10 @@ pub const Animation = struct {
     index: u8 = 0,
     image: Image,
     clip: Clip,
-    extend: u8 = 0,
 
-    source: []const Clip = &.{},
+    sourceIndex: u8 = 0,
+    sourceLength: u8 = 0,
+    source: [*]const Clip = undefined,
 
     pub fn init(image: Image, clip: Clip) Animation {
         return .{ .image = image, .clip = clip };
@@ -37,8 +38,11 @@ pub const Animation = struct {
         return .{ .image = image, .clip = clip, .index = idx };
     }
 
-    pub fn initSource(image: Image, src: []const Clip) Animation {
-        return .{ .image = image, .clip = src[0], .source = src };
+    pub fn initSource(image: Image, source: []const Clip) Animation {
+        var self: Animation = .init(image, source[0]);
+        self.source = source.ptr;
+        self.sourceLength = @intCast(source.len);
+        return self;
     }
 
     pub fn subImage(self: *const Animation, size: Vector2) Image {
@@ -47,6 +51,7 @@ pub const Animation = struct {
     }
 
     pub fn play(self: *Animation, index: u8) void {
+        std.debug.assert(index < self.sourceLength);
         self.clip = self.source[index];
         self.reset();
     }
