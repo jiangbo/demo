@@ -61,7 +61,7 @@ pub var sounds: []Sound = &.{};
 
 pub const Sound = struct {
     handle: SoundHandle,
-    clip: []f32 = &.{},
+    clip: []const f32 = &.{},
     loop: bool = true,
     index: usize = 0,
     channels: u8 = 0,
