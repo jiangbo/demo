@@ -11,9 +11,13 @@ const Path = [:0]const u8;
 pub var allocator: std.mem.Allocator = undefined;
 var imageCache: std.AutoHashMapUnmanaged(Id, Image) = .empty;
 
-pub fn init(allocator1: std.mem.Allocator) void {
+pub fn init(allocator1: std.mem.Allocator, maxSize: usize) void {
     allocator = allocator1;
-    sk.fetch.setup(.{ .logger = .{ .func = sk.log.func } });
+    sk.fetch.setup(.{
+        .num_lanes = fileBuffer.len,
+        .logger = .{ .func = sk.log.func },
+    });
+    for (&fileBuffer) |*buffer| buffer.* = oomAlloc(u8, maxSize);
 }
 
 pub fn deinit() void {
@@ -23,6 +27,7 @@ pub fn deinit() void {
     Music.deinit();
     File.deinit();
     sk.fetch.shutdown();
+    for (&fileBuffer) |buffer| free(buffer);
 }
 
 pub fn oomAlloc(comptime T: type, n: usize) []T {
@@ -209,8 +214,6 @@ const Music = struct {
     }
 };
 
-var loadingBuffer: [5 * 1024 * 1024]u8 = undefined;
-
 const SkCallback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
 pub const Response = struct {
     allocator: std.mem.Allocator = undefined,
@@ -219,6 +222,7 @@ pub const Response = struct {
     data: []const u8 = &.{},
 };
 
+var fileBuffer: [4][]u8 = undefined;
 pub const File = struct {
     const FileState = enum { init, loading, loaded, handled };
     const Handler = *const fn (Response) []const u8;
@@ -239,11 +243,9 @@ pub const File = struct {
         entry.value_ptr.* = .{ .index = index, .handler = handler };
 
         std.log.info("loading {s}", .{path});
-        const buffer = sk.fetch.asRange(&loadingBuffer);
         _ = sk.fetch.send(.{
             .path = path,
             .callback = callback,
-            .buffer = buffer,
         });
 
         entry.value_ptr.state = .loading;
@@ -254,6 +256,11 @@ pub const File = struct {
         const res = responses[0];
         if (res.failed) {
             std.debug.panic("assets load failed, path: {s}", .{res.path});
+        }
+        if (res.dispatched) {
+            const buffer = sk.fetch.asRange(fileBuffer[res.lane]);
+            sk.fetch.bindBuffer(res.handle, buffer);
+            return;
         }
 
         const path = std.mem.span(res.path);

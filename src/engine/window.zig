@@ -97,6 +97,7 @@ pub const WindowInfo = struct {
     scaleEnum: ScaleEnum = .stretch, // 缩放模式
     disableIME: bool = true, // 禁用输入法
     alignment: math.Vector = .center, // 对齐方式
+    maxFileSize: usize = 1 * 1024 * 1024, // 最大加载文件大小
 };
 
 pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
@@ -121,7 +122,7 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     alignment = info.alignment;
     scaleEnum = info.scaleEnum;
     countingAllocator = CountingAllocator.init(allocs);
-    assets.init(countingAllocator.allocator());
+    assets.init(countingAllocator.allocator(), info.maxFileSize);
 
     if (info.disableIME and builtin.os.tag == .windows) {
         _ = ImmDisableIME(-1);
