@@ -170,7 +170,7 @@ const Sound = struct {
         sound.channels = @intCast(info.channels);
 
         const size = c.stbAudio.getSampleCount(stbAudio) * sound.channels;
-        sound.source = allocator.alloc(f32, size) catch unreachable;
+        sound.source = oomAlloc(f32, size);
 
         _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
 
@@ -206,10 +206,8 @@ const Music = struct {
     pub fn deinit() void {
         var iterator = cache.valueIterator();
         while (iterator.next()) |value| {
-            if (value.state != .init) {
-                // 不释放没有加载的资源
-                c.stbAudio.unload(value.source);
-            }
+            // 不释放没有加载的资源
+            if (value.state != .init) c.stbAudio.unload(value.source);
         }
         cache.deinit(allocator);
     }
