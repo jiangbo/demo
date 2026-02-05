@@ -255,7 +255,8 @@ pub const File = struct {
     fn callback(responses: [*c]const sk.fetch.Response) callconv(.c) void {
         const res = responses[0];
         if (res.failed) {
-            std.debug.panic("assets load failed, path: {s}", .{res.path});
+            const msg = "assets load failed, path: {s}, error code: {}";
+            std.debug.panic(msg, .{ res.path, res.error_code });
         }
         if (res.dispatched) {
             const buffer = sk.fetch.asRange(fileBuffer[res.lane]);
