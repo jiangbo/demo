@@ -102,16 +102,17 @@ pub fn loadIcon(path: Path, handle: u64, handler: IconHandler) void {
     _ = File.load(path, handle, struct {
         fn callback(response: Response) []const u8 {
             const icon = c.stbImage.loadFromMemory(response.data);
+            defer c.stbImage.unload(icon);
             handler(response.index, icon);
             return oomDupe(u8, icon.data);
         }
     }.callback);
 }
 
-pub const Texture = struct {
+const Texture = struct {
     var cache: std.AutoHashMapUnmanaged(Id, sk.gfx.View) = .empty;
 
-    pub fn load(path: Path) sk.gfx.View {
+    fn load(path: Path) sk.gfx.View {
         const view = sk.gfx.allocView();
         cache.put(allocator, id(path), view) catch oom();
         _ = File.load(path, view.id, handler);
@@ -216,7 +217,6 @@ const Music = struct {
 
 const SkCallback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
 pub const Response = struct {
-    allocator: std.mem.Allocator = undefined,
     index: u64 = undefined,
     path: [:0]const u8,
     data: []const u8 = &.{},
@@ -269,7 +269,6 @@ pub const File = struct {
         const value = cache.getPtr(id(path)) orelse return;
         const data = @as([*]const u8, @ptrCast(res.data.ptr));
         const response: Response = .{
-            .allocator = allocator,
             .index = value.index,
             .path = path,
             .data = data[0..res.data.size],
