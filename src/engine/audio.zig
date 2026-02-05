@@ -61,7 +61,7 @@ pub var sounds: []Sound = &.{};
 
 pub const Sound = struct {
     handle: SoundHandle,
-    source: []f32 = &.{},
+    clip: []f32 = &.{},
     loop: bool = true,
     index: usize = 0,
     channels: u8 = 0,
@@ -139,7 +139,7 @@ fn mixSamples(buffer: []f32, sound: *Sound) usize {
     else
         std.debug.panic("unsupported channels: {d}", .{sound.channels});
 
-    if (sound.index == sound.source.len) {
+    if (sound.index == sound.clip.len) {
         if (sound.loop) sound.index = 0 else sound.state = .stopped;
     }
 
@@ -147,7 +147,7 @@ fn mixSamples(buffer: []f32, sound: *Sound) usize {
 }
 
 fn mixStereoSamples(dstBuffer: []f32, sound: *Sound) usize {
-    const srcBuffer = sound.source[sound.index..];
+    const srcBuffer = sound.clip[sound.index..];
     const len = @min(dstBuffer.len, srcBuffer.len);
 
     for (0..len) |index| {
@@ -159,7 +159,7 @@ fn mixStereoSamples(dstBuffer: []f32, sound: *Sound) usize {
 }
 
 fn mixMonoSamples(dstBuffer: []f32, sound: *Sound) usize {
-    const srcBuffer = sound.source[sound.index..];
+    const srcBuffer = sound.clip[sound.index..];
     const len = @min(dstBuffer.len / 2, srcBuffer.len);
 
     for (0..len) |index| {
