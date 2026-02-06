@@ -36,6 +36,7 @@ pub var pipeline: gpu.RenderPipeline = undefined;
 pub var vertexBuffer: std.ArrayList(Vertex) = .empty;
 pub var whiteImage: graphics.Image = undefined;
 pub var camera: Camera = undefined;
+var nearestSampler: gpu.Sampler = undefined;
 
 var commandBuffer: std.ArrayList(Command) = .empty;
 var gpuBuffer: gpu.Buffer = undefined;
@@ -50,6 +51,7 @@ pub fn init(vertexes: []Vertex, commands: []Command) void {
 
     const shaderDesc = shader.quadShaderDesc(gpu.queryBackend());
     pipeline = createQuadPipeline(shaderDesc);
+    nearestSampler = gpu.createSampler(.{});
 
     camera = Camera.init();
 }
@@ -234,7 +236,7 @@ fn doDraw(cmd: Command) void {
     bindGroup.setTexture(cmd.texture);
     bindGroup.setVertexBuffer(gpuBuffer);
     bindGroup.setVertexOffset(cmd.start * @sizeOf(Vertex));
-    bindGroup.setSampler(gpu.nearestSampler);
+    bindGroup.setSampler(nearestSampler);
     gpu.setBindGroup(bindGroup);
 
     // 绘制

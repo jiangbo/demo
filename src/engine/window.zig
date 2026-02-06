@@ -136,12 +136,17 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
         .event_cb = windowEvent,
         .frame_cb = windowFrame,
         .cleanup_cb = windowDeinit,
+        .allocator = @bitCast(assets.skAllocator),
     });
 }
 
 export fn windowInit() void {
     computeViewRect();
-    gpu.init();
+    sk.gfx.setup(.{
+        .environment = sk.glue.environment(),
+        .logger = .{ .func = sk.log.func },
+        .allocator = assets.skAllocator,
+    });
     math.setRandomSeed(timer.read());
     call(root, "init", .{});
 }

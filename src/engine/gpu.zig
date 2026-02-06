@@ -25,21 +25,7 @@ pub const VertexLayoutState = gfx.VertexLayoutState;
 pub const ColorTargetState = gfx.ColorTargetState;
 pub const createPipeline = gfx.makePipeline;
 pub const createShader = gfx.makeShader;
-
-pub var nearestSampler: gfx.Sampler = undefined;
-pub var linearSampler: gfx.Sampler = undefined;
-
-pub fn init() void {
-    sk.gfx.setup(.{
-        .environment = sk.glue.environment(),
-        .logger = .{ .func = sk.log.func },
-    });
-    nearestSampler = gfx.makeSampler(.{});
-    linearSampler = gfx.makeSampler(.{
-        .min_filter = .LINEAR,
-        .mag_filter = .LINEAR,
-    });
-}
+pub const createSampler = gfx.makeSampler;
 
 pub fn begin(color: Color, viewRect: math.Rect) void {
     var action = gfx.PassAction{};

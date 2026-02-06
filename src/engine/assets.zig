@@ -9,15 +9,31 @@ const Image = graphics.Image;
 const Path = [:0]const u8;
 
 pub var allocator: std.mem.Allocator = undefined;
+pub var skAllocator: sk.gfx.Allocator = undefined;
 var imageCache: std.AutoHashMapUnmanaged(Id, Image) = .empty;
 
 pub fn init(allocator1: std.mem.Allocator, maxSize: usize) void {
     allocator = allocator1;
+    skAllocator = .{ .alloc_fn = alloc_fn, .free_fn = free_fn };
+
     sk.fetch.setup(.{
         .num_lanes = fileBuffer.len,
         .logger = .{ .func = sk.log.func },
+        .allocator = @bitCast(skAllocator),
     });
     for (&fileBuffer) |*buffer| buffer.* = oomAlloc(u8, maxSize);
+}
+
+fn alloc_fn(len: usize, _: ?*anyopaque) callconv(.c) ?*anyopaque {
+    const slice = oomAlloc(u8, len + @sizeOf(usize));
+    std.mem.bytesAsValue(usize, slice[0..@sizeOf(usize)]).* = len;
+    return slice.ptr + @sizeOf(usize);
+}
+
+fn free_fn(ptr: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
+    const lenPtr = @as([*]u8, @ptrCast(ptr.?)) - @sizeOf(usize);
+    const len = std.mem.bytesToValue(usize, lenPtr[0..@sizeOf(usize)]);
+    free(lenPtr[0 .. len + @sizeOf(usize)]);
 }
 
 pub fn deinit() void {
