@@ -26,9 +26,9 @@ pub fn deinit() void {
 pub fn update(delta: f32) void {
     // if (timer.isFinishedLoopUpdate(delta)) enemy.spawn(&registry);
 
-    if (zhu.window.isMousePressed(.LEFT)) {
+    if (zhu.window.mouse.pressed(.LEFT)) {
         player.spawn(&registry, .warrior);
-    } else if (zhu.window.isMousePressed(.RIGHT)) {
+    } else if (zhu.window.mouse.pressed(.RIGHT)) {
         player.spawn(&registry, .archer);
     }
 

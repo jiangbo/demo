@@ -244,8 +244,8 @@ export fn windowFrame() void {
     if (currentSmoothTime > 0.1) currentSmoothTime = 0.1;
     if (resized) computeViewRect();
     call(root, "frame", .{currentSmoothTime});
-    input.lastKeyState = input.keyState;
-    input.lastMouseState = input.mouseState;
+    input.key.lastState = input.key.state;
+    input.mouse.lastState = input.mouse.state;
     input.anyRelease = false;
     mouseMoved = false;
 
@@ -437,16 +437,7 @@ pub fn drawCenter(str: text.String, y: f32, option: text.Option) void {
     text.drawCenter(str, size.mul(.init(0.5, y)), option);
 }
 
-pub const isKeyDown = input.isKeyDown;
-pub const isAnyKeyDown = input.isAnyKeyDown;
-pub const isKeyPressed = input.isKeyPressed;
-pub const isAnyKeyPressed = input.isAnyKeyPressed;
-pub const isKeyReleased = input.isKeyReleased;
-pub const isAnyKeyReleased = input.isAnyKeyReleased;
-
-pub const isMouseDown = input.isMouseDown;
-pub const isMousePressed = input.isMousePressed;
-pub const isMouseReleased = input.isMouseReleased;
-pub const isAnyMouseReleased = input.isAnyMouseReleased;
+pub const key = input.key;
+pub const mouse = input.mouse;
 
 pub const initText = text.initBitMapFont;
