@@ -244,8 +244,8 @@ export fn windowFrame() void {
     if (currentSmoothTime > 0.1) currentSmoothTime = 0.1;
     if (resized) computeViewRect();
     call(root, "frame", .{currentSmoothTime});
-    input.key.lastState = input.key.state;
-    input.mouse.lastState = input.mouse.state;
+    key.lastState = key.state;
+    mouse.lastState = mouse.state;
     input.anyRelease = false;
     mouseMoved = false;
 
