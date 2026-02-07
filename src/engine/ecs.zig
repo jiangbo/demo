@@ -453,6 +453,12 @@ pub const Registry = struct {
     pub fn view(self: *Registry, types: anytype) View(types, .{}) {
         return self.viewOption(types, .{});
     }
+
+    pub fn reverseView(self: *Registry, types: anytype) //
+    View(types, .{ .reverse = true }) {
+        return self.viewOption(types, .{ .reverse = true });
+    }
+
     // zig fmt: off
     pub fn viewOption(self: *Registry, includes: anytype,
         comptime option: ViewOption) View(includes, option) {

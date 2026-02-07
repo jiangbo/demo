@@ -13,7 +13,12 @@ pub const Vector2 = math.Vector2;
 
 pub const ImageId = assets.Id;
 
-pub const Frame = struct { offset: Vector2, duration: f32 = 0.1 };
+pub const Frame = struct {
+    offset: Vector2, // 图集中的偏移位置
+    duration: f32 = 0.1, // 持续时间，单位秒
+    extend: u32 = 0, // 自由扩展
+};
+
 pub fn EnumAnimation(comptime T: type) type {
     return std.EnumArray(T, Animation);
 }
@@ -54,6 +59,7 @@ pub const Animation = struct {
     pub fn play(self: *Animation, index: u8) void {
         std.debug.assert(index < self.sourceLength);
         self.clip = self.source[index];
+        self.sourceIndex = index;
         self.reset();
     }
 
@@ -91,6 +97,10 @@ pub const Animation = struct {
         // 结束了从头开始
         if (self.index >= self.clip.len) self.index = 0;
         return true;
+    }
+
+    pub fn getEnumFrameExtend(self: *const Animation, T: type) T {
+        return @enumFromInt(self.clip[self.index].extend);
     }
 
     pub fn getEnumExtend(self: *const Animation, T: type) T {
