@@ -5,9 +5,12 @@ const ecs = zhu.ecs;
 
 const map = @import("map.zig");
 const com = @import("component.zig");
-const enemy = @import("enemy.zig");
-const player = @import("player.zig");
+const spawn = @import("spawn.zig");
 const battle = @import("battle.zig");
+
+const system = struct {
+    const motion = @import("system/motion.zig");
+};
 
 var registry: ecs.Registry = undefined;
 // var timer: zhu.Timer = .init(10);
@@ -15,7 +18,7 @@ var registry: ecs.Registry = undefined;
 pub fn init() void {
     registry = .init(zhu.assets.allocator);
     map.init();
-    enemy.spawn(&registry);
+    spawn.spawnEnemies(&registry);
 }
 
 pub fn deinit() void {
@@ -27,9 +30,9 @@ pub fn update(delta: f32) void {
     // if (timer.isFinishedLoopUpdate(delta)) enemy.spawn(&registry);
 
     if (zhu.window.mouse.pressed(.LEFT)) {
-        player.spawn(&registry, .warrior);
+        spawn.spawnPlayer(&registry, .warrior);
     } else if (zhu.window.mouse.pressed(.RIGHT)) {
-        player.spawn(&registry, .archer);
+        spawn.spawnPlayer(&registry, .archer);
     }
 
     // 更新动画事件，切换显示的图片
@@ -37,16 +40,21 @@ pub fn update(delta: f32) void {
     // 地图更新，地图上的动画等。
     map.update(delta);
 
-    enemy.move(&registry, delta);
-    enemy.followPath(&registry);
+    system.motion.update(&registry, delta); // 移动系统
 
     battle.cleanAttackTimerIfDone(&registry, delta);
     battle.cleanInvalidTarget(&registry);
     battle.attack(&registry);
 
-    // 处理攻击事件
+    // 处理动画事件，转换为战斗事件
+    battle.processAnimationEvents(&registry);
+
+    // 处理战斗结算
+    // battle.resolveCombat(&registry);
+
+    // 处理攻击事件（开始攻击动画）
     for (registry.getEvents(com.AttackEvent)) |event| {
-        // 目前先播放一个攻击动画
+        // 播放攻击动画
         const attacker = event.attacker;
         const animation = registry.getPtr(attacker, zhu.Animation);
         animation.play(@intFromEnum(com.StateEnum.attack));
@@ -71,6 +79,11 @@ fn updateAnimation(delta: f32) void {
         if (animation.isRunning()) { // 动画还在运行，并且切换到下一帧了。
             const sprite = view.getPtr(ent, com.Sprite);
             sprite.image = animation.subImage(sprite.image.size);
+
+            // 检查是否有动画事件需要触发
+            const action = animation.getEnumFrameExtend(com.ActionEnum);
+            if (action != .none) view.add(ent, action);
+
             continue;
         }
 
@@ -105,7 +118,7 @@ pub fn draw() void {
 
         var flip = sprite.flip;
         const face = view.tryGet(entity, com.Face);
-        if (face) |f| flip = (f == .Left) != flip;
+        if (face) |f| flip = (f == .left) != flip;
         zhu.batch.drawImage(sprite.image, pos, .{ .flipX = !flip });
     }
 
