@@ -1,28 +1,7 @@
 const std = @import("std");
 
-pub const FourDirection = enum {
-    up,
-    down,
-    left,
-    right,
-
-    pub fn random() FourDirection {
-        return randomEnum(FourDirection);
-    }
-
-    pub fn opposite(self: FourDirection) FourDirection {
-        return switch (self) {
-            .up => .down,
-            .down => .up,
-            .left => .right,
-            .right => .left,
-        };
-    }
-};
-// zig fmt: off
-pub const EightDirection =enum { up, down, left, right,
-                    leftUp, leftDown, rightUp, rightDown };
-// zig fmt: on
+pub const Direction2 = enum { left, right };
+pub const Direction4 = enum { up, down, left, right };
 pub const epsilon = 1e-4;
 
 pub const Timer = struct {
