@@ -29,6 +29,7 @@ pub const Animation = struct {
     index: u16 = 0,
     image: Image,
     clip: Clip,
+    loop: bool = true,
     extend: u32 = 0,
 
     sourceIndex: u8 = 0,
@@ -52,7 +53,8 @@ pub const Animation = struct {
     }
 
     pub fn subImage(self: *const Animation, size: Vector2) Image {
-        const offset = self.clip[self.index].offset;
+        const index = @min(self.clip.len - 1, self.index);
+        const offset = self.clip[index].offset;
         return self.image.sub(.init(offset, size));
     }
 
@@ -97,6 +99,17 @@ pub const Animation = struct {
         // 结束了从头开始
         if (self.index >= self.clip.len) self.index = 0;
         return true;
+    }
+
+    pub fn update(self: *Animation, delta: f32) void {
+        if (self.loop) self.loopUpdate(delta) else {
+            self.onceUpdate(delta);
+        }
+    }
+
+    pub fn isFinishedUpdate(self: *Animation, delta: f32) bool {
+        self.update(delta);
+        return self.isFinished();
     }
 
     pub fn getEnumFrameExtend(self: *const Animation, T: type) T {
