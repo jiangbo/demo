@@ -10,7 +10,7 @@ const Path = [:0]const u8;
 
 pub var allocator: std.mem.Allocator = undefined;
 pub var skAllocator: sk.gfx.Allocator = undefined;
-var imageCache: std.AutoHashMapUnmanaged(Id, Image) = .empty;
+var imageCache: std.AutoHashMapUnmanaged(Id, graphics.Image) = .empty;
 
 pub fn init(allocator1: std.mem.Allocator, maxSize: usize) void {
     allocator = allocator1;
@@ -71,11 +71,11 @@ pub fn loadImage(path: Path, size: graphics.Vector2) Image {
     return entry.value_ptr.*;
 }
 
-pub fn loadSound(path: Path, loop: bool) *audio.Sound {
+pub fn loadSound(path: Path, loop: bool) ?audio.Sound {
     return Sound.load(path, loop);
 }
 
-pub fn loadMusic(path: Path, loop: bool) *audio.Music {
+pub fn loadMusic(path: Path, loop: bool) ?*c.stbAudio.Audio {
     return Music.load(path, loop);
 }
 
@@ -164,14 +164,11 @@ const Texture = struct {
 const Sound = struct {
     var cache: std.AutoHashMapUnmanaged(Id, audio.Sound) = .empty;
 
-    fn load(path: Path, loop: bool) *audio.Sound {
-        const entry = cache.getOrPut(allocator, id(path)) catch oom();
-        if (entry.found_existing) return entry.value_ptr;
+    fn load(path: Path, loop: bool) ?audio.Sound {
+        if (cache.get(id(path))) |value| return value;
 
-        const index = audio.allocSoundIndex();
-        entry.value_ptr.* = .{ .loop = loop, .handle = index };
-        _ = File.load(path, index, handler);
-        return entry.value_ptr;
+        _ = File.load(path, if (loop) 1 else 0, handler);
+        return null;
     }
 
     fn handler(response: Response) []const u8 {
@@ -181,50 +178,41 @@ const Sound = struct {
         defer c.stbAudio.unload(stbAudio);
         const info = c.stbAudio.getInfo(stbAudio);
 
-        var sound = cache.getPtr(id(response.path)).?;
+        const channels: i32 = @intCast(info.channels);
+        const size = c.stbAudio.getSampleCount(stbAudio) * channels;
+        const samples = oomAlloc(f32, @intCast(size));
+        _ = c.stbAudio.fillSamples(stbAudio, samples, channels);
 
-        sound.channels = @intCast(info.channels);
-
-        const size = c.stbAudio.getSampleCount(stbAudio) * sound.channels;
-        sound.source = oomAlloc(f32, size);
-
-        _ = c.stbAudio.fillSamples(stbAudio, sound.source, sound.channels);
-
-        sound.state = .playing;
-        audio.sounds[response.index] = sound.*;
-        return std.mem.sliceAsBytes(sound.source);
+        cache.put(allocator, id(response.path), .{
+            .samples = samples,
+            .channels = @intCast(channels),
+        }) catch oom();
+        _ = audio.playSoundOption(response.path, response.index == 1);
+        return std.mem.sliceAsBytes(samples);
     }
 };
 
 const Music = struct {
-    var cache: std.AutoHashMapUnmanaged(Id, audio.Music) = .empty;
+    var cache: std.AutoHashMapUnmanaged(Id, *c.stbAudio.Audio) = .empty;
 
-    fn load(path: Path, loop: bool) *audio.Music {
-        const entry = cache.getOrPut(allocator, id(path)) catch oom();
-        if (entry.found_existing) return entry.value_ptr;
+    fn load(path: Path, loop: bool) ?*c.stbAudio.Audio {
+        if (cache.get(id(path))) |value| return value;
 
-        _ = File.load(path, 0, handler);
-        entry.value_ptr.* = .{ .loop = loop };
-        return entry.value_ptr;
+        _ = File.load(path, if (loop) 1 else 0, handler);
+        return null;
     }
 
     fn handler(response: Response) []const u8 {
         const data = oomDupe(u8, response.data);
         const stbAudio = c.stbAudio.loadFromMemory(data);
-
-        const value = cache.getPtr(id(response.path)).?;
-        value.source = stbAudio;
-        value.state = .playing;
-        audio.music = value.*;
+        cache.put(allocator, id(response.path), stbAudio) catch oom();
+        audio.playMusicOption(response.path, response.index == 1);
         return data;
     }
 
     pub fn deinit() void {
         var iterator = cache.valueIterator();
-        while (iterator.next()) |value| {
-            // 不释放没有加载的资源
-            if (value.state != .init) c.stbAudio.unload(value.source);
-        }
+        while (iterator.next()) |v| c.stbAudio.unload(v.*);
         cache.deinit(allocator);
     }
 };

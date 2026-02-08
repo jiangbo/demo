@@ -54,8 +54,8 @@ pub const stbVorbis = struct {
         return stb.stb_vorbis_get_info(audio);
     }
 
-    pub fn getSampleCount(audio: *Audio) usize {
-        return stb.stb_vorbis_stream_length_in_samples(audio);
+    pub fn getSampleCount(audio: *Audio) i32 {
+        return @intCast(stb.stb_vorbis_stream_length_in_samples(audio));
     }
 
     pub fn fillSamples(audio: *Audio, buffer: []f32, channels: i32) c_int {
