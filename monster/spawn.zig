@@ -46,6 +46,8 @@ pub fn spawnEnemies(reg: *ecs.Registry) void {
                 .target = start,
                 .speed = value.speed,
             });
+            const index: u8 = @intFromEnum(com.StateEnum.walk);
+            reg.getPtr(entity, com.Animation).play(index, true);
         }
     }
 }

@@ -58,10 +58,11 @@ pub const Animation = struct {
         return self.image.sub(.init(offset, size));
     }
 
-    pub fn play(self: *Animation, index: u8) void {
+    pub fn play(self: *Animation, index: u8, loop: bool) void {
         std.debug.assert(index < self.sourceLength);
         self.clip = self.source[index];
         self.sourceIndex = index;
+        self.loop = loop;
         self.reset();
     }
 
@@ -105,6 +106,12 @@ pub const Animation = struct {
         if (self.loop) self.loopUpdate(delta) else {
             self.onceUpdate(delta);
         }
+    }
+
+    pub fn isNextUpdate(self: *Animation, delta: f32) bool {
+        return if (self.loop) self.isNextLoopUpdate(delta) else {
+            return self.isNextOnceUpdate(delta);
+        };
     }
 
     pub fn isFinishedUpdate(self: *Animation, delta: f32) bool {

@@ -10,6 +10,8 @@ const battle = @import("battle.zig");
 
 const system = struct {
     const motion = @import("system/motion.zig");
+    const state = @import("system/state.zig");
+    const animation = @import("system/animation.zig");
 };
 
 var registry: ecs.Registry = undefined;
@@ -35,12 +37,12 @@ pub fn update(delta: f32) void {
         spawn.spawnPlayer(&registry, .archer);
     }
 
-    // 更新动画事件，切换显示的图片
-    updateAnimation(delta);
     // 地图更新，地图上的动画等。
     map.update(delta);
 
     system.motion.update(&registry, delta); // 移动系统
+    system.animation.update(&registry, delta); // 动画系统
+    system.state.update(&registry, delta); // 状态系统
 
     battle.cleanAttackTimerIfDone(&registry, delta);
     battle.cleanInvalidTarget(&registry);
@@ -56,8 +58,9 @@ pub fn update(delta: f32) void {
     for (registry.getEvents(com.AttackEvent)) |event| {
         // 播放攻击动画
         const attacker = event.attacker;
-        const animation = registry.getPtr(attacker, zhu.Animation);
-        animation.play(@intFromEnum(com.StateEnum.attack));
+        registry.add(attacker, com.AnimationPlay{
+            .index = @intFromEnum(com.StateEnum.attack),
+        });
 
         registry.add(attacker, com.AttackTimer{ .v = .init(2) });
     }
@@ -68,37 +71,6 @@ pub fn update(delta: f32) void {
     }
     registry.clearEvent(ecs.Entity);
     registry.clearEvent(com.AttackEvent);
-}
-
-fn updateAnimation(delta: f32) void {
-    var view = registry.view(.{zhu.Animation});
-    while (view.next()) |ent| {
-        const animation = view.getPtr(ent, zhu.Animation);
-        if (!animation.isNextOnceUpdate(delta)) continue; // 动画未跳到下一帧
-
-        if (animation.isRunning()) { // 动画还在运行，并且切换到下一帧了。
-            const sprite = view.getPtr(ent, com.Sprite);
-            sprite.image = animation.subImage(sprite.image.size);
-
-            // 检查是否有动画事件需要触发
-            const action = animation.getEnumFrameExtend(com.ActionEnum);
-            if (action != .none) view.add(ent, action);
-
-            continue;
-        }
-
-        // 动画播放结束，切换动画，需要根据角色和敌人来区分
-        if (view.has(ent, com.Enemy)) {
-            // 敌人需要区分是否被阻挡
-            if (view.has(ent, com.BlockBy)) {
-                animation.play(@intFromEnum(com.StateEnum.idle));
-            } else {
-                animation.play(@intFromEnum(com.StateEnum.walk));
-            }
-        } else {
-            animation.play(@intFromEnum(com.StateEnum.idle));
-        }
-    }
 }
 
 pub fn draw() void {
