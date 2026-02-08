@@ -1,8 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const ecs = zhu.ecs;
-
 const map = @import("map.zig");
 const com = @import("component.zig");
 const spawn = @import("spawn.zig");
@@ -11,11 +9,12 @@ const battle = @import("battle.zig");
 const system = struct {
     const motion = @import("system/motion.zig");
     const state = @import("system/state.zig");
+    const target = @import("system/target.zig");
+    const attack = @import("system/attack.zig");
     const animation = @import("system/animation.zig");
 };
 
-var registry: ecs.Registry = undefined;
-// var timer: zhu.Timer = .init(10);
+var registry: zhu.ecs.Registry = undefined;
 
 pub fn init() void {
     registry = .init(zhu.assets.allocator);
@@ -29,8 +28,6 @@ pub fn deinit() void {
 }
 
 pub fn update(delta: f32) void {
-    // if (timer.isFinishedLoopUpdate(delta)) enemy.spawn(&registry);
-
     if (zhu.window.mouse.pressed(.LEFT)) {
         spawn.spawnPlayer(&registry, .warrior);
     } else if (zhu.window.mouse.pressed(.RIGHT)) {
@@ -40,13 +37,13 @@ pub fn update(delta: f32) void {
     // 地图更新，地图上的动画等。
     map.update(delta);
 
+    cleanTimerIfDone(com.AttackTimer, delta); // 清理攻击计时器
+
     system.motion.update(&registry, delta); // 移动系统
     system.animation.update(&registry, delta); // 动画系统
     system.state.update(&registry, delta); // 状态系统
-
-    battle.cleanAttackTimerIfDone(&registry, delta);
-    battle.cleanInvalidTarget(&registry);
-    battle.attack(&registry);
+    system.target.update(&registry, delta); // 目标系统
+    system.attack.update(&registry, delta); // 攻击系统
 
     // 处理动画事件，转换为战斗事件
     battle.processAnimationEvents(&registry);
@@ -54,23 +51,24 @@ pub fn update(delta: f32) void {
     // 处理战斗结算
     // battle.resolveCombat(&registry);
 
-    // 处理攻击事件（开始攻击动画）
-    for (registry.getEvents(com.AttackEvent)) |event| {
-        // 播放攻击动画
-        const attacker = event.attacker;
-        registry.add(attacker, com.AnimationPlay{
-            .index = @intFromEnum(com.StateEnum.attack),
-        });
-
-        registry.add(attacker, com.AttackTimer{ .v = .init(2) });
-    }
-
     // 处理到达终点的敌人
-    for (registry.getEvents(ecs.Entity)) |entity| {
+    for (registry.getEvents(zhu.ecs.Entity)) |entity| {
         registry.destroyEntity(entity);
     }
-    registry.clearEvent(ecs.Entity);
-    registry.clearEvent(com.AttackEvent);
+    registry.clearEvent(zhu.ecs.Entity);
+}
+
+///
+///  删除已经结束的计时器。
+///
+pub fn cleanTimerIfDone(T: type, delta: f32) void {
+    var view = registry.reverseView(.{T});
+    while (view.next()) |entity| {
+        const timer = view.getPtr(entity, T);
+        if (timer.v.isFinishedOnceUpdate(delta)) {
+            view.remove(entity, T);
+        }
+    }
 }
 
 pub fn draw() void {

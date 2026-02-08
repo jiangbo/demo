@@ -83,6 +83,9 @@ fn doSpawn(reg: *ecs.Registry, zon: *const Template) ecs.Entity {
         .def = @floatFromInt(zon.defense),
     });
 
+    // 攻击冷却时间
+    reg.add(entity, com.CoolDown{ .v = zon.interval });
+
     // 添加声音组件
     reg.add(entity, zon.sounds);
 

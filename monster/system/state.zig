@@ -9,6 +9,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
     // 动画播放结束，切换动画，需要根据角色和敌人来区分
     var view = reg.view(.{com.AnimationFinished});
     defer reg.clear(com.AnimationFinished);
+
     while (view.next()) |entity| {
         var state = com.StateEnum.idle;
         // 敌人需要区分是否被阻挡
@@ -19,5 +20,8 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
             .index = @intFromEnum(state),
             .loop = true,
         });
+
+        // 移除攻击锁定
+        view.remove(entity, com.AttackLock);
     }
 }
