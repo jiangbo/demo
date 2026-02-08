@@ -30,8 +30,6 @@ fn followPath(registry: *zhu.ecs.Registry) void {
         const velocity = view.getPtr(entity, com.Velocity);
         const direction = enemy.target.point.sub(pos).normalize();
         velocity.v = direction.scale(enemy.speed);
-        const face: com.Face = if (direction.x < 0) .left else .right;
-        view.add(entity, face);
     }
 }
 
@@ -54,9 +52,9 @@ fn move(registry: *zhu.ecs.Registry, delta: f32) void {
 
             const block = blockView.getPtr(blocker, com.Blocker);
             if (block.current < block.max) {
-                view.remove(entity, com.Velocity);
-                const ent = blockView.toEntity(blocker);
-                view.add(entity, com.BlockBy{ .v = ent });
+                const target = blockView.toEntity(blocker);
+                view.add(entity, com.BlockBy{ .v = target });
+                view.add(entity, com.Target{ .v = target });
                 block.current += 1;
                 break;
             }

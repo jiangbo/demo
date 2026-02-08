@@ -11,6 +11,7 @@ const system = struct {
     const state = @import("system/state.zig");
     const target = @import("system/target.zig");
     const attack = @import("system/attack.zig");
+    const facing = @import("system/facing.zig");
     const animation = @import("system/animation.zig");
 };
 
@@ -44,6 +45,7 @@ pub fn update(delta: f32) void {
     system.state.update(&registry, delta); // 状态系统
     system.target.update(&registry, delta); // 目标系统
     system.attack.update(&registry, delta); // 攻击系统
+    system.facing.update(&registry, delta); // 面向系统
 
     // 处理动画事件，转换为战斗事件
     battle.processAnimationEvents(&registry);
@@ -86,10 +88,9 @@ pub fn draw() void {
         const position = view.get(entity, com.Position);
         const pos = position.add(sprite.offset);
 
-        var flip = sprite.flip;
-        const face = view.tryGet(entity, com.Face);
-        if (face) |f| flip = (f == .left) != flip;
-        zhu.batch.drawImage(sprite.image, pos, .{ .flipX = !flip });
+        zhu.batch.drawImage(sprite.image, pos, .{
+            .flipX = sprite.flip,
+        });
     }
 
     for (map.startPaths) |start| {

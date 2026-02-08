@@ -411,6 +411,7 @@ pub const Registry = struct {
         self.assure(T).sort(lessFn);
     }
 
+    pub const remove = swapRemove;
     pub fn swapRemove(self: *Registry, entity: Entity, T: type) void {
         if (!self.validEntity(entity)) return;
         _ = self.assure(T).swapRemove(entity.index);

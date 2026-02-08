@@ -60,8 +60,10 @@ fn doSpawn(reg: *ecs.Registry, zon: *const Template) ecs.Entity {
     reg.add(entity, com.Sprite{
         .image = image.sub(.init(.zero, zon.size)),
         .offset = zon.offset,
-        .flip = zon.faceRight,
     });
+
+    // 面向左侧
+    if (!zon.faceRight) reg.add(entity, com.FaceLeft{});
 
     if (zon.block != 0) {
         reg.add(entity, com.Blocker{ .max = zon.block });
