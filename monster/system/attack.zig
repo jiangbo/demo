@@ -13,8 +13,10 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
         if (!reg.validEntity(target)) continue; // 目标无效
 
         // 播放攻击动画
+        const ranged = view.has(entity, com.Ranged);
+        const attack: com.StateEnum = if (ranged) .ranged else .attack;
         view.add(entity, com.AnimationPlay{
-            .index = @intFromEnum(com.StateEnum.attack),
+            .index = @intFromEnum(attack),
         });
 
         // 设置攻击锁定，不能进行移动

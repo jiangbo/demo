@@ -21,7 +21,12 @@ fn followPath(registry: *zhu.ecs.Registry) void {
         if (enemy.target.point.sub(pos).length2() > 25) continue;
 
         // 到达目标位置，转向，即更新速度
-        const nextPathId = enemy.target.randomNext();
+        var nextPathId = enemy.target.next;
+        if (enemy.target.next2 != 0) {
+            // 随机选择下一条路径
+            if (zhu.randomBool()) nextPathId = enemy.target.next2;
+        }
+
         if (nextPathId == 0) { // 到达终点，销毁实体
             registry.addEvent(view.toEntity(entity));
             continue;

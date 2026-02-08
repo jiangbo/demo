@@ -77,6 +77,9 @@ fn doSpawn(reg: *ecs.Registry, zon: *const Template) ecs.Entity {
         reg.add(entity, com.AttackRange{ .v = zon.range });
     }
 
+    // 添加远程攻击
+    if (zon.ranged) reg.add(entity, com.Ranged{});
+
     // 添加属性组件
     reg.add(entity, com.Stats{
         .hp = @floatFromInt(zon.health),
