@@ -82,7 +82,13 @@ pub fn draw() void {
     //     }
     // }.lessThan);
 
-    var view = registry.view(.{ com.Sprite, com.Position });
+    registry.sort(com.Position, struct {
+        pub fn lessThan(a: com.Position, b: com.Position) bool {
+            return a.y < b.y;
+        }
+    }.lessThan);
+
+    var view = registry.view(.{com.Position});
     while (view.next()) |entity| {
         const sprite = view.get(entity, com.Sprite);
         const position = view.get(entity, com.Position);
