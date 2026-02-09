@@ -13,7 +13,7 @@ fn followPath(registry: *zhu.ecs.Registry) void {
     var view = registry.view(.{ com.Position, com.Enemy, com.Velocity });
     while (view.next()) |entity| {
         if (view.has(entity, com.BlockBy)) continue; // 被阻挡的不处理
-        if (view.has(entity, com.AttackLock)) continue; // 攻击锁定的不处理
+        if (view.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
 
         // 当前位置和目标位置是否足够靠近
         const enemy = view.getPtr(entity, com.Enemy);
@@ -42,7 +42,7 @@ fn move(registry: *zhu.ecs.Registry, delta: f32) void {
     var view = registry.view(.{ com.Position, com.Velocity });
     while (view.next()) |entity| {
         if (view.has(entity, com.BlockBy)) continue; // 被阻挡的不处理
-        if (view.has(entity, com.AttackLock)) continue; // 攻击锁定的不处理
+        if (view.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
 
         // 先移动
         const position = view.getPtr(entity, com.Position);

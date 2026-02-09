@@ -22,6 +22,6 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
         });
 
         // 移除攻击锁定
-        view.remove(entity, com.AttackLock);
+        view.remove(entity, com.attack.Lock);
     }
 }

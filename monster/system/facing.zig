@@ -35,7 +35,7 @@ fn facingMove(reg: *zhu.ecs.Registry) void {
 
     while (view.next()) |entity| {
         if (view.has(entity, com.BlockBy)) continue; // 被阻挡的不处理
-        if (view.has(entity, com.AttackLock)) continue; // 攻击锁定的不处理
+        if (view.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
 
         const sprite = view.getPtr(entity, com.Sprite);
         const velocity = view.get(entity, com.Velocity);

@@ -12,12 +12,12 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
 /// 验证攻击目标是否死亡，是否在攻击范围内。
 ///
 pub fn cleanInvalidTarget(reg: *zhu.ecs.Registry) void {
-    var view = reg.reverseView(.{ com.AttackRange, com.Target });
+    var view = reg.reverseView(.{ com.attack.Range, com.Target });
 
     while (view.next()) |entity| {
         const target = view.get(entity, com.Target).v;
         if (reg.validEntity(target)) { // 目标还存活
-            const range = view.get(entity, com.AttackRange).v + 20; // 目标的中心
+            const range = view.get(entity, com.attack.Range).v + 20; // 目标的中心
             const pos = view.get(entity, com.Position);
             const targetPos = reg.get(target, com.Position);
             if (pos.sub(targetPos).length2() <= range * range) {
@@ -34,12 +34,12 @@ pub fn cleanInvalidTarget(reg: *zhu.ecs.Registry) void {
 ///
 const attack = com.attack;
 pub fn selectAttackTarget(reg: *zhu.ecs.Registry) void {
-    var view = reg.view(.{ com.Position, com.AttackRange, attack.Ready });
+    var view = reg.view(.{ com.Position, attack.Range, attack.Ready });
     while (view.next()) |entity| {
         if (view.has(entity, com.Target)) continue; // 已经有目标了
 
         const pos = view.get(entity, com.Position);
-        const range = view.get(entity, com.AttackRange).v + 20; // 目标的中心
+        const range = view.get(entity, com.attack.Range).v + 20; // 目标的中心
         const range2 = range * range;
 
         var closestTarget: ?zhu.ecs.Entity.Index = null; // 找最近的敌方

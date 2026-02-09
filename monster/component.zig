@@ -20,6 +20,8 @@ pub const Timer = struct {
 
 pub const attack = struct {
     pub const Ready = struct {}; // 冷却完毕，可以攻击。
+    pub const Range = struct { v: f32 }; // 攻击范围
+    pub const Lock = struct {}; // 攻击锁定
 };
 
 pub const Position = zhu.Vector2;
@@ -43,9 +45,8 @@ pub const ActionEnum = enum(u32) { none = 0, hit = 1, emit = 2 };
 
 pub const Ranged = struct {};
 pub const Target = struct { v: Entity };
-pub const AttackRange = struct { v: f32 };
+
 pub const CoolDown = struct { v: f32 }; // 冷却时间
-pub const AttackLock = struct {}; // 攻击锁定
 
 // 战斗相关组件
 pub const Stats = struct {

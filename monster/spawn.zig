@@ -74,7 +74,7 @@ fn doSpawn(reg: *ecs.Registry, zon: *const Template) ecs.Entity {
 
     // 添加攻击范围组件
     if (zon.playerEnum != .witch) {
-        reg.add(entity, com.AttackRange{ .v = zon.range });
+        reg.add(entity, com.attack.Range{ .v = zon.range });
     }
 
     // 添加远程攻击
