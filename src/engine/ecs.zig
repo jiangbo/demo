@@ -317,7 +317,7 @@ pub const Registry = struct {
         return self.identityMap.remove(hashTypeId(T));
     }
 
-    fn assureEvent(self: *Registry, T: type) *std.ArrayList(T) {
+    pub fn assureEvent(self: *Registry, T: type) *std.ArrayList(T) {
         const v = self.eventMap.getOrPut(self.allocator, //
             hashTypeId(T)) catch oom();
         if (!v.found_existing) {

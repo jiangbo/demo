@@ -32,10 +32,10 @@ pub fn cleanInvalidTarget(reg: *zhu.ecs.Registry) void {
 ///
 /// 选择一个最近的攻击目标
 ///
+const attack = com.attack;
 pub fn selectAttackTarget(reg: *zhu.ecs.Registry) void {
-    var view = reg.view(.{ com.Position, com.AttackRange });
+    var view = reg.view(.{ com.Position, com.AttackRange, attack.Ready });
     while (view.next()) |entity| {
-        if (view.has(entity, com.AttackTimer)) continue; // 攻击冷却中
         if (view.has(entity, com.Target)) continue; // 已经有目标了
 
         const pos = view.get(entity, com.Position);

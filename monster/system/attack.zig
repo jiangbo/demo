@@ -4,11 +4,9 @@ const zhu = @import("zhu");
 const com = @import("../component.zig");
 
 pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
-    var view = reg.view(.{com.Target});
+    var view = reg.view(.{ com.Target, com.attack.Ready });
 
     while (view.next()) |entity| {
-        if (view.has(entity, com.AttackTimer)) continue; // 攻击冷却中
-
         const target = view.get(entity, com.Target).v;
         if (!reg.validEntity(target)) continue; // 目标无效
 
@@ -23,7 +21,11 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
         view.add(entity, com.AttackLock{});
 
         // 设置攻击冷却
-        const cool = view.get(entity, com.CoolDown).v;
-        view.add(entity, com.AttackTimer{ .v = .init(cool) });
+        view.remove(entity, com.attack.Ready);
+        reg.addEvent(com.Timer{
+            .remaining = view.get(entity, com.CoolDown).v,
+            .entity = view.toEntity(entity),
+            .type = .attack,
+        });
     }
 }

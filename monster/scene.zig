@@ -7,6 +7,7 @@ const spawn = @import("spawn.zig");
 const battle = @import("battle.zig");
 
 const system = struct {
+    const timer = @import("system/timer.zig");
     const motion = @import("system/motion.zig");
     const state = @import("system/state.zig");
     const target = @import("system/target.zig");
@@ -38,7 +39,7 @@ pub fn update(delta: f32) void {
     // 地图更新，地图上的动画等。
     map.update(delta);
 
-    cleanTimerIfDone(com.AttackTimer, delta); // 清理攻击计时器
+    system.timer.update(&registry, delta); // 计时系统
 
     system.motion.update(&registry, delta); // 移动系统
     system.animation.update(&registry, delta); // 动画系统

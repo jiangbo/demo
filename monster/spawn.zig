@@ -90,6 +90,7 @@ fn doSpawn(reg: *ecs.Registry, zon: *const Template) ecs.Entity {
 
     // 攻击冷却时间
     reg.add(entity, com.CoolDown{ .v = zon.interval });
+    reg.add(entity, com.attack.Ready{});
 
     // 添加声音组件
     reg.add(entity, zon.sounds);
