@@ -13,6 +13,7 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
         }
 
         if (!reg.validEntity(target)) continue; // 目标已经死了
+        if (reg.has(target, com.Dead)) continue; // 目标已经死了
 
         const attack = view.getPtr(entity, com.Stats).attack;
         const stats = view.getPtr(target.index, com.Stats);

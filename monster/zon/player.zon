@@ -67,6 +67,7 @@
         .interval = 1.5,
         .block = 0,
         .cost = 8,
+        .projectile = .arrow,
         .faceRight = true,
         .size = .{ .x = 192, .y = 192 },
         .offset = .{ .x = -96, .y = -128 },
@@ -74,10 +75,16 @@
             .path = "assets/textures/Units/Archer.png",
             .size = .{ .x = 1536, .y = 384 },
         },
-        .sounds = .{.{
-            .action = .emit,
-            .path = "assets/audio/Bow Attack.ogg",
-        }},
+        .sounds = .{
+            .{
+                .action = .emit,
+                .path = "assets/audio/Bow Attack.ogg",
+            },
+            .{
+                .action = .hit,
+                .path = "assets/audio/Bow Impact Hit 1.ogg",
+            },
+        },
         .animations = .{
             .{ // idle
                 .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.1 },

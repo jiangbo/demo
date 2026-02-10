@@ -318,7 +318,7 @@
         .interval = 2,
         .speed = 50,
         .ranged = true,
-        // .projectile = "magic_ball",
+        .projectile = .magic,
         .faceRight = false,
         .size = .{ .x = 192, .y = 192 },
         .offset = .{ .x = -96, .y = -148 },
@@ -326,10 +326,16 @@
             .path = "assets/textures/Enemy/dark_witch.png",
             .size = .{ .x = 5760, .y = 960 },
         },
-        .sounds = .{.{
-            .action = .emit,
-            .path = "assets/audio/Fireball 1.ogg",
-        }},
+        .sounds = .{
+            .{
+                .action = .emit,
+                .path = "assets/audio/Fireball 1.ogg",
+            },
+            .{
+                .action = .hit,
+                .path = "assets/audio/fire-ball.ogg",
+            },
+        },
         .animations = .{
             .{ // idle
                 .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.05 },

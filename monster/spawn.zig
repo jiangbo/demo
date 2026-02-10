@@ -19,6 +19,7 @@ const Template = struct {
     speed: f32 = 0,
     ranged: bool = false,
     faceRight: bool,
+    projectile: ?com.ProjectileEnum = null,
     size: zhu.Vector2,
     offset: zhu.Vector2,
     sounds: []const Sound = &.{},
@@ -81,6 +82,9 @@ fn doSpawn(reg: *zhu.ecs.Registry, zon: *const Template) zhu.ecs.Entity {
     if (zon.stats.health < zon.stats.maxHealth) {
         reg.add(entity, com.attack.Injured{});
     }
+
+    // 添加投射物组件
+    if (zon.projectile) |projectile| reg.add(entity, projectile);
 
     // 攻击冷却时间
     reg.add(entity, com.attack.CoolDown{ .v = zon.interval });
