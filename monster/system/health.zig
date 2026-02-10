@@ -24,8 +24,8 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
         }
 
         // 伤害
-        const damage = @max(attack - stats.defense, 10);
-        stats.health -= damage;
+        const damage = attack - stats.defense;
+        stats.health -= @max(damage, @divTrunc(attack, 10));
         const msg = "entity: {} hit target: {}, damage: {}, health: {}";
         std.log.debug(msg, .{ entity, target, damage, stats.health });
 
