@@ -1,23 +1,28 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const Entity = zhu.ecs.Entity;
+const Entity = zhu.ecs.Entity; // 实体
 
-pub const Position = zhu.Vector2;
-pub const Sprite = struct {
+pub const Position = zhu.Vector2; // 位置
+pub const Sprite = struct { // 精灵
     image: zhu.graphics.Image,
     offset: zhu.Vector2,
     flip: bool = false,
 };
 
-pub const Timer = struct {
+pub const Timer = struct { // 计时器
     remaining: f32,
     entity: zhu.ecs.Entity,
     type: enum { attack },
 };
 
-pub const Enemy = struct { target: Path, speed: f32 };
-pub const Player = struct {};
+pub const Path = struct { // 路径
+    point: zhu.Vector2, // 路径点位置
+    next: u8 = 0, // 终点没有下一个路径点
+    next2: u8 = 0, // 可选的第二条分支路径
+};
+pub const Enemy = struct { target: Path, speed: f32 }; // 敌人
+pub const Player = struct {}; // 玩家
 
 ///
 /// 移动相关组件
@@ -63,13 +68,6 @@ pub const animation = struct {
 };
 
 pub const SoundPath = struct { action: ActionEnum, path: [:0]const u8 };
-
-pub const Path = struct {
-    point: zhu.Vector2, // 路径点位置
-    next: u8 = 0, // 终点没有下一个路径点
-    next2: u8 = 0, // 可选的第二条分支路径
-};
-
 pub const StateEnum = enum { idle, walk, damage, attack, ranged };
 pub const ActionEnum = enum(u32) { none = 0, hit = 1, emit = 2 };
 
