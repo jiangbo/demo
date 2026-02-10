@@ -12,7 +12,7 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
 /// 朝向目标
 ///
 fn facingTarget(reg: *zhu.ecs.Registry) void {
-    var view = reg.view(.{ com.attack.Target, com.Position, com.Sprite });
+    var view = reg.view(.{ com.attack.Target, com.Sprite });
 
     while (view.next()) |entity| {
         const sprite = view.getPtr(entity, com.Sprite);

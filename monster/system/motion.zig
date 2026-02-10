@@ -10,7 +10,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
 }
 
 fn followPath(registry: *zhu.ecs.Registry) void {
-    var view = registry.view(.{ com.Position, com.Enemy, com.motion.Velocity });
+    var view = registry.view(.{ com.Enemy, com.motion.Velocity });
     while (view.next()) |entity| {
         if (view.has(entity, com.motion.BlockBy)) continue; // 被阻挡的不处理
         if (view.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
@@ -39,7 +39,7 @@ fn followPath(registry: *zhu.ecs.Registry) void {
 }
 
 fn move(registry: *zhu.ecs.Registry, delta: f32) void {
-    var view = registry.view(.{ com.Position, com.motion.Velocity });
+    var view = registry.view(.{com.motion.Velocity});
     while (view.next()) |entity| {
         if (view.has(entity, com.motion.BlockBy)) continue; // 被阻挡的不处理
         if (view.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
@@ -50,7 +50,7 @@ fn move(registry: *zhu.ecs.Registry, delta: f32) void {
         position.* = position.*.add(velocity.v.scale(delta));
 
         // 再检查是否被阻挡
-        var blockView = registry.view(.{ com.Position, com.motion.Blocker });
+        var blockView = registry.view(.{com.motion.Blocker});
         while (blockView.next()) |blocker| {
             const pos = blockView.get(blocker, com.Position);
             if (pos.sub(position.*).length2() > 40 * 40) continue;
