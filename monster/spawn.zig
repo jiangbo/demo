@@ -109,3 +109,36 @@ pub fn spawnPlayer(reg: *zhu.ecs.Registry, playerEnum: PlayerEnum) void {
     reg.add(entity, zhu.window.mousePosition);
     reg.add(entity, com.Player{});
 }
+
+const Projectile = struct {
+    image: [:0]const u8,
+    position: zhu.Vector2,
+    size: zhu.Vector2,
+    offset: zhu.Vector2,
+    arc: f32,
+    time: f32,
+};
+
+const projectileZon: []const Projectile = @import("zon/projectile.zon");
+
+pub fn spawnProjectile(reg: *zhu.ecs.Registry) void {
+    defer reg.clear(com.attack.Emit);
+    var view = reg.view(.{com.attack.Emit});
+    while (view.next()) |entity| {
+        std.log.info("projectile: {}", .{entity});
+        const projectile = view.get(entity, com.ProjectileEnum);
+        const value = &projectileZon[@intFromEnum(projectile)];
+
+        const new = reg.createEntity();
+        var image = zhu.assets.loadImage(value.image, .zero);
+        image = image.sub(.init(value.position, value.size));
+        reg.add(new, image);
+        reg.add(new, com.Projectile{
+            .arc = value.arc,
+            .time = value.time,
+        });
+
+        const pos = view.get(entity, com.Position).add(value.offset);
+        reg.add(new, pos);
+    }
+}

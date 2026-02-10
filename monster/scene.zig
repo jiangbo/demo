@@ -11,6 +11,7 @@ const system = struct {
     const motion = @import("system/motion.zig");
     const state = @import("system/state.zig");
     const target = @import("system/target.zig");
+    const projectile = @import("system/projectile.zig");
     const attack = @import("system/attack.zig");
     const health = @import("system/health.zig");
     const facing = @import("system/facing.zig");
@@ -48,6 +49,7 @@ pub fn update(delta: f32) void {
     system.animation.update(&registry, delta); // 动画系统
     system.state.update(&registry, delta); // 状态系统
     system.target.update(&registry, delta); // 目标系统
+    system.projectile.update(&registry, delta); // 投射物系统
     system.attack.update(&registry, delta); // 攻击系统
     system.health.update(&registry, delta); // 生命系统
     system.facing.update(&registry, delta); // 面向系统
@@ -56,6 +58,7 @@ pub fn update(delta: f32) void {
     for (registry.getEvents(zhu.ecs.Entity).items) |entity| {
         registry.destroyEntity(entity);
     }
+
     registry.clearEvent(zhu.ecs.Entity);
 }
 
@@ -74,7 +77,7 @@ pub fn draw() void {
         }
     }.lessThan);
 
-    var view = registry.view(.{com.Position});
+    var view = registry.view(.{ com.Position, com.Sprite });
     while (view.next()) |entity| {
         const sprite = view.get(entity, com.Sprite);
         const position = view.get(entity, com.Position);
@@ -86,6 +89,7 @@ pub fn draw() void {
     }
 
     system.health.draw(&registry); // 绘制血条
+    system.projectile.draw(&registry); // 绘制投射物
 
     for (map.startPaths) |start| {
         if (start == 0) break;

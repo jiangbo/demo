@@ -27,6 +27,8 @@ pub const StateEnum = enum { idle, walk, damage, attack, ranged };
 pub const ActionEnum = enum(u32) { none = 0, hit = 1, emit = 2 };
 pub const ProjectileEnum = enum { arrow, magic }; // 投射物类型
 
+pub const Projectile = struct { arc: f32, time: f32 };
+
 pub const Dead = struct {}; // 死亡标签
 
 ///
