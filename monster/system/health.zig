@@ -18,16 +18,16 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
                 stats.health = stats.maxHealth;
                 reg.remove(target, com.attack.Injured); // 移除受伤标签
             }
-            const msg = "entity: {} heal target: {}, health: {}";
-            std.log.debug(msg, .{ entity, target, stats.health });
+            const msg = "实体: {} 治疗目标: {}, 生命值: {}";
+            std.log.debug(msg, .{ entity, target.index, stats.health });
             continue;
         }
 
         // 伤害
         const damage = attack - stats.defense;
         stats.health -= @max(damage, @divTrunc(attack, 10));
-        const msg = "entity: {} hit target: {}, damage: {}, health: {}";
-        std.log.debug(msg, .{ entity, target, damage, stats.health });
+        const msg = "实体: {} 攻击目标: {}, 伤害: {}, 生命值: {}";
+        std.log.debug(msg, .{ entity, target.index, damage, stats.health });
 
         view.add(target.index, com.attack.Injured{}); // 目标受伤了
         if (stats.health <= 0) {

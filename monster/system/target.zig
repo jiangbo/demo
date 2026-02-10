@@ -26,7 +26,7 @@ pub fn cleanInvalidTarget(reg: *zhu.ecs.Registry) void {
                 continue; // 目标在攻击范围内
             }
         }
-        std.log.debug("entity: {} clean target: {}", .{ entity, target });
+        std.log.debug("实体: {} 清除目标: {}", .{ entity, target.index });
         view.remove(entity, attack.Target);
     }
 }
@@ -66,7 +66,7 @@ pub fn selectAttackTarget(reg: *zhu.ecs.Registry) void {
 
         if (closestTarget) |target| {
             view.add(entity, attack.Target{ .v = view.toEntity(target) });
-            std.log.debug("entity: {} attack: {}", .{ entity, target });
+            std.log.debug("实体: {} 选择攻击目标: {}", .{ entity, target });
         }
     }
 }
@@ -94,7 +94,7 @@ fn selectHealTarget(reg: *zhu.ecs.Registry, entity: zhu.ecs.Entity) void {
 
     if (lowestTarget) |target| {
         reg.add(entity, attack.Target{ .v = view.toEntity(target) });
-        std.log.debug("entity: {} heal: {}", .{ entity, target });
+        std.log.debug("实体: {} 选择治疗目标: {}", .{ entity.index, target });
     } else {
         reg.remove(entity, attack.Target); // 移除之前的目标
     }
