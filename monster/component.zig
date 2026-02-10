@@ -38,6 +38,8 @@ pub const attack = struct {
     pub const Ready = struct {}; // 冷却完毕，可以攻击。
     pub const Range = struct { v: f32 }; // 攻击范围
     pub const Lock = struct {}; // 攻击锁定
+    pub const Healer = struct {}; // 治疗者
+    pub const Injured = struct {}; // 受伤标签
 };
 
 pub const SoundPath = struct { action: ActionEnum, path: [:0]const u8 };
@@ -58,14 +60,11 @@ pub const Ranged = struct {};
 
 pub const CoolDown = struct { v: f32 }; // 冷却时间
 
-// 战斗相关组件
 pub const Stats = struct {
-    hp: f32,
-    maxHp: f32,
-    atk: f32,
-    def: f32,
+    health: i32,
+    maxHealth: i32,
+    attack: i32,
+    defense: i32,
 };
 
 pub const Dead = struct {}; // 死亡标签
-pub const Injured = struct {}; // 受伤标签
-pub const Healer = struct {}; // 治疗者标签

@@ -2,9 +2,12 @@
     .{
         .enemyEnum = .slime,
         .name = "史莱姆",
-        .health = 200,
-        .attack = 70,
-        .defense = 20,
+        .stats = .{
+            .health = 200,
+            .maxHealth = 200,
+            .attack = 70,
+            .defense = 20,
+        },
         .range = 20,
         .interval = 2,
         .speed = 60,
@@ -101,9 +104,12 @@
     .{
         .enemyEnum = .wolf,
         .name = "狼",
-        .health = 300,
-        .attack = 100,
-        .defense = 30,
+        .stats = .{
+            .health = 300,
+            .maxHealth = 300,
+            .attack = 100,
+            .defense = 30,
+        },
         .range = 20,
         .interval = 1.5,
         .speed = 80,
@@ -200,9 +206,12 @@
     .{
         .enemyEnum = .goblin,
         .name = "哥布林",
-        .health = 500,
-        .attack = 130,
-        .defense = 60,
+        .stats = .{
+            .health = 500,
+            .maxHealth = 500,
+            .attack = 130,
+            .defense = 60,
+        },
         .range = 20,
         .interval = 3,
         .speed = 40,
@@ -299,9 +308,12 @@
     .{
         .enemyEnum = .darkWitch,
         .name = "黑暗女巫",
-        .health = 800,
-        .attack = 150,
-        .defense = 50,
+        .stats = .{
+            .health = 800,
+            .maxHealth = 800,
+            .attack = 150,
+            .defense = 50,
+        },
         .range = 250,
         .interval = 2,
         .speed = 50,

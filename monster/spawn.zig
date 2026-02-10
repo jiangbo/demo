@@ -12,9 +12,7 @@ const Template = struct {
     playerEnum: ?PlayerEnum = null,
     name: []const u8,
     description: []const u8 = &.{},
-    health: u32,
-    attack: u32,
-    defense: u32,
+    stats: com.Stats,
     range: f32,
     interval: f32,
     block: u8 = 0,
@@ -73,20 +71,14 @@ fn doSpawn(reg: *ecs.Registry, zon: *const Template) ecs.Entity {
     reg.add(entity, animation);
 
     // 添加攻击范围组件
-    if (zon.playerEnum != .witch) {
-        reg.add(entity, com.attack.Range{ .v = zon.range });
-    }
+    reg.add(entity, com.attack.Range{ .v = zon.range });
 
     // 添加远程攻击
     if (zon.ranged) reg.add(entity, com.Ranged{});
 
     // 添加属性组件
-    reg.add(entity, com.Stats{
-        .hp = @floatFromInt(zon.health),
-        .maxHp = @floatFromInt(zon.health),
-        .atk = @floatFromInt(zon.attack),
-        .def = @floatFromInt(zon.defense),
-    });
+    reg.add(entity, zon.stats);
+    if (zon.stats.attack < 0) reg.add(entity, com.attack.Healer{});
 
     // 攻击冷却时间
     reg.add(entity, com.CoolDown{ .v = zon.interval });
