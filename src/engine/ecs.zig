@@ -317,7 +317,7 @@ pub const Registry = struct {
         return self.identityMap.remove(hashTypeId(T));
     }
 
-    pub fn assureEvent(self: *Registry, T: type) *std.ArrayList(T) {
+    fn assureEvent(self: *Registry, T: type) *std.ArrayList(T) {
         const v = self.eventMap.getOrPut(self.allocator, //
             hashTypeId(T)) catch oom();
         if (!v.found_existing) {
@@ -332,8 +332,8 @@ pub const Registry = struct {
         list.append(self.allocator, value) catch oom();
     }
 
-    pub fn getEvents(self: *Registry, T: type) []T {
-        return self.assureEvent(T).items;
+    pub fn getEvents(self: *Registry, T: type) *std.ArrayList(T) {
+        return self.assureEvent(T);
     }
 
     pub fn popEvent(self: *Registry, T: type) ?T {

@@ -34,6 +34,8 @@ pub fn update(delta: f32) void {
         spawn.spawnPlayer(&registry, .warrior);
     } else if (zhu.window.mouse.pressed(.RIGHT)) {
         spawn.spawnPlayer(&registry, .archer);
+    } else if (zhu.window.mouse.pressed(.MIDDLE)) {
+        spawn.spawnPlayer(&registry, .witch);
     }
 
     // 地图更新，地图上的动画等。
@@ -48,14 +50,8 @@ pub fn update(delta: f32) void {
     system.attack.update(&registry, delta); // 攻击系统
     system.facing.update(&registry, delta); // 面向系统
 
-    // 处理动画事件，转换为战斗事件
-    battle.processAnimationEvents(&registry);
-
-    // 处理战斗结算
-    // battle.resolveCombat(&registry);
-
     // 处理到达终点的敌人
-    for (registry.getEvents(zhu.ecs.Entity)) |entity| {
+    for (registry.getEvents(zhu.ecs.Entity).items) |entity| {
         registry.destroyEntity(entity);
     }
     registry.clearEvent(zhu.ecs.Entity);

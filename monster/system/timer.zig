@@ -4,9 +4,9 @@ const zhu = @import("zhu");
 const com = @import("../component.zig");
 
 pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
-    const timerList = reg.assureEvent(com.Timer);
+    const timerEvents = reg.getEvents(com.Timer);
 
-    var iterator = std.mem.reverseIterator(timerList.items);
+    var iterator = std.mem.reverseIterator(timerEvents.items);
     while (iterator.nextPtr()) |timer| {
         timer.remaining -= delta;
         if (timer.remaining > 0) continue;
@@ -14,6 +14,6 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
         switch (timer.type) {
             .attack => reg.add(timer.entity, com.attack.Ready{}),
         }
-        _ = timerList.swapRemove(iterator.index);
+        _ = timerEvents.swapRemove(iterator.index);
     }
 }

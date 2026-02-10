@@ -1,8 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const ecs = zhu.ecs;
-
 const com = @import("component.zig");
 const map = @import("map.zig");
 
@@ -30,7 +28,7 @@ const Template = struct {
 const enemyZon: []const Template = @import("zon/enemy.zon");
 const playerZon: []const Template = @import("zon/player.zon");
 
-pub fn spawnEnemies(reg: *ecs.Registry) void {
+pub fn spawnEnemies(reg: *zhu.ecs.Registry) void {
     for (map.startPaths) |startId| {
         if (startId == 0) break;
 
@@ -50,7 +48,7 @@ pub fn spawnEnemies(reg: *ecs.Registry) void {
     }
 }
 
-fn doSpawn(reg: *ecs.Registry, zon: *const Template) ecs.Entity {
+fn doSpawn(reg: *zhu.ecs.Registry, zon: *const Template) zhu.ecs.Entity {
     const entity = reg.createEntity();
 
     const path = zon.image.path;
@@ -84,7 +82,7 @@ fn doSpawn(reg: *ecs.Registry, zon: *const Template) ecs.Entity {
     }
 
     // 攻击冷却时间
-    reg.add(entity, com.CoolDown{ .v = zon.interval });
+    reg.add(entity, com.attack.CoolDown{ .v = zon.interval });
     reg.add(entity, com.attack.Ready{});
 
     // 添加声音组件
@@ -93,7 +91,7 @@ fn doSpawn(reg: *ecs.Registry, zon: *const Template) ecs.Entity {
     return entity;
 }
 
-pub fn spawnPlayer(reg: *ecs.Registry, playerEnum: PlayerEnum) void {
+pub fn spawnPlayer(reg: *zhu.ecs.Registry, playerEnum: PlayerEnum) void {
     const value = &playerZon[@intFromEnum(playerEnum)];
 
     const entity = doSpawn(reg, value);

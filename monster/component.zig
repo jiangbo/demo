@@ -40,6 +40,7 @@ pub const attack = struct {
     pub const Lock = struct {}; // 攻击锁定
     pub const Healer = struct {}; // 治疗者
     pub const Injured = struct {}; // 受伤标签
+    pub const CoolDown = struct { v: f32 }; // 冷却时间
 };
 
 pub const SoundPath = struct { action: ActionEnum, path: [:0]const u8 };
@@ -57,8 +58,6 @@ pub const StateEnum = enum { idle, walk, damage, attack, ranged };
 pub const ActionEnum = enum(u32) { none = 0, hit = 1, emit = 2 };
 
 pub const Ranged = struct {};
-
-pub const CoolDown = struct { v: f32 }; // 冷却时间
 
 pub const Stats = struct {
     health: i32,
