@@ -15,6 +15,8 @@ pub fn cleanInvalidTarget(reg: *zhu.ecs.Registry) void {
     var view = reg.reverseView(.{ attack.Range, attack.Target });
 
     while (view.next()) |entity| {
+        if (view.has(entity, attack.Lock)) continue; // 攻击锁定时不能切换目标
+
         const target = view.get(entity, attack.Target).v;
         if (reg.validEntity(target)) { // 目标还存活
             const range = view.get(entity, attack.Range).v + 20; // 目标的中心
