@@ -59,19 +59,6 @@ pub fn update(delta: f32) void {
     registry.clearEvent(zhu.ecs.Entity);
 }
 
-///
-///  删除已经结束的计时器。
-///
-pub fn cleanTimerIfDone(T: type, delta: f32) void {
-    var view = registry.reverseView(.{T});
-    while (view.next()) |entity| {
-        const timer = view.getPtr(entity, T);
-        if (timer.v.isFinishedOnceUpdate(delta)) {
-            view.remove(entity, T);
-        }
-    }
-}
-
 pub fn draw() void {
     map.draw();
 
@@ -97,6 +84,8 @@ pub fn draw() void {
             .flipX = sprite.flip,
         });
     }
+
+    system.health.draw(&registry); // 绘制血条
 
     for (map.startPaths) |start| {
         if (start == 0) break;

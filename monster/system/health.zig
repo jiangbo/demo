@@ -37,3 +37,26 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
 
     reg.clear(com.attack.Hit);
 }
+
+const percentInt = zhu.math.percentInt;
+pub fn draw(reg: *zhu.ecs.Registry) void {
+    const size: zhu.Vector2 = .xy(40, 10);
+
+    var view = reg.view(.{ com.attack.Injured, com.Stats });
+    while (view.next()) |entity| {
+        const stats = view.getPtr(entity, com.Stats);
+        const percent = percentInt(stats.health, stats.maxHealth);
+
+        var pos = view.get(entity, com.Position);
+        pos = pos.addXY(-size.x / 2, size.y);
+
+        var color = zhu.graphics.Color.red;
+        if (percent > 0.7) color = .green //
+        else if (percent > 0.3) color = .yellow;
+
+        var rect = zhu.math.Rect{ .min = pos, .size = size };
+        zhu.batch.drawRectBorder(rect, 2, color);
+        rect.size.x *= @max(percent, 0);
+        zhu.batch.drawRect(rect, .{ .color = color });
+    }
+}
