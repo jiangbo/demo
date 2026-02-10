@@ -72,7 +72,7 @@ fn doSpawn(reg: *zhu.ecs.Registry, zon: *const Template) zhu.ecs.Entity {
     reg.add(entity, com.attack.Range{ .v = zon.range });
 
     // 添加远程攻击
-    if (zon.ranged) reg.add(entity, com.Ranged{});
+    if (zon.ranged) reg.add(entity, com.attack.Ranged{});
 
     // 添加属性组件
     reg.add(entity, zon.stats);
