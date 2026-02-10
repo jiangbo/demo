@@ -79,6 +79,9 @@ fn doSpawn(reg: *ecs.Registry, zon: *const Template) ecs.Entity {
     // 添加属性组件
     reg.add(entity, zon.stats);
     if (zon.stats.attack < 0) reg.add(entity, com.attack.Healer{});
+    if (zon.stats.health < zon.stats.maxHealth) {
+        reg.add(entity, com.attack.Injured{});
+    }
 
     // 攻击冷却时间
     reg.add(entity, com.CoolDown{ .v = zon.interval });
