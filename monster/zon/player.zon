@@ -20,6 +20,10 @@
             .path = "assets/textures/Units/Warrior.png",
             .size = .{ .x = 1536, .y = 576 },
         },
+        .sounds = .{.{
+            .action = .hit,
+            .path = "assets/audio/Sword Impact Hit 1.ogg",
+        }},
         .animations = .{
             .{ // idle
                 .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.1 },
@@ -70,6 +74,10 @@
             .path = "assets/textures/Units/Archer.png",
             .size = .{ .x = 1536, .y = 384 },
         },
+        .sounds = .{.{
+            .action = .emit,
+            .path = "assets/audio/Bow Attack.ogg",
+        }},
         .animations = .{
             .{ // idle
                 .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.1 },
@@ -117,6 +125,10 @@
             .path = "assets/textures/Units/Lancer.png",
             .size = .{ .x = 3840, .y = 640 },
         },
+        .sounds = .{.{
+            .action = .hit,
+            .path = "assets/audio/Sword Impact Hit 1.ogg",
+        }},
         .animations = .{
             .{ // idle
                 .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.1 },
@@ -164,6 +176,10 @@
             .path = "assets/textures/Units/Witch.png",
             .size = .{ .x = 4800, .y = 384 },
         },
+        .sounds = .{.{
+            .action = .hit,
+            .path = "assets/audio/healing-balm.ogg",
+        }},
         .animations = .{
             .{ // idle
                 .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.1 },
