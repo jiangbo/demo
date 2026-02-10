@@ -25,6 +25,9 @@ pub const Timer = struct {
 ///
 pub const motion = struct {
     pub const Velocity = struct { v: zhu.Vector2 }; // 速度
+    pub const FaceLeft = struct {}; // 面向左侧
+    pub const Blocker = struct { max: u8, current: u8 = 0 }; // 阻挡者
+    pub const BlockBy = struct { v: Entity }; // 被阻挡
 };
 
 ///
@@ -47,9 +50,6 @@ pub const Path = struct {
 
 pub const Enemy = struct { target: Path, speed: f32 };
 pub const Player = struct {}; // 占位符
-pub const FaceLeft = struct {}; // 面向左侧
-pub const Blocker = struct { max: u8, current: u8 = 0 };
-pub const BlockBy = struct { v: Entity };
 
 pub const StateEnum = enum { idle, walk, damage, attack, ranged };
 pub const ActionEnum = enum(u32) { none = 0, hit = 1, emit = 2 };

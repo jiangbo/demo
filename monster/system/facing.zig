@@ -20,7 +20,7 @@ fn facingTarget(reg: *zhu.ecs.Registry) void {
         const target = view.get(entity, com.attack.Target).v;
         const targetPos = reg.get(target, com.Position);
 
-        const imageFaceLeft = view.has(entity, com.FaceLeft);
+        const imageFaceLeft = view.has(entity, com.motion.FaceLeft);
         // 想朝右，图片朝左，翻转
         sprite.flip = if (pos.x < targetPos.x) imageFaceLeft //
             else !imageFaceLeft; // 想朝左，图片朝左，不翻转
@@ -34,12 +34,12 @@ fn facingMove(reg: *zhu.ecs.Registry) void {
     var view = reg.view(.{ com.motion.Velocity, com.Sprite });
 
     while (view.next()) |entity| {
-        if (view.has(entity, com.BlockBy)) continue; // 被阻挡的不处理
+        if (view.has(entity, com.motion.BlockBy)) continue; // 被阻挡的不处理
         if (view.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
 
         const sprite = view.getPtr(entity, com.Sprite);
         const velocity = view.get(entity, com.motion.Velocity);
-        const imageFaceLeft = view.has(entity, com.FaceLeft);
+        const imageFaceLeft = view.has(entity, com.motion.FaceLeft);
 
         // 想朝右，图片朝左，翻转
         sprite.flip = if (velocity.v.x > 0) imageFaceLeft //

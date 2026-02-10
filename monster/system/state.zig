@@ -13,7 +13,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
     while (view.next()) |entity| {
         var state = com.StateEnum.idle;
         // 敌人需要区分是否被阻挡
-        const blocked = view.has(entity, com.BlockBy);
+        const blocked = view.has(entity, com.motion.BlockBy);
         if (view.has(entity, com.Enemy) and !blocked) state = .walk;
 
         view.add(entity, com.AnimationPlay{

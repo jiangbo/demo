@@ -12,7 +12,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
 fn followPath(registry: *zhu.ecs.Registry) void {
     var view = registry.view(.{ com.Position, com.Enemy, com.motion.Velocity });
     while (view.next()) |entity| {
-        if (view.has(entity, com.BlockBy)) continue; // 被阻挡的不处理
+        if (view.has(entity, com.motion.BlockBy)) continue; // 被阻挡的不处理
         if (view.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
 
         // 当前位置和目标位置是否足够靠近
@@ -41,7 +41,7 @@ fn followPath(registry: *zhu.ecs.Registry) void {
 fn move(registry: *zhu.ecs.Registry, delta: f32) void {
     var view = registry.view(.{ com.Position, com.motion.Velocity });
     while (view.next()) |entity| {
-        if (view.has(entity, com.BlockBy)) continue; // 被阻挡的不处理
+        if (view.has(entity, com.motion.BlockBy)) continue; // 被阻挡的不处理
         if (view.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
 
         // 先移动
@@ -50,15 +50,15 @@ fn move(registry: *zhu.ecs.Registry, delta: f32) void {
         position.* = position.*.add(velocity.v.scale(delta));
 
         // 再检查是否被阻挡
-        var blockView = registry.view(.{ com.Position, com.Blocker });
+        var blockView = registry.view(.{ com.Position, com.motion.Blocker });
         while (blockView.next()) |blocker| {
             const pos = blockView.get(blocker, com.Position);
             if (pos.sub(position.*).length2() > 40 * 40) continue;
 
-            const block = blockView.getPtr(blocker, com.Blocker);
+            const block = blockView.getPtr(blocker, com.motion.Blocker);
             if (block.current < block.max) {
                 const target = blockView.toEntity(blocker);
-                view.add(entity, com.BlockBy{ .v = target });
+                view.add(entity, com.motion.BlockBy{ .v = target });
                 view.add(entity, com.attack.Target{ .v = target });
                 block.current += 1;
                 break;

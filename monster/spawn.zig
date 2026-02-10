@@ -63,10 +63,10 @@ fn doSpawn(reg: *ecs.Registry, zon: *const Template) ecs.Entity {
     });
 
     // 面向左侧
-    if (!zon.faceRight) reg.add(entity, com.FaceLeft{});
+    if (!zon.faceRight) reg.add(entity, com.motion.FaceLeft{});
 
     if (zon.block != 0) {
-        reg.add(entity, com.Blocker{ .max = zon.block });
+        reg.add(entity, com.motion.Blocker{ .max = zon.block });
     }
 
     const animation = com.Animation.initSource(image, zon.animations);
