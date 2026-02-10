@@ -12,6 +12,7 @@ const system = struct {
     const state = @import("system/state.zig");
     const target = @import("system/target.zig");
     const attack = @import("system/attack.zig");
+    const health = @import("system/health.zig");
     const facing = @import("system/facing.zig");
     const animation = @import("system/animation.zig");
 };
@@ -48,6 +49,7 @@ pub fn update(delta: f32) void {
     system.state.update(&registry, delta); // 状态系统
     system.target.update(&registry, delta); // 目标系统
     system.attack.update(&registry, delta); // 攻击系统
+    system.health.update(&registry, delta); // 生命系统
     system.facing.update(&registry, delta); // 面向系统
 
     // 处理到达终点的敌人

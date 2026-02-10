@@ -46,6 +46,8 @@ pub const attack = struct {
     pub const Injured = struct {}; // 受伤标签
     pub const CoolDown = struct { v: f32 }; // 冷却时间
     pub const Ranged = struct {}; // 远程攻击
+    pub const Hit = struct {}; // 命中标签
+    pub const Emit = struct {}; // 发出攻击标签
 };
 
 ///

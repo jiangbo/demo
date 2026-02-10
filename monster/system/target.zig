@@ -95,5 +95,7 @@ fn selectHealTarget(reg: *zhu.ecs.Registry, entity: zhu.ecs.Entity) void {
     if (lowestTarget) |target| {
         reg.add(entity, attack.Target{ .v = view.toEntity(target) });
         std.log.debug("entity: {} heal: {}", .{ entity, target });
+    } else {
+        reg.remove(entity, attack.Target); // 移除之前的目标
     }
 }

@@ -19,8 +19,6 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
 
         // 设置攻击锁定，不能进行移动
         view.add(entity, com.attack.Lock{});
-        // 设置受伤标签
-        view.add(entity, com.attack.Injured{});
         // 设置攻击冷却
         view.remove(entity, com.attack.Ready);
         reg.addEvent(com.Timer{
