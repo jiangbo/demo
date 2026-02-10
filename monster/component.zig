@@ -3,10 +3,6 @@ const zhu = @import("zhu");
 
 const Entity = zhu.ecs.Entity;
 
-pub const Animation = zhu.graphics.Animation;
-pub const AnimationFinished = struct {};
-pub const AnimationPlay = struct { index: u8, loop: bool = false };
-
 pub const Position = zhu.Vector2;
 pub const Sprite = struct {
     image: zhu.graphics.Image,
@@ -19,6 +15,9 @@ pub const Timer = struct {
     entity: zhu.ecs.Entity,
     type: enum { attack },
 };
+
+pub const Enemy = struct { target: Path, speed: f32 };
+pub const Player = struct {};
 
 ///
 /// 移动相关组件
@@ -44,6 +43,25 @@ pub const attack = struct {
     pub const Ranged = struct {}; // 远程攻击
 };
 
+///
+/// 属性
+///
+pub const Stats = struct {
+    health: i32,
+    maxHealth: i32,
+    attack: i32,
+    defense: i32,
+};
+
+///
+/// 动画
+///
+pub const Animation = zhu.graphics.Animation;
+pub const animation = struct {
+    pub const Finished = struct {};
+    pub const Play = struct { index: u8, loop: bool = false };
+};
+
 pub const SoundPath = struct { action: ActionEnum, path: [:0]const u8 };
 
 pub const Path = struct {
@@ -52,19 +70,7 @@ pub const Path = struct {
     next2: u8 = 0, // 可选的第二条分支路径
 };
 
-pub const Enemy = struct { target: Path, speed: f32 };
-pub const Player = struct {}; // 占位符
-
 pub const StateEnum = enum { idle, walk, damage, attack, ranged };
 pub const ActionEnum = enum(u32) { none = 0, hit = 1, emit = 2 };
-
-// pub const Ranged = struct {};
-
-pub const Stats = struct {
-    health: i32,
-    maxHealth: i32,
-    attack: i32,
-    defense: i32,
-};
 
 pub const Dead = struct {}; // 死亡标签

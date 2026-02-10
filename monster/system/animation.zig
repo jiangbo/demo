@@ -5,13 +5,13 @@ const com = @import("../component.zig");
 
 pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
     var view = reg.view(.{com.Animation});
-    defer reg.clear(com.AnimationPlay);
+    defer reg.clear(com.animation.Play);
 
     while (view.next()) |ent| {
         const animation = view.getPtr(ent, com.Animation);
 
         // 处理可能的动画播放请求
-        if (view.tryGet(ent, com.AnimationPlay)) |play| {
+        if (view.tryGet(ent, com.animation.Play)) |play| {
             animation.play(play.index, play.loop);
         }
 
@@ -26,7 +26,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
             const action = animation.getEnumFrameExtend(com.ActionEnum);
             if (action != .none) view.add(ent, action);
         } else {
-            view.add(ent, com.AnimationFinished{}); // 动画播放结束
+            view.add(ent, com.animation.Finished{}); // 动画播放结束
         }
     }
 }

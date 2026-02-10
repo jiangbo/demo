@@ -13,7 +13,7 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
         // 播放攻击或者发射动画
         const ranged = view.has(entity, com.attack.Ranged);
         const attack: com.StateEnum = if (ranged) .ranged else .attack;
-        view.add(entity, com.AnimationPlay{
+        view.add(entity, com.animation.Play{
             .index = @intFromEnum(attack),
         });
 
