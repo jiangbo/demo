@@ -41,7 +41,7 @@ pub fn spawnEnemies(reg: *ecs.Registry) void {
             const entity = doSpawn(reg, value);
 
             reg.add(entity, start.point);
-            reg.add(entity, com.Velocity{ .v = .zero });
+            reg.add(entity, com.motion.Velocity{ .v = .zero });
             reg.add(entity, com.Enemy{
                 .target = start,
                 .speed = value.speed,

@@ -4,10 +4,10 @@ const zhu = @import("zhu");
 const com = @import("../component.zig");
 
 pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
-    var view = reg.view(.{ com.Target, com.attack.Ready });
+    var view = reg.view(.{ com.attack.Target, com.attack.Ready });
 
     while (view.next()) |entity| {
-        const target = view.get(entity, com.Target).v;
+        const target = view.get(entity, com.attack.Target).v;
         if (!reg.validEntity(target)) continue; // 目标无效
 
         // 播放攻击动画

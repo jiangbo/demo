@@ -12,12 +12,12 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
 /// 验证攻击目标是否死亡，是否在攻击范围内。
 ///
 pub fn cleanInvalidTarget(reg: *zhu.ecs.Registry) void {
-    var view = reg.reverseView(.{ com.attack.Range, com.Target });
+    var view = reg.reverseView(.{ attack.Range, attack.Target });
 
     while (view.next()) |entity| {
-        const target = view.get(entity, com.Target).v;
+        const target = view.get(entity, attack.Target).v;
         if (reg.validEntity(target)) { // 目标还存活
-            const range = view.get(entity, com.attack.Range).v + 20; // 目标的中心
+            const range = view.get(entity, attack.Range).v + 20; // 目标的中心
             const pos = view.get(entity, com.Position);
             const targetPos = reg.get(target, com.Position);
             if (pos.sub(targetPos).length2() <= range * range) {
@@ -25,7 +25,7 @@ pub fn cleanInvalidTarget(reg: *zhu.ecs.Registry) void {
             }
         }
         std.log.debug("entity: {} clean target: {}", .{ entity, target });
-        view.remove(entity, com.Target);
+        view.remove(entity, attack.Target);
     }
 }
 
@@ -34,12 +34,12 @@ pub fn cleanInvalidTarget(reg: *zhu.ecs.Registry) void {
 ///
 const attack = com.attack;
 pub fn selectAttackTarget(reg: *zhu.ecs.Registry) void {
-    var view = reg.view(.{ com.Position, attack.Range, attack.Ready });
+    var view = reg.view(.{ attack.Range, attack.Ready });
     while (view.next()) |entity| {
-        if (view.has(entity, com.Target)) continue; // 已经有目标了
+        if (view.has(entity, attack.Target)) continue; // 已经有目标了
 
         const pos = view.get(entity, com.Position);
-        const range = view.get(entity, com.attack.Range).v + 20; // 目标的中心
+        const range = view.get(entity, attack.Range).v + 20; // 目标的中心
         const range2 = range * range;
 
         var closestTarget: ?zhu.ecs.Entity.Index = null; // 找最近的敌方
@@ -59,7 +59,7 @@ pub fn selectAttackTarget(reg: *zhu.ecs.Registry) void {
         }
 
         if (closestTarget) |target| {
-            view.add(entity, com.Target{ .v = view.toEntity(target) });
+            view.add(entity, attack.Target{ .v = view.toEntity(target) });
             std.log.debug("entity: {} attack: {}", .{ entity, target });
         }
     }

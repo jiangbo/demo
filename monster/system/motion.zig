@@ -10,7 +10,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
 }
 
 fn followPath(registry: *zhu.ecs.Registry) void {
-    var view = registry.view(.{ com.Position, com.Enemy, com.Velocity });
+    var view = registry.view(.{ com.Position, com.Enemy, com.motion.Velocity });
     while (view.next()) |entity| {
         if (view.has(entity, com.BlockBy)) continue; // 被阻挡的不处理
         if (view.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
@@ -32,21 +32,21 @@ fn followPath(registry: *zhu.ecs.Registry) void {
             continue;
         }
         enemy.target = map.paths.get(nextPathId).?;
-        const velocity = view.getPtr(entity, com.Velocity);
+        const velocity = view.getPtr(entity, com.motion.Velocity);
         const direction = enemy.target.point.sub(pos).normalize();
         velocity.v = direction.scale(enemy.speed);
     }
 }
 
 fn move(registry: *zhu.ecs.Registry, delta: f32) void {
-    var view = registry.view(.{ com.Position, com.Velocity });
+    var view = registry.view(.{ com.Position, com.motion.Velocity });
     while (view.next()) |entity| {
         if (view.has(entity, com.BlockBy)) continue; // 被阻挡的不处理
         if (view.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
 
         // 先移动
         const position = view.getPtr(entity, com.Position);
-        const velocity = view.get(entity, com.Velocity);
+        const velocity = view.get(entity, com.motion.Velocity);
         position.* = position.*.add(velocity.v.scale(delta));
 
         // 再检查是否被阻挡
@@ -59,7 +59,7 @@ fn move(registry: *zhu.ecs.Registry, delta: f32) void {
             if (block.current < block.max) {
                 const target = blockView.toEntity(blocker);
                 view.add(entity, com.BlockBy{ .v = target });
-                view.add(entity, com.Target{ .v = target });
+                view.add(entity, com.attack.Target{ .v = target });
                 block.current += 1;
                 break;
             }

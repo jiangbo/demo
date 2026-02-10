@@ -6,6 +6,8 @@ const Entity = zhu.ecs.Entity;
 pub const Animation = zhu.graphics.Animation;
 pub const AnimationFinished = struct {};
 pub const AnimationPlay = struct { index: u8, loop: bool = false };
+
+pub const Position = zhu.Vector2;
 pub const Sprite = struct {
     image: zhu.graphics.Image,
     offset: zhu.Vector2,
@@ -18,14 +20,23 @@ pub const Timer = struct {
     type: enum { attack },
 };
 
+///
+/// 移动相关组件
+///
+pub const motion = struct {
+    pub const Velocity = struct { v: zhu.Vector2 }; // 速度
+};
+
+///
+/// 攻击相关组件
+///
 pub const attack = struct {
+    pub const Target = struct { v: Entity }; // 攻击目标
     pub const Ready = struct {}; // 冷却完毕，可以攻击。
     pub const Range = struct { v: f32 }; // 攻击范围
     pub const Lock = struct {}; // 攻击锁定
 };
 
-pub const Position = zhu.Vector2;
-pub const Velocity = struct { v: zhu.Vector2 };
 pub const SoundPath = struct { action: ActionEnum, path: [:0]const u8 };
 
 pub const Path = struct {
@@ -44,7 +55,6 @@ pub const StateEnum = enum { idle, walk, damage, attack, ranged };
 pub const ActionEnum = enum(u32) { none = 0, hit = 1, emit = 2 };
 
 pub const Ranged = struct {};
-pub const Target = struct { v: Entity };
 
 pub const CoolDown = struct { v: f32 }; // 冷却时间
 
