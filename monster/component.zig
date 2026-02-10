@@ -69,7 +69,13 @@ pub const animation = struct {
     pub const Play = struct { index: u8, loop: bool = false };
 };
 
-pub const SoundPath = struct { action: ActionEnum, path: [:0]const u8 };
+///
+/// 声音
+///
+pub const audio = struct {
+    pub const Hit = struct { path: [:0]const u8 };
+    pub const Emit = struct { path: [:0]const u8 };
+};
 pub const StateEnum = enum { idle, walk, damage, attack, ranged };
 pub const ActionEnum = enum(u32) { none = 0, hit = 1, emit = 2 };
 

@@ -5,6 +5,7 @@ const com = @import("component.zig");
 const map = @import("map.zig");
 
 pub const PlayerEnum = enum { warrior, archer, lancer, witch };
+pub const Sound = struct { action: com.ActionEnum, path: [:0]const u8 };
 const Template = struct {
     enemyEnum: ?enum { slime, wolf, goblin, darkWitch } = null,
     playerEnum: ?PlayerEnum = null,
@@ -20,7 +21,7 @@ const Template = struct {
     faceRight: bool,
     size: zhu.Vector2,
     offset: zhu.Vector2,
-    sounds: []const com.SoundPath = &.{},
+    sounds: []const Sound = &.{},
     image: struct { path: [:0]const u8, size: zhu.Vector2 },
     animations: []const []const zhu.graphics.Frame = &.{},
 };
@@ -51,8 +52,8 @@ pub fn spawnEnemies(reg: *zhu.ecs.Registry) void {
 fn doSpawn(reg: *zhu.ecs.Registry, zon: *const Template) zhu.ecs.Entity {
     const entity = reg.createEntity();
 
-    const path = zon.image.path;
-    const image = zhu.assets.loadImage(path, zon.image.size);
+    const imagePath = zon.image.path;
+    const image = zhu.assets.loadImage(imagePath, zon.image.size);
     reg.add(entity, com.Sprite{
         .image = image.sub(.init(.zero, zon.size)),
         .offset = zon.offset,
@@ -86,8 +87,14 @@ fn doSpawn(reg: *zhu.ecs.Registry, zon: *const Template) zhu.ecs.Entity {
     reg.add(entity, com.attack.Ready{});
 
     // 添加声音组件
-    reg.add(entity, zon.sounds);
-
+    for (zon.sounds) |sound| {
+        const path = sound.path;
+        switch (sound.action) {
+            .hit => reg.add(entity, com.audio.Hit{ .path = path }),
+            .emit => reg.add(entity, com.audio.Emit{ .path = path }),
+            else => {},
+        }
+    }
     return entity;
 }
 

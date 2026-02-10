@@ -7,6 +7,11 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
     var view = reg.view(.{ com.attack.Hit, com.attack.Target });
     while (view.next()) |entity| {
         const target = view.get(entity, com.attack.Target).v;
+
+        if (view.tryGet(entity, com.audio.Hit)) |hitSound| {
+            zhu.audio.playSound(hitSound.path); // 播放命中声音
+        }
+
         if (!reg.validEntity(target)) continue; // 目标已经死了
 
         const attack = view.getPtr(entity, com.Stats).attack;
@@ -32,6 +37,7 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
         view.add(target.index, com.attack.Injured{}); // 目标受伤了
         if (stats.health <= 0) {
             view.add(target.index, com.Dead{}); // 目标死了
+            std.log.debug("实体: {} 杀死了目标: {}", .{ entity, target.index });
         }
     }
 
