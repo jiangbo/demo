@@ -84,7 +84,7 @@ fn doSpawn(reg: *zhu.ecs.Registry, zon: *const Template) zhu.ecs.Entity {
     }
 
     // 添加投射物组件
-    if (zon.projectile) |projectile| reg.add(entity, projectile);
+    if (zon.projectile) |value| reg.add(entity, value);
 
     // 攻击冷却时间
     reg.add(entity, com.attack.CoolDown{ .v = zon.interval });
@@ -121,24 +121,39 @@ const Projectile = struct {
 
 const projectileZon: []const Projectile = @import("zon/projectile.zon");
 
-pub fn spawnProjectile(reg: *zhu.ecs.Registry) void {
+pub fn projectile(reg: *zhu.ecs.Registry, delta: f32) void {
     defer reg.clear(com.attack.Emit);
     var view = reg.view(.{com.attack.Emit});
     while (view.next()) |entity| {
-        std.log.info("projectile: {}", .{entity});
-        const projectile = view.get(entity, com.ProjectileEnum);
-        const value = &projectileZon[@intFromEnum(projectile)];
+        // 检查目标是否还有效
+        var targetPos: ?zhu.Vector2 = null;
+        if (view.tryGet(entity, com.attack.Target)) |target| {
+            if (reg.validEntity(target.v)) {
+                targetPos = reg.get(target.v, com.Position);
+            }
+        }
+        if (targetPos == null) continue; // 目标无效，跳过生成投射物
+
+        const template = view.get(entity, com.ProjectileEnum);
+        const value = &projectileZon[@intFromEnum(template)];
 
         const new = reg.createEntity();
-        var image = zhu.assets.loadImage(value.image, .zero);
-        image = image.sub(.init(value.position, value.size));
-        reg.add(new, image);
+        const image = zhu.assets.loadImage(value.image, .zero);
+        reg.add(new, image.sub(.init(value.position, value.size)));
         reg.add(new, com.Projectile{
+            .damage = view.get(entity, com.Stats).attack,
+            .start = view.get(entity, com.Position),
+            .end = targetPos.?,
             .arc = value.arc,
-            .time = value.time,
+            .totalTime = value.time + delta,
         });
 
-        const pos = view.get(entity, com.Position).add(value.offset);
-        reg.add(new, pos);
+        reg.add(new, view.get(entity, com.Position).add(value.offset));
+
+        if (view.tryGet(entity, com.audio.Emit)) |emitSound| {
+            zhu.audio.playSound(emitSound.path); // 播放发射声音
+        }
+
+        std.log.info("实体：{} 发射：{}", .{ entity, new.index });
     }
 }
