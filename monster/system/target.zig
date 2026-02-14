@@ -52,7 +52,7 @@ pub fn selectAttackTarget(reg: *zhu.ecs.Registry) void {
         var closestLength2: f32 = std.math.floatMax(f32);
 
         const isEnemy = view.has(entity, com.Enemy);
-        var targetView = reg.view(.{com.Position});
+        var targetView = reg.view(.{ com.Position, com.Stats });
         while (targetView.next()) |target| {
             if (isEnemy == view.has(target, com.Enemy)) continue; // 同一边的
 

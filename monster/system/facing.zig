@@ -18,12 +18,16 @@ fn facingTarget(reg: *zhu.ecs.Registry) void {
         const sprite = view.getPtr(entity, com.Sprite);
         const pos = view.get(entity, com.Position);
         const target = view.get(entity, com.attack.Target).v;
-        const targetPos = reg.get(target, com.Position);
 
+        if (!reg.validEntity(target)) continue; // 目标无效了
+
+        const targetPos = reg.get(target, com.Position);
         const imageFaceLeft = view.has(entity, com.motion.FaceLeft);
+
         // 想朝右，图片朝左，翻转
-        sprite.flip = if (pos.x < targetPos.x) imageFaceLeft //
-            else !imageFaceLeft; // 想朝左，图片朝左，不翻转
+        if (pos.x < targetPos.x) sprite.flip = imageFaceLeft
+            // 想朝左，图片朝左，不翻转
+        else if (pos.x > targetPos.x) sprite.flip = !imageFaceLeft;
     }
 }
 

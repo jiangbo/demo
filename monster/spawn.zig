@@ -46,6 +46,7 @@ pub fn spawnEnemies(reg: *zhu.ecs.Registry) void {
             });
             const index: u8 = @intFromEnum(com.StateEnum.walk);
             reg.getPtr(entity, com.Animation).play(index, true);
+            std.log.info("创建敌人：{}", .{entity.index});
         }
     }
 }
@@ -108,6 +109,7 @@ pub fn spawnPlayer(reg: *zhu.ecs.Registry, playerEnum: PlayerEnum) void {
     const entity = doSpawn(reg, value);
     reg.add(entity, zhu.window.mousePosition);
     reg.add(entity, com.Player{});
+    std.log.info("创建玩家：{}", .{entity.index});
 }
 
 const Projectile = struct {
@@ -141,11 +143,12 @@ pub fn projectile(reg: *zhu.ecs.Registry, delta: f32) void {
         const image = zhu.assets.loadImage(value.image, .zero);
         reg.add(new, image.sub(.init(value.position, value.size)));
         reg.add(new, com.Projectile{
-            .damage = view.get(entity, com.Stats).attack,
             .start = view.get(entity, com.Position),
             .end = targetPos.?,
             .arc = value.arc,
             .totalTime = value.time + delta,
+            .owner = view.toEntity(entity),
+            .offset = value.offset,
         });
 
         reg.add(new, view.get(entity, com.Position).add(value.offset));

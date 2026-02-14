@@ -28,13 +28,15 @@ pub const ActionEnum = enum(u32) { none = 0, hit = 1, emit = 2 };
 pub const ProjectileEnum = enum { arrow, magic }; // 投射物类型
 
 pub const Projectile = struct {
-    damage: i32, // 伤害
     start: zhu.Vector2, // 起始位置
     end: zhu.Vector2, // 终点位置
     previous: zhu.Vector2 = .zero, // 上一帧位置
     arc: f32, // 弧度
     time: f32 = 0, // 飞行时间
     totalTime: f32, // 总飞行时间
+    owner: Entity, // 发出者
+    offset: zhu.Vector2, // 绘制偏移
+    rotation: f32 = 0, // 旋转角度
 };
 
 pub const Dead = struct {}; // 死亡标签
