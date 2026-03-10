@@ -44,11 +44,10 @@ pub fn update(delta: f32) void {
     map.update(delta);
 
     system.timer.update(&registry, delta); // 计时系统
-
-    system.motion.update(&registry, delta); // 移动系统
-    system.animation.update(&registry, delta); // 动画系统
-    system.state.update(&registry, delta); // 状态系统
     system.target.update(&registry, delta); // 目标系统
+    system.motion.update(&registry, delta); // 移动系统
+    system.state.update(&registry, delta); // 状态系统
+    system.animation.update(&registry, delta); // 动画系统
     system.projectile.update(&registry, delta); // 投射物系统
     system.attack.update(&registry, delta); // 攻击系统
     system.health.update(&registry, delta); // 生命系统
