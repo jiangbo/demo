@@ -4,7 +4,7 @@
         .description = "近战单位，拥有较高的生命值和防御力，阻挡3名敌人。",
         .playerEnum = .warrior,
         .stats = .{
-            .health = 100,
+            .health = 500,
             .maxHealth = 500,
             .attack = 90,
             .defense = 40,
