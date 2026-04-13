@@ -69,8 +69,7 @@ pub fn SparseMap(T: type) type {
             self.dense.deinit(gpa);
             if (capacity == 0 or self.valueSize == 0) return;
 
-            const size = if (T == u8) self.valueSize else 1;
-            const slice = self.valuePtr[0 .. capacity * size];
+            const slice = self.valuePtr[0 .. capacity * self.valueSize];
             gpa.rawFree(slice, self.alignment, @returnAddress());
         }
 
