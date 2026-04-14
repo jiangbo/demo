@@ -11,9 +11,19 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
     defer reg.clear(com.animation.Finished);
 
     while (view.next()) |entity| {
+        if (view.has(entity, com.Ghost)) {
+            view.add(entity, com.Dead{});
+            continue;
+        }
+
         var state = com.StateEnum.idle;
         // 敌人需要区分是否被阻挡
-        const blocked = view.has(entity, com.motion.BlockBy);
+        var blocked = false;
+        if (view.tryGet(entity, com.motion.BlockBy)) |blockBy| {
+            if (reg.validEntity(blockBy.v)) blocked = true else {
+                view.remove(entity, com.motion.BlockBy);
+            }
+        }
         if (view.has(entity, com.Enemy) and !blocked) state = .walk;
 
         view.add(entity, com.animation.Play{

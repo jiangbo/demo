@@ -432,6 +432,22 @@ pub const Registry = struct {
         for (index[1..]) |i| std.debug.assert(index[0] == i);
     }
 
+    pub fn removeExcept(self: *Registry, e: Entity, keep: anytype) void {
+        if (!self.validEntity(e)) return;
+
+        var iterator = self.componentMap.iterator();
+        while (iterator.next()) |entry| {
+            var found = false;
+            inline for (keep) |T| {
+                if (entry.key_ptr.* == hashTypeId(T)) found = true;
+            }
+            if (found) continue;
+
+            var map: *SparseMap(u8) = @ptrCast(@alignCast(entry.value_ptr));
+            _ = map.swapRemove(e.index);
+        }
+    }
+
     pub fn removeAll(self: *Registry, entity: Entity) void {
         if (!self.validEntity(entity)) return;
 

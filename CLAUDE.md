@@ -104,14 +104,16 @@ demo/
 5. **animation** — 动画帧更新，触发动作事件（hit/emit）
 6. **projectile** — 投射物飞行（抛物线轨迹）
 7. **attack** — 攻击发起，播放动画，设置冷却
-8. **health** — 伤害计算，播放受击音效，绘制血条
-9. **facing** — 根据目标/移动方向翻转精灵
+8. **health** — 伤害计算，播放受击音效，绘制血条，设置 `Dead` 标签
+9. **death** — 死亡处理：释放被死亡 blocker 锁定的实体、销毁 Dead 实体、清理完成的特效实体
+10. **facing** — 根据目标/移动方向翻转精灵
 
 ### 组件定义
 
 所有组件定义在 `monster/component.zig`，包括：
 - 位置、精灵、计时器
-- `Enemy` / `Player` / `Projectile` / `Dead`
+- `Enemy` / `Player` / `Projectile` / `Dead` / `OneShotRemove`
+- `EnemyType` / `PlayerType` — 单位类型枚举（用于死亡特效创建）
 - `Stats`（生命值/攻击/防御）
 - `motion` 命名空间（Velocity, FaceLeft, Blocker, BlockBy）
 - `attack` 命名空间（Target, Ready, Range, Lock, Healer, Injured, CoolDown, Ranged, Hit, Emit）

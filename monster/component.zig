@@ -40,6 +40,7 @@ pub const Projectile = struct {
 };
 
 pub const Dead = struct {}; // 死亡标签
+pub const Ghost = struct {}; // 幽灵标签
 
 ///
 /// 移动相关组件
