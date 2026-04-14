@@ -37,9 +37,7 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
 
         view.add(target.index, com.attack.Injured{}); // 目标受伤了
         if (stats.health <= 0) {
-            if (view.has(target.index, com.Enemy)) {
-                view.add(target.index, com.Ghost{}); // 敌人需要播放死亡动画
-            } else view.add(target.index, com.Dead{}); // 目标死了
+            view.add(target.index, com.Dead{}); // 目标死了
             std.log.debug("实体: {} 杀死了目标: {}", .{ entity, target.index });
         }
     }
