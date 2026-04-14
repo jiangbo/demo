@@ -12,8 +12,12 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
 fn followPath(registry: *zhu.ecs.Registry) void {
     var view = registry.view(.{ com.Enemy, com.motion.Velocity });
     while (view.next()) |entity| {
-        if (view.has(entity, com.motion.BlockBy)) continue; // 被阻挡的不处理
         if (view.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
+
+        if (view.tryGet(entity, com.motion.BlockBy)) |blockBy| {
+            if (registry.validEntity(blockBy.v)) continue;
+            view.remove(entity, com.motion.BlockBy);
+        }
 
         // 当前位置和目标位置是否足够靠近
         const enemy = view.getPtr(entity, com.Enemy);
