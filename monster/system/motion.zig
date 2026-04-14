@@ -17,6 +17,10 @@ fn followPath(registry: *zhu.ecs.Registry) void {
         if (view.tryGet(entity, com.motion.BlockBy)) |blockBy| {
             if (registry.validEntity(blockBy.v)) continue;
             view.remove(entity, com.motion.BlockBy);
+            view.add(entity, com.animation.Play{
+                .index = @intFromEnum(com.StateEnum.walk),
+                .loop = true,
+            });
         }
 
         // 当前位置和目标位置是否足够靠近
