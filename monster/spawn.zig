@@ -4,11 +4,10 @@ const zhu = @import("zhu");
 const com = @import("component.zig");
 const map = @import("map.zig");
 
-pub const PlayerEnum = enum { warrior, archer, lancer, witch };
 pub const Sound = struct { action: com.ActionEnum, path: [:0]const u8 };
-const Template = struct {
+pub const Template = struct {
     enemyEnum: ?enum { slime, wolf, goblin, darkWitch } = null,
-    playerEnum: ?PlayerEnum = null,
+    playerEnum: ?com.PlayerEnum = null,
     name: []const u8,
     description: []const u8 = &.{},
     stats: com.Stats,
@@ -27,8 +26,8 @@ const Template = struct {
     animations: []const []const zhu.graphics.Frame = &.{},
 };
 
-const enemyZon: []const Template = @import("zon/enemy.zon");
-const playerZon: []const Template = @import("zon/player.zon");
+pub const enemyZon: []const Template = @import("zon/enemy.zon");
+pub const playerZon: []const Template = @import("zon/player.zon");
 
 pub fn spawnEnemies(reg: *zhu.ecs.Registry) void {
     for (map.startPaths) |startId| {
@@ -103,7 +102,7 @@ fn doSpawn(reg: *zhu.ecs.Registry, zon: *const Template) zhu.ecs.Entity {
     return entity;
 }
 
-pub fn spawnPlayer(reg: *zhu.ecs.Registry, playerEnum: PlayerEnum) void {
+pub fn spawnPlayer(reg: *zhu.ecs.Registry, playerEnum: com.PlayerEnum) void {
     const value = &playerZon[@intFromEnum(playerEnum)];
 
     const entity = doSpawn(reg, value);

@@ -23,6 +23,7 @@ pub const Path = struct { // 路径
 };
 pub const Enemy = struct { target: Path, speed: f32 }; // 敌人
 pub const Player = struct {}; // 玩家
+pub const PlayerEnum = enum { warrior, archer, lancer, witch }; // 玩家类型
 pub const StateEnum = enum { idle, walk, damage, attack, ranged };
 pub const ActionEnum = enum(u32) { none = 0, hit = 1, emit = 2 };
 pub const ProjectileEnum = enum { arrow, magic }; // 投射物类型
