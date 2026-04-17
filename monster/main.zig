@@ -5,17 +5,19 @@ const zhu = @import("zhu");
 const tiled = zhu.extend.tiled;
 const gui = @import("gui.zig");
 const scene = @import("scene.zig");
+const hud = @import("hud.zig");
 
 var vertexBuffer: []zhu.batch.Vertex = undefined;
-var commandBuffer: [32]zhu.batch.Command = undefined;
+var commandBuffer: [64]zhu.batch.Command = undefined;
 var soundBuffer: [20]zhu.audio.Sound = undefined;
 const tileSets: []const tiled.TileSet = @import("zon/tile.zon");
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
+const fontZon: zhu.text.BitMapFont = @import("zon/font.zon");
 
 pub fn init() void {
     zhu.audio.init(44100 / 2, &soundBuffer);
 
-    vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 5000);
+    vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 8000);
     zhu.graphics.frameStats(true);
     zhu.assets.loadAtlas(atlas);
     zhu.batch.init(vertexBuffer, &commandBuffer);
@@ -25,7 +27,11 @@ pub fn init() void {
 
     tiled.init(tileSets);
 
+    const fontImage = zhu.assets.loadImage("assets/font.png", .zero);
+    zhu.text.initBitMapFont(fontImage, fontZon, 32);
+
     gui.init();
+    hud.init();
     scene.init();
 }
 
@@ -36,9 +42,11 @@ pub fn event(ev: *const zhu.window.Event) void {
 pub fn frame(delta: f32) void {
     gui.update(delta);
     scene.update(delta);
+    hud.update();
 
     zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
     scene.draw();
+    hud.draw();
     zhu.batch.flush();
     gui.draw();
     zhu.batch.commit();
@@ -46,6 +54,7 @@ pub fn frame(delta: f32) void {
 
 pub fn deinit() void {
     scene.deinit();
+    hud.deinit();
     gui.deinit();
     zhu.assets.free(vertexBuffer);
     zhu.audio.deinit();
