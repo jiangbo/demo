@@ -5,6 +5,8 @@ const map = @import("map.zig");
 const com = @import("component.zig");
 const spawn = @import("spawn.zig");
 const battle = @import("battle.zig");
+const hud = @import("hud.zig");
+const ctx = @import("context.zig");
 
 const system = struct {
     const timer = @import("system/timer.zig");
@@ -34,11 +36,14 @@ pub fn deinit() void {
 
 pub fn update(delta: f32) void {
     if (zhu.window.mouse.pressed(.LEFT)) {
-        spawn.spawnPlayer(&registry, .warrior);
-    } else if (zhu.window.mouse.pressed(.RIGHT)) {
-        spawn.spawnPlayer(&registry, .archer);
-    } else if (zhu.window.mouse.pressed(.MIDDLE)) {
-        spawn.spawnPlayer(&registry, .witch);
+        if (!hud.isBarHovered()) {
+            if (hud.getSelected()) |playerEnum| {
+                if (ctx.canAfford(playerEnum)) {
+                    spawn.spawnPlayer(&registry, playerEnum);
+                    ctx.spend(playerEnum);
+                }
+            }
+        }
     }
 
     // 地图更新，地图上的动画等。
