@@ -1,0 +1,19 @@
+.{
+    .level = 1,
+    .point = 0,
+    .units = .{
+        .{ .face = 0, .class = .warrior, .level = 1, .rarity = 1 },
+        .{ .face = 1, .class = .warrior, .level = 2, .rarity = 1 },
+        .{ .face = 2, .class = .warrior, .level = 2, .rarity = 2 },
+        .{ .face = 3, .class = .archer, .level = 1, .rarity = 1 },
+        // .{ .face = 4, .class = .archer, .level = 2, .rarity = 1 },
+        // .{ .face = 5, .class = .archer, .level = 1, .rarity = 2 },
+        // .{ .face = 6, .class = .archer, .level = 2, .rarity = 2 },
+        // .{ .face = 7, .class = .lancer, .level = 1, .rarity = 1 },
+        // .{ .face = 8, .class = .lancer, .level = 2, .rarity = 1 },
+        // .{ .face = 9, .class = .lancer, .level = 2, .rarity = 2 },
+        // .{ .face = 10, .class = .witch, .level = 1, .rarity = 1 },
+        // .{ .face = 11, .class = .witch, .level = 2, .rarity = 1 },
+        // .{ .face = 12, .class = .witch, .level = 2, .rarity = 2 },
+    },
+}
