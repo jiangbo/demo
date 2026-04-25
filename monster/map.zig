@@ -17,8 +17,16 @@ const Animation = struct {
 var animations: std.ArrayList(Animation) = .empty;
 var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
 
+pub const PlaceKind = enum { melee, ranged };
+pub const Place = struct {
+    position: zhu.Vector2,
+    size: zhu.Vector2,
+    kind: PlaceKind,
+};
+
 pub var paths: std.AutoHashMapUnmanaged(u8, com.Path) = .empty;
 pub var startPaths: [10]u8 = undefined; // 最多 10 条起始路径
+pub var places: std.ArrayList(Place) = .empty;
 
 pub fn init() void {
     tiled.backgroundColor = data.backgroundColor;
@@ -36,6 +44,8 @@ pub fn init() void {
         }
     }
 
+    std.log.info("placement count: {}", .{places.items.len});
+
     std.mem.sortUnstable(Animation, animations.items, {}, struct {
         fn lessThan(_: void, a: Animation, b: Animation) bool {
             return a.position.y < b.position.y;
@@ -46,6 +56,7 @@ pub fn init() void {
 pub fn deinit() void {
     tileVertexes.deinit(zhu.assets.allocator);
     animations.deinit(zhu.assets.allocator);
+    places.deinit(zhu.assets.allocator);
     paths.deinit(zhu.assets.allocator);
 }
 
@@ -115,6 +126,14 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
     }
 }
 
+fn placeKind(tile: *const tiled.Tile) ?PlaceKind {
+    for (tile.properties) |prop| {
+        if (!prop.is("place")) continue;
+        if (std.mem.eql(u8, prop.value.string, "melee")) return .melee;
+        if (std.mem.eql(u8, prop.value.string, "range")) return .ranged;
+    } else return null;
+}
+
 fn parseObjectLayer(layer: *const tiled.Layer) void {
     for (layer.objects) |object| {
         if (object.gid == 0) {
@@ -134,6 +153,14 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
         }
 
         const pos = object.position.addY(-object.size.y);
+        if (placeKind(tile.?)) |kind| {
+            places.append(zhu.assets.allocator, .{
+                .position = pos,
+                .size = object.size,
+                .kind = kind,
+            }) catch @panic("oom, can't append place");
+        }
+
         if (tileSet.columns == 0) {
             const image = zhu.assets.getImage(tile.?.id);
             tileVertexes.append(zhu.assets.allocator, .{
@@ -166,5 +193,9 @@ pub fn draw() void {
         batch.drawImage(image, item.position, .{
             .flipX = item.extend.flipX,
         });
+    }
+
+    for (places.items) |place| {
+        batch.debugDraw(.init(place.position, place.size));
     }
 }
