@@ -53,6 +53,8 @@ demo/
     ├── scene.zig          # 主场景管理器
     ├── gui.zig            # ImGui 调试界面
     ├── map.zig            # Tiled 地图加载器
+    ├── hud.zig            # HUD 肖像条与出击准备渲染
+    ├── context.zig        # 关卡全局状态（cost/selected/统计）
     ├── spawn.zig          # 实体生成系统
     ├── component.zig      # 所有 ECS 组件定义
     ├── system/            # ECS 系统（按执行顺序）
@@ -119,6 +121,26 @@ demo/
 - `attack` 命名空间（Target, Ready, Range, Lock, Healer, Injured, CoolDown, Ranged, Hit, Emit）
 - `animation` 命名空间（Finished, Play）
 - `audio` 命名空间（Hit, Emit）
+
+### HUD（hud.zig）
+
+- 底部肖像条，显示可出击单位、职业图标、消耗费用
+- `update()` 检测悬停音效和左键点击选择，选中后直接 return 跳过后续逻辑
+- `drawPrepare(playerEnum)` 绘制跟随鼠标的准备单位精灵，远程单位额外渲染攻击范围圈
+- `ctx.selected != null` 时肖像条禁用交互
+
+### 关卡状态（context.zig）
+
+- 模块级全局变量管理关卡状态：`cost`、`homeHealth`、`selected` 等
+- `spend()` 扣费同时清除选择状态
+- `isGameOver()` / `isLevelClear()` 判定函数
+- 不使用 getter/setter，直接读写公开字段
+
+### 出击流程
+
+1. `scene.update(delta)` 先执行，检测左键部署
+2. `hud.update()` 后执行，检测肖像选择
+3. 顺序不能反，否则同一帧点击会立即部署
 
 ### 数据文件
 
