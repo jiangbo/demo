@@ -6,6 +6,7 @@ const text = zhu.text;
 
 const com = @import("component.zig");
 const spawn = @import("spawn.zig");
+const ctx = @import("context.zig");
 
 const ImageArea = struct {
     name: []const u8,
@@ -162,12 +163,16 @@ pub fn draw() void {
         const pos = unit.position.add(uiZon.fontOffset);
         text.drawNumberColor(unit.cost, pos, .yellow);
 
-        if (unit.cost > 10) {
+        if (!ctx.canAffordCost(unit.cost)) {
             batch.drawRect(.init(unit.position, uiZon.frameSize), .{
                 .color = .rgba(0, 0, 0, 0.2),
             });
         }
     }
+
+    const currentCost: u32 = @intFromFloat(@floor(ctx.cost));
+    text.drawColor("COST:", .xy(24, 24), .yellow);
+    text.drawNumberColor(currentCost, .xy(120, 24), .white);
 
     // // 第 5 层：状态叠加层（白色纹理，批量绘制）
     // for (slots, 0..) |slot, i| {

@@ -6,6 +6,7 @@ const tiled = zhu.extend.tiled;
 const gui = @import("gui.zig");
 const scene = @import("scene.zig");
 const hud = @import("hud.zig");
+const ctx = @import("context.zig");
 
 var vertexBuffer: []zhu.batch.Vertex = undefined;
 var commandBuffer: [64]zhu.batch.Command = undefined;
@@ -31,6 +32,7 @@ pub fn init() void {
     zhu.text.initBitMapFont(fontImage, fontZon, 32);
 
     gui.init();
+    ctx.init();
     hud.init();
     scene.init();
 }
@@ -41,8 +43,9 @@ pub fn event(ev: *const zhu.window.Event) void {
 
 pub fn frame(delta: f32) void {
     gui.update(delta);
-    scene.update(delta);
+    ctx.update(delta);
     hud.update();
+    scene.update(delta);
 
     zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
     scene.draw();
