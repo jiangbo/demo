@@ -44,8 +44,8 @@ pub fn event(ev: *const zhu.window.Event) void {
 pub fn frame(delta: f32) void {
     gui.update(delta);
     ctx.update(delta);
-    hud.update();
     scene.update(delta);
+    hud.update();
 
     zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
     scene.draw();

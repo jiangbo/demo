@@ -43,7 +43,7 @@ pub var homeHealth: i32 = INITIAL_HOME_HEALTH;
 pub var enemyCount: u32 = 0;
 pub var enemyArrivedCount: u32 = 0;
 pub var enemyKilledCount: u32 = 0;
-var selected: ?PlayerEnum = null;
+pub var selected: ?PlayerEnum = null;
 var slots: [sessionData.units.len]Slot = undefined;
 
 pub fn init() void {
@@ -82,6 +82,7 @@ pub fn canAfford(class: PlayerEnum) bool {
 
 pub fn spend(class: PlayerEnum) void {
     spendCost(playerCost(class));
+    selected = null;
 }
 
 pub fn canAffordCost(value: u8) bool {
@@ -91,14 +92,6 @@ pub fn canAffordCost(value: u8) bool {
 pub fn spendCost(value: u8) void {
     if (!canAffordCost(value)) return;
     cost -= @floatFromInt(value);
-}
-
-pub fn getSelected() ?PlayerEnum {
-    return selected;
-}
-
-pub fn setSelected(class: ?PlayerEnum) void {
-    selected = class;
 }
 
 pub fn isGameOver() bool {

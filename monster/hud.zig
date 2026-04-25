@@ -96,6 +96,8 @@ fn computeUnitPositions() void {
 pub fn deinit() void {}
 
 pub fn update() void {
+    if (ctx.selected != null) return;
+
     const mousePos = zhu.window.mousePosition;
 
     for (&units, 0..) |*unit, i| {
@@ -109,22 +111,15 @@ pub fn update() void {
         }
     } else hoveredIndex = null;
 
-    // // 处理输入
-    // if (zhu.window.mouse.pressed(.LEFT)) {
-    //     if (hoveredIndex) |idx| {
-    //         const slot = &slots[idx];
-    //         if (session.canAfford(slot.class)) {
-    //             const current = session.getSelected();
-    //             if (current != null and current.? == slot.class) {
-    //                 session.setSelected(null); // 再次点击取消选择
-    //             } else {
-    //                 session.setSelected(slot.class);
-    //             }
-    //         }
-    //     }
-    // } else if (zhu.window.mouse.pressed(.RIGHT)) {
-    //     session.setSelected(null);
-    // }
+    if (zhu.window.mouse.pressed(.LEFT)) {
+        if (hoveredIndex) |idx| {
+            const unit = &units[idx];
+            if (ctx.canAffordCost(unit.cost)) {
+                ctx.selected = unit.class;
+                hoveredIndex = null;
+            }
+        }
+    }
 }
 
 pub fn draw() void {
@@ -174,38 +169,30 @@ pub fn draw() void {
     text.drawColor("COST:", .xy(24, 24), .yellow);
     text.drawNumberColor(currentCost, .xy(120, 24), .white);
 
-    // // 第 5 层：状态叠加层（白色纹理，批量绘制）
-    // for (slots, 0..) |slot, i| {
-    //     const isSelected = selected != null and selected.? == slot.class;
-    //     const isHovered = hoveredIndex == i;
-    //     const canAfford = gold >= slot.cost;
-
-    //     // 选中高亮
-    //     if (isSelected) {
-    //         batch.drawRect(slot.rect, .{ .color = .rgba(1, 1, 0, 0.3) });
-    //     }
-
-    //     // 悬停高亮
-    //     if (isHovered and !isSelected) {
-    //         batch.drawRect(slot.rect, .{ .color = .rgba(1, 1, 1, 0.15) });
-    //     }
-
-    //     // 金币不足遮罩
-    //     if (!canAfford) {
-    //         batch.drawRect(slot.rect, .{ .color = .rgba(0, 0, 0, 0.5) });
-    //     }
-    // }
-
-    // 金币显示（右上角）
-    // text.drawColor("金币:", .xy(1400, 10), .yellow);
-    // text.drawNumberColor(gold, .xy(1500, 10), .white);
+    if (ctx.selected) |playerEnum| drawPrepare(playerEnum);
 }
 
-pub fn isBarHovered() bool {
-    return hoveredIndex != null;
-}
+/// 绘制准备出击单位（跟随鼠标）
+fn drawPrepare(playerEnum: com.PlayerEnum) void {
+    const template = &spawn.playerZon[@intFromEnum(playerEnum)];
+    const mousePos = zhu.window.mousePosition;
 
-pub fn getSelected() ?com.PlayerEnum {
-    return null;
-    // return session.getSelected();
+    // 远程单位显示攻击范围
+    if (template.ranged) {
+        const range = template.range;
+        const diameter = range * 2;
+        const circle = zhu.getImage("circle.png");
+        zhu.batch.drawImage(circle, mousePos.sub(.xy(range, range)), .{
+            .size = .xy(diameter, diameter),
+            .color = .rgba(0, 1, 0, 0.2),
+        });
+    }
+
+    // 绘制准备单位精灵
+    const size = template.image.size;
+    const image = zhu.assets.loadImage(template.image.path, size);
+    const sub = image.sub(.init(.zero, template.size));
+    zhu.batch.drawImage(sub, mousePos.add(template.offset), .{
+        .color = .white,
+    });
 }

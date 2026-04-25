@@ -36,14 +36,14 @@ pub fn deinit() void {
 
 pub fn update(delta: f32) void {
     if (zhu.window.mouse.pressed(.LEFT)) {
-        if (!hud.isBarHovered()) {
-            if (hud.getSelected()) |playerEnum| {
-                if (ctx.canAfford(playerEnum)) {
-                    spawn.spawnPlayer(&registry, playerEnum);
-                    ctx.spend(playerEnum);
-                }
+        if (ctx.selected) |playerEnum| {
+            if (ctx.canAfford(playerEnum)) {
+                spawn.spawnPlayer(&registry, playerEnum);
+                ctx.spend(playerEnum);
             }
         }
+    } else if (zhu.window.mouse.pressed(.RIGHT)) {
+        ctx.selected = null;
     }
 
     // 地图更新，地图上的动画等。
