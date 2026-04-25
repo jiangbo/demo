@@ -101,6 +101,15 @@ pub fn setSelected(class: ?PlayerEnum) void {
     selected = class;
 }
 
+pub fn isGameOver() bool {
+    return homeHealth <= 0;
+}
+
+pub fn isLevelClear() bool {
+    return enemyCount > 0 and
+        enemyKilledCount + enemyArrivedCount >= enemyCount;
+}
+
 pub fn getSlots() []const Slot {
     return &slots;
 }

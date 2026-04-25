@@ -62,6 +62,8 @@ pub fn update(delta: f32) void {
 
     // 处理到达终点的敌人
     for (registry.getEvents(zhu.ecs.Entity).items) |entity| {
+        ctx.enemyArrivedCount += 1;
+        ctx.homeHealth -= 1;
         registry.destroyEntity(entity);
     }
 
