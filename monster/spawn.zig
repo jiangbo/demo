@@ -183,6 +183,6 @@ pub fn projectile(reg: *Registry, delta: f32) void {
             zhu.audio.playSound(emitSound.path); // 播放发射声音
         }
 
-        std.log.info("实体：{} 发射：{}", .{ entity, new.index });
+        std.log.info("entity: {} emit: {}", .{ entity, new.index });
     }
 }
