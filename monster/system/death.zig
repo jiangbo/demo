@@ -4,15 +4,18 @@ const zhu = @import("zhu");
 const com = @import("../component.zig");
 const spawn = @import("../spawn.zig");
 const ctx = @import("../context.zig");
+const map = @import("../map.zig");
 
 /// 处理死亡实体
 pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
     var deadView = reg.reverseView(.{com.Dead});
     while (deadView.next()) |entity| {
-        std.log.info("处理死亡实体：{}", .{entity});
+        std.log.info("death entity: {}", .{entity});
 
         if (!deadView.has(entity, com.Enemy)) {
-            reg.destroyEntity(deadView.toEntity(entity));
+            const e = deadView.toEntity(entity);
+            spawn.releasePlace(e);
+            reg.destroyEntity(e);
             continue;
         }
         ctx.enemyKilledCount += 1;

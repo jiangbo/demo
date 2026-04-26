@@ -36,12 +36,8 @@ pub fn deinit() void {
 
 pub fn update(delta: f32) void {
     if (zhu.window.mouse.pressed(.LEFT)) {
-        if (ctx.selected) |playerEnum| {
-            if (ctx.canAfford(playerEnum)) {
-                spawn.spawnPlayer(&registry, playerEnum);
-                ctx.spend(playerEnum);
-            }
-        }
+        if (ctx.selected) |playerEnum|
+            spawn.tryDeployPlayer(&registry, playerEnum);
     } else if (zhu.window.mouse.pressed(.RIGHT)) {
         ctx.selected = null;
     }

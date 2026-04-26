@@ -3,6 +3,9 @@ const zhu = @import("zhu");
 
 const com = @import("component.zig");
 const map = @import("map.zig");
+const ctx = @import("context.zig");
+
+const Registry = zhu.ecs.Registry;
 
 pub const Sound = struct { action: com.ActionEnum, path: [:0]const u8 };
 pub const Template = struct {
@@ -16,7 +19,7 @@ pub const Template = struct {
     block: u8 = 0,
     cost: u8 = 0,
     speed: f32 = 0,
-    ranged: bool = false,
+    attackKind: map.PlaceKind = .melee,
     faceRight: bool,
     projectile: ?com.ProjectileEnum = null,
     size: zhu.Vector2,
@@ -29,7 +32,7 @@ pub const Template = struct {
 pub const enemyZon: []const Template = @import("zon/enemy.zon");
 pub const playerZon: []const Template = @import("zon/player.zon");
 
-pub fn spawnEnemies(reg: *zhu.ecs.Registry) void {
+pub fn spawnEnemies(reg: *Registry) void {
     for (map.startPaths) |startId| {
         if (startId == 0) break;
 
@@ -45,12 +48,12 @@ pub fn spawnEnemies(reg: *zhu.ecs.Registry) void {
             });
             const index: u8 = @intFromEnum(com.StateEnum.walk);
             reg.getPtr(entity, com.Animation).play(index, true);
-            std.log.info("创建敌人：{}", .{entity.index});
+            std.log.info("spawn enemy: {}", .{entity.index});
         }
     }
 }
 
-fn doSpawn(reg: *zhu.ecs.Registry, zon: *const Template) zhu.ecs.Entity {
+fn doSpawn(reg: *Registry, zon: *const Template) zhu.ecs.Entity {
     const entity = reg.createEntity();
 
     const imagePath = zon.image.path;
@@ -74,7 +77,7 @@ fn doSpawn(reg: *zhu.ecs.Registry, zon: *const Template) zhu.ecs.Entity {
     reg.add(entity, com.attack.Range{ .v = zon.range });
 
     // 添加远程攻击
-    if (zon.ranged) reg.add(entity, com.attack.Ranged{});
+    if (zon.attackKind == .ranged) reg.add(entity, com.attack.Ranged{});
 
     // 添加属性组件
     reg.add(entity, zon.stats);
@@ -102,13 +105,37 @@ fn doSpawn(reg: *zhu.ecs.Registry, zon: *const Template) zhu.ecs.Entity {
     return entity;
 }
 
-pub fn spawnPlayer(reg: *zhu.ecs.Registry, playerEnum: com.PlayerEnum) void {
-    const value = &playerZon[@intFromEnum(playerEnum)];
+/// 尝试在合法出击区域部署玩家单位
+pub fn tryDeployPlayer(reg: *Registry, playerEnum: com.PlayerEnum) void {
+    const template = &playerZon[@intFromEnum(playerEnum)];
+    const mousePos = zhu.window.mousePosition;
 
-    const entity = doSpawn(reg, value);
-    reg.add(entity, zhu.window.mousePosition);
-    reg.add(entity, com.Player{});
-    std.log.info("创建玩家：{}", .{entity.index});
+    if (map.findPlace(template.attackKind, mousePos)) |idx| {
+        if (!ctx.canAfford(playerEnum)) return;
+
+        const place = &map.places.items[idx];
+        const center = place.position.add(place.size.scale(0.5));
+
+        const entity = doSpawn(reg, template);
+        reg.add(entity, center);
+        reg.add(entity, com.Player{});
+        place.entity = entity;
+
+        ctx.spend(playerEnum);
+        std.log.info("player deployed: {}", .{entity.index});
+    }
+}
+
+/// 释放被该实体占用的出击点
+pub fn releasePlace(entity: zhu.ecs.Entity) void {
+    for (map.places.items) |*place| {
+        if (place.entity) |pe| {
+            if (std.meta.eql(pe, entity)) {
+                place.entity = null;
+                return;
+            }
+        }
+    }
 }
 
 const Projectile = struct {
@@ -122,7 +149,7 @@ const Projectile = struct {
 
 const projectileZon: []const Projectile = @import("zon/projectile.zon");
 
-pub fn projectile(reg: *zhu.ecs.Registry, delta: f32) void {
+pub fn projectile(reg: *Registry, delta: f32) void {
     defer reg.clear(com.attack.Emit);
     var view = reg.view(.{com.attack.Emit});
     while (view.next()) |entity| {

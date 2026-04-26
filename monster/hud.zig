@@ -7,6 +7,7 @@ const text = zhu.text;
 const com = @import("component.zig");
 const spawn = @import("spawn.zig");
 const ctx = @import("context.zig");
+const map = @import("map.zig");
 
 const ImageArea = struct {
     name: []const u8,
@@ -123,10 +124,6 @@ pub fn update() void {
 }
 
 pub fn draw() void {
-    // // const selected = session.getSelected();
-    // const selected = false;
-    // const gold = session.getGold();
-
     // 背景条
     batch.drawRect(backgroundRect, .{ .color = .gray(0.1, 0.1) });
 
@@ -176,9 +173,10 @@ pub fn draw() void {
 fn drawPrepare(playerEnum: com.PlayerEnum) void {
     const template = &spawn.playerZon[@intFromEnum(playerEnum)];
     const mousePos = zhu.window.mousePosition;
+    const found = map.findPlace(template.attackKind, mousePos);
 
     // 远程单位显示攻击范围
-    if (template.ranged) {
+    if (template.attackKind == .ranged) {
         const range = template.range;
         const diameter = range * 2;
         const circle = zhu.getImage("circle.png");
@@ -188,11 +186,11 @@ fn drawPrepare(playerEnum: com.PlayerEnum) void {
         });
     }
 
-    // 绘制准备单位精灵
+    // 绘制准备单位精灵（合法绿色，非法红色）
     const size = template.image.size;
     const image = zhu.assets.loadImage(template.image.path, size);
     const sub = image.sub(.init(.zero, template.size));
     zhu.batch.drawImage(sub, mousePos.add(template.offset), .{
-        .color = .white,
+        .color = if (found != null) .green else .red,
     });
 }

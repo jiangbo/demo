@@ -22,6 +22,7 @@ pub const Place = struct {
     position: zhu.Vector2,
     size: zhu.Vector2,
     kind: PlaceKind,
+    entity: ?zhu.ecs.Entity = null,
 };
 
 pub var paths: std.AutoHashMapUnmanaged(u8, com.Path) = .empty;
@@ -178,6 +179,15 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
             }) catch @panic("oom, can't append animation");
         }
     }
+}
+
+/// 查找位置匹配且未被占用的出击区域
+pub fn findPlace(kind: PlaceKind, pos: zhu.Vector2) ?usize {
+    for (places.items, 0..) |place, i| {
+        if (place.entity != null or place.kind != kind) continue;
+        const rect: zhu.Rect = .init(place.position, place.size);
+        if (rect.contains(pos)) return i;
+    } else return null;
 }
 
 pub fn update(delta: f32) void {
