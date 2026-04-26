@@ -24,33 +24,21 @@ const UiZon = struct {
     fontOffset: zhu.Vector2,
 };
 
-const SessionData = struct {
-    level: u32,
-    point: u32,
-    units: []const Unit,
-};
-
-const Unit = struct {
-    face: u32,
-    class: com.PlayerEnum,
-    level: f32,
-    rarity: f32,
-    position: zhu.Vector2 = .zero,
-    cost: u8 = 0,
-};
-
 const uiZon: UiZon = @import("zon/ui.zon");
-const ctxZon: SessionData = @import("zon/context.zon");
-var units: [ctxZon.units.len]Unit = ctxZon.units[0..].*;
 
 var backgroundRect: zhu.Rect = undefined;
 var hoveredIndex: ?u8 = null;
 
 pub fn init() void {
+    arrangeUnits();
+}
+
+fn arrangeUnits() void {
     // 计算背景条宽度和起始位置
-    computeBackgroundRect(@floatFromInt(ctxZon.units.len));
+    computeBackgroundRect(@floatFromInt(ctx.units.items.len));
     // 计算每个头像的位置
     computeUnitPositions();
+    ctx.unitLayoutDirty = false;
 }
 
 fn computeBackgroundRect(count: f32) void {
@@ -69,25 +57,10 @@ fn computeBackgroundRect(count: f32) void {
 }
 
 fn computeUnitPositions() void {
-    for (&units) |*unit| {
-        const class: u8 = @intFromEnum(unit.class);
-        var cost: f32 = @floatFromInt(spawn.playerZon[class].cost);
-        const levelScale = 0.95 + 0.05 * unit.level;
-        const rarityScale = 0.9 + 0.1 * unit.rarity;
-        cost = @round(cost * levelScale * rarityScale);
-
-        unit.cost = @intFromFloat(cost);
-    }
-    std.mem.sort(Unit, &units, {}, struct {
-        fn lessThan(_: void, a: Unit, b: Unit) bool {
-            return a.cost < b.cost;
-        }
-    }.lessThan);
-
     const padding = uiZon.padding;
     const size = uiZon.frameSize;
     const start = backgroundRect.min.addXY(padding, padding);
-    for (&units, 0..) |*unit, i| {
+    for (ctx.units.items, 0..) |*unit, i| {
         const index: f32 = @floatFromInt(i);
         const offset = (size.x + padding) * index;
         unit.position = .xy(start.x + offset, start.y);
@@ -97,11 +70,12 @@ fn computeUnitPositions() void {
 pub fn deinit() void {}
 
 pub fn update() void {
+    if (ctx.unitLayoutDirty) arrangeUnits();
     if (ctx.selected != null) return;
 
     const mousePos = zhu.window.mousePosition;
 
-    for (&units, 0..) |*unit, i| {
+    for (ctx.units.items, 0..) |*unit, i| {
         const rect: zhu.Rect = .init(unit.position, uiZon.frameSize);
         if (rect.contains(mousePos)) {
             if (hoveredIndex == null or hoveredIndex.? != i) {
@@ -114,9 +88,8 @@ pub fn update() void {
 
     if (zhu.window.mouse.pressed(.LEFT)) {
         if (hoveredIndex) |idx| {
-            const unit = &units[idx];
-            if (ctx.canAffordCost(unit.cost)) {
-                ctx.selected = unit.class;
+            if (ctx.cost >= ctx.units.items[idx].cost) {
+                ctx.selected = idx;
                 hoveredIndex = null;
             }
         }
@@ -127,7 +100,7 @@ pub fn draw() void {
     // 背景条
     batch.drawRect(backgroundRect, .{ .color = .gray(0.1, 0.1) });
 
-    for (&units) |unit| {
+    for (ctx.units.items) |unit| {
         const class: u8 = @intFromEnum(unit.class);
 
         // 绘制头像
@@ -155,7 +128,7 @@ pub fn draw() void {
         const pos = unit.position.add(uiZon.fontOffset);
         text.drawNumberColor(unit.cost, pos, .yellow);
 
-        if (!ctx.canAffordCost(unit.cost)) {
+        if (ctx.cost < unit.cost) {
             batch.drawRect(.init(unit.position, uiZon.frameSize), .{
                 .color = .rgba(0, 0, 0, 0.2),
             });
@@ -166,7 +139,7 @@ pub fn draw() void {
     text.drawColor("COST:", .xy(24, 24), .yellow);
     text.drawNumberColor(currentCost, .xy(120, 24), .white);
 
-    if (ctx.selected) |playerEnum| drawPrepare(playerEnum);
+    if (ctx.selectedUnit()) |unit| drawPrepare(unit.class);
 }
 
 /// 绘制准备出击单位（跟随鼠标）

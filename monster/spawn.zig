@@ -17,7 +17,7 @@ pub const Template = struct {
     range: f32,
     interval: f32,
     block: u8 = 0,
-    cost: u8 = 0,
+    cost: f32 = 0,
     speed: f32 = 0,
     attackKind: map.PlaceKind = .melee,
     faceRight: bool,
@@ -106,12 +106,12 @@ fn doSpawn(reg: *Registry, zon: *const Template) zhu.ecs.Entity {
 }
 
 /// 尝试在合法出击区域部署玩家单位
-pub fn tryDeployPlayer(reg: *Registry, playerEnum: com.PlayerEnum) void {
-    const template = &playerZon[@intFromEnum(playerEnum)];
+pub fn tryDeployPlayer(reg: *Registry, unit: ctx.Unit) void {
+    const template = &playerZon[@intFromEnum(unit.class)];
     const mousePos = zhu.window.mousePosition;
 
     if (map.findPlace(template.attackKind, mousePos)) |idx| {
-        if (!ctx.canAfford(playerEnum)) return;
+        if (ctx.cost < unit.cost) return;
 
         const place = &map.places.items[idx];
         const center = place.position.add(place.size.scale(0.5));
@@ -121,7 +121,8 @@ pub fn tryDeployPlayer(reg: *Registry, playerEnum: com.PlayerEnum) void {
         reg.add(entity, com.Player{});
         place.entity = entity;
 
-        ctx.spend(playerEnum);
+        ctx.spendSelected();
+        zhu.audio.playSound("assets/audio/Fantasy_UI (10).ogg");
         std.log.info("player deployed: {}", .{entity.index});
     }
 }

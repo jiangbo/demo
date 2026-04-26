@@ -58,6 +58,7 @@ pub fn frame(delta: f32) void {
 pub fn deinit() void {
     scene.deinit();
     hud.deinit();
+    ctx.deinit();
     gui.deinit();
     zhu.assets.free(vertexBuffer);
     zhu.audio.deinit();
