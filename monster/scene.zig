@@ -25,11 +25,12 @@ var registry: zhu.ecs.Registry = undefined;
 
 pub fn init() void {
     registry = .init(zhu.assets.allocator);
-    map.init();
-    spawn.spawnEnemies(&registry);
+    map.init(ctx.levelIndex);
+    spawn.init();
 }
 
 pub fn deinit() void {
+    spawn.deinit();
     map.deinit();
     registry.deinit();
 }
@@ -44,6 +45,7 @@ pub fn update(delta: f32) void {
     }
 
     // 地图更新，地图上的动画等。
+    spawn.update(&registry, delta);
     map.update(delta);
 
     system.timer.update(&registry, delta); // 计时系统

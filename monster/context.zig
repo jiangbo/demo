@@ -37,8 +37,13 @@ pub var enemyKilledCount: u32 = 0;
 pub var selected: ?usize = null;
 pub var units: std.ArrayList(Unit) = .empty;
 pub var unitLayoutDirty: bool = true;
+// ZON 中的关卡从 1 开始，代码中统一使用 0-based 索引。
+pub var levelIndex: usize = 0;
 
 pub fn init() void {
+    if (contextZon.level == 0) @panic("level must start at 1");
+    levelIndex = @intCast(contextZon.level - 1);
+
     for (contextZon.units) |zon| {
         var unit = zon;
         const base = spawn.playerZon[@intFromEnum(unit.class)].cost;

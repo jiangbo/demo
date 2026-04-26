@@ -9,7 +9,7 @@ const Registry = zhu.ecs.Registry;
 
 pub const Sound = struct { action: com.ActionEnum, path: [:0]const u8 };
 pub const Template = struct {
-    enemyEnum: ?enum { slime, wolf, goblin, darkWitch } = null,
+    enemyEnum: ?com.EnemyEnum = null,
     playerEnum: ?com.PlayerEnum = null,
     name: []const u8,
     description: []const u8 = &.{},
@@ -29,28 +29,108 @@ pub const Template = struct {
     animations: []const []const zhu.graphics.Frame = &.{},
 };
 
+pub const EnemyGroup = struct { class: com.EnemyEnum, count: u32 };
+
+pub const Wave = struct {
+    nextWaveInterval: f32,
+    spawnInterval: f32,
+    enemies: []const EnemyGroup,
+};
+
+pub const Level = struct {
+    prepTime: f32,
+    enemyLevel: f32,
+    enemyRarity: f32,
+    waves: []const Wave,
+};
+
 pub const enemyZon: []const Template = @import("zon/enemy.zon");
 pub const playerZon: []const Template = @import("zon/player.zon");
+pub const levels: []const Level = @import("zon/levels.zon");
 
-pub fn spawnEnemies(reg: *Registry) void {
-    for (map.startPaths) |startId| {
-        if (startId == 0) break;
+// 下一次要启动的波次下标。
+var nextWaveIndex: usize = 0;
+var nextWaveTimer: ?zhu.Timer = null;
+var spawnTimer: zhu.Timer = .init(0);
+var enemyQueue: std.ArrayList(com.EnemyEnum) = .empty;
 
-        const start = map.paths.get(startId).?;
-        for (enemyZon) |*value| {
-            const entity = doSpawn(reg, value);
+pub fn init() void {
+    changeLevel(ctx.levelIndex);
+}
 
-            reg.add(entity, start.point);
-            reg.add(entity, com.motion.Velocity{ .v = .zero });
-            reg.add(entity, com.Enemy{
-                .target = start,
-                .speed = value.speed,
-            });
-            const index: u8 = @intFromEnum(com.StateEnum.walk);
-            reg.getPtr(entity, com.Animation).play(index, true);
-            std.log.info("spawn enemy: {}", .{entity.index});
+pub fn changeLevel(levelIndex: usize) void {
+    const level = levels[levelIndex];
+
+    ctx.levelIndex = levelIndex;
+    nextWaveIndex = 0;
+    nextWaveTimer = .init(level.prepTime);
+    spawnTimer = .init(0);
+    enemyQueue.clearRetainingCapacity();
+
+    ctx.enemyCount = 0;
+    for (level.waves) |wave| {
+        for (wave.enemies) |enemy| ctx.enemyCount += enemy.count;
+    }
+}
+
+pub fn deinit() void {
+    enemyQueue.deinit(zhu.assets.allocator);
+}
+
+pub fn update(reg: *Registry, delta: f32) void {
+    const level = levels[ctx.levelIndex];
+
+    // 下一波倒计时独立推进，和当前波敌人是否刷完无关。
+    if (nextWaveTimer) |*timer| {
+        if (timer.isFinishedOnceUpdate(delta)) {
+            startWave(level.waves[nextWaveIndex]);
         }
     }
+
+    // 当前波的敌人生成完成了
+    if (enemyQueue.items.len == 0) return;
+    if (spawnTimer.isFinishedLoopUpdate(delta)) {
+        spawnEnemy(reg, enemyQueue.pop().?);
+    }
+}
+
+/// 开始一波：展开敌人分组，并设置本波生成间隔和下一波倒计时。
+fn startWave(wave: Wave) void {
+    nextWaveIndex += 1;
+    for (wave.enemies) |enemy| {
+        enemyQueue.appendNTimes(zhu.assets.allocator, enemy.class, //
+            enemy.count) catch @panic("oom, can't append enemy");
+    }
+    zhu.random().shuffle(com.EnemyEnum, enemyQueue.items);
+
+    spawnTimer = .initFinished(wave.spawnInterval);
+    nextWaveTimer = .init(wave.nextWaveInterval);
+    // 如果没有下一波了，就不需要倒计时了。
+    const len = levels[ctx.levelIndex].waves.len;
+    if (nextWaveIndex >= len) nextWaveTimer = null;
+}
+
+fn spawnEnemy(reg: *Registry, enemyEnum: com.EnemyEnum) void {
+    var startCount: usize = 0;
+    for (map.startPaths) |startId| {
+        if (startId == 0) break else startCount += 1;
+    }
+
+    const startIndex = zhu.randomInt(usize, 0, startCount);
+    const start = map.paths.get(map.startPaths[startIndex]).?;
+    const template = &enemyZon[@intFromEnum(enemyEnum)];
+    const entity = doSpawn(reg, template);
+
+    reg.add(entity, start.point);
+    reg.add(entity, com.motion.Velocity{ .v = .zero });
+    reg.add(entity, com.Enemy{
+        .target = start,
+        .speed = template.speed,
+    });
+
+    const index: u8 = @intFromEnum(com.StateEnum.walk);
+    reg.getPtr(entity, com.Animation).play(index, true);
+    std.log.info("spawn enemy: {}", .{entity.index});
 }
 
 fn doSpawn(reg: *Registry, zon: *const Template) zhu.ecs.Entity {

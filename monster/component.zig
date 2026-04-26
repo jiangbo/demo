@@ -22,6 +22,7 @@ pub const Path = struct { // 路径
     next2: u8 = 0, // 可选的第二条分支路径
 };
 pub const Enemy = struct { target: Path, speed: f32 }; // 敌人
+pub const EnemyEnum = enum { slime, wolf, goblin, darkWitch }; // 敌人类型
 pub const Player = struct {}; // 玩家
 pub const PlayerEnum = enum { warrior, archer, lancer, witch }; // 玩家类型
 pub const StateEnum = enum { idle, walk, damage, attack, ranged };

@@ -6,8 +6,10 @@ const tiled = zhu.extend.tiled;
 
 const com = @import("component.zig");
 
-const level: tiled.Map = @import("zon/level1.zon");
-const data = level;
+const maps = [_]tiled.Map{
+    @import("zon/level1.zon"),
+};
+var data: *const tiled.Map = &maps[0];
 const Animation = struct {
     position: zhu.Vector2,
     size: zhu.Vector2,
@@ -29,7 +31,8 @@ pub var paths: std.AutoHashMapUnmanaged(u8, com.Path) = .empty;
 pub var startPaths: [10]u8 = undefined; // 最多 10 条起始路径
 pub var places: std.ArrayList(Place) = .empty;
 
-pub fn init() void {
+pub fn init(levelIndex: usize) void {
+    data = &maps[levelIndex];
     tiled.backgroundColor = data.backgroundColor;
     @memset(&startPaths, 0);
 
