@@ -11,7 +11,7 @@ pub const Sound = struct { action: com.ActionEnum, path: [:0]const u8 };
 pub const Template = struct {
     enemyEnum: ?com.EnemyEnum = null,
     playerEnum: ?com.PlayerEnum = null,
-    name: []const u8,
+    name: [:0]const u8,
     description: []const u8 = &.{},
     stats: com.Stats,
     range: f32,
@@ -120,6 +120,12 @@ fn spawnEnemy(reg: *Registry, enemyEnum: com.EnemyEnum) void {
     const start = map.paths.get(map.startPaths[startIndex]).?;
     const template = &enemyZon[@intFromEnum(enemyEnum)];
     const entity = doSpawn(reg, template);
+    reg.add(entity, enemyEnum);
+
+    var stats = reg.get(entity, com.Stats);
+    stats.level = levels[ctx.levelIndex].enemyLevel;
+    stats.rarity = levels[ctx.levelIndex].enemyRarity;
+    reg.getPtr(entity, com.Stats).* = stats;
 
     reg.add(entity, start.point);
     reg.add(entity, com.motion.Velocity{ .v = .zero });
@@ -161,6 +167,9 @@ fn doSpawn(reg: *Registry, zon: *const Template) zhu.ecs.Entity {
 
     // 添加属性组件
     reg.add(entity, zon.stats);
+
+    // 添加职业组件。玩家姓名由出击单位数据提供。
+    reg.add(entity, com.ClassName{ .value = zon.name });
     if (zon.stats.attack < 0) reg.add(entity, com.attack.Healer{});
     if (zon.stats.health < zon.stats.maxHealth) {
         reg.add(entity, com.attack.Injured{});
@@ -197,6 +206,15 @@ pub fn tryDeployPlayer(reg: *Registry, unit: ctx.Unit) void {
         const center = place.position.add(place.size.scale(0.5));
 
         const entity = doSpawn(reg, template);
+        reg.add(entity, unit.class);
+
+        // 覆盖为玩家实体的等级和稀有度
+        var stats = reg.get(entity, com.Stats);
+        stats.level = unit.level;
+        stats.rarity = unit.rarity;
+        reg.getPtr(entity, com.Stats).* = stats;
+
+        reg.add(entity, com.Name{ .value = unit.name });
         reg.add(entity, center);
         reg.add(entity, com.Player{});
         place.entity = entity;

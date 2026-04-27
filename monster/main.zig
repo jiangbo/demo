@@ -15,6 +15,8 @@ const tileSets: []const tiled.TileSet = @import("zon/tile.zon");
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
 const fontZon: zhu.text.BitMapFont = @import("zon/font.zon");
 
+var registry: zhu.ecs.Registry = undefined;
+
 pub fn init() void {
     zhu.audio.init(44100 / 2, &soundBuffer);
 
@@ -31,6 +33,8 @@ pub fn init() void {
     const fontImage = zhu.assets.loadImage("assets/font.png", .zero);
     zhu.text.initBitMapFont(fontImage, fontZon, 32);
 
+    registry = .init(zhu.assets.allocator);
+
     gui.init();
     ctx.init();
     hud.init();
@@ -42,13 +46,13 @@ pub fn event(ev: *const zhu.window.Event) void {
 }
 
 pub fn frame(delta: f32) void {
-    gui.update(delta);
+    gui.update(&registry, delta);
     ctx.update(delta);
-    scene.update(delta);
+    scene.update(&registry, delta);
     hud.update();
 
     zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
-    scene.draw();
+    scene.draw(&registry);
     hud.draw();
     zhu.batch.flush();
     gui.draw();
@@ -60,6 +64,7 @@ pub fn deinit() void {
     hud.deinit();
     ctx.deinit();
     gui.deinit();
+    registry.deinit();
     zhu.assets.free(vertexBuffer);
     zhu.audio.deinit();
 }

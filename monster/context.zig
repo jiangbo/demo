@@ -8,6 +8,7 @@ pub const PlayerEnum = com.PlayerEnum;
 
 /// 角色槽位数据
 pub const Unit = struct {
+    name: [:0]const u8,
     face: u32,
     class: PlayerEnum,
     level: f32,
@@ -35,6 +36,9 @@ pub var enemyCount: u32 = 0;
 pub var enemyArrivedCount: u32 = 0;
 pub var enemyKilledCount: u32 = 0;
 pub var selected: ?usize = null;
+pub var hoveredEntity: ?zhu.ecs.Entity = null;
+pub var selectedEntity: ?zhu.ecs.Entity = null;
+pub var uiWantCaptureMouse: bool = false;
 pub var units: std.ArrayList(Unit) = .empty;
 pub var unitLayoutDirty: bool = true;
 // ZON 中的关卡从 1 开始，代码中统一使用 0-based 索引。

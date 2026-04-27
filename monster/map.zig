@@ -207,8 +207,4 @@ pub fn draw() void {
             .flipX = item.extend.flipX,
         });
     }
-
-    for (places.items) |place| {
-        batch.debugDraw(.init(place.position, place.size));
-    }
 }

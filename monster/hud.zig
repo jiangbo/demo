@@ -72,6 +72,10 @@ pub fn deinit() void {}
 pub fn update() void {
     if (ctx.unitLayoutDirty) arrangeUnits();
     if (ctx.selected != null) return;
+    if (ctx.uiWantCaptureMouse) {
+        hoveredIndex = null;
+        return;
+    }
 
     const mousePos = zhu.window.mousePosition;
 

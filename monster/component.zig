@@ -43,6 +43,9 @@ pub const Projectile = struct {
 
 pub const Dead = struct {}; // 死亡标签
 pub const Ghost = struct {}; // 幽灵标签
+pub const ShowRange = struct {}; // 显示攻击范围标签
+pub const Name = struct { value: [:0]const u8 }; // 名称组件
+pub const ClassName = struct { value: [:0]const u8 }; // 职业名称组件
 
 ///
 /// 移动相关组件
@@ -78,6 +81,8 @@ pub const Stats = struct {
     maxHealth: i32,
     attack: i32,
     defense: i32,
+    level: f32 = 1,
+    rarity: f32 = 1,
 };
 
 ///

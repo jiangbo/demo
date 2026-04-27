@@ -19,12 +19,10 @@ const system = struct {
     const death = @import("system/death.zig");
     const facing = @import("system/facing.zig");
     const animation = @import("system/animation.zig");
+    const selection = @import("system/selection.zig");
 };
 
-var registry: zhu.ecs.Registry = undefined;
-
 pub fn init() void {
-    registry = .init(zhu.assets.allocator);
     map.init(ctx.levelIndex);
     spawn.init();
 }
@@ -32,59 +30,55 @@ pub fn init() void {
 pub fn deinit() void {
     spawn.deinit();
     map.deinit();
-    registry.deinit();
 }
 
-pub fn update(delta: f32) void {
-    if (zhu.window.mouse.pressed(.LEFT)) {
-        if (ctx.selectedUnit()) |unit| {
-            spawn.tryDeployPlayer(&registry, unit);
+pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
+    system.selection.update(reg, delta); // 悬停、选中与范围显示状态
+    if (!ctx.uiWantCaptureMouse) {
+        if (zhu.window.mouse.pressed(.LEFT)) {
+            if (ctx.selectedUnit()) |unit| {
+                spawn.tryDeployPlayer(reg, unit);
+            }
+        } else if (zhu.window.mouse.pressed(.RIGHT)) {
+            if (ctx.selected != null) ctx.selected = null;
         }
-    } else if (zhu.window.mouse.pressed(.RIGHT)) {
-        ctx.selected = null;
     }
 
     // 地图更新，地图上的动画等。
-    spawn.update(&registry, delta);
+    spawn.update(reg, delta);
     map.update(delta);
 
-    system.timer.update(&registry, delta); // 计时系统
-    system.target.update(&registry, delta); // 目标系统
-    system.motion.update(&registry, delta); // 移动系统
-    system.state.update(&registry, delta); // 状态系统
-    system.projectile.update(&registry, delta); // 投射物系统
-    system.attack.update(&registry, delta); // 攻击系统
-    system.health.update(&registry, delta); // 生命系统
-    system.death.update(&registry, delta); // 死亡系统
-    system.facing.update(&registry, delta); // 面向系统
-    system.animation.update(&registry, delta); // 动画系统
+    system.timer.update(reg, delta); // 计时系统
+    system.target.update(reg, delta); // 目标系统
+    system.motion.update(reg, delta); // 移动系统
+    system.state.update(reg, delta); // 状态系统
+    system.projectile.update(reg, delta); // 投射物系统
+    system.attack.update(reg, delta); // 攻击系统
+    system.health.update(reg, delta); // 生命系统
+    system.death.update(reg, delta); // 死亡系统
+    system.facing.update(reg, delta); // 面向系统
+    system.animation.update(reg, delta); // 动画系统
 
     // 处理到达终点的敌人
-    for (registry.getEvents(zhu.ecs.Entity).items) |entity| {
+    for (reg.getEvents(zhu.ecs.Entity).items) |entity| {
         ctx.enemyArrivedCount += 1;
         ctx.homeHealth -= 1;
-        registry.destroyEntity(entity);
+        reg.destroyEntity(entity);
     }
 
-    registry.clearEvent(zhu.ecs.Entity);
+    reg.clearEvent(zhu.ecs.Entity);
 }
 
-pub fn draw() void {
+pub fn draw(reg: *zhu.ecs.Registry) void {
     map.draw();
 
-    // registry.sort(com.Sprite, struct {
-    //     pub fn lessThan(a: com.Sprite, b: com.Sprite) bool {
-    //         return a.image.texture.id < b.image.texture.id;
-    //     }
-    // }.lessThan);
-
-    registry.sort(com.Position, struct {
+    reg.sort(com.Position, struct {
         pub fn lessThan(a: com.Position, b: com.Position) bool {
             return a.y < b.y;
         }
     }.lessThan);
 
-    var view = registry.view(.{ com.Position, com.Sprite });
+    var view = reg.view(.{ com.Position, com.Sprite });
     while (view.next()) |entity| {
         const sprite = view.get(entity, com.Sprite);
         const position = view.get(entity, com.Position);
@@ -95,8 +89,9 @@ pub fn draw() void {
         });
     }
 
-    system.health.draw(&registry); // 绘制血条
-    system.projectile.draw(&registry); // 绘制投射物
+    system.health.draw(reg); // 绘制血条
+    system.projectile.draw(reg); // 绘制投射物
+    system.selection.draw(reg); // 绘制攻击范围和选择调试信息
 
     for (map.startPaths) |start| {
         if (start == 0) break;
