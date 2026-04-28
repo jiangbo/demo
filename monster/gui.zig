@@ -92,38 +92,75 @@ fn renderSelectedUnit(reg: *zhu.ecs.Registry) void {
         gui.ImGuiWindowFlags_AlwaysAutoResize;
     if (gui.igBegin("角色状态", null, flags)) {
         if (reg.tryGet(entity, com.Name)) |name| {
-            _ = gui.igText("名称: %s", name.value.ptr);
+            _ = gui.igText("%s  ", name.value.ptr);
+            gui.igSameLine();
         }
 
         if (reg.tryGet(entity, com.ClassName)) |className| {
-            _ = gui.igText("职业: %s", className.value.ptr);
+            _ = gui.igText("%s", className.value.ptr);
         }
 
-        _ = gui.igSeparator();
         _ = gui.igText("等级: %.0f", stats.level);
         gui.igSameLine();
         _ = gui.igText("稀有度: %.0f", stats.rarity);
         _ = gui.igText("生命值: %d / %d", stats.health, stats.maxHealth);
         _ = gui.igText("攻击力: %d", stats.attack);
+        gui.igSameLine();
         _ = gui.igText("防御力: %d", stats.defense);
 
         if (reg.tryGet(entity, com.attack.Range)) |r| {
-            _ = gui.igText("射程: %.0f", r.v);
+            _ = gui.igText("攻击范围: %.0f", r.v);
+            gui.igSameLine();
         }
 
         if (reg.tryGet(entity, com.attack.CoolDown)) |c| {
-            _ = gui.igText("攻击间隔: %.2f s", c.v);
+            _ = gui.igText("攻击间隔: %.2f", c.v);
         }
 
         if (reg.tryGet(entity, com.motion.Blocker)) |blocker| {
             _ = gui.igText("阻挡数量: %d / %d", blocker.current, blocker.max);
         }
 
-        if (gui.igButton("取消选中")) {
-            ctx.selectedEntity = null;
-        }
+        renderSelectedSkill(reg, entity);
     }
     gui.igEnd();
+}
+
+fn renderSelectedSkill(reg: *zhu.ecs.Registry, entity: zhu.ecs.Entity) void {
+    const value = reg.tryGet(entity, com.skill.Skill) orelse return;
+    const ready = reg.has(entity, com.skill.Ready);
+    const active = reg.has(entity, com.skill.Active);
+    const passive = value.passive or reg.has(entity, com.skill.Passive);
+
+    gui.igBeginDisabled(!ready);
+    _ = gui.igButton(value.name.ptr);
+    gui.igEndDisabled();
+    gui.igSameLine();
+
+    if (active) {
+        if (passive) {
+            _ = gui.igText("被动技能激活中");
+        } else {
+            const remaining = @max(0, value.duration - value.durationTimer);
+            _ = gui.igText("激活中，剩余时间: %.1f 秒", remaining);
+        }
+    } else if (passive) {
+        _ = gui.igText("被动技能");
+    } else {
+        _ = gui.igText("快捷键 S: ");
+        gui.igSameLine();
+        if (ready) {
+            _ = gui.igText("技能准备就绪");
+        } else {
+            const progress = if (value.coolDown > 0)
+                value.coolDownTimer / value.coolDown
+            else
+                0;
+            gui.igProgressBar(progress, .{ .x = 120, .y = 0 }, null);
+        }
+    }
+
+    _ = gui.igTextWrapped("%s", value.description.ptr);
 }
 
 pub fn draw() void {

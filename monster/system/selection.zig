@@ -74,7 +74,6 @@ fn updateShowRange(reg: *zhu.ecs.Registry) void {
 
 pub fn draw(reg: *zhu.ecs.Registry) void {
     drawRange(reg);
-    drawDebug(reg);
 }
 
 fn drawRange(reg: *zhu.ecs.Registry) void {
@@ -86,29 +85,7 @@ fn drawRange(reg: *zhu.ecs.Registry) void {
         const r = range.v;
         zhu.batch.drawImage(circle, pos.sub(.xy(r, r)), .{
             .size = .xy(r * 2, r * 2),
-            .color = .rgba(1, 1, 1, 0.3),
+            .color = .rgba(0, 1, 0, 0.3),
         });
-    }
-}
-
-fn drawDebug(reg: *zhu.ecs.Registry) void {
-    var view = reg.view(.{ com.Position, com.Sprite });
-    while (view.next()) |index| {
-        const entity = view.toEntity(index);
-        const pos = view.get(index, com.Position);
-
-        const center = pos.addY(-32);
-        const rect: zhu.Rect = .init(center.sub(.xy(32, 32)), .xy(64, 64));
-
-        var color = zhu.Color.rgba(1, 1, 1, 0.15);
-        if (ctx.hoveredEntity) |h| {
-            if (h.index == entity.index) color = .rgba(1, 0, 1, 0.4);
-        }
-        if (ctx.selectedEntity) |s| {
-            if (s.index == entity.index) color = .rgba(1, 1, 0, 0.4);
-        }
-
-        zhu.batch.drawRect(rect, .{ .color = color });
-        zhu.batch.debugDraw(.init(pos.addXY(-1, -1), .xy(2, 2)));
     }
 }

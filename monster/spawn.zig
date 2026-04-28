@@ -20,6 +20,7 @@ pub const Template = struct {
     cost: f32 = 0,
     speed: f32 = 0,
     attackKind: map.PlaceKind = .melee,
+    skill: ?com.skill.Skill = null,
     faceRight: bool,
     projectile: ?com.ProjectileEnum = null,
     size: zhu.Vector2,
@@ -217,6 +218,7 @@ pub fn tryDeployPlayer(reg: *Registry, unit: ctx.Unit) void {
         reg.add(entity, com.Name{ .value = unit.name });
         reg.add(entity, center);
         reg.add(entity, com.Player{});
+        if (template.skill) |skill| reg.add(entity, skill);
         place.entity = entity;
 
         ctx.spendSelected();

@@ -25,6 +25,7 @@ pub const Enemy = struct { target: Path, speed: f32 }; // 敌人
 pub const EnemyEnum = enum { slime, wolf, goblin, darkWitch }; // 敌人类型
 pub const Player = struct {}; // 玩家
 pub const PlayerEnum = enum { warrior, archer, lancer, witch }; // 玩家类型
+pub const SkillEnum = enum { shield, speedUp, rest, powerUp }; // 技能类型
 pub const StateEnum = enum { idle, walk, damage, attack, ranged };
 pub const ActionEnum = enum(u32) { none = 0, hit = 1, emit = 2 };
 pub const ProjectileEnum = enum { arrow, magic }; // 投射物类型
@@ -46,6 +47,39 @@ pub const Ghost = struct {}; // 幽灵标签
 pub const ShowRange = struct {}; // 显示攻击范围标签
 pub const Name = struct { value: [:0]const u8 }; // 名称组件
 pub const ClassName = struct { value: [:0]const u8 }; // 职业名称组件
+
+///
+/// 技能相关组件
+///
+pub const skill = struct {
+    pub const CostRecovery = struct { rate: f32 }; // COST 恢复组件
+
+    pub const Buff = struct { // 技能增益倍率
+        health: f32 = 1,
+        attack: f32 = 1,
+        defense: f32 = 1,
+        range: f32 = 1,
+        interval: f32 = 1,
+        costRecovery: f32 = 0,
+    };
+
+    pub const Skill = struct { // 技能组件
+        id: SkillEnum,
+        name: [:0]const u8,
+        description: [:0]const u8,
+        passive: bool = false,
+        coolDown: f32 = 0,
+        duration: f32 = 0,
+        coolDownTimer: f32 = 0,
+        durationTimer: f32 = 0,
+        displayEntity: ?Entity = null,
+        buff: Buff = .{},
+    };
+
+    pub const Ready = struct {}; // 技能准备完毕
+    pub const Active = struct {}; // 技能激活中
+    pub const Passive = struct {}; // 被动技能
+};
 
 ///
 /// 移动相关组件
