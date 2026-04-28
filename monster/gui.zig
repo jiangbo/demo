@@ -133,8 +133,11 @@ fn renderSelectedSkill(reg: *zhu.ecs.Registry, entity: zhu.ecs.Entity) void {
     const passive = value.passive or reg.has(entity, com.skill.Passive);
 
     gui.igBeginDisabled(!ready);
-    _ = gui.igButton(value.name.ptr);
+    const clicked = gui.igButton(value.name.ptr);
     gui.igEndDisabled();
+    if (ready and (clicked or zhu.input.key.pressed(.S))) {
+        reg.add(entity, com.skill.Cast{});
+    }
     gui.igSameLine();
 
     if (active) {

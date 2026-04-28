@@ -79,6 +79,7 @@ pub const skill = struct {
     pub const Ready = struct {}; // 技能准备完毕
     pub const Active = struct {}; // 技能激活中
     pub const Passive = struct {}; // 被动技能
+    pub const Cast = struct {}; // 请求施放技能
 };
 
 ///
