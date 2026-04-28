@@ -284,17 +284,20 @@ pub fn projectile(reg: *Registry, delta: f32) void {
 
         const new = reg.createEntity();
         const image = zhu.assets.loadImage(value.image, .zero);
+        const start = view.get(entity, com.Position);
+        const drawStart = start.add(value.offset);
         reg.add(new, image.sub(.init(value.position, value.size)));
         reg.add(new, com.Projectile{
-            .start = view.get(entity, com.Position),
+            .start = start,
             .end = targetPos.?,
+            .previous = drawStart,
             .arc = value.arc,
             .totalTime = value.time + delta,
             .owner = view.toEntity(entity),
             .offset = value.offset,
         });
 
-        reg.add(new, view.get(entity, com.Position).add(value.offset));
+        reg.add(new, drawStart);
 
         if (view.tryGet(entity, com.audio.Emit)) |emitSound| {
             zhu.audio.playSound(emitSound.path); // 播放发射声音
