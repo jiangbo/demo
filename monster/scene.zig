@@ -13,6 +13,7 @@ const system = struct {
     const motion = @import("system/motion.zig");
     const state = @import("system/state.zig");
     const target = @import("system/target.zig");
+    const skill = @import("system/skill.zig");
     const projectile = @import("system/projectile.zig");
     const attack = @import("system/attack.zig");
     const health = @import("system/health.zig");
@@ -49,6 +50,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
     map.update(delta);
 
     system.timer.update(reg, delta); // 计时系统
+    system.skill.update(reg, delta); // 技能系统
     system.target.update(reg, delta); // 目标系统
     system.motion.update(reg, delta); // 移动系统
     system.state.update(reg, delta); // 状态系统

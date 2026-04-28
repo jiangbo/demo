@@ -218,13 +218,29 @@ pub fn tryDeployPlayer(reg: *Registry, unit: ctx.Unit) void {
         reg.add(entity, com.Name{ .value = unit.name });
         reg.add(entity, center);
         reg.add(entity, com.Player{});
-        if (template.skill) |skill| reg.add(entity, skill);
+        if (template.skill) |skill| addSkill(reg, entity, skill);
         place.entity = entity;
 
         ctx.spendSelected();
         zhu.audio.playSound("assets/audio/Fantasy_UI (10).ogg");
         std.log.info("player deployed: {}", .{entity.index});
     }
+}
+
+fn addSkill(reg: *Registry, entity: zhu.ecs.Entity, skill: com.skill.Skill) void {
+    reg.add(entity, skill);
+
+    if (skill.passive) {
+        reg.add(entity, com.skill.Passive{});
+        return;
+    }
+
+    if (skill.coolDown <= 0) {
+        reg.add(entity, com.skill.Ready{});
+        return;
+    }
+
+    // 冷却推进由 skill 系统处理。
 }
 
 /// 释放被该实体占用的出击点
