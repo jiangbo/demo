@@ -67,9 +67,9 @@ fn renderHoveredUnit(reg: *zhu.ecs.Registry) void {
         _ = gui.igText("等级: %.0f", stats.level);
         gui.igSameLine();
         _ = gui.igText("稀有度: %.0f", stats.rarity);
-        _ = gui.igText("生命值: %d / %d", stats.health, stats.maxHealth);
-        _ = gui.igText("攻击力: %d", stats.attack);
-        _ = gui.igText("防御力: %d", stats.defense);
+        _ = gui.igText("生命值: %.0f / %.0f", stats.health, stats.maxHealth);
+        _ = gui.igText("攻击力: %.0f", stats.attack);
+        _ = gui.igText("防御力: %.0f", stats.defense);
 
         if (reg.tryGet(entity, com.attack.Range)) |range| {
             _ = gui.igText("攻击范围: %d", @as(i32, @intFromFloat(range.v)));
@@ -103,10 +103,10 @@ fn renderSelectedUnit(reg: *zhu.ecs.Registry) void {
         _ = gui.igText("等级: %.0f", stats.level);
         gui.igSameLine();
         _ = gui.igText("稀有度: %.0f", stats.rarity);
-        _ = gui.igText("生命值: %d / %d", stats.health, stats.maxHealth);
-        _ = gui.igText("攻击力: %d", stats.attack);
+        _ = gui.igText("生命值: %.0f / %.0f", stats.health, stats.maxHealth);
+        _ = gui.igText("攻击力: %.0f", stats.attack);
         gui.igSameLine();
-        _ = gui.igText("防御力: %d", stats.defense);
+        _ = gui.igText("防御力: %.0f", stats.defense);
 
         if (reg.tryGet(entity, com.attack.Range)) |r| {
             _ = gui.igText("攻击范围: %.0f", r.v);

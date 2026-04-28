@@ -12,11 +12,8 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
             zhu.audio.playSound(hitSound.path); // 播放命中声音
         }
 
-        if (!reg.validEntity(target)) continue; // 目标已经死了
-        if (reg.has(target, com.Dead)) continue; // 目标已经死了
-
         const attack = view.getPtr(entity, com.Stats).attack;
-        const stats = view.getPtr(target.index, com.Stats);
+        const stats = reg.tryGetPtr(target, com.Stats) orelse continue;
 
         if (attack < 0) { // 治疗
             stats.health -= attack;
@@ -31,7 +28,7 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
 
         // 伤害
         const damage = attack - stats.defense;
-        stats.health -= @max(damage, @divTrunc(attack, 10));
+        stats.health -= @max(damage, attack / 10);
         const msg = "entity: {} attack target: {}, damage: {}, health: {}";
         std.log.debug(msg, .{ entity, target.index, damage, stats.health });
 
@@ -45,14 +42,13 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
     reg.clear(com.attack.Hit);
 }
 
-const percentInt = zhu.math.percentInt;
 pub fn draw(reg: *zhu.ecs.Registry) void {
     const size: zhu.Vector2 = .xy(40, 10);
 
     var view = reg.view(.{ com.attack.Injured, com.Stats });
     while (view.next()) |entity| {
         const stats = view.getPtr(entity, com.Stats);
-        const percent = percentInt(stats.health, stats.maxHealth);
+        const percent = stats.health / stats.maxHealth;
 
         var pos = view.get(entity, com.Position);
         pos = pos.addXY(-size.x / 2, size.y);

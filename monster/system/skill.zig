@@ -18,6 +18,15 @@ fn updateCast(reg: *zhu.ecs.Registry) void {
         if (skill.passive) continue;
 
         skill.durationTimer = 0;
+        if (view.tryGetPtr(entity, com.Stats)) |stats| {
+            skill.buff.multiplyStats(stats);
+        }
+        if (view.tryGetPtr(entity, com.attack.Range)) |range| {
+            range.v *= skill.buff.range;
+        }
+        if (view.tryGetPtr(entity, com.attack.CoolDown)) |coolDown| {
+            coolDown.v *= skill.buff.interval;
+        }
         view.remove(entity, com.skill.Ready);
         view.add(entity, com.skill.Active{});
     }
@@ -55,6 +64,15 @@ fn updateDuration(reg: *zhu.ecs.Registry, delta: f32) void {
 
         skill.durationTimer = 0;
         skill.coolDownTimer = 0;
+        if (view.tryGetPtr(entity, com.Stats)) |stats| {
+            skill.buff.divideStats(stats);
+        }
+        if (view.tryGetPtr(entity, com.attack.CoolDown)) |coolDown| {
+            coolDown.v /= skill.buff.interval;
+        }
+        if (view.tryGetPtr(entity, com.attack.Range)) |range| {
+            range.v /= skill.buff.range;
+        }
         view.remove(entity, com.skill.Active);
     }
 }

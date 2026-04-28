@@ -61,6 +61,20 @@ pub const skill = struct {
         range: f32 = 1,
         interval: f32 = 1,
         costRecovery: f32 = 0,
+
+        pub fn multiplyStats(self: Buff, stats: *Stats) void {
+            stats.health *= self.health;
+            stats.maxHealth *= self.health;
+            stats.attack *= self.attack;
+            stats.defense *= self.defense;
+        }
+
+        pub fn divideStats(self: Buff, stats: *Stats) void {
+            stats.health /= self.health;
+            stats.maxHealth /= self.health;
+            stats.attack /= self.attack;
+            stats.defense /= self.defense;
+        }
     };
 
     pub const Skill = struct { // 技能组件
@@ -112,10 +126,10 @@ pub const attack = struct {
 /// 属性
 ///
 pub const Stats = struct {
-    health: i32,
-    maxHealth: i32,
-    attack: i32,
-    defense: i32,
+    health: f32,
+    maxHealth: f32,
+    attack: f32,
+    defense: f32,
     level: f32 = 1,
     rarity: f32 = 1,
 };
