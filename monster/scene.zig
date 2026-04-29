@@ -88,6 +88,7 @@ pub fn draw(reg: *zhu.ecs.Registry) void {
 
         zhu.batch.drawImage(sprite.image, pos, .{
             .flipX = sprite.flip,
+            .size = sprite.size,
         });
     }
 
