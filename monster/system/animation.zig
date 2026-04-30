@@ -14,23 +14,21 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
             animation.play(play.index, play.loop);
         }
 
-        // 动画未跳到下一帧
-        if (animation.update(delta) == .none) continue;
-
-        // 更新显示的图片
-        const sprite = view.getPtr(entity, com.Sprite);
-        sprite.image = animation.subImage(sprite.image.size);
-
-        if (animation.isRunning()) {
-            // 检查是否有动画事件需要触发
-            const action = animation.getEnumFrameExtend(com.ActionEnum);
-            switch (action) {
-                .hit => view.add(entity, com.attack.Hit{}),
-                .emit => view.add(entity, com.attack.Emit{}),
-                .none => {},
-            }
-        } else {
-            view.add(entity, com.animation.Finished{}); // 动画播放结束
+        switch (animation.update(delta)) {
+            .next, .loop => {
+                // 更新显示的图片
+                const sprite = view.getPtr(entity, com.Sprite);
+                sprite.image = animation.subImage(sprite.image.size);
+                // 检查是否有动画事件需要触发
+                const action = animation.getEnumFrame(com.ActionEnum);
+                switch (action) {
+                    .hit => view.add(entity, com.attack.Hit{}),
+                    .emit => view.add(entity, com.attack.Emit{}),
+                    .none => {},
+                }
+            },
+            .end => view.add(entity, com.animation.Finished{}),
+            .none => continue, // 动画未跳到下一帧
         }
     }
     reg.clear(com.animation.Play);

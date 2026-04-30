@@ -24,7 +24,7 @@ pub fn EnumAnimation(comptime T: type) type {
 }
 pub const Animation = struct {
     pub const Clip = []const Frame;
-    pub const Step = enum { none, next, end };
+    pub const Step = enum { none, next, loop, end };
 
     elapsed: f32 = 0,
     index: u16 = 0,
@@ -71,19 +71,16 @@ pub const Animation = struct {
         self.elapsed += delta;
         const current = self.clip[self.index];
         if (self.elapsed < current.duration) return .none; // 还未到下一帧
+
         self.elapsed -= current.duration;
         self.index += 1;
         if (self.index < self.clip.len) return .next; // 下一帧
-        if (self.loop) self.index = 0;
-        return .end;
+        if (!self.loop) return .end; // 动画结束
+        self.index = 0; // 循环播放
+        return .loop;
     }
 
-    pub fn isNextAfterUpdate(self: *const Animation, delta: f32) bool {
-        const step = self.update(delta);
-        return step == .next or step == .end;
-    }
-
-    pub fn getEnumFrameExtend(self: *const Animation, T: type) T {
+    pub fn getEnumFrame(self: *const Animation, T: type) T {
         return @enumFromInt(self.clip[self.index].extend);
     }
 
