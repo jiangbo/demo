@@ -2,6 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const com = @import("../component.zig");
+const spawn = @import("../spawn.zig");
 
 pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
     var view = reg.view(.{ com.attack.Hit, com.attack.Target });
@@ -20,6 +21,9 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
             if (stats.health >= stats.maxHealth) {
                 stats.health = stats.maxHealth;
                 reg.remove(target, com.attack.Injured); // 移除受伤标签
+            }
+            if (reg.tryGet(target, com.Position)) |position| {
+                _ = spawn.effect(reg, .heal, position);
             }
             const msg = "entity: {} heal target: {}, health: {}";
             std.log.debug(msg, .{ entity, target.index, stats.health });

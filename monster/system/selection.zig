@@ -24,6 +24,8 @@ fn updateHoveredEntity(reg: *zhu.ecs.Registry) void {
     var maxY: f32 = -1e10;
     var view = reg.view(.{ com.Position, com.Sprite });
     while (view.next()) |index| {
+        if (view.has(index, com.skill.Display)) continue;
+
         const pos = view.get(index, com.Position);
         const center = pos.addY(-32);
         const rect: zhu.Rect = .init(center.sub(.xy(32, 32)), .xy(64, 64));

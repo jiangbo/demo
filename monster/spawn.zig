@@ -6,6 +6,7 @@ const map = @import("map.zig");
 const ctx = @import("context.zig");
 
 const Registry = zhu.ecs.Registry;
+const Entity = zhu.ecs.Entity;
 
 pub const Sound = struct { action: com.ActionEnum, path: [:0]const u8 };
 pub const Template = struct {
@@ -45,9 +46,20 @@ pub const Level = struct {
     waves: []const Wave,
 };
 
+pub const Effect = struct {
+    effectEnum: com.EffectEnum,
+    position: zhu.Vector2 = .zero,
+    size: zhu.Vector2,
+    drawSize: ?zhu.Vector2 = null,
+    offset: zhu.Vector2 = .zero,
+    image: struct { path: [:0]const u8, size: zhu.Vector2 },
+    animation: []const zhu.graphics.Frame,
+};
+
 pub const enemyZon: []const Template = @import("zon/enemy.zon");
 pub const playerZon: []const Template = @import("zon/player.zon");
 pub const levels: []const Level = @import("zon/levels.zon");
+pub const effectZon: []const Effect = @import("zon/effect.zon");
 
 // 下一次要启动的波次下标。
 var nextWaveIndex: usize = 0;
@@ -228,12 +240,21 @@ pub fn tryDeployPlayer(reg: *Registry, unit: ctx.Unit) void {
 }
 
 fn addSkill(reg: *Registry, entity: zhu.ecs.Entity, skill: com.skill.Skill) void {
-    reg.add(entity, skill);
-
     if (skill.passive) {
+        reg.add(entity, skill);
         reg.add(entity, com.skill.Passive{});
+        reg.add(entity, com.skill.Active{});
+        if (skill.buff.costRecovery != 0) {
+            reg.add(entity, com.skill.CostRecovery{
+                .rate = skill.buff.costRecovery,
+            });
+        }
         return;
     }
+
+    var value = skill;
+    value.coolDownTimer = skill.coolDown / 2;
+    reg.add(entity, value);
 
     if (skill.coolDown <= 0) {
         reg.add(entity, com.skill.Ready{});
@@ -241,6 +262,62 @@ fn addSkill(reg: *Registry, entity: zhu.ecs.Entity, skill: com.skill.Skill) void
     }
 
     // 冷却推进由 skill 系统处理。
+}
+
+pub fn skillDisplay(
+    reg: *Registry,
+    effectEnum: com.EffectEnum,
+    position: zhu.Vector2,
+) zhu.ecs.Entity {
+    return createEffect(reg, effectEnum, position, true);
+}
+
+pub fn effect(
+    reg: *Registry,
+    effectEnum: com.EffectEnum,
+    position: zhu.Vector2,
+) zhu.ecs.Entity {
+    const entity = createEffect(reg, effectEnum, position, false);
+    reg.add(entity, com.OneShotEffect{});
+    return entity;
+}
+
+pub fn deathEffect(reg: *Registry, e: Entity) void {
+    const sprite = reg.get(e, com.Sprite);
+    const position = reg.get(e, com.Position);
+    var animation = reg.get(e, com.Animation);
+
+    const damageIndex: u8 =
+        @intFromEnum(com.StateEnum.damage);
+    animation.play(damageIndex, false);
+
+    const newEntity = reg.createEntity();
+    reg.add(newEntity, sprite);
+    reg.add(newEntity, position);
+    reg.add(newEntity, animation);
+    reg.add(newEntity, com.OneShotEffect{});
+}
+
+fn createEffect(
+    reg: *Registry,
+    effectEnum: com.EffectEnum,
+    position: zhu.Vector2,
+    loop: bool,
+) zhu.ecs.Entity {
+    const value = &effectZon[@intFromEnum(effectEnum)];
+    const entity = reg.createEntity();
+    const image = zhu.assets.loadImage(value.image.path, value.image.size);
+
+    reg.add(entity, com.Sprite{
+        .image = image.sub(.init(value.position, value.size)),
+        .offset = value.offset,
+        .size = value.drawSize,
+    });
+    reg.add(entity, position);
+    var animation = com.Animation.init(image, value.animation);
+    animation.loop = loop;
+    reg.add(entity, animation);
+    return entity;
 }
 
 /// 释放被该实体占用的出击点

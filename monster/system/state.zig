@@ -6,17 +6,22 @@ const com = @import("../component.zig");
 pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
     _ = delta;
 
-    // 动画播放结束，切换动画，需要根据角色和敌人来区分
     var view = reg.view(.{com.animation.Finished});
-    defer reg.clear(com.animation.Finished);
 
     while (view.next()) |entity| {
-        if (view.has(entity, com.Ghost)) {
+        if (view.has(entity, com.OneShotEffect)) {
             view.add(entity, com.Dead{});
             continue;
         }
 
         var state = com.StateEnum.idle;
+        if (view.has(entity, com.Player)) {
+            if (view.tryGet(entity, com.skill.Skill)) |skill| {
+                if (skill.id == .shield and view.has(entity, com.skill.Active)) {
+                    state = .walk;
+                }
+            }
+        }
         // 敌人需要区分是否被阻挡
         var blocked = false;
         if (view.tryGet(entity, com.motion.BlockBy)) |blockBy| {
@@ -34,4 +39,6 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
         // 移除攻击锁定
         view.remove(entity, com.attack.Lock);
     }
+
+    reg.clear(com.animation.Finished);
 }
