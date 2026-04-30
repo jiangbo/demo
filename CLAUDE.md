@@ -60,18 +60,24 @@ demo/
     ├── system/            # ECS 系统（按执行顺序）
     │   ├── timer.zig      # 计时器事件处理
     │   ├── target.zig     # 目标选择系统
+    │   ├── skill.zig      # 技能冷却、施放、Buff 与显示
     │   ├── motion.zig     # 移动系统
     │   ├── state.zig      # 状态机
     │   ├── animation.zig  # 动画播放
     │   ├── projectile.zig # 投射物系统
     │   ├── attack.zig     # 攻击发起
     │   ├── health.zig     # 生命值/伤害系统
-    │   └── facing.zig     # 朝向系统
+    │   ├── death.zig      # 死亡与特效清理
+    │   ├── facing.zig     # 朝向系统
+    │   └── selection.zig  # 鼠标悬停、选中和范围显示
     └── zon/               # 数据定义文件
         ├── enemy.zon      # 敌人类型定义
         ├── player.zon     # 玩家单位定义
         ├── projectile.zon # 投射物类型定义
+        ├── effect.zon     # 特效定义（治疗、技能提示等）
         ├── atlas.zon      # 纹理图集定义
+        ├── ui.zon         # HUD/UI 资源定义
+        ├── levels.zon     # 波次与关卡定义
         ├── tile.zon       # 瓦片集定义
         └── level1.zon     # 关卡地图数据
 ```
@@ -99,28 +105,61 @@ demo/
 
 ### ECS 系统（每帧按顺序执行）
 
-1. **timer** — 处理冷却计时器，到期授予 `attack.Ready`
-2. **target** — 目标选择（最近敌人或最低生命值友军）
-3. **motion** — 移动系统，敌人沿路径图移动
-4. **state** — 动画完成后状态转换（idle → walk）
-5. **animation** — 动画帧更新，触发动作事件（hit/emit）
-6. **projectile** — 投射物飞行（抛物线轨迹）
-7. **attack** — 攻击发起，播放动画，设置冷却
-8. **health** — 伤害计算，播放受击音效，绘制血条，设置 `Dead` 标签
-9. **death** — 死亡处理：释放被死亡 blocker 锁定的实体、销毁 Dead 实体、清理完成的特效实体
-10. **facing** — 根据目标/移动方向翻转精灵
+每帧先处理输入选择和部署，再推进生成、地图和 ECS 系统：
+
+1. **selection** — 更新鼠标悬停、选中单位和 `ShowRange`
+2. **spawn.update** — 按波次生成敌人
+3. **map.update** — 更新地图上的动画等状态
+4. **timer** — 处理攻击冷却计时器，到期授予 `attack.Ready`
+5. **skill** — 推进技能冷却/持续时间，处理施放、Buff、COST 恢复和头顶显示
+6. **target** — 目标选择（最近敌人或最低生命值友军）
+7. **motion** — 移动系统，敌人沿路径图移动
+8. **state** — 动画完成后的状态转换和一次性特效结束处理
+9. **projectile** — 投射物飞行（抛物线轨迹）
+10. **attack** — 攻击发起，播放动画，设置冷却
+11. **health** — 伤害/治疗结算，播放受击音效，绘制血条，设置 `Dead`
+12. **death** — 死亡处理：释放阻挡、生成敌人死亡特效、销毁 Dead 实体
+13. **facing** — 根据目标/移动方向翻转精灵
+14. **animation** — 动画帧更新，触发动作事件（hit/emit）
+
+`scene.update()` 末尾还会处理到达终点的敌人事件，扣除基地生命值并销毁对应实体。
 
 ### 组件定义
 
 所有组件定义在 `monster/component.zig`，包括：
 - 位置、精灵、计时器
-- `Enemy` / `Player` / `Projectile` / `Dead` / `OneShotRemove`
-- `EnemyType` / `PlayerType` — 单位类型枚举（用于死亡特效创建）
+- `Enemy` / `Player` / `Projectile` / `Dead` / `OneShotEffect`
+- `EnemyEnum` / `PlayerEnum` / `SkillEnum` / `EffectEnum` — 数据类型枚举
+- `DeathEffectSource` — 敌人死亡特效需要的图集、帧尺寸、偏移和动画
 - `Stats`（生命值/攻击/防御）
 - `motion` 命名空间（Velocity, FaceLeft, Blocker, BlockBy）
 - `attack` 命名空间（Target, Ready, Range, Lock, Healer, Injured, CoolDown, Ranged, Hit, Emit）
+- `skill` 命名空间（Skill, Buff, Ready, Active, Passive, Cast, Display, CostRecovery）
 - `animation` 命名空间（Finished, Play）
 - `audio` 命名空间（Hit, Emit）
+
+### 技能系统（system/skill.zig）
+
+- 玩家单位的技能数据直接定义在 `player.zon` 的模板里，不单独维护 `skill.zon`。
+- 主动技能部署后初始冷却为 `coolDown / 2`；冷却完成后添加 `skill.Ready`。
+- ImGui 按钮或快捷键 `S` 添加 `skill.Cast`，技能系统消费后进入 `skill.Active`。
+- Buff 直接修改 `Stats`、`attack.Range` 和 `attack.CoolDown`，持续结束后按倍率恢复。
+- 被动技能部署后直接添加 `skill.Passive`、`skill.Active` 和可选 `skill.CostRecovery`。
+- `skill.CostRecovery` 每帧给 `ctx.cost` 增加额外恢复量。
+- 技能头顶显示通过 `spawn.skillDisplay()` 创建循环特效实体：
+  - `skill.Ready` 显示 `EffectEnum.skillReady`
+  - `skill.Active` 显示 `EffectEnum.skillActive`
+  - 状态变化或 owner 失效时销毁旧显示实体
+
+### 特效与死亡处理
+
+- 通用特效数据定义在 `monster/zon/effect.zon`，包含图片路径、源区域、绘制大小、偏移和动画帧。
+- `spawn.effect()` 创建一次性特效实体，并添加 `OneShotEffect` 标签。
+- `spawn.skillDisplay()` 创建循环特效实体，不添加 `OneShotEffect`，由技能系统按状态销毁。
+- `spawn.enemyDeathEffect()` 使用敌人的 `DeathEffectSource` 创建独立死亡特效实体。
+- `state.zig` 看到 `animation.Finished + OneShotEffect` 时添加 `Dead`。
+- `death.zig` 统一销毁 `Dead` 实体；敌人本体死亡时会释放阻挡、统计击杀、生成死亡特效并立即销毁本体。
+- 当前不再使用“把敌人本体改成 Ghost 播放死亡动画”的流程。
 
 ### HUD（hud.zig）
 
@@ -132,7 +171,8 @@ demo/
 ### 关卡状态（context.zig）
 
 - 模块级全局变量管理关卡状态：`cost`、`homeHealth`、`selected` 等
-- `spend()` 扣费同时清除选择状态
+- `update(delta)` 负责基础 COST 自增长；技能系统负责额外 COST 恢复
+- `spendSelected()` 扣费、移除已部署单位槽位并清除选择状态
 - `isGameOver()` / `isLevelClear()` 判定函数
 - 不使用 getter/setter，直接读写公开字段
 
@@ -142,6 +182,10 @@ demo/
 - `enemy.zon` — 4 种敌人类型（Slime, Wolf, Goblin, Dark Witch）
 - `player.zon` — 4 种玩家单位（Warrior, Archer, Lancer, Witch）
 - `projectile.zon` — 投射物类型（arrow, magic）
+- `effect.zon` — 一次性特效与技能显示特效（heal, skillActive, skillReady）
+- `levels.zon` — 关卡波次、准备时间和敌人等级/稀有度
+- `context.zon` — 初始关卡、点数和玩家出击单位列表
+- `ui.zon` — HUD 肖像、职业图标和边框资源
 
 ## 依赖
 
