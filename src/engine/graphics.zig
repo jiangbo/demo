@@ -24,6 +24,7 @@ pub fn EnumAnimation(comptime T: type) type {
 }
 pub const Animation = struct {
     pub const Clip = []const Frame;
+    pub const Step = enum { none, next, end };
 
     elapsed: f32 = 0,
     index: u16 = 0,
@@ -41,7 +42,7 @@ pub const Animation = struct {
     }
 
     pub fn initFinished(image: Image, clip: Clip) Animation {
-        const idx: u8 = @intCast(clip.len + 1);
+        const idx: u8 = @intCast(clip.len);
         return .{ .image = image, .clip = clip, .index = idx };
     }
 
@@ -59,64 +60,27 @@ pub const Animation = struct {
     }
 
     pub fn play(self: *Animation, index: u8, loop: bool) void {
-        std.debug.assert(index < self.sourceLength);
         self.clip = self.source[index];
         self.sourceIndex = index;
         self.loop = loop;
         self.reset();
     }
 
-    pub fn onceUpdate(self: *Animation, delta: f32) void {
-        _ = self.isNextOnceUpdate(delta);
-    }
-
-    pub fn isNextOnceUpdate(self: *Animation, delta: f32) bool {
-        if (self.index > self.clip.len) return false; // 已停止
-        if (self.index < self.clip.len) {
-            self.elapsed += delta;
-            const current = self.clip[self.index]; // 当前帧
-            if (self.elapsed < current.duration) return false;
-            self.elapsed -= current.duration;
-        }
-        self.index += 1;
-        return true;
-    }
-
-    pub fn isFinishedOnceUpdate(self: *Animation, delta: f32) bool {
-        self.onceUpdate(delta);
-        return self.index >= self.clip.len;
-    }
-
-    pub fn loopUpdate(self: *Animation, delta: f32) void {
-        _ = self.isNextLoopUpdate(delta);
-    }
-
-    pub fn isNextLoopUpdate(self: *Animation, delta: f32) bool {
+    pub fn update(self: *Animation, delta: f32) Step {
+        if (self.index == self.clip.len) return .none; // 已经结束
         self.elapsed += delta;
-        const current = self.clip[self.index]; // 当前帧
-        if (self.elapsed < current.duration) return false;
+        const current = self.clip[self.index];
+        if (self.elapsed < current.duration) return .none; // 还未到下一帧
         self.elapsed -= current.duration;
         self.index += 1;
-        // 结束了从头开始
-        if (self.index >= self.clip.len) self.index = 0;
-        return true;
+        if (self.index < self.clip.len) return .next; // 下一帧
+        if (self.loop) self.index = 0;
+        return .end;
     }
 
-    pub fn update(self: *Animation, delta: f32) void {
-        if (self.loop) self.loopUpdate(delta) else {
-            self.onceUpdate(delta);
-        }
-    }
-
-    pub fn isNextUpdate(self: *Animation, delta: f32) bool {
-        return if (self.loop) self.isNextLoopUpdate(delta) else {
-            return self.isNextOnceUpdate(delta);
-        };
-    }
-
-    pub fn isFinishedUpdate(self: *Animation, delta: f32) bool {
-        self.update(delta);
-        return self.isFinished();
+    pub fn isNextAfterUpdate(self: *const Animation, delta: f32) bool {
+        const step = self.update(delta);
+        return step == .next or step == .end;
     }
 
     pub fn getEnumFrameExtend(self: *const Animation, T: type) T {
@@ -128,7 +92,7 @@ pub const Animation = struct {
     }
 
     pub fn stop(self: *Animation) void {
-        self.index = @intCast(self.clip.len + 1);
+        self.index = @intCast(self.clip.len);
     }
 
     pub fn isRunning(self: *const Animation) bool {
@@ -136,10 +100,6 @@ pub const Animation = struct {
     }
 
     pub fn isFinished(self: *const Animation) bool {
-        return self.index >= self.clip.len;
-    }
-
-    pub fn isJustFinished(self: *const Animation) bool {
         return self.index == self.clip.len;
     }
 

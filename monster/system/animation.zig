@@ -5,7 +5,6 @@ const com = @import("../component.zig");
 
 pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
     var view = reg.view(.{com.Animation});
-    defer reg.clear(com.animation.Play);
 
     while (view.next()) |entity| {
         const animation = view.getPtr(entity, com.Animation);
@@ -15,7 +14,8 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
             animation.play(play.index, play.loop);
         }
 
-        if (!animation.isNextUpdate(delta)) continue; // 动画未跳到下一帧
+        // 动画未跳到下一帧
+        if (animation.update(delta) == .none) continue;
 
         // 更新显示的图片
         const sprite = view.getPtr(entity, com.Sprite);
@@ -33,4 +33,5 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
             view.add(entity, com.animation.Finished{}); // 动画播放结束
         }
     }
+    reg.clear(com.animation.Play);
 }

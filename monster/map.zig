@@ -194,7 +194,7 @@ pub fn findPlace(kind: PlaceKind, pos: zhu.Vector2) ?usize {
 }
 
 pub fn update(delta: f32) void {
-    for (animations.items) |*item| item.value.loopUpdate(delta);
+    for (animations.items) |*item| _ = item.value.update(delta);
 }
 
 pub fn draw() void {
