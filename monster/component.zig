@@ -27,7 +27,7 @@ pub const EnemyEnum = enum { slime, wolf, goblin, darkWitch }; // 敌人类型
 pub const Player = struct {}; // 玩家
 pub const PlayerEnum = enum { warrior, archer, lancer, witch }; // 玩家类型
 pub const SkillEnum = enum { shield, speedUp, rest, powerUp }; // 技能类型
-pub const EffectEnum = enum { heal, skillActive, skillReady }; // 特效类型
+pub const EffectEnum = enum { heal, active, ready }; // 特效类型
 pub const StateEnum = enum { idle, walk, damage, attack, ranged };
 pub const ActionEnum = enum(u32) { none = 0, hit = 1, emit = 2 };
 pub const ProjectileEnum = enum { arrow, magic }; // 投射物类型
@@ -45,8 +45,7 @@ pub const Projectile = struct {
 };
 
 pub const Dead = struct {}; // 死亡标签
-pub const Ghost = struct {}; // 幽灵标签
-pub const OneShotRemove = struct {}; // 一次性动画结束后移除标签
+pub const OneShotEffect = struct {}; // 一次性特效，动画结束后移除
 pub const ShowRange = struct {}; // 显示攻击范围标签
 pub const Name = struct { value: [:0]const u8 }; // 名称组件
 pub const ClassName = struct { value: [:0]const u8 }; // 职业名称组件

@@ -147,8 +147,8 @@ demo/
 - 被动技能部署后直接添加 `skill.Passive`、`skill.Active` 和可选 `skill.CostRecovery`。
 - `skill.CostRecovery` 每帧给 `ctx.cost` 增加额外恢复量。
 - 技能头顶显示通过 `spawn.skillDisplay()` 创建循环特效实体：
-  - `skill.Ready` 显示 `EffectEnum.skillReady`
-  - `skill.Active` 显示 `EffectEnum.skillActive`
+  - `skill.Ready` 显示 `EffectEnum.ready`
+  - `skill.Active` 显示 `EffectEnum.active`
   - 状态变化或 owner 失效时销毁旧显示实体
 
 ### 特效与死亡处理
@@ -182,7 +182,7 @@ demo/
 - `enemy.zon` — 4 种敌人类型（Slime, Wolf, Goblin, Dark Witch）
 - `player.zon` — 4 种玩家单位（Warrior, Archer, Lancer, Witch）
 - `projectile.zon` — 投射物类型（arrow, magic）
-- `effect.zon` — 一次性特效与技能显示特效（heal, skillActive, skillReady）
+- `effect.zon` — 一次性特效与技能显示特效（heal, active, ready）
 - `levels.zon` — 关卡波次、准备时间和敌人等级/稀有度
 - `context.zon` — 初始关卡、点数和玩家出击单位列表
 - `ui.zon` — HUD 肖像、职业图标和边框资源
