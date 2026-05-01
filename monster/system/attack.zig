@@ -22,7 +22,7 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
         // 设置攻击冷却
         view.remove(entity, com.attack.Ready);
         reg.addEvent(com.Timer{
-            .remaining = view.get(entity, com.attack.CoolDown).v,
+            .remaining = view.get(entity, com.Stats).interval,
             .entity = view.toEntity(entity),
             .type = .attack,
         });

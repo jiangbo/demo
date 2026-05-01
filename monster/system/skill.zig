@@ -23,13 +23,11 @@ fn updateCast(reg: *zhu.ecs.Registry) void {
 
         skill.durationTimer = 0;
         if (view.tryGetPtr(entity, com.Stats)) |stats| {
-            skill.buff.multiplyStats(stats);
-        }
-        if (view.tryGetPtr(entity, com.attack.Range)) |range| {
-            range.v *= skill.buff.range;
-        }
-        if (view.tryGetPtr(entity, com.attack.CoolDown)) |coolDown| {
-            coolDown.v *= skill.buff.interval;
+            view.add(entity, com.skill.Backup{ .stats = stats.* });
+            const buff = skill.buff;
+            inline for (@typeInfo(com.Stats).@"struct".fields) |field| {
+                @field(stats, field.name) *= @field(buff, field.name);
+            }
         }
         view.remove(entity, com.skill.Ready);
         view.add(entity, com.skill.Active{});
@@ -72,14 +70,11 @@ fn updateDuration(reg: *zhu.ecs.Registry, delta: f32) void {
 
         skill.durationTimer = 0;
         skill.coolDownTimer = 0;
-        if (view.tryGetPtr(entity, com.Stats)) |stats| {
-            skill.buff.divideStats(stats);
-        }
-        if (view.tryGetPtr(entity, com.attack.CoolDown)) |coolDown| {
-            coolDown.v /= skill.buff.interval;
-        }
-        if (view.tryGetPtr(entity, com.attack.Range)) |range| {
-            range.v /= skill.buff.range;
+        if (view.tryGetPtr(entity, com.skill.Backup)) |backup| {
+            const health = view.get(entity, com.Stats).health;
+            view.getPtr(entity, com.Stats).* = backup.stats;
+            view.getPtr(entity, com.Stats).health = health;
+            view.remove(entity, com.skill.Backup);
         }
         if (skill.id == .shield) {
             view.add(entity, com.animation.Play{

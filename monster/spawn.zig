@@ -15,8 +15,6 @@ pub const Template = struct {
     name: [:0]const u8,
     description: []const u8 = &.{},
     stats: com.Stats,
-    range: f32,
-    interval: f32,
     block: u8 = 0,
     cost: f32 = 0,
     speed: f32 = 0,
@@ -172,9 +170,6 @@ fn doSpawn(reg: *Registry, zon: *const Template) zhu.ecs.Entity {
     const animation = com.Animation.initSource(image, zon.animations);
     reg.add(entity, animation);
 
-    // 添加攻击范围组件
-    reg.add(entity, com.attack.Range{ .v = zon.range });
-
     // 添加远程攻击
     if (zon.attackKind == .ranged) reg.add(entity, com.attack.Ranged{});
 
@@ -191,8 +186,7 @@ fn doSpawn(reg: *Registry, zon: *const Template) zhu.ecs.Entity {
     // 添加投射物组件
     if (zon.projectile) |value| reg.add(entity, value);
 
-    // 攻击冷却时间
-    reg.add(entity, com.attack.CoolDown{ .v = zon.interval });
+    // 攻击就绪
     reg.add(entity, com.attack.Ready{});
 
     // 添加声音组件
@@ -244,9 +238,9 @@ fn addSkill(reg: *Registry, entity: zhu.ecs.Entity, skill: com.skill.Skill) void
         reg.add(entity, skill);
         reg.add(entity, com.skill.Passive{});
         reg.add(entity, com.skill.Active{});
-        if (skill.buff.costRecovery != 0) {
+        if (skill.costRecovery != 0) {
             reg.add(entity, com.skill.CostRecovery{
-                .rate = skill.buff.costRecovery,
+                .rate = skill.costRecovery,
             });
         }
         return;

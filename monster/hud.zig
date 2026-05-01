@@ -154,7 +154,7 @@ fn drawPrepare(playerEnum: com.PlayerEnum) void {
 
     // 远程单位显示攻击范围
     if (template.attackKind == .ranged) {
-        const range = template.range;
+        const range = template.stats.range;
         const diameter = range * 2;
         const circle = zhu.getImage("circle.png");
         zhu.batch.drawImage(circle, mousePos.sub(.xy(range, range)), .{

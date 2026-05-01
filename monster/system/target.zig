@@ -12,14 +12,14 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
 /// 验证攻击目标是否死亡，是否在攻击范围内。
 ///
 pub fn cleanInvalidTarget(reg: *zhu.ecs.Registry) void {
-    var view = reg.reverseView(.{ attack.Range, attack.Target });
+    var view = reg.reverseView(.{ com.Stats, attack.Target });
 
     while (view.next()) |entity| {
         if (view.has(entity, attack.Lock)) continue; // 攻击锁定时不能切换目标
 
         const target = view.get(entity, attack.Target).v;
         if (reg.validEntity(target)) { // 目标还存活
-            const range = view.get(entity, attack.Range).v + 20; // 目标的中心
+            const range = view.get(entity, com.Stats).range + 20;
             const pos = view.get(entity, com.Position);
             const targetPos = reg.get(target, com.Position);
             if (pos.sub(targetPos).length2() <= range * range) {
@@ -36,7 +36,7 @@ pub fn cleanInvalidTarget(reg: *zhu.ecs.Registry) void {
 ///
 const attack = com.attack;
 pub fn selectAttackTarget(reg: *zhu.ecs.Registry) void {
-    var view = reg.view(.{ attack.Range, attack.Ready });
+    var view = reg.view(.{ com.Stats, attack.Ready });
     while (view.next()) |entity| {
         if (view.has(entity, attack.Healer)) {
             selectHealTarget(reg, view.toEntity(entity)); // 选择治疗目标
@@ -45,7 +45,7 @@ pub fn selectAttackTarget(reg: *zhu.ecs.Registry) void {
         if (view.has(entity, attack.Target)) continue; // 已经有目标了
 
         const pos = view.get(entity, com.Position);
-        const range = view.get(entity, attack.Range).v + 20; // 目标的中心
+        const range = view.get(entity, com.Stats).range + 20;
         const range2 = range * range;
 
         var closestTarget: ?zhu.ecs.Entity.Index = null; // 找最近的敌方
@@ -74,7 +74,7 @@ pub fn selectAttackTarget(reg: *zhu.ecs.Registry) void {
 fn selectHealTarget(reg: *zhu.ecs.Registry, entity: zhu.ecs.Entity) void {
     // 寻找自身范围内，血量最低的友方单位。
     const pos = reg.get(entity, com.Position);
-    const range = reg.get(entity, attack.Range).v + 20; // 目标的中心
+    const range = reg.get(entity, com.Stats).range + 20;
     const range2 = range * range;
 
     var lowestTarget: ?zhu.ecs.Entity.Index = null; // 找血量最低的友方

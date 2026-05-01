@@ -56,29 +56,6 @@ pub const ClassName = struct { value: [:0]const u8 }; // 职业名称组件
 pub const skill = struct {
     pub const CostRecovery = struct { rate: f32 }; // COST 恢复组件
 
-    pub const Buff = struct { // 技能增益倍率
-        health: f32 = 1,
-        attack: f32 = 1,
-        defense: f32 = 1,
-        range: f32 = 1,
-        interval: f32 = 1,
-        costRecovery: f32 = 0,
-
-        pub fn multiplyStats(self: Buff, stats: *Stats) void {
-            stats.health *= self.health;
-            stats.maxHealth *= self.health;
-            stats.attack *= self.attack;
-            stats.defense *= self.defense;
-        }
-
-        pub fn divideStats(self: Buff, stats: *Stats) void {
-            stats.health /= self.health;
-            stats.maxHealth /= self.health;
-            stats.attack /= self.attack;
-            stats.defense /= self.defense;
-        }
-    };
-
     pub const Skill = struct { // 技能组件
         id: SkillEnum,
         name: [:0]const u8,
@@ -89,13 +66,15 @@ pub const skill = struct {
         coolDownTimer: f32 = 0,
         durationTimer: f32 = 0,
         displayEntity: ?Entity = null,
-        buff: Buff = .{},
+        buff: Stats = .{},
+        costRecovery: f32 = 0,
     };
 
     pub const Ready = struct {}; // 技能准备完毕
     pub const Active = struct {}; // 技能激活中
     pub const Passive = struct {}; // 被动技能
     pub const Cast = struct {}; // 请求施放技能
+    pub const Backup = struct { stats: Stats }; // 备份原始属性
     // 技能显示实体
     pub const Display = struct { owner: Entity, effect: EffectEnum };
 };
@@ -116,11 +95,9 @@ pub const motion = struct {
 pub const attack = struct {
     pub const Target = struct { v: Entity }; // 攻击目标
     pub const Ready = struct {}; // 冷却完毕，可以攻击。
-    pub const Range = struct { v: f32 }; // 攻击范围
     pub const Lock = struct {}; // 攻击锁定
     pub const Healer = struct {}; // 治疗者
     pub const Injured = struct {}; // 受伤标签
-    pub const CoolDown = struct { v: f32 }; // 冷却时间
     pub const Ranged = struct {}; // 远程攻击
     pub const Hit = struct {}; // 命中标签
     pub const Emit = struct {}; // 发出攻击标签
@@ -130,10 +107,12 @@ pub const attack = struct {
 /// 属性
 ///
 pub const Stats = struct {
-    health: f32,
-    maxHealth: f32,
-    attack: f32,
-    defense: f32,
+    health: f32 = 1,
+    maxHealth: f32 = 1,
+    attack: f32 = 1,
+    defense: f32 = 1,
+    range: f32 = 1,
+    interval: f32 = 1,
     level: f32 = 1,
     rarity: f32 = 1,
 };

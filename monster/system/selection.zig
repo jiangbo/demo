@@ -68,7 +68,7 @@ fn updateShowRange(reg: *zhu.ecs.Registry) void {
         return;
     }
     if (!reg.has(selected, com.Player)) return;
-    if (!reg.has(selected, com.attack.Range)) return;
+    if (!reg.has(selected, com.Stats)) return;
 
     reg.add(selected, com.ShowRange{});
     currentRangeEntity = selected;
@@ -79,12 +79,11 @@ pub fn draw(reg: *zhu.ecs.Registry) void {
 }
 
 fn drawRange(reg: *zhu.ecs.Registry) void {
-    var view = reg.view(.{ com.ShowRange, com.Position, com.attack.Range });
+    var view = reg.view(.{ com.ShowRange, com.Position, com.Stats });
     while (view.next()) |entity| {
         const pos = view.get(entity, com.Position);
-        const range = view.get(entity, com.attack.Range);
+        const r = view.get(entity, com.Stats).range;
         const circle = zhu.getImage("circle.png");
-        const r = range.v;
         zhu.batch.drawImage(circle, pos.sub(.xy(r, r)), .{
             .size = .xy(r * 2, r * 2),
             .color = .rgba(0, 1, 0, 0.3),

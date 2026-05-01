@@ -70,14 +70,8 @@ fn renderHoveredUnit(reg: *zhu.ecs.Registry) void {
         _ = gui.igText("生命值: %.0f / %.0f", stats.health, stats.maxHealth);
         _ = gui.igText("攻击力: %.0f", stats.attack);
         _ = gui.igText("防御力: %.0f", stats.defense);
-
-        if (reg.tryGet(entity, com.attack.Range)) |range| {
-            _ = gui.igText("攻击范围: %d", @as(i32, @intFromFloat(range.v)));
-        }
-
-        if (reg.tryGet(entity, com.attack.CoolDown)) |c| {
-            _ = gui.igText("攻击间隔: %.2f", c.v);
-        }
+        _ = gui.igText("攻击范围: %d", @as(i32, @intFromFloat(stats.range)));
+        _ = gui.igText("攻击间隔: %.2f", stats.interval);
 
         gui.igEndTooltip();
     }
@@ -107,15 +101,9 @@ fn renderSelectedUnit(reg: *zhu.ecs.Registry) void {
         _ = gui.igText("攻击力: %.0f", stats.attack);
         gui.igSameLine();
         _ = gui.igText("防御力: %.0f", stats.defense);
-
-        if (reg.tryGet(entity, com.attack.Range)) |r| {
-            _ = gui.igText("攻击范围: %.0f", r.v);
-            gui.igSameLine();
-        }
-
-        if (reg.tryGet(entity, com.attack.CoolDown)) |c| {
-            _ = gui.igText("攻击间隔: %.2f", c.v);
-        }
+        _ = gui.igText("攻击范围: %.0f", stats.range);
+        gui.igSameLine();
+        _ = gui.igText("攻击间隔: %.2f", stats.interval);
 
         if (reg.tryGet(entity, com.motion.Blocker)) |blocker| {
             _ = gui.igText("阻挡数量: %d / %d", blocker.current, blocker.max);
