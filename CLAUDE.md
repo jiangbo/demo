@@ -128,9 +128,9 @@ demo/
 
 所有组件定义在 `monster/component.zig`，包括：
 - 位置、精灵、计时器
-- `Enemy` / `Player` / `Projectile` / `Dead` / `OneShotEffect`
+- `Enemy` / `Player` / `Projectile` / `Dead` / `DeadEffect`
 - `EnemyEnum` / `PlayerEnum` / `SkillEnum` / `EffectEnum` — 数据类型枚举
-- `DeathEffectSource` — 敌人死亡特效需要的图集、帧尺寸、偏移和动画
+- `DeadEffect` — 一次性特效标签，动画结束后自动销毁
 - `Stats`（生命值/攻击/防御）
 - `motion` 命名空间（Velocity, FaceLeft, Blocker, BlockBy）
 - `attack` 命名空间（Target, Ready, Range, Lock, Healer, Injured, CoolDown, Ranged, Hit, Emit）
@@ -154,10 +154,10 @@ demo/
 ### 特效与死亡处理
 
 - 通用特效数据定义在 `monster/zon/effect.zon`，包含图片路径、源区域、绘制大小、偏移和动画帧。
-- `spawn.effect()` 创建一次性特效实体，并添加 `OneShotEffect` 标签。
-- `spawn.skillDisplay()` 创建循环特效实体，不添加 `OneShotEffect`，由技能系统按状态销毁。
-- `spawn.enemyDeathEffect()` 使用敌人的 `DeathEffectSource` 创建独立死亡特效实体。
-- `state.zig` 看到 `animation.Finished + OneShotEffect` 时添加 `Dead`。
+- `spawn.effect()` 创建一次性特效实体，并添加 `DeadEffect` 标签。
+- `spawn.skillDisplay()` 创建循环特效实体，不添加 `DeadEffect`，由技能系统按状态销毁。
+- `spawn.deathEffect()` 复用敌人本体的精灵和动画创建独立死亡特效实体，标记 `DeadEffect`。
+- `state.zig` 看到 `animation.Finished + DeadEffect` 时添加 `Dead`。
 - `death.zig` 统一销毁 `Dead` 实体；敌人本体死亡时会释放阻挡、统计击杀、生成死亡特效并立即销毁本体。
 - 当前不再使用“把敌人本体改成 Ghost 播放死亡动画”的流程。
 

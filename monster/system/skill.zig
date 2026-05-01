@@ -15,13 +15,11 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
 }
 
 fn updateCast(reg: *zhu.ecs.Registry) void {
-    var view = reg.view(.{ com.skill.Skill, com.skill.Cast });
+    var view = reg.view(.{ com.skill.Cast, com.skill.Ready });
     while (view.next()) |entity| {
-        if (!view.has(entity, com.skill.Ready)) continue;
         if (view.has(entity, com.skill.Passive)) continue;
 
         const skill = view.getPtr(entity, com.skill.Skill);
-        if (skill.passive) continue;
 
         skill.durationTimer = 0;
         if (view.tryGetPtr(entity, com.Stats)) |stats| {
@@ -53,7 +51,6 @@ fn updateCoolDown(reg: *zhu.ecs.Registry, delta: f32) void {
         if (view.has(entity, com.skill.Passive)) continue;
 
         const skill = view.getPtr(entity, com.skill.Skill);
-        if (skill.passive) continue;
 
         skill.coolDownTimer = @min(skill.coolDown, skill.coolDownTimer + delta);
         if (skill.coolDownTimer >= skill.coolDown) {
@@ -69,7 +66,6 @@ fn updateDuration(reg: *zhu.ecs.Registry, delta: f32) void {
         if (view.has(entity, com.skill.Passive)) continue;
 
         const skill = view.getPtr(entity, com.skill.Skill);
-        if (skill.passive) continue;
 
         skill.durationTimer += delta;
         if (skill.durationTimer < skill.duration) continue;
@@ -130,7 +126,7 @@ fn updateExistingDisplay(reg: *zhu.ecs.Registry) void {
             continue;
         };
 
-        if (display.state != state) {
+        if (display.effect != state) {
             skill.displayEntity = null;
             reg.destroyEntity(displayEntity);
             continue;
@@ -149,15 +145,13 @@ fn createMissingDisplay(reg: *zhu.ecs.Registry) void {
         if (reg.validEntity(skill.displayEntity)) continue;
 
         const owner = view.toEntity(entity);
-        const displayEntity = spawn.skillDisplay(
-            reg,
-            displayEffect(state),
-            displayPosition(reg, owner),
-        );
+        const displayEntity = spawn.effect(reg, state);
+        reg.add(displayEntity, displayPosition(reg, owner));
+        reg.getPtr(displayEntity, com.Animation).loop = true;
         skill.displayEntity = displayEntity;
         reg.add(displayEntity, com.skill.Display{
             .owner = owner,
-            .state = state,
+            .effect = state,
         });
     }
 }
@@ -165,7 +159,7 @@ fn createMissingDisplay(reg: *zhu.ecs.Registry) void {
 fn displayState(
     reg: *zhu.ecs.Registry,
     entity: zhu.ecs.Entity,
-) ?com.skill.DisplayState {
+) ?com.EffectEnum {
     if (reg.has(entity, com.skill.Active)) return .active;
     if (reg.has(entity, com.skill.Ready)) return .ready;
     return null;
@@ -174,11 +168,4 @@ fn displayState(
 fn displayPosition(reg: *zhu.ecs.Registry, owner: zhu.ecs.Entity) com.Position {
     const position = reg.get(owner, com.Position);
     return position.add(displayPositionOffset);
-}
-
-fn displayEffect(state: com.skill.DisplayState) com.EffectEnum {
-    return switch (state) {
-        .ready => .ready,
-        .active => .active,
-    };
 }

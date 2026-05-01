@@ -264,58 +264,34 @@ fn addSkill(reg: *Registry, entity: zhu.ecs.Entity, skill: com.skill.Skill) void
     // 冷却推进由 skill 系统处理。
 }
 
-pub fn skillDisplay(
-    reg: *Registry,
-    effectEnum: com.EffectEnum,
-    position: zhu.Vector2,
-) zhu.ecs.Entity {
-    return createEffect(reg, effectEnum, position, true);
-}
+/// 复制敌人精灵播放受伤动画，动画结束后自动销毁。
+pub fn deadEnemy(reg: *Registry, entity: Entity) void {
+    const sprite = reg.get(entity, com.Sprite);
+    const position = reg.get(entity, com.Position);
+    var animation = reg.get(entity, com.Animation);
 
-pub fn effect(
-    reg: *Registry,
-    effectEnum: com.EffectEnum,
-    position: zhu.Vector2,
-) zhu.ecs.Entity {
-    const entity = createEffect(reg, effectEnum, position, false);
-    reg.add(entity, com.OneShotEffect{});
-    return entity;
-}
-
-pub fn deathEffect(reg: *Registry, e: Entity) void {
-    const sprite = reg.get(e, com.Sprite);
-    const position = reg.get(e, com.Position);
-    var animation = reg.get(e, com.Animation);
-
-    const damageIndex: u8 =
-        @intFromEnum(com.StateEnum.damage);
+    const damageIndex: u8 = @intFromEnum(com.StateEnum.damage);
     animation.play(damageIndex, false);
 
     const newEntity = reg.createEntity();
     reg.add(newEntity, sprite);
     reg.add(newEntity, position);
     reg.add(newEntity, animation);
-    reg.add(newEntity, com.OneShotEffect{});
+    reg.add(newEntity, com.DeadOnFinish{});
 }
 
-fn createEffect(
-    reg: *Registry,
-    effectEnum: com.EffectEnum,
-    position: zhu.Vector2,
-    loop: bool,
-) zhu.ecs.Entity {
+/// 根据 effectZon 数据创建特效实体，位置和生命周期由调用方处理。
+pub fn effect(reg: *Registry, effectEnum: com.EffectEnum) Entity {
     const value = &effectZon[@intFromEnum(effectEnum)];
     const entity = reg.createEntity();
-    const image = zhu.assets.loadImage(value.image.path, value.image.size);
+    const image = zhu.assets.loadImage(value.image.path, .zero);
 
     reg.add(entity, com.Sprite{
         .image = image.sub(.init(value.position, value.size)),
         .offset = value.offset,
         .size = value.drawSize,
     });
-    reg.add(entity, position);
-    var animation = com.Animation.init(image, value.animation);
-    animation.loop = loop;
+    const animation = com.Animation.init(image, value.animation);
     reg.add(entity, animation);
     return entity;
 }

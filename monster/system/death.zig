@@ -17,8 +17,6 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
             continue;
         }
 
-        ctx.enemyKilledCount += 1;
-
         // 死亡实体被阻挡了，释放阻挡锁定
         if (deadView.tryGet(entity, com.motion.BlockBy)) |blockBy| {
             if (reg.tryGetPtr(blockBy.v, com.motion.Blocker)) |blocker| {
@@ -27,8 +25,9 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
         }
 
         if (deadView.has(entity, com.EnemyEnum)) {
+            ctx.enemyKilledCount += 1;
             const enemyEntity = deadView.toEntity(entity);
-            spawn.deathEffect(reg, enemyEntity);
+            spawn.deadEnemy(reg, enemyEntity);
         }
     }
 }

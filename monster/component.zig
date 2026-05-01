@@ -45,7 +45,7 @@ pub const Projectile = struct {
 };
 
 pub const Dead = struct {}; // 死亡标签
-pub const OneShotEffect = struct {}; // 一次性特效，动画结束后移除
+pub const DeadOnFinish = struct {}; // 动画结束后标记死亡
 pub const ShowRange = struct {}; // 显示攻击范围标签
 pub const Name = struct { value: [:0]const u8 }; // 名称组件
 pub const ClassName = struct { value: [:0]const u8 }; // 职业名称组件
@@ -96,11 +96,8 @@ pub const skill = struct {
     pub const Active = struct {}; // 技能激活中
     pub const Passive = struct {}; // 被动技能
     pub const Cast = struct {}; // 请求施放技能
-    pub const DisplayState = enum { ready, active };
-    pub const Display = struct { // 技能显示实体
-        owner: Entity,
-        state: DisplayState,
-    };
+    // 技能显示实体
+    pub const Display = struct { owner: Entity, effect: EffectEnum };
 };
 
 ///

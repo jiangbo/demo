@@ -9,7 +9,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
     var view = reg.view(.{com.animation.Finished});
 
     while (view.next()) |entity| {
-        if (view.has(entity, com.OneShotEffect)) {
+        if (view.has(entity, com.DeadOnFinish)) {
             view.add(entity, com.Dead{});
             continue;
         }

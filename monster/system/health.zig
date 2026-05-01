@@ -23,7 +23,9 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
                 reg.remove(target, com.attack.Injured); // 移除受伤标签
             }
             if (reg.tryGet(target, com.Position)) |position| {
-                _ = spawn.effect(reg, .heal, position);
+                const effect = spawn.effect(reg, .heal);
+                reg.add(effect, position);
+                reg.add(effect, com.DeadOnFinish{});
             }
             const msg = "entity: {} heal target: {}, health: {}";
             std.log.debug(msg, .{ entity, target.index, stats.health });
