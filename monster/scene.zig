@@ -45,6 +45,8 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
         }
     }
 
+    if (ctx.paused) return;
+
     // 地图更新，地图上的动画等。
     spawn.update(reg, delta);
     map.update(delta);

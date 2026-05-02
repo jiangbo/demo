@@ -6,6 +6,8 @@ const gui = @import("cimgui");
 
 const com = @import("component.zig");
 const ctx = @import("context.zig");
+const spawn = @import("spawn.zig");
+const Registry = zhu.ecs.Registry;
 
 pub fn init() void {
     sk.imgui.setup(.{
@@ -28,7 +30,7 @@ pub fn event(ev: *const zhu.window.Event) void {
 }
 
 var flag: bool = true;
-pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
+pub fn update(reg: *Registry, delta: f32) void {
     sk.imgui.newFrame(.{
         .width = sk.app.width(),
         .height = sk.app.height(),
@@ -50,7 +52,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
     ctx.uiWantCaptureMouse = io.*.WantCaptureMouse;
 }
 
-fn renderHoveredUnit(reg: *zhu.ecs.Registry) void {
+fn renderHoveredUnit(reg: *Registry) void {
     const entity = ctx.hoveredEntity orelse return;
     const stats = reg.tryGet(entity, com.Stats) orelse return;
 
@@ -77,7 +79,7 @@ fn renderHoveredUnit(reg: *zhu.ecs.Registry) void {
     }
 }
 
-fn renderSelectedUnit(reg: *zhu.ecs.Registry) void {
+fn renderSelectedUnit(reg: *Registry) void {
     const entity = ctx.selectedEntity orelse return;
     const stats = reg.tryGet(entity, com.Stats) orelse return;
 
@@ -110,11 +112,12 @@ fn renderSelectedUnit(reg: *zhu.ecs.Registry) void {
         }
 
         renderSelectedSkill(reg, entity);
+        renderSelectedUpgrade(reg, entity);
     }
     gui.igEnd();
 }
 
-fn renderSelectedSkill(reg: *zhu.ecs.Registry, entity: zhu.ecs.Entity) void {
+fn renderSelectedSkill(reg: *Registry, entity: zhu.ecs.Entity) void {
     const value = reg.tryGet(entity, com.skill.Skill) orelse return;
     const ready = reg.has(entity, com.skill.Ready);
     const active = reg.has(entity, com.skill.Active);
@@ -123,7 +126,7 @@ fn renderSelectedSkill(reg: *zhu.ecs.Registry, entity: zhu.ecs.Entity) void {
     gui.igBeginDisabled(!ready);
     const clicked = gui.igButton(value.name.ptr);
     gui.igEndDisabled();
-    if (ready and (clicked or zhu.input.key.pressed(.S))) {
+    if (ready and clicked) {
         reg.add(entity, com.skill.Cast{});
     }
     gui.igSameLine();
@@ -138,8 +141,6 @@ fn renderSelectedSkill(reg: *zhu.ecs.Registry, entity: zhu.ecs.Entity) void {
     } else if (passive) {
         _ = gui.igText("被动技能");
     } else {
-        _ = gui.igText("快捷键 S: ");
-        gui.igSameLine();
         if (ready) {
             _ = gui.igText("技能准备就绪");
         } else if (reg.tryGet(entity, com.skill.Timer)) |timer| {
@@ -148,6 +149,24 @@ fn renderSelectedSkill(reg: *zhu.ecs.Registry, entity: zhu.ecs.Entity) void {
     }
 
     _ = gui.igTextWrapped("%s", value.description.ptr);
+}
+
+fn renderSelectedUpgrade(reg: *Registry, entity: zhu.ecs.Entity) void {
+    if (!reg.has(entity, com.Player)) return;
+
+    const playerEnum = reg.get(entity, com.PlayerEnum);
+    const upgradeCost = spawn.playerZon[@intFromEnum(playerEnum)].cost;
+
+    gui.igBeginDisabled(ctx.cost < upgradeCost);
+    const clicked = gui.igButton("升级");
+    gui.igEndDisabled();
+    gui.igSameLine();
+    _ = gui.igText("消耗 %.0f COST", upgradeCost);
+
+    if (clicked and ctx.cost >= upgradeCost) {
+        ctx.cost -= upgradeCost;
+        spawn.upgradeUnit(reg, entity);
+    }
 }
 
 pub fn draw() void {

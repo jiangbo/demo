@@ -69,6 +69,37 @@ pub fn init() void {
     changeLevel(ctx.levelIndex);
 }
 
+/// 属性公式：基础值 × 等级系数 × 稀有度系数
+pub fn statModify(base: f32, level: f32, rarity: f32) f32 {
+    return base * (0.95 + 0.05 * level) * (0.9 + 0.1 * rarity);
+}
+
+/// 升级单位：等级+1，从模板重算属性，生成升级特效。
+pub fn upgradeUnit(reg: *Registry, entity: Entity) void {
+    const playerEnum = reg.get(entity, com.PlayerEnum);
+    const template = &playerZon[@intFromEnum(playerEnum)];
+
+    const stats = reg.getPtr(entity, com.Stats);
+    stats.level += 1;
+    const level = stats.level;
+    const rarity = stats.rarity;
+
+    stats.maxHealth = statModify(template.stats.maxHealth, level, rarity);
+    stats.health = stats.maxHealth;
+    stats.attack = statModify(template.stats.attack, level, rarity);
+    stats.defense = statModify(template.stats.defense, level, rarity);
+    stats.range = statModify(template.stats.range, level, rarity);
+    stats.interval = statModify(template.stats.interval, level, rarity);
+
+    const position = reg.get(entity, com.Position);
+    const effectEntity = effect(reg, .levelUp);
+    reg.add(effectEntity, position);
+    reg.add(effectEntity, com.DeadOnFinish{});
+
+    zhu.audio.playSound("assets/audio/Fantasy_UI (10).ogg");
+    std.log.info("upgrade entity: {}, level: {}", .{ entity.index, level });
+}
+
 pub fn changeLevel(levelIndex: usize) void {
     const level = levels[levelIndex];
 

@@ -39,6 +39,8 @@ pub var selected: ?usize = null;
 pub var hoveredEntity: ?zhu.ecs.Entity = null;
 pub var selectedEntity: ?zhu.ecs.Entity = null;
 pub var uiWantCaptureMouse: bool = false;
+pub var paused: bool = false;
+pub var timeScale: f32 = 1;
 pub var units: std.ArrayList(Unit) = .empty;
 pub var unitLayoutDirty: bool = true;
 // ZON 中的关卡从 1 开始，代码中统一使用 0-based 索引。
@@ -51,9 +53,7 @@ pub fn init() void {
     for (contextZon.units) |zon| {
         var unit = zon;
         const base = spawn.playerZon[@intFromEnum(unit.class)].cost;
-        const levelScale = 0.95 + 0.05 * unit.level;
-        const rarityScale = 0.9 + 0.1 * unit.rarity;
-        unit.cost = @round(base * levelScale * rarityScale);
+        unit.cost = @round(spawn.statModify(base, unit.level, unit.rarity));
         units.append(zhu.assets.allocator, unit) catch @panic("oom, can't append unit");
     }
 

@@ -46,9 +46,10 @@ pub fn event(ev: *const zhu.window.Event) void {
 }
 
 pub fn frame(delta: f32) void {
-    gui.update(&registry, delta);
-    ctx.update(delta);
-    scene.update(&registry, delta);
+    const scaled = delta * ctx.timeScale;
+    gui.update(&registry, scaled);
+    ctx.update(scaled);
+    scene.update(&registry, scaled);
     hud.update();
 
     zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
