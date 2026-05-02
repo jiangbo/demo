@@ -28,6 +28,7 @@ const uiZon: UiZon = @import("zon/ui.zon");
 
 var backgroundRect: zhu.Rect = undefined;
 var hoveredIndex: ?u8 = null;
+var scrollOffset: f32 = 0;
 
 pub fn init() void {
     arrangeUnits();
@@ -59,7 +60,7 @@ fn computeBackgroundRect(count: f32) void {
 fn computeUnitPositions() void {
     const padding = uiZon.padding;
     const size = uiZon.frameSize;
-    const start = backgroundRect.min.addXY(padding, padding);
+    const start = backgroundRect.min.addXY(padding - scrollOffset, padding);
     for (ctx.units.items, 0..) |*unit, i| {
         const index: f32 = @floatFromInt(i);
         const offset = (size.x + padding) * index;
@@ -69,8 +70,25 @@ fn computeUnitPositions() void {
 
 pub fn deinit() void {}
 
-pub fn update() void {
+fn updateScroll(delta: f32) void {
+    const maxScroll = @max(0, backgroundRect.size.x - zhu.window.size.x);
+    if (maxScroll == 0) {
+        scrollOffset = 0;
+        return;
+    }
+
+    const speed = 400 * delta;
+    if (zhu.input.key.down(.LEFT)) scrollOffset -= speed;
+    if (zhu.input.key.down(.RIGHT)) scrollOffset += speed;
+    scrollOffset -= zhu.input.mouseScrollY * 30;
+    scrollOffset = @max(0, @min(scrollOffset, maxScroll));
+
+    computeUnitPositions();
+}
+
+pub fn update(delta: f32) void {
     if (ctx.unitLayoutDirty) arrangeUnits();
+    updateScroll(delta);
     if (ctx.selected != null) return;
     if (ctx.uiWantCaptureMouse) {
         hoveredIndex = null;

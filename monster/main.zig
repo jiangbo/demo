@@ -50,7 +50,7 @@ pub fn frame(delta: f32) void {
     gui.update(&registry, scaled);
     ctx.update(scaled);
     scene.update(&registry, scaled);
-    hud.update();
+    hud.update(delta);
 
     zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
     scene.draw(&registry);

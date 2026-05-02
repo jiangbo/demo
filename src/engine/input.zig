@@ -5,6 +5,7 @@ const math = @import("math.zig");
 pub const KeyCode = sk.app.Keycode;
 
 pub var mousePosition: math.Vector = .zero;
+pub var mouseScrollY: f32 = 0;
 pub var anyRelease: bool = false;
 
 pub fn event(ev: *const sk.app.Event) void {
@@ -22,6 +23,7 @@ pub fn event(ev: *const sk.app.Event) void {
             mouse.state.unset(buttonCode);
             anyRelease = true;
         },
+        .MOUSE_SCROLL => mouseScrollY += ev.scroll_y,
         .ICONIFIED, .UNFOCUSED => {
             key.state = .initEmpty();
             mouse.state = .initEmpty();

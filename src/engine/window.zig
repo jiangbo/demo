@@ -247,6 +247,7 @@ export fn windowFrame() void {
     key.lastState = key.state;
     mouse.lastState = mouse.state;
     input.anyRelease = false;
+    input.mouseScrollY = 0;
     mouseMoved = false;
 
     // 执行更新和渲染消耗的时间，单位为纳秒
