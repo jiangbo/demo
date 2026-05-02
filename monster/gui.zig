@@ -131,8 +131,8 @@ fn renderSelectedSkill(reg: *zhu.ecs.Registry, entity: zhu.ecs.Entity) void {
     if (active) {
         if (passive) {
             _ = gui.igText("被动技能激活中");
-        } else {
-            const remaining = @max(0, value.duration - value.durationTimer);
+        } else if (reg.tryGet(entity, com.skill.Timer)) |timer| {
+            const remaining = @max(0, value.duration - timer.elapsed);
             _ = gui.igText("激活中，剩余时间: %.1f 秒", remaining);
         }
     } else if (passive) {
@@ -142,12 +142,8 @@ fn renderSelectedSkill(reg: *zhu.ecs.Registry, entity: zhu.ecs.Entity) void {
         gui.igSameLine();
         if (ready) {
             _ = gui.igText("技能准备就绪");
-        } else {
-            const progress = if (value.coolDown > 0)
-                value.coolDownTimer / value.coolDown
-            else
-                0;
-            gui.igProgressBar(progress, .{ .x = 120, .y = 0 }, null);
+        } else if (reg.tryGet(entity, com.skill.Timer)) |timer| {
+            gui.igProgressBar(timer.progress(), .{ .x = 120, .y = 0 }, null);
         }
     }
 

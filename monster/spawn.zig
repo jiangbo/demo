@@ -246,16 +246,14 @@ fn addSkill(reg: *Registry, entity: zhu.ecs.Entity, skill: com.skill.Skill) void
         return;
     }
 
-    var value = skill;
-    value.coolDownTimer = skill.coolDown / 2;
-    reg.add(entity, value);
+    reg.add(entity, skill);
 
     if (skill.coolDown <= 0) {
         reg.add(entity, com.skill.Ready{});
         return;
     }
 
-    // 冷却推进由 skill 系统处理。
+    reg.add(entity, com.skill.Timer.init(skill.coolDown / 2));
 }
 
 /// 复制敌人精灵播放受伤动画，动画结束后自动销毁。

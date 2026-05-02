@@ -63,13 +63,12 @@ pub const skill = struct {
         passive: bool = false,
         coolDown: f32 = 0,
         duration: f32 = 0,
-        coolDownTimer: f32 = 0,
-        durationTimer: f32 = 0,
         displayEntity: ?Entity = null,
         buff: Stats = .{},
         costRecovery: f32 = 0,
     };
 
+    pub const Timer = zhu.Timer; // 技能计时器
     pub const Ready = struct {}; // 技能准备完毕
     pub const Active = struct {}; // 技能激活中
     pub const Passive = struct {}; // 被动技能
