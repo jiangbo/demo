@@ -113,6 +113,7 @@ fn renderSelectedUnit(reg: *Registry) void {
 
         renderSelectedSkill(reg, entity);
         renderSelectedUpgrade(reg, entity);
+        renderSelectedLeave(reg, entity);
     }
     gui.igEnd();
 }
@@ -169,8 +170,90 @@ fn renderSelectedUpgrade(reg: *Registry, entity: zhu.ecs.Entity) void {
     }
 }
 
+fn renderSelectedLeave(reg: *Registry, entity: zhu.ecs.Entity) void {
+    if (!reg.has(entity, com.Player)) return;
+
+    const playerEnum = reg.get(entity, com.PlayerEnum);
+    const stats = reg.get(entity, com.Stats);
+    const cost = spawn.playerZon[@intFromEnum(playerEnum)].cost;
+    const refund = spawn.statModify(cost, stats.level, stats.rarity) * 0.5;
+
+    if (gui.igButton("撤退")) {
+        ctx.cost += refund;
+        reg.add(entity, com.Dead{});
+        ctx.selectedEntity = null;
+    }
+    gui.igSameLine();
+    _ = gui.igText("返还 %.0f COST", refund);
+}
+
 pub fn draw() void {
+    renderLevelInfo();
+    renderSettings();
+    renderDebugTools();
     sk.imgui.render();
+}
+
+fn renderLevelInfo() void {
+    gui.igSetNextWindowPos(.{ .x = 10, .y = 250 }, gui.ImGuiCond_Always);
+    const flags = gui.ImGuiWindowFlags_NoTitleBar |
+        gui.ImGuiWindowFlags_AlwaysAutoResize;
+    if (gui.igBegin("关卡信息", null, flags)) {
+        _ = gui.igText("基地血量: %d", ctx.homeHealth);
+        _ = gui.igText("COST: %.0f", ctx.cost);
+        _ = gui.igText("击杀: %d / %d", ctx.enemyKilledCount, ctx.enemyCount);
+        _ = gui.igText("关卡: %d", ctx.levelIndex + 1);
+        if (ctx.paused) {
+            _ = gui.igText("已暂停");
+        }
+    }
+    gui.igEnd();
+}
+
+fn renderSettings() void {
+    gui.igSetNextWindowPos(.{ .x = 10, .y = 400 }, gui.ImGuiCond_Always);
+    const flags = gui.ImGuiWindowFlags_NoTitleBar |
+        gui.ImGuiWindowFlags_AlwaysAutoResize;
+    if (gui.igBegin("设置", null, flags)) {
+        if (gui.igButton("暂停/继续")) {
+            ctx.paused = !ctx.paused;
+        }
+
+        gui.igSameLine();
+        _ = gui.igText("倍速:");
+        gui.igSameLine();
+        if (gui.igButton("0.5x")) ctx.timeScale = 0.5;
+        gui.igSameLine();
+        if (gui.igButton("1x")) ctx.timeScale = 1;
+        gui.igSameLine();
+        if (gui.igButton("2x")) ctx.timeScale = 2;
+
+        var music: f32 = zhu.audio.musicVolume.load(.acquire);
+        if (gui.igSliderFloat("音乐", &music, 0, 1)) {
+            zhu.audio.musicVolume.store(music, .release);
+        }
+        var sound: f32 = zhu.audio.soundVolume.load(.acquire);
+        if (gui.igSliderFloat("音效", &sound, 0, 1)) {
+            zhu.audio.soundVolume.store(sound, .release);
+        }
+    }
+    gui.igEnd();
+}
+
+fn renderDebugTools() void {
+    gui.igSetNextWindowPos(.{ .x = 10, .y = 600 }, gui.ImGuiCond_Always);
+    const flags = gui.ImGuiWindowFlags_NoTitleBar |
+        gui.ImGuiWindowFlags_AlwaysAutoResize;
+    if (gui.igBegin("调试", null, flags)) {
+        if (gui.igButton("COST +10")) ctx.cost += 10;
+        gui.igSameLine();
+        if (gui.igButton("COST +100")) ctx.cost += 100;
+        gui.igSameLine();
+        if (gui.igButton("通关")) {
+            ctx.enemyKilledCount = ctx.enemyCount;
+        }
+    }
+    gui.igEnd();
 }
 
 pub fn deinit() void {
