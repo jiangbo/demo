@@ -49,24 +49,40 @@ pub var levelIndex: usize = 0;
 pub fn init() void {
     if (contextZon.level == 0) @panic("level must start at 1");
     levelIndex = @intCast(contextZon.level - 1);
+    reset();
+}
 
+pub fn deinit() void {
+    units.deinit(zhu.assets.allocator);
+}
+
+/// 重置所有全局状态并重建 units 列表。
+pub fn reset() void {
+    cost = INITIAL_COST;
+    homeHealth = INITIAL_HOME_HEALTH;
+    enemyCount = 0;
+    enemyArrivedCount = 0;
+    enemyKilledCount = 0;
+    selected = null;
+    hoveredEntity = null;
+    selectedEntity = null;
+    paused = false;
+    timeScale = 1;
+    unitLayoutDirty = true;
+
+    units.clearRetainingCapacity();
     for (contextZon.units) |zon| {
         var unit = zon;
         const base = spawn.playerZon[@intFromEnum(unit.class)].cost;
         unit.cost = @round(spawn.statModify(base, unit.level, unit.rarity));
-        units.append(zhu.assets.allocator, unit) catch @panic("oom, can't append unit");
+        units.append(zhu.assets.allocator, unit) catch @panic("oom");
     }
 
-    // 按 cost 升序排序
     std.mem.sortUnstable(Unit, units.items, {}, struct {
         fn lessThan(_: void, a: Unit, b: Unit) bool {
             return a.cost < b.cost;
         }
     }.lessThan);
-}
-
-pub fn deinit() void {
-    units.deinit(zhu.assets.allocator);
 }
 
 pub fn update(delta: f32) void {

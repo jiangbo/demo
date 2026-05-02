@@ -56,7 +56,7 @@ pub fn frame(delta: f32) void {
     scene.draw(&registry);
     hud.draw();
     zhu.batch.flush();
-    gui.draw();
+    gui.draw(&registry);
     zhu.batch.commit();
 }
 

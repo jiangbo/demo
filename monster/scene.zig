@@ -33,6 +33,13 @@ pub fn deinit() void {
     map.deinit();
 }
 
+pub fn restart(reg: *zhu.ecs.Registry) void {
+    ctx.reset();
+    reg.reset();
+    spawn.changeLevel(ctx.levelIndex);
+    map.init(ctx.levelIndex);
+}
+
 pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
     system.selection.update(reg, delta); // 悬停、选中与范围显示状态
     if (!ctx.uiWantCaptureMouse) {

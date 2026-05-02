@@ -249,6 +249,11 @@ pub const Registry = struct {
         self.componentMap.deinit(self.allocator);
     }
 
+    pub fn reset(self: *Registry) void {
+        self.deinit();
+        self.* = .init(self.allocator);
+    }
+
     pub fn createEntity(self: *Registry) Entity {
         return self.entities.create(self.allocator) catch oom();
     }

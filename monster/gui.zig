@@ -7,6 +7,7 @@ const gui = @import("cimgui");
 const com = @import("component.zig");
 const ctx = @import("context.zig");
 const spawn = @import("spawn.zig");
+const scene = @import("scene.zig");
 const Registry = zhu.ecs.Registry;
 
 pub fn init() void {
@@ -187,11 +188,31 @@ fn renderSelectedLeave(reg: *Registry, entity: zhu.ecs.Entity) void {
     _ = gui.igText("返还 %.0f COST", refund);
 }
 
-pub fn draw() void {
+pub fn draw(reg: *Registry) void {
+    renderGameEnd();
     renderLevelInfo();
-    renderSettings();
+    renderSettings(reg);
     renderDebugTools();
     sk.imgui.render();
+}
+
+fn renderGameEnd() void {
+    var label: ?[*:0]const u8 = null;
+    if (ctx.isGameOver()) label = "失败";
+    if (ctx.isLevelClear()) label = "通关";
+    if (label == null) return;
+
+    const flags = gui.ImGuiWindowFlags_NoTitleBar |
+        gui.ImGuiWindowFlags_NoResize |
+        gui.ImGuiWindowFlags_NoMove |
+        gui.ImGuiWindowFlags_NoBackground;
+    gui.igSetNextWindowPos(.{ .x = 400, .y = 300 }, gui.ImGuiCond_Always);
+    gui.igSetNextWindowSize(.{ .x = 200, .y = 80 }, gui.ImGuiCond_Always);
+    if (gui.igBegin("游戏结束", null, flags)) {
+        gui.igSetCursorPos(.{ .x = 60, .y = 20 });
+        _ = gui.igText("%s", label.?);
+    }
+    gui.igEnd();
 }
 
 fn renderLevelInfo() void {
@@ -210,13 +231,17 @@ fn renderLevelInfo() void {
     gui.igEnd();
 }
 
-fn renderSettings() void {
+fn renderSettings(reg: *Registry) void {
     gui.igSetNextWindowPos(.{ .x = 10, .y = 400 }, gui.ImGuiCond_Always);
     const flags = gui.ImGuiWindowFlags_NoTitleBar |
         gui.ImGuiWindowFlags_AlwaysAutoResize;
     if (gui.igBegin("设置", null, flags)) {
         if (gui.igButton("暂停/继续")) {
             ctx.paused = !ctx.paused;
+        }
+        gui.igSameLine();
+        if (gui.igButton("重新开始")) {
+            scene.restart(reg);
         }
 
         gui.igSameLine();
