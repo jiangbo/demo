@@ -37,6 +37,8 @@ pub var pendingScene: ?SceneState = null;
 
 // --- 全局状态 ---
 
+pub var point: u32 = contextZon.point;
+pub var levelClear: bool = false;
 pub var cost: f32 = INITIAL_COST;
 pub var homeHealth: i32 = INITIAL_HOME_HEALTH;
 pub var enemyCount: u32 = 0;
@@ -75,6 +77,7 @@ pub fn reset() void {
     selectedEntity = null;
     paused = false;
     timeScale = 1;
+    levelClear = false;
     unitLayoutDirty = true;
 
     units.clearRetainingCapacity();
@@ -115,4 +118,58 @@ pub fn isGameOver() bool {
 pub fn isLevelClear() bool {
     return enemyCount > 0 and
         enemyKilledCount + enemyArrivedCount >= enemyCount;
+}
+
+const SaveData = struct {
+    level: u32,
+    point: u32,
+    levelClear: bool,
+    units: []const Unit,
+};
+
+pub fn saveGame(path: [:0]const u8) !void {
+    const data = SaveData{
+        .level = @intCast(levelIndex),
+        .point = point,
+        .levelClear = levelClear,
+        .units = units.items,
+    };
+
+    var buf: [4096]u8 = undefined;
+    var writer = std.Io.Writer.fixed(&buf);
+    try std.zon.stringify.serialize(data, .{}, &writer);
+    try zhu.window.saveAll(path, buf[0..writer.end]);
+    std.log.info("save: {s}", .{path});
+}
+
+pub fn loadGame(path: [:0]const u8) !void {
+    const content = try zhu.window.readAll(path);
+    defer zhu.assets.allocator.free(content);
+
+    const terminated = try std.fmt.allocPrintSentinel(
+        zhu.assets.allocator,
+        "{s}",
+        .{content},
+        0,
+    );
+    defer zhu.assets.allocator.free(terminated);
+
+    const data = try std.zon.parse.fromSlice(
+        SaveData,
+        zhu.assets.allocator,
+        terminated,
+        null,
+        .{},
+    );
+    defer std.zon.parse.free(zhu.assets.allocator, data);
+
+    levelIndex = data.level;
+    point = data.point;
+    levelClear = data.levelClear;
+
+    units.clearRetainingCapacity();
+    for (data.units) |saveUnit| {
+        units.append(zhu.assets.allocator, saveUnit) catch @panic("oom");
+    }
+    std.log.info("load: {s}", .{path});
 }

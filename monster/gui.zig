@@ -50,6 +50,10 @@ pub fn update(reg: *Registry, delta: f32) void {
     ctx.uiWantCaptureMouse = io.*.WantCaptureMouse;
 }
 
+var showUnitInfo: bool = false;
+var showLoadPanel: bool = false;
+var showSavePanel: bool = false;
+
 fn renderTitleButtons() void {
     gui.igSetNextWindowPos(.{ .x = 400, .y = 800 }, gui.ImGuiCond_Always);
     const flags = gui.ImGuiWindowFlags_NoTitleBar |
@@ -60,9 +64,13 @@ fn renderTitleButtons() void {
             ctx.pendingScene = .battle;
         }
         gui.igSameLine();
-        if (gui.igButton("确认角色")) {}
+        if (gui.igButton("确认角色")) {
+            showUnitInfo = !showUnitInfo;
+        }
         gui.igSameLine();
-        if (gui.igButton("载入游戏")) {}
+        if (gui.igButton("载入游戏")) {
+            showLoadPanel = !showLoadPanel;
+        }
         gui.igSameLine();
         if (gui.igButton("退出游戏")) {
             zhu.window.exit();
@@ -70,6 +78,9 @@ fn renderTitleButtons() void {
         gui.igSetWindowFontScale(1.0);
     }
     gui.igEnd();
+
+    if (showUnitInfo) renderUnitInfo();
+    if (showLoadPanel) renderLoadPanel();
 }
 
 fn renderHoveredUnit(reg: *Registry) void {
@@ -207,6 +218,116 @@ fn renderSelectedLeave(reg: *Registry, entity: zhu.ecs.Entity) void {
     _ = gui.igText("返还 %.0f COST", refund);
 }
 
+fn renderUnitInfo() void {
+    if (!gui.igBegin("角色信息", &showUnitInfo, gui.ImGuiWindowFlags_None)) {
+        gui.igEnd();
+        return;
+    }
+    const col = 7;
+    if (gui.igBeginTable("角色表格", col, gui.ImGuiTableFlags_None)) {
+        gui.igTableSetupColumn("姓名", 0);
+        gui.igTableSetupColumn("职业", 0);
+        gui.igTableSetupColumn("等级", 0);
+        gui.igTableSetupColumn("稀有度", 0);
+        gui.igTableSetupColumn("生命", 0);
+        gui.igTableSetupColumn("攻击", 0);
+        gui.igTableSetupColumn("升级", 0);
+        gui.igTableHeadersRow();
+
+        for (ctx.units.items) |*unit| {
+            const template = &spawn.playerZon[@intFromEnum(unit.class)];
+            const hp = spawn.statModify(
+                template.stats.maxHealth, unit.level, unit.rarity);
+            const atk = spawn.statModify(
+                template.stats.attack, unit.level, unit.rarity);
+            const upgradeCost: u32 = @intFromFloat(@round(
+                spawn.statModify(template.cost, 1, unit.rarity)));
+
+            gui.igTableNextRow();
+            _ = gui.igTableNextColumn();
+            _ = gui.igText("%s", unit.name.ptr);
+            _ = gui.igTableNextColumn();
+            _ = gui.igText("%s", template.name.ptr);
+            _ = gui.igTableNextColumn();
+            _ = gui.igText("%.0f", unit.level);
+            _ = gui.igTableNextColumn();
+            _ = gui.igText("%.0f", unit.rarity);
+            _ = gui.igTableNextColumn();
+            _ = gui.igText("%.0f", hp);
+            _ = gui.igTableNextColumn();
+            _ = gui.igText("%.0f", atk);
+            _ = gui.igTableNextColumn();
+
+            gui.igPushID(unit.name);
+            const canUpgrade = ctx.point >= upgradeCost;
+            gui.igBeginDisabled(!canUpgrade);
+            var btnText: [32]u8 = undefined;
+            const btnLabel = std.fmt.bufPrintZ(
+                &btnText, "- {}", .{upgradeCost}) catch unreachable;
+            const clicked = gui.igButton(btnLabel);
+            gui.igEndDisabled();
+            if (canUpgrade and clicked) {
+                ctx.point -= upgradeCost;
+                unit.level += 1;
+                unit.cost = @round(spawn.statModify(
+                    template.cost, unit.level, unit.rarity));
+            }
+            gui.igPopID();
+        }
+        gui.igEndTable();
+    }
+    _ = gui.igText("剩余积分: %d", ctx.point);
+    gui.igEnd();
+}
+
+const slots = [_][:0]const u8{
+    "assets/save/SLOT_1.json",
+    "assets/save/SLOT_2.json",
+    "assets/save/SLOT_3.json",
+};
+
+fn renderLoadPanel() void {
+    if (!gui.igBegin("读档", &showLoadPanel, gui.ImGuiWindowFlags_None)) {
+        gui.igEnd();
+        return;
+    }
+    for (slots, 0..) |slot, i| {
+        var lbl: [16]u8 = undefined;
+        const text = std.fmt.bufPrintZ(&lbl, "SLOT {}", .{i + 1}) catch unreachable;
+        if (gui.igButton(text)) {
+            ctx.loadGame(slot) catch continue;
+        }
+        gui.igSameLine();
+    }
+    if (ctx.levelClear) {
+        _ = gui.igText("下一关: %d", ctx.levelIndex + 1);
+    } else {
+        _ = gui.igText("当前关卡: %d", ctx.levelIndex);
+    }
+    gui.igEnd();
+}
+
+fn renderSavePanel() void {
+    if (!gui.igBegin("存档", &showSavePanel, gui.ImGuiWindowFlags_None)) {
+        gui.igEnd();
+        return;
+    }
+    for (slots, 0..) |slot, i| {
+        var lbl: [16]u8 = undefined;
+        const text = std.fmt.bufPrintZ(&lbl, "SLOT {}", .{i + 1}) catch unreachable;
+        if (gui.igButton(text)) {
+            ctx.saveGame(slot) catch continue;
+        }
+        gui.igSameLine();
+    }
+    if (ctx.levelClear) {
+        _ = gui.igText("下一关: %d", ctx.levelIndex + 1);
+    } else {
+        _ = gui.igText("当前关卡: %d", ctx.levelIndex);
+    }
+    gui.igEnd();
+}
+
 pub fn draw(reg: *Registry) void {
     if (ctx.currentScene == .title) {
         renderTitleUI();
@@ -236,6 +357,7 @@ fn renderBattleUI(reg: *Registry) void {
     renderLevelInfo();
     renderSettings(reg);
     renderDebugTools();
+    if (showSavePanel) renderSavePanel();
 }
 
 fn renderGameEnd() void {
@@ -288,6 +410,10 @@ fn renderSettings(reg: *Registry) void {
         gui.igSameLine();
         if (gui.igButton("重新开始")) {
             scene.restart(reg);
+        }
+        gui.igSameLine();
+        if (gui.igButton("保存")) {
+            showSavePanel = !showSavePanel;
         }
 
         gui.igSameLine();
