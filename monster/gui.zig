@@ -39,18 +39,37 @@ pub fn update(reg: *Registry, delta: f32) void {
         .dpi_scale = sk.app.dpiScale(),
     });
 
-    // gui.igShowDemoWindow(&flag);
-
-    if (gui.igBegin("怪物战争", &flag, gui.ImGuiWindowFlags_None)) {
-        _ = gui.igText("ImGui 版本：%s", gui.IMGUI_VERSION);
+    if (ctx.currentScene == .title) {
+        renderTitleButtons();
+    } else {
+        renderHoveredUnit(reg);
+        renderSelectedUnit(reg);
     }
-    gui.igEnd();
-
-    renderHoveredUnit(reg);
-    renderSelectedUnit(reg);
 
     const io = gui.igGetIO();
     ctx.uiWantCaptureMouse = io.*.WantCaptureMouse;
+}
+
+fn renderTitleButtons() void {
+    gui.igSetNextWindowPos(.{ .x = 400, .y = 800 }, gui.ImGuiCond_Always);
+    const flags = gui.ImGuiWindowFlags_NoTitleBar |
+        gui.ImGuiWindowFlags_AlwaysAutoResize;
+    if (gui.igBegin("标题按钮", null, flags)) {
+        gui.igSetWindowFontScale(2.0);
+        if (gui.igButton("开始游戏")) {
+            ctx.pendingScene = .battle;
+        }
+        gui.igSameLine();
+        if (gui.igButton("确认角色")) {}
+        gui.igSameLine();
+        if (gui.igButton("载入游戏")) {}
+        gui.igSameLine();
+        if (gui.igButton("退出游戏")) {
+            zhu.window.exit();
+        }
+        gui.igSetWindowFontScale(1.0);
+    }
+    gui.igEnd();
 }
 
 fn renderHoveredUnit(reg: *Registry) void {
@@ -189,11 +208,34 @@ fn renderSelectedLeave(reg: *Registry, entity: zhu.ecs.Entity) void {
 }
 
 pub fn draw(reg: *Registry) void {
+    if (ctx.currentScene == .title) {
+        renderTitleUI();
+    } else {
+        renderBattleUI(reg);
+    }
+    sk.imgui.render();
+}
+
+fn renderTitleUI() void {
+    gui.igSetNextWindowPos(.{ .x = 400, .y = 300 }, gui.ImGuiCond_Always);
+    const flags = gui.ImGuiWindowFlags_NoTitleBar |
+        gui.ImGuiWindowFlags_NoResize |
+        gui.ImGuiWindowFlags_NoMove |
+        gui.ImGuiWindowFlags_NoBackground;
+    gui.igSetNextWindowSize(.{ .x = 400, .y = 100 }, gui.ImGuiCond_Always);
+    if (gui.igBegin("标题", null, flags)) {
+        gui.igSetWindowFontScale(2.0);
+        gui.igSetCursorPos(.{ .x = 110, .y = 30 });
+        _ = gui.igText("怪物战争");
+    }
+    gui.igEnd();
+}
+
+fn renderBattleUI(reg: *Registry) void {
     renderGameEnd();
     renderLevelInfo();
     renderSettings(reg);
     renderDebugTools();
-    sk.imgui.render();
 }
 
 fn renderGameEnd() void {
@@ -238,6 +280,10 @@ fn renderSettings(reg: *Registry) void {
     if (gui.igBegin("设置", null, flags)) {
         if (gui.igButton("暂停/继续")) {
             ctx.paused = !ctx.paused;
+        }
+        gui.igSameLine();
+        if (gui.igButton("返回标题")) {
+            ctx.pendingScene = .title;
         }
         gui.igSameLine();
         if (gui.igButton("重新开始")) {

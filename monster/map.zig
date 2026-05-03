@@ -6,7 +6,8 @@ const tiled = zhu.extend.tiled;
 
 const com = @import("component.zig");
 
-const maps = [_]tiled.Map{
+pub const maps = [_]tiled.Map{
+    @import("zon/title.zon"),
     @import("zon/level1.zon"),
 };
 var data: *const tiled.Map = &maps[0];

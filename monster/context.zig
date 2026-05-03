@@ -28,6 +28,13 @@ const INITIAL_COST: f32 = 10; // 初始 COST
 const COST_GEN_PER_SECOND: f32 = 1; // 每秒恢复的 COST
 const INITIAL_HOME_HEALTH: i32 = 5; // 初始基地生命值
 
+// --- 场景状态 ---
+pub const SceneState = enum { title, battle };
+pub var currentScene: SceneState = .title;
+
+// --- 场景切换 ---
+pub var pendingScene: ?SceneState = null;
+
 // --- 全局状态 ---
 
 pub var cost: f32 = INITIAL_COST;
@@ -43,12 +50,12 @@ pub var paused: bool = false;
 pub var timeScale: f32 = 1;
 pub var units: std.ArrayList(Unit) = .empty;
 pub var unitLayoutDirty: bool = true;
-// ZON 中的关卡从 1 开始，代码中统一使用 0-based 索引。
+// 地图数组中索引 0 是标题地图，关卡从索引 1 开始。
 pub var levelIndex: usize = 0;
 
 pub fn init() void {
     if (contextZon.level == 0) @panic("level must start at 1");
-    levelIndex = @intCast(contextZon.level - 1);
+    levelIndex = contextZon.level;
     reset();
 }
 

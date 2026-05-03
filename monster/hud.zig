@@ -34,7 +34,7 @@ pub fn init() void {
     arrangeUnits();
 }
 
-fn arrangeUnits() void {
+pub fn arrangeUnits() void {
     // 计算背景条宽度和起始位置
     computeBackgroundRect(@floatFromInt(ctx.units.items.len));
     // 计算每个头像的位置

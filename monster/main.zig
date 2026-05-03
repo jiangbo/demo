@@ -6,6 +6,7 @@ const tiled = zhu.extend.tiled;
 const gui = @import("gui.zig");
 const scene = @import("scene.zig");
 const hud = @import("hud.zig");
+const title = @import("title.zig");
 const ctx = @import("context.zig");
 
 var vertexBuffer: []zhu.batch.Vertex = undefined;
@@ -37,8 +38,10 @@ pub fn init() void {
 
     gui.init();
     ctx.init();
-    hud.init();
     scene.init();
+    hud.init();
+    title.init();
+    title.enter();
 }
 
 pub fn event(ev: *const zhu.window.Event) void {
@@ -46,15 +49,26 @@ pub fn event(ev: *const zhu.window.Event) void {
 }
 
 pub fn frame(delta: f32) void {
-    const scaled = delta * ctx.timeScale;
-    gui.update(&registry, scaled);
-    ctx.update(scaled);
-    scene.update(&registry, scaled);
-    hud.update(delta);
+    if (ctx.pendingScene) |s| {
+        switchScene(s);
+    }
+    if (ctx.currentScene == .battle) {
+        const scaled = delta * ctx.timeScale;
+        gui.update(&registry, scaled);
+        ctx.update(scaled);
+        scene.update(&registry, scaled);
+        hud.update(delta);
 
-    zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
-    scene.draw(&registry);
-    hud.draw();
+        zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
+        scene.draw(&registry);
+        hud.draw();
+    } else {
+        gui.update(&registry, delta);
+        title.update(delta);
+
+        zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
+        title.draw();
+    }
     zhu.batch.flush();
     gui.draw(&registry);
     zhu.batch.commit();
@@ -63,11 +77,30 @@ pub fn frame(delta: f32) void {
 pub fn deinit() void {
     scene.deinit();
     hud.deinit();
+    title.deinit();
     ctx.deinit();
     gui.deinit();
     registry.deinit();
     zhu.assets.free(vertexBuffer);
     zhu.audio.deinit();
+}
+
+fn switchScene(s: ctx.SceneState) void {
+    ctx.pendingScene = null;
+    if (ctx.currentScene == .battle) {
+        scene.exit();
+    } else {
+        title.exit();
+    }
+    registry.reset();
+
+    ctx.currentScene = s;
+    if (s == .battle) {
+        scene.enter();
+        hud.arrangeUnits();
+    } else {
+        title.enter();
+    }
 }
 
 pub fn main() void {

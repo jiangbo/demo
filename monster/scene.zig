@@ -23,13 +23,19 @@ const system = struct {
     const selection = @import("system/selection.zig");
 };
 
-pub fn init() void {
+pub fn init() void {}
+
+pub fn deinit() void {
+    spawn.deinit();
+}
+
+pub fn enter() void {
+    ctx.reset();
     map.init(ctx.levelIndex);
     spawn.init();
 }
 
-pub fn deinit() void {
-    spawn.deinit();
+pub fn exit() void {
     map.deinit();
 }
 
