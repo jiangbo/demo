@@ -29,7 +29,7 @@ const COST_GEN_PER_SECOND: f32 = 1; // 每秒恢复的 COST
 const INITIAL_HOME_HEALTH: i32 = 5; // 初始基地生命值
 
 // --- 场景状态 ---
-pub const SceneState = enum { title, battle };
+pub const SceneState = enum { title, battle, clear, end };
 pub var currentScene: SceneState = .title;
 
 // --- 场景切换 ---
@@ -39,6 +39,7 @@ pub var pendingScene: ?SceneState = null;
 
 pub var point: u32 = contextZon.point;
 pub var levelClear: bool = false;
+pub var win: bool = false;
 pub var cost: f32 = INITIAL_COST;
 pub var homeHealth: i32 = INITIAL_HOME_HEALTH;
 pub var enemyCount: u32 = 0;
@@ -78,6 +79,7 @@ pub fn reset() void {
     paused = false;
     timeScale = 1;
     levelClear = false;
+    win = false;
     unitLayoutDirty = true;
 
     units.clearRetainingCapacity();

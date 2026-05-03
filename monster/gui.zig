@@ -39,11 +39,13 @@ pub fn update(reg: *Registry, delta: f32) void {
         .dpi_scale = sk.app.dpiScale(),
     });
 
-    if (ctx.currentScene == .title) {
-        renderTitleButtons();
-    } else {
-        renderHoveredUnit(reg);
-        renderSelectedUnit(reg);
+    switch (ctx.currentScene) {
+        .title => renderTitleButtons(),
+        .battle => {
+            renderHoveredUnit(reg);
+            renderSelectedUnit(reg);
+        },
+        .clear, .end => {},
     }
 
     const io = gui.igGetIO();
@@ -329,10 +331,11 @@ fn renderSavePanel() void {
 }
 
 pub fn draw(reg: *Registry) void {
-    if (ctx.currentScene == .title) {
-        renderTitleUI();
-    } else {
-        renderBattleUI(reg);
+    switch (ctx.currentScene) {
+        .title => renderTitleUI(),
+        .battle => renderBattleUI(reg),
+        .clear => renderLevelClear(),
+        .end => renderEndScene(),
     }
     sk.imgui.render();
 }
@@ -353,7 +356,6 @@ fn renderTitleUI() void {
 }
 
 fn renderBattleUI(reg: *Registry) void {
-    renderGameEnd();
     renderLevelInfo();
     renderSettings(reg);
     renderDebugTools();
@@ -448,6 +450,74 @@ fn renderDebugTools() void {
         gui.igSameLine();
         if (gui.igButton("通关")) {
             ctx.enemyKilledCount = ctx.enemyCount;
+        }
+    }
+    gui.igEnd();
+}
+
+fn renderLevelClear() void {
+    gui.igSetNextWindowPos(
+        .{ .x = 400, .y = 300 },
+        gui.ImGuiCond_Always,
+    );
+    const flags = gui.ImGuiWindowFlags_NoTitleBar |
+        gui.ImGuiWindowFlags_AlwaysAutoResize;
+    if (gui.igBegin("Level Clear", null, flags)) {
+        gui.igSetWindowFontScale(2.0);
+        _ = gui.igText("通关");
+        gui.igSetWindowFontScale(1.0);
+
+        _ = gui.igText("关卡: %d", ctx.levelIndex + 1);
+        _ = gui.igText("击杀: %d", ctx.enemyKilledCount);
+        _ = gui.igText(
+            "基地血量: %d", ctx.homeHealth,
+        );
+        const reward = ctx.enemyKilledCount +
+            @as(u32, @intCast(@max(0, ctx.homeHealth))) * 5;
+        _ = gui.igText("奖励积分: %d", reward);
+        _ = gui.igText("总积分: %d", ctx.point);
+
+        if (gui.igButton("下一关")) {
+            ctx.levelIndex += 1;
+            ctx.levelClear = false;
+            ctx.pendingScene = .battle;
+        }
+        gui.igSameLine();
+        if (gui.igButton("保存")) {
+            showSavePanel = !showSavePanel;
+        }
+        gui.igSameLine();
+        if (gui.igButton("返回标题")) {
+            ctx.pendingScene = .title;
+        }
+    }
+    gui.igEnd();
+
+    if (showSavePanel) renderSavePanel();
+}
+
+fn renderEndScene() void {
+    gui.igSetNextWindowPos(
+        .{ .x = 400, .y = 300 },
+        gui.ImGuiCond_Always,
+    );
+    const flags = gui.ImGuiWindowFlags_NoTitleBar |
+        gui.ImGuiWindowFlags_AlwaysAutoResize;
+    if (gui.igBegin("Game End", null, flags)) {
+        gui.igSetWindowFontScale(2.0);
+        if (ctx.win) {
+            _ = gui.igText("胜利");
+        } else {
+            _ = gui.igText("失败");
+        }
+        gui.igSetWindowFontScale(1.0);
+
+        if (gui.igButton("返回标题")) {
+            ctx.pendingScene = .title;
+        }
+        gui.igSameLine();
+        if (gui.igButton("退出")) {
+            zhu.window.exit();
         }
     }
     gui.igEnd();

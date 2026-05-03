@@ -23,6 +23,9 @@ const system = struct {
     const selection = @import("system/selection.zig");
 };
 
+var clearTimer: ?zhu.Timer = null;
+var gameOverTriggered: bool = false;
+
 pub fn init() void {}
 
 pub fn deinit() void {
@@ -30,6 +33,8 @@ pub fn deinit() void {
 }
 
 pub fn enter() void {
+    clearTimer = null;
+    gameOverTriggered = false;
     ctx.reset();
     map.init(ctx.levelIndex);
     spawn.init();
@@ -40,6 +45,8 @@ pub fn exit() void {
 }
 
 pub fn restart(reg: *zhu.ecs.Registry) void {
+    clearTimer = null;
+    gameOverTriggered = false;
     ctx.reset();
     reg.reset();
     spawn.changeLevel(ctx.levelIndex);
@@ -82,16 +89,36 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
         ctx.homeHealth -= 1;
         reg.destroyEntity(entity);
     }
+    reg.clearEvent(zhu.ecs.Entity);
 
-    // 通关奖励积分
+    // 通关奖励积分 + 启动延迟计时器
     if (!ctx.levelClear and ctx.isLevelClear()) {
         ctx.levelClear = true;
         const reward = ctx.enemyKilledCount +
             @as(u32, @intCast(@max(0, ctx.homeHealth))) * 5;
         ctx.point += reward;
+        clearTimer = .init(3);
     }
 
-    reg.clearEvent(zhu.ecs.Entity);
+    // 通关延迟倒计时
+    if (clearTimer) |*t| {
+        if (t.isFinishedOnceUpdate(delta)) {
+            clearTimer = null;
+            if (ctx.levelIndex + 1 >= map.maps.len) {
+                ctx.win = true;
+                ctx.pendingScene = .end;
+            } else {
+                ctx.pendingScene = .clear;
+            }
+        }
+    }
+
+    // 游戏失败检测（仅触发一次）
+    if (!gameOverTriggered and ctx.isGameOver()) {
+        gameOverTriggered = true;
+        ctx.win = false;
+        ctx.pendingScene = .end;
+    }
 }
 
 pub fn draw(reg: *zhu.ecs.Registry) void {

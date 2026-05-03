@@ -52,22 +52,29 @@ pub fn frame(delta: f32) void {
     if (ctx.pendingScene) |s| {
         switchScene(s);
     }
-    if (ctx.currentScene == .battle) {
-        const scaled = delta * ctx.timeScale;
-        gui.update(&registry, scaled);
-        ctx.update(scaled);
-        scene.update(&registry, scaled);
-        hud.update(delta);
+    switch (ctx.currentScene) {
+        .battle => {
+            const scaled = delta * ctx.timeScale;
+            gui.update(&registry, scaled);
+            ctx.update(scaled);
+            scene.update(&registry, scaled);
+            hud.update(delta);
 
-        zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
-        scene.draw(&registry);
-        hud.draw();
-    } else {
-        gui.update(&registry, delta);
-        title.update(delta);
+            zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
+            scene.draw(&registry);
+            hud.draw();
+        },
+        .title => {
+            gui.update(&registry, delta);
+            title.update(delta);
 
-        zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
-        title.draw();
+            zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
+            title.draw();
+        },
+        .clear, .end => {
+            gui.update(&registry, delta);
+            zhu.batch.beginDraw(.black);
+        },
     }
     zhu.batch.flush();
     gui.draw(&registry);
@@ -87,19 +94,21 @@ pub fn deinit() void {
 
 fn switchScene(s: ctx.SceneState) void {
     ctx.pendingScene = null;
-    if (ctx.currentScene == .battle) {
-        scene.exit();
-    } else {
-        title.exit();
+    switch (ctx.currentScene) {
+        .battle => scene.exit(),
+        .title => title.exit(),
+        else => {},
     }
     registry.reset();
 
     ctx.currentScene = s;
-    if (s == .battle) {
-        scene.enter();
-        hud.arrangeUnits();
-    } else {
-        title.enter();
+    switch (s) {
+        .battle => {
+            scene.enter();
+            hud.arrangeUnits();
+        },
+        .title => title.enter(),
+        else => {},
     }
 }
 
