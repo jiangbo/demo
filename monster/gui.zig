@@ -42,6 +42,8 @@ pub fn update(reg: *Registry, delta: f32) void {
     switch (ctx.currentScene) {
         .title => renderTitleButtons(),
         .battle => {
+            if (zhu.input.key.pressed(.P)) ctx.paused = !ctx.paused;
+
             renderHoveredUnit(reg);
             renderSelectedUnit(reg);
         },
@@ -160,7 +162,7 @@ fn renderSelectedSkill(reg: *Registry, entity: zhu.ecs.Entity) void {
     gui.igBeginDisabled(!ready);
     const clicked = gui.igButton(value.name.ptr);
     gui.igEndDisabled();
-    if (ready and clicked) {
+    if (ready and (clicked or zhu.input.key.pressed(.S))) {
         reg.add(entity, com.skill.Cast{});
     }
     gui.igSameLine();
@@ -197,7 +199,7 @@ fn renderSelectedUpgrade(reg: *Registry, entity: zhu.ecs.Entity) void {
     gui.igSameLine();
     _ = gui.igText("消耗 %.0f COST", upgradeCost);
 
-    if (clicked and ctx.cost >= upgradeCost) {
+    if (ctx.cost >= upgradeCost and (clicked or zhu.input.key.pressed(.U))) {
         ctx.cost -= upgradeCost;
         spawn.upgradeUnit(reg, entity);
     }
@@ -211,7 +213,7 @@ fn renderSelectedLeave(reg: *Registry, entity: zhu.ecs.Entity) void {
     const cost = spawn.playerZon[@intFromEnum(playerEnum)].cost;
     const refund = spawn.statModify(cost, stats.level, stats.rarity) * 0.5;
 
-    if (gui.igButton("撤退")) {
+    if (gui.igButton("撤退") or zhu.input.key.pressed(.R)) {
         ctx.cost += refund;
         reg.add(entity, com.Dead{});
         ctx.selectedEntity = null;
@@ -238,12 +240,9 @@ fn renderUnitInfo() void {
 
         for (ctx.units.items) |*unit| {
             const template = &spawn.playerZon[@intFromEnum(unit.class)];
-            const hp = spawn.statModify(
-                template.stats.maxHealth, unit.level, unit.rarity);
-            const atk = spawn.statModify(
-                template.stats.attack, unit.level, unit.rarity);
-            const upgradeCost: u32 = @intFromFloat(@round(
-                spawn.statModify(template.cost, 1, unit.rarity)));
+            const hp = spawn.statModify(template.stats.maxHealth, unit.level, unit.rarity);
+            const atk = spawn.statModify(template.stats.attack, unit.level, unit.rarity);
+            const upgradeCost: u32 = @intFromFloat(@round(spawn.statModify(template.cost, 1, unit.rarity)));
 
             gui.igTableNextRow();
             _ = gui.igTableNextColumn();
@@ -264,15 +263,13 @@ fn renderUnitInfo() void {
             const canUpgrade = ctx.point >= upgradeCost;
             gui.igBeginDisabled(!canUpgrade);
             var btnText: [32]u8 = undefined;
-            const btnLabel = std.fmt.bufPrintZ(
-                &btnText, "- {}", .{upgradeCost}) catch unreachable;
+            const btnLabel = std.fmt.bufPrintZ(&btnText, "- {}", .{upgradeCost}) catch unreachable;
             const clicked = gui.igButton(btnLabel);
             gui.igEndDisabled();
             if (canUpgrade and clicked) {
                 ctx.point -= upgradeCost;
                 unit.level += 1;
-                unit.cost = @round(spawn.statModify(
-                    template.cost, unit.level, unit.rarity));
+                unit.cost = @round(spawn.statModify(template.cost, unit.level, unit.rarity));
             }
             gui.igPopID();
         }
@@ -469,9 +466,7 @@ fn renderLevelClear() void {
 
         _ = gui.igText("关卡: %d", ctx.levelIndex + 1);
         _ = gui.igText("击杀: %d", ctx.enemyKilledCount);
-        _ = gui.igText(
-            "基地血量: %d", ctx.homeHealth,
-        );
+        _ = gui.igText("基地血量: %d", ctx.homeHealth);
         const reward = ctx.enemyKilledCount +
             @as(u32, @intCast(@max(0, ctx.homeHealth))) * 5;
         _ = gui.igText("奖励积分: %d", reward);

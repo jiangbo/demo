@@ -110,6 +110,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
             } else {
                 ctx.pendingScene = .clear;
             }
+            zhu.audio.playMusic("assets/audio/level-win.ogg");
         }
     }
 
@@ -118,6 +119,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
         gameOverTriggered = true;
         ctx.win = false;
         ctx.pendingScene = .end;
+        zhu.audio.playMusic("assets/audio/violin-lose-4.ogg");
     }
 }
 

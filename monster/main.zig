@@ -106,8 +106,12 @@ fn switchScene(s: ctx.SceneState) void {
         .battle => {
             scene.enter();
             hud.arrangeUnits();
+            zhu.audio.playMusic("assets/audio/4 Battle Track INTRO TomMusic.ogg");
         },
-        .title => title.enter(),
+        .title => {
+            title.enter();
+            zhu.audio.playMusic("assets/audio/Piano_Ui (2).ogg");
+        },
         else => {},
     }
 }
