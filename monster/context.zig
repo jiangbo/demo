@@ -122,6 +122,10 @@ pub fn isLevelClear() bool {
         enemyKilledCount + enemyArrivedCount >= enemyCount;
 }
 
+pub fn reward() u32 {
+    return enemyKilledCount + @as(u32, @intCast(@max(0, homeHealth))) * 5;
+}
+
 const SaveData = struct {
     level: u32,
     point: u32,

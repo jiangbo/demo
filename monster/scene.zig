@@ -94,9 +94,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
     // 通关奖励积分 + 启动延迟计时器
     if (!ctx.levelClear and ctx.isLevelClear()) {
         ctx.levelClear = true;
-        const reward = ctx.enemyKilledCount +
-            @as(u32, @intCast(@max(0, ctx.homeHealth))) * 5;
-        ctx.point += reward;
+        ctx.point += ctx.reward();
         clearTimer = .init(3);
     }
 

@@ -30,7 +30,6 @@ pub fn event(ev: *const zhu.window.Event) void {
     _ = sk.imgui.handleEvent(ev.*);
 }
 
-var flag: bool = true;
 pub fn update(reg: *Registry, delta: f32) void {
     sk.imgui.newFrame(.{
         .width = sk.app.width(),
@@ -359,25 +358,6 @@ fn renderBattleUI(reg: *Registry) void {
     if (showSavePanel) renderSavePanel();
 }
 
-fn renderGameEnd() void {
-    var label: ?[*:0]const u8 = null;
-    if (ctx.isGameOver()) label = "失败";
-    if (ctx.isLevelClear()) label = "通关";
-    if (label == null) return;
-
-    const flags = gui.ImGuiWindowFlags_NoTitleBar |
-        gui.ImGuiWindowFlags_NoResize |
-        gui.ImGuiWindowFlags_NoMove |
-        gui.ImGuiWindowFlags_NoBackground;
-    gui.igSetNextWindowPos(.{ .x = 400, .y = 300 }, gui.ImGuiCond_Always);
-    gui.igSetNextWindowSize(.{ .x = 200, .y = 80 }, gui.ImGuiCond_Always);
-    if (gui.igBegin("游戏结束", null, flags)) {
-        gui.igSetCursorPos(.{ .x = 60, .y = 20 });
-        _ = gui.igText("%s", label.?);
-    }
-    gui.igEnd();
-}
-
 fn renderLevelInfo() void {
     gui.igSetNextWindowPos(.{ .x = 10, .y = 250 }, gui.ImGuiCond_Always);
     const flags = gui.ImGuiWindowFlags_NoTitleBar |
@@ -467,14 +447,11 @@ fn renderLevelClear() void {
         _ = gui.igText("关卡: %d", ctx.levelIndex + 1);
         _ = gui.igText("击杀: %d", ctx.enemyKilledCount);
         _ = gui.igText("基地血量: %d", ctx.homeHealth);
-        const reward = ctx.enemyKilledCount +
-            @as(u32, @intCast(@max(0, ctx.homeHealth))) * 5;
-        _ = gui.igText("奖励积分: %d", reward);
+        _ = gui.igText("奖励积分: %d", ctx.reward());
         _ = gui.igText("总积分: %d", ctx.point);
 
         if (gui.igButton("下一关")) {
             ctx.levelIndex += 1;
-            ctx.levelClear = false;
             ctx.pendingScene = .battle;
         }
         gui.igSameLine();
