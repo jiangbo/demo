@@ -61,7 +61,6 @@ pub fn SparseMap(T: type) type {
         valuePtr: [*]T = undefined,
         valueSize: u16 = @sizeOf(T),
         alignIndex: Index = 0,
-        deletedIndex: Index = Entity.invalid,
 
         pub fn deinit(self: *Self, gpa: Allocator) void {
             self.sparse.deinit(gpa);
@@ -79,15 +78,8 @@ pub fn SparseMap(T: type) type {
         }
 
         pub fn add(self: *Self, gpa: Allocator, e: Index, v: T) !void {
-            if (self.has(e)) { // repeat add
+            if (self.has(e)) {
                 if (self.valueSize != 0) self.get(e).* = v;
-            } else if (self.deletedIndex != Entity.invalid) {
-                const index = self.deletedIndex;
-                self.deletedIndex = self.dense.items[index];
-
-                self.sparse.items[e] = index;
-                self.dense.items[index] = e;
-                if (self.valueSize != 0) self.valuePtr[index] = v;
             } else try self.doAdd(gpa, e, v);
         }
 
@@ -123,18 +115,7 @@ pub fn SparseMap(T: type) type {
 
         pub fn components(self: *const Self) []T {
             std.debug.assert(self.valueSize != 0);
-            std.debug.assert(self.deletedIndex == Entity.invalid);
             return self.valuePtr[0..self.dense.items.len];
-        }
-
-        pub fn markRemove(self: *Self, entity: Index) void {
-            if (!self.has(entity)) return;
-
-            const index = self.sparse.items[entity];
-            self.sparse.items[entity] = Entity.invalid;
-
-            self.dense.items[index] = self.deletedIndex;
-            self.deletedIndex = index;
         }
 
         pub fn swapRemove(self: *Self, entity: Index) Index {
@@ -171,7 +152,6 @@ pub fn SparseMap(T: type) type {
         }
 
         pub fn sort(self: *Self, lessFn: fn (T, T) bool) void {
-            std.debug.assert(self.deletedIndex == Entity.invalid);
             if (self.dense.items.len <= 1 or self.valueSize == 0) return;
 
             const sparse = self.sparse.items;
@@ -189,7 +169,6 @@ pub fn SparseMap(T: type) type {
         }
 
         pub fn clear(self: *Self) void {
-            self.deletedIndex = Entity.invalid;
             @memset(self.sparse.items, Entity.invalid);
             self.dense.clearRetainingCapacity();
         }
