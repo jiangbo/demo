@@ -240,7 +240,7 @@ fn doDraw(cmd: Command) void {
     gpu.setBindGroup(bindGroup);
 
     // 绘制
-    gpu.drawInstanced(cmd.end - cmd.start);
+    gpu.draw(0, 4, cmd.end - cmd.start);
 }
 
 fn createQuadPipeline(shaderDesc: gpu.ShaderDesc) gpu.RenderPipeline {

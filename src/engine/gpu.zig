@@ -47,8 +47,8 @@ pub fn setBindGroup(group: BindGroup) void {
     gfx.applyBindings(group.value);
 }
 
-pub fn drawInstanced(number: usize) void {
-    gfx.draw(0, 4, @intCast(number));
+pub fn draw(base: u32, vertices: u32, instances: u32) void {
+    gfx.draw(base, vertices, instances);
 }
 
 pub fn end() void {
