@@ -321,7 +321,7 @@ pub fn statFileTime(path: [:0]const u8) i64 {
 pub fn readBuffer(path: [:0]const u8, buffer: []u8) ![]u8 {
     if (@import("builtin").target.os.tag == .emscripten) {
         const value = @import("c.zig").em.my_add(1, 1);
-        _ = value; // 防止编译器优化掉，目前不清楚为什么要加这个方法才生效
+        _ = value; // 强制 emscripten 链接器保留 em_js_file_load 所在的目标文件
         const len = try readFromJs(path, &buffer);
         // 长度大于0，读完了内容，直接分配返回。
         if (len > 0) return buffer[0..@intCast(len)];
@@ -334,7 +334,7 @@ pub fn readBuffer(path: [:0]const u8, buffer: []u8) ![]u8 {
 pub fn readAll(path: [:0]const u8) ![]u8 {
     if (@import("builtin").target.os.tag == .emscripten) {
         const value = @import("c.zig").em.my_add(1, 1);
-        _ = value; // 防止编译器优化掉，目前不清楚为什么要加这个方法才生效
+        _ = value; // 强制 emscripten 链接器保留 em_js_file_load 所在的目标文件
         var buffer: [1024]u8 = undefined;
         const len = try readFromJs(path, &buffer);
         // 长度大于0，读完了内容，直接分配返回。
