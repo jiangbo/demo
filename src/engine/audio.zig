@@ -31,7 +31,7 @@ pub fn setVolume(volume: f32) void {
 }
 
 pub var musicVolume: std.atomic.Value(f32) = .init(1);
-var music: ?Music = null;
+var music: Music = .{ .state = .stopped };
 
 pub const StateEnum = enum { playing, paused, stopped };
 
@@ -59,7 +59,7 @@ pub fn playMusicOption(path: [:0]const u8, loop: bool) void {
 pub fn setMusicState(state: StateEnum) void {
     mutex.lock();
     defer mutex.unlock();
-    if (music) |*m| m.state = state;
+    music.state = state;
 }
 
 pub const Sound = struct {
@@ -116,7 +116,7 @@ export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     mutex.lock();
     defer mutex.unlock();
 
-    if (music != null) fillMusic(buffer, channels);
+    if (music.state == .playing) fillMusic(buffer, channels);
     fillSound(buffer);
 }
 
@@ -125,13 +125,13 @@ fn fillMusic(buffer: []f32, channels: i32) void {
     const volume = musicVolume.load(.acquire);
     var len: usize = 0; // 存储填充的长度
     // 因为有可能循环播放，所以循环添加，直到缓冲区填满。
-    while (music.?.state == .playing) {
-        const source = music.?.source;
+    while (music.state == .playing) {
+        const source = music.source;
         const count = stbAudio.fillSamples(source, buffer[len..], channels);
         len += @as(usize, @intCast(count * channels));
 
-        if (len == buffer.len) break; // 声音缓冲区填充满了
-        if (music.?.loop) stbAudio.reset(source) else music = null;
+        if (len == buffer.len) break;
+        if (music.loop) stbAudio.reset(source) else music.state = .stopped;
     }
     // 填充音乐完成，设置音乐的音量
     for (buffer[0..len]) |*sample| sample.* *= volume;

@@ -146,7 +146,7 @@ pub const Vector2 = extern struct {
     }
 
     pub fn normalize(self: Vector2) Vector2 {
-        return .{ .x = self.x / self.length(), .y = self.y / self.length() };
+        return self.scale(1 / self.length());
     }
 
     pub fn sign(self: Vector2) Vector2 {
