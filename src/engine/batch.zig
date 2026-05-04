@@ -5,6 +5,7 @@ const math = @import("math.zig");
 const shader = @import("shader/quad.glsl.zig");
 const graphics = @import("graphics.zig");
 const assets = @import("assets.zig");
+const camera = @import("camera.zig");
 
 const Image = graphics.Image;
 const ImageId = graphics.ImageId;
@@ -35,7 +36,6 @@ pub const Vertex = extern struct {
 pub var pipeline: gpu.RenderPipeline = undefined;
 pub var vertexBuffer: std.ArrayList(Vertex) = .empty;
 pub var whiteImage: graphics.Image = undefined;
-pub var camera: Camera = undefined;
 var nearestSampler: gpu.Sampler = undefined;
 
 var commandBuffer: std.ArrayList(Command) = .empty;
@@ -53,7 +53,7 @@ pub fn init(vertexes: []Vertex, commands: []Command) void {
     pipeline = createQuadPipeline(shaderDesc);
     nearestSampler = gpu.createSampler(.{});
 
-    camera = Camera.init();
+    camera.init();
 }
 
 pub fn initWithWhiteTexture(size: Vector2, buffer: []Vertex) void {
@@ -274,60 +274,3 @@ fn createQuadPipeline(shaderDesc: gpu.ShaderDesc) gpu.RenderPipeline {
 pub fn imageDrawCount() usize {
     return commandBuffer.items.len;
 }
-
-pub const Camera = struct {
-    const window = @import("window.zig");
-
-    modeEnum: enum { world, window } = .world,
-    position: Vector2 = .zero,
-    size: Vector2 = undefined,
-    bound: Vector2 = undefined,
-
-    pub fn init() Camera {
-        return .{ .size = window.size, .bound = window.size };
-    }
-
-    pub fn toWorld(self: Camera, windowPosition: Vector2) Vector2 {
-        return windowPosition.add(self.position);
-    }
-
-    pub fn toWindow(self: Camera, worldPosition: Vector2) Vector2 {
-        return worldPosition.sub(self.position);
-    }
-
-    pub fn control(self: *Camera, distance: f32) void {
-        if (window.isKeyDown(.UP)) self.position.y -= distance;
-        if (window.isKeyDown(.DOWN)) self.position.y += distance;
-        if (window.isKeyDown(.LEFT)) self.position.x -= distance;
-        if (window.isKeyDown(.RIGHT)) self.position.x += distance;
-    }
-
-    pub fn clampBound(self: *Camera) void {
-        const max = self.bound.sub(self.size).max(.zero);
-        self.position.clamp(.zero, max);
-    }
-
-    pub fn directFollow(self: *Camera, pos: Vector2) void {
-        self.position = pos.sub(self.size.scale(0.5));
-        self.clampBound();
-    }
-
-    pub fn smoothFollow(self: *Camera, pos: Vector2, smooth: f32) void {
-        const target = pos.sub(self.size.scale(0.5));
-        const distance = target.sub(self.position);
-
-        const clampedSmooth = std.math.clamp(smooth, 0, 1);
-        if (@abs(distance.x) < 1) self.position.x = target.x else {
-            var moved = distance.x * clampedSmooth;
-            if (@abs(moved) < 1) moved = math.ceilAway(moved);
-            self.position.x += moved;
-        }
-
-        if (@abs(distance.y) < 1) self.position.y = target.y else {
-            var moved = distance.y * clampedSmooth;
-            if (@abs(moved) < 1) moved = math.ceilAway(moved);
-            self.position.y += moved;
-        }
-        self.clampBound();
-    }
-};
