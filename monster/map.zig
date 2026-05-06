@@ -49,8 +49,6 @@ pub fn init(levelIndex: usize) void {
         }
     }
 
-    std.log.info("placement count: {}", .{places.items.len});
-
     std.mem.sortUnstable(Animation, animations.items, {}, struct {
         fn lessThan(_: void, a: Animation, b: Animation) bool {
             return a.position.y < b.position.y;

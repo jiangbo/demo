@@ -3,7 +3,9 @@ const zhu = @import("zhu");
 const map = @import("map.zig");
 
 pub fn init() void {}
-pub fn deinit() void {}
+pub fn deinit() void {
+    map.deinit();
+}
 
 pub fn enter() void {
     map.init(0);
