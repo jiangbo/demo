@@ -46,13 +46,14 @@ fn computeBackgroundRect(count: f32) void {
     const padding = uiZon.padding;
     const size = uiZon.frameSize;
 
-    // 计算总宽度和起始位置
     const totalWidth = (size.x + padding) * count + padding;
-    const startX = (zhu.window.size.x - totalWidth) / 2;
+    const maxScroll = @max(0, totalWidth - zhu.window.size.x);
+    scrollOffset = @max(0, @min(scrollOffset, maxScroll));
+    const startX = -scrollOffset;
     const startY = zhu.window.size.y - size.y - 2 * padding;
 
     backgroundRect = .{
-        .min = .xy(startX, startY - padding), // 再往上挪一点，给边框留空间
+        .min = .xy(startX, startY),
         .size = .xy(totalWidth, size.y + 2 * padding),
     };
 }
@@ -60,7 +61,7 @@ fn computeBackgroundRect(count: f32) void {
 fn computeUnitPositions() void {
     const padding = uiZon.padding;
     const size = uiZon.frameSize;
-    const start = backgroundRect.min.addXY(padding - scrollOffset, padding);
+    const start = backgroundRect.min.addXY(padding, padding);
     for (ctx.units.items, 0..) |*unit, i| {
         const index: f32 = @floatFromInt(i);
         const offset = (size.x + padding) * index;
@@ -78,11 +79,12 @@ fn updateScroll(delta: f32) void {
     }
 
     const speed = 400 * delta;
-    if (zhu.input.key.down(.LEFT)) scrollOffset -= speed;
-    if (zhu.input.key.down(.RIGHT)) scrollOffset += speed;
+    if (zhu.input.key.anyDown(&.{ .LEFT, .A })) scrollOffset += speed;
+    if (zhu.input.key.anyDown(&.{ .RIGHT, .D })) scrollOffset -= speed;
     scrollOffset -= zhu.input.mouseScrollY * 30;
     scrollOffset = @max(0, @min(scrollOffset, maxScroll));
 
+    computeBackgroundRect(@floatFromInt(ctx.units.items.len));
     computeUnitPositions();
 }
 

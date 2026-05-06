@@ -38,22 +38,31 @@ pub fn event(ev: *const zhu.window.Event) void {
 }
 
 pub fn update(reg: *Registry, delta: f32) void {
+    const view = zhu.window.viewRect.size;
+    const logic = zhu.window.size;
+    const scale = @min(view.x / logic.x, view.y / logic.y);
+
     sk.imgui.newFrame(.{
         .width = sk.app.width(),
         .height = sk.app.height(),
         .delta_time = delta,
-        .dpi_scale = sk.app.dpiScale(),
+        .dpi_scale = scale,
     });
 
     switch (ctx.currentScene) {
-        .title => renderTitleButtons(),
+        .title => {
+            renderTitleButtons();
+            renderTitleUI();
+        },
         .battle => {
             if (zhu.input.key.pressed(.P)) ctx.paused = !ctx.paused;
 
             renderHoveredUnit(reg);
             renderSelectedUnit(reg);
+            renderBattleUI(reg);
         },
-        .clear, .end => {},
+        .clear => renderLevelClear(),
+        .end => renderEndScene(),
     }
 
     const io = gui.igGetIO();
@@ -456,12 +465,7 @@ fn renderSavePanel() void {
 }
 
 pub fn draw(reg: *Registry) void {
-    switch (ctx.currentScene) {
-        .title => renderTitleUI(),
-        .battle => renderBattleUI(reg),
-        .clear => renderLevelClear(),
-        .end => renderEndScene(),
-    }
+    _ = reg;
     sk.imgui.render();
 }
 

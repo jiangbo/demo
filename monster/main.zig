@@ -10,7 +10,7 @@ const title = @import("title.zig");
 const ctx = @import("context.zig");
 
 var vertexBuffer: []zhu.batch.Vertex = undefined;
-var commandBuffer: [64]zhu.batch.Command = undefined;
+var commandBuffer: [128]zhu.batch.Command = undefined;
 var soundBuffer: [20]zhu.audio.Sound = undefined;
 const tileSets: []const tiled.TileSet = @import("zon/tile.zon");
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
@@ -106,11 +106,9 @@ fn switchScene(s: ctx.SceneState) void {
         .battle => {
             scene.enter();
             hud.arrangeUnits();
-            zhu.audio.playMusic("assets/audio/4 Battle Track INTRO TomMusic.ogg");
         },
         .title => {
             title.enter();
-            zhu.audio.playMusic("assets/audio/Piano_Ui (2).ogg");
         },
         else => {},
     }
@@ -134,7 +132,7 @@ pub fn main() void {
         .title = "怪物战争",
         .size = .xy(800, 608),
         .logicSize = .xy(1600, 1216),
-        .scaleEnum = .integer,
+        .scaleEnum = .fit,
         .maxFileSize = 5 * 1024 * 1024,
     });
 }
