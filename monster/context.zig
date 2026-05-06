@@ -57,7 +57,6 @@ pub var unitLayoutDirty: bool = true;
 pub var levelIndex: usize = 0;
 
 pub fn init() void {
-    if (contextZon.level == 0) @panic("level must start at 1");
     levelIndex = contextZon.level;
     reset();
 }
@@ -85,8 +84,7 @@ pub fn reset() void {
     units.clearRetainingCapacity();
     for (contextZon.units) |zon| {
         var unit = zon;
-        const base = spawn.playerZon[@intFromEnum(unit.class)].cost;
-        unit.cost = @round(spawn.statModify(base, unit.level, unit.rarity));
+        unit.cost = playerCost(unit.class, unit.rarity);
         units.append(zhu.assets.allocator, unit) catch @panic("oom");
     }
 
@@ -95,6 +93,11 @@ pub fn reset() void {
             return a.cost < b.cost;
         }
     }.lessThan);
+}
+
+pub fn playerCost(playerEnum: PlayerEnum, rarity: f32) f32 {
+    const base = spawn.playerZon[@intFromEnum(playerEnum)].cost;
+    return @round(spawn.statModify(base, 1, rarity));
 }
 
 pub fn update(delta: f32) void {
@@ -175,7 +178,9 @@ pub fn loadGame(path: [:0]const u8) !void {
 
     units.clearRetainingCapacity();
     for (data.units) |saveUnit| {
-        units.append(zhu.assets.allocator, saveUnit) catch @panic("oom");
+        var unit = saveUnit;
+        unit.cost = playerCost(unit.class, unit.rarity);
+        units.append(zhu.assets.allocator, unit) catch @panic("oom");
     }
     std.log.info("load: {s}", .{path});
 }

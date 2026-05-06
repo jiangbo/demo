@@ -254,7 +254,7 @@ pub fn tryDeployPlayer(reg: *Registry, unit: ctx.Unit) void {
 
         reg.add(entity, com.Name{ .value = unit.name });
         reg.add(entity, center);
-        reg.add(entity, com.Player{});
+        reg.add(entity, com.Player{ .cost = unit.cost });
         if (template.skill) |skill| addSkill(reg, entity, skill);
         place.entity = entity;
 

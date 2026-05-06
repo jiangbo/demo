@@ -24,7 +24,7 @@ pub const Path = struct { // 路径
 };
 pub const Enemy = struct { target: Path, speed: f32 }; // 敌人
 pub const EnemyEnum = enum { slime, wolf, goblin, darkWitch }; // 敌人类型
-pub const Player = struct {}; // 玩家
+pub const Player = struct { cost: f32 }; // 玩家
 pub const PlayerEnum = enum { warrior, archer, lancer, witch }; // 玩家类型
 pub const SkillEnum = enum { shield, speedUp, rest, powerUp }; // 技能类型
 pub const EffectEnum = enum { heal, active, ready, levelUp }; // 特效类型

@@ -188,8 +188,8 @@ fn renderSelectedSkill(reg: *Registry, entity: zhu.ecs.Entity) void {
 fn renderSelectedUpgrade(reg: *Registry, entity: zhu.ecs.Entity) void {
     if (!reg.has(entity, com.Player)) return;
 
-    const playerEnum = reg.get(entity, com.PlayerEnum);
-    const upgradeCost = spawn.playerZon[@intFromEnum(playerEnum)].cost;
+    const player = reg.get(entity, com.Player);
+    const upgradeCost = player.cost;
 
     gui.igBeginDisabled(ctx.cost < upgradeCost);
     const clicked = gui.igButton("升级");
@@ -206,10 +206,8 @@ fn renderSelectedUpgrade(reg: *Registry, entity: zhu.ecs.Entity) void {
 fn renderSelectedLeave(reg: *Registry, entity: zhu.ecs.Entity) void {
     if (!reg.has(entity, com.Player)) return;
 
-    const playerEnum = reg.get(entity, com.PlayerEnum);
-    const stats = reg.get(entity, com.Stats);
-    const cost = spawn.playerZon[@intFromEnum(playerEnum)].cost;
-    const refund = spawn.statModify(cost, stats.level, stats.rarity) * 0.5;
+    const player = reg.get(entity, com.Player);
+    const refund = player.cost * 0.5;
 
     if (gui.igButton("撤退") or zhu.input.key.pressed(.R)) {
         ctx.cost += refund;
@@ -240,7 +238,7 @@ fn renderUnitInfo() void {
             const template = &spawn.playerZon[@intFromEnum(unit.class)];
             const hp = spawn.statModify(template.stats.maxHealth, unit.level, unit.rarity);
             const atk = spawn.statModify(template.stats.attack, unit.level, unit.rarity);
-            const upgradeCost: u32 = @intFromFloat(@round(spawn.statModify(template.cost, 1, unit.rarity)));
+            const upgradeCost: u32 = @intFromFloat(ctx.playerCost(unit.class, unit.rarity));
 
             gui.igTableNextRow();
             _ = gui.igTableNextColumn();
@@ -267,7 +265,7 @@ fn renderUnitInfo() void {
             if (canUpgrade and clicked) {
                 ctx.point -= upgradeCost;
                 unit.level += 1;
-                unit.cost = @round(spawn.statModify(template.cost, unit.level, unit.rarity));
+                unit.cost = ctx.playerCost(unit.class, unit.rarity);
             }
             gui.igPopID();
         }
