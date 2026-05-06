@@ -115,6 +115,15 @@ pub fn changeLevel(levelIndex: usize) void {
     }
 }
 
+pub fn remainingWaveCount() usize {
+    return levels[ctx.levelIndex].waves.len - nextWaveIndex;
+}
+
+pub fn nextWaveSeconds() ?f32 {
+    const timer = nextWaveTimer orelse return null;
+    return @max(0, timer.duration - timer.elapsed);
+}
+
 pub fn deinit() void {
     enemyQueue.deinit(zhu.assets.allocator);
 }
