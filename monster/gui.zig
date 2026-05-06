@@ -58,7 +58,6 @@ var showLoadPanel: bool = false;
 var showSavePanel: bool = false;
 
 fn renderTitleButtons() void {
-    gui.igSetNextWindowPos(.{ .x = 400, .y = 800 }, gui.ImGuiCond_Always);
     const flags = gui.ImGuiWindowFlags_NoTitleBar |
         gui.ImGuiWindowFlags_AlwaysAutoResize;
     if (gui.igBegin("标题按钮", null, flags)) {
@@ -337,12 +336,10 @@ pub fn draw(reg: *Registry) void {
 }
 
 fn renderTitleUI() void {
-    gui.igSetNextWindowPos(.{ .x = 400, .y = 300 }, gui.ImGuiCond_Always);
     const flags = gui.ImGuiWindowFlags_NoTitleBar |
         gui.ImGuiWindowFlags_NoResize |
-        gui.ImGuiWindowFlags_NoMove |
         gui.ImGuiWindowFlags_NoBackground;
-    gui.igSetNextWindowSize(.{ .x = 400, .y = 100 }, gui.ImGuiCond_Always);
+    gui.igSetNextWindowSize(.{ .x = 400, .y = 100 }, gui.ImGuiCond_FirstUseEver);
     if (gui.igBegin("标题", null, flags)) {
         gui.igSetWindowFontScale(2.0);
         gui.igSetCursorPos(.{ .x = 110, .y = 30 });
@@ -359,7 +356,6 @@ fn renderBattleUI(reg: *Registry) void {
 }
 
 fn renderLevelInfo() void {
-    gui.igSetNextWindowPos(.{ .x = 10, .y = 250 }, gui.ImGuiCond_Always);
     const flags = gui.ImGuiWindowFlags_NoTitleBar |
         gui.ImGuiWindowFlags_AlwaysAutoResize;
     if (gui.igBegin("关卡信息", null, flags)) {
@@ -375,7 +371,6 @@ fn renderLevelInfo() void {
 }
 
 fn renderSettings(reg: *Registry) void {
-    gui.igSetNextWindowPos(.{ .x = 10, .y = 400 }, gui.ImGuiCond_Always);
     const flags = gui.ImGuiWindowFlags_NoTitleBar |
         gui.ImGuiWindowFlags_AlwaysAutoResize;
     if (gui.igBegin("设置", null, flags)) {
@@ -417,7 +412,6 @@ fn renderSettings(reg: *Registry) void {
 }
 
 fn renderDebugTools() void {
-    gui.igSetNextWindowPos(.{ .x = 10, .y = 600 }, gui.ImGuiCond_Always);
     const flags = gui.ImGuiWindowFlags_NoTitleBar |
         gui.ImGuiWindowFlags_AlwaysAutoResize;
     if (gui.igBegin("调试", null, flags)) {
@@ -433,10 +427,6 @@ fn renderDebugTools() void {
 }
 
 fn renderLevelClear() void {
-    gui.igSetNextWindowPos(
-        .{ .x = 400, .y = 300 },
-        gui.ImGuiCond_Always,
-    );
     const flags = gui.ImGuiWindowFlags_NoTitleBar |
         gui.ImGuiWindowFlags_AlwaysAutoResize;
     if (gui.igBegin("Level Clear", null, flags)) {
@@ -469,10 +459,6 @@ fn renderLevelClear() void {
 }
 
 fn renderEndScene() void {
-    gui.igSetNextWindowPos(
-        .{ .x = 400, .y = 300 },
-        gui.ImGuiCond_Always,
-    );
     const flags = gui.ImGuiWindowFlags_NoTitleBar |
         gui.ImGuiWindowFlags_AlwaysAutoResize;
     if (gui.igBegin("Game End", null, flags)) {
