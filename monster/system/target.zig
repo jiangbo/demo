@@ -18,6 +18,12 @@ pub fn cleanInvalidTarget(reg: *zhu.ecs.Registry) void {
         if (view.has(entity, attack.Lock)) continue; // 攻击锁定时不能切换目标
 
         const target = view.get(entity, attack.Target).v;
+        if (view.tryGet(entity, com.motion.BlockBy)) |blockBy| {
+            if (reg.validEntity(blockBy.v) and std.meta.eql(target, blockBy.v)) {
+                continue; // 阻挡目标由阻挡系统维护，不按攻击范围清理。
+            }
+        }
+
         if (reg.validEntity(target)) { // 目标还存活
             const range = view.get(entity, com.Stats).range + 20;
             const pos = view.get(entity, com.Position);

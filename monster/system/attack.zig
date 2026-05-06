@@ -10,8 +10,9 @@ pub fn update(reg: *zhu.ecs.Registry, _: f32) void {
         const target = view.get(entity, com.attack.Target).v;
         if (!reg.validEntity(target)) continue; // 目标无效
 
-        // 播放攻击或者发射动画
-        const ranged = view.has(entity, com.attack.Ranged);
+        // 被阻挡的远程敌人改用近身攻击动画。
+        const ranged = view.has(entity, com.attack.Ranged) and
+            !view.has(entity, com.motion.BlockBy);
         const attack: com.StateEnum = if (ranged) .ranged else .attack;
         view.add(entity, com.animation.Play{
             .index = @intFromEnum(attack),
