@@ -174,7 +174,18 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
                 .texturePosition = image.toTexturePosition(),
             }) catch @panic("oom, can't append tile");
         } else {
-            const image = zhu.assets.getImage(tileSet.image);
+
+            // 图片太大，不能合并到图集中，使用临时方案解决。
+            const path: ?[:0]const u8 = switch (tileSet.image) {
+                672649248 => "assets/textures/Units/Archer.png",
+                1853426592 => "assets/textures/Units/Lancer.png",
+                1610704809 => "assets/textures/Units/Warrior.png",
+                else => null,
+            };
+            const image = if (path) |p| blk: {
+                break :blk zhu.assets.loadImage(p, .zero);
+            } else zhu.assets.getImage(tileSet.image);
+
             animations.append(zhu.assets.allocator, .{
                 .position = pos,
                 .size = object.size,
