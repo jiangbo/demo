@@ -74,6 +74,17 @@ pub fn statModify(base: f32, level: f32, rarity: f32) f32 {
     return base * (0.95 + 0.05 * level) * (0.9 + 0.1 * rarity);
 }
 
+fn applyLevelRarity(base: com.Stats, level: f32, rarity: f32) com.Stats {
+    var stats = base;
+    stats.health = statModify(base.maxHealth, level, rarity);
+    stats.maxHealth = stats.health;
+    stats.attack = statModify(base.attack, level, rarity);
+    stats.defense = statModify(base.defense, level, rarity);
+    stats.level = level;
+    stats.rarity = rarity;
+    return stats;
+}
+
 /// 升级单位：等级+1，从模板重算属性，生成升级特效。
 pub fn upgradeUnit(reg: *Registry, entity: Entity) void {
     const playerEnum = reg.get(entity, com.PlayerEnum);
@@ -88,8 +99,8 @@ pub fn upgradeUnit(reg: *Registry, entity: Entity) void {
     stats.health = stats.maxHealth;
     stats.attack = statModify(template.stats.attack, level, rarity);
     stats.defense = statModify(template.stats.defense, level, rarity);
-    stats.range = statModify(template.stats.range, level, rarity);
-    stats.interval = statModify(template.stats.interval, level, rarity);
+    stats.range = template.stats.range;
+    stats.interval = template.stats.interval;
 
     const position = reg.get(entity, com.Position);
     const effectEntity = effect(reg, .levelUp);
@@ -116,7 +127,7 @@ pub fn changeLevel(levelIndex: usize) void {
 }
 
 pub fn hasNextLevel(levelIndex: usize) bool {
-    return levelIndex < levels.len;
+    return levelIndex > 0 and levelIndex < levels.len;
 }
 
 fn levelData(levelIndex: usize) Level {
@@ -182,11 +193,12 @@ fn spawnEnemy(reg: *Registry, enemyEnum: com.EnemyEnum) void {
     const entity = doSpawn(reg, template);
     reg.add(entity, enemyEnum);
 
-    var stats = reg.get(entity, com.Stats);
     const level = levelData(ctx.levelIndex);
-    stats.level = level.enemyLevel;
-    stats.rarity = level.enemyRarity;
-    reg.getPtr(entity, com.Stats).* = stats;
+    reg.getPtr(entity, com.Stats).* = applyLevelRarity(
+        template.stats,
+        level.enemyLevel,
+        level.enemyRarity,
+    );
 
     reg.add(entity, start.point);
     reg.add(entity, com.motion.Velocity{ .v = .zero });
@@ -266,10 +278,11 @@ pub fn tryDeployPlayer(reg: *Registry, unit: ctx.Unit) void {
         reg.add(entity, unit.class);
 
         // 覆盖为玩家实体的等级和稀有度
-        var stats = reg.get(entity, com.Stats);
-        stats.level = unit.level;
-        stats.rarity = unit.rarity;
-        reg.getPtr(entity, com.Stats).* = stats;
+        reg.getPtr(entity, com.Stats).* = applyLevelRarity(
+            template.stats,
+            unit.level,
+            unit.rarity,
+        );
 
         reg.add(entity, com.Name{ .value = unit.name });
         reg.add(entity, center);
@@ -367,9 +380,11 @@ pub fn projectile(reg: *Registry, delta: f32) void {
     var view = reg.view(.{com.attack.Emit});
     while (view.next()) |entity| {
         // 检查目标是否还有效
+        var targetEntity: ?Entity = null;
         var targetPos: ?zhu.Vector2 = null;
         if (view.tryGet(entity, com.attack.Target)) |target| {
             if (reg.validEntity(target.v)) {
+                targetEntity = target.v;
                 targetPos = reg.get(target.v, com.Position);
             }
         }
@@ -378,6 +393,7 @@ pub fn projectile(reg: *Registry, delta: f32) void {
         const template = view.get(entity, com.ProjectileEnum);
         const value = &projectileZon[@intFromEnum(template)];
 
+        const damage = view.get(entity, com.Stats).attack;
         const new = reg.createEntity();
         const image = zhu.assets.loadImage(value.image, .zero);
         const start = view.get(entity, com.Position);
@@ -390,6 +406,8 @@ pub fn projectile(reg: *Registry, delta: f32) void {
             .arc = value.arc,
             .totalTime = value.time + delta,
             .owner = view.toEntity(entity),
+            .target = targetEntity.?,
+            .damage = damage,
             .offset = value.offset,
         });
 

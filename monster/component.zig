@@ -40,6 +40,8 @@ pub const Projectile = struct {
     time: f32 = 0, // 飞行时间
     totalTime: f32, // 总飞行时间
     owner: Entity, // 发出者
+    target: Entity, // 命中目标
+    damage: f32, // 发射瞬间锁定的伤害
     offset: zhu.Vector2, // 绘制偏移
     rotation: f32 = 0, // 旋转角度
 };

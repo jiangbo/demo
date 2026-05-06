@@ -78,17 +78,18 @@ fn selectHealTarget(reg: *zhu.ecs.Registry, entity: zhu.ecs.Entity) void {
     const range2 = range * range;
 
     var lowestTarget: ?zhu.ecs.Entity.Index = null; // 找血量最低的友方
-    var lowestHealth: f32 = std.math.floatMax(f32);
+    var lowestHealthPercent: f32 = std.math.floatMax(f32);
 
     var view = reg.view(.{ com.Player, com.attack.Injured }); // 找受伤的玩家
     while (view.next()) |target| {
         const targetPos = view.get(target, com.Position);
         if (pos.sub(targetPos).length2() > range2) continue; // 不在治疗范围内
 
-        const health = view.get(target, com.Stats).health;
-        if (health > lowestHealth) continue;
+        const stats = view.get(target, com.Stats);
+        const healthPercent = stats.health / stats.maxHealth;
+        if (healthPercent > lowestHealthPercent) continue;
 
-        lowestHealth = health;
+        lowestHealthPercent = healthPercent;
         lowestTarget = target;
     }
 

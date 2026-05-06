@@ -22,9 +22,7 @@ fn updateCast(reg: *ecs.Registry) void {
 
         const skill = view.getPtr(entity, com.skill.Skill);
 
-        // 备份当前属性，buff 结束后恢复
         if (view.tryGetPtr(entity, com.Stats)) |stats| {
-            view.add(entity, com.skill.Backup{ .stats = stats.* });
             const buff = skill.buff;
             inline for (@typeInfo(com.Stats).@"struct".fields) |field| {
                 @field(stats, field.name) *= @field(buff, field.name);
@@ -55,12 +53,12 @@ fn updateTimer(reg: *ecs.Registry, delta: f32) void {
 
         const skill = view.getPtr(entity, com.skill.Skill);
         if (view.has(entity, com.skill.Active)) {
-            // 持续结束：恢复属性，切回冷却计时
-            if (view.tryGetPtr(entity, com.skill.Backup)) |backup| {
-                const health = view.get(entity, com.Stats).health;
-                view.getPtr(entity, com.Stats).* = backup.stats;
-                view.getPtr(entity, com.Stats).health = health;
-                view.remove(entity, com.skill.Backup);
+            // 持续结束：按倍率还原属性，切回冷却计时
+            if (view.tryGetPtr(entity, com.Stats)) |stats| {
+                const buff = skill.buff;
+                inline for (@typeInfo(com.Stats).@"struct".fields) |field| {
+                    @field(stats, field.name) /= @field(buff, field.name);
+                }
             }
             if (skill.id == .shield) {
                 view.add(entity, com.animation.Play{

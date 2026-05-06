@@ -15,7 +15,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
 
         // 飞行时间是否大于等于总时间
         if (projectile.time >= projectile.totalTime) {
-            reg.add(projectile.owner, com.attack.Hit{});
+            hitTarget(reg, projectile.*);
             view.destroy(entity);
             continue;
         }
@@ -33,6 +33,24 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
         const direction = pos.sub(projectile.previous);
         projectile.rotation = std.math.atan2(direction.y, direction.x);
         projectile.previous = pos;
+    }
+}
+
+fn hitTarget(reg: *zhu.ecs.Registry, projectile: com.Projectile) void {
+    const stats = reg.tryGetPtr(projectile.target, com.Stats) orelse return;
+
+    if (reg.validEntity(projectile.owner)) {
+        if (reg.tryGet(projectile.owner, com.audio.Hit)) |hitSound| {
+            zhu.audio.playSound(hitSound.path);
+        }
+    }
+
+    const damage = projectile.damage - stats.defense;
+    stats.health -= @max(damage, projectile.damage / 10);
+
+    reg.add(projectile.target, com.attack.Injured{});
+    if (stats.health <= 0) {
+        reg.add(projectile.target, com.Dead{});
     }
 }
 
