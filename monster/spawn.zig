@@ -216,7 +216,7 @@ fn doSpawn(reg: *Registry, zon: *const Template) zhu.ecs.Entity {
     const entity = reg.createEntity();
 
     const imagePath = zon.image.path;
-    const image = zhu.assets.loadImage(imagePath, zon.image.size);
+    const image = zhu.assets.loadImage(imagePath);
     reg.add(entity, com.Sprite{
         .image = image.sub(.init(.zero, zon.size)),
         .offset = zon.offset,
@@ -339,7 +339,7 @@ pub fn deadEnemy(reg: *Registry, entity: Entity) void {
 pub fn effect(reg: *Registry, effectEnum: com.EffectEnum) Entity {
     const value = &effectZon[@intFromEnum(effectEnum)];
     const entity = reg.createEntity();
-    const image = zhu.assets.loadImage(value.image.path, .zero);
+    const image = zhu.assets.loadImage(value.image.path);
 
     reg.add(entity, com.Sprite{
         .image = image.sub(.init(value.position, value.size)),
@@ -395,7 +395,7 @@ pub fn projectile(reg: *Registry, delta: f32) void {
 
         const damage = view.get(entity, com.Stats).attack;
         const new = reg.createEntity();
-        const image = zhu.assets.loadImage(value.image, .zero);
+        const image = zhu.assets.loadImage(value.image);
         const start = view.get(entity, com.Position);
         const drawStart = start.add(value.offset);
         reg.add(new, image.sub(.init(value.position, value.size)));

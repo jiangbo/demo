@@ -182,7 +182,7 @@ fn parseObjectLayer(layer: *const tiled.Layer) void {
                 else => null,
             };
             const image = if (path) |p| blk: {
-                break :blk zhu.assets.loadImage(p, .zero);
+                break :blk zhu.assets.loadImage(p);
             } else zhu.assets.getImage(tileSet.image);
 
             animations.append(zhu.assets.allocator, .{

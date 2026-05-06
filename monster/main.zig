@@ -32,7 +32,7 @@ pub fn init() void {
 
     tiled.init(tileSets);
 
-    const fontImage = zhu.assets.loadImage("assets/font.png", .zero);
+    const fontImage = zhu.assets.loadImage("assets/font.png");
     zhu.text.initBitMapFont(fontImage, fontZon, 32);
 
     registry = .init(zhu.assets.allocator);

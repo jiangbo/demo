@@ -62,11 +62,11 @@ pub fn oom() noreturn {
     @panic("out of memory");
 }
 
-pub fn loadImage(path: Path, size: graphics.Vector2) Image {
+pub fn loadImage(path: Path) Image {
     const entry = imageCache.getOrPut(allocator, id(path)) catch oom();
     if (!entry.found_existing) {
         const texture = Texture.load(path);
-        entry.value_ptr.* = .{ .texture = texture, .size = size };
+        entry.value_ptr.* = .{ .texture = texture, .size = .zero };
     }
     return entry.value_ptr.*;
 }
@@ -87,7 +87,8 @@ pub fn id(name: []const u8) Id {
 pub fn loadAtlas(atlas: graphics.Atlas) void {
     const size: u32 = @intCast(atlas.images.len + 1); // 多包含一张图集
     imageCache.ensureUnusedCapacity(allocator, size) catch oom();
-    var image = loadImage(atlas.imagePath, atlas.size);
+    var image = loadImage(atlas.imagePath);
+    imageCache.getPtr(id(atlas.imagePath)).?.size = atlas.size;
 
     for (atlas.images) |atlasImage| {
         image.offset = atlasImage.rect.min;
@@ -103,7 +104,7 @@ pub fn createWhiteImage(comptime key: [:0]const u8) Image {
     Texture.cache.put(allocator, key, view) catch oom();
     imageCache.put(allocator, comptime id(key), .{
         .texture = view,
-        .area = .init(.zero, .init(1, 1)),
+        .size = .one,
     }) catch oom();
     return imageCache.get(comptime id(key)).?;
 }
@@ -145,6 +146,12 @@ const Texture = struct {
         sk.gfx.initView(view, .{ .texture = .{
             .image = makeImage(img.width, img.height, img.data),
         } });
+        if (imageCache.getPtr(id(response.path))) |image| {
+            image.size = .{
+                .x = @floatFromInt(img.width),
+                .y = @floatFromInt(img.height),
+            };
+        }
         return &.{};
     }
 

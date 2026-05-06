@@ -129,21 +129,21 @@ pub fn draw() void {
 
         // 绘制头像
         const face = uiZon.face[unit.face];
-        var image = zhu.assets.loadImage(face.image, .zero);
+        var image = zhu.assets.loadImage(face.image);
         batch.drawImage(image.sub(face.rect), unit.position, .{
             .size = uiZon.frameSize,
         });
 
         // 绘制边框
         const border = uiZon.border[if (unit.rarity > 1) 1 else 0];
-        image = zhu.assets.loadImage(border.image, .zero);
+        image = zhu.assets.loadImage(border.image);
         batch.drawImage(image.sub(border.rect), unit.position, .{
             .size = uiZon.frameSize,
         });
 
         // 绘制职业
         const icon = uiZon.icon[class];
-        image = zhu.assets.loadImage(icon.image, .zero);
+        image = zhu.assets.loadImage(icon.image);
         batch.drawImage(image.sub(icon.rect), unit.position, .{
             .size = uiZon.frameSize.scale(0.5),
         });
@@ -180,8 +180,7 @@ fn drawPrepare(playerEnum: com.PlayerEnum) void {
     }
 
     // 绘制准备单位精灵（合法绿色，非法红色）
-    const size = template.image.size;
-    const image = zhu.assets.loadImage(template.image.path, size);
+    const image = zhu.assets.loadImage(template.image.path);
     const sub = image.sub(.init(.zero, template.size));
     zhu.batch.drawImage(sub, mousePos.add(template.offset), .{
         .color = if (found != null) .green else .red,
