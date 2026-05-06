@@ -57,10 +57,10 @@ pub fn init(levelIndex: usize) void {
 }
 
 pub fn deinit() void {
-    tileVertexes.deinit(zhu.assets.allocator);
-    animations.deinit(zhu.assets.allocator);
-    places.deinit(zhu.assets.allocator);
-    paths.deinit(zhu.assets.allocator);
+    tileVertexes.clearAndFree(zhu.assets.allocator);
+    animations.clearAndFree(zhu.assets.allocator);
+    places.clearAndFree(zhu.assets.allocator);
+    paths.clearAndFree(zhu.assets.allocator);
 }
 
 fn parsePathLayer(layer: *const tiled.Layer) void {
