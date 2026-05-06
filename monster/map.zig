@@ -215,7 +215,7 @@ pub fn draw() void {
     for (animations.items) |item| {
         const image = item.value.subImage(item.size);
         batch.drawImage(image, item.position, .{
-            .flipX = item.extend.flipX,
+            .mask = .{ .flipX = item.extend.flipX },
         });
     }
 }

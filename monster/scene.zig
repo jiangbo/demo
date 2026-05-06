@@ -136,8 +136,8 @@ pub fn draw(reg: *zhu.ecs.Registry) void {
         const pos = position.add(sprite.offset);
 
         zhu.batch.drawImage(sprite.image, pos, .{
-            .flipX = sprite.flip,
             .size = sprite.size,
+            .mask = .{ .flipX = sprite.flip },
         });
     }
 

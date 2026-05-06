@@ -24,9 +24,15 @@ pub const Command = struct {
 };
 
 pub const Vertex = extern struct {
+    pub const Mask = packed struct(u32) {
+        flipX: bool = false,
+        flipY: bool = false,
+        padding: u30 = 0,
+    };
+
     position: math.Vector2, // 顶点坐标
     radian: f32 = 0, // 旋转弧度
-    padding: u32 = 1,
+    mask: Mask = .{},
     size: math.Vector2, // 大小
     pivot: math.Vector2 = .zero, // 旋转中心
     texturePosition: math.Vector4, // 纹理坐标
@@ -68,7 +74,7 @@ pub const Option = struct {
     pivot: Vector2 = .center, // 旋转中心
     radian: f32 = 0, // 旋转弧度
     color: graphics.Color = .white, // 颜色
-    flipX: bool = false, // 水平翻转
+    mask: Vertex.Mask = .{}, // 绘制标记
 };
 
 pub fn beginDraw(color: graphics.Color) void {
@@ -166,7 +172,7 @@ pub fn drawTriangle(area: math.Rect, option: TriangleOption) void {
     drawImage(whiteImage, area.min, .{
         .size = area.size,
         .color = option.color,
-        .flipX = option.flip,
+        .mask = .{ .flipX = option.flip },
     });
 }
 
@@ -183,11 +189,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     const size = (option.size orelse image.size);
     const scaledSize = size.mul(option.scale);
 
-    var imageVector = image.toTexturePosition();
-    if (option.flipX) {
-        imageVector.x += imageVector.z;
-        imageVector.z = -imageVector.z;
-    }
+    const imageVector = image.toTexturePosition();
 
     var command = currentCommand();
     if (command.texture.id == 0) {
@@ -200,6 +202,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     vertexBuffer.appendSliceAssumeCapacity(&.{Vertex{
         .position = worldPos.sub(scaledSize.mul(option.anchor)),
         .radian = option.radian,
+        .mask = option.mask,
         .size = scaledSize,
         .pivot = option.pivot,
         .texturePosition = imageVector,
@@ -248,7 +251,7 @@ fn createQuadPipeline(shaderDesc: gpu.ShaderDesc) gpu.RenderPipeline {
 
     vertexLayout.attrs[0].format = .FLOAT2;
     vertexLayout.attrs[1].format = .FLOAT;
-    vertexLayout.attrs[2].format = .FLOAT;
+    vertexLayout.attrs[2].format = .UINT;
     vertexLayout.attrs[3].format = .FLOAT2;
     vertexLayout.attrs[4].format = .FLOAT2;
     vertexLayout.attrs[5].format = .FLOAT4;
