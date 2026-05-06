@@ -130,7 +130,7 @@ pub fn main() void {
 
     zhu.window.run(allocator, .{
         .title = "怪物战争",
-        .size = .xy(800, 608),
+        .size = .xy(1200, 912),
         .logicSize = .xy(1600, 1216),
         .scaleEnum = .fit,
         .maxFileSize = 5 * 1024 * 1024,

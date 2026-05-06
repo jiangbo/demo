@@ -38,15 +38,10 @@ pub fn event(ev: *const zhu.window.Event) void {
 }
 
 pub fn update(reg: *Registry, delta: f32) void {
-    const view = zhu.window.viewRect.size;
-    const logic = zhu.window.size;
-    const scale = @min(view.x / logic.x, view.y / logic.y);
-
     sk.imgui.newFrame(.{
         .width = sk.app.width(),
         .height = sk.app.height(),
         .delta_time = delta,
-        .dpi_scale = scale,
     });
 
     switch (ctx.currentScene) {

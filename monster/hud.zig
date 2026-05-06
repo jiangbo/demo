@@ -159,10 +159,6 @@ pub fn draw() void {
         }
     }
 
-    const currentCost: u32 = @intFromFloat(@floor(ctx.cost));
-    text.drawColor("COST:", .xy(24, 24), .yellow);
-    text.drawNumberColor(currentCost, .xy(120, 24), .white);
-
     if (ctx.selectedUnit()) |unit| drawPrepare(unit.class);
 }
 

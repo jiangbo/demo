@@ -146,20 +146,4 @@ pub fn draw(reg: *zhu.ecs.Registry) void {
     system.health.draw(reg); // 绘制血条
     system.projectile.draw(reg); // 绘制投射物
     system.selection.draw(reg); // 绘制攻击范围和选择调试信息
-
-    for (map.startPaths) |start| {
-        if (start == 0) break;
-
-        var previous = map.paths.get(start).?;
-        while (previous.next != 0) {
-            const next = map.paths.get(previous.next).?;
-            zhu.batch.drawLine(previous.point, next.point, .{
-                .color = .red,
-                .width = 4,
-            });
-            previous = next;
-        }
-    }
-
-    // std.log.info("command len: {}", .{zhu.batch.imageDrawCount()});
 }
