@@ -8,6 +8,7 @@ const com = @import("component.zig");
 const ctx = @import("context.zig");
 const spawn = @import("spawn.zig");
 const scene = @import("scene.zig");
+const title = @import("title.zig");
 const Registry = zhu.ecs.Registry;
 
 pub fn init() void {
@@ -70,7 +71,7 @@ fn renderTitleButtons() void {
     if (gui.igBegin("TitleUI", null, flags)) {
         gui.igSetWindowFontScale(2.0);
         if (gui.igButtonEx("开始游戏", .{ .x = 200, .y = 60 })) {
-            ctx.pendingScene = .battle;
+            title.startGame();
         }
         gui.igSameLine();
         gui.igSetCursorPosX(gui.igGetCursorPosX() + 20);
@@ -466,14 +467,9 @@ pub fn draw(reg: *Registry) void {
 
 fn renderTitleUI() void {
     const flags = gui.ImGuiWindowFlags_NoTitleBar |
-        gui.ImGuiWindowFlags_NoResize |
-        gui.ImGuiWindowFlags_NoBackground;
-    gui.igSetNextWindowSize(.{ .x = 400, .y = 100 }, gui.ImGuiCond_FirstUseEver);
-    if (gui.igBegin("标题", null, flags)) {
-        gui.igSetWindowFontScale(2.0);
-        gui.igSetCursorPos(.{ .x = 110, .y = 30 });
-        _ = gui.igText("怪物战争");
-    }
+        gui.ImGuiWindowFlags_NoBackground |
+        gui.ImGuiWindowFlags_NoInputs;
+    if (gui.igBegin("TitleLogo", null, flags)) {}
     gui.igEnd();
 }
 

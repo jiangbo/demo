@@ -38,6 +38,7 @@ pub fn enter() void {
     ctx.reset();
     map.init(ctx.levelIndex);
     spawn.init();
+    zhu.audio.playMusic("assets/audio/4 Battle Track INTRO TomMusic.ogg");
 }
 
 pub fn exit() void {
