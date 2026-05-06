@@ -314,7 +314,8 @@ pub fn effect(reg: *Registry, effectEnum: com.EffectEnum) Entity {
         .offset = value.offset,
         .size = value.drawSize,
     });
-    const animation = com.Animation.init(image, value.animation);
+    var animation = com.Animation.init(image, value.animation);
+    animation.loop = false;
     reg.add(entity, animation);
     return entity;
 }

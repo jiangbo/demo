@@ -126,11 +126,11 @@ fn createMissingDisplay(reg: *ecs.Registry) void {
         var state: ?com.EffectEnum = null;
         if (view.has(entity, com.skill.Active)) state = .active;
         if (view.has(entity, com.skill.Ready)) state = .ready;
-        const displayEntity = spawn.effect(reg, state orelse continue);
 
         const skill = view.getPtr(entity, com.skill.Skill);
         if (reg.validEntity(skill.displayEntity)) continue;
 
+        const displayEntity = spawn.effect(reg, state orelse continue);
         const owner = view.toEntity(entity);
         reg.add(displayEntity, displayPosition(reg, owner));
         reg.getPtr(displayEntity, com.Animation).loop = true;
