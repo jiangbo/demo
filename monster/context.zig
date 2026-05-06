@@ -65,8 +65,25 @@ pub fn deinit() void {
     units.deinit(zhu.assets.allocator);
 }
 
-/// 重置所有全局状态并重建 units 列表。
+/// 重置为默认存档数据，用于程序启动时初始化。
 pub fn reset() void {
+    resetBattle();
+    point = contextZon.point;
+    levelIndex = contextZon.level;
+    levelClear = false;
+
+    units.clearRetainingCapacity();
+    for (contextZon.units) |zon| {
+        var unit = zon;
+        unit.cost = playerCost(unit.class, unit.rarity);
+        units.append(zhu.assets.allocator, unit) catch @panic("oom");
+    }
+
+    sortUnitsByCost();
+}
+
+/// 重置单局战斗状态，不覆盖读档/升级得到的 Session 数据。
+pub fn resetBattle() void {
     cost = INITIAL_COST;
     homeHealth = INITIAL_HOME_HEALTH;
     enemyCount = 0;
@@ -77,17 +94,11 @@ pub fn reset() void {
     selectedEntity = null;
     paused = false;
     timeScale = 1;
-    levelClear = false;
     win = false;
     unitLayoutDirty = true;
+}
 
-    units.clearRetainingCapacity();
-    for (contextZon.units) |zon| {
-        var unit = zon;
-        unit.cost = playerCost(unit.class, unit.rarity);
-        units.append(zhu.assets.allocator, unit) catch @panic("oom");
-    }
-
+fn sortUnitsByCost() void {
     std.mem.sortUnstable(Unit, units.items, {}, struct {
         fn lessThan(_: void, a: Unit, b: Unit) bool {
             return a.cost < b.cost;
@@ -182,5 +193,7 @@ pub fn loadGame(path: [:0]const u8) !void {
         unit.cost = playerCost(unit.class, unit.rarity);
         units.append(zhu.assets.allocator, unit) catch @panic("oom");
     }
+    sortUnitsByCost();
+    unitLayoutDirty = true;
     std.log.info("load: {s}", .{path});
 }

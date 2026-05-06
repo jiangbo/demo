@@ -2,6 +2,7 @@ const zhu = @import("zhu");
 
 const ctx = @import("context.zig");
 const map = @import("map.zig");
+const spawn = @import("spawn.zig");
 
 var titleLogo: zhu.graphics.Image = undefined;
 
@@ -21,7 +22,7 @@ pub fn enter() void {
 pub fn startGame() void {
     if (ctx.levelClear) {
         ctx.levelClear = false;
-        if (ctx.levelIndex + 1 >= map.maps.len) {
+        if (!spawn.hasNextLevel(ctx.levelIndex)) {
             ctx.win = true;
             ctx.pendingScene = .end;
         } else {

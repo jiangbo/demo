@@ -101,7 +101,7 @@ pub fn upgradeUnit(reg: *Registry, entity: Entity) void {
 }
 
 pub fn changeLevel(levelIndex: usize) void {
-    const level = levels[levelIndex];
+    const level = levelData(levelIndex);
 
     ctx.levelIndex = levelIndex;
     nextWaveIndex = 0;
@@ -115,8 +115,17 @@ pub fn changeLevel(levelIndex: usize) void {
     }
 }
 
+pub fn hasNextLevel(levelIndex: usize) bool {
+    return levelIndex < levels.len;
+}
+
+fn levelData(levelIndex: usize) Level {
+    const dataIndex = if (levelIndex == 0) 0 else levelIndex - 1;
+    return levels[dataIndex];
+}
+
 pub fn remainingWaveCount() usize {
-    return levels[ctx.levelIndex].waves.len - nextWaveIndex;
+    return levelData(ctx.levelIndex).waves.len - nextWaveIndex;
 }
 
 pub fn nextWaveSeconds() ?f32 {
@@ -129,7 +138,7 @@ pub fn deinit() void {
 }
 
 pub fn update(reg: *Registry, delta: f32) void {
-    const level = levels[ctx.levelIndex];
+    const level = levelData(ctx.levelIndex);
 
     // 下一波倒计时独立推进，和当前波敌人是否刷完无关。
     if (nextWaveTimer) |*timer| {
@@ -157,7 +166,7 @@ fn startWave(wave: Wave) void {
     spawnTimer = .initFinished(wave.spawnInterval);
     nextWaveTimer = .init(wave.nextWaveInterval);
     // 如果没有下一波了，就不需要倒计时了。
-    const len = levels[ctx.levelIndex].waves.len;
+    const len = levelData(ctx.levelIndex).waves.len;
     if (nextWaveIndex >= len) nextWaveTimer = null;
 }
 
@@ -174,8 +183,9 @@ fn spawnEnemy(reg: *Registry, enemyEnum: com.EnemyEnum) void {
     reg.add(entity, enemyEnum);
 
     var stats = reg.get(entity, com.Stats);
-    stats.level = levels[ctx.levelIndex].enemyLevel;
-    stats.rarity = levels[ctx.levelIndex].enemyRarity;
+    const level = levelData(ctx.levelIndex);
+    stats.level = level.enemyLevel;
+    stats.rarity = level.enemyRarity;
     reg.getPtr(entity, com.Stats).* = stats;
 
     reg.add(entity, start.point);

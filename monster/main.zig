@@ -17,6 +17,7 @@ const atlas: zhu.Atlas = @import("zon/atlas.zon");
 const fontZon: zhu.text.BitMapFont = @import("zon/font.zon");
 
 var registry: zhu.ecs.Registry = undefined;
+var battleLoaded: bool = false;
 
 pub fn init() void {
     zhu.audio.init(44100 / 2, &soundBuffer);
@@ -73,7 +74,11 @@ pub fn frame(delta: f32) void {
         },
         .clear, .end => {
             gui.update(&registry, delta);
-            zhu.batch.beginDraw(.black);
+            zhu.batch.beginDraw(tiled.backgroundColor orelse .black);
+            if (battleLoaded) {
+                scene.draw(&registry);
+                hud.draw();
+            }
         },
     }
     zhu.batch.flush();
@@ -93,24 +98,40 @@ pub fn deinit() void {
 }
 
 fn switchScene(s: ctx.SceneState) void {
+    const previous = ctx.currentScene;
+    const pushBattleOverlay = previous == .battle and (s == .clear or s == .end);
+
     ctx.pendingScene = null;
-    switch (ctx.currentScene) {
-        .battle => scene.exit(),
-        .title => title.exit(),
-        else => {},
+
+    if (!pushBattleOverlay) {
+        if (battleLoaded) {
+            scene.exit();
+            battleLoaded = false;
+        }
+        if (previous == .title) title.exit();
+        registry.reset();
     }
-    registry.reset();
 
     ctx.currentScene = s;
     switch (s) {
         .battle => {
             scene.enter();
+            battleLoaded = true;
             hud.arrangeUnits();
         },
         .title => {
             title.enter();
         },
-        else => {},
+        .clear => {
+            zhu.audio.playMusic("assets/audio/level-win.ogg");
+        },
+        .end => {
+            if (ctx.win) {
+                zhu.audio.playMusic("assets/audio/level-win.ogg");
+            } else {
+                zhu.audio.playMusic("assets/audio/violin-lose-4.ogg");
+            }
+        },
     }
 }
 

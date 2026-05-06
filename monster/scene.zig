@@ -35,7 +35,7 @@ pub fn deinit() void {
 pub fn enter() void {
     clearTimer = null;
     gameOverTriggered = false;
-    ctx.reset();
+    ctx.resetBattle();
     map.init(ctx.levelIndex);
     spawn.init();
     zhu.audio.playMusic("assets/audio/4 Battle Track INTRO TomMusic.ogg");
@@ -48,7 +48,7 @@ pub fn exit() void {
 pub fn restart(reg: *zhu.ecs.Registry) void {
     clearTimer = null;
     gameOverTriggered = false;
-    ctx.reset();
+    ctx.resetBattle();
     reg.reset();
     spawn.changeLevel(ctx.levelIndex);
     map.init(ctx.levelIndex);
@@ -103,13 +103,12 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
     if (clearTimer) |*t| {
         if (t.isFinishedOnceUpdate(delta)) {
             clearTimer = null;
-            if (ctx.levelIndex + 1 >= map.maps.len) {
+            if (!spawn.hasNextLevel(ctx.levelIndex)) {
                 ctx.win = true;
                 ctx.pendingScene = .end;
             } else {
                 ctx.pendingScene = .clear;
             }
-            zhu.audio.playMusic("assets/audio/level-win.ogg");
         }
     }
 
@@ -118,7 +117,6 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
         gameOverTriggered = true;
         ctx.win = false;
         ctx.pendingScene = .end;
-        zhu.audio.playMusic("assets/audio/violin-lose-4.ogg");
     }
 }
 

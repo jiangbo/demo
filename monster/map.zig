@@ -9,6 +9,7 @@ const com = @import("component.zig");
 pub const maps = [_]tiled.Map{
     @import("zon/title.zon"),
     @import("zon/level1.zon"),
+    @import("zon/level2.zon"),
 };
 var data: *const tiled.Map = &maps[0];
 const Animation = struct {

@@ -412,9 +412,9 @@ fn compareInt(a: anytype, b: @TypeOf(a)) i32 {
 }
 
 const slots = [_][:0]const u8{
-    "assets/save/SLOT_1.json",
-    "assets/save/SLOT_2.json",
-    "assets/save/SLOT_3.json",
+    "assets/save/SLOT_1.zon",
+    "assets/save/SLOT_2.zon",
+    "assets/save/SLOT_3.zon",
 };
 
 fn renderLoadPanel() void {
@@ -426,12 +426,17 @@ fn renderLoadPanel() void {
         var lbl: [16]u8 = undefined;
         const text = std.fmt.bufPrintZ(&lbl, "SLOT {}", .{i + 1}) catch unreachable;
         if (gui.igButton(text)) {
-            ctx.loadGame(slot) catch continue;
+            ctx.loadGame(slot) catch |err| {
+                std.log.err("load failed: {s}, {}", .{ slot, err });
+                continue;
+            };
         }
         gui.igSameLine();
     }
-    if (ctx.levelClear) {
+    if (ctx.levelClear and spawn.hasNextLevel(ctx.levelIndex)) {
         _ = gui.igText("下一关: %d", ctx.levelIndex + 1);
+    } else if (ctx.levelClear) {
+        _ = gui.igText("已通关");
     } else {
         _ = gui.igText("当前关卡: %d", ctx.levelIndex);
     }
@@ -447,12 +452,17 @@ fn renderSavePanel() void {
         var lbl: [16]u8 = undefined;
         const text = std.fmt.bufPrintZ(&lbl, "SLOT {}", .{i + 1}) catch unreachable;
         if (gui.igButton(text)) {
-            ctx.saveGame(slot) catch continue;
+            ctx.saveGame(slot) catch |err| {
+                std.log.err("save failed: {s}, {}", .{ slot, err });
+                continue;
+            };
         }
         gui.igSameLine();
     }
-    if (ctx.levelClear) {
+    if (ctx.levelClear and spawn.hasNextLevel(ctx.levelIndex)) {
         _ = gui.igText("下一关: %d", ctx.levelIndex + 1);
+    } else if (ctx.levelClear) {
+        _ = gui.igText("已通关");
     } else {
         _ = gui.igText("当前关卡: %d", ctx.levelIndex);
     }
@@ -586,8 +596,14 @@ fn renderLevelClear() void {
     if (gui.igBegin("通关结算按钮", null, flags)) {
         gui.igSetWindowFontScale(1.5);
         if (gui.igButtonEx("下一关", .{ .x = 150, .y = 45 })) {
-            ctx.levelIndex += 1;
-            ctx.pendingScene = .battle;
+            ctx.levelClear = false;
+            if (spawn.hasNextLevel(ctx.levelIndex)) {
+                ctx.levelIndex += 1;
+                ctx.pendingScene = .battle;
+            } else {
+                ctx.win = true;
+                ctx.pendingScene = .end;
+            }
         }
         gui.igSameLine();
         gui.igSetCursorPosX(gui.igGetCursorPosX() + 20);
