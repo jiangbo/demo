@@ -1,0 +1,4 @@
+.{
+    .scene = .title,
+    .time_scale = 1,
+}
