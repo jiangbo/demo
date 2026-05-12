@@ -1,17 +1,30 @@
 const std = @import("std");
 
-const gpu = @import("gpu.zig");
+const sk = @import("sokol");
 const math = @import("math.zig");
 const assets = @import("assets.zig");
 const window = @import("window.zig");
 
-pub const frameStats = gpu.frameStats;
-pub const queryFrameStats = gpu.queryFrameStats;
-pub const queryBackend = gpu.queryBackend;
+pub const Texture = sk.gfx.View;
+
+pub fn frameStats(enable: bool) void {
+    if (enable) sk.gfx.enableFrameStats() else sk.gfx.disableFrameStats();
+}
+
+pub const queryFrameStats = sk.gfx.queryFrameStats;
+pub const queryBackend = sk.gfx.queryBackend;
 
 pub const Vector2 = math.Vector2;
 
 pub const ImageId = assets.Id;
+
+pub fn queryTextureSize(texture: Texture) math.Vector {
+    const image = sk.gfx.queryViewImage(texture);
+    return .{
+        .x = @floatFromInt(sk.gfx.queryImageWidth(image)),
+        .y = @floatFromInt(sk.gfx.queryImageHeight(image)),
+    };
+}
 
 pub const Frame = struct {
     offset: Vector2, // 图集中的偏移位置
@@ -129,7 +142,7 @@ pub fn loopFramesX(comptime count: u8, size: Vector2, d: f32) //
 }
 
 pub const Image = struct {
-    texture: gpu.Texture,
+    texture: Texture,
     offset: math.Vector2 = .zero,
     size: math.Vector2,
 
@@ -154,8 +167,21 @@ pub const Atlas = struct {
 
 pub var textCount: u32 = 0;
 pub fn beginDraw(clearColor: Color) void {
-    gpu.begin(@bitCast(clearColor), window.viewRect);
+    var action = sk.gfx.PassAction{};
+    action.colors[0] = .{
+        .load_action = .CLEAR,
+        .clear_value = @bitCast(clearColor),
+    };
+    sk.gfx.beginPass(.{ .action = action, .swapchain = sk.glue.swapchain() });
+    const view = window.viewRect;
+    sk.gfx.applyViewportf(view.min.x, view.min.y, //
+        view.size.x, view.size.y, true);
     textCount = 0;
+}
+
+pub fn endDraw() void {
+    sk.gfx.endPass();
+    sk.gfx.commit();
 }
 
 pub const Color = extern struct {

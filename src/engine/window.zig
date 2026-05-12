@@ -7,7 +7,6 @@ const assets = @import("assets.zig");
 const audio = @import("audio.zig");
 const input = @import("input.zig");
 const text = @import("text.zig");
-const gpu = @import("gpu.zig");
 const graphics = @import("graphics.zig");
 const batch = @import("batch.zig");
 

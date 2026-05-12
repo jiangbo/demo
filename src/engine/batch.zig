@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const gpu = @import("gpu.zig");
+const sk = @import("sokol");
 const math = @import("math.zig");
 const shader = @import("shader/quad.glsl.zig");
 const graphics = @import("graphics.zig");
@@ -17,7 +17,7 @@ const CommandEnum = enum { draw, scissor };
 pub const Command = struct {
     start: u32 = 0, // 起始顶点索引
     end: u32 = 0, // 结束顶点索引
-    texture: gpu.Texture = .{}, // 纹理
+    texture: graphics.Texture = .{}, // 纹理
     position: Vector2 = .zero, // 位置
     scale: Vector2 = .one, // 缩放
     commandEnum: CommandEnum = .draw, // 命令类型
@@ -39,25 +39,25 @@ pub const Vertex = extern struct {
     color: graphics.Color = .white, // 顶点颜色
 };
 
-pub var pipeline: gpu.RenderPipeline = undefined;
+pub var pipeline: sk.gfx.Pipeline = undefined;
 pub var vertexBuffer: std.ArrayList(Vertex) = .empty;
 pub var whiteImage: graphics.Image = undefined;
-var nearestSampler: gpu.Sampler = undefined;
+var nearestSampler: sk.gfx.Sampler = undefined;
 
 var commandBuffer: std.ArrayList(Command) = .empty;
-var gpuBuffer: gpu.Buffer = undefined;
+var vertexBufferHandle: sk.gfx.Buffer = undefined;
 
 pub fn init(vertexes: []Vertex, commands: []Command) void {
-    gpuBuffer = gpu.createBuffer(.{
+    vertexBufferHandle = sk.gfx.makeBuffer(.{
         .size = @sizeOf(Vertex) * vertexes.len,
         .usage = .{ .stream_update = true },
     });
     vertexBuffer = .initBuffer(vertexes);
     commandBuffer = .initBuffer(commands);
 
-    const shaderDesc = shader.quadShaderDesc(gpu.queryBackend());
+    const shaderDesc = shader.quadShaderDesc(sk.gfx.queryBackend());
     pipeline = createQuadPipeline(shaderDesc);
-    nearestSampler = gpu.createSampler(.{});
+    nearestSampler = sk.gfx.makeSampler(.{});
 
     camera.init();
 }
@@ -88,16 +88,25 @@ pub fn flush() void {
     if (vertexBuffer.items.len == 0) return; // 没需要绘制的东西
 
     currentCommand().end = @intCast(vertexBuffer.items.len);
-    gpu.updateBuffer(gpuBuffer, vertexBuffer.items);
+    _ = sk.gfx.updateBuffer(
+        vertexBufferHandle,
+        sk.gfx.asRange(vertexBuffer.items),
+    );
     for (commandBuffer.items) |cmd| {
         switch (cmd.commandEnum) {
             .draw => doDraw(cmd),
-            .scissor => gpu.scissor(.init(cmd.position, cmd.scale)),
+            .scissor => sk.gfx.applyScissorRectf(
+                cmd.position.x,
+                cmd.position.y,
+                cmd.scale.x,
+                cmd.scale.y,
+                true,
+            ),
         }
     }
 }
 
-pub const commit = gpu.end;
+pub const commit = graphics.endDraw;
 
 pub fn currentCommand() *Command {
     return &commandBuffer.items[commandBuffer.items.len - 1];
@@ -213,7 +222,7 @@ pub fn startNewDrawCommand() void {
 
 fn doDraw(cmd: Command) void {
     // 绑定流水线
-    gpu.setPipeline(pipeline);
+    sk.gfx.applyPipeline(pipeline);
 
     // 处理 uniform 变量
     const x, const y = .{ camera.size.x, camera.size.y };
@@ -223,26 +232,27 @@ fn doDraw(cmd: Command) void {
     const scaleMatrix = math.Matrix.scaleVec(cmd.scale.toVector3(1));
     const view = math.Matrix.mul(scaleMatrix, translate);
 
-    const size = gpu.queryTextureSize(cmd.texture);
-    gpu.setUniform(shader.UB_vs_params, .{
+    const size = graphics.queryTextureSize(cmd.texture);
+    const uniforms = shader.VsParams{
         .viewMatrix = math.Matrix.mul(orth, view).mat,
         .textureVec = [4]f32{ 1 / size.x, 1 / size.y, 1, 1 },
-    });
+    };
+    sk.gfx.applyUniforms(shader.UB_vs_params, sk.gfx.asRange(&uniforms));
 
     // 绑定组
-    var bindGroup: gpu.BindGroup = .{};
-    bindGroup.setTexture(cmd.texture);
-    bindGroup.setVertexBuffer(gpuBuffer);
-    bindGroup.setVertexOffset(cmd.start * @sizeOf(Vertex));
-    bindGroup.setSampler(nearestSampler);
-    gpu.setBindGroup(bindGroup);
+    var bindings = sk.gfx.Bindings{};
+    bindings.views[0] = cmd.texture;
+    bindings.vertex_buffers[0] = vertexBufferHandle;
+    bindings.vertex_buffer_offsets[0] = @intCast(cmd.start * @sizeOf(Vertex));
+    bindings.samplers[0] = nearestSampler;
+    sk.gfx.applyBindings(bindings);
 
     // 绘制
-    gpu.draw(0, 4, cmd.end - cmd.start);
+    sk.gfx.draw(0, 4, cmd.end - cmd.start);
 }
 
-fn createQuadPipeline(shaderDesc: gpu.ShaderDesc) gpu.RenderPipeline {
-    var vertexLayout = gpu.VertexLayoutState{};
+fn createQuadPipeline(shaderDesc: sk.gfx.ShaderDesc) sk.gfx.Pipeline {
+    var vertexLayout = sk.gfx.VertexLayoutState{};
 
     vertexLayout.attrs[0].format = .FLOAT2;
     vertexLayout.attrs[1].format = .FLOAT;
@@ -253,12 +263,12 @@ fn createQuadPipeline(shaderDesc: gpu.ShaderDesc) gpu.RenderPipeline {
     vertexLayout.attrs[6].format = .FLOAT4;
     vertexLayout.buffers[0].step_func = .PER_INSTANCE;
 
-    return gpu.createPipeline(.{
-        .shader = gpu.createShader(shaderDesc),
+    return sk.gfx.makePipeline(.{
+        .shader = sk.gfx.makeShader(shaderDesc),
         .layout = vertexLayout,
         .primitive_type = .TRIANGLE_STRIP,
         .colors = init: {
-            var c: [8]gpu.ColorTargetState = @splat(.{});
+            var c: [8]sk.gfx.ColorTargetState = @splat(.{});
             c[0] = .{ .blend = .{
                 .enabled = true,
                 .src_factor_rgb = .SRC_ALPHA,
