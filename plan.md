@@ -6,7 +6,7 @@ CPP 源码路径：C:\workspace\github\TinyFarm
 - [x] 00-开篇.md
 - [x] 01-构建与运行.md
 - [x] 02-游戏架构设计.md
-- [ ] 03-从入口到第一帧.md
+- [x] 03-从入口到第一帧.md
 - [ ] 04-测试用例入门.md
 - [ ] 05-Debug UI 与可观测性基础.md
 - [ ] 06-事件系统.md

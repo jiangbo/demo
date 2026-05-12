@@ -62,11 +62,6 @@ pub fn init(vertexes: []Vertex, commands: []Command) void {
     camera.init();
 }
 
-pub fn initWithWhiteTexture(size: Vector2, buffer: []Vertex) void {
-    init(size, buffer);
-    whiteImage = assets.createWhiteImage("engine/white");
-}
-
 pub const Option = struct {
     size: ?Vector2 = null, // 大小
     scale: Vector2 = .one, // 缩放

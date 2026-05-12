@@ -101,7 +101,7 @@ pub fn createWhiteImage(comptime key: [:0]const u8) Image {
     const data: [4]u8 = @splat(0xFF);
     const image = Texture.makeImage(1, 1, &data);
     const view = sk.gfx.makeView(.{ .texture = .{ .image = image } });
-    Texture.cache.put(allocator, key, view) catch oom();
+    Texture.cache.put(allocator, comptime id(key), view) catch oom();
     imageCache.put(allocator, comptime id(key), .{
         .texture = view,
         .size = .one,
