@@ -26,7 +26,7 @@ pub fn build(b: *std.Build) !void {
     sokol.artifact("sokol_clib").root_module.addIncludePath(include);
 
     const exeModule = b.createModule(.{
-        .root_source_file = b.path("monster/main.zig"),
+        .root_source_file = b.path("farm/main.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{

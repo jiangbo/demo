@@ -1,25 +1,18 @@
-# Monster Wars - Zig 游戏项目
+# Tiny Farm - Zig 游戏项目
 
 ## 项目概述
 
 这是一个 Zig 编写的 2D 游戏项目，包含：
 - **zhu 引擎**：自定义 2D 游戏引擎，位于 `src/engine/`
-- **Monster Wars（怪物战争）**：塔防游戏，位于 `monster/`，是当前工作的主要目录
+- **Tiny Farm（迷你农场）**：2D 农场模拟游戏，位于 `farm/`，是当前工作的主要目录
 
-最低 Zig 版本：**0.15.1**
+最低 Zig 版本：**0.15.1**，需要进行实现时，可以参考 monster 目录中的代码。
 
 ## 构建命令
 
 ```bash
-# 原生构建
-zig build
-zig build run
-
-# WebAssembly 构建
-zig build -Dtarget=wasm32-emscripten --release=safe
-
-# 编译着色器（修改 shader/*.glsl 后需要运行）
-.\generate-shader.ps1
+zig build # 编译
+zig build run # 编译并运行
 ```
 
 ## 引擎模块说明
@@ -80,7 +73,7 @@ zig build -Dtarget=wasm32-emscripten --release=safe
 ## 注意事项
 
 以下目录是**旧项目/工具**，不是当前工作范围，不需要关注：
-- `dungeon/`、`shooter/`、`ghost/`、`sunny/` — 早期游戏原型
+- `dungeon/`、`shooter/`、`ghost/`、`sunny/`、`monster/` — 早期游戏原型
 - `extend/` — 独立工具（图集打包、字体生成、Tiled 解析）
 - `assets-00/` ~ `assets-04/` — 旧/备用资源集
 - `src/main.zig` — ECS 测试程序（不是构建目标）
