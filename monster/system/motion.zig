@@ -12,20 +12,20 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
 fn followPath(registry: *zhu.ecs.Registry) void {
     var view = registry.view(.{ com.Enemy, com.motion.Velocity });
     while (view.next()) |entity| {
-        if (view.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
+        if (registry.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
 
-        if (view.tryGet(entity, com.motion.BlockBy)) |blockBy| {
+        if (registry.tryGet(entity, com.motion.BlockBy)) |blockBy| {
             if (registry.validEntity(blockBy.v)) continue;
-            view.remove(entity, com.motion.BlockBy);
-            view.add(entity, com.animation.Play{
+            registry.remove(entity, com.motion.BlockBy);
+            registry.add(entity, com.animation.Play{
                 .index = @intFromEnum(com.StateEnum.walk),
                 .loop = true,
             });
         }
 
         // 当前位置和目标位置是否足够靠近
-        const enemy = view.getPtr(entity, com.Enemy);
-        const pos = view.get(entity, com.Position);
+        const enemy = registry.getPtr(entity, com.Enemy);
+        const pos = registry.get(entity, com.Position);
         if (enemy.target.point.sub(pos).length2() > 25) continue;
 
         // 到达目标位置，转向，即更新速度
@@ -40,7 +40,7 @@ fn followPath(registry: *zhu.ecs.Registry) void {
             continue;
         }
         enemy.target = map.paths.get(nextPathId).?;
-        const velocity = view.getPtr(entity, com.motion.Velocity);
+        const velocity = registry.getPtr(entity, com.motion.Velocity);
         const direction = enemy.target.point.sub(pos).normalize();
         velocity.v = direction.scale(enemy.speed);
     }
@@ -49,25 +49,25 @@ fn followPath(registry: *zhu.ecs.Registry) void {
 fn move(registry: *zhu.ecs.Registry, delta: f32) void {
     var view = registry.view(.{com.motion.Velocity});
     while (view.next()) |entity| {
-        if (view.has(entity, com.motion.BlockBy)) continue; // 被阻挡的不处理
-        if (view.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
+        if (registry.has(entity, com.motion.BlockBy)) continue; // 被阻挡的不处理
+        if (registry.has(entity, com.attack.Lock)) continue; // 攻击锁定的不处理
 
         // 先移动
-        const position = view.getPtr(entity, com.Position);
-        const velocity = view.get(entity, com.motion.Velocity);
+        const position = registry.getPtr(entity, com.Position);
+        const velocity = registry.get(entity, com.motion.Velocity);
         position.* = position.*.add(velocity.v.scale(delta));
 
         // 再检查是否被阻挡
         var blockView = registry.view(.{com.motion.Blocker});
         while (blockView.next()) |blocker| {
-            const pos = blockView.get(blocker, com.Position);
+            const pos = registry.get(blocker, com.Position);
             if (pos.sub(position.*).length2() > 40 * 40) continue;
 
-            const block = blockView.getPtr(blocker, com.motion.Blocker);
+            const block = registry.getPtr(blocker, com.motion.Blocker);
             if (block.current < block.max) {
                 const target = blockView.toEntity(blocker);
-                view.add(entity, com.motion.BlockBy{ .v = target });
-                view.add(entity, com.attack.Target{ .v = target });
+                registry.add(entity, com.motion.BlockBy{ .v = target });
+                registry.add(entity, com.attack.Target{ .v = target });
                 block.current += 1;
                 break;
             }

@@ -164,16 +164,16 @@ pub fn canMove(pos: TilePosition) bool {
 pub fn moveIfNeed() void {
     var view = ecs.w.view(.{ WantToMove, TilePosition });
     blk: while (view.next()) |entity| {
-        const dest = view.get(entity, WantToMove)[0];
+        const dest = ecs.w.get(entity, WantToMove)[0];
         if (!canMove(dest)) continue;
 
         for (ecs.w.raw(TilePosition)) |pos| {
             if (pos.equals(dest)) continue :blk;
         }
 
-        view.getPtr(entity, TilePosition).* = dest;
+        ecs.w.getPtr(entity, TilePosition).* = dest;
         const pos = worldPosition(dest);
-        view.getPtr(entity, Position).* = pos;
+        ecs.w.getPtr(entity, Position).* = pos;
     }
 }
 
@@ -253,7 +253,8 @@ pub fn draw() void {
 
 fn drawPlayerWalk() void {
     const playerEntity = ecs.w.getIdentityEntity(Player).?;
-    const viewField = ecs.w.get(playerEntity, ViewField)[0];
+    const playerIndex = ecs.w.toIndex(playerEntity).?;
+    const viewField = ecs.w.get(playerIndex, ViewField)[0];
 
     for (walks, 0..) |isWalk, index| {
         if (!isWalk) continue;

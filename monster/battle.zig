@@ -13,9 +13,9 @@ pub fn cleanAttackTimerIfDone(reg: *ecs.Registry, delta: f32) void {
     });
 
     while (view.next()) |entity| {
-        const timer = view.getPtr(entity, com.AttackTimer);
+        const timer = reg.getPtr(entity, com.AttackTimer);
         if (timer.v.isFinishedOnceUpdate(delta)) {
-            view.remove(entity, com.AttackTimer);
+            reg.remove(entity, com.AttackTimer);
         }
     }
 }
@@ -29,17 +29,17 @@ pub fn cleanInvalidTarget(reg: *ecs.Registry) void {
     });
 
     while (view.next()) |entity| {
-        const target = view.get(entity, com.Target).v;
-        if (reg.validEntity(target)) { // 目标还存活
-            const range = view.get(entity, com.AttackRange).v + 20; // 目标的中心
-            const pos = view.get(entity, com.Position);
-            const targetPos = reg.get(target, com.Position);
+        const target = reg.get(entity, com.Target).v;
+        if (reg.toIndex(target)) |target_index| { // 目标还存活
+            const range = reg.get(entity, com.AttackRange).v + 20; // 目标的中心
+            const pos = reg.get(entity, com.Position);
+            const targetPos = reg.get(target_index, com.Position);
             if (pos.sub(targetPos).length2() <= range * range) {
                 continue; // 目标在攻击范围内
             }
         }
         std.log.debug("entity: {} clean target: {}", .{ entity, target });
-        view.remove(entity, com.Target);
+        reg.remove(entity, com.Target);
     }
 }
 
@@ -49,9 +49,9 @@ pub fn cleanInvalidTarget(reg: *ecs.Registry) void {
 pub fn attack(reg: *ecs.Registry) void {
     var view = reg.view(.{ com.Position, com.AttackRange });
     while (view.next()) |entity| {
-        if (view.has(entity, com.AttackTimer)) continue; // 攻击冷却中
+        if (reg.has(entity, com.AttackTimer)) continue; // 攻击冷却中
 
-        if (view.tryGet(entity, com.Target)) |target| {
+        if (reg.tryGet(entity, com.Target)) |target| {
             reg.addEvent(com.AttackEvent{ // 已经有目标了，直接攻击
                 .attacker = view.toEntity(entity),
                 .target = target.v,
@@ -59,19 +59,19 @@ pub fn attack(reg: *ecs.Registry) void {
             continue;
         }
 
-        const pos = view.get(entity, com.Position);
-        const range = view.get(entity, com.AttackRange).v + 20; // 目标的中心
+        const pos = reg.get(entity, com.Position);
+        const range = reg.get(entity, com.AttackRange).v + 20; // 目标的中心
         const range2 = range * range;
 
         var closestTarget: ?zhu.ecs.Entity.Index = null; // 找最近的敌方
         var closestLength2: f32 = std.math.floatMax(f32);
 
-        const isEnemy = view.has(entity, com.Enemy);
+        const isEnemy = reg.has(entity, com.Enemy);
         var targetView = reg.view(.{com.Position});
         while (targetView.next()) |target| {
-            if (isEnemy == view.has(target, com.Enemy)) continue; // 同一边的
+            if (isEnemy == reg.has(target, com.Enemy)) continue; // 同一边的
 
-            const targetPos = targetView.get(target, com.Position);
+            const targetPos = reg.get(target, com.Position);
             const length2 = pos.sub(targetPos).length2();
             if (length2 <= range2 and length2 < closestLength2) {
                 closestTarget = target;
@@ -80,7 +80,7 @@ pub fn attack(reg: *ecs.Registry) void {
         }
 
         if (closestTarget) |target| {
-            view.add(entity, com.Target{ .v = view.toEntity(target) });
+            reg.add(entity, com.Target{ .v = view.toEntity(target) });
             std.log.debug("entity: {} attack: {}", .{ entity, target });
             reg.addEvent(com.AttackEvent{ // 找到了目标，攻击
                 .attacker = view.toEntity(entity),

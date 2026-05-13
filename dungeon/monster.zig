@@ -50,14 +50,15 @@ pub fn init() void {
     const playerView = ecs.w.getIdentity(Player, ViewField).?[0];
     for (map.spawns[1..]) |pos| {
         const entity = ecs.w.createEntity();
-        if (playerView.contains(pos)) ecs.w.add(entity, PlayerView{});
+        const entityIndex = ecs.w.toIndex(entity).?;
+        if (playerView.contains(pos)) ecs.w.add(entityIndex, PlayerView{});
 
         const index = zhu.random().weightedIndex(u8, &frequencies);
         const template = &templates[index];
-        ecs.w.add(entity, pos);
-        ecs.w.add(entity, map.worldPosition(pos));
-        ecs.w.add(entity, map.getTextureFromTile(template.tile));
-        ecs.w.add(entity, Name{template.name});
+        ecs.w.add(entityIndex, pos);
+        ecs.w.add(entityIndex, map.worldPosition(pos));
+        ecs.w.add(entityIndex, map.getTextureFromTile(template.tile));
+        ecs.w.add(entityIndex, Name{template.name});
 
         switch (templates[index].entityType) {
             .item => spawnItem(entity, template),
@@ -67,20 +68,22 @@ pub fn init() void {
 }
 
 fn spawnItem(entity: ecs.Entity, t: *const Template) void {
-    ecs.w.add(entity, Item{});
+    const entityIndex = ecs.w.toIndex(entity).?;
+    ecs.w.add(entityIndex, Item{});
     if (t.tile == .map) return;
     if (t.damage == 0) {
-        return ecs.w.add(entity, Healing{ .v = t.value });
+        return ecs.w.add(entityIndex, Healing{ .v = t.value });
     }
-    ecs.w.add(entity, Damage{ .v = t.damage });
+    ecs.w.add(entityIndex, Damage{ .v = t.damage });
 }
 
 fn spawnMonster(enemy: ecs.Entity, t: *const Template) void {
+    const enemyIndex = ecs.w.toIndex(enemy).?;
     const hp: i32 = @intCast(t.value);
-    ecs.w.add(enemy, Health{ .current = hp, .max = hp });
-    ecs.w.add(enemy, ChasePlayer{});
-    ecs.w.add(enemy, Enemy{});
-    ecs.w.add(enemy, Damage{ .v = t.damage });
+    ecs.w.add(enemyIndex, Health{ .current = hp, .max = hp });
+    ecs.w.add(enemyIndex, ChasePlayer{});
+    ecs.w.add(enemyIndex, Enemy{});
+    ecs.w.add(enemyIndex, Damage{ .v = t.damage });
 }
 
 pub fn update() void {
@@ -93,20 +96,21 @@ pub fn update() void {
 
 fn moveOrAttack() void {
     const playerEntity = ecs.w.getIdentityEntity(Player).?;
-    const playerPos = ecs.w.get(playerEntity, TilePosition);
-    const rect = ecs.w.get(playerEntity, ViewField)[0];
+    const playerIndex = ecs.w.toIndex(playerEntity).?;
+    const playerPos = ecs.w.get(playerIndex, TilePosition);
+    const rect = ecs.w.get(playerIndex, ViewField)[0];
 
     var view = ecs.w.view(.{ ChasePlayer, TilePosition });
     while (view.next()) |entity| {
-        var pos = view.get(entity, TilePosition);
-        if (rect.contains(pos)) view.add(entity, PlayerView{});
+        var pos = ecs.w.get(entity, TilePosition);
+        if (rect.contains(pos)) ecs.w.add(entity, PlayerView{});
         const enemyRect: TileRect = .fromCenter(pos, viewSize);
         if (!enemyRect.contains(playerPos)) continue;
 
         const next = map.queryLessDistance(pos) orelse continue;
 
         if (playerPos.equals(next)) {
-            view.add(entity, WantToAttack{playerEntity});
+            ecs.w.add(entity, WantToAttack{playerEntity});
             continue;
         }
 
@@ -115,8 +119,8 @@ fn moveOrAttack() void {
 
             const step = zhu.math.randomStep(u8, 1);
             if (pos.x == next.x) pos.x +%= step else pos.y +%= step;
-            view.add(entity, WantToMove{pos});
+            ecs.w.add(entity, WantToMove{pos});
             break;
-        } else view.add(entity, WantToMove{next});
+        } else ecs.w.add(entity, WantToMove{next});
     }
 }

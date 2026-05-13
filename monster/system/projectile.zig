@@ -10,13 +10,13 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
     // 更新所有投射物的飞行状态
     var view = reg.reverseView(.{com.Projectile});
     while (view.next()) |entity| {
-        const projectile = view.getPtr(entity, com.Projectile);
+        const projectile = reg.getPtr(entity, com.Projectile);
         projectile.time += delta;
 
         // 飞行时间是否大于等于总时间
         if (projectile.time >= projectile.totalTime) {
             hitTarget(reg, projectile.*);
-            view.destroy(entity);
+            reg.destroy(entity);
             continue;
         }
 
@@ -27,7 +27,7 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
 
         const arc = @sin(percent * std.math.pi) * projectile.arc;
         pos = pos.addY(-arc).add(projectile.offset);
-        view.add(entity, pos);
+        reg.add(entity, pos);
 
         // 处理旋转角度
         const direction = pos.sub(projectile.previous);
@@ -37,10 +37,11 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
 }
 
 fn hitTarget(reg: *zhu.ecs.Registry, projectile: com.Projectile) void {
-    const stats = reg.tryGetPtr(projectile.target, com.Stats) orelse return;
+    const target = reg.toIndex(projectile.target) orelse return;
+    const stats = reg.tryGetPtr(target, com.Stats) orelse return;
 
-    if (reg.validEntity(projectile.owner)) {
-        if (reg.tryGet(projectile.owner, com.audio.Hit)) |hitSound| {
+    if (reg.toIndex(projectile.owner)) |owner| {
+        if (reg.tryGet(owner, com.audio.Hit)) |hitSound| {
             zhu.audio.playSound(hitSound.path);
         }
     }
@@ -48,9 +49,9 @@ fn hitTarget(reg: *zhu.ecs.Registry, projectile: com.Projectile) void {
     const damage = projectile.damage - stats.defense;
     stats.health -= @max(damage, projectile.damage / 10);
 
-    reg.add(projectile.target, com.attack.Injured{});
+    reg.add(target, com.attack.Injured{});
     if (stats.health <= 0) {
-        reg.add(projectile.target, com.Dead{});
+        reg.add(target, com.Dead{});
     }
 }
 
@@ -58,9 +59,9 @@ pub fn draw(reg: *zhu.ecs.Registry) void {
     var view = reg.view(.{com.Projectile});
 
     while (view.next()) |entity| {
-        const projectile = view.getPtr(entity, com.Projectile);
-        const image = view.get(entity, zhu.graphics.Image);
-        const position = view.get(entity, com.Position);
+        const projectile = reg.getPtr(entity, com.Projectile);
+        const image = reg.get(entity, zhu.graphics.Image);
+        const position = reg.get(entity, com.Position);
         zhu.batch.drawImage(image, position, .{
             .radian = projectile.rotation,
         });

@@ -8,9 +8,9 @@ pub fn draw(registry: *zhu.ecs.Registry) void {
 
     var view = registry.view(.{ com.Render, com.Position, com.Sprite });
     while (view.next()) |entity| {
-        const render = view.get(entity, com.Render);
-        const position = view.get(entity, com.Position);
-        const sprite = view.get(entity, com.Sprite);
+        const render = registry.get(entity, com.Render);
+        const position = registry.get(entity, com.Position);
+        const sprite = registry.get(entity, com.Sprite);
 
         zhu.batch.drawImage(sprite.image, position.add(sprite.offset), .{
             .size = sprite.size,

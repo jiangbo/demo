@@ -12,7 +12,9 @@ pub fn update(reg: *zhu.ecs.Registry, delta: f32) void {
         if (timer.remaining > 0) continue;
 
         switch (timer.type) {
-            .attack => reg.add(timer.entity, com.attack.Ready{}),
+            .attack => if (reg.toIndex(timer.entity)) |index| {
+                reg.add(index, com.attack.Ready{});
+            },
         }
         _ = timerEvents.swapRemove(iterator.index);
     }

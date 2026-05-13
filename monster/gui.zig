@@ -102,15 +102,16 @@ fn renderTitleButtons() void {
 
 fn renderHoveredUnit(reg: *Registry) void {
     const entity = ctx.hoveredEntity orelse return;
-    const stats = reg.tryGet(entity, com.Stats) orelse return;
+    const index = reg.toIndex(entity) orelse return;
+    const stats = reg.tryGet(index, com.Stats) orelse return;
 
     if (gui.igBeginTooltip()) {
-        if (reg.tryGet(entity, com.Name)) |name| {
+        if (reg.tryGet(index, com.Name)) |name| {
             _ = gui.igText("%s  ", name.value.ptr);
             gui.igSameLine();
         }
 
-        if (reg.tryGet(entity, com.ClassName)) |className| {
+        if (reg.tryGet(index, com.ClassName)) |className| {
             _ = gui.igText("%s", className.value.ptr);
         }
 
@@ -129,18 +130,19 @@ fn renderHoveredUnit(reg: *Registry) void {
 
 fn renderSelectedUnit(reg: *Registry) void {
     const entity = ctx.selectedEntity orelse return;
-    const stats = reg.tryGet(entity, com.Stats) orelse return;
+    const index = reg.toIndex(entity) orelse return;
+    const stats = reg.tryGet(index, com.Stats) orelse return;
 
     gui.igSetNextWindowPos(.{ .x = 10, .y = 10 }, gui.ImGuiCond_Always);
     const flags = gui.ImGuiWindowFlags_NoTitleBar |
         gui.ImGuiWindowFlags_AlwaysAutoResize;
     if (gui.igBegin("角色状态", null, flags)) {
-        if (reg.tryGet(entity, com.Name)) |name| {
+        if (reg.tryGet(index, com.Name)) |name| {
             _ = gui.igText("%s  ", name.value.ptr);
             gui.igSameLine();
         }
 
-        if (reg.tryGet(entity, com.ClassName)) |className| {
+        if (reg.tryGet(index, com.ClassName)) |className| {
             _ = gui.igText("%s", className.value.ptr);
         }
 
@@ -155,7 +157,7 @@ fn renderSelectedUnit(reg: *Registry) void {
         gui.igSameLine();
         _ = gui.igText("攻击间隔: %.2f", stats.interval);
 
-        if (reg.tryGet(entity, com.motion.Blocker)) |blocker| {
+        if (reg.tryGet(index, com.motion.Blocker)) |blocker| {
             _ = gui.igText("阻挡数量: %d / %d", blocker.current, blocker.max);
         }
 
@@ -167,23 +169,24 @@ fn renderSelectedUnit(reg: *Registry) void {
 }
 
 fn renderSelectedSkill(reg: *Registry, entity: zhu.ecs.Entity) void {
-    const value = reg.tryGet(entity, com.skill.Skill) orelse return;
-    const ready = reg.has(entity, com.skill.Ready);
-    const active = reg.has(entity, com.skill.Active);
-    const passive = value.passive or reg.has(entity, com.skill.Passive);
+    const index = reg.toIndex(entity) orelse return;
+    const value = reg.tryGet(index, com.skill.Skill) orelse return;
+    const ready = reg.has(index, com.skill.Ready);
+    const active = reg.has(index, com.skill.Active);
+    const passive = value.passive or reg.has(index, com.skill.Passive);
 
     gui.igBeginDisabled(!ready);
     const clicked = gui.igButton(value.name.ptr);
     gui.igEndDisabled();
     if (ready and (clicked or zhu.input.key.pressed(.S))) {
-        reg.add(entity, com.skill.Cast{});
+        reg.add(index, com.skill.Cast{});
     }
     gui.igSameLine();
 
     if (active) {
         if (passive) {
             _ = gui.igText("被动技能激活中");
-        } else if (reg.tryGet(entity, com.skill.Timer)) |timer| {
+        } else if (reg.tryGet(index, com.skill.Timer)) |timer| {
             const remaining = @max(0, value.duration - timer.elapsed);
             _ = gui.igText("激活中，剩余时间: %.1f 秒", remaining);
         }
@@ -194,7 +197,7 @@ fn renderSelectedSkill(reg: *Registry, entity: zhu.ecs.Entity) void {
         gui.igSameLine();
         if (ready) {
             _ = gui.igText("技能准备就绪");
-        } else if (reg.tryGet(entity, com.skill.Timer)) |timer| {
+        } else if (reg.tryGet(index, com.skill.Timer)) |timer| {
             gui.igProgressBar(timer.progress(), .{ .x = 120, .y = 0 }, null);
         }
     }
@@ -203,9 +206,10 @@ fn renderSelectedSkill(reg: *Registry, entity: zhu.ecs.Entity) void {
 }
 
 fn renderSelectedUpgrade(reg: *Registry, entity: zhu.ecs.Entity) void {
-    if (!reg.has(entity, com.Player)) return;
+    const index = reg.toIndex(entity) orelse return;
+    if (!reg.has(index, com.Player)) return;
 
-    const player = reg.get(entity, com.Player);
+    const player = reg.get(index, com.Player);
     const upgradeCost = player.cost;
 
     gui.igBeginDisabled(ctx.cost < upgradeCost);
@@ -221,14 +225,15 @@ fn renderSelectedUpgrade(reg: *Registry, entity: zhu.ecs.Entity) void {
 }
 
 fn renderSelectedLeave(reg: *Registry, entity: zhu.ecs.Entity) void {
-    if (!reg.has(entity, com.Player)) return;
+    const index = reg.toIndex(entity) orelse return;
+    if (!reg.has(index, com.Player)) return;
 
-    const player = reg.get(entity, com.Player);
+    const player = reg.get(index, com.Player);
     const refund = player.cost * 0.5;
 
     if (gui.igButton("撤退") or zhu.input.key.pressed(.R)) {
         ctx.cost += refund;
-        reg.add(entity, com.Dead{});
+        reg.add(index, com.Dead{});
         ctx.selectedEntity = null;
     }
     gui.igSameLine();

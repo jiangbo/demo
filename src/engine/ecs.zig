@@ -241,10 +241,18 @@ pub const Registry = struct {
         return self.entities.isAlive(entity orelse return false);
     }
 
+    pub fn toIndex(self: *const Registry, entity: Entity) ?Entity.Index {
+        return if (self.validEntity(entity)) entity.index else null;
+    }
+
     pub fn destroyEntity(self: *Registry, entity: ?Entity) void {
         if (!self.validEntity(entity)) return;
-        self.removeAll(entity.?);
+        self.removeAll(entity.?.index);
         self.entities.destroy(self.allocator, entity.?) catch oom();
+    }
+
+    pub fn destroy(self: *Registry, index: Entity.Index) void {
+        self.destroyEntity(self.entities.toEntity(index));
     }
 
     pub fn addContext(self: *Registry, value: anytype) void {
@@ -288,7 +296,8 @@ pub const Registry = struct {
 
     pub fn getIdentity(self: *Registry, T: type, V: type) ?V {
         const entity = self.getIdentityEntity(T) orelse return null;
-        return self.get(entity, V);
+        const index = self.toIndex(entity) orelse return null;
+        return self.get(index, V);
     }
 
     pub fn isIdentity(self: *Registry, e: Entity, T: type) bool {
@@ -342,43 +351,39 @@ pub const Registry = struct {
         return @ptrCast(@alignCast(result.value_ptr));
     }
 
-    pub fn add(self: *Registry, entity: Entity, value: anytype) void {
-        if (!self.validEntity(entity)) return;
+    pub fn add(self: *Registry, index: Entity.Index, value: anytype) void {
         var map = self.assure(@TypeOf(value));
-        map.add(self.allocator, entity.index, value) catch oom();
+        map.add(self.allocator, index, value) catch oom();
     }
 
-    pub fn alignAdd(self: *Registry, e: Entity, comps: anytype) void {
-        if (!self.validEntity(e)) return;
-        var index: [comps.len]Entity.Index = undefined;
-        inline for (comps, &index) |value, *i| {
+    pub fn alignAdd(self: *Registry, entity: Entity.Index, comps: anytype) void {
+        var aligned_indexes: [comps.len]Entity.Index = undefined;
+        inline for (comps, &aligned_indexes) |value, *i| {
             var map = self.assure(@TypeOf(value));
-            map.add(self.allocator, e.index, value) catch oom();
-            i.* = map.sparse.items[e.index] + map.alignIndex;
+            map.add(self.allocator, entity, value) catch oom();
+            i.* = map.sparse.items[entity] + map.alignIndex;
         }
-        for (index[1..]) |i| std.debug.assert(index[0] == i);
+        for (aligned_indexes[1..]) |i| std.debug.assert(aligned_indexes[0] == i);
     }
 
-    pub fn has(self: *Registry, entity: Entity, T: type) bool {
-        if (!self.validEntity(entity)) return false;
-        return self.assure(T).has(entity.index);
+    pub fn has(self: *Registry, index: Entity.Index, T: type) bool {
+        return self.assure(T).has(index);
     }
 
-    pub fn get(self: *Registry, entity: Entity, T: type) T {
-        return self.tryGet(entity, T).?;
+    pub fn get(self: *Registry, index: Entity.Index, T: type) T {
+        return self.tryGet(index, T).?;
     }
 
-    pub fn tryGet(self: *Registry, entity: Entity, T: type) ?T {
-        return (self.tryGetPtr(entity, T) orelse return null).*;
+    pub fn tryGet(self: *Registry, index: Entity.Index, T: type) ?T {
+        return (self.tryGetPtr(index, T) orelse return null).*;
     }
 
-    pub fn getPtr(self: *Registry, entity: Entity, T: type) *T {
-        return self.tryGetPtr(entity, T).?;
+    pub fn getPtr(self: *Registry, index: Entity.Index, T: type) *T {
+        return self.tryGetPtr(index, T).?;
     }
 
-    pub fn tryGetPtr(self: *Registry, entity: Entity, T: type) ?*T {
-        if (!self.validEntity(entity)) return null;
-        return self.assure(T).tryGet(entity.index);
+    pub fn tryGetPtr(self: *Registry, index: Entity.Index, T: type) ?*T {
+        return self.assure(T).tryGet(index);
     }
 
     pub fn raw(self: *Registry, T: type) []T {
@@ -395,29 +400,25 @@ pub const Registry = struct {
     }
 
     pub const remove = swapRemove;
-    pub fn swapRemove(self: *Registry, entity: Entity, T: type) void {
-        if (!self.validEntity(entity)) return;
-        _ = self.assure(T).swapRemove(entity.index);
+    pub fn swapRemove(self: *Registry, index: Entity.Index, T: type) void {
+        _ = self.assure(T).swapRemove(index);
     }
 
-    pub fn orderedRemove(self: *Registry, e: Entity, T: type) void {
-        if (!self.validEntity(e)) return;
-        self.assure(T).orderedRemove(e.index);
+    pub fn orderedRemove(self: *Registry, index: Entity.Index, T: type) void {
+        self.assure(T).orderedRemove(index);
     }
 
-    pub fn alignRemove(self: *Registry, e: Entity, types: anytype) void {
-        if (!self.validEntity(e)) return;
+    pub fn alignRemove(self: *Registry, entity: Entity.Index, types: anytype) void {
         var index: [types.len]u16 = undefined;
         inline for (types, &index) |T, *i| {
             var map = self.assure(T);
-            i.* = map.swapRemove(e.index);
+            i.* = map.swapRemove(entity);
             if (i.* != Entity.invalid) i.* +% map.alignIndex;
         }
         for (index[1..]) |i| std.debug.assert(index[0] == i);
     }
 
-    pub fn removeExcept(self: *Registry, e: Entity, keep: anytype) void {
-        if (!self.validEntity(e)) return;
+    pub fn removeExcept(self: *Registry, index: Entity.Index, keep: anytype) void {
 
         var iterator = self.componentMap.iterator();
         while (iterator.next()) |entry| {
@@ -428,17 +429,15 @@ pub const Registry = struct {
             if (found) continue;
 
             var map: *SparseMap(u8) = @ptrCast(@alignCast(entry.value_ptr));
-            _ = map.swapRemove(e.index);
+            _ = map.swapRemove(index);
         }
     }
 
-    pub fn removeAll(self: *Registry, entity: Entity) void {
-        if (!self.validEntity(entity)) return;
-
+    pub fn removeAll(self: *Registry, index: Entity.Index) void {
         var iterator = self.componentMap.valueIterator();
         while (iterator.next()) |value| {
             var map: *SparseMap(u8) = @ptrCast(@alignCast(value));
-            _ = map.swapRemove(entity.index);
+            _ = map.swapRemove(index);
         }
     }
 
@@ -497,56 +496,14 @@ pub fn View(includes: anytype, option: ViewOption) type {
 
                 if (includes.len == 1) return entity;
                 inline for (includes) |T| {
-                    if (!self.has(entity, T)) continue :blk;
+                    if (!self.registry.has(entity, T)) continue :blk;
                 }
                 return entity;
             } else return null;
         }
 
-        pub fn assure(self: *@This(), T: type) *SparseMap(T) {
-            return self.registry.assure(T);
-        }
-
-        pub fn get(self: *@This(), entity: Index, T: type) T {
-            return self.getPtr(entity, T).*;
-        }
-
-        pub fn tryGet(self: *@This(), entity: Index, T: type) ?T {
-            return (self.tryGetPtr(entity, T) orelse return null).*;
-        }
-
-        pub fn getPtr(self: *@This(), entity: Index, T: type) *T {
-            return self.assure(T).get(entity);
-        }
-
-        pub fn tryGetPtr(self: *@This(), entity: Index, T: type) ?*T {
-            return self.assure(T).tryGet(entity);
-        }
-
-        pub fn has(self: *const @This(), entity: Index, T: type) bool {
-            return self.registry.assure(T).has(entity);
-        }
-
-        pub fn is(self: *const @This(), entity: Index, T: type) bool {
-            const e = self.registry.getIdentityEntity(T) orelse return false;
-            return e.index == entity;
-        }
-
-        pub fn add(self: *@This(), entity: Index, value: anytype) void {
-            const map = self.registry.assure(@TypeOf(value));
-            map.add(self.registry.allocator, entity, value) catch oom();
-        }
-
         pub fn toEntity(self: *const @This(), index: Index) Entity {
             return self.registry.entities.toEntity(index).?;
-        }
-
-        pub fn remove(self: *@This(), entity: Index, T: type) void {
-            _ = self.registry.assure(T).swapRemove(entity);
-        }
-
-        pub fn destroy(self: *@This(), entity: Index) void {
-            self.registry.destroyEntity(self.toEntity(entity));
         }
     };
 }

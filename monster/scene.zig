@@ -131,8 +131,8 @@ pub fn draw(reg: *zhu.ecs.Registry) void {
 
     var view = reg.view(.{ com.Position, com.Sprite });
     while (view.next()) |entity| {
-        const sprite = view.get(entity, com.Sprite);
-        const position = view.get(entity, com.Position);
+        const sprite = reg.get(entity, com.Sprite);
+        const position = reg.get(entity, com.Position);
         const pos = position.add(sprite.offset);
 
         zhu.batch.drawImage(sprite.image, pos, .{

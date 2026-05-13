@@ -69,12 +69,12 @@ fn drawNameAndHealthIfNeed() void {
 
     var view = ecs.w.view(.{ Name, Position, PlayerView });
     while (view.next()) |entity| {
-        var position = view.get(entity, Position);
-        const name = view.get(entity, Name)[0];
+        var position = ecs.w.get(entity, Position);
+        const name = ecs.w.get(entity, Name)[0];
 
         position = position.addXY(TILE_SIZE / 2, -size.y);
         var text: []const u8 = undefined;
-        if (view.tryGet(entity, Health)) |h| {
+        if (ecs.w.tryGet(entity, Health)) |h| {
             text = zhu.format(&buffer, "{s}: {}hp", .{ name, h.current });
         } else {
             text = zhu.format(&buffer, "{s}", .{name});
@@ -91,7 +91,7 @@ fn drawCarriedItemIfNeed() void {
     var buffer: [44]u8 = undefined;
     while (view.next()) |entity| : (index += 1) {
         if (index > 9) break;
-        const name = view.get(entity, Name)[0];
+        const name = ecs.w.get(entity, Name)[0];
         const offset: f32 = @floatFromInt(index * 16);
         const pos = gfx.Vector.init(30, 20 + offset);
         const text = zhu.format(&buffer, "{}: {s}", .{ index, name });

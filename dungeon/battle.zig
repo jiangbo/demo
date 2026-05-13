@@ -16,10 +16,11 @@ const TurnState = component.TurnState;
 pub fn attack() void {
     var view = ecs.w.view(.{ WantToAttack, component.Damage });
     while (view.next()) |entity| {
-        const target = view.get(entity, WantToAttack)[0];
+        const target = ecs.w.get(entity, WantToAttack)[0];
+        const targetIndex = ecs.w.toIndex(target) orelse continue;
 
-        var health = ecs.w.tryGetPtr(target, Health) orelse continue;
-        const damage = view.get(entity, component.Damage).v;
+        var health = ecs.w.tryGetPtr(targetIndex, Health) orelse continue;
+        const damage = ecs.w.get(entity, component.Damage).v;
         health.current -= damage;
         if (health.current <= 0) {
             if (ecs.w.isIdentity(target, Player)) {

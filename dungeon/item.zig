@@ -24,33 +24,36 @@ pub fn init() void {
 
 fn spawnAmulet() void {
     const amulet = ecs.w.createIdentityEntity(Amulet);
+    const amuletIndex = ecs.w.toIndex(amulet).?;
 
     const pos = map.finalPos;
-    ecs.w.add(amulet, pos);
+    ecs.w.add(amuletIndex, pos);
     const texture = map.getTextureFromTile(.amulet);
-    ecs.w.alignAdd(amulet, .{ map.worldPosition(pos), texture });
-    ecs.w.add(amulet, Item{});
+    ecs.w.alignAdd(amuletIndex, .{ map.worldPosition(pos), texture });
+    ecs.w.add(amuletIndex, Item{});
 }
 
 fn spawnExit() void {
     const exit = ecs.w.createEntity();
+    const exitIndex = ecs.w.toIndex(exit).?;
 
     const pos = map.finalPos;
-    ecs.w.add(exit, pos);
+    ecs.w.add(exitIndex, pos);
     const texture = map.getTextureFromTile(.exit);
-    ecs.w.alignAdd(exit, .{ map.worldPosition(pos), texture });
-    ecs.w.add(exit, Item{});
+    ecs.w.alignAdd(exitIndex, .{ map.worldPosition(pos), texture });
+    ecs.w.add(exitIndex, Item{});
 }
 
 pub fn update() void {
     const playerEntity = ecs.w.getIdentityEntity(Player).?;
-    const viewField = ecs.w.get(playerEntity, ViewField)[0];
+    const playerIndex = ecs.w.toIndex(playerEntity).?;
+    const viewField = ecs.w.get(playerIndex, ViewField)[0];
 
     var view = ecs.w.viewOption(.{Item}, .{PlayerView}, .{});
     while (view.next()) |item| {
-        const itemPos = view.get(item, TilePosition);
+        const itemPos = ecs.w.get(item, TilePosition);
         if (viewField.contains(itemPos)) {
-            view.add(item, PlayerView{});
+            ecs.w.add(item, PlayerView{});
         }
     }
 }

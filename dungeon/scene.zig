@@ -60,16 +60,17 @@ fn nextLevel() void {
     var view = ecs.w.view(.{component.Carried});
     while (view.next()) |entity| {
         const newEntity = reg.createEntity();
-        reg.add(newEntity, component.Carried{});
-        reg.add(newEntity, component.Item{});
-        reg.add(newEntity, component.PlayerView{});
-        if (view.tryGet(entity, component.Healing)) |heal| {
-            reg.add(newEntity, heal);
+        const newIndex = reg.toIndex(newEntity).?;
+        reg.add(newIndex, component.Carried{});
+        reg.add(newIndex, component.Item{});
+        reg.add(newIndex, component.PlayerView{});
+        if (ecs.w.tryGet(entity, component.Healing)) |heal| {
+            reg.add(newIndex, heal);
         }
-        if (view.tryGet(entity, component.Damage)) |damage| {
-            reg.add(newEntity, damage);
+        if (ecs.w.tryGet(entity, component.Damage)) |damage| {
+            reg.add(newIndex, damage);
         }
-        reg.add(newEntity, view.get(entity, component.Name));
+        reg.add(newIndex, ecs.w.get(entity, component.Name));
     }
     // 保留角色攻击力
     const damage = ecs.w.get(player.entity, component.Damage);
@@ -113,8 +114,8 @@ pub fn draw() void {
 
     var view = ecs.w.view(.{ gfx.Texture, Position, PlayerView });
     while (view.next()) |entity| {
-        const pos = view.get(entity, Position);
-        camera.draw(view.get(entity, gfx.Texture), pos);
+        const pos = ecs.w.get(entity, Position);
+        camera.draw(ecs.w.get(entity, gfx.Texture), pos);
     }
     if (map.minMap) {
         camera.encodeScaleCommand(.init(0.25, 0.25));

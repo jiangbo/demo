@@ -24,9 +24,9 @@ fn updateHoveredEntity(reg: *zhu.ecs.Registry) void {
     var maxY: f32 = -1e10;
     var view = reg.view(.{ com.Position, com.Sprite });
     while (view.next()) |index| {
-        if (view.has(index, com.skill.Display)) continue;
+        if (reg.has(index, com.skill.Display)) continue;
 
-        const pos = view.get(index, com.Position);
+        const pos = reg.get(index, com.Position);
         const center = pos.addY(-32);
         const rect: zhu.Rect = .init(center.sub(.xy(32, 32)), .xy(64, 64));
 
@@ -42,7 +42,8 @@ fn updateSelectedEntity(reg: *zhu.ecs.Registry) void {
 
     if (zhu.window.mouse.pressed(.LEFT)) {
         const entity = ctx.hoveredEntity orelse return;
-        if (!reg.has(entity, com.Player)) return;
+        const index = reg.toIndex(entity) orelse return;
+        if (!reg.has(index, com.Player)) return;
         ctx.selectedEntity = entity;
     } else if (zhu.window.mouse.pressed(.RIGHT)) {
         ctx.selectedEntity = null;
@@ -57,7 +58,7 @@ fn updateShowRange(reg: *zhu.ecs.Registry) void {
             selected.?.index != entity.index or
             selected.?.version != entity.version)
         {
-            reg.remove(entity, com.ShowRange);
+            if (reg.toIndex(entity)) |index| reg.remove(index, com.ShowRange);
             currentRangeEntity = null;
         }
     }
@@ -67,10 +68,11 @@ fn updateShowRange(reg: *zhu.ecs.Registry) void {
         ctx.selectedEntity = null;
         return;
     }
-    if (!reg.has(selected, com.Player)) return;
-    if (!reg.has(selected, com.Stats)) return;
+    const selected_index = reg.toIndex(selected) orelse return;
+    if (!reg.has(selected_index, com.Player)) return;
+    if (!reg.has(selected_index, com.Stats)) return;
 
-    reg.add(selected, com.ShowRange{});
+    reg.add(selected_index, com.ShowRange{});
     currentRangeEntity = selected;
 }
 
@@ -81,8 +83,8 @@ pub fn draw(reg: *zhu.ecs.Registry) void {
 fn drawRange(reg: *zhu.ecs.Registry) void {
     var view = reg.view(.{ com.ShowRange, com.Position, com.Stats });
     while (view.next()) |entity| {
-        const pos = view.get(entity, com.Position);
-        const r = view.get(entity, com.Stats).range;
+        const pos = reg.get(entity, com.Position);
+        const r = reg.get(entity, com.Stats).range;
         const circle = zhu.getImage("circle.png");
         zhu.batch.drawImage(circle, pos.sub(.xy(r, r)), .{
             .size = .xy(r * 2, r * 2),

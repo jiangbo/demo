@@ -87,10 +87,11 @@ fn applyLevelRarity(base: com.Stats, level: f32, rarity: f32) com.Stats {
 
 /// 升级单位：等级+1，从模板重算属性，生成升级特效。
 pub fn upgradeUnit(reg: *Registry, entity: Entity) void {
-    const playerEnum = reg.get(entity, com.PlayerEnum);
+    const entity_index = reg.toIndex(entity) orelse return;
+    const playerEnum = reg.get(entity_index, com.PlayerEnum);
     const template = &playerZon[@intFromEnum(playerEnum)];
 
-    const stats = reg.getPtr(entity, com.Stats);
+    const stats = reg.getPtr(entity_index, com.Stats);
     stats.level += 1;
     const level = stats.level;
     const rarity = stats.rarity;
@@ -102,10 +103,11 @@ pub fn upgradeUnit(reg: *Registry, entity: Entity) void {
     stats.range = template.stats.range;
     stats.interval = template.stats.interval;
 
-    const position = reg.get(entity, com.Position);
+    const position = reg.get(entity_index, com.Position);
     const effectEntity = effect(reg, .levelUp);
-    reg.add(effectEntity, position);
-    reg.add(effectEntity, com.DeadOnFinish{});
+    const effect_index = reg.toIndex(effectEntity).?;
+    reg.add(effect_index, position);
+    reg.add(effect_index, com.DeadOnFinish{});
 
     zhu.audio.playSound("assets/audio/Fantasy_UI (10).ogg");
     std.log.info("upgrade entity: {}, level: {}", .{ entity.index, level });
@@ -191,72 +193,74 @@ fn spawnEnemy(reg: *Registry, enemyEnum: com.EnemyEnum) void {
     const start = map.paths.get(map.startPaths[startIndex]).?;
     const template = &enemyZon[@intFromEnum(enemyEnum)];
     const entity = doSpawn(reg, template);
-    reg.add(entity, enemyEnum);
+    const entity_index = reg.toIndex(entity).?;
+    reg.add(entity_index, enemyEnum);
 
     const level = levelData(ctx.levelIndex);
-    reg.getPtr(entity, com.Stats).* = applyLevelRarity(
+    reg.getPtr(entity_index, com.Stats).* = applyLevelRarity(
         template.stats,
         level.enemyLevel,
         level.enemyRarity,
     );
 
-    reg.add(entity, start.point);
-    reg.add(entity, com.motion.Velocity{ .v = .zero });
-    reg.add(entity, com.Enemy{
+    reg.add(entity_index, start.point);
+    reg.add(entity_index, com.motion.Velocity{ .v = .zero });
+    reg.add(entity_index, com.Enemy{
         .target = start,
         .speed = template.speed,
     });
 
     const index: u8 = @intFromEnum(com.StateEnum.walk);
-    reg.getPtr(entity, com.Animation).play(index, true);
+    reg.getPtr(entity_index, com.Animation).play(index, true);
     std.log.info("spawn enemy: {}", .{entity.index});
 }
 
 fn doSpawn(reg: *Registry, zon: *const Template) zhu.ecs.Entity {
     const entity = reg.createEntity();
+    const entity_index = reg.toIndex(entity).?;
 
     const imagePath = zon.image.path;
     const image = zhu.assets.loadImage(imagePath);
-    reg.add(entity, com.Sprite{
+    reg.add(entity_index, com.Sprite{
         .image = image.sub(.init(.zero, zon.size)),
         .offset = zon.offset,
     });
 
     // 面向左侧
-    if (!zon.faceRight) reg.add(entity, com.motion.FaceLeft{});
+    if (!zon.faceRight) reg.add(entity_index, com.motion.FaceLeft{});
 
     if (zon.block != 0) {
-        reg.add(entity, com.motion.Blocker{ .max = zon.block });
+        reg.add(entity_index, com.motion.Blocker{ .max = zon.block });
     }
 
     const animation = com.Animation.initSource(image, zon.animations);
-    reg.add(entity, animation);
+    reg.add(entity_index, animation);
 
     // 添加远程攻击
-    if (zon.attackKind == .ranged) reg.add(entity, com.attack.Ranged{});
+    if (zon.attackKind == .ranged) reg.add(entity_index, com.attack.Ranged{});
 
     // 添加属性组件
-    reg.add(entity, zon.stats);
+    reg.add(entity_index, zon.stats);
 
     // 添加职业组件。玩家姓名由出击单位数据提供。
-    reg.add(entity, com.ClassName{ .value = zon.name });
-    if (zon.stats.attack < 0) reg.add(entity, com.attack.Healer{});
+    reg.add(entity_index, com.ClassName{ .value = zon.name });
+    if (zon.stats.attack < 0) reg.add(entity_index, com.attack.Healer{});
     if (zon.stats.health < zon.stats.maxHealth) {
-        reg.add(entity, com.attack.Injured{});
+        reg.add(entity_index, com.attack.Injured{});
     }
 
     // 添加投射物组件
-    if (zon.projectile) |value| reg.add(entity, value);
+    if (zon.projectile) |value| reg.add(entity_index, value);
 
     // 攻击就绪
-    reg.add(entity, com.attack.Ready{});
+    reg.add(entity_index, com.attack.Ready{});
 
     // 添加声音组件
     for (zon.sounds) |sound| {
         const path = sound.path;
         switch (sound.action) {
-            .hit => reg.add(entity, com.audio.Hit{ .path = path }),
-            .emit => reg.add(entity, com.audio.Emit{ .path = path }),
+            .hit => reg.add(entity_index, com.audio.Hit{ .path = path }),
+            .emit => reg.add(entity_index, com.audio.Emit{ .path = path }),
             else => {},
         }
     }
@@ -275,18 +279,19 @@ pub fn tryDeployPlayer(reg: *Registry, unit: ctx.Unit) void {
         const center = place.position.add(place.size.scale(0.5));
 
         const entity = doSpawn(reg, template);
-        reg.add(entity, unit.class);
+        const entity_index = reg.toIndex(entity).?;
+        reg.add(entity_index, unit.class);
 
         // 覆盖为玩家实体的等级和稀有度
-        reg.getPtr(entity, com.Stats).* = applyLevelRarity(
+        reg.getPtr(entity_index, com.Stats).* = applyLevelRarity(
             template.stats,
             unit.level,
             unit.rarity,
         );
 
-        reg.add(entity, com.Name{ .value = unit.name });
-        reg.add(entity, center);
-        reg.add(entity, com.Player{ .cost = unit.cost });
+        reg.add(entity_index, com.Name{ .value = unit.name });
+        reg.add(entity_index, center);
+        reg.add(entity_index, com.Player{ .cost = unit.cost });
         if (template.skill) |skill| addSkill(reg, entity, skill);
         place.entity = entity;
 
@@ -297,58 +302,62 @@ pub fn tryDeployPlayer(reg: *Registry, unit: ctx.Unit) void {
 }
 
 fn addSkill(reg: *Registry, entity: zhu.ecs.Entity, skill: com.skill.Skill) void {
+    const entity_index = reg.toIndex(entity) orelse return;
     if (skill.passive) {
-        reg.add(entity, skill);
-        reg.add(entity, com.skill.Passive{});
-        reg.add(entity, com.skill.Active{});
+        reg.add(entity_index, skill);
+        reg.add(entity_index, com.skill.Passive{});
+        reg.add(entity_index, com.skill.Active{});
         if (skill.costRecovery != 0) {
-            reg.add(entity, com.skill.CostRecovery{
+            reg.add(entity_index, com.skill.CostRecovery{
                 .rate = skill.costRecovery,
             });
         }
         return;
     }
 
-    reg.add(entity, skill);
+    reg.add(entity_index, skill);
 
     if (skill.coolDown <= 0) {
-        reg.add(entity, com.skill.Ready{});
+        reg.add(entity_index, com.skill.Ready{});
         return;
     }
 
-    reg.add(entity, com.skill.Timer.init(skill.coolDown / 2));
+    reg.add(entity_index, com.skill.Timer.init(skill.coolDown / 2));
 }
 
 /// 复制敌人精灵播放受伤动画，动画结束后自动销毁。
 pub fn deadEnemy(reg: *Registry, entity: Entity) void {
-    const sprite = reg.get(entity, com.Sprite);
-    const position = reg.get(entity, com.Position);
-    var animation = reg.get(entity, com.Animation);
+    const entity_index = reg.toIndex(entity) orelse return;
+    const sprite = reg.get(entity_index, com.Sprite);
+    const position = reg.get(entity_index, com.Position);
+    var animation = reg.get(entity_index, com.Animation);
 
     const damageIndex: u8 = @intFromEnum(com.StateEnum.damage);
     animation.play(damageIndex, false);
 
     const newEntity = reg.createEntity();
-    reg.add(newEntity, sprite);
-    reg.add(newEntity, position);
-    reg.add(newEntity, animation);
-    reg.add(newEntity, com.DeadOnFinish{});
+    const new_index = reg.toIndex(newEntity).?;
+    reg.add(new_index, sprite);
+    reg.add(new_index, position);
+    reg.add(new_index, animation);
+    reg.add(new_index, com.DeadOnFinish{});
 }
 
 /// 根据 effectZon 数据创建特效实体，位置和生命周期由调用方处理。
 pub fn effect(reg: *Registry, effectEnum: com.EffectEnum) Entity {
     const value = &effectZon[@intFromEnum(effectEnum)];
     const entity = reg.createEntity();
+    const entity_index = reg.toIndex(entity).?;
     const image = zhu.assets.loadImage(value.image.path);
 
-    reg.add(entity, com.Sprite{
+    reg.add(entity_index, com.Sprite{
         .image = image.sub(.init(value.position, value.size)),
         .offset = value.offset,
         .size = value.drawSize,
     });
     var animation = com.Animation.init(image, value.animation);
     animation.loop = false;
-    reg.add(entity, animation);
+    reg.add(entity_index, animation);
     return entity;
 }
 
@@ -382,24 +391,25 @@ pub fn projectile(reg: *Registry, delta: f32) void {
         // 检查目标是否还有效
         var targetEntity: ?Entity = null;
         var targetPos: ?zhu.Vector2 = null;
-        if (view.tryGet(entity, com.attack.Target)) |target| {
-            if (reg.validEntity(target.v)) {
+        if (reg.tryGet(entity, com.attack.Target)) |target| {
+            if (reg.toIndex(target.v)) |target_index| {
                 targetEntity = target.v;
-                targetPos = reg.get(target.v, com.Position);
+                targetPos = reg.get(target_index, com.Position);
             }
         }
         if (targetPos == null) continue; // 目标无效，跳过生成投射物
 
-        const template = view.get(entity, com.ProjectileEnum);
+        const template = reg.get(entity, com.ProjectileEnum);
         const value = &projectileZon[@intFromEnum(template)];
 
-        const damage = view.get(entity, com.Stats).attack;
+        const damage = reg.get(entity, com.Stats).attack;
         const new = reg.createEntity();
+        const new_index = reg.toIndex(new).?;
         const image = zhu.assets.loadImage(value.image);
-        const start = view.get(entity, com.Position);
+        const start = reg.get(entity, com.Position);
         const drawStart = start.add(value.offset);
-        reg.add(new, image.sub(.init(value.position, value.size)));
-        reg.add(new, com.Projectile{
+        reg.add(new_index, image.sub(.init(value.position, value.size)));
+        reg.add(new_index, com.Projectile{
             .start = start,
             .end = targetPos.?,
             .previous = drawStart,
@@ -411,9 +421,9 @@ pub fn projectile(reg: *Registry, delta: f32) void {
             .offset = value.offset,
         });
 
-        reg.add(new, drawStart);
+        reg.add(new_index, drawStart);
 
-        if (view.tryGet(entity, com.audio.Emit)) |emitSound| {
+        if (reg.tryGet(entity, com.audio.Emit)) |emitSound| {
             zhu.audio.playSound(emitSound.path); // 播放发射声音
         }
 
