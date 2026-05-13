@@ -187,11 +187,10 @@ pub fn computeViewRect() void {
         },
         .integer => {
             const scale = @min(ratio.x, ratio.y);
-            if (scale < 1) viewRect = .init(.zero, clientSize) else {
-                const intSize = size.scale(@trunc(scale));
-                const position = clientSize.sub(intSize).mul(alignment);
-                viewRect = .init(position, intSize);
-            }
+            const usedScale = if (scale < 1) scale else @trunc(scale);
+            const intSize = size.scale(usedScale);
+            const position = clientSize.sub(intSize).mul(alignment);
+            viewRect = .init(position, intSize);
         },
     }
 }
