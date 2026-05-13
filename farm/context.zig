@@ -13,12 +13,20 @@ pub var currentScene: Scene = config.scene;
 pub var pendingScene: ?Scene = null;
 pub var paused: bool = false;
 pub var timeScale: f32 = config.time_scale;
+pub var showEngineDebug: bool = false;
+pub var showGameDebug: bool = false;
+pub var uiWantCaptureMouse: bool = false;
+pub var uiWantCaptureKeyboard: bool = false;
 
 pub fn init() void {
     currentScene = config.scene;
     pendingScene = null;
     paused = false;
     timeScale = config.time_scale;
+    showEngineDebug = false;
+    showGameDebug = false;
+    uiWantCaptureMouse = false;
+    uiWantCaptureKeyboard = false;
     std.log.info("context init scene={s}", .{@tagName(currentScene)});
 }
 
