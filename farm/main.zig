@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const zhu = @import("zhu");
 
 const context = @import("context.zig");
+const events = @import("event.zig");
 const gui = @import("gui.zig");
 const map = @import("map.zig");
 const scene = @import("scene.zig");
@@ -18,6 +19,7 @@ pub fn init() void {
 
     gui.init();
     context.init();
+    events.init();
     map.init();
     spawn.init();
     scene.init();
@@ -36,12 +38,14 @@ pub fn frame(delta: f32) void {
     zhu.batch.flush();
     gui.draw();
     zhu.batch.commit();
+    events.update();
 }
 
 pub fn deinit() void {
     scene.deinit();
     spawn.deinit();
     map.deinit();
+    events.deinit();
     context.deinit();
     gui.deinit();
     zhu.assets.free(vertexBuffer);

@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const imgui = @import("cimgui");
 
 const context = @import("context.zig");
+const events = @import("event.zig");
 
 pub fn init() void {
     sk.imgui.setup(.{
@@ -88,6 +89,9 @@ fn drawEnginePanel() void {
         "Capture keyboard: %s",
         boolText(context.uiWantCaptureKeyboard).ptr,
     );
+    imgui.igSeparator();
+    drawEventControls();
+    drawEventTrace();
 
     imgui.igEnd();
 }
@@ -123,4 +127,34 @@ fn sceneName(scene: context.Scene) [:0]const u8 {
 
 fn boolText(value: bool) [:0]const u8 {
     return if (value) "true" else "false";
+}
+
+fn drawEventControls() void {
+    if (imgui.igButton("Queue farm scene")) {
+        events.enqueue(.{ .scene_request = .farm });
+    }
+    imgui.igSameLine();
+    if (imgui.igButton("Trigger title scene")) {
+        events.trigger(.{ .scene_request = .title });
+    }
+    if (imgui.igButton("Queue debug note")) {
+        events.enqueue(.{ .debug_note = "debug note from panel" });
+    }
+    imgui.igSameLine();
+    if (imgui.igButton("Clear trace")) {
+        events.clearTrace();
+    }
+}
+
+fn drawEventTrace() void {
+    const items = events.recentTrace();
+    _ = imgui.igText("Recent events: %d", @as(i32, @intCast(items.len)));
+
+    for (items) |entry| {
+        _ = imgui.igText(
+            "%s  %s",
+            events.modeName(entry.mode).ptr,
+            events.eventName(entry.event).ptr,
+        );
+    }
 }
