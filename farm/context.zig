@@ -33,17 +33,39 @@ pub fn init() void {
 pub fn deinit() void {}
 
 pub fn requestScene(scene: Scene) void {
+    std.log.debug("request scene: {s} -> {s}", .{
+        @tagName(currentScene),
+        @tagName(scene),
+    });
     pendingScene = scene;
 }
 
 pub fn applyPendingScene() void {
     if (pendingScene) |scene| {
+        std.log.info("apply scene: {s} -> {s}", .{
+            @tagName(currentScene),
+            @tagName(scene),
+        });
         currentScene = scene;
         pendingScene = null;
     }
 }
 
-test "测试场景切换" {
+test "scene request waits until apply" {
+    init();
+
+    requestScene(.farm);
+
+    try std.testing.expectEqual(Scene.title, currentScene);
+    try std.testing.expectEqual(Scene.farm, pendingScene.?);
+
+    applyPendingScene();
+
+    try std.testing.expectEqual(Scene.farm, currentScene);
+    try std.testing.expectEqual(@as(?Scene, null), pendingScene);
+}
+
+test "latest scene request wins before apply" {
     init();
 
     requestScene(.farm);

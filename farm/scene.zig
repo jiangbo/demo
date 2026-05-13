@@ -10,7 +10,6 @@ pub fn init() void {
 pub fn deinit() void {}
 
 pub fn update(delta: f32) void {
-    context.applyPendingScene();
     if (context.paused) return;
 
     const scaled = delta * context.timeScale;
@@ -18,6 +17,8 @@ pub fn update(delta: f32) void {
         .title => title.update(scaled),
         .farm => {},
     }
+
+    context.applyPendingScene();
 }
 
 pub fn draw() void {
