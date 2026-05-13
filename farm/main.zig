@@ -11,11 +11,13 @@ const spawn = @import("spawn.zig");
 
 var vertexBuffer: []zhu.batch.Vertex = undefined;
 var commandBuffer: [128]zhu.batch.Command = undefined;
+var registry: zhu.ecs.Registry = undefined;
 
 pub fn init() void {
     vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 4096);
     zhu.batch.init(vertexBuffer, &commandBuffer);
     zhu.batch.whiteImage = zhu.assets.createWhiteImage("farm/white");
+    registry = .init(zhu.assets.allocator);
 
     gui.init();
     context.init();
@@ -30,11 +32,11 @@ pub fn event(ev: *const zhu.window.Event) void {
 }
 
 pub fn frame(delta: f32) void {
-    scene.update(delta);
+    scene.update(&registry, delta);
     gui.update(delta);
 
     zhu.batch.beginDraw(.rgb(0.23, 0.31, 0.27));
-    scene.draw();
+    scene.draw(&registry);
     zhu.batch.flush();
     gui.draw();
     zhu.batch.commit();
@@ -48,6 +50,7 @@ pub fn deinit() void {
     events.deinit();
     context.deinit();
     gui.deinit();
+    registry.deinit();
     zhu.assets.free(vertexBuffer);
 }
 

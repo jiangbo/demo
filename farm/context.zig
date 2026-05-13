@@ -51,7 +51,7 @@ pub fn applyPendingScene() void {
     }
 }
 
-test "scene request waits until apply" {
+test "场景请求会等待到应用阶段才生效" {
     init();
 
     requestScene(.farm);
@@ -65,7 +65,7 @@ test "scene request waits until apply" {
     try std.testing.expectEqual(@as(?Scene, null), pendingScene);
 }
 
-test "latest scene request wins before apply" {
+test "应用前最后一次场景请求生效" {
     init();
 
     requestScene(.farm);

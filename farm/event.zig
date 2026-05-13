@@ -103,7 +103,7 @@ fn record(entry: TraceEntry) void {
     trace[trace.len - 1] = entry;
 }
 
-test "trigger handles scene request immediately" {
+test "trigger 会立即处理场景请求" {
     context.init();
     init();
 
@@ -114,7 +114,7 @@ test "trigger handles scene request immediately" {
     try std.testing.expectEqual(DispatchMode.immediate, recentTrace()[0].mode);
 }
 
-test "enqueue waits for update" {
+test "enqueue 会等待 update 处理" {
     context.init();
     init();
 

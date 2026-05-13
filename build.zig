@@ -88,6 +88,7 @@ fn buildNative(b: *std.Build, options: Options) !void {
         .target = target,
         .optimize = optimize,
     });
+    testModule.addImport("zhu", zhuModule);
 
     const tests = b.addTest(.{ .name = "tests", .root_module = testModule });
     tests.step.dependOn(&writeFiles.step);
