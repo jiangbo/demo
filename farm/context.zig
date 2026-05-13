@@ -34,3 +34,14 @@ pub fn applyPendingScene() void {
         pendingScene = null;
     }
 }
+
+test "测试场景切换" {
+    init();
+
+    requestScene(.farm);
+    requestScene(.title);
+    applyPendingScene();
+
+    try std.testing.expectEqual(Scene.title, currentScene);
+    try std.testing.expectEqual(@as(?Scene, null), pendingScene);
+}

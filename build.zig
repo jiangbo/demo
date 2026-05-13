@@ -83,6 +83,18 @@ fn buildNative(b: *std.Build, options: Options) !void {
     const stbAudioPath = writeFiles.add("stb_audio.c", stbAudioSource);
     zhuModule.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{"-O2"} });
 
+    const testModule = b.createModule(.{
+        .root_source_file = b.path("farm/tests.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const tests = b.addTest(.{ .name = "tests", .root_module = testModule });
+    tests.step.dependOn(&writeFiles.step);
+
+    const run_tests = b.addRunArtifact(tests);
+    b.step("test", "Run farm tests").dependOn(&run_tests.step);
+
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
