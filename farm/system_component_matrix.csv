@@ -1,0 +1,5 @@
+系统中文名,系统英文名,位置,精灵,渲染,Y轴排序,玩家,作物,耕地
+,,Position,Sprite,Render,YSort,Player,Crop,Farmland
+作物系统,crop,,,,,,√,
+Y轴排序系统,ysort,√,,√,√,,,
+渲染系统,render,√,√,√,,,,

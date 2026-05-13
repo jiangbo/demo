@@ -9,6 +9,20 @@ pub const Sprite = struct {
     flip: bool = false,
 };
 
+pub const RenderLayer = enum(i16) {
+    ground = 0,
+    crop = 10,
+    actor = 20,
+};
+
+pub const Render = struct {
+    layer: RenderLayer = .actor,
+    depth: f32 = 0,
+    color: zhu.Color = .white,
+};
+
+pub const YSort = struct {};
+
 pub const Player = struct {};
 pub const Crop = struct {
     growth: f32 = 0,

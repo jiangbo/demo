@@ -7,6 +7,8 @@ const title = @import("title.zig");
 
 const system = struct {
     const crop = @import("system/crop.zig");
+    const render = @import("system/render.zig");
+    const ysort = @import("system/ysort.zig");
 };
 
 var farmLoaded: bool = false;
@@ -33,10 +35,9 @@ pub fn update(registry: *zhu.ecs.Registry, delta: f32) void {
 }
 
 pub fn draw(registry: *zhu.ecs.Registry) void {
-    _ = registry;
     switch (context.currentScene) {
         .title => title.draw(),
-        .farm => {},
+        .farm => drawFarm(registry),
     }
 }
 
@@ -47,4 +48,9 @@ fn updateFarm(registry: *zhu.ecs.Registry, delta: f32) void {
     }
 
     system.crop.update(registry, delta);
+}
+
+fn drawFarm(registry: *zhu.ecs.Registry) void {
+    system.ysort.update(registry);
+    system.render.draw(registry);
 }
