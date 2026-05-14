@@ -191,7 +191,6 @@ pub const Registry = struct {
     componentMap: Map(TypeId, SparseMap(u8)) = .empty,
 
     identityMap: Map(TypeId, Entity) = .empty,
-    contextMap: Map(TypeId, []u8) = .empty,
     eventMap: Map(TypeId, DeinitList(u8)) = .empty,
 
     pub fn init(allocator: std.mem.Allocator) Registry {
@@ -201,10 +200,6 @@ pub const Registry = struct {
     pub fn deinit(self: *Registry) void {
         self.entities.deinit(self.allocator);
         self.identityMap.deinit(self.allocator);
-
-        var it = self.contextMap.valueIterator();
-        while (it.next()) |value| self.allocator.free(value.*);
-        self.contextMap.deinit(self.allocator);
 
         var events = self.eventMap.valueIterator();
         while (events.next()) |list| list.deinit(self.allocator);
@@ -231,30 +226,6 @@ pub const Registry = struct {
 
     pub fn destroy(self: *Registry, entity: Entity) void {
         self.destroyEntity(entity);
-    }
-
-    pub fn addContext(self: *Registry, value: anytype) void {
-        const id = hashTypeId(@TypeOf(value));
-        const v = self.contextMap.getOrPut(self.allocator, id) catch oom();
-        if (!v.found_existing) {
-            const size = @sizeOf(@TypeOf(value));
-            v.value_ptr.* = self.allocator.alloc(u8, size) catch oom();
-        }
-        @memcpy(v.value_ptr.*, std.mem.asBytes(&value));
-    }
-
-    pub fn getContext(self: *Registry, T: type) ?T {
-        return (self.getContextPtr(T) orelse return null).*;
-    }
-
-    pub fn getContextPtr(self: *Registry, T: type) ?*T {
-        const ptr = self.contextMap.get(hashTypeId(T));
-        return @ptrCast(ptr orelse return null);
-    }
-
-    pub fn removeContext(self: *Registry, T: type) void {
-        const removed = self.contextMap.fetchRemove(hashTypeId(T));
-        if (removed) |entry| self.allocator.free(entry.value);
     }
 
     pub fn addIdentity(self: *Registry, e: Entity, T: type) void {
