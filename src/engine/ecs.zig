@@ -188,11 +188,11 @@ const Map = std.AutoHashMapUnmanaged;
 pub const Registry = struct {
     allocator: Allocator,
     entities: Entities = .{},
-    componentMap: Map(TypeId, [@sizeOf(SparseMap(u8))]u8) = .empty,
+    componentMap: Map(TypeId, SparseMap(u8)) = .empty,
 
     identityMap: Map(TypeId, Entity) = .empty,
     contextMap: Map(TypeId, []u8) = .empty,
-    eventMap: Map(TypeId, [@sizeOf(DeinitList(u8))]u8) = .empty,
+    eventMap: Map(TypeId, DeinitList(u8)) = .empty,
 
     pub fn init(allocator: std.mem.Allocator) Registry {
         return .{ .allocator = allocator };
@@ -207,17 +207,11 @@ pub const Registry = struct {
         self.contextMap.deinit(self.allocator);
 
         var events = self.eventMap.valueIterator();
-        while (events.next()) |value| {
-            var list: *DeinitList(u8) = @ptrCast(@alignCast(value));
-            list.deinit(self.allocator);
-        }
+        while (events.next()) |list| list.deinit(self.allocator);
         self.eventMap.deinit(self.allocator);
 
         var iterator = self.componentMap.valueIterator();
-        while (iterator.next()) |value| {
-            var map: *SparseMap(u8) = @ptrCast(@alignCast(value));
-            map.deinit(self.allocator);
-        }
+        while (iterator.next()) |map| map.deinit(self.allocator);
         self.componentMap.deinit(self.allocator);
     }
 
@@ -295,10 +289,10 @@ pub const Registry = struct {
     fn assureEvent(self: *Registry, T: type) *std.ArrayList(T) {
         const v = self.eventMap.getOrPut(self.allocator, //
             hashTypeId(T)) catch oom();
+        const list: *DeinitList(T) = @ptrCast(@alignCast(v.value_ptr));
         if (!v.found_existing) {
-            v.value_ptr.* = std.mem.toBytes(DeinitList(T){});
+            list.* = .{};
         }
-        var list: *DeinitList(T) = @ptrCast(@alignCast(v.value_ptr));
         return &list.list;
     }
 
@@ -327,11 +321,11 @@ pub const Registry = struct {
     pub fn assure(self: *Registry, T: type) *SparseMap(T) {
         const result = self.componentMap
             .getOrPut(self.allocator, hashTypeId(T)) catch oom();
+        const map: *SparseMap(T) = @ptrCast(@alignCast(result.value_ptr));
 
-        if (!result.found_existing) {
-            result.value_ptr.* = std.mem.toBytes(SparseMap(T){});
-        }
-        return @ptrCast(@alignCast(result.value_ptr));
+        if (!result.found_existing) map.* = .{};
+
+        return map;
     }
 
     pub fn add(self: *Registry, entity: Entity, value: anytype) void {
@@ -404,17 +398,13 @@ pub const Registry = struct {
             }
             if (found) continue;
 
-            var map: *SparseMap(u8) = @ptrCast(@alignCast(entry.value_ptr));
-            _ = map.swapRemove(entity);
+            _ = entry.value_ptr.swapRemove(entity);
         }
     }
 
     pub fn removeAll(self: *Registry, entity: Entity) void {
         var iterator = self.componentMap.valueIterator();
-        while (iterator.next()) |value| {
-            var map: *SparseMap(u8) = @ptrCast(@alignCast(value));
-            _ = map.swapRemove(entity);
-        }
+        while (iterator.next()) |map| _ = map.swapRemove(entity);
     }
 
     pub fn clear(self: *Registry, T: type) void {
