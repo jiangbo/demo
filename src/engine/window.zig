@@ -296,7 +296,7 @@ pub fn drawDebugInfo() void {
         stats.size_append_buffer + stats.size_update_buffer,
         stats.size_apply_uniforms,
         stats.num_draw,
-        batch.imageDrawCount(),
+        batch.commandCount(),
         // Debug 信息本身的次数也应该统计进去
         graphics.textCount + debutTextCount,
         countingAllocator.used,

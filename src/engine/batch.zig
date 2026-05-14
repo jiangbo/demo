@@ -13,14 +13,13 @@ const Color = graphics.Color;
 const Vector2 = math.Vector2;
 const Matrix = math.Matrix;
 
-const CommandEnum = enum { draw, scissor };
 pub const Command = struct {
     start: u32 = 0, // 起始顶点索引
     end: u32 = 0, // 结束顶点索引
     texture: graphics.Texture = .{}, // 纹理
     position: Vector2 = .zero, // 位置
-    scale: Vector2 = .one, // 缩放
-    commandEnum: CommandEnum = .draw, // 命令类型
+    scale: Vector2 = .one, // 缩放或大小
+    type: enum { draw, scissor } = .draw, // 类型
 };
 
 pub const Vertex = extern struct {
@@ -98,22 +97,22 @@ pub fn flush() void {
     currentCommand().end = @intCast(vertexBuffer.items.len);
     lastStats = .{
         .sprites = vertexBuffer.items.len,
-        .commands = drawCommandCount(),
+        .commands = commandCount(),
     };
     _ = sk.gfx.updateBuffer(
         vertexBufferHandle,
         sk.gfx.asRange(vertexBuffer.items),
     );
     for (commandBuffer.items) |cmd| {
-        switch (cmd.commandEnum) {
-            .draw => doDraw(cmd),
-            .scissor => sk.gfx.applyScissorRectf(
-                cmd.position.x,
-                cmd.position.y,
-                cmd.scale.x,
-                cmd.scale.y,
-                true,
-            ),
+        switch (cmd.type) {
+            .draw => {
+                if (cmd.texture.id != 0 and cmd.end > cmd.start) doDraw(cmd);
+            },
+            .scissor => {
+                const x, const y = .{ cmd.position.x, cmd.position.y };
+                const w, const h = .{ cmd.scale.x, cmd.scale.y };
+                sk.gfx.applyScissorRectf(x, y, w, h, true);
+            },
         }
     }
 }
@@ -209,9 +208,10 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
 
     var command = currentCommand();
     if (command.texture.id == 0) {
-        command.texture = image.texture; // 还没有绘制任何纹理
+        command.texture = image.texture;
+        command.position = camera.position;
     } else if (image.texture.id != command.texture.id) {
-        startNewDrawCommand(); // 纹理改变，开始新的命令
+        startNewDrawCommand();
         currentCommand().texture = image.texture;
     }
 
@@ -239,7 +239,7 @@ fn doDraw(cmd: Command) void {
     // 处理 uniform 变量
     const x, const y = .{ camera.size.x, camera.size.y };
     const orth = math.Matrix.orthographic(x, y, 0, 1);
-    const pos = camera.position.scale(-1).toVector3(0);
+    const pos = cmd.position.scale(-1).toVector3(0);
     const translate = math.Matrix.translateVec(pos);
     const scaleMatrix = math.Matrix.scaleVec(cmd.scale.toVector3(1));
     const view = math.Matrix.mul(scaleMatrix, translate);
@@ -291,14 +291,6 @@ fn createQuadPipeline(shaderDesc: sk.gfx.ShaderDesc) sk.gfx.Pipeline {
     });
 }
 
-pub fn imageDrawCount() usize {
+pub fn commandCount() usize {
     return commandBuffer.items.len;
-}
-
-fn drawCommandCount() usize {
-    var count: usize = 0;
-    for (commandBuffer.items) |cmd| {
-        if (cmd.commandEnum == .draw) count += 1;
-    }
-    return count;
 }
