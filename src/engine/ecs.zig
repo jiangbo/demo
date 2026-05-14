@@ -425,78 +425,73 @@ pub const Registry = struct {
         inline for (types) |T| self.clear(T);
     }
 
-    pub fn query(self: *Registry, includes: anytype) Query(includes.len) {
-        return self.queryNone(includes, .{});
+    pub fn query(self: *Registry, All: anytype) Query(All.len, 0) {
+        return self.queryNone(All, .{});
     }
 
     // zig fmt: off
     pub fn queryNone(self: *Registry, All: anytype, None: anytype)
-        Query(All.len + None.len) {
+        Query(All.len, None.len) {
     // zig fmt: on
         comptime std.debug.assert(All.len > 0);
 
-        var slices: [All.len + None.len][]Entity = undefined;
-        var minIndex: usize, var minCount: usize = .{ 0, invalid };
-        var dense: []Entity = &.{};
-        inline for (All, &slices, 0..) |T, *slice, i| {
+        var result: Query(All.len, None.len) = .{};
+        var minCount: usize = invalid;
+        inline for (All, &result.all) |T, *sparse| {
             const map = self.assure(T);
-            slice.* = map.sparse.items;
+            sparse.* = map.sparse.items;
             if (map.dense.items.len < minCount) {
-                minIndex, minCount = .{ i, map.dense.items.len };
-                dense = map.dense.items;
+                minCount = map.dense.items.len;
+                result.dense = map.dense.items;
             }
         }
-        inline for (None, slices[All.len..]) |T, *slice| {
-            slice.* = self.assure(T).sparse.items;
+        inline for (None, &result.none) |T, *sparse| {
+            sparse.* = self.assure(T).sparse.items;
         }
 
-        if (minIndex != 0) {
-            std.mem.swap([]Entity, &slices[0], &slices[minIndex]);
-        }
-        slices[0] = dense;
-        return .{ .slices = slices, .include = All.len };
+        return result;
     }
 
     // zig fmt: off
     pub fn queryBy(self: *Registry, By: type, All: anytype,
-        None: anytype) Query(1 + All.len + None.len) {
+        None: anytype) Query(All.len, None.len) {
     // zig fmt: on
-        var slices: [1 + All.len + None.len][]Entity = undefined;
-        slices[0] = self.assure(By).dense.items;
+        var result: Query(All.len, None.len) = .{};
+        result.dense = self.assure(By).dense.items;
 
-        inline for (All, slices[1 .. 1 + All.len]) |T, *slice| {
-            slice.* = self.assure(T).sparse.items;
+        inline for (All, &result.all) |T, *sparse| {
+            sparse.* = self.assure(T).sparse.items;
         }
-        inline for (None, slices[1 + All.len ..]) |T, *slice| {
-            slice.* = self.assure(T).sparse.items;
+        inline for (None, &result.none) |T, *sparse| {
+            sparse.* = self.assure(T).sparse.items;
         }
-        return .{ .slices = slices, .include = 1 + All.len };
+        return result;
     }
 };
 
-pub fn Query(comptime len: usize) type {
+pub fn Query(comptime allLen: usize, comptime noneLen: usize) type {
     return struct {
-        slices: [len][]Entity,
-        include: usize,
-        index: usize = 0,
+        dense: []Entity = &.{},
+        all: [allLen][]Entity = undefined,
+        none: [noneLen][]Entity = undefined,
+        index: Entity = 0,
         reversed: bool = false,
 
         pub fn reverse(self: @This()) @This() {
             var query = self;
-            query.index = query.slices[0].len -| 1;
+            query.index = query.dense.len -| 1;
             query.reversed = true;
             return query;
         }
 
         pub fn next(self: *@This()) ?Entity {
-            blk: while (self.index < self.slices[0].len) {
-                const entity = self.slices[0][self.index];
+            blk: while (self.index < self.dense.len) {
+                const entity = self.dense[self.index];
                 if (self.reversed) self.index -%= 1 else self.index += 1;
-                if (self.slices.len == 1) return entity;
-                for (self.slices[1..self.include]) |sparse| {
+                for (self.all) |sparse| {
                     if (!hasEntity(sparse, entity)) continue :blk;
                 }
-                for (self.slices[self.include..]) |sparse| {
+                for (self.none) |sparse| {
                     if (hasEntity(sparse, entity)) continue :blk;
                 }
                 return entity;
