@@ -14,7 +14,7 @@ CPP 源码路径：C:\workspace\github\TinyFarm
 - [x] 08-ECS 在本项目中的落地.md
 - [x] 09-2D 渲染最小闭环.md
 - [x] 10-Renderer 与 GLRenderer.md
-- [ ] 11-精灵批处理与着色器.md
+- [x] 11-精灵批处理与着色器.md
 - [ ] 12-光照与后处理.md
 - [ ] 13-资源系统.md
 - [ ] 14-字体与文本渲染.md
