@@ -4,6 +4,9 @@ const Allocator = std.mem.Allocator;
 
 pub const Entity = u16;
 const invalid = std.math.maxInt(Entity);
+pub fn hasEntity(slice: []const Entity, entity: Entity) bool {
+    return entity < slice.len and slice[entity] != invalid;
+}
 pub const Version = u16;
 pub const Identity = struct { entity: Entity, version: Version };
 
@@ -64,8 +67,7 @@ pub fn SparseMap(T: type) type {
         }
 
         pub fn has(self: *const Self, entity: Entity) bool {
-            return entity < self.sparse.items.len and
-                self.sparse.items[entity] != invalid;
+            return hasEntity(self.sparse.items, entity);
         }
 
         pub fn add(self: *Self, gpa: Allocator, entity: Entity, v: T) !void {
@@ -371,11 +373,6 @@ pub const Registry = struct {
         return self.assure(T).components();
     }
 
-    // pub fn indexes(self: *Registry, T: type) //
-    // struct { []Entity, View(.{T}, .{}, false) } {
-    //     return .{ self.assure(T).dense.items, self.view(.{T}) };
-    // }
-
     pub fn sort(self: *Registry, T: type, lessFn: fn (T, T) bool) void {
         self.assure(T).sort(lessFn);
     }
@@ -428,53 +425,74 @@ pub const Registry = struct {
         inline for (types) |T| self.clear(T);
     }
 
-    pub fn view(self: *Registry, types: anytype) View(types, .{}) {
-        return self.viewOption(types, .{});
-    }
-
-    pub fn reverseView(self: *Registry, types: anytype) //
-    View(types, .{ .reverse = true }) {
-        return self.viewOption(types, .{ .reverse = true });
+    pub fn query(self: *Registry, includes: anytype) Query(includes.len) {
+        return self.queryOption(includes, .{}, .{});
     }
 
     // zig fmt: off
-    pub fn viewOption(self: *Registry, includes: anytype,
-        comptime option: ViewOption) View(includes, option) {
+    pub fn reverseQuery(self: *Registry, includes: anytype)
+        Query(includes.len) {
+        return self.queryOption(includes, .{}, .{ .reverse = true });
+    }
+
+    pub fn queryOption(self: *Registry, includes: anytype, excludes: anytype,
+        option: QueryOption) Query(includes.len + excludes.len) {
     // zig fmt: on
-        return View(includes, option).init(self);
+        comptime std.debug.assert(includes.len > 0);
+
+        var slices: [includes.len + excludes.len][]Entity = undefined;
+        var minIndex: usize, var minCount: usize = .{ 0, invalid };
+        var dense: []Entity = &.{};
+        inline for (includes, &slices, 0..) |T, *slice, i| {
+            const map = self.assure(T);
+            slice.* = map.sparse.items;
+            if (map.dense.items.len < minCount) {
+                minIndex, minCount = .{ i, map.dense.items.len };
+                dense = map.dense.items;
+            }
+        }
+        inline for (excludes, slices[includes.len..]) |T, *slice| {
+            slice.* = self.assure(T).sparse.items;
+        }
+
+        if (option.useFirst or minIndex == 0) {
+            slices[0] = self.assure(includes[0]).dense.items;
+        } else {
+            std.mem.swap([]Entity, &slices[0], &slices[minIndex]);
+            slices[0] = dense;
+        }
+
+        return .{
+            .slices = slices,
+            .include = @intCast(includes.len),
+            .index = if (option.reverse) slices[0].len -| 1 else 0,
+            .reverse = option.reverse,
+        };
     }
 };
 
-pub const ViewOption = struct {
+pub const QueryOption = struct {
     reverse: bool = false,
     useFirst: bool = false, // use shortest or first?
 };
-pub fn View(includes: anytype, option: ViewOption) type {
-    return struct {
-        registry: *Registry,
-        slice: []Entity = &.{},
-        index: usize,
 
-        pub fn init(r: *Registry) @This() {
-            var slice = r.assure(includes[0]).dense.items;
-            if (!option.useFirst) {
-                inline for (includes) |T| {
-                    const entities = r.assure(T).dense.items;
-                    if (entities.len < slice.len) slice = entities;
-                }
-            }
-            const i = if (option.reverse) slice.len -| 1 else 0;
-            return .{ .registry = r, .slice = slice, .index = @intCast(i) };
-        }
+pub fn Query(comptime len: usize) type {
+    return struct {
+        slices: [len][]Entity,
+        include: u8,
+        index: usize,
+        reverse: bool,
 
         pub fn next(self: *@This()) ?Entity {
-            blk: while (self.index < self.slice.len) {
-                const entity = self.slice[self.index];
-                if (option.reverse) self.index -%= 1 else self.index += 1;
-
-                if (includes.len == 1) return entity;
-                inline for (includes) |T| {
-                    if (!self.registry.has(entity, T)) continue :blk;
+            blk: while (self.index < self.slices[0].len) {
+                const entity = self.slices[0][self.index];
+                if (self.reverse) self.index -%= 1 else self.index += 1;
+                if (self.slices.len == 1) return entity;
+                for (self.slices[1..self.include]) |sparse| {
+                    if (!hasEntity(sparse, entity)) continue :blk;
+                }
+                for (self.slices[self.include..]) |sparse| {
+                    if (hasEntity(sparse, entity)) continue :blk;
                 }
                 return entity;
             } else return null;

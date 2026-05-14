@@ -4,8 +4,8 @@ const zhu = @import("zhu");
 const com = @import("../component.zig");
 
 pub fn update(registry: *zhu.ecs.Registry) void {
-    var view = registry.view(.{ com.Position, com.Render, com.YSort });
-    while (view.next()) |entity| {
+    var query = registry.query(.{ com.Render, com.YSort });
+    while (query.next()) |entity| {
         const position = registry.get(entity, com.Position);
         const render = registry.getPtr(entity, com.Render);
         render.depth = position.y;

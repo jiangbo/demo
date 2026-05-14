@@ -4,8 +4,8 @@ const zhu = @import("zhu");
 const com = @import("../component.zig");
 
 pub fn update(registry: *zhu.ecs.Registry, delta: f32) void {
-    var view = registry.view(.{com.Crop});
-    while (view.next()) |entity| {
+    var query = registry.query(.{com.Crop});
+    while (query.next()) |entity| {
         const crop = registry.getPtr(entity, com.Crop);
         crop.growth = @min(1, crop.growth + delta * 0.1);
     }

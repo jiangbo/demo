@@ -6,8 +6,8 @@ const com = @import("../component.zig");
 pub fn draw(registry: *zhu.ecs.Registry) void {
     registry.sort(com.Render, lessThan);
 
-    var view = registry.view(.{ com.Render, com.Position, com.Sprite });
-    while (view.next()) |entity| {
+    var query = registry.query(.{ com.Render, com.Sprite });
+    while (query.next()) |entity| {
         const render = registry.get(entity, com.Render);
         const position = registry.get(entity, com.Position);
         const sprite = registry.get(entity, com.Sprite);
