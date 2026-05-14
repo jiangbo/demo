@@ -41,6 +41,7 @@ pub const Vertex = extern struct {
 pub var pipeline: sk.gfx.Pipeline = undefined;
 pub var vertexBuffer: std.ArrayList(Vertex) = .empty;
 pub var whiteImage: graphics.Image = undefined;
+pub var pixelSnap: bool = true;
 var nearestSampler: sk.gfx.Sampler = undefined;
 
 var commandBuffer: std.ArrayList(Command) = .empty;
@@ -239,8 +240,11 @@ fn doDraw(cmd: Command) void {
     // 处理 uniform 变量
     const x, const y = .{ camera.size.x, camera.size.y };
     const orth = math.Matrix.orthographic(x, y, 0, 1);
-    const pos = cmd.position.scale(-1).toVector3(0);
-    const translate = math.Matrix.translateVec(pos);
+    var pos = cmd.position;
+    if (pixelSnap) pos = pos.mul(cmd.scale).round().div(cmd.scale);
+    const position = pos.scale(-1).toVector3(0);
+
+    const translate = math.Matrix.translateVec(position);
     const scaleMatrix = math.Matrix.scaleVec(cmd.scale.toVector3(1));
     const view = math.Matrix.mul(scaleMatrix, translate);
 
