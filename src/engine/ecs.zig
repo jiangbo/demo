@@ -426,24 +426,19 @@ pub const Registry = struct {
     }
 
     pub fn query(self: *Registry, includes: anytype) Query(includes.len) {
-        return self.queryOption(includes, .{}, .{});
+        return self.queryNone(includes, .{});
     }
 
     // zig fmt: off
-    pub fn reverseQuery(self: *Registry, includes: anytype)
-        Query(includes.len) {
-        return self.queryOption(includes, .{}, .{ .reverse = true });
-    }
-
-    pub fn queryOption(self: *Registry, includes: anytype, excludes: anytype,
-        option: QueryOption) Query(includes.len + excludes.len) {
+    pub fn queryNone(self: *Registry, All: anytype, None: anytype)
+        Query(All.len + None.len) {
     // zig fmt: on
-        comptime std.debug.assert(includes.len > 0);
+        comptime std.debug.assert(All.len > 0);
 
-        var slices: [includes.len + excludes.len][]Entity = undefined;
+        var slices: [All.len + None.len][]Entity = undefined;
         var minIndex: usize, var minCount: usize = .{ 0, invalid };
         var dense: []Entity = &.{};
-        inline for (includes, &slices, 0..) |T, *slice, i| {
+        inline for (All, &slices, 0..) |T, *slice, i| {
             const map = self.assure(T);
             slice.* = map.sparse.items;
             if (map.dense.items.len < minCount) {
@@ -451,42 +446,52 @@ pub const Registry = struct {
                 dense = map.dense.items;
             }
         }
-        inline for (excludes, slices[includes.len..]) |T, *slice| {
+        inline for (None, slices[All.len..]) |T, *slice| {
             slice.* = self.assure(T).sparse.items;
         }
 
-        if (option.useFirst or minIndex == 0) {
-            slices[0] = self.assure(includes[0]).dense.items;
-        } else {
+        if (minIndex != 0) {
             std.mem.swap([]Entity, &slices[0], &slices[minIndex]);
-            slices[0] = dense;
         }
-
-        return .{
-            .slices = slices,
-            .include = @intCast(includes.len),
-            .index = if (option.reverse) slices[0].len -| 1 else 0,
-            .reverse = option.reverse,
-        };
+        slices[0] = dense;
+        return .{ .slices = slices, .include = All.len };
     }
-};
 
-pub const QueryOption = struct {
-    reverse: bool = false,
-    useFirst: bool = false, // use shortest or first?
+    // zig fmt: off
+    pub fn queryBy(self: *Registry, By: type, All: anytype,
+        None: anytype) Query(1 + All.len + None.len) {
+    // zig fmt: on
+        var slices: [1 + All.len + None.len][]Entity = undefined;
+        slices[0] = self.assure(By).dense.items;
+
+        inline for (All, slices[1 .. 1 + All.len]) |T, *slice| {
+            slice.* = self.assure(T).sparse.items;
+        }
+        inline for (None, slices[1 + All.len ..]) |T, *slice| {
+            slice.* = self.assure(T).sparse.items;
+        }
+        return .{ .slices = slices, .include = 1 + All.len };
+    }
 };
 
 pub fn Query(comptime len: usize) type {
     return struct {
         slices: [len][]Entity,
-        include: u8,
-        index: usize,
-        reverse: bool,
+        include: usize,
+        index: usize = 0,
+        reversed: bool = false,
+
+        pub fn reverse(self: @This()) @This() {
+            var query = self;
+            query.index = query.slices[0].len -| 1;
+            query.reversed = true;
+            return query;
+        }
 
         pub fn next(self: *@This()) ?Entity {
             blk: while (self.index < self.slices[0].len) {
                 const entity = self.slices[0][self.index];
-                if (self.reverse) self.index -%= 1 else self.index += 1;
+                if (self.reversed) self.index -%= 1 else self.index += 1;
                 if (self.slices.len == 1) return entity;
                 for (self.slices[1..self.include]) |sparse| {
                     if (!hasEntity(sparse, entity)) continue :blk;
