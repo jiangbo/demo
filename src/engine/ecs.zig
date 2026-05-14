@@ -149,7 +149,7 @@ pub fn SparseMap(T: type) type {
 
             const sparse = self.sparse.items;
             const v = self.valuePtr[0..self.dense.items.len];
-            for (0..v.len) |i| {
+            for (1..v.len) |i| {
                 var j = i;
                 while (j > 0 and lessFn(v[j], v[j - 1])) : (j -= 1) {
                     std.mem.swap(T, &v[j], &v[j - 1]);
