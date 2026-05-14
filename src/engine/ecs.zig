@@ -2,18 +2,14 @@ const std = @import("std");
 
 const Allocator = std.mem.Allocator;
 
-pub const Entity = struct {
-    pub const Index = u16;
-    pub const Version = u16;
-    const invalid = std.math.maxInt(Index);
-
-    index: Index,
-    version: Version,
-};
+pub const Entity = u16;
+const invalid = std.math.maxInt(Entity);
+pub const Version = u16;
+pub const Identity = struct { entity: Entity, version: Version };
 
 const Entities = struct {
-    versions: std.ArrayList(Entity.Version) = .empty,
-    deleted: std.ArrayList(Entity.Index) = .empty,
+    versions: std.ArrayList(Version) = .empty,
+    deleted: std.ArrayList(Entity) = .empty,
 
     pub fn deinit(self: *Entities, gpa: Allocator) void {
         self.versions.deinit(gpa);
@@ -21,31 +17,28 @@ const Entities = struct {
     }
 
     pub fn create(self: *Entities, gpa: Allocator) !Entity {
-        if (self.deleted.pop()) |index| {
-            const version = self.versions.items[index];
-            return .{ .index = index, .version = version };
-        } else {
-            const index = self.versions.items.len;
-            if (index == Entity.invalid) @panic("max entity index");
-            try self.versions.append(gpa, 0);
-            return .{ .index = @intCast(index), .version = 0 };
-        }
+        if (self.deleted.pop()) |entity| return entity;
+
+        const entity: Entity = @intCast(self.versions.items.len);
+        if (entity == invalid) @panic("max entity count reached");
+        try self.versions.append(gpa, 0);
+        return entity;
     }
 
     pub fn destroy(self: *Entities, gpa: Allocator, entity: Entity) !void {
-        self.versions.items[entity.index] +%= 1;
-        try self.deleted.append(gpa, entity.index);
+        self.versions.items[entity] +%= 1;
+        try self.deleted.append(gpa, entity);
     }
 
-    pub fn isAlive(self: *const Entities, entity: Entity) bool {
-        return entity.index < self.versions.items.len and
-            self.versions.items[entity.index] == entity.version;
+    pub fn isAlive(self: *const Entities, identity: Identity) bool {
+        return identity.entity < self.versions.items.len and
+            self.versions.items[identity.entity] == identity.version;
     }
 
-    pub fn toEntity(self: *const Entities, index: Entity.Index) ?Entity {
-        if (index < self.versions.items.len) {
-            const version = self.versions.items[index];
-            return .{ .index = index, .version = version };
+    pub fn toIdentity(self: *const Entities, entity: Entity) ?Identity {
+        if (entity < self.versions.items.len) {
+            const version = self.versions.items[entity];
+            return .{ .entity = entity, .version = version };
         } else return null;
     }
 };
@@ -53,14 +46,12 @@ const Entities = struct {
 pub fn SparseMap(T: type) type {
     return struct {
         const Self = @This();
-        const Index = Entity.Index;
 
-        sparse: std.ArrayList(Index) = .empty,
-        dense: std.ArrayList(Index) = .empty,
+        sparse: std.ArrayList(Entity) = .empty,
+        dense: std.ArrayList(Entity) = .empty,
         alignment: std.mem.Alignment = .of(T),
         valuePtr: [*]T = undefined,
         valueSize: u16 = @sizeOf(T),
-        alignIndex: Index = 0,
 
         pub fn deinit(self: *Self, gpa: Allocator) void {
             self.sparse.deinit(gpa);
@@ -72,26 +63,26 @@ pub fn SparseMap(T: type) type {
             gpa.rawFree(slice, self.alignment, @returnAddress());
         }
 
-        pub fn has(self: *const Self, entity: Index) bool {
+        pub fn has(self: *const Self, entity: Entity) bool {
             return entity < self.sparse.items.len and
-                self.sparse.items[entity] != Entity.invalid;
+                self.sparse.items[entity] != invalid;
         }
 
-        pub fn add(self: *Self, gpa: Allocator, e: Index, v: T) !void {
-            if (self.has(e)) {
-                if (self.valueSize != 0) self.get(e).* = v;
-            } else try self.doAdd(gpa, e, v);
+        pub fn add(self: *Self, gpa: Allocator, entity: Entity, v: T) !void {
+            if (self.has(entity)) {
+                if (self.valueSize != 0) self.get(entity).* = v;
+            } else try self.doAdd(gpa, entity, v);
         }
 
-        fn doAdd(self: *Self, gpa: Allocator, e: Index, v: T) !void {
-            if (e >= self.sparse.items.len) {
-                const count = e + 1 - self.sparse.items.len;
-                try self.sparse.appendNTimes(gpa, Entity.invalid, count);
+        fn doAdd(self: *Self, gpa: Allocator, entity: Entity, v: T) !void {
+            if (entity >= self.sparse.items.len) {
+                const count = entity + 1 - self.sparse.items.len;
+                try self.sparse.appendNTimes(gpa, invalid, count);
             }
 
-            const index: u16 = @intCast(self.dense.items.len);
+            const index: Entity = @intCast(self.dense.items.len);
             const oldCapacity = self.dense.capacity;
-            try self.dense.append(gpa, e);
+            try self.dense.append(gpa, entity);
             errdefer _ = self.dense.pop();
             if (self.valueSize != 0) {
                 if (oldCapacity != self.dense.capacity) {
@@ -101,15 +92,15 @@ pub fn SparseMap(T: type) type {
                 }
                 self.valuePtr[index] = v;
             }
-            self.sparse.items[e] = index;
+            self.sparse.items[entity] = index;
         }
 
-        pub fn get(self: *const Self, entity: Index) *T {
+        pub fn get(self: *const Self, entity: Entity) *T {
             std.debug.assert(self.valueSize != 0);
             return &self.valuePtr[self.sparse.items[entity]];
         }
 
-        pub fn tryGet(self: *const Self, entity: Index) ?*T {
+        pub fn tryGet(self: *const Self, entity: Entity) ?*T {
             return if (self.has(entity)) self.get(entity) else null;
         }
 
@@ -118,11 +109,11 @@ pub fn SparseMap(T: type) type {
             return self.valuePtr[0..self.dense.items.len];
         }
 
-        pub fn swapRemove(self: *Self, entity: Index) Index {
-            if (!self.has(entity)) return Entity.invalid;
+        pub fn swapRemove(self: *Self, entity: Entity) Entity {
+            if (!self.has(entity)) return invalid;
 
             const index = self.sparse.items[entity];
-            self.sparse.items[entity] = Entity.invalid;
+            self.sparse.items[entity] = invalid;
 
             const moved = self.dense.pop().?;
             if (self.dense.items.len == index) return index;
@@ -136,11 +127,11 @@ pub fn SparseMap(T: type) type {
             return index;
         }
 
-        pub fn orderedRemove(self: *Self, entity: Index) void {
+        pub fn orderedRemove(self: *Self, entity: Entity) void {
             if (!self.has(entity)) return;
 
             const index = self.sparse.items[entity];
-            self.sparse.items[entity] = Entity.invalid;
+            self.sparse.items[entity] = invalid;
             _ = self.dense.orderedRemove(index);
             for (self.dense.items[index..]) |e| self.sparse.items[e] -= 1;
             if (self.valueSize == 0) return;
@@ -162,14 +153,14 @@ pub fn SparseMap(T: type) type {
                     std.mem.swap(T, &v[j], &v[j - 1]);
                     const lhs = &self.dense.items[j];
                     const rhs = &self.dense.items[j - 1];
-                    std.mem.swap(Index, lhs, rhs);
-                    std.mem.swap(u16, &sparse[lhs.*], &sparse[rhs.*]);
+                    std.mem.swap(Entity, lhs, rhs);
+                    std.mem.swap(Entity, &sparse[lhs.*], &sparse[rhs.*]);
                 }
             }
         }
 
         pub fn clear(self: *Self) void {
-            @memset(self.sparse.items, Entity.invalid);
+            @memset(self.sparse.items, invalid);
             self.dense.clearRetainingCapacity();
         }
     };
@@ -237,22 +228,13 @@ pub const Registry = struct {
         return self.entities.create(self.allocator) catch oom();
     }
 
-    pub fn validEntity(self: *const Registry, entity: ?Entity) bool {
-        return self.entities.isAlive(entity orelse return false);
+    pub fn destroyEntity(self: *Registry, entity: Entity) void {
+        self.removeAll(entity);
+        self.entities.destroy(self.allocator, entity) catch oom();
     }
 
-    pub fn toIndex(self: *const Registry, entity: Entity) ?Entity.Index {
-        return if (self.validEntity(entity)) entity.index else null;
-    }
-
-    pub fn destroyEntity(self: *Registry, entity: ?Entity) void {
-        if (!self.validEntity(entity)) return;
-        self.removeAll(entity.?.index);
-        self.entities.destroy(self.allocator, entity.?) catch oom();
-    }
-
-    pub fn destroy(self: *Registry, index: Entity.Index) void {
-        self.destroyEntity(self.entities.toEntity(index));
+    pub fn destroy(self: *Registry, entity: Entity) void {
+        self.destroyEntity(entity);
     }
 
     pub fn addContext(self: *Registry, value: anytype) void {
@@ -296,13 +278,12 @@ pub const Registry = struct {
 
     pub fn getIdentity(self: *Registry, T: type, V: type) ?V {
         const entity = self.getIdentityEntity(T) orelse return null;
-        const index = self.toIndex(entity) orelse return null;
-        return self.get(index, V);
+        return self.get(entity, V);
     }
 
     pub fn isIdentity(self: *Registry, e: Entity, T: type) bool {
         const e1 = self.getIdentityEntity(T) orelse return false;
-        return e1.index == e.index and e1.version == e.version;
+        return e1 == e;
     }
 
     pub fn removeIdentity(self: *Registry, T: type) bool {
@@ -351,75 +332,73 @@ pub const Registry = struct {
         return @ptrCast(@alignCast(result.value_ptr));
     }
 
-    pub fn add(self: *Registry, index: Entity.Index, value: anytype) void {
+    pub fn add(self: *Registry, entity: Entity, value: anytype) void {
         var map = self.assure(@TypeOf(value));
-        map.add(self.allocator, index, value) catch oom();
+        map.add(self.allocator, entity, value) catch oom();
     }
 
-    pub fn alignAdd(self: *Registry, entity: Entity.Index, comps: anytype) void {
-        var aligned_indexes: [comps.len]Entity.Index = undefined;
-        inline for (comps, &aligned_indexes) |value, *i| {
+    pub fn alignAdd(self: *Registry, entity: Entity, comps: anytype) void {
+        var indexes: [comps.len]Entity = undefined;
+        inline for (comps, &indexes) |value, *i| {
             var map = self.assure(@TypeOf(value));
             map.add(self.allocator, entity, value) catch oom();
-            i.* = map.sparse.items[entity] + map.alignIndex;
+            i.* = map.sparse.items[entity];
         }
-        for (aligned_indexes[1..]) |i| std.debug.assert(aligned_indexes[0] == i);
+        for (indexes[1..]) |i| std.debug.assert(indexes[0] == i);
     }
 
-    pub fn has(self: *Registry, index: Entity.Index, T: type) bool {
-        return self.assure(T).has(index);
+    pub fn has(self: *Registry, entity: Entity, T: type) bool {
+        return self.assure(T).has(entity);
     }
 
-    pub fn get(self: *Registry, index: Entity.Index, T: type) T {
-        return self.tryGet(index, T).?;
+    pub fn get(self: *Registry, entity: Entity, T: type) T {
+        return self.tryGet(entity, T).?;
     }
 
-    pub fn tryGet(self: *Registry, index: Entity.Index, T: type) ?T {
-        return (self.tryGetPtr(index, T) orelse return null).*;
+    pub fn tryGet(self: *Registry, entity: Entity, T: type) ?T {
+        return (self.tryGetPtr(entity, T) orelse return null).*;
     }
 
-    pub fn getPtr(self: *Registry, index: Entity.Index, T: type) *T {
-        return self.tryGetPtr(index, T).?;
+    pub fn getPtr(self: *Registry, entity: Entity, T: type) *T {
+        return self.tryGetPtr(entity, T).?;
     }
 
-    pub fn tryGetPtr(self: *Registry, index: Entity.Index, T: type) ?*T {
-        return self.assure(T).tryGet(index);
+    pub fn tryGetPtr(self: *Registry, entity: Entity, T: type) ?*T {
+        return self.assure(T).tryGet(entity);
     }
 
     pub fn raw(self: *Registry, T: type) []T {
         return self.assure(T).components();
     }
 
-    pub fn indexes(self: *Registry, T: type) //
-    struct { []Entity.Index, View(.{T}, .{}, false) } {
-        return .{ self.assure(T).dense.items, self.view(.{T}) };
-    }
+    // pub fn indexes(self: *Registry, T: type) //
+    // struct { []Entity, View(.{T}, .{}, false) } {
+    //     return .{ self.assure(T).dense.items, self.view(.{T}) };
+    // }
 
     pub fn sort(self: *Registry, T: type, lessFn: fn (T, T) bool) void {
         self.assure(T).sort(lessFn);
     }
 
     pub const remove = swapRemove;
-    pub fn swapRemove(self: *Registry, index: Entity.Index, T: type) void {
-        _ = self.assure(T).swapRemove(index);
+    pub fn swapRemove(self: *Registry, entity: Entity, T: type) void {
+        _ = self.assure(T).swapRemove(entity);
     }
 
-    pub fn orderedRemove(self: *Registry, index: Entity.Index, T: type) void {
-        self.assure(T).orderedRemove(index);
+    pub fn orderedRemove(self: *Registry, entity: Entity, T: type) void {
+        self.assure(T).orderedRemove(entity);
     }
 
-    pub fn alignRemove(self: *Registry, entity: Entity.Index, types: anytype) void {
-        var index: [types.len]u16 = undefined;
+    pub fn alignRemove(self: *Registry, entity: Entity, types: anytype) void {
+        var index: [types.len]Entity = undefined;
         inline for (types, &index) |T, *i| {
             var map = self.assure(T);
             i.* = map.swapRemove(entity);
-            if (i.* != Entity.invalid) i.* +% map.alignIndex;
         }
         for (index[1..]) |i| std.debug.assert(index[0] == i);
     }
 
-    pub fn removeExcept(self: *Registry, index: Entity.Index, keep: anytype) void {
-
+    pub fn removeExcept(self: *Registry, entity: Entity, keep: anytype) void {
         var iterator = self.componentMap.iterator();
         while (iterator.next()) |entry| {
             var found = false;
@@ -429,15 +408,15 @@ pub const Registry = struct {
             if (found) continue;
 
             var map: *SparseMap(u8) = @ptrCast(@alignCast(entry.value_ptr));
-            _ = map.swapRemove(index);
+            _ = map.swapRemove(entity);
         }
     }
 
-    pub fn removeAll(self: *Registry, index: Entity.Index) void {
+    pub fn removeAll(self: *Registry, entity: Entity) void {
         var iterator = self.componentMap.valueIterator();
         while (iterator.next()) |value| {
             var map: *SparseMap(u8) = @ptrCast(@alignCast(value));
-            _ = map.swapRemove(index);
+            _ = map.swapRemove(entity);
         }
     }
 
@@ -471,11 +450,10 @@ pub const ViewOption = struct {
     useFirst: bool = false, // use shortest or first?
 };
 pub fn View(includes: anytype, option: ViewOption) type {
-    const Index = Entity.Index;
     return struct {
         registry: *Registry,
-        slice: []Index = &.{},
-        index: Index,
+        slice: []Entity = &.{},
+        index: usize,
 
         pub fn init(r: *Registry) @This() {
             var slice = r.assure(includes[0]).dense.items;
@@ -489,7 +467,7 @@ pub fn View(includes: anytype, option: ViewOption) type {
             return .{ .registry = r, .slice = slice, .index = @intCast(i) };
         }
 
-        pub fn next(self: *@This()) ?Index {
+        pub fn next(self: *@This()) ?Entity {
             blk: while (self.index < self.slice.len) {
                 const entity = self.slice[self.index];
                 if (option.reverse) self.index -%= 1 else self.index += 1;
@@ -500,10 +478,6 @@ pub fn View(includes: anytype, option: ViewOption) type {
                 }
                 return entity;
             } else return null;
-        }
-
-        pub fn toEntity(self: *const @This(), index: Index) Entity {
-            return self.registry.entities.toEntity(index).?;
         }
     };
 }

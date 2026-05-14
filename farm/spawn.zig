@@ -10,7 +10,7 @@ pub fn init() void {
 pub fn deinit() void {}
 
 pub fn loadFarm(registry: *zhu.ecs.Registry) void {
-    const player = registry.toIndex(registry.createEntity()).?;
+    const player = registry.createEntity();
     registry.add(player, com.Player{});
     registry.add(player, com.Position.xy(160, 96));
     registry.add(player, com.Sprite{
@@ -24,7 +24,7 @@ pub fn loadFarm(registry: *zhu.ecs.Registry) void {
     });
     registry.add(player, com.YSort{});
 
-    const crop = registry.toIndex(registry.createEntity()).?;
+    const crop = registry.createEntity();
     registry.add(crop, com.Crop{ .growth = 0 });
     registry.add(crop, com.Position.xy(176, 96));
     registry.add(crop, com.Sprite{
@@ -38,7 +38,7 @@ pub fn loadFarm(registry: *zhu.ecs.Registry) void {
     });
     registry.add(crop, com.YSort{});
 
-    const farmland = registry.toIndex(registry.createEntity()).?;
+    const farmland = registry.createEntity();
     registry.add(farmland, com.Farmland{});
     registry.add(farmland, com.Position.xy(176, 112));
     registry.add(farmland, com.Sprite{

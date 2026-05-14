@@ -16,7 +16,7 @@ test "YSort 会把位置的 y 写入渲染深度" {
     var registry = zhu.ecs.Registry.init(std.testing.allocator);
     defer registry.deinit();
 
-    const entity = registry.toIndex(registry.createEntity()).?;
+    const entity = registry.createEntity();
     registry.add(entity, com.Position.xy(10, 42));
     registry.add(entity, com.Render{});
     registry.add(entity, com.YSort{});

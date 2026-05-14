@@ -15,7 +15,7 @@ test "作物更新会增长并限制到一" {
     var registry = zhu.ecs.Registry.init(std.testing.allocator);
     defer registry.deinit();
 
-    const entity = registry.toIndex(registry.createEntity()).?;
+    const entity = registry.createEntity();
     registry.add(entity, com.Crop{ .growth = 0.95 });
 
     update(&registry, 10);
