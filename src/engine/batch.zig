@@ -47,6 +47,13 @@ var nearestSampler: sk.gfx.Sampler = undefined;
 var commandBuffer: std.ArrayList(Command) = .empty;
 var vertexBufferHandle: sk.gfx.Buffer = undefined;
 
+pub const Stats = struct {
+    sprites: usize = 0,
+    commands: usize = 0,
+};
+
+pub var lastStats: Stats = .{};
+
 pub fn init(vertexes: []Vertex, commands: []Command) void {
     vertexBufferHandle = sk.gfx.makeBuffer(.{
         .size = @sizeOf(Vertex) * vertexes.len,
@@ -85,9 +92,14 @@ pub fn endDraw() void {
 }
 
 pub fn flush() void {
+    lastStats = .{};
     if (vertexBuffer.items.len == 0) return; // 没需要绘制的东西
 
     currentCommand().end = @intCast(vertexBuffer.items.len);
+    lastStats = .{
+        .sprites = vertexBuffer.items.len,
+        .commands = drawCommandCount(),
+    };
     _ = sk.gfx.updateBuffer(
         vertexBufferHandle,
         sk.gfx.asRange(vertexBuffer.items),
@@ -281,4 +293,12 @@ fn createQuadPipeline(shaderDesc: sk.gfx.ShaderDesc) sk.gfx.Pipeline {
 
 pub fn imageDrawCount() usize {
     return commandBuffer.items.len;
+}
+
+fn drawCommandCount() usize {
+    var count: usize = 0;
+    for (commandBuffer.items) |cmd| {
+        if (cmd.commandEnum == .draw) count += 1;
+    }
+    return count;
 }

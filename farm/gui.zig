@@ -90,6 +90,8 @@ fn drawEnginePanel() void {
         boolText(context.uiWantCaptureKeyboard).ptr,
     );
     imgui.igSeparator();
+    drawBatchStats();
+    imgui.igSeparator();
     drawEventControls();
     drawEventTrace();
 
@@ -127,6 +129,21 @@ fn sceneName(scene: context.Scene) [:0]const u8 {
 
 fn boolText(value: bool) [:0]const u8 {
     return if (value) "true" else "false";
+}
+
+fn drawBatchStats() void {
+    const gpuStats = zhu.graphics.queryFrameStats();
+    const batchStats = zhu.batch.lastStats;
+    const ratio = if (batchStats.commands == 0)
+        0
+    else
+        batchStats.sprites / batchStats.commands;
+
+    _ = imgui.igText("Batch Stats");
+    _ = imgui.igText("GPU draw calls: %d", @as(i32, @intCast(gpuStats.num_draw)));
+    _ = imgui.igText("Batch sprites: %d", @as(i32, @intCast(batchStats.sprites)));
+    _ = imgui.igText("Batch commands: %d", @as(i32, @intCast(batchStats.commands)));
+    _ = imgui.igText("Sprites / command: %d", @as(i32, @intCast(ratio)));
 }
 
 fn drawEventControls() void {
