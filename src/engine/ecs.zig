@@ -257,9 +257,7 @@ pub const Registry = struct {
         const v = self.eventMap.getOrPut(self.allocator, //
             hashTypeId(T)) catch oom();
         const list: *EventList(T) = @ptrCast(@alignCast(v.value_ptr));
-        if (!v.found_existing) {
-            list.* = .{};
-        }
+        if (!v.found_existing) list.* = .{};
         return &list.list;
     }
 
