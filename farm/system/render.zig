@@ -6,11 +6,14 @@ const com = @import("../component.zig");
 pub fn draw(registry: *zhu.ecs.Registry) void {
     registry.sort(com.Render, lessThan);
 
-    var query = registry.query(.{ com.Render, com.Sprite });
+    var query = registry.view(.{ com.Render, com.Position, com.Sprite });
+    const renders = query.query(com.Render);
+    const positions = query.query(com.Position);
+    const sprites = query.query(com.Sprite);
     while (query.next()) |entity| {
-        const render = registry.get(entity, com.Render);
-        const position = registry.get(entity, com.Position);
-        const sprite = registry.get(entity, com.Sprite);
+        const render = renders.get(entity);
+        const position = positions.get(entity);
+        const sprite = sprites.get(entity);
 
         zhu.batch.drawImage(sprite.image, position.add(sprite.offset), .{
             .size = sprite.size,

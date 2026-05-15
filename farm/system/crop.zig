@@ -4,9 +4,10 @@ const zhu = @import("zhu");
 const com = @import("../component.zig");
 
 pub fn update(registry: *zhu.ecs.Registry, delta: f32) void {
-    var query = registry.query(.{com.Crop});
+    var query = registry.view(.{com.Crop});
+    const crops = query.query(com.Crop);
     while (query.next()) |entity| {
-        const crop = registry.getPtr(entity, com.Crop);
+        const crop = crops.getPtr(entity);
         crop.growth = @min(1, crop.growth + delta * 0.1);
     }
 }
@@ -20,5 +21,5 @@ test "作物更新会增长并限制到一" {
 
     update(&registry, 10);
 
-    try std.testing.expectEqual(@as(f32, 1), registry.get(entity, com.Crop).growth);
+    try std.testing.expectEqual(@as(f32, 1), registry.query(com.Crop).get(entity).growth);
 }

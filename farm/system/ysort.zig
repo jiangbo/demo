@@ -4,10 +4,12 @@ const zhu = @import("zhu");
 const com = @import("../component.zig");
 
 pub fn update(registry: *zhu.ecs.Registry) void {
-    var query = registry.query(.{ com.Render, com.YSort });
+    var query = registry.view(.{ com.Render, com.Position, com.YSort });
+    const positions = query.query(com.Position);
+    const renders = query.query(com.Render);
     while (query.next()) |entity| {
-        const position = registry.get(entity, com.Position);
-        const render = registry.getPtr(entity, com.Render);
+        const position = positions.get(entity);
+        const render = renders.getPtr(entity);
         render.depth = position.y;
     }
 }
@@ -23,5 +25,8 @@ test "YSort 会把位置的 y 写入渲染深度" {
 
     update(&registry);
 
-    try std.testing.expectEqual(@as(f32, 42), registry.get(entity, com.Render).depth);
+    try std.testing.expectEqual(
+        @as(f32, 42),
+        registry.query(com.Render).get(entity).depth,
+    );
 }
