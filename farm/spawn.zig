@@ -67,7 +67,7 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
     });
 }
 
-test "loadFarm 创建初始农场实体" {
+test "加载农场会创建初始实体" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 

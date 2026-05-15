@@ -22,7 +22,7 @@ test {
     std.testing.refAllDeclsRecursive(ysort);
 }
 
-test "ECS query can read and write cached component values" {
+test "ECS 查询可以读写缓存的组件值" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
@@ -45,7 +45,7 @@ test "ECS query can read and write cached component values" {
     try std.testing.expectEqual(null, view.next());
 }
 
-test "ECS viewNone keeps excluded components filtered" {
+test "ECS viewNone 会过滤排除组件" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 

@@ -28,7 +28,7 @@ pub fn lessThan(lhs: Render, rhs: Render) bool {
     return @intFromEnum(lhs.layer) < @intFromEnum(rhs.layer);
 }
 
-test "Render 排序先比较图层再比较深度" {
+test "渲染排序先比较图层再比较深度" {
     const ground = Render{ .layer = .ground, .depth = 100 };
     const crop = Render{ .layer = .crop, .depth = 0 };
     const actorBack = Render{ .layer = .actor, .depth = 8 };

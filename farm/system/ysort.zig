@@ -15,7 +15,7 @@ pub fn update(world: *zhu.ecs.World) void {
     }
 }
 
-test "YSort 会把位置的 y 写入渲染深度" {
+test "YSort 会把位置 y 写入渲染深度" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
