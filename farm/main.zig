@@ -5,6 +5,7 @@ const zhu = @import("zhu");
 const context = @import("context.zig");
 const events = @import("event.zig");
 const gui = @import("gui.zig");
+const images = @import("images.zig");
 const map = @import("map.zig");
 const scene = @import("scene.zig");
 const spawn = @import("spawn.zig");
@@ -22,6 +23,7 @@ pub fn init() void {
     gui.init();
     context.init();
     events.init();
+    images.init();
     map.init();
     spawn.init();
     scene.init();
@@ -45,7 +47,6 @@ pub fn frame(delta: f32) void {
 
 pub fn deinit() void {
     scene.deinit();
-    spawn.deinit();
     map.deinit();
     events.deinit();
     context.deinit();

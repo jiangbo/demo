@@ -3,20 +3,13 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 
-const playerIdlePath =
-    "assets/farm-rpg/Character and Portrait/Character/Pre-made/Alex/Idle.png";
 const playerFrameSize = zhu.Vector2.xy(32, 32);
 
 var playerIdleFrame: ?zhu.graphics.Image = null;
 
 pub fn init() void {
-    const image = zhu.assets.loadImage(playerIdlePath);
-    playerIdleFrame = image.sub(.init(.zero, playerFrameSize));
+    playerIdleFrame = zhu.getImage("farm/player/idle_down_0");
     std.log.info("spawn init", .{});
-}
-
-pub fn deinit() void {
-    playerIdleFrame = null;
 }
 
 pub fn loadFarm(world: *zhu.ecs.World) void {
