@@ -5,10 +5,11 @@ const component = @import("component.zig");
 
 const playerFrameSize = zhu.Vector2.xy(32, 32);
 
-var playerIdleFrame: ?zhu.graphics.Image = null;
+var playerIdleFrame: zhu.graphics.Image = undefined;
 
 pub fn init() void {
-    playerIdleFrame = zhu.getImage("farm/player/idle_down_0");
+    playerIdleFrame = zhu.getImage("farm-rpg/Character and Portrait/Character/Pre-made/Alex/Idle.png");
+    playerIdleFrame = playerIdleFrame.sub(.init(.zero, playerFrameSize));
     std.log.info("spawn init", .{});
 }
 
@@ -17,9 +18,8 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
     world.add(player, component.Player{});
     world.add(player, component.Position.xy(160, 96));
     world.add(player, component.Sprite{
-        .image = playerIdleFrame orelse zhu.batch.whiteImage,
+        .image = playerIdleFrame,
         .offset = .xy(-16, -24),
-        .size = playerFrameSize,
     });
     world.add(player, component.Render{
         .layer = .actor,

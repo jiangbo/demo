@@ -5,7 +5,6 @@ const zhu = @import("zhu");
 const context = @import("context.zig");
 const events = @import("event.zig");
 const gui = @import("gui.zig");
-const images = @import("images.zig");
 const map = @import("map.zig");
 const scene = @import("scene.zig");
 const spawn = @import("spawn.zig");
@@ -20,10 +19,11 @@ pub fn init() void {
     zhu.batch.whiteImage = zhu.assets.createWhiteImage("farm/white");
     world = .init(zhu.assets.allocator);
 
+    zhu.assets.loadAtlas(@import("zon/atlas.zon"));
+
     gui.init();
     context.init();
     events.init();
-    images.init();
     map.init();
     spawn.init();
     scene.init();
