@@ -1,0 +1,14 @@
+.{
+    .crop = .{
+        .sprite = .{
+            .offset = .{ .x = -6, .y = -10 },
+            .size = .{ .x = 12, .y = 10 },
+        },
+    },
+    .farmland = .{
+        .sprite = .{
+            .offset = .{ .x = -8, .y = -8 },
+            .size = .{ .x = 16, .y = 16 },
+        },
+    },
+}

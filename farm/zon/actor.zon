@@ -1,0 +1,20 @@
+.{
+    .player = .{
+        .sprite = .{
+            .path = "farm-rpg/Character and Portrait/Character/Pre-made/Alex/Idle.png",
+            .rect = .{ .min = .{ .x = 0, .y = 0 }, .size = .{ .x = 32, .y = 32 } },
+            .size = .{ .x = 32, .y = 32 },
+            .offset = .{ .x = -16, .y = -24 },
+        },
+        .images = .{
+            .idle = "farm-rpg/Character and Portrait/Character/Pre-made/Alex/Idle.png",
+            .walk = "farm-rpg/Character and Portrait/Character/Pre-made/Alex/Walk.png",
+            .hoe = "farm-rpg/Character and Portrait/Character/Pre-made/Alex/Hoe.png",
+            .watering = "farm-rpg/Character and Portrait/Character/Pre-made/Alex/Watering.png",
+            .planting = "farm-rpg/Character and Portrait/Character/Pre-made/Alex/Throwing items.png",
+            .sickle = "farm-rpg/Character and Portrait/Character/Pre-made/Alex/Sickle.png",
+            .axe = "farm-rpg/Character and Portrait/Character/Pre-made/Alex/Axe.png",
+            .pickaxe = "farm-rpg/Character and Portrait/Character/Pre-made/Alex/Pickaxe.png",
+        },
+    },
+}
