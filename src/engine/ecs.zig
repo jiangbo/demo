@@ -224,10 +224,6 @@ pub const Registry = struct {
         self.entities.destroy(self.allocator, entity) catch oom();
     }
 
-    pub fn destroy(self: *Registry, entity: Entity) void {
-        self.destroyEntity(entity);
-    }
-
     pub fn addIdentity(self: *Registry, e: Entity, T: type) void {
         const id = hashTypeId(T);
         self.identityMap.put(self.allocator, id, e) catch oom();
