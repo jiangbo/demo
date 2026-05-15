@@ -3,24 +3,33 @@ const zhu = @import("zhu");
 
 const com = @import("component.zig");
 
+const playerIdlePath =
+    "assets/farm-rpg/Character and Portrait/Character/Pre-made/Alex/Idle.png";
+const playerFrameSize = zhu.Vector2.xy(32, 32);
+
+var playerIdleFrame: ?zhu.graphics.Image = null;
+
 pub fn init() void {
+    const image = zhu.assets.loadImage(playerIdlePath);
+    playerIdleFrame = image.sub(.init(.zero, playerFrameSize));
     std.log.info("spawn init", .{});
 }
 
-pub fn deinit() void {}
+pub fn deinit() void {
+    playerIdleFrame = null;
+}
 
 pub fn loadFarm(World: *zhu.ecs.World) void {
     const player = World.createEntity();
     World.add(player, com.Player{});
     World.add(player, com.Position.xy(160, 96));
     World.add(player, com.Sprite{
-        .image = zhu.batch.whiteImage,
-        .offset = .xy(-6, -18),
-        .size = .xy(12, 18),
+        .image = playerIdleFrame orelse zhu.batch.whiteImage,
+        .offset = .xy(-16, -24),
+        .size = playerFrameSize,
     });
     World.add(player, com.Render{
         .layer = .actor,
-        .color = .rgb(0.92, 0.82, 0.64),
     });
     World.add(player, com.YSort{});
 

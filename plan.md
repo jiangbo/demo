@@ -44,7 +44,7 @@ zig build test
   - 需要系统：YSort 标记、Render 排序。
   - 参考源码：`engine/system/ysort_system.*`
 
-- [ ] 06-加载第一张 PNG 图片
+- [x] 06-加载第一张 PNG 图片
   - 可见效果：玩家或按钮不再是色块，显示真实 PNG。
   - 需要系统：`assets.loadImage`、Sprite 使用真实 Image。
   - 参考源码：`engine/resource/texture_manager.*`

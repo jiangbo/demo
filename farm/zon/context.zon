@@ -1,4 +1,4 @@
 .{
-    .scene = .title,
+    .scene = .farm,
     .time_scale = 1,
 }

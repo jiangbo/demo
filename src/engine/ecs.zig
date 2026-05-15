@@ -475,7 +475,8 @@ pub fn Query(comptime All: anytype, comptime None: anytype) type {
         pub fn getPtr(self: *@This(), entity: Entity, T: type) *T {
             std.debug.assert(self.has(entity, T) and @sizeOf(T) != 0);
             const index = self.sparse[typeIndex(T)][entity];
-            return @ptrCast(@alignCast(&self.values[index]));
+            const values = self.values[typeIndex(T)];
+            return &@as([*]T, @ptrCast(@alignCast(values)))[index];
         }
 
         pub fn tryGet(self: *@This(), entity: Entity, T: type) ?T {
