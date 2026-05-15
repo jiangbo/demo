@@ -26,7 +26,8 @@ pub const Vertex = extern struct {
     pub const Mask = packed struct(u32) {
         flipX: bool = false,
         flipY: bool = false,
-        padding: u30 = 0,
+        padding: u6 = 0,
+        extend: u24 = 0,
     };
 
     position: math.Vector2, // 顶点坐标
