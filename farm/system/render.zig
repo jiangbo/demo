@@ -1,16 +1,19 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const com = @import("../component.zig");
+const component = @import("../component.zig");
+const Position = component.Position;
+const Render = component.Render;
+const Sprite = component.Sprite;
 
 pub fn draw(world: *zhu.ecs.World) void {
-    world.sort(com.Render, lessThan);
+    world.sort(Render, lessThan);
 
-    var query = world.query(.{ com.Render, com.Position, com.Sprite });
-    while (query.next()) |entity| {
-        const render = query.get(entity, com.Render);
-        const position = query.get(entity, com.Position);
-        const sprite = query.get(entity, com.Sprite);
+    var view = world.view(.{ Render, Position, Sprite });
+    while (view.next()) |entity| {
+        const render = view.query(Render).get(entity);
+        const position = view.query(Position).get(entity);
+        const sprite = view.query(Sprite).get(entity);
 
         zhu.batch.drawImage(sprite.image, position.add(sprite.offset), .{
             .size = sprite.size,
@@ -20,16 +23,16 @@ pub fn draw(world: *zhu.ecs.World) void {
     }
 }
 
-pub fn lessThan(lhs: com.Render, rhs: com.Render) bool {
+pub fn lessThan(lhs: Render, rhs: Render) bool {
     if (lhs.layer == rhs.layer) return lhs.depth < rhs.depth;
     return @intFromEnum(lhs.layer) < @intFromEnum(rhs.layer);
 }
 
 test "Render 排序先比较图层再比较深度" {
-    const ground = com.Render{ .layer = .ground, .depth = 100 };
-    const crop = com.Render{ .layer = .crop, .depth = 0 };
-    const actorBack = com.Render{ .layer = .actor, .depth = 8 };
-    const actorFront = com.Render{ .layer = .actor, .depth = 16 };
+    const ground = Render{ .layer = .ground, .depth = 100 };
+    const crop = Render{ .layer = .crop, .depth = 0 };
+    const actorBack = Render{ .layer = .actor, .depth = 8 };
+    const actorFront = Render{ .layer = .actor, .depth = 16 };
 
     try std.testing.expect(lessThan(ground, crop));
     try std.testing.expect(lessThan(actorBack, actorFront));

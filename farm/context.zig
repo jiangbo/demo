@@ -54,24 +54,26 @@ pub fn applyPendingScene() void {
 test "场景请求会等待到应用阶段才生效" {
     init();
 
-    requestScene(.farm);
+    const requested: Scene = if (config.scene == .title) .farm else .title;
+    requestScene(requested);
 
-    try std.testing.expectEqual(Scene.title, currentScene);
-    try std.testing.expectEqual(Scene.farm, pendingScene.?);
+    try std.testing.expectEqual(config.scene, currentScene);
+    try std.testing.expectEqual(requested, pendingScene.?);
 
     applyPendingScene();
 
-    try std.testing.expectEqual(Scene.farm, currentScene);
+    try std.testing.expectEqual(requested, currentScene);
     try std.testing.expectEqual(@as(?Scene, null), pendingScene);
 }
 
 test "应用前最后一次场景请求生效" {
     init();
 
-    requestScene(.farm);
-    requestScene(.title);
+    const first: Scene = if (config.scene == .title) .farm else .title;
+    requestScene(first);
+    requestScene(config.scene);
     applyPendingScene();
 
-    try std.testing.expectEqual(Scene.title, currentScene);
+    try std.testing.expectEqual(config.scene, currentScene);
     try std.testing.expectEqual(@as(?Scene, null), pendingScene);
 }

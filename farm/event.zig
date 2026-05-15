@@ -99,7 +99,7 @@ fn record(entry: TraceEntry) void {
         return;
     }
 
-    std.mem.copyForwards(TraceEntry, trace[0..trace.len - 1], trace[1..]);
+    std.mem.copyForwards(TraceEntry, trace[0 .. trace.len - 1], trace[1..]);
     trace[trace.len - 1] = entry;
 }
 
@@ -110,7 +110,7 @@ test "trigger 会立即处理场景请求" {
     trigger(.{ .scene_request = .farm });
 
     try std.testing.expectEqual(context.Scene.farm, context.pendingScene.?);
-    try std.testing.expectEqual(@as(usize, 1), recentTrace().len);
+    try std.testing.expectEqual(1, recentTrace().len);
     try std.testing.expectEqual(DispatchMode.immediate, recentTrace()[0].mode);
 }
 
@@ -125,6 +125,6 @@ test "enqueue 会等待 update 处理" {
     update();
 
     try std.testing.expectEqual(context.Scene.farm, context.pendingScene.?);
-    try std.testing.expectEqual(@as(usize, 1), recentTrace().len);
+    try std.testing.expectEqual(1, recentTrace().len);
     try std.testing.expectEqual(DispatchMode.queued, recentTrace()[0].mode);
 }

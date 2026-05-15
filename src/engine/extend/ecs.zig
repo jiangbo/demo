@@ -100,7 +100,7 @@ pub fn SparseMap(T: type) type {
             return self.valuePtr[0..self.dense.items.len];
         }
 
-        pub fn remove(self: *Self, entity: Entity) Entity {
+        pub fn swapRemove(self: *Self, entity: Entity) Entity {
             if (!hasEntity(self.sparse.items, entity)) return invalid;
 
             const index = self.sparse.items[entity];
@@ -116,6 +116,21 @@ pub fn SparseMap(T: type) type {
             const src = self.valuePtr[sz * self.dense.items.len ..];
             @memcpy(self.valuePtr[sz * index ..][0..sz], src[0..sz]);
             return index;
+        }
+
+        pub fn orderedRemove(self: *Self, entity: Entity) void {
+            if (!hasEntity(self.sparse.items, entity)) return;
+
+            const index = self.sparse.items[entity];
+            self.sparse.items[entity] = invalid;
+            _ = self.dense.orderedRemove(index);
+            for (self.dense.items[index..]) |e| self.sparse.items[e] -= 1;
+            if (self.valueSize == 0) return;
+
+            const sz = if (T == u8) self.valueSize else 1;
+            const len = (self.dense.items.len - index) * sz;
+            const src = self.valuePtr[sz * (index + 1) ..][0..len];
+            @memmove(self.valuePtr[sz * index ..][0..len], src);
         }
 
         pub fn sort(self: *Self, lessFn: fn (T, T) bool) void {
@@ -142,33 +157,37 @@ pub fn SparseMap(T: type) type {
     };
 }
 
-pub fn Query(T: type) type {
-    return struct {
-        sparse: []Entity = &.{},
-        values: [*]T = undefined,
+// pub fn Query(T: type) type {
+//     return struct {
+//         sparse: []Entity = &.{},
+//         values: [*]T = undefined,
 
-        pub fn has(self: @This(), entity: Entity) bool {
-            return hasEntity(self.sparse, entity);
-        }
+//         pub fn has(self: @This(), entity: Entity) bool {
+//             return hasEntity(self.sparse, entity);
+//         }
 
-        pub fn get(self: @This(), entity: Entity) T {
-            return self.getPtr(entity).*;
-        }
+//         pub fn get(self: @This(), entity: Entity) T {
+//             return self.getPtr(entity).*;
+//         }
 
-        pub fn getPtr(self: @This(), entity: Entity) *T {
-            std.debug.assert(self.has(entity) and @sizeOf(T) != 0);
-            return &self.values[self.sparse[entity]];
-        }
+//         pub fn tryGet(self: @This(), entity: Entity) ?T {
+//             const ptr = self.tryGetPtr(entity) orelse return null;
+//             return ptr.*;
+//         }
 
-        pub fn tryGet(self: @This(), entity: Entity) ?T {
-            return if (self.has(entity)) self.get(entity) else null;
-        }
+//         pub fn getPtr(self: @This(), entity: Entity) *T {
+//             comptime if (@sizeOf(T) == 0) {
+//                 @compileError("zero-sized component has no value pointer");
+//             };
+//             std.debug.assert(self.has(entity));
+//             return &self.values[self.sparse[entity]];
+//         }
 
-        pub fn tryGetPtr(self: @This(), entity: Entity) ?*T {
-            return if (self.has(entity)) self.getPtr(entity) else null;
-        }
-    };
-}
+//         pub fn tryGetPtr(self: @This(), entity: Entity) ?*T {
+//             return if (self.has(entity)) self.getPtr(entity) else null;
+//         }
+//     };
+// }
 
 fn EventList(T: type) type {
     return struct {
@@ -291,6 +310,7 @@ pub const World = struct {
         const map: *SparseMap(T) = @ptrCast(@alignCast(result.value_ptr));
 
         if (!result.found_existing) map.* = .{};
+
         return map;
     }
 
@@ -309,10 +329,13 @@ pub const World = struct {
         for (indexes[1..]) |i| std.debug.assert(indexes[0] == i);
     }
 
-    pub fn query(self: *World, T: type) Query(T) {
-        const map = self.assure(T);
-        return .{ .sparse = map.sparse.items, .values = map.valuePtr };
-    }
+    // pub fn query(self: *World, T: type) Query(T) {
+    //     const map = self.assure(T);
+    //     return .{
+    //         .sparse = map.sparse.items,
+    //         .values = if (@sizeOf(T) == 0) undefined else map.valuePtr,
+    //     };
+    // }
 
     pub fn raw(self: *World, T: type) []T {
         return self.assure(T).components();
@@ -322,8 +345,13 @@ pub const World = struct {
         self.assure(T).sort(lessFn);
     }
 
-    pub fn remove(self: *World, entity: Entity, T: type) void {
+    pub const remove = swapRemove;
+    pub fn swapRemove(self: *World, entity: Entity, T: type) void {
         _ = self.assure(T).swapRemove(entity);
+    }
+
+    pub fn orderedRemove(self: *World, entity: Entity, T: type) void {
+        self.assure(T).orderedRemove(entity);
     }
 
     pub fn alignRemove(self: *World, entity: Entity, types: anytype) void {
@@ -361,17 +389,17 @@ pub const World = struct {
         inline for (types) |T| self.clear(T);
     }
 
-    pub fn view(self: *World, All: anytype) View(All, .{}) {
-        return self.viewNone(All, .{});
+    pub fn query(self: *World, All: anytype) Query(All, .{}) {
+        return self.queryNone(All, .{});
     }
 
     // zig fmt: off
-    pub fn viewNone(self: *World, All: anytype, None: anytype)
-        View(All, None) {
+    pub fn queryNone(self: *World, All: anytype, None: anytype)
+        Query(All, None) {
     // zig fmt: on
         comptime std.debug.assert(All.len > 0);
 
-        var result: View(All, None) = .{};
+        var result: Query(All, None) = .{};
         var minCount: usize = invalid;
         inline for (All, &result.sparse, &result.values) |T, *s, *v| {
             const map = self.assure(T);
@@ -389,10 +417,10 @@ pub const World = struct {
     }
 
     // zig fmt: off
-    pub fn viewBy(self: *World, By: type, All: anytype,
-        None: anytype) View(All, None) {
+    pub fn queryBy(self: *World, By: type, All: anytype,
+        None: anytype) Query(All, None) {
     // zig fmt: on
-        var rs: View(All, None) = .{};
+        var rs: Query(All, None) = .{};
         rs.dense = self.assure(By).dense.items;
 
         inline for (All, &rs.sparse, &rs.values) |T, *s, *v| {
@@ -406,7 +434,7 @@ pub const World = struct {
     }
 };
 
-pub fn View(comptime All: anytype, comptime None: anytype) type {
+pub fn Query(comptime All: anytype, comptime None: anytype) type {
     return struct {
         dense: []Entity = &.{},
         sparse: [All.len][]Entity = undefined,
@@ -436,12 +464,33 @@ pub fn View(comptime All: anytype, comptime None: anytype) type {
             } else return null;
         }
 
-        pub fn query(self: *const @This(), T: type) Query(T) {
-            const i = blk: inline for (All, 0..) |Comp, i| {
-                if (Comp == T) break :blk i;
+        pub fn has(self: *const @This(), entity: Entity, T: type) bool {
+            return hasEntity(self.sparse[typeIndex(T)], entity);
+        }
+
+        pub fn get(self: *@This(), entity: Entity, T: type) T {
+            return self.getPtr(entity, T).*;
+        }
+
+        pub fn getPtr(self: *@This(), entity: Entity, T: type) *T {
+            std.debug.assert(self.has(entity, T) and @sizeOf(T) != 0);
+            const index = self.sparse[typeIndex(T)][entity];
+            const values = self.values[typeIndex(T)];
+            return &@as([*]T, @ptrCast(@alignCast(values)))[index];
+        }
+
+        pub fn tryGet(self: *@This(), entity: Entity, T: type) ?T {
+            return if (self.has(entity, T)) self.get(entity, T) else null;
+        }
+
+        pub fn tryGetPtr(self: *@This(), entity: Entity, T: type) ?*T {
+            return if (self.has(entity, T)) self.getPtr(entity, T) else null;
+        }
+
+        fn typeIndex(T: type) usize {
+            inline for (All, 0..) |Comp, i| {
+                if (Comp == T) return i;
             } else @compileError(T ++ " is not in query type");
-            const values: [*]T = @ptrCast(@alignCast(self.values[i]));
-            return .{ .sparse = self.sparse[i], .values = values };
         }
     };
 }

@@ -22,35 +22,35 @@ pub fn deinit() void {
     farmLoaded = false;
 }
 
-pub fn update(World: *zhu.ecs.World, delta: f32) void {
+pub fn update(world: *zhu.ecs.World, delta: f32) void {
     if (context.paused) return;
 
     const scaled = delta * context.timeScale;
     switch (context.currentScene) {
         .title => title.update(scaled),
-        .farm => updateFarm(World, scaled),
+        .farm => updateFarm(world, scaled),
     }
 
     context.applyPendingScene();
 }
 
-pub fn draw(World: *zhu.ecs.World) void {
+pub fn draw(world: *zhu.ecs.World) void {
     switch (context.currentScene) {
         .title => title.draw(),
-        .farm => drawFarm(World),
+        .farm => drawFarm(world),
     }
 }
 
-fn updateFarm(World: *zhu.ecs.World, delta: f32) void {
+fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
     if (!farmLoaded) {
-        spawn.loadFarm(World);
+        spawn.loadFarm(world);
         farmLoaded = true;
     }
 
-    system.crop.update(World, delta);
+    system.crop.update(world, delta);
 }
 
-fn drawFarm(World: *zhu.ecs.World) void {
-    system.ysort.update(World);
-    system.render.draw(World);
+fn drawFarm(world: *zhu.ecs.World) void {
+    system.ysort.update(world);
+    system.render.draw(world);
 }

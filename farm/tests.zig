@@ -30,20 +30,19 @@ test "ECS query can read and write cached component values" {
     world.add(entity, QueryPosition{ .x = 1 });
     world.add(entity, QueryVelocity{ .x = 2 });
 
-    var query = world.query(.{ QueryPosition, QueryVelocity });
-    const positions = query.query(QueryPosition);
-    const velocities = query.query(QueryVelocity);
-    const found = query.next().?;
+    var view = world.view(.{ QueryPosition, QueryVelocity });
+    const found = view.next().?;
 
     try std.testing.expectEqual(entity, found);
-    try std.testing.expectEqual(@as(i32, 1), positions.get(found).x);
+    const position = view.query(QueryPosition).get(found);
+    try std.testing.expectEqual(1, position.x);
 
-    const velocity = velocities.getPtr(found);
+    const velocity = view.query(QueryVelocity).getPtr(found);
     velocity.x = 5;
 
-    const worldVelocities = world.query(QueryVelocity);
-    try std.testing.expectEqual(@as(i32, 5), worldVelocities.get(entity).x);
-    try std.testing.expectEqual(null, query.next());
+    const worldVelocity = world.query(QueryVelocity).get(entity);
+    try std.testing.expectEqual(5, worldVelocity.x);
+    try std.testing.expectEqual(null, view.next());
 }
 
 test "ECS viewNone keeps excluded components filtered" {
@@ -57,11 +56,11 @@ test "ECS viewNone keeps excluded components filtered" {
     const visible = world.createEntity();
     world.add(visible, QueryPosition{ .x = 2 });
 
-    var query = world.queryNone(.{QueryPosition}, .{QueryHidden});
-    const positions = query.query(QueryPosition);
-    const found = query.next().?;
+    var view = world.viewNone(.{QueryPosition}, .{QueryHidden});
+    const found = view.next().?;
 
     try std.testing.expectEqual(visible, found);
-    try std.testing.expectEqual(@as(i32, 2), positions.get(found).x);
-    try std.testing.expectEqual(null, query.next());
+    const position = view.query(QueryPosition).get(found);
+    try std.testing.expectEqual(2, position.x);
+    try std.testing.expectEqual(null, view.next());
 }
