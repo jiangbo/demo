@@ -23,14 +23,14 @@ test {
 }
 
 test "ECS query can read and write cached component values" {
-    var registry = zhu.ecs.Registry.init(std.testing.allocator);
-    defer registry.deinit();
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
 
-    const entity = registry.createEntity();
-    registry.add(entity, QueryPosition{ .x = 1 });
-    registry.add(entity, QueryVelocity{ .x = 2 });
+    const entity = world.createEntity();
+    world.add(entity, QueryPosition{ .x = 1 });
+    world.add(entity, QueryVelocity{ .x = 2 });
 
-    var query = registry.view(.{ QueryPosition, QueryVelocity });
+    var query = world.query(.{ QueryPosition, QueryVelocity });
     const positions = query.query(QueryPosition);
     const velocities = query.query(QueryVelocity);
     const found = query.next().?;
@@ -41,23 +41,23 @@ test "ECS query can read and write cached component values" {
     const velocity = velocities.getPtr(found);
     velocity.x = 5;
 
-    const registryVelocities = registry.query(QueryVelocity);
-    try std.testing.expectEqual(@as(i32, 5), registryVelocities.get(entity).x);
+    const worldVelocities = world.query(QueryVelocity);
+    try std.testing.expectEqual(@as(i32, 5), worldVelocities.get(entity).x);
     try std.testing.expectEqual(null, query.next());
 }
 
 test "ECS viewNone keeps excluded components filtered" {
-    var registry = zhu.ecs.Registry.init(std.testing.allocator);
-    defer registry.deinit();
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
 
-    const hidden = registry.createEntity();
-    registry.add(hidden, QueryPosition{ .x = 1 });
-    registry.add(hidden, QueryHidden{});
+    const hidden = world.createEntity();
+    world.add(hidden, QueryPosition{ .x = 1 });
+    world.add(hidden, QueryHidden{});
 
-    const visible = registry.createEntity();
-    registry.add(visible, QueryPosition{ .x = 2 });
+    const visible = world.createEntity();
+    world.add(visible, QueryPosition{ .x = 2 });
 
-    var query = registry.viewNone(.{QueryPosition}, .{QueryHidden});
+    var query = world.queryNone(.{QueryPosition}, .{QueryHidden});
     const positions = query.query(QueryPosition);
     const found = query.next().?;
 

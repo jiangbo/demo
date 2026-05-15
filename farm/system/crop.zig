@@ -3,23 +3,22 @@ const zhu = @import("zhu");
 
 const com = @import("../component.zig");
 
-pub fn update(registry: *zhu.ecs.Registry, delta: f32) void {
-    var query = registry.view(.{com.Crop});
-    const crops = query.query(com.Crop);
+pub fn update(world: *zhu.ecs.World, delta: f32) void {
+    var query = world.query(.{com.Crop});
     while (query.next()) |entity| {
-        const crop = crops.getPtr(entity);
+        const crop = query.getPtr(entity, com.Crop);
         crop.growth = @min(1, crop.growth + delta * 0.1);
     }
 }
 
 test "作物更新会增长并限制到一" {
-    var registry = zhu.ecs.Registry.init(std.testing.allocator);
-    defer registry.deinit();
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
 
-    const entity = registry.createEntity();
-    registry.add(entity, com.Crop{ .growth = 0.95 });
+    const entity = world.createEntity();
+    world.add(entity, com.Crop{ .growth = 0.95 });
 
-    update(&registry, 10);
+    update(&world, 10);
 
-    try std.testing.expectEqual(@as(f32, 1), registry.query(com.Crop).get(entity).growth);
+    try std.testing.expectEqual(@as(f32, 1), world.query(com.Crop).get(entity).growth);
 }

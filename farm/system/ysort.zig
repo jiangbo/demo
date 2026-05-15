@@ -3,30 +3,28 @@ const zhu = @import("zhu");
 
 const com = @import("../component.zig");
 
-pub fn update(registry: *zhu.ecs.Registry) void {
-    var query = registry.view(.{ com.Render, com.Position, com.YSort });
-    const positions = query.query(com.Position);
-    const renders = query.query(com.Render);
+pub fn update(world: *zhu.ecs.World) void {
+    var query = world.query(.{ com.Render, com.Position, com.YSort });
     while (query.next()) |entity| {
-        const position = positions.get(entity);
-        const render = renders.getPtr(entity);
+        const position = query.get(entity, com.Position);
+        const render = query.getPtr(entity, com.Render);
         render.depth = position.y;
     }
 }
 
 test "YSort 会把位置的 y 写入渲染深度" {
-    var registry = zhu.ecs.Registry.init(std.testing.allocator);
-    defer registry.deinit();
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
 
-    const entity = registry.createEntity();
-    registry.add(entity, com.Position.xy(10, 42));
-    registry.add(entity, com.Render{});
-    registry.add(entity, com.YSort{});
+    const entity = world.createEntity();
+    world.add(entity, com.Position.xy(10, 42));
+    world.add(entity, com.Render{});
+    world.add(entity, com.YSort{});
 
-    update(&registry);
+    update(&world);
 
     try std.testing.expectEqual(
         @as(f32, 42),
-        registry.query(com.Render).get(entity).depth,
+        world.query(com.Render).get(entity).depth,
     );
 }
