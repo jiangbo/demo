@@ -9,11 +9,11 @@ const Sprite = component.Sprite;
 pub fn draw(world: *zhu.ecs.World) void {
     world.sort(Render, lessThan);
 
-    var view = world.view(.{ Render, Position, Sprite });
-    while (view.next()) |entity| {
-        const render = view.query(Render).get(entity);
-        const position = view.query(Position).get(entity);
-        const sprite = view.query(Sprite).get(entity);
+    var query = world.query(.{ Render, Position, Sprite });
+    while (query.next()) |entity| {
+        const render = query.get(entity, Render);
+        const position = query.get(entity, Position);
+        const sprite = query.get(entity, Sprite);
 
         zhu.batch.drawImage(sprite.image, position.add(sprite.offset), .{
             .size = sprite.size,

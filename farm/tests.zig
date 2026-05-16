@@ -30,19 +30,19 @@ test "ECS 查询可以读写缓存的组件值" {
     world.add(entity, QueryPosition{ .x = 1 });
     world.add(entity, QueryVelocity{ .x = 2 });
 
-    var view = world.view(.{ QueryPosition, QueryVelocity });
-    const found = view.next().?;
+    var query = world.query(.{ QueryPosition, QueryVelocity });
+    const found = query.next().?;
 
     try std.testing.expectEqual(entity, found);
-    const position = view.query(QueryPosition).get(found);
+    const position = query.get(found, QueryPosition);
     try std.testing.expectEqual(1, position.x);
 
-    const velocity = view.query(QueryVelocity).getPtr(found);
+    const velocity = query.getPtr(found, QueryVelocity);
     velocity.x = 5;
 
-    const worldVelocity = world.query(QueryVelocity).get(entity);
+    const worldVelocity = query.get(entity, QueryVelocity);
     try std.testing.expectEqual(5, worldVelocity.x);
-    try std.testing.expectEqual(null, view.next());
+    try std.testing.expectEqual(null, query.next());
 }
 
 test "ECS viewNone 会过滤排除组件" {
@@ -56,11 +56,11 @@ test "ECS viewNone 会过滤排除组件" {
     const visible = world.createEntity();
     world.add(visible, QueryPosition{ .x = 2 });
 
-    var view = world.viewNone(.{QueryPosition}, .{QueryHidden});
-    const found = view.next().?;
+    var query = world.queryNone(.{QueryPosition}, .{QueryHidden});
+    const found = query.next().?;
 
     try std.testing.expectEqual(visible, found);
-    const position = view.query(QueryPosition).get(found);
+    const position = query.get(found, QueryPosition);
     try std.testing.expectEqual(2, position.x);
-    try std.testing.expectEqual(null, view.next());
+    try std.testing.expectEqual(null, query.next());
 }

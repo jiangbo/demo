@@ -15,7 +15,7 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
     {
         const sprite = actorConfig.player.sprite;
         const playerImage = imageFromConfig(sprite);
-        var query = world.view(.{component.Player});
+        var query = world.query(.{component.Player});
         world.add(query.next().?, component.Sprite{
             .image = playerImage,
             .offset = .xy(sprite.offset.x, sprite.offset.y),
@@ -25,7 +25,7 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
 
     {
         const sprite = farmConfig.crop.sprite;
-        var query = world.view(.{component.Crop});
+        var query = world.query(.{component.Crop});
         world.add(query.next().?, component.Sprite{
             .image = zhu.batch.whiteImage,
             .offset = .xy(sprite.offset.x, sprite.offset.y),
@@ -35,7 +35,7 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
 
     {
         const sprite = farmConfig.farmland.sprite;
-        var query = world.view(.{component.Farmland});
+        var query = world.query(.{component.Farmland});
         world.add(query.next().?, component.Sprite{
             .image = zhu.batch.whiteImage,
             .offset = .xy(sprite.offset.x, sprite.offset.y),

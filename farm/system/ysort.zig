@@ -7,10 +7,10 @@ const Render = component.Render;
 const YSort = component.YSort;
 
 pub fn update(world: *zhu.ecs.World) void {
-    var view = world.view(.{ Render, Position, YSort });
-    while (view.next()) |entity| {
-        const position = view.query(Position).get(entity);
-        const render = view.query(Render).getPtr(entity);
+    var query = world.query(.{ Render, Position, YSort });
+    while (query.next()) |entity| {
+        const position = query.get(entity, Position);
+        const render = query.getPtr(entity, Render);
         render.depth = position.y;
     }
 }
@@ -26,6 +26,6 @@ test "YSort 会把位置 y 写入渲染深度" {
 
     update(&world);
 
-    const renders = world.query(Render).get(entity);
+    const renders = world.get(entity, Render).?;
     try std.testing.expectEqual(42, renders.depth);
 }
