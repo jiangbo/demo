@@ -42,7 +42,7 @@ pub fn deinit() void {
     Sound.cache.deinit(allocator);
     Music.deinit();
     File.deinit();
-    sk.fetch.shutdown();
+    if (sk.fetch.valid()) sk.fetch.shutdown();
     for (&fileBuffer) |buffer| free(buffer);
 }
 
@@ -102,15 +102,16 @@ pub fn createWhiteImage(comptime key: [:0]const u8) Image {
     const image = Texture.makeImage(1, 1, &data);
     const view = sk.gfx.makeView(.{ .texture = .{ .image = image } });
     Texture.cache.put(allocator, comptime id(key), view) catch oom();
-    imageCache.put(allocator, comptime id(key), .{
-        .texture = view,
-        .size = .one,
-    }) catch oom();
+    putImage(comptime id(key), .{ .texture = view, .size = .one });
     return imageCache.get(comptime id(key)).?;
 }
 
 pub fn getImage(imageId: Id) ?graphics.Image {
     return imageCache.get(imageId);
+}
+
+pub fn putImage(imageId: Id, image: graphics.Image) void {
+    imageCache.put(allocator, imageId, image) catch oom();
 }
 
 pub const Icon = c.stbImage.Image;
@@ -231,7 +232,7 @@ pub const Response = struct {
     data: []const u8 = &.{},
 };
 
-var fileBuffer: [4][]u8 = undefined;
+var fileBuffer: [4][]u8 = @splat(&.{});
 pub const File = struct {
     const FileState = enum { init, loading, loaded, handled };
     const Handler = *const fn (Response) []const u8;

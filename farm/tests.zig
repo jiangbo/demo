@@ -20,6 +20,7 @@ test {
     std.testing.refAllDeclsRecursive(crop);
     std.testing.refAllDeclsRecursive(render);
     std.testing.refAllDeclsRecursive(ysort);
+    std.testing.refAllDeclsRecursive(@import("template.zig"));
 }
 
 test "ECS 查询可以读写缓存的组件值" {

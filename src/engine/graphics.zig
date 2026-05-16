@@ -38,6 +38,7 @@ pub fn EnumAnimation(comptime T: type) type {
 pub const Animation = struct {
     pub const Clip = []const Frame;
     pub const Step = enum { none, next, loop, end };
+    pub const Source = struct { imageId: ImageId, clip: Clip };
 
     elapsed: f32 = 0,
     index: u16 = 0,
@@ -47,8 +48,7 @@ pub const Animation = struct {
     extend: u32 = 0,
 
     sourceIndex: u8 = 0,
-    sourceLength: u8 = 0,
-    source: [*]const Clip = undefined,
+    sources: []const Source = &.{},
 
     pub fn init(image: Image, clip: Clip) Animation {
         return .{ .image = image, .clip = clip };
@@ -59,10 +59,10 @@ pub const Animation = struct {
         return .{ .image = image, .clip = clip, .index = idx };
     }
 
-    pub fn initSource(image: Image, source: []const Clip) Animation {
-        var self: Animation = .init(image, source[0]);
-        self.source = source.ptr;
-        self.sourceLength = @intCast(source.len);
+    pub fn initSource(sources: []const Source) Animation {
+        var self = Animation{ .image = undefined, .clip = undefined };
+        self.sources = sources;
+        self.play(0, true);
         return self;
     }
 
@@ -73,8 +73,9 @@ pub const Animation = struct {
     }
 
     pub fn play(self: *Animation, index: u8, loop: bool) void {
-        self.clip = self.source[index];
-        self.sourceIndex = index;
+        const next = self.sources[index];
+        self.image = assets.getImage(next.imageId).?;
+        self.clip, self.sourceIndex = .{ next.clip, index };
         self.loop = loop;
         self.reset();
     }

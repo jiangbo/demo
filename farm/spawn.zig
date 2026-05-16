@@ -1,30 +1,28 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const actorConfig = @import("zon/actor.zon");
 const component = @import("component.zig");
-const farmConfig = @import("zon/farm.zon");
+const template = @import("template.zig");
 
 pub fn init() void {
     std.log.info("spawn init", .{});
 }
 
-const frames = zhu.graphics.framesX(4, .xy(32, 32), 0.2);
-
 pub fn loadFarm(world: *zhu.ecs.World) void {
+    // 1. 初始化玩家实体
     {
-        const sprite = actorConfig.player.sprite;
+        const config = template.actor.player;
+
         const player = world.createEntity();
         world.add(player, component.Player{});
         world.add(player, component.Position.xy(160, 96));
 
-        const image = zhu.getImage(sprite.path) orelse zhu.batch.whiteImage;
-        const size = zhu.Vector2.xy(sprite.size.x, sprite.size.y);
-        const animation = zhu.graphics.Animation.init(image, &frames);
+        const sources = animationSources(config.animations);
+        const animation = zhu.Animation.initSource(&sources);
 
         world.add(player, component.Sprite{
-            .image = animation.subImage(size),
-            .offset = .xy(sprite.offset.x, sprite.offset.y),
+            .image = animation.subImage(config.sprite.size),
+            .offset = config.sprite.offset,
         });
 
         world.add(player, animation);
@@ -32,43 +30,57 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
         world.add(player, component.YSort{});
     }
 
+    // 2. 初始化作物实体
     {
-        const sprite = farmConfig.crop.sprite;
+        const sprite = template.farm.crop.sprite;
         const crop = world.createEntity();
         world.add(crop, component.Crop{ .growth = 0 });
         world.add(crop, component.Position.xy(176, 96));
         world.add(crop, component.Sprite{
             .image = imageFromConfig(sprite),
-            .offset = .xy(sprite.offset.x, sprite.offset.y),
+            .offset = sprite.offset,
         });
         world.add(crop, component.Render{ .layer = .crop });
         world.add(crop, component.YSort{});
     }
 
+    // 3. 初始化土地实体
     {
-        const sprite = farmConfig.farmland.sprite;
+        const sprite = template.farm.farmland.sprite;
         const farmland = world.createEntity();
         world.add(farmland, component.Farmland{});
         world.add(farmland, component.Position.xy(176, 112));
         world.add(farmland, component.Sprite{
             .image = imageFromConfig(sprite),
-            .offset = .xy(sprite.offset.x, sprite.offset.y),
+            .offset = sprite.offset,
         });
         world.add(farmland, component.Render{ .layer = .ground });
     }
 }
 
-fn imageFromConfig(sprite: anytype) zhu.graphics.Image {
-    const rect = zhu.Rect{
-        .min = .xy(sprite.rect.min.x, sprite.rect.min.y),
-        .size = .xy(sprite.rect.size.x, sprite.rect.size.y),
-    };
+fn animationSources(comptime animations: []const template.Animation) //
+[animations.len]zhu.Animation.Source {
+    var sources: [animations.len]zhu.Animation.Source = undefined;
+    inline for (animations) |config| {
+        sources[@intFromEnum(config.type)] = .{
+            .imageId = zhu.assets.id(config.path),
+            .clip = config.frames,
+        };
+    }
+    return sources;
+}
+
+fn imageFromConfig(comptime sprite: anytype) zhu.graphics.Image {
+    const rect = sprite.rect;
 
     if (zhu.getImage(sprite.path)) |image| return image.sub(rect);
     return zhu.batch.whiteImage.sub(rect);
 }
 
 test "加载农场会创建初始实体" {
+    putMockFarmImages();
+    defer zhu.assets.deinit();
+
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
@@ -83,12 +95,17 @@ test "加载农场会创建初始实体" {
     try equal(2, world.assure(component.YSort).dense.items.len);
 }
 
-test "玩家图片配置来自 actor.zon" {
-    const sprite = actorConfig.player.sprite;
+fn putMockFarmImages() void {
+    zhu.assets.allocator = std.testing.allocator;
 
-    try std.testing.expectEqual(2802575066, zhu.id(sprite.path));
-    try std.testing.expectEqual(32, sprite.rect.size.x);
-    try std.testing.expectEqual(32, sprite.rect.size.y);
-    try std.testing.expectEqual(-16, sprite.offset.x);
-    try std.testing.expectEqual(-24, sprite.offset.y);
+    const image = zhu.graphics.Image{
+        .texture = .{ .id = 1 },
+        .size = .xy(256, 256),
+    };
+
+    inline for (template.actor.player.animations) |animation| {
+        zhu.assets.putImage(comptime zhu.assets.id(animation.path), image);
+    }
+    zhu.assets.putImage(comptime zhu.assets.id(template.farm.crop.sprite.path), image);
+    zhu.assets.putImage(comptime zhu.assets.id(template.farm.farmland.sprite.path), image);
 }
