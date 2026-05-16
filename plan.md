@@ -49,12 +49,12 @@ zig build test
   - 需要系统：`assets.loadImage`、Sprite 使用真实 Image。
   - 参考源码：`engine/resource/texture_manager.*`
 
-- [ ] 07-裁剪 sprite sheet 的第一帧
+- [x] 07-裁剪 sprite sheet 的第一帧
   - 可见效果：从角色 Idle 图里裁出单帧角色。
   - 需要系统：Image.sub、Sprite 源矩形、尺寸约定。
   - 参考源码：`engine/render/image.*`、`sprite_component.h`
 
-- [ ] 08-Sprite pivot 与脚底定位
+- [x] 08-Sprite pivot 与脚底定位
   - 可见效果：角色脚底落在格子上，YSort 更自然。
   - 需要系统：Sprite.pivot，RenderSystem 用 pivot 计算绘制位置。
   - 参考源码：`engine/component/sprite_component.h`

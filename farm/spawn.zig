@@ -30,14 +30,11 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
         world.add(crop, component.Crop{ .growth = 0 });
         world.add(crop, component.Position.xy(176, 96));
         world.add(crop, component.Sprite{
-            .image = zhu.batch.whiteImage,
+            .image = imageFromConfig(sprite),
             .offset = .xy(sprite.offset.x, sprite.offset.y),
             .size = .xy(sprite.size.x, sprite.size.y),
         });
-        world.add(crop, component.Render{
-            .layer = .crop,
-            .color = .rgb(0.24, 0.68, 0.28),
-        });
+        world.add(crop, component.Render{ .layer = .crop });
         world.add(crop, component.YSort{});
     }
 
@@ -47,14 +44,11 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
         world.add(farmland, component.Farmland{});
         world.add(farmland, component.Position.xy(176, 112));
         world.add(farmland, component.Sprite{
-            .image = zhu.batch.whiteImage,
+            .image = imageFromConfig(sprite),
             .offset = .xy(sprite.offset.x, sprite.offset.y),
             .size = .xy(sprite.size.x, sprite.size.y),
         });
-        world.add(farmland, component.Render{
-            .layer = .ground,
-            .color = .rgb(0.47, 0.28, 0.16),
-        });
+        world.add(farmland, component.Render{ .layer = .ground });
     }
 }
 
