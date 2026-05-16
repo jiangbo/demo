@@ -59,7 +59,7 @@ zig build test
   - 需要系统：Sprite.pivot，RenderSystem 用 pivot 计算绘制位置。
   - 参考源码：`engine/component/sprite_component.h`
 
-- [ ] 09-角色待机动画
+- [x] 09-角色待机动画
   - 可见效果：玩家站立时播放 Idle 动画。
   - 需要系统：Animation 组件、AnimationSystem、帧计时。
   - 参考源码：`engine/component/animation_component.h`、`animation_system.*`

@@ -23,6 +23,8 @@ pub const Render = struct {
 
 pub const YSort = struct {};
 
+pub const Animation = zhu.graphics.Animation;
+
 pub const Player = struct {};
 pub const Crop = struct {
     growth: f32 = 0,

@@ -123,8 +123,8 @@ pub fn framesX(comptime count: u8, size: Vector2, d: f32) [count]Frame {
     var result: [count]Frame = undefined;
     for (&result, 0..) |*frame, i| {
         const index: f32 = @floatFromInt(i);
-        frame.area = .init(.xy(index * size.x, 0), size);
-        frame.interval = d;
+        frame.offset = .xy(index * size.x, 0);
+        frame.duration = d;
     }
     return result;
 }
@@ -135,8 +135,8 @@ pub fn loopFramesX(comptime count: u8, size: Vector2, d: f32) //
     for (&result, 0..) |*frame, i| {
         var index: f32 = @floatFromInt(i);
         if (i >= count) index = @floatFromInt(count + count - 2 - i);
-        frame.area = .init(.xy(index * size.x, 0), size);
-        frame.interval = d;
+        frame.offset = .xy(index * size.x, 0);
+        frame.duration = d;
     }
     return result;
 }

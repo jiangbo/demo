@@ -6,6 +6,7 @@ const spawn = @import("spawn.zig");
 const title = @import("title.zig");
 
 const system = struct {
+    const animation = @import("system/animation.zig");
     const crop = @import("system/crop.zig");
     const render = @import("system/render.zig");
     const ysort = @import("system/ysort.zig");
@@ -47,6 +48,7 @@ fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
         farmLoaded = true;
     }
 
+    system.animation.update(world, delta);
     system.crop.update(world, delta);
 }
 

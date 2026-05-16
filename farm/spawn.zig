@@ -9,17 +9,25 @@ pub fn init() void {
     std.log.info("spawn init", .{});
 }
 
+const frames = zhu.graphics.framesX(4, .xy(32, 32), 0.2);
+
 pub fn loadFarm(world: *zhu.ecs.World) void {
     {
         const sprite = actorConfig.player.sprite;
         const player = world.createEntity();
         world.add(player, component.Player{});
         world.add(player, component.Position.xy(160, 96));
+
+        const image = zhu.getImage(sprite.path) orelse zhu.batch.whiteImage;
+        const size = zhu.Vector2.xy(sprite.size.x, sprite.size.y);
+        const animation = zhu.graphics.Animation.init(image, &frames);
+
         world.add(player, component.Sprite{
-            .image = imageFromConfig(sprite),
+            .image = animation.subImage(size),
             .offset = .xy(sprite.offset.x, sprite.offset.y),
-            .size = .xy(sprite.size.x, sprite.size.y),
         });
+
+        world.add(player, animation);
         world.add(player, component.Render{ .layer = .actor });
         world.add(player, component.YSort{});
     }
@@ -32,7 +40,6 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
         world.add(crop, component.Sprite{
             .image = imageFromConfig(sprite),
             .offset = .xy(sprite.offset.x, sprite.offset.y),
-            .size = .xy(sprite.size.x, sprite.size.y),
         });
         world.add(crop, component.Render{ .layer = .crop });
         world.add(crop, component.YSort{});
@@ -46,7 +53,6 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
         world.add(farmland, component.Sprite{
             .image = imageFromConfig(sprite),
             .offset = .xy(sprite.offset.x, sprite.offset.y),
-            .size = .xy(sprite.size.x, sprite.size.y),
         });
         world.add(farmland, component.Render{ .layer = .ground });
     }
