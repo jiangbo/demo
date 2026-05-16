@@ -78,8 +78,9 @@ fn imageFromConfig(comptime sprite: anytype) zhu.graphics.Image {
 }
 
 test "加载农场会创建初始实体" {
-    putMockFarmImages();
+    zhu.assets.allocator = std.testing.allocator;
     defer zhu.assets.deinit();
+    putMockFarmImages();
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -96,16 +97,16 @@ test "加载农场会创建初始实体" {
 }
 
 fn putMockFarmImages() void {
-    zhu.assets.allocator = std.testing.allocator;
-
     const image = zhu.graphics.Image{
         .texture = .{ .id = 1 },
         .size = .xy(256, 256),
     };
 
     inline for (template.actor.player.animations) |animation| {
-        zhu.assets.putImage(comptime zhu.assets.id(animation.path), image);
+        zhu.assets.putImage(zhu.assets.id(animation.path), image);
     }
-    zhu.assets.putImage(comptime zhu.assets.id(template.farm.crop.sprite.path), image);
-    zhu.assets.putImage(comptime zhu.assets.id(template.farm.farmland.sprite.path), image);
+    var id = zhu.assets.id(template.farm.crop.sprite.path);
+    zhu.assets.putImage(id, image);
+    id = zhu.assets.id(template.farm.farmland.sprite.path);
+    zhu.assets.putImage(id, image);
 }
