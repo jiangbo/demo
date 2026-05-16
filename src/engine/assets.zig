@@ -109,8 +109,8 @@ pub fn createWhiteImage(comptime key: [:0]const u8) Image {
     return imageCache.get(comptime id(key)).?;
 }
 
-pub fn getImage(imageId: Id) graphics.Image {
-    return imageCache.get(imageId).?;
+pub fn getImage(imageId: Id) ?graphics.Image {
+    return imageCache.get(imageId);
 }
 
 pub const Icon = c.stbImage.Image;

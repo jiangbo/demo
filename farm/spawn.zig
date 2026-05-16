@@ -10,71 +10,52 @@ pub fn init() void {
 }
 
 pub fn loadFarm(world: *zhu.ecs.World) void {
-    spawnFarmEntities(world);
-
     {
         const sprite = actorConfig.player.sprite;
-        const playerImage = imageFromConfig(sprite);
-        var query = world.query(.{component.Player});
-        world.add(query.next().?, component.Sprite{
-            .image = playerImage,
+        const player = world.createEntity();
+        world.add(player, component.Player{});
+        world.add(player, component.Position.xy(160, 96));
+        world.add(player, component.Sprite{
+            .image = imageFromConfig(sprite),
             .offset = .xy(sprite.offset.x, sprite.offset.y),
             .size = .xy(sprite.size.x, sprite.size.y),
         });
+        world.add(player, component.Render{ .layer = .actor });
+        world.add(player, component.YSort{});
     }
 
     {
         const sprite = farmConfig.crop.sprite;
-        var query = world.query(.{component.Crop});
-        world.add(query.next().?, component.Sprite{
+        const crop = world.createEntity();
+        world.add(crop, component.Crop{ .growth = 0 });
+        world.add(crop, component.Position.xy(176, 96));
+        world.add(crop, component.Sprite{
             .image = zhu.batch.whiteImage,
             .offset = .xy(sprite.offset.x, sprite.offset.y),
             .size = .xy(sprite.size.x, sprite.size.y),
         });
+        world.add(crop, component.Render{
+            .layer = .crop,
+            .color = .rgb(0.24, 0.68, 0.28),
+        });
+        world.add(crop, component.YSort{});
     }
 
     {
         const sprite = farmConfig.farmland.sprite;
-        var query = world.query(.{component.Farmland});
-        world.add(query.next().?, component.Sprite{
+        const farmland = world.createEntity();
+        world.add(farmland, component.Farmland{});
+        world.add(farmland, component.Position.xy(176, 112));
+        world.add(farmland, component.Sprite{
             .image = zhu.batch.whiteImage,
             .offset = .xy(sprite.offset.x, sprite.offset.y),
             .size = .xy(sprite.size.x, sprite.size.y),
         });
+        world.add(farmland, component.Render{
+            .layer = .ground,
+            .color = .rgb(0.47, 0.28, 0.16),
+        });
     }
-}
-
-fn spawnFarmEntities(world: *zhu.ecs.World) void {
-    const player = world.createEntity();
-    world.add(player, component.Player{});
-    world.add(player, component.Position.xy(160, 96));
-    world.add(player, component.Render{
-        .layer = .actor,
-    });
-    world.add(player, component.YSort{});
-
-    const crop = world.createEntity();
-    world.add(crop, component.Crop{ .growth = 0 });
-    world.add(crop, component.Position.xy(176, 96));
-    world.add(crop, component.Render{
-        .layer = .crop,
-        .color = .rgb(0.24, 0.68, 0.28),
-    });
-    world.add(crop, component.YSort{});
-
-    const farmland = world.createEntity();
-    world.add(farmland, component.Farmland{});
-    world.add(farmland, component.Position.xy(176, 112));
-    world.add(farmland, component.Render{
-        .layer = .ground,
-        .color = .rgb(0.47, 0.28, 0.16),
-    });
-
-    std.log.info("farm loaded entities player={} crop={} farmland={}", .{
-        player,
-        crop,
-        farmland,
-    });
 }
 
 fn imageFromConfig(sprite: anytype) zhu.graphics.Image {
@@ -83,19 +64,21 @@ fn imageFromConfig(sprite: anytype) zhu.graphics.Image {
         .size = .xy(sprite.rect.size.x, sprite.rect.size.y),
     };
 
-    return zhu.getImage(sprite.path).sub(rect);
+    if (zhu.getImage(sprite.path)) |image| return image.sub(rect);
+    return zhu.batch.whiteImage.sub(rect);
 }
 
 test "加载农场会创建初始实体" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    spawnFarmEntities(&world);
+    loadFarm(&world);
 
     const equal = std.testing.expectEqual;
     try equal(1, world.assure(component.Player).dense.items.len);
     try equal(1, world.raw(component.Crop).len);
     try equal(1, world.raw(component.Farmland).len);
+    try equal(3, world.raw(component.Sprite).len);
     try equal(3, world.raw(component.Render).len);
     try equal(2, world.assure(component.YSort).dense.items.len);
 }

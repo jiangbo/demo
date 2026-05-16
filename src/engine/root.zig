@@ -26,7 +26,7 @@ pub fn id(comptime path: []const u8) assets.Id {
     return comptime assets.id(path);
 }
 
-pub fn getImage(comptime path: []const u8) graphics.Image {
+pub fn getImage(comptime path: []const u8) ?graphics.Image {
     return assets.getImage(id(path));
 }
 
