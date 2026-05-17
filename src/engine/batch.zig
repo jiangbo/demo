@@ -194,8 +194,7 @@ pub fn drawTriangle(area: math.Rect, option: TriangleOption) void {
 }
 
 pub fn drawImageId(id: ImageId, pos: Vector2, option: Option) void {
-    const image = assets.getImage(id) orelse whiteImage;
-    drawImage(image, pos, option);
+    drawImage(assets.getImage(id).?, pos, option);
 }
 
 pub fn drawImage(image: Image, pos: Vector2, option: Option) void {

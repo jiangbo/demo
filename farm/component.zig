@@ -2,6 +2,8 @@ const zhu = @import("zhu");
 
 pub const Position = zhu.Vector2;
 
+pub const Velocity = struct { value: zhu.Vector2 = .zero };
+
 pub const Sprite = struct {
     image: zhu.graphics.Image,
     offset: zhu.Vector2 = .zero,

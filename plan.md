@@ -42,7 +42,7 @@ zig build test
 - [x] 05-YSort 与 layer/depth 排序
   - 可见效果：不同 y 坐标的对象遮挡顺序正确。
   - 需要系统：YSort 标记、Render 排序。
-  - 参考源码：`engine/system/ysort_system.*`
+  - 参考源码：渲染深度更新与排序相关逻辑
 
 - [x] 06-加载第一张 PNG 图片
   - 可见效果：玩家或按钮不再是色块，显示真实 PNG。
@@ -64,7 +64,7 @@ zig build test
   - 需要系统：Animation 组件、AnimationSystem、帧计时。
   - 参考源码：`engine/component/animation_component.h`、`animation_system.*`
 
-- [ ] 10-键盘移动玩家
+- [x] 10-键盘移动玩家
   - 可见效果：WASD/方向键移动玩家图片。
   - 需要系统：Input、Velocity、MovementSystem、PlayerControlSystem 最小版。
   - 参考源码：`engine/input/*`、`game/system/player_control_system.*`

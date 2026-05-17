@@ -1,25 +1,19 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const context = @import("context.zig");
-const event = @import("event.zig");
-const spawn = @import("spawn.zig");
-const crop = @import("system/crop.zig");
-const render = @import("system/render.zig");
-const time = @import("system/time.zig");
-const ysort = @import("system/ysort.zig");
-
 const QueryPosition = struct { x: i32 = 0 };
 const QueryVelocity = struct { x: i32 = 0 };
 const QueryHidden = struct {};
 
 test {
-    std.testing.refAllDeclsRecursive(context);
-    std.testing.refAllDeclsRecursive(event);
-    std.testing.refAllDeclsRecursive(spawn);
-    std.testing.refAllDeclsRecursive(crop);
-    std.testing.refAllDeclsRecursive(render);
-    std.testing.refAllDeclsRecursive(ysort);
+    std.testing.refAllDeclsRecursive(@import("context.zig"));
+    std.testing.refAllDeclsRecursive(@import("event.zig"));
+    std.testing.refAllDeclsRecursive(@import("spawn.zig"));
+    std.testing.refAllDeclsRecursive(@import("system/control.zig"));
+    std.testing.refAllDeclsRecursive(@import("system/crop.zig"));
+    std.testing.refAllDeclsRecursive(@import("system/movement.zig"));
+    std.testing.refAllDeclsRecursive(@import("system/render.zig"));
+    std.testing.refAllDeclsRecursive(@import("system/depth.zig"));
     std.testing.refAllDeclsRecursive(@import("template.zig"));
 }
 

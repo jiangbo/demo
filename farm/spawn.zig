@@ -13,9 +13,9 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
     {
         const config = template.actor.player;
 
-        const player = world.createEntity();
-        world.add(player, component.Player{});
+        const player = world.createIdentityEntity(component.Player);
         world.add(player, component.Position.xy(160, 96));
+        world.add(player, component.Velocity{});
 
         const sources = animationSources(config.animations);
         const animation = zhu.Animation.initSource(&sources);
@@ -88,9 +88,11 @@ test "加载农场会创建初始实体" {
     loadFarm(&world);
 
     const equal = std.testing.expectEqual;
-    try equal(1, world.assure(component.Player).dense.items.len);
+    const player = world.getIdentityEntity(component.Player).?;
+    try equal(160, world.get(player, component.Position).?.x);
     try equal(1, world.raw(component.Crop).len);
     try equal(1, world.raw(component.Farmland).len);
+    try equal(1, world.raw(component.Velocity).len);
     try equal(3, world.raw(component.Sprite).len);
     try equal(3, world.raw(component.Render).len);
     try equal(2, world.assure(component.YSort).dense.items.len);

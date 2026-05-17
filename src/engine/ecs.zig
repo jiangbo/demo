@@ -205,7 +205,7 @@ pub const World = struct {
 
     pub fn addIdentity(self: *World, entity: Entity, T: type) void {
         self.identityMap.put(self.allocator, hashTypeId(T), //
-            self.entities.toIdentity(entity)) catch oom();
+            self.entities.toIdentity(entity).?) catch oom();
     }
 
     pub fn createIdentityEntity(self: *World, T: type) Entity {

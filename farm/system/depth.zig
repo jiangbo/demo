@@ -10,8 +10,7 @@ pub fn update(world: *zhu.ecs.World) void {
     var query = world.query(.{ Render, Position, YSort });
     while (query.next()) |entity| {
         const position = query.get(entity, Position);
-        const render = query.getPtr(entity, Render);
-        render.depth = position.y;
+        query.getPtr(entity, Render).depth = position.y;
     }
 }
 

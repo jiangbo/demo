@@ -7,9 +7,11 @@ const title = @import("title.zig");
 
 const system = struct {
     const animation = @import("system/animation.zig");
+    const control = @import("system/control.zig");
     const crop = @import("system/crop.zig");
+    const depth = @import("system/depth.zig");
+    const movement = @import("system/movement.zig");
     const render = @import("system/render.zig");
-    const ysort = @import("system/ysort.zig");
 };
 
 var farmLoaded: bool = false;
@@ -48,11 +50,13 @@ fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
         farmLoaded = true;
     }
 
+    system.control.update(world);
+    system.movement.update(world, delta);
     system.animation.update(world, delta);
     system.crop.update(world, delta);
+    system.depth.update(world);
 }
 
 fn drawFarm(world: *zhu.ecs.World) void {
-    system.ysort.update(world);
     system.render.draw(world);
 }
