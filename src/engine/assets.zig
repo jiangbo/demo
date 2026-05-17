@@ -24,6 +24,12 @@ pub fn init(allocator1: std.mem.Allocator, maxSize: usize) void {
     for (&fileBuffer) |*buffer| buffer.* = oomAlloc(u8, maxSize);
 }
 
+pub fn initCaches(allocator1: std.mem.Allocator) void {
+    allocator, imageCache = .{ allocator1, .empty };
+    Texture.cache, File.cache = .{ .empty, .empty };
+    Sound.cache, Music.cache = .{ .empty, .empty };
+}
+
 fn sk_alloc(len: usize, _: ?*anyopaque) callconv(.c) ?*anyopaque {
     const slice = oomAlloc(u8, len + @sizeOf(usize));
     std.mem.bytesAsValue(usize, slice[0..@sizeOf(usize)]).* = len;

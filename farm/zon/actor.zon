@@ -6,7 +6,7 @@
             .size = .{ .x = 32, .y = 32 },
             .offset = .{ .x = -16, .y = -24 },
         },
-        .directions = .{ .down, .up, .right },
+        .rows = .{ 0, 1, -2, 2 },
         .animations = .{
             .{ // 0: idle
                 .type = .idle,

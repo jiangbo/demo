@@ -1,3 +1,4 @@
+const std = @import("std");
 const zhu = @import("zhu");
 
 pub const Position = zhu.Vector2;
@@ -43,7 +44,7 @@ pub const Facing = enum { down, up, left, right };
 pub const Actor = struct {
     animation: PlayerAnimation = .idle,
     facing: Facing = .down,
-    directions: []const Facing = &.{ .down, .up, .right },
+    rows: [4]i8 = .{ 0, 1, -2, 2 },
 };
 pub const Crop = struct {
     growth: f32 = 0,

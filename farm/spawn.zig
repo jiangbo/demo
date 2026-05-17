@@ -46,7 +46,7 @@ fn spawnPlayer(world: *zhu.ecs.World) void {
     const player = world.createIdentityEntity(component.Player);
     world.add(player, component.Position.xy(160, 96));
     world.add(player, component.Velocity{});
-    world.add(player, component.Actor{ .directions = config.directions });
+    world.add(player, component.Actor{ .rows = config.rows });
 
     const sources = comptime animationSources(config.animations);
     const animation = zhu.Animation.initSource(&sources);
