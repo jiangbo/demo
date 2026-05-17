@@ -140,7 +140,7 @@ fn drawBatchStats() void {
         batchStats.sprites / batchStats.commands;
 
     _ = imgui.igText("Batch Stats");
-    _ = imgui.igCheckbox("Pixel Snap", &zhu.batch.pixelSnap);
+    // _ = imgui.igCheckbox("Pixel Snap", &zhu.batch.pixelSnap);
     _ = imgui.igText("GPU draw calls: %d", @as(i32, @intCast(gpuStats.num_draw)));
     _ = imgui.igText("Batch sprites: %d", @as(i32, @intCast(batchStats.sprites)));
     _ = imgui.igText("Batch commands: %d", @as(i32, @intCast(batchStats.commands)));
