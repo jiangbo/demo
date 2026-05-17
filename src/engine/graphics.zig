@@ -40,8 +40,9 @@ pub const Animation = struct {
     pub const Step = enum { none, next, loop, end };
     pub const Source = struct { imageId: ImageId, clip: Clip };
 
-    elapsed: f32 = 0,
-    index: u16 = 0,
+    elapsed: f32 = -math.epsilon,
+    row: u8 = 0,
+    index: u8 = 0,
     image: Image,
     clip: Clip,
     loop: bool = true,
@@ -68,21 +69,28 @@ pub const Animation = struct {
 
     pub fn subImage(self: *const Animation, size: Vector2) Image {
         const index = @min(self.clip.len - 1, self.index);
-        const offset = self.clip[index].offset;
+        var offset = self.clip[index].offset;
+        offset.y += size.y * @as(f32, @floatFromInt(self.row));
         return self.image.sub(.init(offset, size));
     }
 
     pub fn play(self: *Animation, index: u8, loop: bool) void {
+        self.playRow(index, self.row, loop);
+    }
+
+    pub fn playRow(self: *Animation, index: u8, row: u8, loop: bool) void {
         const next = self.sources[index];
         self.image = assets.getImage(next.imageId).?;
         self.clip, self.sourceIndex = .{ next.clip, index };
-        self.loop = loop;
+        self.row, self.loop = .{ row, loop };
         self.reset();
     }
 
     pub fn update(self: *Animation, delta: f32) Step {
         if (self.index == self.clip.len) return .none; // 已经结束
+        const firstUpdate = self.elapsed < 0;
         self.elapsed += delta;
+        if (firstUpdate) return .next; //  第一次第一帧
         const current = self.clip[self.index];
         if (self.elapsed < current.duration) return .none; // 还未到下一帧
 
@@ -115,8 +123,7 @@ pub const Animation = struct {
     }
 
     pub fn reset(self: *Animation) void {
-        self.index = 0;
-        self.elapsed = 0;
+        self.index, self.elapsed = .{ 0, -math.epsilon };
     }
 };
 

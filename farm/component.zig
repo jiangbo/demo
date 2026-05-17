@@ -39,6 +39,12 @@ pub const PlayerAnimation = enum {
 pub const Animation = zhu.graphics.Animation;
 
 pub const Player = struct {};
+pub const Facing = enum { down, up, left, right };
+pub const Actor = struct {
+    animation: PlayerAnimation = .idle,
+    facing: Facing = .down,
+    directions: []const Facing = &.{ .down, .up, .right },
+};
 pub const Crop = struct {
     growth: f32 = 0,
 };

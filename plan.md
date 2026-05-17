@@ -69,7 +69,7 @@ zig build test
   - 需要系统：Input、Velocity、MovementSystem、PlayerControlSystem 最小版。
   - 参考源码：`engine/input/*`、`game/system/player_control_system.*`
 
-- [ ] 11-移动动画与朝向
+- [x] 11-移动动画与朝向
   - 可见效果：移动时切 Walk 动画，停止后回 Idle。
   - 需要系统：Actor 状态、方向、Animation 切换。
   - 参考源码：`game/component/actor_component.h`、`state_system.*`

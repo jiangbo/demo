@@ -16,6 +16,7 @@ pub const Actor = struct {
         size: zhu.Vector2,
         offset: zhu.Vector2,
     },
+    directions: []const component.Facing,
     animations: []const Animation,
 };
 

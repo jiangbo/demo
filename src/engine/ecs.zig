@@ -261,6 +261,10 @@ pub const World = struct {
         return map;
     }
 
+    pub fn has(self: *World, entity: Entity, T: type) bool {
+        return hasEntity(self.assure(T).sparse.items, entity);
+    }
+
     pub fn get(self: *World, entity: Entity, T: type) ?T {
         return if (self.getPtr(entity, T)) |ptr| ptr.* else null;
     }

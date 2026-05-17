@@ -10,25 +10,7 @@ pub fn init() void {
 
 pub fn loadFarm(world: *zhu.ecs.World) void {
     // 1. 初始化玩家实体
-    {
-        const config = template.actor.player;
-
-        const player = world.createIdentityEntity(component.Player);
-        world.add(player, component.Position.xy(160, 96));
-        world.add(player, component.Velocity{});
-
-        const sources = animationSources(config.animations);
-        const animation = zhu.Animation.initSource(&sources);
-
-        world.add(player, component.Sprite{
-            .image = animation.subImage(config.sprite.size),
-            .offset = config.sprite.offset,
-        });
-
-        world.add(player, animation);
-        world.add(player, component.Render{ .layer = .actor });
-        world.add(player, component.YSort{});
-    }
+    spawnPlayer(world);
 
     // 2. 初始化作物实体
     {
@@ -56,6 +38,28 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
         });
         world.add(farmland, component.Render{ .layer = .ground });
     }
+}
+
+fn spawnPlayer(world: *zhu.ecs.World) void {
+    const config = template.actor.player;
+
+    const player = world.createIdentityEntity(component.Player);
+    world.add(player, component.Position.xy(160, 96));
+    world.add(player, component.Velocity{});
+    world.add(player, component.Actor{ .directions = config.directions });
+
+    const sources = comptime animationSources(config.animations);
+    const animation = zhu.Animation.initSource(&sources);
+
+    world.add(player, component.Sprite{
+        .image = animation.image,
+        .offset = config.sprite.offset,
+        .size = config.sprite.size,
+    });
+
+    world.add(player, animation);
+    world.add(player, component.Render{ .layer = .actor });
+    world.add(player, component.YSort{});
 }
 
 fn animationSources(comptime animations: []const template.Animation) //
@@ -93,6 +97,7 @@ test "加载农场会创建初始实体" {
     try equal(1, world.raw(component.Crop).len);
     try equal(1, world.raw(component.Farmland).len);
     try equal(1, world.raw(component.Velocity).len);
+    try equal(1, world.raw(component.Actor).len);
     try equal(3, world.raw(component.Sprite).len);
     try equal(3, world.raw(component.Render).len);
     try equal(2, world.assure(component.YSort).dense.items.len);
