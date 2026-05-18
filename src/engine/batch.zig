@@ -44,7 +44,7 @@ pub var vertexBuffer: std.ArrayList(Vertex) = .empty;
 pub var whiteImage: graphics.Image = undefined;
 var nearestSampler: sk.gfx.Sampler = undefined;
 
-var commandBuffer: std.ArrayList(Command) = .empty;
+pub var commandBuffer: std.ArrayList(Command) = .empty;
 var vertexBufferHandle: sk.gfx.Buffer = undefined;
 
 pub const Stats = struct {
@@ -59,13 +59,13 @@ pub fn init(vertexes: []Vertex, commands: []Command) void {
         .size = @sizeOf(Vertex) * vertexes.len,
         .usage = .{ .stream_update = true },
     });
-    vertexBuffer = .initBuffer(vertexes);
-    commandBuffer = .initBuffer(commands);
 
     const shaderDesc = shader.quadShaderDesc(sk.gfx.queryBackend());
     pipeline = createQuadPipeline(shaderDesc);
     nearestSampler = sk.gfx.makeSampler(.{});
 
+    vertexBuffer = .initBuffer(vertexes);
+    commandBuffer = .initBuffer(commands);
     camera.init();
 }
 

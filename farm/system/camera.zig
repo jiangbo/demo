@@ -27,3 +27,36 @@ fn updateScale() void {
     const scale = std.math.clamp(zhu.camera.scale.x + delta, 0.5, 4);
     zhu.camera.scale = .xy(scale, scale);
 }
+
+test "相机跟随会向玩家位置移动" {
+    zhu.camera.position = .zero;
+    zhu.camera.size = .xy(320, 180);
+    zhu.camera.scale = .one;
+    zhu.camera.bound = .xy(640, 360);
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const player = world.createIdentityEntity(Player);
+    world.add(player, Position.xy(300, 200));
+
+    update(&world);
+
+    try std.testing.expect(zhu.camera.position.x > 0);
+    try std.testing.expect(zhu.camera.position.y > 0);
+}
+
+test "没有玩家时相机不变" {
+    zhu.camera.position = .xy(10, 10);
+    zhu.camera.size = .xy(320, 180);
+    zhu.camera.scale = .one;
+    zhu.camera.bound = .xy(640, 360);
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    update(&world);
+
+    try std.testing.expectEqual(10, zhu.camera.position.x);
+    try std.testing.expectEqual(10, zhu.camera.position.y);
+}
