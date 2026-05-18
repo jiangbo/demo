@@ -60,6 +60,7 @@ fn spawnPlayer(world: *zhu.ecs.World) void {
     world.add(player, animation);
     world.add(player, component.Render{ .layer = .actor });
     world.add(player, component.YSort{});
+    world.add(player, component.Target{});
 }
 
 fn animationSources(comptime animations: []const template.Animation) //

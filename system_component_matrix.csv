@@ -1,0 +1,9 @@
+系统中文名,系统英文名,位置,速度,精灵,动画,渲染,Y轴排序,玩家,角色,作物,耕地,目标
+,,Position,Velocity,Sprite,Animation,Render,YSort,Player,Actor,Crop,Farmland,Target
+玩家控制系统,control,,√,,,,,√,√,,,
+动画系统,animation,,,√,√,,,,√,,,
+移动系统,movement,√,√,,,,,,,,,
+作物系统,crop,,,,,,,,,√,,
+Y轴深度系统,depth,√,,,,√,√,,,,,
+渲染系统,render,√,,√,,√,,,,,,
+目标格系统,target,√,,,,,,√,,,,√

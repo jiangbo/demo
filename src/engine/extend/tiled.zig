@@ -5,10 +5,10 @@ const graphics = @import("../graphics.zig");
 const math = @import("../math.zig");
 
 pub const Position = struct {
-    x: u32,
-    y: u32,
+    x: i32,
+    y: i32,
 
-    pub fn xy(x: u32, y: u32) Position {
+    pub fn xy(x: i32, y: i32) Position {
         return .{ .x = x, .y = y };
     }
 };
@@ -25,7 +25,9 @@ pub const Map = struct {
     tileSetRefs: []const TileSetRef,
 
     pub fn size(self: Map) Vector2 {
-        return self.tilePositionToWorld(.xy(self.width, self.height));
+        const width: i32 = @intCast(self.width);
+        const height: i32 = @intCast(self.height);
+        return self.tilePositionToWorld(.xy(width, height));
     }
 
     pub fn tilePositionToWorld(self: Map, pos: Position) Vector2 {
@@ -46,16 +48,16 @@ pub const Map = struct {
 
     pub fn worldToTilePosition(self: Map, pos: Vector2) Position {
         const tilePos = pos.div(self.tileSize).floor();
-        const x: u32 = @intFromFloat(tilePos.x);
+        const x: i32 = @intFromFloat(tilePos.x);
         return .{ .x = x, .y = @intFromFloat(tilePos.y) };
     }
 
     pub fn worldToTileIndex(self: Map, pos: Vector2) usize {
         const tilePos = self.worldToTilePosition(pos);
         if (tilePos.x < 0 or tilePos.y < 0) return 0;
-        if (tilePos.x >= self.width) return 0;
-        if (tilePos.y >= self.height) return 0;
-        return tilePos.y * self.width + tilePos.x;
+        const width: i32 = @intCast(self.width);
+        if (tilePos.x >= width or tilePos.y >= self.height) return 0;
+        return @intCast(tilePos.y * width + tilePos.x);
     }
 
     pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {

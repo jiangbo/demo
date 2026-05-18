@@ -52,3 +52,9 @@ pub const Crop = struct {
 pub const Farmland = struct {
     watered: bool = false,
 };
+
+pub const Target = struct {
+    position: zhu.Vector2 = .zero,
+    color: zhu.Color = .rgba(0, 1, 0, 0.2),
+    active: bool = false,
+};

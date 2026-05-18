@@ -96,14 +96,14 @@ zig build test
   - 需要系统：固定二维 tile 数组、tileset sub image。
   - 参考源码：`engine/component/tilelayer_component.h`
 
-- [ ] 17-绘制土地与作物贴图
+- [x] 17-绘制土地与作物贴图
   - 可见效果：土地和作物使用真实素材，而不是色块。
   - 需要系统：作物/土地组件绑定 sprite sheet 子图。
   - 参考源码：`game/component/crop_component.h`、`farmland_component.h`
 
-- [ ] 18-工具目标格高亮
-  - 可见效果：玩家面前的格子有高亮框。
-  - 需要系统：Target 组件、方向到目标格计算、debug/overlay 绘制。
+- [x] 18-工具目标格高亮
+  - 可见效果：鼠标指向的邻近格子有高亮框。
+  - 需要系统：Target 组件、鼠标位置到目标格计算、debug/overlay 绘制。
   - 参考源码：`game/component/target_component.h`
 
 - [ ] 19-锄地交互
