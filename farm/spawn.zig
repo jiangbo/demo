@@ -19,24 +19,12 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
         world.add(crop, component.Crop{ .growth = 0 });
         world.add(crop, component.Position.xy(176, 96));
         world.add(crop, component.Sprite{
-            .image = imageFromConfig(sprite),
+            .image = spriteImage(sprite),
             .offset = sprite.offset,
         });
         world.add(crop, component.Render{ .layer = .crop });
         world.add(crop, component.YSort{});
     }
-}
-
-pub fn farmland(world: *zhu.ecs.World, position: zhu.Vector2) void {
-    const sprite = template.farm.farmland.sprite;
-    const entity = world.createEntity();
-    world.add(entity, component.Farmland{});
-    world.add(entity, position);
-    world.add(entity, component.Sprite{
-        .image = imageFromConfig(sprite),
-        .offset = sprite.offset,
-    });
-    world.add(entity, component.Render{ .layer = .ground });
 }
 
 fn spawnPlayer(world: *zhu.ecs.World) void {
@@ -74,10 +62,10 @@ fn animationSources(comptime animations: []const template.Animation) //
     return sources;
 }
 
-fn imageFromConfig(comptime sprite: anytype) zhu.graphics.Image {
+fn spriteImage(comptime sprite: anytype) zhu.graphics.Image {
     const rect = sprite.rect;
 
-    if (zhu.getImage(sprite.path)) |image| return image.sub(rect);
+    if (zhu.getImage(sprite.path)) |source| return source.sub(rect);
     return zhu.batch.whiteImage.sub(rect);
 }
 
@@ -111,31 +99,6 @@ fn putMockFarmImages() void {
     inline for (template.actor.player.animations) |animation| {
         zhu.assets.putImage(zhu.assets.id(animation.path), image);
     }
-    var id = zhu.assets.id(template.farm.crop.sprite.path);
+    const id = zhu.assets.id(template.farm.crop.sprite.path);
     zhu.assets.putImage(id, image);
-    id = zhu.assets.id(template.farm.farmland.sprite.path);
-    zhu.assets.putImage(id, image);
-}
-
-test "创建耕地会把贴图覆盖到目标格" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    putMockFarmImages();
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    farmland(&world, .xy(32, 48));
-
-    var query = world.query(.{
-        component.Farmland,
-        component.Position,
-        component.Sprite,
-    });
-    const entity = query.next().?;
-    const position = query.get(entity, component.Position);
-    const sprite = query.get(entity, component.Sprite);
-
-    const actual = position.add(sprite.offset);
-    try std.testing.expect(actual.approxEqual(.xy(32, 48)));
 }

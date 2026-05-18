@@ -111,7 +111,7 @@ zig build test
   - 需要系统：ItemUse 最小入口、FarmSystem hoe 操作、格子状态。
   - 参考源码：`game/system/item_use_system.*`、`farm_system.*`
 
-- [ ] 20-浇水交互
+- [x] 20-浇水交互
   - 可见效果：耕地按键后切换为湿润土地贴图。
   - 需要系统：Farmland.watered、贴图切换、操作反馈。
   - 参考源码：`game/component/farmland_component.h`

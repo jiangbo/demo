@@ -8,11 +8,11 @@ const QueryHidden = struct {};
 test {
     std.testing.refAllDeclsRecursive(@import("context.zig"));
     std.testing.refAllDeclsRecursive(@import("event.zig"));
+    std.testing.refAllDeclsRecursive(@import("map.zig"));
     std.testing.refAllDeclsRecursive(@import("spawn.zig"));
     std.testing.refAllDeclsRecursive(@import("system/animation.zig"));
     std.testing.refAllDeclsRecursive(@import("system/control.zig"));
     std.testing.refAllDeclsRecursive(@import("system/crop.zig"));
-    std.testing.refAllDeclsRecursive(@import("system/farm.zig"));
     std.testing.refAllDeclsRecursive(@import("system/movement.zig"));
     std.testing.refAllDeclsRecursive(@import("system/render.zig"));
     std.testing.refAllDeclsRecursive(@import("system/depth.zig"));

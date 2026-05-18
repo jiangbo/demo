@@ -49,9 +49,6 @@ pub const Actor = struct {
 pub const Crop = struct {
     growth: f32 = 0,
 };
-pub const Farmland = struct {
-    watered: bool = false,
-};
 
 pub const Target = struct {
     position: zhu.Vector2 = .zero,
