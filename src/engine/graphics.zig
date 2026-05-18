@@ -175,7 +175,6 @@ pub const Atlas = struct {
 
 pub var textCount: u32 = 0;
 pub fn beginDraw(clearColor: Color) void {
-    if (!sk.gfx.isvalid()) return;
     var action = sk.gfx.PassAction{};
     action.colors[0] = .{
         .load_action = .CLEAR,
