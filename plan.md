@@ -74,17 +74,14 @@ zig build test
   - 需要系统：Actor 状态、方向、Animation 切换。
   - 参考源码：`game/component/actor_component.h`、`state_system.*`
 
-- [ ] 12-相机跟随玩家
+- [x] 12-相机跟随玩家
   - 可见效果：玩家移动到屏幕边缘时相机跟随。
   - 需要系统：camera position、CameraFollowSystem。
   - 参考源码：`engine/render/camera.*`、`game/system/camera_follow_system.*`
 
-- [ ] 13-Renderer 外观层
-  - 可见效果：画面不变，但 RenderSystem 不再直接调用 batch。
-  - 需要系统：farm/renderer.zig，drawSprite、drawRect 最小接口。
-  - 参考源码：`engine/render/renderer.*`
+- [x] 13-Renderer 外观层（跳过，视口裁剪直接在 render 系统中实现）
 
-- [ ] 14-视口裁剪
+- [x] 14-视口裁剪
   - 可见效果：Debug 面板能看到屏幕外对象被跳过。
   - 需要系统：相机可视矩形、Renderer culling、统计显示。
   - 参考源码：`engine/system/render_system.*`

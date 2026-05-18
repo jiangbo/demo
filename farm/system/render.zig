@@ -9,13 +9,21 @@ const Sprite = component.Sprite;
 pub fn draw(world: *zhu.ecs.World) void {
     world.sort(Render, lessThan);
 
+    const size = zhu.camera.size.div(zhu.camera.scale);
+    const viewport = zhu.Rect.init(zhu.camera.position, size);
+
     var query = world.query(.{ Render, Position, Sprite });
     while (query.next()) |entity| {
         const render = query.get(entity, Render);
         const position = query.get(entity, Position);
         const sprite = query.get(entity, Sprite);
 
-        zhu.batch.drawImage(sprite.image, position.add(sprite.offset), .{
+        const spriteSize = sprite.size orelse sprite.image.size;
+        const spritePosition = position.add(sprite.offset);
+        const spriteRect = zhu.Rect.init(spritePosition, spriteSize);
+        if (!viewport.intersect(spriteRect)) continue;
+
+        zhu.batch.drawImage(sprite.image, spritePosition, .{
             .size = sprite.size,
             .color = render.color,
             .mask = .{ .flipX = sprite.flip },
