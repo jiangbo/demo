@@ -12,8 +12,8 @@ const scaleStep: f32 = 0.1;
 
 pub fn update(world: *zhu.ecs.World) void {
     updateScale();
-    const player = world.getIdentityEntity(Player) orelse return;
-    const position = world.get(player, Position) orelse return;
+    const player = world.getIdentityEntity(Player).?;
+    const position = world.get(player, Position).?;
     zhu.camera.smoothFollow(position, followSmooth);
 }
 
@@ -44,19 +44,4 @@ test "相机跟随会向玩家位置移动" {
 
     try std.testing.expect(zhu.camera.position.x > 0);
     try std.testing.expect(zhu.camera.position.y > 0);
-}
-
-test "没有玩家时相机不变" {
-    zhu.camera.position = .xy(10, 10);
-    zhu.camera.size = .xy(320, 180);
-    zhu.camera.scale = .one;
-    zhu.camera.bound = .xy(640, 360);
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    update(&world);
-
-    try std.testing.expectEqual(10, zhu.camera.position.x);
-    try std.testing.expectEqual(10, zhu.camera.position.y);
 }

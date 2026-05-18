@@ -15,10 +15,10 @@ const playerSpeed: f32 = 60;
 pub fn update(world: *zhu.ecs.World) void {
     const direction = readDirection();
     const velocity = direction.scale(playerSpeed);
-    const player = world.getIdentityEntity(Player) orelse return;
-    if (world.getPtr(player, Velocity)) |v| v.value = velocity;
+    const player = world.getIdentityEntity(Player).?;
+    world.getPtr(player, Velocity).?.value = velocity;
 
-    const actor = world.getPtr(player, Actor) orelse return;
+    const actor = world.getPtr(player, Actor).?;
     if (direction.length2() == 0) {
         actor.animation = PlayerAnimation.idle;
         return;

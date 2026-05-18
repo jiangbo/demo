@@ -15,6 +15,7 @@ const system = struct {
     const movement = @import("system/movement.zig");
     const render = @import("system/render.zig");
     const target = @import("system/target.zig");
+    const tool = @import("system/tool.zig");
 };
 
 var farmLoaded: bool = false;
@@ -61,6 +62,7 @@ fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
     system.depth.update(world);
     system.camera.update(world);
     system.target.update(world);
+    system.tool.update(world);
 }
 
 fn drawFarm(world: *zhu.ecs.World) void {

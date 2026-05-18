@@ -25,19 +25,18 @@ pub fn loadFarm(world: *zhu.ecs.World) void {
         world.add(crop, component.Render{ .layer = .crop });
         world.add(crop, component.YSort{});
     }
+}
 
-    // 3. 初始化土地实体
-    {
-        const sprite = template.farm.farmland.sprite;
-        const farmland = world.createEntity();
-        world.add(farmland, component.Farmland{});
-        world.add(farmland, component.Position.xy(176, 112));
-        world.add(farmland, component.Sprite{
-            .image = imageFromConfig(sprite),
-            .offset = sprite.offset,
-        });
-        world.add(farmland, component.Render{ .layer = .ground });
-    }
+pub fn farmland(world: *zhu.ecs.World, position: zhu.Vector2) void {
+    const sprite = template.farm.farmland.sprite;
+    const entity = world.createEntity();
+    world.add(entity, component.Farmland{});
+    world.add(entity, position);
+    world.add(entity, component.Sprite{
+        .image = imageFromConfig(sprite),
+        .offset = sprite.offset,
+    });
+    world.add(entity, component.Render{ .layer = .ground });
 }
 
 fn spawnPlayer(world: *zhu.ecs.World) void {
@@ -83,7 +82,7 @@ fn imageFromConfig(comptime sprite: anytype) zhu.graphics.Image {
 }
 
 test "加载农场会创建初始实体" {
-    zhu.assets.allocator = std.testing.allocator;
+    zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
     putMockFarmImages();
 
@@ -96,11 +95,10 @@ test "加载农场会创建初始实体" {
     const player = world.getIdentityEntity(component.Player).?;
     try equal(160, world.get(player, component.Position).?.x);
     try equal(1, world.raw(component.Crop).len);
-    try equal(1, world.raw(component.Farmland).len);
     try equal(1, world.raw(component.Velocity).len);
     try equal(1, world.raw(component.Actor).len);
-    try equal(3, world.raw(component.Sprite).len);
-    try equal(3, world.raw(component.Render).len);
+    try equal(2, world.raw(component.Sprite).len);
+    try equal(2, world.raw(component.Render).len);
     try equal(2, world.assure(component.YSort).dense.items.len);
 }
 
@@ -117,4 +115,27 @@ fn putMockFarmImages() void {
     zhu.assets.putImage(id, image);
     id = zhu.assets.id(template.farm.farmland.sprite.path);
     zhu.assets.putImage(id, image);
+}
+
+test "创建耕地会把贴图覆盖到目标格" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    putMockFarmImages();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    farmland(&world, .xy(32, 48));
+
+    var query = world.query(.{
+        component.Farmland,
+        component.Position,
+        component.Sprite,
+    });
+    const entity = query.next().?;
+    const position = query.get(entity, component.Position);
+    const sprite = query.get(entity, component.Sprite);
+
+    const actual = position.add(sprite.offset);
+    try std.testing.expect(actual.approxEqual(.xy(32, 48)));
 }

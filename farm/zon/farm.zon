@@ -11,7 +11,7 @@
         .sprite = .{
             .path = "farm-rpg/Farm/Tileset/Modular/Tilled Soil and wet soil.png",
             .rect = .{ .min = .{ .x = 0, .y = 48 }, .size = .{ .x = 16, .y = 16 } },
-            .offset = .{ .x = -8, .y = -8 },
+            .offset = .{ .x = 0, .y = 0 },
             .size = .{ .x = 16, .y = 16 },
         },
     },

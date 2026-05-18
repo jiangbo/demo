@@ -106,7 +106,7 @@ zig build test
   - 需要系统：Target 组件、鼠标位置到目标格计算、debug/overlay 绘制。
   - 参考源码：`game/component/target_component.h`
 
-- [ ] 19-锄地交互
+- [x] 19-锄地交互
   - 可见效果：按键后目标格变成耕地贴图。
   - 需要系统：ItemUse 最小入口、FarmSystem hoe 操作、格子状态。
   - 参考源码：`game/system/item_use_system.*`、`farm_system.*`
