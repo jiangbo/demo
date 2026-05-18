@@ -1,10 +1,11 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const component = @import("component.zig");
 const template = @import("template.zig");
+const component = @import("component.zig");
+const Position = component.Position;
+const Crop = component.Crop;
 
-const batch = zhu.batch;
 const tiled = zhu.extend.tiled;
 
 pub const maps = [_]tiled.Map{
@@ -12,7 +13,7 @@ pub const maps = [_]tiled.Map{
 };
 
 pub var data: *const tiled.Map = &maps[0];
-var vertexes: std.ArrayList(batch.Vertex) = .empty;
+var vertexes: std.ArrayList(zhu.batch.Vertex) = .empty;
 var tiledCount: usize = 0;
 var cells: []Cell = &.{};
 var dryImage: zhu.graphics.Image = undefined;
@@ -61,15 +62,16 @@ pub fn deinit() void {
 }
 
 pub fn draw() void {
-    batch.vertexBuffer.appendSliceAssumeCapacity(vertexes.items);
+    zhu.batch.vertexBuffer.appendSliceAssumeCapacity(vertexes.items);
 }
 
 pub fn rebuild(world: *zhu.ecs.World) void {
     for (cells) |*cell| cell.crop = null;
 
-    var query = world.query(.{ component.Position, component.Crop });
+    var query = world.query(.{ Position, Crop });
     while (query.next()) |entity| {
-        const index = cellIndex(query.get(entity, component.Position)) orelse continue;
+        const position = query.get(entity, Position);
+        const index = cellIndex(position) orelse continue;
         cells[index].crop = entity;
     }
 }
@@ -131,13 +133,8 @@ fn rebuildLandVertexes() void {
     for (cells, 0..) |cell, index| {
         const land = cell.land orelse continue;
         const position = data.tileIndexToWorld(index);
-        switch (land) {
-            .dry => appendVertex(position, dryImage),
-            .wet => {
-                appendVertex(position, dryImage);
-                appendVertex(position, wetImage);
-            },
-        }
+        appendVertex(position, dryImage);
+        if (land == .wet) appendVertex(position, wetImage);
     }
 }
 
@@ -200,8 +197,8 @@ test "目标格有作物时不会锄地" {
     defer world.deinit();
 
     const crop = world.createEntity();
-    world.add(crop, component.Crop{});
-    world.add(crop, component.Position.xy(40, 56));
+    world.add(crop, Crop{});
+    world.add(crop, Position.xy(40, 56));
     rebuild(&world);
 
     hoe(.xy(32, 48));
