@@ -12,19 +12,19 @@ pub const maps = [_]tiled.Map{
 };
 
 pub var data: *const tiled.Map = &maps[0];
-var tileVertexes: std.ArrayList(batch.Vertex) = .empty;
+var vertexes: std.ArrayList(batch.Vertex) = .empty;
+var tiledCount: usize = 0;
 var cells: []Cell = &.{};
 var dryImage: zhu.graphics.Image = undefined;
 var wetImage: zhu.graphics.Image = undefined;
 
 const Land = enum {
-    none,
     dry,
     wet,
 };
 
 const Cell = struct {
-    land: Land = .none,
+    land: ?Land = null,
     crop: ?zhu.ecs.Entity = null,
 };
 
@@ -32,8 +32,7 @@ pub fn init() void {
     std.log.info("map init", .{});
     tiled.init(@import("zon/tile.zon"));
 
-    zhu.assets.free(cells);
-    const count: usize = @intCast(data.width * data.height);
+    const count = data.width * data.height;
     cells = zhu.assets.oomAlloc(Cell, count);
     @memset(cells, .{});
 
@@ -50,30 +49,19 @@ pub fn init() void {
         }
     }
 
+    tiledCount = vertexes.items.len;
+
     std.log.info("map loaded: {}x{}, tiles: {}", //
-        .{ data.width, data.height, tileVertexes.items.len });
+        .{ data.width, data.height, vertexes.items.len });
 }
 
 pub fn deinit() void {
     zhu.assets.free(cells);
-    cells = &.{};
-    tileVertexes.clearAndFree(zhu.assets.allocator);
+    vertexes.clearAndFree(zhu.assets.allocator);
 }
 
 pub fn draw() void {
-    batch.vertexBuffer.appendSliceAssumeCapacity(tileVertexes.items);
-
-    for (cells, 0..) |cell, index| {
-        const position = data.tileIndexToWorld(index);
-        switch (cell.land) {
-            .none => {},
-            .dry => zhu.batch.drawImage(dryImage, position, .{}),
-            .wet => {
-                zhu.batch.drawImage(dryImage, position, .{});
-                zhu.batch.drawImage(wetImage, position, .{});
-            },
-        }
-    }
+    batch.vertexBuffer.appendSliceAssumeCapacity(vertexes.items);
 }
 
 pub fn rebuild(world: *zhu.ecs.World) void {
@@ -88,19 +76,18 @@ pub fn rebuild(world: *zhu.ecs.World) void {
 
 pub fn hoe(position: zhu.Vector2) void {
     const index = cellIndex(position) orelse return;
-    const cell = &cells[index];
-    if (cell.land != .none) return;
-    if (cell.crop != null) return;
+    const cell = cells[index];
+    if (cell.land != null or cell.crop != null) return;
 
-    cell.land = .dry;
+    cells[index].land = .dry;
+    rebuildLandVertexes();
 }
 
 pub fn water(position: zhu.Vector2) void {
     const index = cellIndex(position) orelse return;
-    const cell = &cells[index];
-    if (cell.land == .none) return;
-
-    cell.land = .wet;
+    if (cells[index].land == null) return;
+    cells[index].land = .wet;
+    rebuildLandVertexes();
 }
 
 /// 将 tile 层的每个瓦片转为预构建顶点
@@ -118,24 +105,40 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
         // 用 localId 和 columns 算出在 tileSet 图中的裁剪矩形
         const area = data.tileArea(localId, tileSet.columns);
         const image = zhu.assets.getImage(tileSet.image).?.sub(area);
-
-        tileVertexes.append(zhu.assets.allocator, .{
-            .position = data.tileIndexToWorld(index), // 索引 → 世界坐标
-            .size = image.size,
-            .texturePosition = image.toTexturePosition(),
-        }) catch @panic("oom, can't append tile");
+        appendVertex(data.tileIndexToWorld(index), image);
     }
 }
 
 /// 将整张图作为一层背景/前景直接写入顶点
 /// image 层没有瓦片网格，就是一张大图放在 offset 位置
 fn parseImageLayer(layer: *const tiled.Layer) void {
-    const image = zhu.assets.getImage(layer.image).?;
-    tileVertexes.append(zhu.assets.allocator, .{
-        .position = layer.offset,
-        .size = .xy(layer.width, layer.height),
+    const image = zhu.assets.getImage(layer.image).?
+        .sub(.init(.zero, .xy(layer.width, layer.height)));
+    appendVertex(layer.offset, image);
+}
+
+fn appendVertex(position: zhu.Vector2, image: zhu.graphics.Image) void {
+    vertexes.append(zhu.assets.allocator, .{
+        .position = position,
+        .size = image.size,
         .texturePosition = image.toTexturePosition(),
-    }) catch @panic("oom, can't append image layer");
+    }) catch @panic("map oom");
+}
+
+fn rebuildLandVertexes() void {
+    vertexes.shrinkRetainingCapacity(tiledCount);
+
+    for (cells, 0..) |cell, index| {
+        const land = cell.land orelse continue;
+        const position = data.tileIndexToWorld(index);
+        switch (land) {
+            .dry => appendVertex(position, dryImage),
+            .wet => {
+                appendVertex(position, dryImage);
+                appendVertex(position, wetImage);
+            },
+        }
+    }
 }
 
 fn cellIndex(position: zhu.Vector2) ?usize {
@@ -153,12 +156,11 @@ fn cellIndex(position: zhu.Vector2) ?usize {
 test "锄地会记录目标格" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
-    cells = zhu.assets.oomAlloc(Cell, @intCast(data.width * data.height));
-    defer {
-        zhu.assets.free(cells);
-        cells = &.{};
-    }
+    cells = zhu.assets.oomAlloc(Cell, data.width * data.height);
+    defer zhu.assets.free(cells);
     @memset(cells, .{});
+    putMockLandImages();
+    defer vertexes.clearAndFree(std.testing.allocator);
 
     hoe(.xy(32, 48));
 
@@ -169,16 +171,15 @@ test "锄地会记录目标格" {
 test "浇水只会影响已有耕地" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
-    cells = zhu.assets.oomAlloc(Cell, @intCast(data.width * data.height));
-    defer {
-        zhu.assets.free(cells);
-        cells = &.{};
-    }
+    cells = zhu.assets.oomAlloc(Cell, data.width * data.height);
+    defer zhu.assets.free(cells);
     @memset(cells, .{});
+    putMockLandImages();
+    defer vertexes.clearAndFree(std.testing.allocator);
 
     water(.xy(32, 48));
     var index = cellIndex(.xy(32, 48)).?;
-    try std.testing.expectEqual(Land.none, cells[index].land);
+    try std.testing.expectEqual(null, cells[index].land);
 
     hoe(.xy(32, 48));
     water(.xy(32, 48));
@@ -189,12 +190,11 @@ test "浇水只会影响已有耕地" {
 test "目标格有作物时不会锄地" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
-    cells = zhu.assets.oomAlloc(Cell, @intCast(data.width * data.height));
-    defer {
-        zhu.assets.free(cells);
-        cells = &.{};
-    }
+    cells = zhu.assets.oomAlloc(Cell, data.width * data.height);
+    defer zhu.assets.free(cells);
     @memset(cells, .{});
+    putMockLandImages();
+    defer vertexes.clearAndFree(std.testing.allocator);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -206,18 +206,16 @@ test "目标格有作物时不会锄地" {
 
     hoe(.xy(32, 48));
     const index = cellIndex(.xy(32, 48)).?;
-    try std.testing.expectEqual(Land.none, cells[index].land);
+    try std.testing.expectEqual(null, cells[index].land);
 }
 
 test "土地绘制会追加干湿图块" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
-    cells = zhu.assets.oomAlloc(Cell, @intCast(data.width * data.height));
-    defer {
-        zhu.assets.free(cells);
-        cells = &.{};
-    }
+    cells = zhu.assets.oomAlloc(Cell, data.width * data.height);
+    defer zhu.assets.free(cells);
     putMockLandImages();
+    defer vertexes.clearAndFree(std.testing.allocator);
     @memset(cells, .{});
 
     var vertices: [8]zhu.batch.Vertex = undefined;
@@ -239,10 +237,6 @@ fn putMockLandImages() void {
         .size = .xy(256, 256),
     };
 
-    var id = zhu.assets.id(template.farm.farmland.dry.path);
-    zhu.assets.putImage(id, image);
-    dryImage = zhu.assets.getImage(id).?.sub(template.farm.farmland.dry.rect);
-    id = zhu.assets.id(template.farm.farmland.wet.path);
-    zhu.assets.putImage(id, image);
-    wetImage = zhu.assets.getImage(id).?.sub(template.farm.farmland.wet.rect);
+    dryImage = image.sub(template.farm.farmland.dry.rect);
+    wetImage = image.sub(template.farm.farmland.wet.rect);
 }
