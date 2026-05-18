@@ -16,10 +16,12 @@ var world: zhu.ecs.World = undefined;
 pub fn init() void {
     vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 4096);
     zhu.batch.init(vertexBuffer, &commandBuffer);
-    zhu.batch.whiteImage = zhu.assets.createWhiteImage("farm/white");
     world = .init(zhu.assets.allocator);
 
     zhu.assets.loadAtlas(@import("zon/atlas.zon"));
+    const whiteCircle = zhu.getImage("circle.png").?;
+    const area: zhu.Rect = .init(.xy(16, 16), .xy(32, 32));
+    zhu.batch.whiteImage = whiteCircle.sub(area);
 
     gui.init();
     context.init();

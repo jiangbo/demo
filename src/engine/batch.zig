@@ -230,7 +230,10 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
 pub fn startNewDrawCommand() void {
     const index: u32 = @intCast(vertexBuffer.items.len);
     currentCommand().end = index;
-    commandBuffer.appendAssumeCapacity(.{ .start = index });
+    commandBuffer.appendAssumeCapacity(.{
+        .start = index,
+        .position = camera.position,
+    });
 }
 
 fn doDraw(cmd: Command) void {
