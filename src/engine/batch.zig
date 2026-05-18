@@ -238,7 +238,8 @@ fn doDraw(cmd: Command) void {
     sk.gfx.applyPipeline(pipeline);
 
     // 处理 uniform 变量
-    const x, const y = .{ camera.size.x, camera.size.y };
+    const viewSize = camera.size.div(camera.scale);
+    const x, const y = .{ viewSize.x, viewSize.y };
     const orth = math.Matrix.orthographic(x, y, 0, 1);
     var pos = cmd.position;
     const position = pos.scale(-1).toVector3(0);

@@ -89,6 +89,12 @@ fn drawEnginePanel() void {
         "Capture keyboard: %s",
         boolText(context.uiWantCaptureKeyboard).ptr,
     );
+    _ = imgui.igText(
+        "Camera: %.1f, %.1f  scale: %.2f",
+        zhu.camera.position.x,
+        zhu.camera.position.y,
+        zhu.camera.scale.x,
+    );
     imgui.igSeparator();
     drawBatchStats();
     imgui.igSeparator();

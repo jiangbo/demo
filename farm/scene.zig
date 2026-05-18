@@ -7,6 +7,7 @@ const title = @import("title.zig");
 
 const system = struct {
     const animation = @import("system/animation.zig");
+    const camera = @import("system/camera.zig");
     const control = @import("system/control.zig");
     const crop = @import("system/crop.zig");
     const depth = @import("system/depth.zig");
@@ -55,6 +56,7 @@ fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
     system.animation.update(world, delta);
     system.crop.update(world, delta);
     system.depth.update(world);
+    system.camera.update(world);
 }
 
 fn drawFarm(world: *zhu.ecs.World) void {

@@ -7,20 +7,20 @@ const Vector2 = math.Vector2;
 
 pub var modeEnum: enum { world, window } = .world;
 pub var position: Vector2 = .zero;
+pub var scale: Vector2 = .one;
 pub var size: Vector2 = undefined;
 pub var bound: Vector2 = undefined;
 
 pub fn init() void {
-    size = window.size;
-    bound = window.size;
+    size, bound = .{ window.size, window.size };
 }
 
 pub fn toWorld(windowPosition: Vector2) Vector2 {
-    return windowPosition.add(position);
+    return windowPosition.div(scale).add(position);
 }
 
 pub fn toWindow(worldPosition: Vector2) Vector2 {
-    return worldPosition.sub(position);
+    return worldPosition.sub(position).mul(scale);
 }
 
 pub fn control(distance: f32) void {
@@ -31,18 +31,17 @@ pub fn control(distance: f32) void {
 }
 
 pub fn clampBound() void {
-    const max = bound.sub(size).max(.zero);
+    const max = bound.sub(size.div(scale)).max(.zero);
     position.clamp(.zero, max);
 }
 
 pub fn directFollow(pos: Vector2) void {
-    const halfWindowSize = size.scale(0.5);
-    position = pos.sub(halfWindowSize);
+    position = pos.sub(size.div(scale).scale(0.5));
     clampBound();
 }
 
 pub fn smoothFollow(pos: Vector2, smooth: f32) void {
-    const target = pos.sub(size.scale(0.5));
+    const target = pos.sub(size.div(scale).scale(0.5));
     const distance = target.sub(position);
 
     const clampedSmooth = std.math.clamp(smooth, 0, 1);
