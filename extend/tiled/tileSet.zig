@@ -116,7 +116,7 @@ fn parseTileSet(id: u32, value: tiled.Tileset) !TileSet {
 
     var imageId: u32 = 0;
     if (value.image) |img| {
-        const i = std.mem.indexOf(u8, img, "texture").?;
+        const i = 6;
         imageId = hash(img[i..]);
         std.log.info("image: {s}, id: {}", .{ img[i..], imageId });
     }
@@ -164,7 +164,7 @@ fn parseTilesCollection(tiles: []tiled.TileDefinition) ![]Tile {
     for (tiles) |tile| {
         var imageId: u32 = 0;
         if (tile.image) |img| {
-            const i = std.mem.indexOf(u8, img, "texture").?;
+            const i = 6;
             imageId = hash(img[i..]);
             std.log.info("image: {s}, id: {}", .{ img[i..], imageId });
         }

@@ -2,6 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const context = @import("context.zig");
+const map = @import("map.zig");
 const spawn = @import("spawn.zig");
 const title = @import("title.zig");
 
@@ -48,6 +49,7 @@ pub fn draw(world: *zhu.ecs.World) void {
 fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
     if (!farmLoaded) {
         spawn.loadFarm(world);
+        zhu.camera.bound = map.data.size();
         farmLoaded = true;
     }
 
@@ -60,5 +62,6 @@ fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
 }
 
 fn drawFarm(world: *zhu.ecs.World) void {
+    map.draw();
     system.render.draw(world);
 }

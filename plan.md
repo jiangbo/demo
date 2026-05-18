@@ -86,12 +86,12 @@ zig build test
   - 需要系统：相机可视矩形、Renderer culling、统计显示。
   - 参考源码：`engine/system/render_system.*`
 
-- [ ] 15-批处理统计面板
+- [x] 15-批处理统计面板
   - 可见效果：面板显示 sprites、commands、sprites/command。
   - 需要系统：batch stats 命名整理、Debug UI 展示。
   - 参考源码：`engine/render/opengl/sprite_batch.*`
 
-- [ ] 16-绘制简单草地 tiles
+- [x] 16-绘制简单草地 tiles
   - 可见效果：屏幕上出现一片由真实 tileset 拼出的草地。
   - 需要系统：固定二维 tile 数组、tileset sub image。
   - 参考源码：`engine/component/tilelayer_component.h`
