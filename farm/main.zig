@@ -23,6 +23,10 @@ pub fn init() void {
     const area: zhu.Rect = .init(.xy(16, 16), .xy(32, 32));
     zhu.batch.whiteImage = whiteCircle.sub(area);
 
+    const fontImage = zhu.assets.loadImage("assets/font.png");
+    zhu.text.initBitMapFont(fontImage, @import("zon/font.zon"));
+    zhu.text.changeFontSize(8);
+
     gui.init();
     context.init();
     events.init();
