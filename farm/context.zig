@@ -1,7 +1,8 @@
 const std = @import("std");
+const component = @import("component.zig");
 
 pub const Scene = enum { title, farm };
-pub const Tool = enum { hoe, water, seed };
+pub const Tool = component.Tool;
 
 const Config = struct {
     scene: Scene = .title,

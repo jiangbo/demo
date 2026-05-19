@@ -59,3 +59,22 @@ pub const Target = struct {
     color: zhu.Color = .rgba(0, 1, 0, 0.2),
     active: bool = false,
 };
+
+pub const Tool = enum { hoe, water, seed };
+
+pub const ItemId = enum { hoe, water, seed, crop };
+
+pub const ItemStack = struct {
+    id: ItemId,
+    count: u32 = 1,
+};
+
+pub const Inventory = struct {
+    slots: [10]?ItemStack = [_]?ItemStack{null} ** 10,
+    active: u32 = 0,
+};
+
+pub const Pickup = struct {
+    item: ItemId,
+    count: u32 = 1,
+};
