@@ -5,7 +5,7 @@ const window = @import("window.zig");
 
 const Vector2 = math.Vector2;
 
-pub var modeEnum: enum { world, window } = .world;
+pub var mode: enum { world, window, fixed } = .world;
 pub var position: Vector2 = .zero;
 pub var scale: Vector2 = .one;
 pub var size: Vector2 = undefined;

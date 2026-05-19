@@ -18,7 +18,8 @@ pub const Command = struct {
     end: u32 = 0, // 结束顶点索引
     texture: graphics.Texture = .{}, // 纹理
     position: Vector2 = .zero, // 位置
-    scale: Vector2 = .one, // 缩放或大小
+    scale: Vector2 = .one, // 缩放
+    size: Vector2 = .zero, // 大小
     type: enum { draw, scissor } = .draw, // 类型
 };
 
@@ -83,7 +84,6 @@ pub fn beginDraw(color: graphics.Color) void {
     graphics.beginDraw(color);
     vertexBuffer.clearRetainingCapacity();
     commandBuffer.clearRetainingCapacity();
-    commandBuffer.appendAssumeCapacity(.{});
 }
 
 pub fn endDraw() void {
@@ -95,7 +95,7 @@ pub fn flush() void {
     lastStats = .{};
     if (vertexBuffer.items.len == 0) return; // 没需要绘制的东西
 
-    currentCommand().end = @intCast(vertexBuffer.items.len);
+    currentCommand().?.end = @intCast(vertexBuffer.items.len);
     lastStats = .{
         .sprites = vertexBuffer.items.len,
         .commands = commandCount(),
@@ -111,7 +111,7 @@ pub fn flush() void {
             },
             .scissor => {
                 const x, const y = .{ cmd.position.x, cmd.position.y };
-                const w, const h = .{ cmd.scale.x, cmd.scale.y };
+                const w, const h = .{ cmd.size.x, cmd.size.y };
                 sk.gfx.applyScissorRectf(x, y, w, h, true);
             },
         }
@@ -120,7 +120,8 @@ pub fn flush() void {
 
 pub const commit = graphics.endDraw;
 
-pub fn currentCommand() *Command {
+pub fn currentCommand() ?*Command {
+    if (commandBuffer.items.len == 0) return null;
     return &commandBuffer.items[commandBuffer.items.len - 1];
 }
 
@@ -197,23 +198,21 @@ pub fn drawImageId(id: ImageId, pos: Vector2, option: Option) void {
 }
 
 pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
-    var worldPos = pos;
-    if (camera.modeEnum == .window) {
-        worldPos = camera.position.add(pos);
+    var cmd = currentCommand() orelse addDrawCommand(image.texture);
+    if (cmd.texture.id != image.texture.id) {
+        cmd = addDrawCommand(image.texture); // 纹理切换
     }
 
-    const size = (option.size orelse image.size);
-    const scaledSize = size.mul(option.scale);
-
-    const imageVector = image.toTexturePosition();
-
-    var command = currentCommand();
-    if (command.texture.id == 0) {
-        command.texture = image.texture;
-        command.position = camera.position;
-    } else if (image.texture.id != command.texture.id) {
-        startNewDrawCommand();
-        currentCommand().texture = image.texture;
+    const size = option.size orelse image.size;
+    var scaledSize = size.mul(option.scale);
+    var worldPos = pos;
+    switch (camera.mode) {
+        .world => {},
+        .window => worldPos = cmd.position.add(pos),
+        .fixed => {
+            worldPos = cmd.position.add(pos.div(cmd.scale));
+            scaledSize = scaledSize.div(cmd.scale);
+        },
     }
 
     vertexBuffer.appendSliceAssumeCapacity(&.{Vertex{
@@ -222,18 +221,25 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
         .mask = option.mask,
         .size = scaledSize,
         .pivot = option.pivot,
-        .texturePosition = imageVector,
+        .texturePosition = image.toTexturePosition(),
         .color = option.color,
     }});
 }
 
-pub fn startNewDrawCommand() void {
-    const index: u32 = @intCast(vertexBuffer.items.len);
-    currentCommand().end = index;
+pub fn addDrawCommand(texture: graphics.Texture) *Command {
+    const index: u32 = if (currentCommand()) |cmd| blk: {
+        cmd.end = @intCast(vertexBuffer.items.len);
+        break :blk cmd.end;
+    } else 0;
+
     commandBuffer.appendAssumeCapacity(.{
         .start = index,
+        .texture = texture,
         .position = camera.position,
+        .scale = camera.scale,
+        .size = camera.size,
     });
+    return &commandBuffer.items[commandBuffer.items.len - 1];
 }
 
 fn doDraw(cmd: Command) void {
@@ -241,11 +247,9 @@ fn doDraw(cmd: Command) void {
     sk.gfx.applyPipeline(pipeline);
 
     // 处理 uniform 变量
-    const viewSize = camera.size.div(camera.scale);
-    const x, const y = .{ viewSize.x, viewSize.y };
+    const x, const y = .{ cmd.size.x, cmd.size.y };
     const orth = math.Matrix.orthographic(x, y, 0, 1);
-    var pos = cmd.position;
-    const position = pos.scale(-1).toVector3(0);
+    const position = cmd.position.scale(-1).toVector3(0);
 
     const translate = math.Matrix.translateVec(position);
     const scaleMatrix = math.Matrix.scaleVec(cmd.scale.toVector3(1));
