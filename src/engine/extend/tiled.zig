@@ -119,6 +119,7 @@ pub const PropertyEnum = enum {
     float,
     bool,
     object,
+    class,
 };
 
 pub const PropertyValue = union(PropertyEnum) {
@@ -127,6 +128,7 @@ pub const PropertyValue = union(PropertyEnum) {
     float: f32, // 浮点数值
     bool: bool, // 布尔值
     object: i32, // 引用物体 ID
+    class: []const u8, // Tiled 1.8+ 类类型
 };
 
 pub const Property = struct {

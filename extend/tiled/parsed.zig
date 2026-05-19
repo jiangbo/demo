@@ -9,7 +9,7 @@ pub const PropertyEnum = enum {
     // color,
     // file,
     object,
-    // class,
+    class,
 };
 
 pub const PropertyValue = union(PropertyEnum) {
@@ -20,7 +20,7 @@ pub const PropertyValue = union(PropertyEnum) {
     // color: []const u8, // 颜色值 (#RRGGBB)
     // file: []const u8, // 文件路径
     object: i64, // 引用物体 ID
-    // class: []const u8, // Tiled 1.8+ 类类型
+    class: []const u8, // Tiled 1.8+ 类类型
 };
 
 pub const Property = struct {

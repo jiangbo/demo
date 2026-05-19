@@ -195,8 +195,13 @@ fn parsePropertyValue(property: tiled.Property) parsed.PropertyValue {
     return switch (toEnum(parsed.PropertyEnum, property.type).?) {
         .string => .{ .string = property.value.string },
         .int => .{ .int = @intCast(property.value.integer) },
-        .float => .{ .float = @floatCast(property.value.float) },
+        .float => switch (property.value) {
+            .float => |f| .{ .float = @floatCast(f) },
+            .integer => |i| .{ .float = @floatFromInt(i) },
+            else => @panic("Expected a number type for .float"),
+        },
         .bool => .{ .bool = property.value.bool },
+        .class => .{ .class = property.propertytype.? },
         .object => .{ .object = @intCast(property.value.integer) },
     };
 }
