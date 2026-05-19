@@ -46,8 +46,12 @@ pub const Actor = struct {
     facing: Facing = .down,
     rows: [4]i8 = .{ 0, 1, -2, 2 },
 };
+pub const GrowthStage = enum { seed, sprout, growing, mature };
+
 pub const Crop = struct {
-    growth: f32 = 0,
+    stage: GrowthStage = .seed,
+    timer: f32 = 0,
+    watered: bool = false,
 };
 
 pub const Target = struct {

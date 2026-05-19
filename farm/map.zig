@@ -4,27 +4,27 @@ const zhu = @import("zhu");
 const template = @import("template.zig");
 const component = @import("component.zig");
 const Position = component.Position;
-const Crop = component.Crop;
 
 const tiled = zhu.extend.tiled;
 
 pub const maps = [_]tiled.Map{
     @import("zon/school.zon"),
+    @import("zon/town.zon"),
 };
 
 pub var data: *const tiled.Map = &maps[0];
 var vertexes: std.ArrayList(zhu.batch.Vertex) = .empty;
 var tiledCount: usize = 0;
-var cells: []Cell = &.{};
+pub var cells: []Cell = &.{};
 var dryImage: zhu.graphics.Image = undefined;
 var wetImage: zhu.graphics.Image = undefined;
 
-const Land = enum {
+pub const Land = enum {
     dry,
     wet,
 };
 
-const Cell = struct {
+pub const Cell = struct {
     land: ?Land = null,
     crop: ?zhu.ecs.Entity = null,
 };
@@ -65,31 +65,31 @@ pub fn draw() void {
     zhu.batch.vertexBuffer.appendSliceAssumeCapacity(vertexes.items);
 }
 
-pub fn rebuild(world: *zhu.ecs.World) void {
-    for (cells) |*cell| cell.crop = null;
-
-    var query = world.query(.{ Position, Crop });
-    while (query.next()) |entity| {
-        const position = query.get(entity, Position);
-        const index = cellIndex(position) orelse continue;
-        cells[index].crop = entity;
-    }
-}
-
 pub fn hoe(position: zhu.Vector2) void {
-    const index = cellIndex(position) orelse return;
-    const cell = cells[index];
+    const cell = getCell(position) orelse return;
     if (cell.land != null or cell.crop != null) return;
 
-    cells[index].land = .dry;
+    cell.land = .dry;
     rebuildLandVertexes();
 }
 
 pub fn water(position: zhu.Vector2) void {
-    const index = cellIndex(position) orelse return;
-    if (cells[index].land == null) return;
-    cells[index].land = .wet;
+    const cell = getCell(position) orelse return;
+    if (cell.land == null) return;
+    cell.land = .wet;
     rebuildLandVertexes();
+}
+
+pub fn getCell(position: zhu.Vector2) ?*Cell {
+    std.debug.assert(cells.len != 0);
+    const tile = data.worldToTilePosition(position);
+    if (tile.x < 0 or tile.y < 0) return null;
+
+    const width: i32 = @intCast(data.width);
+    const height: i32 = @intCast(data.height);
+    if (tile.x >= width or tile.y >= height) return null;
+
+    return &cells[@as(usize, @intCast(tile.y * width + tile.x))];
 }
 
 /// 将 tile 层的每个瓦片转为预构建顶点
@@ -138,18 +138,6 @@ fn rebuildLandVertexes() void {
     }
 }
 
-fn cellIndex(position: zhu.Vector2) ?usize {
-    std.debug.assert(cells.len != 0);
-    const tile = data.worldToTilePosition(position);
-    if (tile.x < 0 or tile.y < 0) return null;
-
-    const width: i32 = @intCast(data.width);
-    const height: i32 = @intCast(data.height);
-    if (tile.x >= width or tile.y >= height) return null;
-
-    return @intCast(tile.y * width + tile.x);
-}
-
 test "锄地会记录目标格" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
@@ -161,8 +149,7 @@ test "锄地会记录目标格" {
 
     hoe(.xy(32, 48));
 
-    const index = cellIndex(.xy(32, 48)).?;
-    try std.testing.expectEqual(Land.dry, cells[index].land);
+    try std.testing.expectEqual(Land.dry, getCell(.xy(32, 48)).?.land);
 }
 
 test "浇水只会影响已有耕地" {
@@ -175,13 +162,11 @@ test "浇水只会影响已有耕地" {
     defer vertexes.clearAndFree(std.testing.allocator);
 
     water(.xy(32, 48));
-    var index = cellIndex(.xy(32, 48)).?;
-    try std.testing.expectEqual(null, cells[index].land);
+    try std.testing.expectEqual(null, getCell(.xy(32, 48)).?.land);
 
     hoe(.xy(32, 48));
     water(.xy(32, 48));
-    index = cellIndex(.xy(32, 48)).?;
-    try std.testing.expectEqual(Land.wet, cells[index].land);
+    try std.testing.expectEqual(Land.wet, getCell(.xy(32, 48)).?.land);
 }
 
 test "目标格有作物时不会锄地" {
@@ -193,17 +178,10 @@ test "目标格有作物时不会锄地" {
     putMockLandImages();
     defer vertexes.clearAndFree(std.testing.allocator);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const crop = world.createEntity();
-    world.add(crop, Crop{});
-    world.add(crop, Position.xy(40, 56));
-    rebuild(&world);
+    getCell(.xy(32, 48)).?.crop = 1;
 
     hoe(.xy(32, 48));
-    const index = cellIndex(.xy(32, 48)).?;
-    try std.testing.expectEqual(null, cells[index].land);
+    try std.testing.expectEqual(null, getCell(.xy(32, 48)).?.land);
 }
 
 test "土地绘制会追加干湿图块" {

@@ -2,7 +2,6 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
-const context = @import("../context.zig");
 
 const Player = component.Player;
 const Position = component.Position;
@@ -18,8 +17,6 @@ pub fn update(world: *zhu.ecs.World) void {
 }
 
 fn updateScale() void {
-    if (context.uiWantCaptureMouse) return;
-
     const scroll = zhu.input.mouseScrollY;
     if (scroll == 0) return;
 

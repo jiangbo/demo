@@ -39,6 +39,18 @@ pub fn nextEnum(E: type, value: anytype) E {
     return @enumFromInt((@intFromEnum(value) + 1) % len);
 }
 
+pub fn enumArray(E: type, V: type, values: []V) std.EnumArray(E, V) {
+    var array: std.EnumArray(E, V) = .initUndefined();
+    for (values, 0..) |value, i| array.set(@enumFromInt(i), value);
+    return array;
+}
+
+pub fn enumTypeArray(E: type, V: type, values: []V) std.EnumArray(E, V) {
+    var array: std.EnumArray(E, V) = .initUndefined();
+    for (values) |value| array.set(value.type, value);
+    return array;
+}
+
 pub const random = math.random;
 pub const randomF32 = math.randomF32;
 pub const randomInt = math.randomInt;

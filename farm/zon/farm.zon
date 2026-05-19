@@ -1,23 +1,22 @@
 .{
     .crop = .{
-        .sprite = .{
-            .path = "farm-rpg/Icons/Crops.png",
-            .rect = .{ .min = .{ .x = 0, .y = 0 }, .size = .{ .x = 16, .y = 16 } },
-            .offset = .{ .x = -8, .y = -11 },
-            .size = .{ .x = 16, .y = 16 },
+        .stages = .{
+            .seed    = .{ .path = "farm-rpg/Farm Crops/Spring Crops.png", .rect = .{ .min = .{ .x = 0, .y = 16 }, .size = .{ .x = 16, .y = 16 } }, .offset = .{ .x = 2.5, .y = -2.5 }, .size = .{ .x = 16, .y = 16 } },
+            .sprout  = .{ .path = "farm-rpg/Farm Crops/Spring Crops.png", .rect = .{ .min = .{ .x = 16, .y = 16 }, .size = .{ .x = 16, .y = 16 } }, .offset = .{ .x = 1.0, .y = -4.0 }, .size = .{ .x = 16, .y = 16 } },
+            .growing = .{ .path = "farm-rpg/Farm Crops/Spring Crops.png", .rect = .{ .min = .{ .x = 32, .y = 16 }, .size = .{ .x = 16, .y = 16 } }, .offset = .{ .x = 0.5, .y = -3.0 }, .size = .{ .x = 16, .y = 16 } },
+            .mature  = .{ .path = "farm-rpg/Farm Crops/Spring Crops.png", .rect = .{ .min = .{ .x = 80, .y = 16 }, .size = .{ .x = 16, .y = 16 } }, .offset = .{ .x = 0.5, .y = -0.5 }, .size = .{ .x = 16, .y = 16 } },
         },
+        .durations = .{ 5.0, 8.0, 8.0, 0.0 },
     },
     .farmland = .{
         .dry = .{
             .path = "farm-rpg/Farm/Tileset/Modular/Tilled Soil and wet soil.png",
             .rect = .{ .min = .{ .x = 0, .y = 48 }, .size = .{ .x = 16, .y = 16 } },
-            .offset = .{ .x = 0, .y = 0 },
             .size = .{ .x = 16, .y = 16 },
         },
         .wet = .{
             .path = "farm-rpg/Farm/Tileset/Modular/Tilled Soil and wet soil.png",
             .rect = .{ .min = .{ .x = 192, .y = 48 }, .size = .{ .x = 16, .y = 16 } },
-            .offset = .{ .x = 0, .y = 0 },
             .size = .{ .x = 16, .y = 16 },
         },
     },

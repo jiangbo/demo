@@ -116,7 +116,7 @@ zig build test
   - 需要系统：Farmland.watered、贴图切换、操作反馈。
   - 参考源码：`game/component/farmland_component.h`
 
-- [ ] 21-播种与作物生长
+- [x] 21-播种与作物生长
   - 可见效果：播种后出现种子，时间推进后变成下一阶段。
   - 需要系统：Crop.growth、CropSystem、作物阶段 sprite。
   - 参考源码：`game/system/crop_system.*`、`assets/data/crop_config.json`

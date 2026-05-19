@@ -1,6 +1,7 @@
 const std = @import("std");
 
 pub const Scene = enum { title, farm };
+pub const Tool = enum { hoe, water, seed };
 
 const Config = struct {
     scene: Scene = .title,
@@ -17,6 +18,7 @@ pub var showEngineDebug: bool = false;
 pub var showGameDebug: bool = false;
 pub var uiWantCaptureMouse: bool = false;
 pub var uiWantCaptureKeyboard: bool = false;
+pub var tool: Tool = .hoe;
 
 pub fn init() void {
     currentScene = config.scene;
@@ -27,6 +29,7 @@ pub fn init() void {
     showGameDebug = false;
     uiWantCaptureMouse = false;
     uiWantCaptureKeyboard = false;
+    tool = .hoe;
     std.log.info("context init scene={s}", .{@tagName(currentScene)});
 }
 

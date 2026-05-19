@@ -1,6 +1,11 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
+const component = @import("component.zig");
+const Position = component.Position;
+const Crop = component.Crop;
+const Player = component.Player;
+const Target = component.Target;
 const context = @import("context.zig");
 const map = @import("map.zig");
 const spawn = @import("spawn.zig");
@@ -51,16 +56,25 @@ pub fn draw(world: *zhu.ecs.World) void {
 fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
     if (!farmLoaded) {
         spawn.loadFarm(world);
-        map.rebuild(world);
+        rebuildCells(world);
         zhu.camera.bound = map.data.size();
         farmLoaded = true;
     }
+
+    updateToolSelection();
 
     system.control.update(world);
     system.movement.update(world, delta);
     system.animation.update(world, delta);
     system.crop.update(world, delta);
     system.depth.update(world);
+
+    if (context.uiWantCaptureMouse) {
+        const player = world.getIdentityEntity(Player).?;
+        world.getPtr(player, Target).?.active = false;
+        return;
+    }
+
     system.camera.update(world);
     system.target.update(world);
     system.tool.update(world);
@@ -70,4 +84,22 @@ fn drawFarm(world: *zhu.ecs.World) void {
     map.draw();
     system.render.draw(world);
     system.target.draw(world);
+}
+
+fn rebuildCells(world: *zhu.ecs.World) void {
+    for (map.cells) |*cell| cell.crop = null;
+
+    var query = world.query(.{ Position, Crop });
+    while (query.next()) |entity| {
+        const position = query.get(entity, Position);
+        const cell = map.getCell(position) orelse continue;
+        cell.crop = entity;
+    }
+}
+
+fn updateToolSelection() void {
+    if (context.uiWantCaptureKeyboard) return;
+    if (zhu.input.key.pressed(._1)) context.tool = .hoe;
+    if (zhu.input.key.pressed(._2)) context.tool = .water;
+    if (zhu.input.key.pressed(._3)) context.tool = .seed;
 }

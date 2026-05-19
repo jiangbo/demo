@@ -1,7 +1,6 @@
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
-const context = @import("../context.zig");
 const map = @import("../map.zig");
 
 const Player = component.Player;
@@ -14,11 +13,6 @@ pub fn update(world: *zhu.ecs.World) void {
     const player = world.getIdentityEntity(Player).?;
     const target = world.getPtr(player, Target).?;
     const playerPos = world.get(player, Position).?;
-
-    if (context.uiWantCaptureMouse) {
-        target.active = false;
-        return;
-    }
 
     const playerTile = map.data.worldToTilePosition(playerPos);
     const mouseWorld = zhu.camera.toWorld(zhu.window.mousePosition);
