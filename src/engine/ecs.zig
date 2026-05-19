@@ -314,7 +314,7 @@ pub const World = struct {
 
     pub fn removeAll(self: *World, entity: Entity) void {
         var iterator = self.componentMap.valueIterator();
-        while (iterator.next()) |map| _ = map.swapRemove(entity);
+        while (iterator.next()) |map| _ = map.remove(entity);
     }
 
     pub fn clear(self: *World, T: type) void {

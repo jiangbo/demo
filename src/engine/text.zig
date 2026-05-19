@@ -28,17 +28,21 @@ var fontImage: graphics.Image = undefined;
 var fontScale: f32 = undefined;
 var halfAdvance: f32 = undefined; // 英文只需要前进半个距离
 
-pub fn initBitMapFont(image: Image, zon: BitMapFont, size: f32) void {
+pub fn initBitMapFont(image: Image, zon: BitMapFont) void {
     font = zon;
     fontImage = image;
-    fontScale = size / font.size;
-    halfAdvance = font.size / 2;
     invalidIndex = binarySearch('?').?;
+    changeFontSize(font.size);
     // font.init(fontZon);
     // font.initSDF(.{
     //     .font = fontZon,
     //     .image = image,
     // });
+}
+
+pub fn changeFontSize(size: f32) void {
+    fontScale = size / font.size;
+    halfAdvance = font.size / 2;
 }
 
 fn binarySearch(unicode: u32) ?usize {
