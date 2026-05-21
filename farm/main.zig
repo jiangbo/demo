@@ -11,12 +11,15 @@ const factory = @import("factory.zig");
 
 var vertexBuffer: []zhu.batch.Vertex = undefined;
 var commandBuffer: [128]zhu.batch.Command = undefined;
+var soundBuffer: [20]zhu.audio.Sound = undefined;
 var world: zhu.ecs.World = undefined;
 
 pub fn init() void {
     vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 4096);
     zhu.batch.init(vertexBuffer, &commandBuffer);
     world = .init(zhu.assets.allocator);
+
+    zhu.audio.init(44100 / 2, &soundBuffer);
 
     zhu.assets.loadAtlas(@import("zon/atlas.zon"));
     const whiteCircle = zhu.getImage("circle.png").?;
