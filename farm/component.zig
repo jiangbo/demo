@@ -65,7 +65,4 @@ pub const Tool = enum { hoe, water, seed };
 
 pub const ItemId = enum { hoe, water, seed, crop };
 
-pub const Pickup = struct {
-    item: ItemId,
-    count: u32 = 1,
-};
+pub const Pickup = struct { item: ItemId, count: u32 = 1 };

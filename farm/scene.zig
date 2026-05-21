@@ -7,7 +7,7 @@ const map = @import("map.zig");
 const spawn = @import("spawn.zig");
 const title = @import("title.zig");
 const inventory = @import("inventory.zig");
-const toolbar = @import("ui/toolbar.zig");
+const toolbar = @import("toolbar.zig");
 
 const system = struct {
     const animation = @import("system/animation.zig");
