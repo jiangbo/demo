@@ -1,22 +1,90 @@
 .{
+    .items = .{
+        .hoe = .{ .stack_limit = 1, .tool = .hoe },
+        .water = .{ .stack_limit = 1, .tool = .water },
+        .seed = .{ .stack_limit = 99, .tool = .seed },
+        .crop = .{
+            .stack_limit = 99,
+            .icon = .{
+                // .path = "farm-rpg/Icons/Crops.png",
+                .imageId = 2346538291,
+                .rect = .{
+                    .min = .{ .x = 0, .y = 0 },
+                    .size = .{ .x = 16, .y = 16 },
+                },
+                .size = .{ .x = 16, .y = 16 },
+            },
+        },
+    },
     .crop = .{
         .stages = .{
-            .seed    = .{ .path = "farm-rpg/Farm Crops/Spring Crops.png", .rect = .{ .min = .{ .x = 0, .y = 16 }, .size = .{ .x = 16, .y = 16 } }, .offset = .{ .x = 2.5, .y = -2.5 }, .size = .{ .x = 16, .y = 16 } },
-            .sprout  = .{ .path = "farm-rpg/Farm Crops/Spring Crops.png", .rect = .{ .min = .{ .x = 16, .y = 16 }, .size = .{ .x = 16, .y = 16 } }, .offset = .{ .x = 1.0, .y = -4.0 }, .size = .{ .x = 16, .y = 16 } },
-            .growing = .{ .path = "farm-rpg/Farm Crops/Spring Crops.png", .rect = .{ .min = .{ .x = 32, .y = 16 }, .size = .{ .x = 16, .y = 16 } }, .offset = .{ .x = 0.5, .y = -3.0 }, .size = .{ .x = 16, .y = 16 } },
-            .mature  = .{ .path = "farm-rpg/Farm Crops/Spring Crops.png", .rect = .{ .min = .{ .x = 80, .y = 16 }, .size = .{ .x = 16, .y = 16 } }, .offset = .{ .x = 0.5, .y = -0.5 }, .size = .{ .x = 16, .y = 16 } },
+            // .path = "farm-rpg/Farm Crops/Spring Crops.png",
+            .{
+                .sprite = .{
+                    .imageId = 4041761859,
+                    .rect = .{
+                        .min = .{ .x = 0, .y = 16 },
+                        .size = .{ .x = 16, .y = 16 },
+                    },
+                    .offset = .{ .x = 2.5, .y = -2.5 },
+                    .size = .{ .x = 16, .y = 16 },
+                },
+                .duration = 5.0,
+            },
+            .{
+                .sprite = .{
+                    .imageId = 4041761859,
+                    .rect = .{
+                        .min = .{ .x = 16, .y = 16 },
+                        .size = .{ .x = 16, .y = 16 },
+                    },
+                    .offset = .{ .x = 1.0, .y = -4.0 },
+                    .size = .{ .x = 16, .y = 16 },
+                },
+                .duration = 8.0,
+            },
+            .{
+                .sprite = .{
+                    .imageId = 4041761859,
+                    .rect = .{
+                        .min = .{ .x = 32, .y = 16 },
+                        .size = .{ .x = 16, .y = 16 },
+                    },
+                    .offset = .{ .x = 0.5, .y = -3.0 },
+                    .size = .{ .x = 16, .y = 16 },
+                },
+                .duration = 8.0,
+            },
+            .{
+                .sprite = .{
+                    .imageId = 4041761859,
+                    .rect = .{
+                        .min = .{ .x = 80, .y = 16 },
+                        .size = .{ .x = 16, .y = 16 },
+                    },
+                    .offset = .{ .x = 0.5, .y = -0.5 },
+                    .size = .{ .x = 16, .y = 16 },
+                },
+                .duration = 0.0,
+            },
         },
-        .durations = .{ 5.0, 8.0, 8.0, 0.0 },
     },
     .farmland = .{
+        // .path = "farm-rpg/Farm/Tileset/Modular/Tilled Soil and wet soil.png",
         .dry = .{
-            .path = "farm-rpg/Farm/Tileset/Modular/Tilled Soil and wet soil.png",
-            .rect = .{ .min = .{ .x = 0, .y = 48 }, .size = .{ .x = 16, .y = 16 } },
+            .imageId = 3338481385,
+            .rect = .{
+                .min = .{ .x = 0, .y = 48 },
+                .size = .{ .x = 16, .y = 16 },
+            },
             .size = .{ .x = 16, .y = 16 },
         },
         .wet = .{
-            .path = "farm-rpg/Farm/Tileset/Modular/Tilled Soil and wet soil.png",
-            .rect = .{ .min = .{ .x = 192, .y = 48 }, .size = .{ .x = 16, .y = 16 } },
+            .imageId = 3338481385,
+            .rect = .{
+                .min = .{ .x = 192, .y = 48 },
+                .size = .{ .x = 16, .y = 16 },
+            },
             .size = .{ .x = 16, .y = 16 },
         },
     },
