@@ -5,37 +5,38 @@ const component = @import("component.zig");
 
 pub const Animation = struct {
     type: component.PlayerAnimation,
-    path: [:0]const u8,
+    imageId: zhu.Id,
     frames: []const zhu.graphics.Frame,
 };
 
 pub const Actor = struct {
-    sprite: struct {
-        path: [:0]const u8,
-        rect: zhu.Rect,
-        size: zhu.Vector2,
-        offset: zhu.Vector2,
-    },
+    sprite: Sprite,
     rows: [4]i8,
     animations: []const Animation,
 };
 
 pub const Sprite = struct {
-    path: [:0]const u8,
+    imageId: zhu.Id,
     rect: zhu.Rect,
     offset: zhu.Vector2 = .zero,
     size: zhu.Vector2,
 };
 
+pub const Item = struct {
+    stack_limit: u32 = 99,
+    tool: ?component.Tool = null,
+    icon: ?Sprite = null,
+};
+
 pub const Farm = struct {
+    items: struct {
+        hoe: Item,
+        water: Item,
+        seed: Item,
+        crop: Item,
+    },
     crop: struct {
-        stages: struct {
-            seed: Sprite,
-            sprout: Sprite,
-            growing: Sprite,
-            mature: Sprite,
-        },
-        durations: [4]f32,
+        stages: [4]struct { sprite: Sprite, duration: f32 },
     },
     farmland: struct {
         dry: Sprite,
@@ -49,7 +50,7 @@ pub const farm: Farm = @import("zon/farm.zon");
 test "玩家图片配置来自 actor.zon" {
     const sprite = actor.player.sprite;
 
-    try std.testing.expectEqual(2802575066, zhu.id(sprite.path));
+    try std.testing.expectEqual(2802575066, sprite.imageId);
     try std.testing.expectEqual(32, sprite.rect.size.x);
     try std.testing.expectEqual(32, sprite.rect.size.y);
     try std.testing.expectEqual(-16, sprite.offset.x);
@@ -64,9 +65,21 @@ test "农田配置包含干湿两种贴图" {
 }
 
 test "作物配置包含四个阶段" {
-    try std.testing.expectEqual(0, farm.crop.stages.seed.rect.min.x);
-    try std.testing.expectEqual(16, farm.crop.stages.sprout.rect.min.x);
-    try std.testing.expectEqual(32, farm.crop.stages.growing.rect.min.x);
-    try std.testing.expectEqual(80, farm.crop.stages.mature.rect.min.x);
-    try std.testing.expectEqual(4, farm.crop.durations.len);
+    const stages = farm.crop.stages;
+    try std.testing.expectEqual(0, stages[0].sprite.rect.min.x);
+    try std.testing.expectEqual(16, stages[1].sprite.rect.min.x);
+    try std.testing.expectEqual(32, stages[2].sprite.rect.min.x);
+    try std.testing.expectEqual(80, stages[3].sprite.rect.min.x);
+    try std.testing.expectEqual(4, stages.len);
+}
+
+test "工具物品不可堆叠" {
+    const hoe = farm.items.hoe;
+    try std.testing.expectEqual(component.Tool.hoe, hoe.tool);
+    try std.testing.expectEqual(1, hoe.stack_limit);
+}
+
+test "作物物品有图标" {
+    try std.testing.expect(farm.items.crop.icon != null);
+    try std.testing.expect(farm.items.crop.tool == null);
 }
