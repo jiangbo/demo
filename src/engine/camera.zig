@@ -30,6 +30,10 @@ pub fn control(distance: f32) void {
     if (window.isKeyDown(.RIGHT)) position.x += distance;
 }
 
+pub fn viewport() math.Rect {
+    return math.Rect.init(position, size.div(scale));
+}
+
 pub fn clampBound() void {
     const max = bound.sub(size.div(scale)).max(.zero);
     position.clamp(.zero, max);

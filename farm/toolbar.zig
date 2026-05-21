@@ -6,13 +6,34 @@ const prefab = @import("prefab.zig");
 
 const ItemEnum = component.ItemEnum;
 const NineOption = zhu.batch.NineOption;
+const ImageId = zhu.graphics.ImageId;
+
+const NineImage = struct { rect: zhu.Rect, nine: NineOption };
+
+const Config = struct {
+    imageId: ImageId,
+    slotSize: f32,
+    spacing: f32,
+    slotCount: u32,
+    panelPadding: f32,
+    bottomMargin: f32,
+    panel: NineImage,
+    slot: NineImage,
+    selected: NineImage,
+};
+
+const preset: Config = @import("zon/preset.zon");
+
+const imagePath = "assets/farm-rpg/UI/Inventory/Slots.png";
 
 pub const Item = struct { type: ItemEnum, count: u32 = 0 };
 
-pub var slots: [10]Item = @splat(.{ .type = .hoe });
+pub var slots: [preset.slotCount]Item = @splat(.{ .type = .hoe });
 pub var index: u32 = 0;
+var hoverIndex: ?usize = null;
 
 pub fn init() void {
+    _ = zhu.assets.loadImage(imagePath);
     index = 0;
     add(.hoe, 1);
     add(.water, 1);
@@ -20,13 +41,13 @@ pub fn init() void {
 }
 
 pub fn add(itemType: ItemEnum, count: u32) void {
-    const item_config = prefab.item(itemType);
+    const config = prefab.item(itemType);
 
     var remaining: u32 = count;
     for (&slots) |*slot| { // 先尝试叠加到已有的同类型物品上
         if (slot.count == 0 or slot.type != itemType) continue;
 
-        const space = item_config.limit - slot.count;
+        const space = config.limit - slot.count;
         if (space == 0) continue;
         const minCount = @min(space, remaining);
         slot.count += minCount;
@@ -37,7 +58,7 @@ pub fn add(itemType: ItemEnum, count: u32) void {
     for (&slots) |*slot| { // 再尝试放到空槽位
         if (slot.count > 0 or remaining == 0) continue;
 
-        const minCount = @min(item_config.limit, remaining);
+        const minCount = @min(config.limit, remaining);
         slot.* = .{ .type = itemType, .count = minCount };
         remaining -= minCount;
     }
@@ -54,79 +75,69 @@ pub fn update() void {
         const keyCode: zhu.input.KeyCode = @enumFromInt(key1 + key);
         if (zhu.input.key.pressed(keyCode)) index = @intCast(key);
     }
-}
 
-const uiImagePath = "assets/farm-rpg/UI/Inventory/Slots.png";
-
-const slotSize: f32 = 16;
-const spacing: f32 = 2;
-const slotCount: f32 = 10;
-const panelPadding: f32 = 4;
-const bottomMargin: f32 = 2.5;
-const slotsWidth: f32 = slotCount * slotSize + (slotCount - 1) * spacing;
-const panelWidth: f32 = slotsWidth + panelPadding * 2;
-const panelHeight: f32 = slotSize + panelPadding * 2;
-
-const panelRect: zhu.Rect = .init(.xy(6, 105), .xy(164, 28));
-const slotRect: zhu.Rect = .init(.xy(151, 38), .xy(18, 18));
-const selectedRect: zhu.Rect = .init(.xy(119, 6), .xy(18, 18));
-
-const panelNine: NineOption = .{
-    .topLeft = .xy(7, 7),
-    .bottomRight = .xy(7, 6),
-};
-const slotNine: NineOption = .{
-    .topLeft = .xy(2, 2),
-    .bottomRight = .xy(2, 3),
-};
-const selectedNine: NineOption = .{
-    .topLeft = .xy(4, 4),
-    .bottomRight = .xy(4, 4),
-};
-
-pub fn draw() void {
-    const uiImage = zhu.assets.loadImage(uiImagePath);
-    const panelPos = zhu.Vector2.xy(
-        (zhu.camera.size.x - panelWidth) / 2,
-        zhu.camera.size.y - panelHeight - bottomMargin,
-    );
-    zhu.batch.drawNine(
-        uiImage.sub(panelRect),
-        .init(panelPos, .xy(panelWidth, panelHeight)),
-        panelNine,
-    );
-
-    const startX = panelPos.x + panelPadding;
-    const startY = panelPos.y + panelPadding;
-
-    for (slots, 0..) |slot, i| {
-        const x = startX + @as(f32, @floatFromInt(i)) * (slotSize + spacing);
-        const y = startY;
-        const slotPos = zhu.Vector2.xy(x, y);
-
-        zhu.batch.drawNine(
-            uiImage.sub(slotRect),
-            .init(slotPos, .xy(slotSize, slotSize)),
-            slotNine,
-        );
-
-        if (slot.count > 0) {
-            const iconMargin = slotSize * 0.1;
-            const iconPos = slotPos.add(.xy(iconMargin, iconMargin));
-            const iconSize = zhu.Vector2.square(slotSize * 0.8);
-
-            drawItemIcon(slot.type, iconPos, iconSize);
-            if (slot.count > 1) drawItemCount(slot.count, iconPos, iconSize);
-        }
-
-        if (i == index) {
-            zhu.batch.drawNine(
-                uiImage.sub(selectedRect),
-                .init(slotPos, .xy(slotSize, slotSize)),
-                selectedNine,
-            );
+    const pPos = panelPosition();
+    const mousePos = zhu.window.mousePosition;
+    hoverIndex = null;
+    for (0..slots.len) |i| {
+        const sPos = slotPosition(i, pPos);
+        const area = zhu.Rect.init(sPos, .xy(preset.slotSize, preset.slotSize));
+        if (area.contains(mousePos)) {
+            hoverIndex = i;
+            if (zhu.window.mouse.released(.LEFT)) {
+                index = @intCast(i);
+                zhu.audio.playSound("assets/audio/UI_button08.ogg");
+            }
+            break;
         }
     }
+}
+
+const slotsWidth: f32 = preset.slotCount * preset.slotSize + (preset.slotCount - 1) * preset.spacing;
+const panelWidth: f32 = slotsWidth + preset.panelPadding * 2;
+const panelHeight: f32 = preset.slotSize + preset.panelPadding * 2;
+
+fn panelPosition() zhu.Vector2 {
+    return .xy(
+        (zhu.camera.size.x - panelWidth) / 2,
+        zhu.camera.size.y - panelHeight - preset.bottomMargin,
+    );
+}
+
+fn slotPosition(i: usize, panelPos: zhu.Vector2) zhu.Vector2 {
+    const startX = panelPos.x + preset.panelPadding;
+    const startY = panelPos.y + preset.panelPadding;
+    const x = startX + @as(f32, @floatFromInt(i)) * (preset.slotSize + preset.spacing);
+    return .xy(x, startY);
+}
+
+pub fn draw() void {
+    // const uiImage = zhu.assets.getImage(preset.imageId).?;
+    // const panelPos = panelPosition();
+    // zhu.batch.drawNine(uiImage.sub(preset.panel.rect), .init(panelPos, .xy(panelWidth, panelHeight)), preset.panel.nine);
+
+    // for (slots, 0..) |slot, i| {
+    //     const slotPos = slotPosition(i, panelPos);
+
+    //     zhu.batch.drawNine(uiImage.sub(preset.slot.rect), .init(slotPos, .xy(preset.slotSize, preset.slotSize)), preset.slot.nine);
+
+    //     if (slot.count > 0) {
+    //         const iconMargin = preset.slotSize * 0.1;
+    //         const iconPos = slotPos.add(.xy(iconMargin, iconMargin));
+    //         const iconSize = zhu.Vector2.square(preset.slotSize * 0.8);
+
+    //         drawItemIcon(slot.type, iconPos, iconSize);
+    //         if (slot.count > 1) drawItemCount(slot.count, iconPos, iconSize);
+    //     }
+
+    //     if (i == index) {
+    //         zhu.batch.drawNine(
+    //             uiImage.sub(preset.selected.rect),
+    //             .init(slotPos, .xy(preset.slotSize, preset.slotSize)),
+    //             preset.selected.nine,
+    //         );
+    //     }
+    // }
 }
 
 fn drawItemIcon(itemType: ItemEnum, pos: zhu.Vector2, size: zhu.Vector2) void {

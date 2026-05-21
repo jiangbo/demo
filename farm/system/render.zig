@@ -9,9 +9,7 @@ const Sprite = component.Sprite;
 pub fn draw(world: *zhu.ecs.World) void {
     world.sort(Render, lessThan);
 
-    const size = zhu.camera.size.div(zhu.camera.scale);
-    const viewport = zhu.Rect.init(zhu.camera.position, size);
-
+    const viewport = zhu.camera.viewport();
     var query = world.query(.{ Render, Position, Sprite });
     while (query.next()) |entity| {
         const render = query.get(entity, Render);
