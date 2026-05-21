@@ -4,15 +4,14 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const template = @import("template.zig");
 
+const World = zhu.ecs.World;
+const Entity = zhu.ecs.Entity;
+
 pub fn init() void {
     std.log.info("spawn init", .{});
 }
 
-pub fn loadFarm(world: *zhu.ecs.World) void {
-    spawnPlayer(world);
-}
-
-fn spawnPlayer(world: *zhu.ecs.World) void {
+pub fn loadFarm(world: *World) void {
     const config = template.actor.player;
 
     const player = world.createIdentityEntity(component.Player);
@@ -35,43 +34,92 @@ fn spawnPlayer(world: *zhu.ecs.World) void {
     world.add(player, component.Target{});
 }
 
+pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
+    const stage = template.farm.crop.stages[0];
+    const entity = world.createEntity();
+    world.add(entity, component.Crop{ .next = stage.duration });
+    world.add(entity, component.Position.xy(position.x, position.y));
+    const image = zhu.assets.getImage(stage.sprite.imageId).?;
+    world.add(entity, component.Sprite{
+        .image = image.sub(stage.sprite.rect),
+        .offset = stage.sprite.offset,
+    });
+    world.add(entity, component.Render{ .layer = .crop });
+    world.add(entity, component.YSort{});
+    return entity;
+}
+
+pub fn advanceCrop(crop: *component.Crop) component.Sprite {
+    crop.timer = 0;
+    crop.stage = zhu.nextEnum(component.GrowthStage, crop.stage);
+    const stage = template.farm.crop.stages[@intFromEnum(crop.stage)];
+    crop.next = stage.duration;
+    const image = zhu.assets.getImage(stage.sprite.imageId).?;
+    return .{
+        .image = image.sub(stage.sprite.rect),
+        .offset = stage.sprite.offset,
+    };
+}
+
 fn animationSources(comptime animations: []const template.Animation) //
 [animations.len]zhu.Animation.Source {
     var sources: [animations.len]zhu.Animation.Source = undefined;
     inline for (animations) |config| {
         sources[@intFromEnum(config.type)] = .{
-            .imageId = zhu.assets.id(config.path),
+            .imageId = config.imageId,
             .clip = config.frames,
         };
     }
     return sources;
 }
 
-fn spriteImage(comptime sprite: anytype) zhu.graphics.Image {
-    const rect = sprite.rect;
-
-    if (zhu.getImage(sprite.path)) |source| return source.sub(rect);
-    return zhu.batch.whiteImage.sub(rect);
-}
-
+const expectEqual = std.testing.expectEqual;
 test "加载农场会创建初始实体" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
     putMockFarmImages();
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = World.init(std.testing.allocator);
     defer world.deinit();
 
     loadFarm(&world);
 
-    const equal = std.testing.expectEqual;
     const player = world.getIdentityEntity(component.Player).?;
-    try equal(160, world.get(player, component.Position).?.x);
-    try equal(1, world.raw(component.Velocity).len);
-    try equal(1, world.raw(component.Actor).len);
-    try equal(1, world.raw(component.Sprite).len);
-    try equal(1, world.raw(component.Render).len);
-    try equal(1, world.assure(component.YSort).dense.items.len);
+    try expectEqual(160, world.get(player, component.Position).?.x);
+    try expectEqual(1, world.raw(component.Velocity).len);
+    try expectEqual(1, world.raw(component.Actor).len);
+    try expectEqual(1, world.raw(component.Sprite).len);
+    try expectEqual(1, world.raw(component.Render).len);
+    try expectEqual(1, world.assure(component.YSort).dense.items.len);
+}
+
+test "spawnCrop 创建作物实体并设置初始 next" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    putMockCropImages();
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = spawnCrop(&world, .xy(32, 48));
+    const crop = world.get(entity, component.Crop).?;
+    try expectEqual(component.GrowthStage.seed, crop.stage);
+    try expectEqual(template.farm.crop.stages[0].duration, crop.next);
+    try expectEqual(32, world.get(entity, component.Position).?.x);
+}
+
+test "advanceCrop 推进阶段并累加 next" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    putMockCropImages();
+
+    var crop = component.Crop{
+        .next = template.farm.crop.stages[0].duration,
+    };
+    _ = advanceCrop(&crop);
+    try expectEqual(component.GrowthStage.sprout, crop.stage);
+    try expectEqual(template.farm.crop.stages[1].duration, crop.next);
+    try expectEqual(@as(f32, 0), crop.timer);
 }
 
 fn putMockFarmImages() void {
@@ -80,7 +128,17 @@ fn putMockFarmImages() void {
         .size = .xy(256, 256),
     };
 
-    inline for (template.actor.player.animations) |animation| {
-        zhu.assets.putImage(zhu.assets.id(animation.path), image);
+    for (template.actor.player.animations) |animation| {
+        zhu.assets.putImage(animation.imageId, image);
+    }
+}
+
+fn putMockCropImages() void {
+    const image = zhu.graphics.Image{
+        .texture = .{ .id = 1 },
+        .size = .xy(256, 256),
+    };
+    for (template.farm.crop.stages) |stage| {
+        zhu.assets.putImage(stage.sprite.imageId, image);
     }
 }
