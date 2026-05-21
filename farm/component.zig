@@ -46,10 +46,10 @@ pub const Actor = struct {
     facing: Facing = .down,
     rows: [4]i8 = .{ 0, 1, -2, 2 },
 };
-pub const GrowthStage = enum { seed, sprout, growing, mature };
+pub const GrowthEnum = enum { seed, sprout, growing, mature };
 
 pub const Crop = struct {
-    stage: GrowthStage = .seed,
+    stage: GrowthEnum = .seed,
     timer: f32 = 0,
     next: f32 = 0,
     watered: bool = false,
@@ -61,8 +61,5 @@ pub const Target = struct {
     active: bool = false,
 };
 
-pub const Tool = enum { hoe, water, seed };
-
-pub const ItemId = enum { hoe, water, seed, crop };
-
-pub const Pickup = struct { item: ItemId, count: u32 = 1 };
+pub const ItemEnum = enum { hoe, water, seed, crop };
+pub const Pickup = struct { item: ItemEnum, count: u32 = 1 };

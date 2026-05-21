@@ -1,10 +1,10 @@
 .{
     .items = .{
-        .hoe = .{ .stack_limit = 1, .tool = .hoe },
-        .water = .{ .stack_limit = 1, .tool = .water },
-        .seed = .{ .stack_limit = 99, .tool = .seed },
+        .hoe = .{ .limit = 1 },
+        .water = .{ .limit = 1 },
+        .seed = .{ .limit = 99 },
         .crop = .{
-            .stack_limit = 99,
+            .limit = 99,
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png",
                 .imageId = 2346538291,

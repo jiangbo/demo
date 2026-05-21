@@ -54,7 +54,7 @@ pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
 
 pub fn advanceCrop(crop: *component.Crop) component.Sprite {
     crop.timer = 0;
-    crop.stage = zhu.nextEnum(component.GrowthStage, crop.stage);
+    crop.stage = zhu.nextEnum(component.GrowthEnum, crop.stage);
     const stage = template.farm.crop.stages[@intFromEnum(crop.stage)];
     crop.next = stage.duration;
     return .{
@@ -63,7 +63,7 @@ pub fn advanceCrop(crop: *component.Crop) component.Sprite {
     };
 }
 
-pub fn spawnPickup(world: *World, position: zhu.Vector2, item: component.ItemId) void {
+pub fn spawnPickup(world: *World, position: zhu.Vector2, item: component.ItemEnum) void {
     const item_config = switch (item) {
         inline else => |id| @field(
             template.farm.items,
@@ -123,7 +123,7 @@ test "spawnCrop 创建作物实体并设置初始 next" {
 
     const entity = spawnCrop(&world, .xy(32, 48));
     const crop = world.get(entity, component.Crop).?;
-    try expectEqual(component.GrowthStage.seed, crop.stage);
+    try expectEqual(component.GrowthEnum.seed, crop.stage);
     try expectEqual(template.farm.crop.stages[0].duration, crop.next);
     try expectEqual(32, world.get(entity, component.Position).?.x);
 }
@@ -137,7 +137,7 @@ test "advanceCrop 推进阶段并累加 next" {
         .next = template.farm.crop.stages[0].duration,
     };
     _ = advanceCrop(&crop);
-    try expectEqual(component.GrowthStage.sprout, crop.stage);
+    try expectEqual(component.GrowthEnum.sprout, crop.stage);
     try expectEqual(template.farm.crop.stages[1].duration, crop.next);
     try expectEqual(@as(f32, 0), crop.timer);
 }

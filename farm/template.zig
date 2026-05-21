@@ -23,8 +23,7 @@ pub const Sprite = struct {
 };
 
 pub const Item = struct {
-    stack_limit: u32 = 99,
-    tool: ?component.Tool = null,
+    limit: u32 = 99,
     icon: ?Sprite = null,
 };
 
@@ -71,12 +70,9 @@ test "作物配置包含四个阶段" {
 }
 
 test "工具物品不可堆叠" {
-    const hoe = farm.items.hoe;
-    try std.testing.expectEqual(component.Tool.hoe, hoe.tool);
-    try std.testing.expectEqual(1, hoe.stack_limit);
+    try std.testing.expectEqual(1, farm.items.hoe.limit);
 }
 
 test "作物物品有图标" {
     try std.testing.expect(farm.items.crop.icon != null);
-    try std.testing.expect(farm.items.crop.tool == null);
 }
