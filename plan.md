@@ -121,22 +121,22 @@ zig build test
   - 需要系统：Crop.growth、CropSystem、作物阶段 sprite。
   - 参考源码：`game/system/crop_system.*`、`assets/data/crop_config.json`
 
-- [ ] 22-收获与掉落物
+- [x] 22-收获与掉落物
   - 可见效果：成熟作物被收获，地上出现可拾取物图标。
   - 需要系统：Pickup 组件、收获规则、掉落 sprite。
   - 参考源码：`game/component/pickup_component.h`、`pickup_system.*`
 
-- [ ] 23-物品栏与快捷栏 UI
+- [x] 23-物品栏与快捷栏 UI
   - 可见效果：屏幕底部显示快捷栏和物品图标数量。
   - 需要系统：Inventory、Hotbar、UI 图片绘制、图标配置。
   - 参考源码：`game/ui/hotbar_ui.*`、`inventory_system.*`
 
-- [ ] 24-快捷栏选择与工具切换
+- [x] 24-快捷栏选择与工具切换
   - 可见效果：数字键/滚轮切换选中格，工具图标变化。
   - 需要系统：HotbarSystem、Input、选中状态显示。
   - 参考源码：`game/system/hotbar_system.*`
 
-- [ ] 25-拾取物进入背包
+- [x] 25-拾取物进入背包
   - 可见效果：玩家靠近掉落物后物品消失，快捷栏数量增加。
   - 需要系统：简单碰撞/距离检测、PickupSystem、Inventory 合并。
   - 参考源码：`game/system/pickup_system.*`
