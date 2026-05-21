@@ -380,10 +380,10 @@ pub fn Query(comptime All: anytype, comptime None: anytype) type {
         reversed: bool = false,
 
         pub fn reverse(self: @This()) @This() {
-            var view = self;
-            view.index = view.dense.len -| 1;
-            view.reversed = true;
-            return view;
+            var query = self;
+            query.index = @intCast(query.dense.len -| 1);
+            query.reversed = true;
+            return query;
         }
 
         pub fn next(self: *@This()) ?Entity {
