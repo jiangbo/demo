@@ -63,22 +63,18 @@ pub fn advanceCrop(crop: *component.Crop) component.Sprite {
     };
 }
 
-pub fn spawnPickup(world: *World, position: zhu.Vector2, item: component.ItemEnum) void {
-    const item_config = switch (item) {
-        inline else => |id| @field(
-            template.farm.items,
-            @tagName(id),
-        ),
-    };
+pub fn spawnPickup(world: *World, item: component.ItemEnum) Entity {
+    const config = template.farm.items[@intFromEnum(item)];
+
     const entity = world.createEntity();
     world.add(entity, component.Pickup{ .item = item, .count = 1 });
-    world.add(entity, component.Position.xy(position.x, position.y));
     world.add(entity, component.Sprite{
-        .image = resolveImage(item_config.icon.?),
+        .image = resolveImage(config.icon.?),
         .size = .xy(10, 10),
     });
     world.add(entity, component.Render{ .layer = .crop });
     world.add(entity, component.YSort{});
+    return entity;
 }
 
 fn animationSources(comptime animations: []const template.Animation) //

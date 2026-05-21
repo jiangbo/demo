@@ -1,9 +1,9 @@
 .{
     .items = .{
-        .hoe = .{ .limit = 1 },
-        .water = .{ .limit = 1 },
-        .seed = .{ .limit = 99 },
-        .crop = .{
+        .{ .limit = 1 }, // hoe
+        .{ .limit = 1 }, // water
+        .{ .limit = 99 }, // seed
+        .{
             .limit = 99,
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png",

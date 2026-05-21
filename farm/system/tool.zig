@@ -24,7 +24,8 @@ pub fn update(world: *zhu.ecs.World) void {
 
         world.destroyEntity(entity);
         cell.crop = null;
-        spawn.spawnPickup(world, target.position, .crop);
+        const pickupEntity = spawn.spawnPickup(world, .crop);
+        world.add(pickupEntity, target.position);
         return;
     }
 

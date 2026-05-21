@@ -28,12 +28,7 @@ pub const Item = struct {
 };
 
 pub const Farm = struct {
-    items: struct {
-        hoe: Item,
-        water: Item,
-        seed: Item,
-        crop: Item,
-    },
+    items: [std.meta.fields(component.ItemEnum).len]Item,
     crop: struct {
         stages: [4]struct { sprite: Sprite, duration: f32 },
     },
@@ -42,6 +37,10 @@ pub const Farm = struct {
 
 pub const actor: struct { player: Actor } = @import("zon/actor.zon");
 pub const farm: Farm = @import("zon/farm.zon");
+
+pub fn item(itemType: component.ItemEnum) Item {
+    return farm.items[@intFromEnum(itemType)];
+}
 
 test "玩家图片配置来自 actor.zon" {
     const sprite = actor.player.sprite;
@@ -70,9 +69,9 @@ test "作物配置包含四个阶段" {
 }
 
 test "工具物品不可堆叠" {
-    try std.testing.expectEqual(1, farm.items.hoe.limit);
+    try std.testing.expectEqual(1, item(.hoe).limit);
 }
 
 test "作物物品有图标" {
-    try std.testing.expect(farm.items.crop.icon != null);
+    try std.testing.expect(item(.crop).icon != null);
 }
