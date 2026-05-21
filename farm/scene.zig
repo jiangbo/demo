@@ -2,14 +2,12 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("component.zig");
-const Position = component.Position;
-const Crop = component.Crop;
-const Player = component.Player;
-const Target = component.Target;
 const context = @import("context.zig");
 const map = @import("map.zig");
 const spawn = @import("spawn.zig");
 const title = @import("title.zig");
+const inventory = @import("inventory.zig");
+const toolbar = @import("ui/toolbar.zig");
 
 const system = struct {
     const animation = @import("system/animation.zig");
@@ -18,6 +16,7 @@ const system = struct {
     const crop = @import("system/crop.zig");
     const depth = @import("system/depth.zig");
     const movement = @import("system/movement.zig");
+    const pickup = @import("system/pickup.zig");
     const render = @import("system/render.zig");
     const target = @import("system/target.zig");
     const tool = @import("system/tool.zig");
@@ -56,6 +55,7 @@ pub fn draw(world: *zhu.ecs.World) void {
 fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
     if (!farmLoaded) {
         spawn.loadFarm(world);
+        inventory.init();
         rebuildCells(world);
         zhu.camera.bound = map.data.size();
         farmLoaded = true;
@@ -68,10 +68,11 @@ fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
     system.animation.update(world, delta);
     system.crop.update(world, delta);
     system.depth.update(world);
+    system.pickup.update(world);
 
     if (context.uiWantCaptureMouse) {
-        const player = world.getIdentityEntity(Player).?;
-        world.getPtr(player, Target).?.active = false;
+        const player = world.getIdentityEntity(component.Player).?;
+        world.getPtr(player, component.Target).?.active = false;
         return;
     }
 
@@ -84,14 +85,19 @@ fn drawFarm(world: *zhu.ecs.World) void {
     map.draw();
     system.render.draw(world);
     system.target.draw(world);
+
+    zhu.camera.mode = .fixed;
+    toolbar.draw();
+    zhu.window.drawDebugInfo();
+    zhu.camera.mode = .world;
 }
 
 fn rebuildCells(world: *zhu.ecs.World) void {
     for (map.cells) |*cell| cell.crop = null;
 
-    var query = world.query(.{ Position, Crop });
+    var query = world.query(.{ component.Position, component.Crop });
     while (query.next()) |entity| {
-        const position = query.get(entity, Position);
+        const position = query.get(entity, component.Position);
         const cell = map.getCell(position) orelse continue;
         cell.crop = entity;
     }
@@ -99,7 +105,22 @@ fn rebuildCells(world: *zhu.ecs.World) void {
 
 fn updateToolSelection() void {
     if (context.uiWantCaptureKeyboard) return;
-    if (zhu.input.key.pressed(._1)) context.tool = .hoe;
-    if (zhu.input.key.pressed(._2)) context.tool = .water;
-    if (zhu.input.key.pressed(._3)) context.tool = .seed;
+
+    if (zhu.input.key.pressed(._1)) inventory.active = 0;
+    if (zhu.input.key.pressed(._2)) inventory.active = 1;
+    if (zhu.input.key.pressed(._3)) inventory.active = 2;
+    if (zhu.input.key.pressed(._4)) inventory.active = 3;
+    if (zhu.input.key.pressed(._5)) inventory.active = 4;
+
+    const scroll = zhu.input.mouseScrollY;
+    if (scroll != 0) {
+        const len: u32 = @intCast(inventory.slots.len);
+        if (scroll > 0) {
+            inventory.active = (inventory.active + len - 1) % len;
+        } else {
+            inventory.active = (inventory.active + 1) % len;
+        }
+    }
+
+    context.tool = inventory.activeTool() orelse context.tool;
 }
