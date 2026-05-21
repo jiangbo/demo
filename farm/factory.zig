@@ -65,7 +65,7 @@ pub fn spawnPickup(world: *World, item: component.ItemEnum) Entity {
     const entity = world.createEntity();
     world.add(entity, component.Pickup{ .item = item, .count = 1 });
     world.add(entity, component.Sprite{
-        .image = prefab.resolveImage(config.icon.?),
+        .image = prefab.resolveImage(config.icon),
         .size = .xy(10, 10),
     });
     world.add(entity, component.Render{ .layer = .crop });

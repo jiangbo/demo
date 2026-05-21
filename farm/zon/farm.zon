@@ -1,6 +1,6 @@
 .{
     .items = .{
-        .{
+        .{ // hoe
             .limit = 1,
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/RPG/5.png",
@@ -11,8 +11,9 @@
                 },
                 .size = .{ .x = 16, .y = 16 },
             },
-        }, // hoe
-        .{
+        },
+
+        .{ // water
             .limit = 1,
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/RPG/5.png",
@@ -23,8 +24,9 @@
                 },
                 .size = .{ .x = 16, .y = 16 },
             },
-        }, // water
-        .{
+        },
+
+        .{ // seed
             .limit = 99,
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png",
@@ -35,8 +37,9 @@
                 },
                 .size = .{ .x = 16, .y = 16 },
             },
-        }, // seed
-        .{
+        },
+
+        .{ // crop
             .limit = 99,
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png",

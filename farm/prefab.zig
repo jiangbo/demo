@@ -24,7 +24,7 @@ pub const Sprite = struct {
 
 pub const Item = struct {
     limit: u32 = 99,
-    icon: ?Sprite = null,
+    icon: Sprite,
 };
 
 pub const Farm = struct {
@@ -74,8 +74,5 @@ test "作物配置包含四个阶段" {
 
 test "工具物品不可堆叠" {
     try std.testing.expectEqual(1, item(.hoe).limit);
-}
-
-test "作物物品有图标" {
-    try std.testing.expect(item(.crop).icon != null);
+    try std.testing.expectEqual(1, item(.water).limit);
 }
