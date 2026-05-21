@@ -1,8 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const template = @import("template.zig");
-const spawn = @import("spawn.zig");
+const prefab = @import("prefab.zig");
 const component = @import("component.zig");
 const Position = component.Position;
 
@@ -35,8 +34,8 @@ pub fn init() void {
     cells = zhu.assets.oomAlloc(Cell, count);
     @memset(cells, .{});
 
-    dryImage = spawn.resolveImage(template.farm.farmland.dry);
-    wetImage = spawn.resolveImage(template.farm.farmland.wet);
+    dryImage = prefab.resolveImage(prefab.farm.farmland.dry);
+    wetImage = prefab.resolveImage(prefab.farm.farmland.wet);
 
     for (data.layers) |*layer| {
         switch (layer.type) {
@@ -208,6 +207,6 @@ fn putMockLandImages() void {
         .size = .xy(256, 256),
     };
 
-    dryImage = image.sub(template.farm.farmland.dry.rect);
-    wetImage = image.sub(template.farm.farmland.wet.rect);
+    dryImage = image.sub(prefab.farm.farmland.dry.rect);
+    wetImage = image.sub(prefab.farm.farmland.wet.rect);
 }

@@ -7,7 +7,7 @@ const events = @import("event.zig");
 const gui = @import("gui.zig");
 const map = @import("map.zig");
 const scene = @import("scene.zig");
-const spawn = @import("spawn.zig");
+const factory = @import("factory.zig");
 
 var vertexBuffer: []zhu.batch.Vertex = undefined;
 var commandBuffer: [128]zhu.batch.Command = undefined;
@@ -31,7 +31,7 @@ pub fn init() void {
     context.init();
     events.init();
     map.init();
-    spawn.init();
+    factory.init();
     scene.init();
 }
 

@@ -4,7 +4,7 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const context = @import("context.zig");
 const map = @import("map.zig");
-const spawn = @import("spawn.zig");
+const factory = @import("factory.zig");
 const title = @import("title.zig");
 const toolbar = @import("toolbar.zig");
 
@@ -53,7 +53,7 @@ pub fn draw(world: *zhu.ecs.World) void {
 
 fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
     if (!farmLoaded) {
-        spawn.loadFarm(world);
+        factory.loadFarm(world);
         toolbar.init();
         rebuildCells(world);
         zhu.camera.bound = map.data.size();

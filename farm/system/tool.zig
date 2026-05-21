@@ -1,6 +1,6 @@
 const zhu = @import("zhu");
 
-const spawn = @import("../spawn.zig");
+const factory = @import("../factory.zig");
 const component = @import("../component.zig");
 const toolbar = @import("../toolbar.zig");
 const map = @import("../map.zig");
@@ -24,7 +24,7 @@ pub fn update(world: *zhu.ecs.World) void {
 
         world.destroyEntity(entity);
         cell.crop = null;
-        const pickupEntity = spawn.spawnPickup(world, .crop);
+        const pickupEntity = factory.spawnPickup(world, .crop);
         world.add(pickupEntity, target.position);
         return;
     }
@@ -55,6 +55,6 @@ fn plant(world: *zhu.ecs.World, position: zhu.Vector2) void {
     if (cell.land == null or cell.crop != null) return;
 
     toolbar.active().?.count -= 1;
-    const entity = spawn.spawnCrop(world, position);
+    const entity = factory.spawnCrop(world, position);
     cell.crop = entity;
 }

@@ -42,6 +42,10 @@ pub fn item(itemType: component.ItemEnum) Item {
     return farm.items[@intFromEnum(itemType)];
 }
 
+pub fn resolveImage(sprite: Sprite) zhu.graphics.Image {
+    return zhu.assets.getImage(sprite.imageId).?.sub(sprite.rect);
+}
+
 test "玩家图片配置来自 actor.zon" {
     const sprite = actor.player.sprite;
 

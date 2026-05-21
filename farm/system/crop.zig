@@ -1,7 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const spawn = @import("../spawn.zig");
+const factory = @import("../factory.zig");
 const component = @import("../component.zig");
 const Crop = component.Crop;
 const Sprite = component.Sprite;
@@ -16,6 +16,6 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
         if (crop.timer < crop.next) continue;
 
         const sprite = query.getPtr(entity, Sprite);
-        sprite.* = spawn.advanceCrop(crop);
+        sprite.* = factory.advanceCrop(crop);
     }
 }

@@ -2,7 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("component.zig");
-const template = @import("template.zig");
+const prefab = @import("prefab.zig");
 
 const World = zhu.ecs.World;
 const Entity = zhu.ecs.Entity;
@@ -12,7 +12,7 @@ pub fn init() void {
 }
 
 pub fn loadFarm(world: *World) void {
-    const config = template.actor.player;
+    const config = prefab.actor.player;
 
     const player = world.createIdentityEntity(component.Player);
     world.add(player, component.Position.xy(160, 96));
@@ -34,17 +34,13 @@ pub fn loadFarm(world: *World) void {
     world.add(player, component.Target{});
 }
 
-pub fn resolveImage(sprite: template.Sprite) zhu.graphics.Image {
-    return zhu.assets.getImage(sprite.imageId).?.sub(sprite.rect);
-}
-
 pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
-    const stage = template.farm.crop.stages[0];
+    const stage = prefab.farm.crop.stages[0];
     const entity = world.createEntity();
     world.add(entity, component.Crop{ .next = stage.duration });
     world.add(entity, component.Position.xy(position.x, position.y));
     world.add(entity, component.Sprite{
-        .image = resolveImage(stage.sprite),
+        .image = prefab.resolveImage(stage.sprite),
         .offset = stage.sprite.offset,
     });
     world.add(entity, component.Render{ .layer = .crop });
@@ -55,21 +51,21 @@ pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
 pub fn advanceCrop(crop: *component.Crop) component.Sprite {
     crop.timer = 0;
     crop.stage = zhu.nextEnum(component.GrowthEnum, crop.stage);
-    const stage = template.farm.crop.stages[@intFromEnum(crop.stage)];
+    const stage = prefab.farm.crop.stages[@intFromEnum(crop.stage)];
     crop.next = stage.duration;
     return .{
-        .image = resolveImage(stage.sprite),
+        .image = prefab.resolveImage(stage.sprite),
         .offset = stage.sprite.offset,
     };
 }
 
 pub fn spawnPickup(world: *World, item: component.ItemEnum) Entity {
-    const config = template.farm.items[@intFromEnum(item)];
+    const config = prefab.item(item);
 
     const entity = world.createEntity();
     world.add(entity, component.Pickup{ .item = item, .count = 1 });
     world.add(entity, component.Sprite{
-        .image = resolveImage(config.icon.?),
+        .image = prefab.resolveImage(config.icon.?),
         .size = .xy(10, 10),
     });
     world.add(entity, component.Render{ .layer = .crop });
@@ -77,7 +73,7 @@ pub fn spawnPickup(world: *World, item: component.ItemEnum) Entity {
     return entity;
 }
 
-fn animationSources(comptime animations: []const template.Animation) //
+fn animationSources(comptime animations: []const prefab.Animation) //
 [animations.len]zhu.Animation.Source {
     var sources: [animations.len]zhu.Animation.Source = undefined;
     inline for (animations) |config| {
@@ -120,7 +116,7 @@ test "spawnCrop 创建作物实体并设置初始 next" {
     const entity = spawnCrop(&world, .xy(32, 48));
     const crop = world.get(entity, component.Crop).?;
     try expectEqual(component.GrowthEnum.seed, crop.stage);
-    try expectEqual(template.farm.crop.stages[0].duration, crop.next);
+    try expectEqual(prefab.farm.crop.stages[0].duration, crop.next);
     try expectEqual(32, world.get(entity, component.Position).?.x);
 }
 
@@ -130,11 +126,11 @@ test "advanceCrop 推进阶段并累加 next" {
     putMockCropImages();
 
     var crop = component.Crop{
-        .next = template.farm.crop.stages[0].duration,
+        .next = prefab.farm.crop.stages[0].duration,
     };
     _ = advanceCrop(&crop);
     try expectEqual(component.GrowthEnum.sprout, crop.stage);
-    try expectEqual(template.farm.crop.stages[1].duration, crop.next);
+    try expectEqual(prefab.farm.crop.stages[1].duration, crop.next);
     try expectEqual(@as(f32, 0), crop.timer);
 }
 
@@ -144,7 +140,7 @@ fn putMockFarmImages() void {
         .size = .xy(256, 256),
     };
 
-    for (template.actor.player.animations) |animation| {
+    for (prefab.actor.player.animations) |animation| {
         zhu.assets.putImage(animation.imageId, image);
     }
 }
@@ -154,7 +150,7 @@ fn putMockCropImages() void {
         .texture = .{ .id = 1 },
         .size = .xy(256, 256),
     };
-    for (template.farm.crop.stages) |stage| {
+    for (prefab.farm.crop.stages) |stage| {
         zhu.assets.putImage(stage.sprite.imageId, image);
     }
 }
