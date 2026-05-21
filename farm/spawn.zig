@@ -34,14 +34,17 @@ pub fn loadFarm(world: *World) void {
     world.add(player, component.Target{});
 }
 
+pub fn resolveImage(sprite: template.Sprite) zhu.graphics.Image {
+    return zhu.assets.getImage(sprite.imageId).?.sub(sprite.rect);
+}
+
 pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
     const stage = template.farm.crop.stages[0];
     const entity = world.createEntity();
     world.add(entity, component.Crop{ .next = stage.duration });
     world.add(entity, component.Position.xy(position.x, position.y));
-    const image = zhu.assets.getImage(stage.sprite.imageId).?;
     world.add(entity, component.Sprite{
-        .image = image.sub(stage.sprite.rect),
+        .image = resolveImage(stage.sprite),
         .offset = stage.sprite.offset,
     });
     world.add(entity, component.Render{ .layer = .crop });
@@ -54,9 +57,8 @@ pub fn advanceCrop(crop: *component.Crop) component.Sprite {
     crop.stage = zhu.nextEnum(component.GrowthStage, crop.stage);
     const stage = template.farm.crop.stages[@intFromEnum(crop.stage)];
     crop.next = stage.duration;
-    const image = zhu.assets.getImage(stage.sprite.imageId).?;
     return .{
-        .image = image.sub(stage.sprite.rect),
+        .image = resolveImage(stage.sprite),
         .offset = stage.sprite.offset,
     };
 }

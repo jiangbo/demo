@@ -38,10 +38,7 @@ pub const Farm = struct {
     crop: struct {
         stages: [4]struct { sprite: Sprite, duration: f32 },
     },
-    farmland: struct {
-        dry: Sprite,
-        wet: Sprite,
-    },
+    farmland: struct { dry: Sprite, wet: Sprite },
 };
 
 pub const actor: struct { player: Actor } = @import("zon/actor.zon");
