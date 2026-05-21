@@ -28,11 +28,13 @@ pub fn update(world: *zhu.ecs.World) void {
         return;
     }
 
-    switch (toolbar.activeTool() orelse return) {
-        .hoe => map.hoe(target.position),
-        .water => waterTarget(world, target.position),
-        .seed => plant(world, target.position),
-        .crop => {},
+    if (toolbar.active()) |tool| {
+        switch (tool.type) {
+            .hoe => map.hoe(target.position),
+            .water => waterTarget(world, target.position),
+            .seed => plant(world, target.position),
+            .crop => {},
+        }
     }
 }
 
@@ -51,6 +53,7 @@ fn plant(world: *zhu.ecs.World, position: zhu.Vector2) void {
     const cell = map.getCell(position) orelse return;
     if (cell.land == null or cell.crop != null) return;
 
+    toolbar.active().?.count -= 1;
     const entity = spawn.spawnCrop(world, position);
     cell.crop = entity;
 }
