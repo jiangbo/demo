@@ -2,6 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const template = @import("template.zig");
+const spawn = @import("spawn.zig");
 const component = @import("component.zig");
 const Position = component.Position;
 
@@ -19,10 +20,7 @@ pub var cells: []Cell = &.{};
 var dryImage: zhu.graphics.Image = undefined;
 var wetImage: zhu.graphics.Image = undefined;
 
-pub const Land = enum {
-    dry,
-    wet,
-};
+pub const Land = enum { dry, wet };
 
 pub const Cell = struct {
     land: ?Land = null,
@@ -37,10 +35,8 @@ pub fn init() void {
     cells = zhu.assets.oomAlloc(Cell, count);
     @memset(cells, .{});
 
-    const drySprite = template.farm.farmland.dry;
-    const wetSprite = template.farm.farmland.wet;
-    dryImage = zhu.getImage(drySprite.path).?.sub(drySprite.rect);
-    wetImage = zhu.getImage(wetSprite.path).?.sub(wetSprite.rect);
+    dryImage = spawn.resolveImage(template.farm.farmland.dry);
+    wetImage = spawn.resolveImage(template.farm.farmland.wet);
 
     for (data.layers) |*layer| {
         switch (layer.type) {
