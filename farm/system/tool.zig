@@ -2,7 +2,7 @@ const zhu = @import("zhu");
 
 const spawn = @import("../spawn.zig");
 const component = @import("../component.zig");
-const context = @import("../context.zig");
+const toolbar = @import("../toolbar.zig");
 const map = @import("../map.zig");
 
 const Crop = component.Crop;
@@ -28,7 +28,7 @@ pub fn update(world: *zhu.ecs.World) void {
         return;
     }
 
-    switch (context.tool) {
+    switch (toolbar.activeTool() orelse return) {
         .hoe => map.hoe(target.position),
         .water => waterTarget(world, target.position),
         .seed => plant(world, target.position),

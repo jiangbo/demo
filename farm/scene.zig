@@ -6,7 +6,6 @@ const context = @import("context.zig");
 const map = @import("map.zig");
 const spawn = @import("spawn.zig");
 const title = @import("title.zig");
-const inventory = @import("inventory.zig");
 const toolbar = @import("toolbar.zig");
 
 const system = struct {
@@ -55,13 +54,11 @@ pub fn draw(world: *zhu.ecs.World) void {
 fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
     if (!farmLoaded) {
         spawn.loadFarm(world);
-        inventory.init();
+        toolbar.init();
         rebuildCells(world);
         zhu.camera.bound = map.data.size();
         farmLoaded = true;
     }
-
-    updateToolSelection();
 
     system.control.update(world);
     system.movement.update(world, delta);
@@ -79,6 +76,7 @@ fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
     system.camera.update(world);
     system.target.update(world);
     system.tool.update(world);
+    toolbar.update();
 }
 
 fn drawFarm(world: *zhu.ecs.World) void {
@@ -101,26 +99,4 @@ fn rebuildCells(world: *zhu.ecs.World) void {
         const cell = map.getCell(position) orelse continue;
         cell.crop = entity;
     }
-}
-
-fn updateToolSelection() void {
-    if (context.uiWantCaptureKeyboard) return;
-
-    if (zhu.input.key.pressed(._1)) inventory.active = 0;
-    if (zhu.input.key.pressed(._2)) inventory.active = 1;
-    if (zhu.input.key.pressed(._3)) inventory.active = 2;
-    if (zhu.input.key.pressed(._4)) inventory.active = 3;
-    if (zhu.input.key.pressed(._5)) inventory.active = 4;
-
-    const scroll = zhu.input.mouseScrollY;
-    if (scroll != 0) {
-        const len: u32 = @intCast(inventory.slots.len);
-        if (scroll > 0) {
-            inventory.active = (inventory.active + len - 1) % len;
-        } else {
-            inventory.active = (inventory.active + 1) % len;
-        }
-    }
-
-    context.tool = inventory.activeTool() orelse context.tool;
 }

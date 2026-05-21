@@ -1,7 +1,7 @@
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
-const inventory = @import("../inventory.zig");
+const toolbar = @import("../toolbar.zig");
 
 const Player = component.Player;
 const Position = component.Position;
@@ -20,7 +20,7 @@ pub fn update(world: *zhu.ecs.World) void {
         const distance2 = position.sub(playerPos).length2();
         if (distance2 > collectRadius * collectRadius) continue;
 
-        inventory.add(pickup.item, pickup.count);
+        toolbar.add(pickup.item, pickup.count);
         world.destroyEntity(entity);
     }
 }
