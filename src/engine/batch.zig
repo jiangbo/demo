@@ -125,8 +125,8 @@ pub fn currentCommand() ?*Command {
     return &commandBuffer.items[commandBuffer.items.len - 1];
 }
 
-pub fn debugDraw(area: math.Rect) void {
-    drawRect(area, .{ .color = .rgba(1, 0, 1, 0.4) });
+pub fn debugDraw(rect: math.Rect) void {
+    drawRect(rect, .{ .color = .rgba(1, 0, 1, 0.4) });
 }
 
 pub fn draw(image: ImageId, pos: math.Vector2) void {
@@ -160,22 +160,22 @@ pub fn drawLine(start: Vector2, end: Vector2, option: LineOption) void {
     });
 }
 
-pub fn drawRectBorder(area: math.Rect, width: f32, c: Color) void {
+pub fn drawRectBorder(rect: math.Rect, width: f32, c: Color) void {
     const color = RectOption{ .color = c };
-    drawRect(.init(area.min, .xy(area.size.x, width)), color); // 上
-    var start = area.min.addY(area.size.y - width);
-    drawRect(.init(start, .xy(area.size.x, width)), color); // 下
-    const size: Vector2 = .xy(width, area.size.y - 2 * width);
-    drawRect(.init(area.min.addY(width), size), color); // 左
-    start = area.min.addXY(area.size.x - width, width);
+    drawRect(.init(rect.min, .xy(rect.size.x, width)), color); // 上
+    var start = rect.min.addY(rect.size.y - width);
+    drawRect(.init(start, .xy(rect.size.x, width)), color); // 下
+    const size: Vector2 = .xy(width, rect.size.y - 2 * width);
+    drawRect(.init(rect.min.addY(width), size), color); // 左
+    start = rect.min.addXY(rect.size.x - width, width);
     drawRect(.init(start, size), color); // 右
 }
 
 pub const RectOption = struct { color: Color = .white, radian: f32 = 0 };
-pub fn drawRect(area: math.Rect, option: RectOption) void {
+pub fn drawRect(rect: math.Rect, option: RectOption) void {
     const white = whiteImage.sub(.init(.xy(0, 4), .xy(4, 4)));
-    drawImage(white, area.min, .{
-        .size = area.size,
+    drawImage(white, rect.min, .{
+        .size = rect.size,
         .color = option.color,
         .radian = option.radian,
     });
@@ -185,12 +185,46 @@ pub const TriangleOption = struct {
     color: Color = .white,
     flip: bool = false,
 };
-pub fn drawTriangle(area: math.Rect, option: TriangleOption) void {
-    drawImage(whiteImage, area.min, .{
-        .size = area.size,
+pub fn drawTriangle(rect: math.Rect, option: TriangleOption) void {
+    drawImage(whiteImage, rect.min, .{
+        .size = rect.size,
         .color = option.color,
         .mask = .{ .flipX = option.flip },
     });
+}
+
+pub const NineOption = struct { topLeft: Vector2, bottomRight: Vector2 };
+pub fn drawNine(image: Image, rect: math.Rect, option: NineOption) void {
+    const left = option.topLeft.x;
+    const top = option.topLeft.y;
+    const right = option.bottomRight.x;
+    const bottom = option.bottomRight.y;
+
+    const finalSize = rect.size.max(.xy(left + right, top + bottom));
+    const centerW = finalSize.x - left - right;
+    const centerH = finalSize.y - top - bottom;
+
+    const srcX = [_]f32{ 0, left, image.size.x - right };
+    const srcY = [_]f32{ 0, top, image.size.y - bottom };
+    const srcW = [_]f32{ left, image.size.x - left - right, right };
+    const srcH = [_]f32{ top, image.size.y - top - bottom, bottom };
+
+    const min = rect.min;
+    const dstX = [_]f32{ min.x, min.x + left, min.x + left + centerW };
+    const dstY = [_]f32{ min.y, min.y + top, min.y + top + centerH };
+    const dstW = [_]f32{ left, centerW, right };
+    const dstH = [_]f32{ top, centerH, bottom };
+
+    for (0..3) |row| {
+        for (0..3) |col| {
+            const srcPos = Vector2.xy(srcX[col], srcY[row]);
+            const srcSize = Vector2.xy(srcW[col], srcH[row]);
+            const pos = Vector2.xy(dstX[col], dstY[row]);
+            drawImage(image.sub(.init(srcPos, srcSize)), pos, .{
+                .size = .xy(dstW[col], dstH[row]),
+            });
+        }
+    }
 }
 
 pub fn drawImageId(id: ImageId, pos: Vector2, option: Option) void {
