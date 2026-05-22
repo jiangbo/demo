@@ -103,15 +103,17 @@ pub fn isSolid(position: zhu.Vector2, collider: Collider) bool {
     const pos = position.add(collider.offset);
     const rect = zhu.Rect.init(pos, collider.size);
 
-    // 把矩形左上角和右下角转为 tile 坐标
+    // 用半开矩形 [min, max) 计算覆盖到的 tile 范围。
+    // 右下边界回退一点，避免刚好贴边时多查相邻 tile。
     const tileMin = data.worldToTilePosition(rect.min);
-    const tileMax = data.worldToTilePosition(rect.max());
+    const max = rect.max().sub(.square(zhu.math.epsilon));
+    const tileMax = data.worldToTilePosition(max);
     var y = tileMin.y;
     while (y <= tileMax.y) : (y += 1) {
         var x = tileMin.x;
         while (x <= tileMax.x) : (x += 1) {
             const index = data.tilePositionToIndex(.xy(x, y));
-            if (solids[index orelse continue]) return true;
+            if (solids[index orelse return true]) return true;
         }
     }
     return false;
@@ -191,6 +193,46 @@ test "isSolid 检测碰撞框是否与 solid 格子重叠" {
 
     // 碰撞框不与 solid 格子重叠时应返回 false
     try std.testing.expect(!isSolid(.xy(80, 80), collider));
+}
+
+test "isSolid 不会把贴边当成碰撞" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    solids = zhu.assets.oomAlloc(bool, data.width * data.height);
+    defer zhu.assets.free(solids);
+    @memset(solids, false);
+
+    // solid tile (2,2) 的世界范围是 32~48, 32~48
+    solids[data.worldToTileIndex(.xy(40, 40)).?] = true;
+
+    const collider: component.Collider = .{
+        .size = .xy(10, 6),
+    };
+
+    // 右边界刚好贴到 solid 的左边界 x=32，不应算重叠
+    try std.testing.expect(!isSolid(.xy(22, 36), collider));
+
+    // 下边界刚好贴到 solid 的上边界 y=32，不应算重叠
+    try std.testing.expect(!isSolid(.xy(36, 26), collider));
+
+    // 真正进入 solid 1 像素后才应算碰撞
+    try std.testing.expect(isSolid(.xy(23, 36), collider));
+}
+
+test "isSolid 会把地图外当成阻挡" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    solids = zhu.assets.oomAlloc(bool, data.width * data.height);
+    defer zhu.assets.free(solids);
+    @memset(solids, false);
+
+    const collider: component.Collider = .{
+        .size = .xy(4, 4),
+    };
+
+    try std.testing.expect(isSolid(.xy(-1, 16), collider));
+    try std.testing.expect(isSolid(.xy(16, -1), collider));
+    try std.testing.expect(isSolid(data.size().sub(.xy(3, 3)), collider));
 }
 
 test "锄地会记录目标格" {
