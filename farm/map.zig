@@ -105,11 +105,8 @@ pub fn loadObjects(world: *zhu.ecs.World) void {
             for (layer.objects) |object| {
                 markSolidRect(.init(object.position, object.size));
             }
-            continue;
-        }
-
-        for (layer.objects) |object| {
-            loadObject(world, object);
+        } else {
+            for (layer.objects) |object| loadObject(world, object);
         }
     }
 }
@@ -118,7 +115,7 @@ fn loadObject(world: *zhu.ecs.World, object: tiled.Object) void {
     if (object.gid == 0) return;
 
     const image = data.imageByGid(object.gid);
-    _ = factory.spawnMapImageObject(world, object, image);
+    factory.spawnMapObject(world, object, image);
     markTileColliders(object, image);
 }
 

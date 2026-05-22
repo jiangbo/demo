@@ -7,6 +7,7 @@ const prefab = @import("prefab.zig");
 const World = zhu.ecs.World;
 const Entity = zhu.ecs.Entity;
 const Object = zhu.extend.tiled.Object;
+const Image = zhu.graphics.Image;
 
 pub fn init() void {
     std.log.info("spawn init", .{});
@@ -39,14 +40,12 @@ pub fn loadFarm(world: *World) void {
     world.add(player, component.Target{});
 }
 
-pub fn spawnMapImageObject(world: *World, object: Object, image: zhu.graphics.Image) Entity {
-    const size = if (object.size.x > 0 and object.size.y > 0)
-        object.size
-    else
-        image.size;
+pub fn spawnMapObject(world: *World, object: Object, image: Image) void {
+    const hasSize = object.size.x > 0 and object.size.y > 0;
+    const size = if (hasSize) object.size else image.size;
 
     const entity = world.createEntity();
-    world.add(entity, component.Position.xy(object.position.x, object.position.y));
+    world.add(entity, object.position);
     world.add(entity, component.Sprite{
         .image = image,
         .offset = .xy(0, -size.y),
@@ -55,7 +54,6 @@ pub fn spawnMapImageObject(world: *World, object: Object, image: zhu.graphics.Im
     });
     world.add(entity, component.Render{ .layer = .actor });
     world.add(entity, component.YSort{});
-    return entity;
 }
 
 pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
@@ -169,7 +167,7 @@ test "地图图片对象按底边定位生成实体" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    const entity = spawnMapImageObject(&world, .{
+    spawnMapObject(&world, .{
         .id = 1,
         .gid = 1,
         .name = "",
@@ -181,13 +179,17 @@ test "地图图片对象按底边定位生成实体" {
         .extend = .{},
     }, image);
 
-    const position = world.get(entity, component.Position).?;
-    const sprite = world.get(entity, component.Sprite).?;
-    try expectEqual(@as(f32, 12), position.x);
-    try expectEqual(@as(f32, 34), position.y);
-    try expectEqual(@as(f32, -30), sprite.offset.y);
-    try expectEqual(@as(f32, 20), sprite.size.?.x);
-    try expectEqual(@as(f32, 30), sprite.size.?.y);
+    var query = world.query(.{ component.Position, component.Sprite });
+    while (query.next()) |entity| {
+        const position = query.get(entity, component.Position);
+        const sprite = query.get(entity, component.Sprite);
+
+        try expectEqual(@as(f32, 12), position.x);
+        try expectEqual(@as(f32, 34), position.y);
+        try expectEqual(@as(f32, -30), sprite.offset.y);
+        try expectEqual(@as(f32, 20), sprite.size.?.x);
+        try expectEqual(@as(f32, 30), sprite.size.?.y);
+    }
 }
 
 fn putMockFarmImages() void {
