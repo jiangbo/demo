@@ -80,8 +80,9 @@ fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
 }
 
 fn drawFarm(world: *zhu.ecs.World) void {
-    map.draw();
+    map.drawBack();
     system.render.draw(world);
+    map.drawFront();
     system.target.draw(world);
 
     // 调试绘制碰撞层

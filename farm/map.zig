@@ -15,11 +15,13 @@ pub const maps = [_]tiled.Map{
 
 pub var data: *const tiled.Map = &maps[0];
 var vertexes: std.ArrayList(zhu.batch.Vertex) = .empty;
-var tiledCount: usize = 0;
+var frontLayerStart: usize = 0;
+var staticLayerEnd: usize = 0;
 pub var cells: []Cell = &.{};
 pub var solids: []bool = &.{};
 var dryImage: zhu.graphics.Image = undefined;
 var wetImage: zhu.graphics.Image = undefined;
+var mapTexture: zhu.graphics.Texture = undefined;
 
 pub const Land = enum { dry, wet };
 
@@ -31,6 +33,10 @@ pub const Cell = struct {
 pub fn init() void {
     std.log.info("map init", .{});
     tiled.init(@import("zon/tile.zon"));
+    vertexes.clearRetainingCapacity();
+    frontLayerStart = 0;
+    staticLayerEnd = 0;
+    mapTexture = zhu.getImage("circle.png").?.texture;
 
     const count = data.width * data.height;
     cells = zhu.assets.oomAlloc(Cell, count);
@@ -41,7 +47,9 @@ pub fn init() void {
     dryImage = prefab.resolveImage(prefab.farm.farmland.dry);
     wetImage = prefab.resolveImage(prefab.farm.farmland.wet);
 
+    var foundFrontLayer = false;
     for (data.layers) |*layer| {
+        std.log.info("parsing layer: {s}", .{layer.name});
         switch (layer.type) {
             .tile => {
                 if (std.mem.eql(u8, layer.name, "solid"))
@@ -50,11 +58,17 @@ pub fn init() void {
                     parseTileLayer(layer);
             },
             .image => parseImageLayer(layer),
-            .object => {},
+            .object => {
+                if (!foundFrontLayer and std.mem.eql(u8, layer.name, "main")) {
+                    frontLayerStart = vertexes.items.len;
+                    foundFrontLayer = true;
+                }
+            },
         }
     }
 
-    tiledCount = vertexes.items.len;
+    staticLayerEnd = vertexes.items.len;
+    if (!foundFrontLayer) frontLayerStart = staticLayerEnd;
 
     std.log.info("map loaded: {}x{}, tiles: {}", //
         .{ data.width, data.height, vertexes.items.len });
@@ -66,8 +80,20 @@ pub fn deinit() void {
     vertexes.clearAndFree(zhu.assets.allocator);
 }
 
-pub fn draw() void {
-    zhu.batch.vertexBuffer.appendSliceAssumeCapacity(vertexes.items);
+pub fn drawBack() void {
+    if (vertexes.items.len == 0) return;
+
+    _ = zhu.batch.addDrawCommand(mapTexture);
+    const back = vertexes.items[0..frontLayerStart];
+    zhu.batch.vertexBuffer.appendSliceAssumeCapacity(back);
+    const land = vertexes.items[staticLayerEnd..];
+    zhu.batch.vertexBuffer.appendSliceAssumeCapacity(land);
+}
+
+pub fn drawFront() void {
+    if (frontLayerStart == staticLayerEnd) return;
+    const front = vertexes.items[frontLayerStart..staticLayerEnd];
+    zhu.batch.vertexBuffer.appendSliceAssumeCapacity(front);
 }
 
 pub fn hoe(position: zhu.Vector2) void {
@@ -161,7 +187,7 @@ fn appendVertex(position: zhu.Vector2, image: zhu.graphics.Image) void {
 }
 
 fn rebuildLandVertexes() void {
-    vertexes.shrinkRetainingCapacity(tiledCount);
+    vertexes.shrinkRetainingCapacity(staticLayerEnd);
 
     for (cells, 0..) |cell, index| {
         const land = cell.land orelse continue;
@@ -298,9 +324,47 @@ test "土地绘制会追加干湿图块" {
 
     hoe(.xy(32, 48));
     water(.xy(32, 48));
-    draw();
+    drawBack();
 
     try std.testing.expectEqual(2, zhu.batch.vertexBuffer.items.len);
+}
+
+test "地图绘制会把前景留到实体之后" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    defer vertexes.clearAndFree(std.testing.allocator);
+
+    vertexes.clearRetainingCapacity();
+    frontLayerStart = 0;
+    staticLayerEnd = 0;
+
+    const image = zhu.graphics.Image{
+        .texture = .{ .id = 1 },
+        .size = .xy(1, 1),
+    };
+    mapTexture = image.texture;
+
+    appendVertex(.xy(1, 0), image); // back
+    frontLayerStart = vertexes.items.len;
+    appendVertex(.xy(2, 0), image); // front
+    staticLayerEnd = vertexes.items.len;
+    appendVertex(.xy(3, 0), image); // dynamic land
+
+    var vertices: [8]zhu.batch.Vertex = undefined;
+    var commands: [4]zhu.batch.Command = undefined;
+    zhu.batch.vertexBuffer = .initBuffer(&vertices);
+    zhu.batch.commandBuffer = .initBuffer(&commands);
+
+    drawBack();
+
+    try std.testing.expectEqual(@as(usize, 2), zhu.batch.vertexBuffer.items.len);
+    try std.testing.expectEqual(@as(f32, 1), zhu.batch.vertexBuffer.items[0].position.x);
+    try std.testing.expectEqual(@as(f32, 3), zhu.batch.vertexBuffer.items[1].position.x);
+
+    drawFront();
+
+    try std.testing.expectEqual(@as(usize, 3), zhu.batch.vertexBuffer.items.len);
+    try std.testing.expectEqual(@as(f32, 2), zhu.batch.vertexBuffer.items[2].position.x);
 }
 
 fn putMockLandImages() void {
@@ -309,6 +373,9 @@ fn putMockLandImages() void {
         .size = .xy(256, 256),
     };
 
+    frontLayerStart = 0;
+    staticLayerEnd = 0;
+    mapTexture = image.texture;
     dryImage = image.sub(prefab.farm.farmland.dry.rect);
     wetImage = image.sub(prefab.farm.farmland.wet.rect);
 }

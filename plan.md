@@ -141,12 +141,13 @@ zig build test
   - 需要系统：简单碰撞/距离检测、PickupSystem、Inventory 合并。
   - 参考源码：`game/system/pickup_system.*`
 
-- [ ] 26-碰撞阻挡
+- [x] 26-碰撞阻挡
   - 可见效果：玩家不能穿过房子、栅栏或测试障碍。
-  - 需要系统：Collider、StaticTileGrid/DynamicGrid 最小版、Movement 碰撞解析。
+  - 需要系统：Collider、StaticTileGrid 最小版、Movement 碰撞解析。
+  - 暂缓内容：DynamicGrid 放到地图对象/动态实体生成后再接入。
   - 参考源码：`engine/spatial/*`、`movement_system.*`
 
-- [ ] 27-加载 Tiled 地图背景
+- [x] 27-加载 Tiled 地图背景
   - 可见效果：从 `.tmj` 显示真实地图 tile layer。
   - 需要系统：Tiled JSON 解析、tileset 图片加载、tile layer 绘制。
   - 参考源码：`engine/loader/level_loader.*`
