@@ -63,23 +63,35 @@ pub const Map = struct {
         return self.tilePositionToIndex(tilePos);
     }
 
-    pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {
+    pub fn tileSetRefByGid(self: Map, gid: u32) TileSetRef {
+        std.debug.assert(gid != 0);
         for (self.tileSetRefs) |ref| {
-            if (gid < ref.max) return ref;
+            if (gid >= ref.firstGid and gid < ref.max) return ref;
         } else unreachable;
     }
 
-    pub fn getTileSetByGid(self: Map, gid: u32) TileSet {
-        return self.getTileSetByRef(self.getTileSetRefByGid(gid));
+    pub fn tileSetByGid(self: Map, gid: u32) TileSet {
+        return tileSetByRef(self.tileSetRefByGid(gid));
     }
 
-    pub fn getTileByGId(self: Map, gid: u32) ?*const Tile {
-        for (self.tileSetRefs) |ref| {
-            if (gid < ref.max) {
-                const ts = getTileSetByRef(ref);
-                return ts.getTileByLocalId(gid - ref.firstGid);
-            }
-        } else unreachable;
+    pub fn tileByGid(self: Map, gid: u32) ?*const Tile {
+        const ref = self.tileSetRefByGid(gid);
+        const tileSet = tileSetByRef(ref);
+        return tileSet.tileByLocalId(gid - ref.firstGid);
+    }
+
+    pub fn imageByGid(self: Map, gid: u32) graphics.Image {
+        const ref = self.tileSetRefByGid(gid);
+        const tileSet = tileSetByRef(ref);
+        const localId = gid - ref.firstGid;
+
+        if (tileSet.columns == 0) {
+            const tile = tileSet.tileByLocalId(localId).?;
+            return assets.getImage(tile.id).?;
+        }
+
+        const area = self.tileArea(localId, tileSet.columns);
+        return assets.getImage(tileSet.image).?.sub(area);
     }
 
     pub fn tileArea(self: Map, index: u32, columns: u32) Rect {
@@ -150,7 +162,7 @@ pub const TileSet = struct {
     image: u32,
     tiles: []const Tile,
 
-    pub fn getTileByLocalId(self: TileSet, id: u32) ?*const Tile {
+    pub fn tileByLocalId(self: TileSet, id: u32) ?*const Tile {
         if (self.columns == 0) return &self.tiles[id];
         for (self.tiles) |*tile| {
             if (id == tile.id) return tile;
@@ -196,16 +208,16 @@ pub fn init(ts: []const TileSet) void {
     tileSets = ts;
 }
 
-pub fn getTileSetById(id: assets.Id) TileSet {
+pub fn tileSetById(id: assets.Id) TileSet {
     for (tileSets) |ts| if (ts.id == id) return ts;
     unreachable;
 }
 
-pub fn getTileSetByRef(ref: TileSetRef) TileSet {
-    return getTileSetById(ref.id);
+pub fn tileSetByRef(ref: TileSetRef) TileSet {
+    return tileSetById(ref.id);
 }
 
-pub fn getTileByImageId(id: graphics.ImageId) Tile {
+pub fn tileByImageId(id: graphics.ImageId) Tile {
     for (tileSets) |ts| {
         for (ts.tiles) |tile| if (tile.id == id) return tile;
     } else unreachable;
