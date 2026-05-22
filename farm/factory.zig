@@ -17,6 +17,10 @@ pub fn loadFarm(world: *World) void {
     const player = world.createIdentityEntity(component.Player);
     world.add(player, component.Position.xy(160, 96));
     world.add(player, component.Velocity{});
+    world.add(player, component.Collider{
+        .size = .xy(10, 6),
+        .offset = .xy(-5, -6),
+    });
     world.add(player, component.Actor{ .rows = config.rows });
 
     const sources = comptime animationSources(config.animations);

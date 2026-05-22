@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const prefab = @import("prefab.zig");
 const component = @import("component.zig");
 const Position = component.Position;
+const Collider = component.Collider;
 
 const tiled = zhu.extend.tiled;
 
@@ -16,6 +17,7 @@ pub var data: *const tiled.Map = &maps[0];
 var vertexes: std.ArrayList(zhu.batch.Vertex) = .empty;
 var tiledCount: usize = 0;
 pub var cells: []Cell = &.{};
+pub var solids: []bool = &.{};
 var dryImage: zhu.graphics.Image = undefined;
 var wetImage: zhu.graphics.Image = undefined;
 
@@ -32,14 +34,21 @@ pub fn init() void {
 
     const count = data.width * data.height;
     cells = zhu.assets.oomAlloc(Cell, count);
+    solids = zhu.assets.oomAlloc(bool, count);
     @memset(cells, .{});
+    @memset(solids, false);
 
     dryImage = prefab.resolveImage(prefab.farm.farmland.dry);
     wetImage = prefab.resolveImage(prefab.farm.farmland.wet);
 
     for (data.layers) |*layer| {
         switch (layer.type) {
-            .tile => parseTileLayer(layer),
+            .tile => {
+                if (std.mem.eql(u8, layer.name, "solid"))
+                    parseSolidLayer(layer)
+                else
+                    parseTileLayer(layer);
+            },
             .image => parseImageLayer(layer),
             .object => {},
         }
@@ -53,6 +62,7 @@ pub fn init() void {
 
 pub fn deinit() void {
     zhu.assets.free(cells);
+    zhu.assets.free(solids);
     vertexes.clearAndFree(zhu.assets.allocator);
 }
 
@@ -85,6 +95,32 @@ pub fn getCell(position: zhu.Vector2) ?*Cell {
     if (tile.x >= width or tile.y >= height) return null;
 
     return &cells[@as(usize, @intCast(tile.y * width + tile.x))];
+}
+
+/// 检查碰撞框在指定位置是否与 solid 格子重叠
+pub fn isSolid(position: zhu.Vector2, collider: Collider) bool {
+    // 计算碰撞框在世界中的矩形
+    const pos = position.add(collider.offset);
+    const rect = zhu.Rect.init(pos, collider.size);
+
+    // 把矩形左上角和右下角转为 tile 坐标
+    const tileMin = data.worldToTilePosition(rect.min);
+    const tileMax = data.worldToTilePosition(rect.max());
+    var y = tileMin.y;
+    while (y <= tileMax.y) : (y += 1) {
+        var x = tileMin.x;
+        while (x <= tileMax.x) : (x += 1) {
+            const index = data.tilePositionToIndex(.xy(x, y));
+            if (solids[index orelse continue]) return true;
+        }
+    }
+    return false;
+}
+
+fn parseSolidLayer(layer: *const tiled.Layer) void {
+    for (layer.data, 0..) |gid, index| {
+        if (gid != 0) solids[index] = true;
+    }
 }
 
 /// 将 tile 层的每个瓦片转为预构建顶点
@@ -131,6 +167,30 @@ fn rebuildLandVertexes() void {
         appendVertex(position, dryImage);
         if (land == .wet) appendVertex(position, wetImage);
     }
+}
+
+test "isSolid 检测碰撞框是否与 solid 格子重叠" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    solids = zhu.assets.oomAlloc(bool, data.width * data.height);
+    defer zhu.assets.free(solids);
+    @memset(solids, false);
+
+    // 空地图不应碰撞
+    const collider: component.Collider = .{
+        .size = .xy(10, 6),
+        .offset = .xy(-5, -6),
+    };
+    try std.testing.expect(!isSolid(.xy(24, 40), collider));
+
+    // 标记 tile (1,2) 为 solid（世界坐标 16~32, 32~48）
+    solids[data.worldToTileIndex(.xy(24, 40)).?] = true;
+
+    // 碰撞框与 solid 格子重叠时应返回 true
+    try std.testing.expect(isSolid(.xy(24, 40), collider));
+
+    // 碰撞框不与 solid 格子重叠时应返回 false
+    try std.testing.expect(!isSolid(.xy(80, 80), collider));
 }
 
 test "锄地会记录目标格" {

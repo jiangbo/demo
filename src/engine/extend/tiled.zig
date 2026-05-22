@@ -30,6 +30,12 @@ pub const Map = struct {
         return self.tilePositionToWorld(.xy(width, height));
     }
 
+    pub fn tilePositionToIndex(self: Map, pos: Position) ?usize {
+        if (pos.x < 0 or pos.y < 0) return null;
+        if (pos.x >= self.width or pos.y >= self.height) return null;
+        return @intCast(pos.y * @as(i32, @intCast(self.width)) + pos.x);
+    }
+
     pub fn tilePositionToWorld(self: Map, pos: Position) Vector2 {
         const floatX: f32 = @floatFromInt(pos.x);
         return self.tileSize.mul(.xy(floatX, @floatFromInt(pos.y)));
@@ -52,12 +58,9 @@ pub const Map = struct {
         return .{ .x = x, .y = @intFromFloat(tilePos.y) };
     }
 
-    pub fn worldToTileIndex(self: Map, pos: Vector2) usize {
+    pub fn worldToTileIndex(self: Map, pos: Vector2) ?usize {
         const tilePos = self.worldToTilePosition(pos);
-        if (tilePos.x < 0 or tilePos.y < 0) return 0;
-        const width: i32 = @intCast(self.width);
-        if (tilePos.x >= width or tilePos.y >= self.height) return 0;
-        return @intCast(tilePos.y * width + tilePos.x);
+        return self.tilePositionToIndex(tilePos);
     }
 
     pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {
