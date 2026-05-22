@@ -37,11 +37,14 @@ const ObjectExtend = packed struct(u8) {
 };
 
 pub const Object = struct {
-    gid: u32 = 0,
+    id: u32,
+    gid: u32,
+    name: []const u8,
+    type: []const u8,
     position: Vector2, // 像素坐标
     size: Vector2, // 像素宽高
-    point: bool = false, // 是否为点物体
-    properties: []const parsed.Property = &.{}, // 物体自定义属性
+    point: bool, // 是否为点物体
+    properties: []const parsed.Property, // 物体自定义属性
     extend: ObjectExtend, // 扩展信息
 };
 
@@ -212,11 +215,21 @@ fn parseObjectGroup(value: tiled.Layer) !ObjectGroup {
 fn parseObjects(objects: []tiled.Object) ![]Object {
     const result = try allocator.alloc(Object, objects.len);
     for (objects, 0..) |object, i| {
+        const gid = object.gid orelse 0;
         result[i] = .{
+            .id = object.id,
+            .gid = gid & 0x1FFFFFFF,
+            .name = object.name,
+            .type = object.type,
             .point = object.point,
-            .extend = .{},
             .position = .{ .x = object.x, .y = object.y },
             .size = .{ .x = object.width, .y = object.height },
+            .properties = try parseProperties(object.properties),
+            .extend = .{
+                .flipX = (gid & 0x80000000) != 0,
+                .flipY = (gid & 0x40000000) != 0,
+                .rotation = (gid & 0x20000000) != 0,
+            },
         };
     }
     return result;
@@ -269,9 +282,14 @@ fn parsePropertyValue(property: tiled.Property) parsed.PropertyValue {
     return switch (toEnum(parsed.PropertyEnum, property.type).?) {
         .string => .{ .string = property.value.string },
         .int => .{ .int = @intCast(property.value.integer) },
-        .float => .{ .float = @floatCast(property.value.float) },
+        .float => switch (property.value) {
+            .float => |f| .{ .float = @floatCast(f) },
+            .integer => |i| .{ .float = @floatFromInt(i) },
+            else => @panic("Expected a number type for .float"),
+        },
         .bool => .{ .bool = property.value.bool },
-        .object => .{ .object = property.value.integer },
+        .class => .{ .class = property.propertytype.? },
+        .object => .{ .object = @intCast(property.value.integer) },
     };
 }
 

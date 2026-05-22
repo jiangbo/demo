@@ -586,9 +586,13 @@
             .data = .{},
             .objects = .{
                 .{
-                    .gid = 3,
+                    .id = 3,
+                    .gid = 0,
+                    .name = "",
+                    .type = "collider",
                     .position = .{ .x = 35.5, .y = 106.5 },
                     .size = .{ .x = 26.5, .y = 28.25 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -598,9 +602,13 @@
                     },
                 },
                 .{
-                    .gid = 4,
+                    .id = 4,
+                    .gid = 0,
+                    .name = "",
+                    .type = "collider",
                     .position = .{ .x = 83.083336, .y = 106.208336 },
                     .size = .{ .x = 26.5, .y = 28.25 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -610,9 +618,13 @@
                     },
                 },
                 .{
-                    .gid = 5,
+                    .id = 5,
+                    .gid = 0,
+                    .name = "",
+                    .type = "collider",
                     .position = .{ .x = 130.75, .y = 105.875 },
                     .size = .{ .x = 26.5, .y = 28.25 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -622,9 +634,13 @@
                     },
                 },
                 .{
-                    .gid = 7,
+                    .id = 7,
+                    .gid = 0,
+                    .name = "",
+                    .type = "collider",
                     .position = .{ .x = 35.458332, .y = 154.52083 },
                     .size = .{ .x = 26.5, .y = 28.25 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -634,9 +650,13 @@
                     },
                 },
                 .{
-                    .gid = 8,
+                    .id = 8,
+                    .gid = 0,
+                    .name = "",
+                    .type = "collider",
                     .position = .{ .x = 83.04163, .y = 154.22884 },
                     .size = .{ .x = 26.5, .y = 28.25 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -646,9 +666,13 @@
                     },
                 },
                 .{
-                    .gid = 9,
+                    .id = 9,
+                    .gid = 0,
+                    .name = "",
+                    .type = "collider",
                     .position = .{ .x = 130.70833, .y = 153.89583 },
                     .size = .{ .x = 26.5, .y = 28.25 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -658,9 +682,13 @@
                     },
                 },
                 .{
-                    .gid = 10,
+                    .id = 10,
+                    .gid = 0,
+                    .name = "",
+                    .type = "collider",
                     .position = .{ .x = 35.708332, .y = 202.4375 },
                     .size = .{ .x = 26.5, .y = 28.25 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -670,9 +698,13 @@
                     },
                 },
                 .{
-                    .gid = 11,
+                    .id = 11,
+                    .gid = 0,
+                    .name = "",
+                    .type = "collider",
                     .position = .{ .x = 83.29163, .y = 202.3955 },
                     .size = .{ .x = 26.5, .y = 28.25 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -682,9 +714,13 @@
                     },
                 },
                 .{
-                    .gid = 12,
+                    .id = 12,
+                    .gid = 0,
+                    .name = "",
+                    .type = "collider",
                     .position = .{ .x = 130.95833, .y = 202.3125 },
                     .size = .{ .x = 26.5, .y = 28.25 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -694,9 +730,13 @@
                     },
                 },
                 .{
-                    .gid = 13,
+                    .id = 13,
+                    .gid = 0,
+                    .name = "",
+                    .type = "collider",
                     .position = .{ .x = 70.416664, .y = 49.208332 },
                     .size = .{ .x = 51.166668, .y = 27.583334 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -706,9 +746,13 @@
                     },
                 },
                 .{
-                    .gid = 15,
+                    .id = 15,
+                    .gid = 0,
+                    .name = "",
+                    .type = "collider",
                     .position = .{ .x = 250.25, .y = 181.875 },
                     .size = .{ .x = 53, .y = 40.25 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -718,9 +762,13 @@
                     },
                 },
                 .{
-                    .gid = 23,
+                    .id = 23,
+                    .gid = 0,
+                    .name = "",
+                    .type = "collider",
                     .position = .{ .x = 399.13635, .y = 182.05682 },
                     .size = .{ .x = 53, .y = 40.25 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -745,9 +793,13 @@
             .offset = .{ .x = 0, .y = 0 },
             .data = .{},
             .objects = .{.{
-                .gid = 2,
+                .id = 2,
+                .gid = 0,
+                .name = "",
+                .type = "map_trigger",
                 .position = .{ .x = 194.33331, .y = 261.83334 },
                 .size = .{ .x = 26.000032, .y = 9.333333 },
+                .point = false,
                 .properties = .{
                     .{ .name = "self_id", .value = .{ .int = 1 } },
                     .{ .name = "start_offset", .value = .{ .string = "top" } },

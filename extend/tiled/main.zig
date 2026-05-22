@@ -50,9 +50,13 @@ const ObjectExtend = packed struct(u8) {
 };
 
 pub const Object = struct {
+    id: u32,
     gid: u32,
+    name: []const u8,
+    type: []const u8,
     position: Vector2,
     size: Vector2,
+    point: bool,
     properties: []const parsed.Property,
     extend: ObjectExtend, // 扩展信息
 };
@@ -142,11 +146,15 @@ fn parseLayers(layers: []tiled.Layer) ![]Layer {
             layerEnum = .object;
             objects = try allocator.alloc(Object, old.objects.len);
             for (objects, old.objects) |*new, obj| {
-                const gid = obj.gid orelse obj.id;
+                const gid = obj.gid orelse 0;
                 new.* = Object{
+                    .id = obj.id,
                     .gid = gid & 0x1FFFFFFF,
+                    .name = obj.name,
+                    .type = obj.type,
                     .position = .{ .x = obj.x, .y = obj.y },
                     .size = .{ .x = obj.width, .y = obj.height },
+                    .point = obj.point,
                     .properties = try parseProperties(obj.properties),
                     .extend = .{
                         .flipX = (gid & 0x80000000) != 0,

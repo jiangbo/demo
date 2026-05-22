@@ -6257,9 +6257,13 @@
             .data = .{},
             .objects = .{
                 .{
+                    .id = 1,
                     .gid = 1729,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 312.33334, .y = 213.66667 },
                     .size = .{ .x = 48, .y = 64 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6269,9 +6273,13 @@
                     },
                 },
                 .{
+                    .id = 2,
                     .gid = 1738,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 205.16667, .y = 337.83334 },
                     .size = .{ .x = 80, .y = 96 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6281,9 +6289,13 @@
                     },
                 },
                 .{
+                    .id = 3,
                     .gid = 1739,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 399, .y = 120.666664 },
                     .size = .{ .x = 128, .y = 128 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6293,9 +6305,13 @@
                     },
                 },
                 .{
+                    .id = 4,
                     .gid = 2112,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 112, .y = 48 },
                     .size = .{ .x = 32, .y = 48 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6305,9 +6321,13 @@
                     },
                 },
                 .{
+                    .id = 5,
                     .gid = 2116,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 41, .y = 140 },
                     .size = .{ .x = 32, .y = 48 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6317,9 +6337,13 @@
                     },
                 },
                 .{
+                    .id = 6,
                     .gid = 2116,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 405, .y = 357 },
                     .size = .{ .x = 32, .y = 48 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6329,9 +6353,13 @@
                     },
                 },
                 .{
+                    .id = 7,
                     .gid = 2116,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 456, .y = 294 },
                     .size = .{ .x = 32, .y = 48 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6341,9 +6369,13 @@
                     },
                 },
                 .{
+                    .id = 8,
                     .gid = 2112,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 491, .y = 356.5 },
                     .size = .{ .x = 32, .y = 48 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6353,9 +6385,13 @@
                     },
                 },
                 .{
+                    .id = 9,
                     .gid = 2112,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 522.5, .y = 255 },
                     .size = .{ .x = 32, .y = 48 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6365,9 +6401,13 @@
                     },
                 },
                 .{
+                    .id = 10,
                     .gid = 2112,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 527.5, .y = 38 },
                     .size = .{ .x = 32, .y = 48 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6377,9 +6417,13 @@
                     },
                 },
                 .{
+                    .id = 11,
                     .gid = 2116,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 363, .y = 88 },
                     .size = .{ .x = 32, .y = 48 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6389,9 +6433,13 @@
                     },
                 },
                 .{
+                    .id = 12,
                     .gid = 2116,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 219.5, .y = 132 },
                     .size = .{ .x = 32, .y = 48 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6401,9 +6449,13 @@
                     },
                 },
                 .{
+                    .id = 13,
                     .gid = 2112,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 262, .y = 53 },
                     .size = .{ .x = 32, .y = 48 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6413,9 +6465,13 @@
                     },
                 },
                 .{
+                    .id = 14,
                     .gid = 2116,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 124.5, .y = 199.5 },
                     .size = .{ .x = 32, .y = 48 },
+                    .point = false,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6425,9 +6481,13 @@
                     },
                 },
                 .{
-                    .gid = 24,
+                    .id = 24,
+                    .gid = 0,
+                    .name = "cow",
+                    .type = "animal",
                     .position = .{ .x = 105.75, .y = 347.66666 },
                     .size = .{ .x = 0, .y = 0 },
+                    .point = true,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6437,9 +6497,13 @@
                     },
                 },
                 .{
-                    .gid = 25,
+                    .id = 25,
+                    .gid = 0,
+                    .name = "sheep",
+                    .type = "animal",
                     .position = .{ .x = 146.33333, .y = 320.66666 },
                     .size = .{ .x = 0, .y = 0 },
+                    .point = true,
                     .properties = .{},
                     .extend = .{
                         .flipX = false,
@@ -6464,9 +6528,13 @@
             .offset = .{ .x = 0, .y = 0 },
             .data = .{},
             .objects = .{ .{
-                .gid = 22,
+                .id = 22,
+                .gid = 0,
+                .name = "point",
+                .type = "light",
                 .position = .{ .x = 336.007, .y = 182.02092 },
                 .size = .{ .x = 0, .y = 0 },
+                .point = true,
                 .properties = .{ .{ .name = "night_only", .value = .{ .bool = true } }, .{ .name = "radius", .value = .{ .float = 64 } } },
                 .extend = .{
                     .flipX = false,
@@ -6475,9 +6543,13 @@
                     .padding = 0,
                 },
             }, .{
-                .gid = 23,
+                .id = 23,
+                .gid = 0,
+                .name = "spot",
+                .type = "light",
                 .position = .{ .x = 244.58002, .y = 282.1658 },
                 .size = .{ .x = 0, .y = 0 },
+                .point = true,
                 .properties = .{ .{ .name = "night_only", .value = .{ .bool = true } }, .{ .name = "spot", .value = .{ .class = "Spotlight" } } },
                 .extend = .{
                     .flipX = false,
@@ -6501,9 +6573,13 @@
             .offset = .{ .x = 0, .y = 0 },
             .data = .{},
             .objects = .{.{
-                .gid = 26,
+                .id = 26,
+                .gid = 0,
+                .name = "",
+                .type = "map_trigger",
                 .position = .{ .x = 226.66666, .y = 331.83334 },
                 .size = .{ .x = 10.6667, .y = 11 },
+                .point = false,
                 .properties = .{
                     .{ .name = "self_id", .value = .{ .int = 1 } },
                     .{ .name = "start_offset", .value = .{ .string = "bottom" } },

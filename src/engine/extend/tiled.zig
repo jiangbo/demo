@@ -178,11 +178,14 @@ pub const ObjectExtend = packed struct(u8) {
 };
 
 pub const Object = struct {
-    gid: u32 = 0,
+    id: u32,
+    gid: u32,
+    name: []const u8,
+    type: []const u8,
     position: Vector2, // 像素坐标
     size: Vector2, // 像素宽高
-    point: bool = false, // 是否为点物体
-    properties: []const Property = &.{}, // 物体自定义属性
+    point: bool, // 是否为点物体
+    properties: []const Property, // 物体自定义属性
     extend: ObjectExtend, // 扩展信息
 };
 

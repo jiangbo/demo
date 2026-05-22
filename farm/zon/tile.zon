@@ -3145,7 +3145,10 @@
         .tiles = .{ .{
             .id = 0,
             .objectGroup = .{ .visible = true, .objects = .{.{
+                .id = 1,
                 .gid = 0,
+                .name = "",
+                .type = "",
                 .position = .{ .x = 0.33333334, .y = 22.666666 },
                 .size = .{ .x = 46.666668, .y = 41.333332 },
                 .point = false,
@@ -3167,7 +3170,10 @@
         }, .{
             .id = 4,
             .objectGroup = .{ .visible = true, .objects = .{.{
+                .id = 1,
                 .gid = 0,
+                .name = "",
+                .type = "",
                 .position = .{ .x = -0.000016666667, .y = 22.33335 },
                 .size = .{ .x = 46.6667, .y = 41.3333 },
                 .point = false,
@@ -3203,7 +3209,10 @@
         .tiles = .{.{
             .id = 3632935980,
             .objectGroup = .{ .visible = true, .objects = .{.{
+                .id = 1,
                 .gid = 0,
+                .name = "",
+                .type = "",
                 .position = .{ .x = 9.375, .y = 38.75 },
                 .size = .{ .x = 13.125, .y = 8.625 },
                 .point = false,
@@ -3234,7 +3243,10 @@
         .tiles = .{ .{
             .id = 0,
             .objectGroup = .{ .visible = true, .objects = .{.{
+                .id = 1,
                 .gid = 0,
+                .name = "",
+                .type = "",
                 .position = .{ .x = 0.375, .y = 3.25 },
                 .size = .{ .x = 14.125, .y = 12.375 },
                 .point = false,
@@ -3275,7 +3287,10 @@
             .{
                 .id = 2150676121,
                 .objectGroup = .{ .visible = true, .objects = .{.{
+                    .id = 1,
                     .gid = 0,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 4.9140835, .y = 48.65134 },
                     .size = .{ .x = 119, .y = 53 },
                     .point = false,
@@ -3293,7 +3308,10 @@
             .{
                 .id = 730456114,
                 .objectGroup = .{ .visible = true, .objects = .{.{
+                    .id = 1,
                     .gid = 0,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 10.672225, .y = 49.025536 },
                     .size = .{ .x = 59.030746, .y = 40.35435 },
                     .point = false,
@@ -3311,7 +3329,10 @@
             .{
                 .id = 580602680,
                 .objectGroup = .{ .visible = true, .objects = .{.{
+                    .id = 1,
                     .gid = 0,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 0.66701406, .y = 65.033875 },
                     .size = .{ .x = 127.06618, .y = 54.354397 },
                     .point = false,
@@ -3337,7 +3358,10 @@
             .{
                 .id = 0,
                 .objectGroup = .{ .visible = true, .objects = .{.{
+                    .id = 1,
                     .gid = 0,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 10, .y = 39.75 },
                     .size = .{ .x = 13.125, .y = 8.125 },
                     .point = false,
@@ -3361,7 +3385,10 @@
             .{
                 .id = 4,
                 .objectGroup = .{ .visible = true, .objects = .{.{
+                    .id = 1,
                     .gid = 0,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 6.75, .y = 37.875 },
                     .size = .{ .x = 18, .y = 10 },
                     .point = false,
@@ -3385,7 +3412,10 @@
             .{
                 .id = 8,
                 .objectGroup = .{ .visible = true, .objects = .{.{
+                    .id = 1,
                     .gid = 0,
+                    .name = "",
+                    .type = "",
                     .position = .{ .x = 6.75, .y = 37.875 },
                     .size = .{ .x = 18, .y = 10.125 },
                     .point = false,
