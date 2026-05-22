@@ -84,10 +84,34 @@ fn drawFarm(world: *zhu.ecs.World) void {
     system.render.draw(world);
     system.target.draw(world);
 
+    // 调试绘制碰撞层
+    drawSolids();
+    drawCollider(world);
+
     zhu.camera.mode = .window;
     toolbar.draw();
     zhu.window.drawDebugInfo();
     zhu.camera.mode = .world;
+}
+
+fn drawSolids() void {
+    const tileSize = map.data.tileSize;
+    for (map.solids, 0..) |solid, index| {
+        if (!solid) continue;
+        const position = map.data.tileIndexToWorld(index);
+        zhu.batch.debugDraw(.init(position, tileSize));
+    }
+}
+
+fn drawCollider(world: *zhu.ecs.World) void {
+    const player = world.getIdentityEntity(component.Player) orelse return;
+    const position = world.get(player, component.Position) orelse return;
+    const collider = world.get(player, component.Collider) orelse return;
+    const rect = zhu.Rect.init(
+        position.add(collider.offset),
+        collider.size,
+    );
+    zhu.batch.drawRect(rect, .{ .color = .rgba(0, 1, 0, 0.4) });
 }
 
 fn rebuildCells(world: *zhu.ecs.World) void {
