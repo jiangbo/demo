@@ -54,6 +54,7 @@ pub fn draw(world: *zhu.ecs.World) void {
 fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
     if (!farmLoaded) {
         factory.loadFarm(world);
+        map.loadObjects(world);
         toolbar.init();
         rebuildCells(world);
         zhu.camera.bound = map.data.size();

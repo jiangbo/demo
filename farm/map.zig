@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 const prefab = @import("prefab.zig");
 const component = @import("component.zig");
+const factory = @import("factory.zig");
 const Position = component.Position;
 const Collider = component.Collider;
 
@@ -96,6 +97,31 @@ pub fn drawFront() void {
     zhu.batch.vertexBuffer.appendSliceAssumeCapacity(front);
 }
 
+pub fn loadObjects(world: *zhu.ecs.World) void {
+    for (data.layers) |layer| {
+        if (layer.type != .object) continue;
+
+        if (std.mem.eql(u8, layer.name, "collider")) {
+            for (layer.objects) |object| {
+                markSolidRect(.init(object.position, object.size));
+            }
+            continue;
+        }
+
+        for (layer.objects) |object| {
+            loadObject(world, object);
+        }
+    }
+}
+
+fn loadObject(world: *zhu.ecs.World, object: tiled.Object) void {
+    if (object.gid == 0) return;
+
+    const image = data.imageByGid(object.gid);
+    _ = factory.spawnMapImageObject(world, object, image);
+    markTileColliders(object, image);
+}
+
 pub fn hoe(position: zhu.Vector2) void {
     const cell = getCell(position) orelse return;
     if (cell.land != null or cell.crop != null) return;
@@ -151,6 +177,43 @@ fn parseSolidLayer(layer: *const tiled.Layer) void {
     }
 }
 
+pub fn markSolidRect(rect: zhu.Rect) void {
+    if (rect.size.x <= 0 or rect.size.y <= 0) return;
+
+    const tileMin = data.worldToTilePosition(rect.min);
+    const max = rect.max().sub(.square(zhu.math.epsilon));
+    const tileMax = data.worldToTilePosition(max);
+
+    var y = tileMin.y;
+    while (y <= tileMax.y) : (y += 1) {
+        var x = tileMin.x;
+        while (x <= tileMax.x) : (x += 1) {
+            const index = data.tilePositionToIndex(.xy(x, y));
+            solids[index orelse continue] = true;
+        }
+    }
+}
+
+fn markTileColliders(object: tiled.Object, image: zhu.graphics.Image) void {
+    const tile = data.tileByGid(object.gid) orelse return;
+    const group = tile.objectGroup orelse return;
+
+    const size = if (object.size.x > 0 and object.size.y > 0)
+        object.size
+    else
+        image.size;
+    const scale = size.div(image.size);
+    const topLeft = object.position.addY(-size.y);
+
+    for (group.objects) |local| {
+        const rect = zhu.Rect.init(
+            topLeft.add(local.position.mul(scale)),
+            local.size.mul(scale),
+        );
+        markSolidRect(rect);
+    }
+}
+
 /// 将 tile 层的每个瓦片转为预构建顶点
 /// 流程：gid → 找到所属 tileSet → 算出 tileSet 内的局部 ID
 ///       → 用 columns 换算行列得到裁剪区域 → sub 裁出子图 → 写入顶点
@@ -158,14 +221,7 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
     for (layer.data, 0..) |globalId, index| {
         if (globalId == 0) continue; // 0 表示空瓦片，跳过
 
-        // gid → tileSet 引用 → tileSet 定义 → 局部 ID
-        const tileSetRef = data.getTileSetRefByGid(globalId);
-        const tileSet = tiled.getTileSetByRef(tileSetRef);
-        const localId = globalId - tileSetRef.firstGid;
-
-        // 用 localId 和 columns 算出在 tileSet 图中的裁剪矩形
-        const area = data.tileArea(localId, tileSet.columns);
-        const image = zhu.assets.getImage(tileSet.image).?.sub(area);
+        const image = data.imageByGid(globalId);
         appendVertex(data.tileIndexToWorld(index), image);
     }
 }
@@ -259,6 +315,61 @@ test "isSolid 会把地图外当成阻挡" {
     try std.testing.expect(isSolid(.xy(-1, 16), collider));
     try std.testing.expect(isSolid(.xy(16, -1), collider));
     try std.testing.expect(isSolid(data.size().sub(.xy(3, 3)), collider));
+}
+
+test "gid 图片解析支持单图和集合图块集" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    tiled.init(@import("zon/tile.zon"));
+
+    const old = data;
+    defer data = old;
+    data = &maps[1];
+
+    const mockImage = zhu.graphics.Image{
+        .texture = .{ .id = 1 },
+        .size = .xy(10, 10),
+    };
+
+    var singleGid: u32 = 0;
+    for (data.tileSetRefs) |ref| {
+        const tileSet = tiled.tileSetByRef(ref);
+        if (tileSet.columns == 0) continue;
+        zhu.assets.putImage(tileSet.image, mockImage);
+        singleGid = ref.firstGid;
+        break;
+    }
+    try std.testing.expect(singleGid != 0);
+    try std.testing.expectEqual(@as(u32, 1), data.imageByGid(singleGid).texture.id);
+
+    var collectionGid: u32 = 0;
+    for (data.tileSetRefs) |ref| {
+        const tileSet = tiled.tileSetByRef(ref);
+        if (tileSet.columns != 0) continue;
+        for (tileSet.tiles, 0..) |tile, localId| {
+            if (tile.id == 0) continue;
+            zhu.assets.putImage(tile.id, mockImage);
+            collectionGid = ref.firstGid + @as(u32, @intCast(localId));
+            break;
+        }
+        if (collectionGid != 0) break;
+    }
+    try std.testing.expect(collectionGid != 0);
+    try std.testing.expectEqual(@as(u32, 1), data.imageByGid(collectionGid).texture.id);
+}
+
+test "markSolidRect 会标记矩形覆盖到的格子" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+
+    solids = zhu.assets.oomAlloc(bool, data.width * data.height);
+    defer zhu.assets.free(solids);
+    @memset(solids, false);
+
+    markSolidRect(.init(.xy(32, 32), .xy(16, 16)));
+
+    try std.testing.expect(solids[data.worldToTileIndex(.xy(40, 40)).?]);
+    try std.testing.expect(!solids[data.worldToTileIndex(.xy(24, 40)).?]);
 }
 
 test "锄地会记录目标格" {

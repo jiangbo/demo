@@ -152,7 +152,7 @@ zig build test
   - 需要系统：Tiled JSON 解析、tileset 图片加载、tile layer 绘制。
   - 参考源码：`engine/loader/level_loader.*`
 
-- [ ] 28-地图对象生成实体
+- [x] 28-地图对象生成实体
   - 可见效果：Tiled object layer 里的玩家出生点、房子、树等生成出来。
   - 需要系统：BasicEntityBuilder、EntityBuilder、对象属性读取。
   - 参考源码：`engine/loader/basic_entity_builder.*`、`game/loader/entity_builder.*`
