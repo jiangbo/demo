@@ -62,6 +62,7 @@ pub const Option = struct {
     color: graphics.Color = .white, // 文字的颜色
     maxWidth: f32 = std.math.floatMax(f32), // 最大宽度，超过换行
     spacing: f32 = 0, // 文字间的间距
+    alignment: ?Vector2 = null, // 文字对齐
 };
 
 pub fn drawNumber(number: anytype, pos: Vector2) void {
@@ -78,23 +79,16 @@ pub fn draw(string: String, pos: math.Vector) void {
     drawOption(string, pos, .{});
 }
 
-pub fn drawTextCenter(str: String, pos: Vector2, option: Option) void {
-    const width = computeTextWidthOption(str, option);
-    drawOption(str, .xy(pos.x - width / 2, pos.y), option);
-}
-
-pub fn drawRight(str: String, pos: Vector2, option: Option) void {
-    const width = computeTextWidthOption(str, option);
-    drawOption(str, .xy(pos.x - width, pos.y), option);
-}
-
-pub fn drawFmt(comptime fmt: String, pos: Vector2, args: anytype) void {
-    var buffer: [1024]u8 = undefined;
-    drawOption(format(&buffer, fmt, args), pos, .{});
-}
-
 pub fn drawColor(str: String, pos: Vector2, color: Color) void {
     drawOption(str, pos, .{ .color = color });
+}
+
+// zig fmt: off
+pub fn drawFormat(comptime fmt: String, pos: Vector2, args: anytype,
+    option: Option) void {
+// zig fmt: on
+    var buffer: [1024]u8 = undefined;
+    drawOption(format(&buffer, fmt, args), pos, option);
 }
 
 const Utf8View = std.unicode.Utf8View;
@@ -102,6 +96,10 @@ pub fn drawOption(text: String, position: Vector2, option: Option) void {
     const scale = if (option.size) |s| s / font.size else fontScale;
     const height = font.lineHeight * scale;
     var pos = position;
+    if (option.alignment) |a| {
+        const width = computeTextWidthOption(text, option);
+        pos = pos.sub(.xy(width * a.x, height * a.y));
+    }
 
     var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {

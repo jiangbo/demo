@@ -22,22 +22,28 @@ const Config = struct {
     selected: NineImage,
 };
 
-const preset: Config = @import("zon/preset.zon");
-
-const imagePath = "assets/farm-rpg/UI/Inventory/Slots.png";
-
 pub const Item = struct { type: ItemEnum, count: u32 = 0 };
 
-pub var slots: [preset.slotCount]Item = @splat(.{ .type = .hoe });
-pub var index: u32 = 0;
-var hoverIndex: ?usize = null;
+const zon: Config = @import("zon/preset.zon");
+
+pub var slots: [zon.slotCount]Item = @splat(.{ .type = .hoe });
+pub var slotIndex: usize = 0;
+
+var panelPosition: zhu.Vector2 = undefined; // 初始位置
+const slotWidth: f32 = zon.slotCount * (zon.slotSize + zon.spacing);
+const panelWidth: f32 = slotWidth - zon.spacing + zon.panelPadding * 2;
+const panelHeight: f32 = zon.panelPadding * 2 + zon.slotSize;
 
 pub fn init() void {
-    _ = zhu.assets.loadImage(imagePath);
-    index = 0;
+    slotIndex = 0;
     add(.hoe, 1);
     add(.water, 1);
     add(.seed, 99);
+
+    panelPosition = zhu.Vector2{
+        .x = (zhu.window.size.x - panelWidth) / 2,
+        .y = zhu.window.size.y - panelHeight - zon.bottomMargin,
+    };
 }
 
 pub fn add(itemType: ItemEnum, count: u32) void {
@@ -65,93 +71,80 @@ pub fn add(itemType: ItemEnum, count: u32) void {
 }
 
 pub fn active() ?*Item {
-    return if (slots[index].count == 0) null else &slots[index];
+    return if (slots[slotIndex].count == 0) null else &slots[slotIndex];
 }
 
 pub fn update() void {
-    if (zhu.input.key.pressed(._0)) index = slots.len - 1;
+    if (zhu.input.key.pressed(._0)) slotIndex = slots.len - 1;
     const key1: usize = @intFromEnum(zhu.input.KeyCode._1);
     for (0..slots.len - 1) |key| {
         const keyCode: zhu.input.KeyCode = @enumFromInt(key1 + key);
-        if (zhu.input.key.pressed(keyCode)) index = @intCast(key);
+        if (zhu.input.key.pressed(keyCode)) slotIndex = @intCast(key);
     }
 
-    const pPos = panelPosition();
-    const mousePos = zhu.window.mousePosition;
-    hoverIndex = null;
+    const start = panelPosition.add(.square(zon.panelPadding));
     for (0..slots.len) |i| {
-        const sPos = slotPosition(i, pPos);
-        const area = zhu.Rect.init(sPos, .xy(preset.slotSize, preset.slotSize));
-        if (area.contains(mousePos)) {
-            hoverIndex = i;
-            if (zhu.window.mouse.released(.LEFT)) {
-                index = @intCast(i);
-                zhu.audio.playSound("assets/audio/UI_button08.ogg");
-            }
+        const position = slotPosition(@floatFromInt(i), start);
+        const rect = zhu.Rect.init(position, .square(zon.slotSize));
+        if (!rect.contains(zhu.window.mousePosition)) continue;
+
+        if (zhu.window.mouse.released(.LEFT)) {
+            slotIndex = i;
+            zhu.audio.playSound("assets/audio/UI_button08.ogg");
             break;
         }
     }
 }
 
-const slotsWidth: f32 = preset.slotCount * preset.slotSize + (preset.slotCount - 1) * preset.spacing;
-const panelWidth: f32 = slotsWidth + preset.panelPadding * 2;
-const panelHeight: f32 = preset.slotSize + preset.panelPadding * 2;
-
-fn panelPosition() zhu.Vector2 {
-    return .xy(
-        (zhu.camera.size.x - panelWidth) / 2,
-        zhu.camera.size.y - panelHeight - preset.bottomMargin,
-    );
-}
-
-fn slotPosition(i: usize, panelPos: zhu.Vector2) zhu.Vector2 {
-    const startX = panelPos.x + preset.panelPadding;
-    const startY = panelPos.y + preset.panelPadding;
-    const x = startX + @as(f32, @floatFromInt(i)) * (preset.slotSize + preset.spacing);
-    return .xy(x, startY);
+fn slotPosition(index: f32, position: zhu.Vector2) zhu.Vector2 {
+    return position.addX(index * (zon.slotSize + zon.spacing));
 }
 
 pub fn draw() void {
-    // const uiImage = zhu.assets.getImage(preset.imageId).?;
-    // const panelPos = panelPosition();
-    // zhu.batch.drawNine(uiImage.sub(preset.panel.rect), .init(panelPos, .xy(panelWidth, panelHeight)), preset.panel.nine);
+    const panelImage = zhu.assets.getImage(zon.imageId).?;
+    { // 绘制面板
+        const rect = zhu.Rect{
+            .min = panelPosition,
+            .size = .xy(panelWidth, panelHeight),
+        };
+        const image = panelImage.sub(zon.panel.rect);
+        zhu.batch.drawNine(image, rect, zon.panel.nine);
+    }
 
-    // for (slots, 0..) |slot, i| {
-    //     const slotPos = slotPosition(i, panelPos);
+    const start = panelPosition.add(.square(zon.panelPadding));
+    for (slots, 0..) |slot, i| {
+        const position = slotPosition(@floatFromInt(i), start);
+        { // 绘制槽位
+            const image = panelImage.sub(zon.slot.rect);
+            const rect = zhu.Rect.init(position, .square(zon.slotSize));
+            zhu.batch.drawNine(image, rect, zon.slot.nine);
+        }
 
-    //     zhu.batch.drawNine(uiImage.sub(preset.slot.rect), .init(slotPos, .xy(preset.slotSize, preset.slotSize)), preset.slot.nine);
+        if (slot.count > 0) {
+            const iconMargin = zon.slotSize * 0.1;
+            const iconPosition = position.add(.square(iconMargin));
 
-    //     if (slot.count > 0) {
-    //         const iconMargin = preset.slotSize * 0.1;
-    //         const iconPos = slotPos.add(.xy(iconMargin, iconMargin));
-    //         const iconSize = zhu.Vector2.square(preset.slotSize * 0.8);
+            drawItemIcon(slot.type, iconPosition);
 
-    //         drawItemIcon(slot.type, iconPos, iconSize);
-    //         if (slot.count > 1) drawItemCount(slot.count, iconPos, iconSize);
-    //     }
+            if (slot.count > 1) drawItemCount(slot.count, iconPosition);
+        }
 
-    //     if (i == index) {
-    //         zhu.batch.drawNine(
-    //             uiImage.sub(preset.selected.rect),
-    //             .init(slotPos, .xy(preset.slotSize, preset.slotSize)),
-    //             preset.selected.nine,
-    //         );
-    //     }
-    // }
+        if (i == slotIndex) {
+            const image = panelImage.sub(zon.selected.rect);
+            const rect = zhu.Rect.init(position, .square(zon.slotSize));
+            zhu.batch.drawNine(image, rect, zon.selected.nine);
+        }
+    }
 }
 
-fn drawItemIcon(itemType: ItemEnum, pos: zhu.Vector2, size: zhu.Vector2) void {
-    const config = prefab.item(itemType);
-    const image = prefab.resolveImage(config.icon);
-    zhu.batch.drawImage(image, pos, .{ .size = size });
+fn drawItemIcon(itemType: ItemEnum, position: zhu.Vector2) void {
+    const iconSize = zhu.Vector2.square(zon.slotSize * 0.8);
+    const image = prefab.resolveImage(prefab.item(itemType).icon);
+    zhu.batch.drawImage(image, position, .{ .size = iconSize });
 }
 
-fn drawItemCount(count: u32, iconPos: zhu.Vector2, iconSize: zhu.Vector2) void {
-    var buffer: [15]u8 = undefined;
-    const text = std.fmt.bufPrint(&buffer, "{d}", .{count}) catch return;
-    const padding: f32 = 1;
-    const textSize: f32 = 8;
-    const x = iconPos.x + iconSize.x - zhu.text.computeTextWidth(text) - padding;
-    const y = iconPos.y + iconSize.y - textSize - padding;
-    zhu.text.drawColor(text, .xy(x, y), zhu.Color.white);
+fn drawItemCount(count: u32, position: zhu.Vector2) void {
+    const iconSize = zhu.Vector2.square(zon.slotSize * 0.8);
+    const pos = position.add(iconSize).sub(.square(1));
+    zhu.text.drawFormat("{d}", pos, .{count}, .{ .alignment = .one });
 }
