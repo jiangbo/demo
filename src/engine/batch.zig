@@ -238,15 +238,10 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     }
 
     const size = option.size orelse image.size;
-
-    var scaledSize = size.mul(option.scale);
+    const scaledSize = size.mul(option.scale).div(cmd.scale);
     const worldPos = switch (camera.mode) {
         .world => pos,
-        .window => cmd.position.add(pos),
-        .fixed => blk: {
-            scaledSize = scaledSize.div(cmd.scale);
-            break :blk cmd.position.add(pos.div(cmd.scale));
-        },
+        .window => cmd.position.add(pos.div(cmd.scale)),
     };
 
     vertexBuffer.appendSliceAssumeCapacity(&.{Vertex{

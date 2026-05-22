@@ -84,7 +84,7 @@ fn drawFarm(world: *zhu.ecs.World) void {
     system.render.draw(world);
     system.target.draw(world);
 
-    zhu.camera.mode = .fixed;
+    zhu.camera.mode = .window;
     toolbar.draw();
     zhu.window.drawDebugInfo();
     zhu.camera.mode = .world;
