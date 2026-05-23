@@ -198,7 +198,7 @@ pub const World = struct {
         self.entities.destroy(self.allocator, entity) catch oom();
     }
 
-    pub fn destroyEntityByType(self: *World, T: type) void {
+    pub fn destroyEntities(self: *World, T: type) void {
         var toDestroy = self.query(.{T}).reverse();
         while (toDestroy.next()) |entity| self.destroyEntity(entity);
     }

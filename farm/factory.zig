@@ -84,6 +84,7 @@ pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
     });
     world.add(entity, render.Render{ .layer = .crop });
     world.add(entity, render.YSort{});
+    world.add(entity, map.Scoped{});
     return entity;
 }
 
@@ -109,6 +110,7 @@ pub fn spawnPickup(world: *World, itemType: item.ItemEnum) Entity {
     });
     world.add(entity, render.Render{ .layer = .crop });
     world.add(entity, render.YSort{});
+    world.add(entity, map.Scoped{});
     return entity;
 }
 
