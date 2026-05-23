@@ -208,19 +208,18 @@ pub const World = struct {
             self.entities.toIdentity(entity).?) catch oom();
     }
 
-    pub fn createIdentityEntity(self: *World, T: type) Entity {
+    pub fn createIdentity(self: *World, T: type) Entity {
         const entity = self.createEntity();
         self.addIdentity(entity, T);
         return entity;
     }
 
-    pub fn getIdentityEntity(self: *World, T: type) ?Entity {
+    pub fn getIdentity(self: *World, T: type) ?Entity {
         return self.toEntity(self.identityMap.get(hashTypeId(T)));
     }
 
     pub fn isIdentity(self: *World, entity: Entity, T: type) bool {
-        const e1 = self.getIdentityEntity(T) orelse return false;
-        return e1 == entity;
+        return self.getIdentity(T) orelse return false == entity;
     }
 
     pub fn removeIdentity(self: *World, T: type) bool {

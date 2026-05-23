@@ -15,7 +15,7 @@ const playerSpeed: f32 = 60;
 pub fn update(world: *zhu.ecs.World) void {
     const direction = readDirection();
     const velocity = direction.scale(playerSpeed);
-    const player = world.getIdentityEntity(Player).?;
+    const player = world.getIdentity(Player).?;
     world.getPtr(player, Velocity).?.value = velocity;
 
     const actor = world.getPtr(player, Actor).?;
@@ -68,7 +68,7 @@ test "玩家控制会把方向键写入速度" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    const player = world.createIdentityEntity(Player);
+    const player = world.createIdentity(Player);
     world.add(player, Velocity{});
     world.add(player, Actor{});
 
@@ -94,7 +94,7 @@ test "界面捕获键盘时玩家不会移动" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    const player = world.createIdentityEntity(Player);
+    const player = world.createIdentity(Player);
     world.add(player, Velocity{});
     world.add(player, Actor{});
 

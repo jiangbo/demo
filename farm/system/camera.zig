@@ -11,7 +11,7 @@ const scaleStep: f32 = 0.1;
 
 pub fn update(world: *zhu.ecs.World) void {
     updateScale();
-    const player = world.getIdentityEntity(Player).?;
+    const player = world.getIdentity(Player).?;
     const position = world.get(player, Position).?;
     zhu.camera.smoothFollow(position, followSmooth);
 }
@@ -34,7 +34,7 @@ test "相机跟随会向玩家位置移动" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    const player = world.createIdentityEntity(Player);
+    const player = world.createIdentity(Player);
     world.add(player, Position.xy(300, 200));
 
     update(&world);

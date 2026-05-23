@@ -10,7 +10,7 @@ const Target = component.Target;
 const tileRange: i32 = 1;
 
 pub fn update(world: *zhu.ecs.World) void {
-    const player = world.getIdentityEntity(Player).?;
+    const player = world.getIdentity(Player).?;
     const target = world.getPtr(player, Target).?;
     const playerPos = world.get(player, Position).?;
 
@@ -29,7 +29,7 @@ pub fn update(world: *zhu.ecs.World) void {
 }
 
 pub fn draw(world: *zhu.ecs.World) void {
-    const player = world.getIdentityEntity(Player).?;
+    const player = world.getIdentity(Player).?;
     const target = world.get(player, Target).?;
     if (!target.active) return;
 

@@ -12,7 +12,7 @@ const Target = component.Target;
 pub fn update(world: *zhu.ecs.World) void {
     if (!zhu.window.mouse.pressed(.LEFT)) return;
 
-    const player = world.getIdentityEntity(Player).?;
+    const player = world.getIdentity(Player).?;
     const target = world.get(player, Target).?;
     if (!target.active) return;
 

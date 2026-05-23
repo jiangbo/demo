@@ -10,7 +10,7 @@ const Pickup = component.Pickup;
 const collectRadius: f32 = 12;
 
 pub fn update(world: *zhu.ecs.World) void {
-    const player = world.getIdentityEntity(Player).?;
+    const player = world.getIdentity(Player).?;
     const playerPos = world.get(player, Position).?;
 
     var query = world.query(.{ Pickup, Position }).reverse();

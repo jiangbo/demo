@@ -16,7 +16,7 @@ pub fn init() void {
 pub fn loadFarm(world: *World) void {
     const config = prefab.actor.player;
 
-    const player = world.createIdentityEntity(component.Player);
+    const player = world.createIdentity(component.Player);
     world.add(player, component.Position.xy(160, 96));
     world.add(player, component.Velocity{});
     world.add(player, component.Collider{
@@ -54,6 +54,7 @@ pub fn spawnMapObject(world: *World, object: Object, image: Image) void {
     });
     world.add(entity, component.Render{ .layer = .actor });
     world.add(entity, component.YSort{});
+    world.add(entity, component.MapObject{});
 }
 
 pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
@@ -118,7 +119,7 @@ test "加载农场会创建初始实体" {
 
     loadFarm(&world);
 
-    const player = world.getIdentityEntity(component.Player).?;
+    const player = world.getIdentity(component.Player).?;
     try expectEqual(160, world.get(player, component.Position).?.x);
     try expectEqual(1, world.raw(component.Velocity).len);
     try expectEqual(1, world.raw(component.Actor).len);
