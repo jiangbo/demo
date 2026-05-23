@@ -144,6 +144,14 @@ pub const PropertyValue = union(PropertyEnum) {
     bool: bool, // 布尔值
     object: i32, // 引用物体 ID
     class: []const u8, // Tiled 1.8+ 类类型
+
+    pub fn get(self: PropertyValue, comptime T: type) ?T {
+        if (T == []const u8) return self.string;
+        if (T == bool) return self.bool;
+        if (@typeInfo(T) == .int) return @intCast(self.int);
+        if (@typeInfo(T) == .float) return @floatCast(self.float);
+        @compileError("unsupported property type: " ++ @typeName(T));
+    }
 };
 
 pub const Property = struct {
@@ -199,6 +207,13 @@ pub const Object = struct {
     point: bool, // 是否为点物体
     properties: []const Property, // 物体自定义属性
     extend: ObjectExtend, // 扩展信息
+
+    pub fn getProperty(self: Object, name: []const u8, T: type) ?T {
+        for (self.properties) |property| {
+            if (property.is(name)) return property.value.get(T);
+        }
+        return null;
+    }
 };
 
 pub var backgroundColor: ?graphics.Color = null;
