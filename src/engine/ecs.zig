@@ -358,12 +358,13 @@ pub const World = struct {
 
     // zig fmt: off
     pub fn queryBy(self: *World, By: type, All: anytype,
-        None: anytype) Query(All, None) {
+        None: anytype) Query(.{By} ++ All, None) {
     // zig fmt: on
-        var rs: Query(All, None) = .{};
+        inline for (All) |T| std.debug.assert(T != By);
+        var rs: Query(.{By} ++ All, None) = .{};
         rs.dense = self.assure(By).dense.items;
 
-        inline for (All, &rs.sparse, &rs.values) |T, *s, *v| {
+        inline for (.{By} ++ All, &rs.sparse, &rs.values) |T, *s, *v| {
             const map = self.assure(T);
             s.*, v.* = .{ map.sparse.items, map.valuePtr };
         }
