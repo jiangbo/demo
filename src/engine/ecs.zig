@@ -198,6 +198,11 @@ pub const World = struct {
         self.entities.destroy(self.allocator, entity) catch oom();
     }
 
+    pub fn destroyEntityByType(self: *World, T: type) void {
+        var toDestroy = self.query(.{T}).reverse();
+        while (toDestroy.next()) |entity| self.destroyEntity(entity);
+    }
+
     pub fn toEntity(self: *const World, identity: ?Identity) ?Entity {
         const id = identity orelse return null;
         return if (self.entities.isAlive(id)) id.entity else null;
