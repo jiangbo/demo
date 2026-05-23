@@ -126,6 +126,10 @@ pub const Layer = struct {
     parallaxY: f32 = 1.0,
     repeatX: bool = false,
     repeatY: bool = false,
+
+    pub fn isNamed(self: Layer, name: []const u8) bool {
+        return std.mem.eql(u8, self.name, name);
+    }
 };
 
 pub const PropertyEnum = enum {
