@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 const factory = @import("../factory.zig");
 const component = @import("../component.zig");
 const toolbar = @import("../toolbar.zig");
-const map = @import("../map.zig");
+const land = @import("../map.zig").land;
 
 const Crop = component.farm.Crop;
 const Player = component.actor.Player;
@@ -16,7 +16,7 @@ pub fn update(world: *zhu.ecs.World) void {
     const target = world.get(player, Target).?;
     if (!target.active) return;
 
-    const cell = map.getCell(target.position) orelse return;
+    const cell = land.getCell(target.position) orelse return;
 
     if (cell.crop) |entity| {
         const crop = world.get(entity, Crop) orelse return;
@@ -31,7 +31,7 @@ pub fn update(world: *zhu.ecs.World) void {
 
     if (toolbar.active()) |tool| {
         switch (tool.type) {
-            .hoe => map.hoe(target.position),
+            .hoe => land.hoe(target.position),
             .water => waterTarget(world, target.position),
             .seed => plant(world, target.position),
             .crop => {},
@@ -40,9 +40,9 @@ pub fn update(world: *zhu.ecs.World) void {
 }
 
 fn waterTarget(world: *zhu.ecs.World, position: zhu.Vector2) void {
-    map.water(position);
+    land.water(position);
 
-    const cell = map.getCell(position) orelse return;
+    const cell = land.getCell(position) orelse return;
     if (cell.crop) |entity| {
         if (world.getPtr(entity, Crop)) |crop| {
             crop.watered = true;
@@ -51,7 +51,7 @@ fn waterTarget(world: *zhu.ecs.World, position: zhu.Vector2) void {
 }
 
 fn plant(world: *zhu.ecs.World, position: zhu.Vector2) void {
-    const cell = map.getCell(position) orelse return;
+    const cell = land.getCell(position) orelse return;
     if (cell.land == null or cell.crop != null) return;
 
     toolbar.active().?.count -= 1;
