@@ -29,7 +29,7 @@ pub fn update(world: *zhu.ecs.World) void {
 }
 
 fn readDirection() zhu.Vector2 {
-    if (context.uiWantCaptureKeyboard) return .zero;
+    if (context.ui.wantCaptureKeyboard) return .zero;
 
     var direction: zhu.Vector2 = .zero;
     if (zhu.input.key.anyDown(&.{ .A, .LEFT })) direction.x -= 1;
@@ -51,7 +51,7 @@ fn facingFromDirection(direction: zhu.Vector2) Facing {
 fn resetInput() void {
     zhu.input.key.state = .initEmpty();
     zhu.input.key.lastState = .initEmpty();
-    context.uiWantCaptureKeyboard = false;
+    context.ui.wantCaptureKeyboard = false;
 }
 
 fn setKey(keyCode: zhu.input.KeyCode) void {
@@ -88,7 +88,7 @@ test "界面捕获键盘时玩家不会移动" {
     resetInput();
     defer resetInput();
 
-    context.uiWantCaptureKeyboard = true;
+    context.ui.wantCaptureKeyboard = true;
     setKey(.D);
 
     var world = zhu.ecs.World.init(std.testing.allocator);

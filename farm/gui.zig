@@ -42,18 +42,18 @@ pub fn update(delta: f32) void {
     });
 
     if (zhu.input.key.pressed(.F5)) {
-        context.showEngineDebug = !context.showEngineDebug;
+        context.debug.showEngine = !context.debug.showEngine;
     }
     if (zhu.input.key.pressed(.F6)) {
-        context.showGameDebug = !context.showGameDebug;
+        context.debug.showGame = !context.debug.showGame;
     }
 
-    if (context.showEngineDebug) drawEnginePanel();
-    if (context.showGameDebug) drawGamePanel();
+    if (context.debug.showEngine) drawEnginePanel();
+    if (context.debug.showGame) drawGamePanel();
 
     const io = imgui.igGetIO();
-    context.uiWantCaptureMouse = io.*.WantCaptureMouse;
-    context.uiWantCaptureKeyboard = io.*.WantCaptureKeyboard;
+    context.ui.wantCaptureMouse = io.*.WantCaptureMouse;
+    context.ui.wantCaptureKeyboard = io.*.WantCaptureKeyboard;
 }
 
 pub fn draw() void {
@@ -67,7 +67,7 @@ pub fn deinit() void {
 fn drawEnginePanel() void {
     if (!imgui.igBegin(
         "Engine Debug",
-        &context.showEngineDebug,
+        &context.debug.showEngine,
         imgui.ImGuiWindowFlags_AlwaysAutoResize,
     )) {
         imgui.igEnd();
@@ -75,19 +75,19 @@ fn drawEnginePanel() void {
     }
 
     const mouse = zhu.input.mousePosition;
-    _ = imgui.igText("Current scene: %s", sceneName(context.currentScene).ptr);
+    _ = imgui.igText("Current scene: %s", sceneName(context.scene.current).ptr);
     _ = imgui.igText("Pending scene: %s", pendingSceneName().ptr);
-    _ = imgui.igText("Paused: %s", boolText(context.paused).ptr);
-    _ = imgui.igText("Time scale: %.2f", context.timeScale);
+    _ = imgui.igText("Paused: %s", boolText(context.time.paused).ptr);
+    _ = imgui.igText("Time scale: %.2f", context.time.scale);
     _ = imgui.igSeparator();
     _ = imgui.igText("Mouse: %.1f, %.1f", mouse.x, mouse.y);
     _ = imgui.igText(
         "Capture mouse: %s",
-        boolText(context.uiWantCaptureMouse).ptr,
+        boolText(context.ui.wantCaptureMouse).ptr,
     );
     _ = imgui.igText(
         "Capture keyboard: %s",
-        boolText(context.uiWantCaptureKeyboard).ptr,
+        boolText(context.ui.wantCaptureKeyboard).ptr,
     );
     _ = imgui.igText(
         "Camera: %.1f, %.1f  scale: %.2f",
@@ -107,7 +107,7 @@ fn drawEnginePanel() void {
 fn drawGamePanel() void {
     if (!imgui.igBegin(
         "Game Debug",
-        &context.showGameDebug,
+        &context.debug.showGame,
         imgui.ImGuiWindowFlags_AlwaysAutoResize,
     )) {
         imgui.igEnd();
@@ -122,12 +122,12 @@ fn drawGamePanel() void {
 }
 
 fn pendingSceneName() [:0]const u8 {
-    if (context.pendingScene) |scene| return sceneName(scene);
+    if (context.scene.pending) |next| return sceneName(next);
     return "none";
 }
 
-fn sceneName(scene: context.Scene) [:0]const u8 {
-    return switch (scene) {
+fn sceneName(value: context.scene.Scene) [:0]const u8 {
+    return switch (value) {
         .title => "title",
         .farm => "farm",
     };

@@ -8,7 +8,7 @@ pub const DispatchMode = enum {
 };
 
 pub const Event = union(enum) {
-    scene_request: context.Scene,
+    scene_request: context.scene.Scene,
     debug_note: [:0]const u8,
 };
 
@@ -85,7 +85,7 @@ pub fn modeName(mode: DispatchMode) [:0]const u8 {
 
 fn handle(value: Event, mode: DispatchMode) void {
     switch (value) {
-        .scene_request => |scene| context.requestScene(scene),
+        .scene_request => |next| context.scene.request(next),
         .debug_note => {},
     }
 
@@ -109,7 +109,7 @@ test "trigger 会立即处理场景请求" {
 
     trigger(.{ .scene_request = .farm });
 
-    try std.testing.expectEqual(context.Scene.farm, context.pendingScene.?);
+    try std.testing.expectEqual(context.scene.Scene.farm, context.scene.pending.?);
     try std.testing.expectEqual(1, recentTrace().len);
     try std.testing.expectEqual(DispatchMode.immediate, recentTrace()[0].mode);
 }
@@ -120,11 +120,11 @@ test "enqueue 会等待 update 处理" {
 
     enqueue(.{ .scene_request = .farm });
 
-    try std.testing.expectEqual(@as(?context.Scene, null), context.pendingScene);
+    try std.testing.expectEqual(@as(?context.scene.Scene, null), context.scene.pending);
 
     update();
 
-    try std.testing.expectEqual(context.Scene.farm, context.pendingScene.?);
+    try std.testing.expectEqual(context.scene.Scene.farm, context.scene.pending.?);
     try std.testing.expectEqual(1, recentTrace().len);
     try std.testing.expectEqual(DispatchMode.queued, recentTrace()[0].mode);
 }
