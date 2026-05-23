@@ -5,9 +5,9 @@ const component = @import("../component.zig");
 const toolbar = @import("../toolbar.zig");
 const map = @import("../map.zig");
 
-const Crop = component.Crop;
-const Player = component.Player;
-const Target = component.Target;
+const Crop = component.farm.Crop;
+const Player = component.actor.Player;
+const Target = component.ui.Target;
 
 pub fn update(world: *zhu.ecs.World) void {
     if (!zhu.window.mouse.pressed(.LEFT)) return;

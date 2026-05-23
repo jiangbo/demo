@@ -4,7 +4,7 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 
 pub const Animation = struct {
-    type: component.PlayerAnimation,
+    type: component.actor.Action,
     imageId: zhu.Id,
     frames: []const zhu.graphics.Frame,
 };
@@ -28,7 +28,7 @@ pub const Item = struct {
 };
 
 pub const Farm = struct {
-    items: [std.meta.fields(component.ItemEnum).len]Item,
+    items: [std.meta.fields(component.item.ItemEnum).len]Item,
     crop: struct {
         stages: [4]struct { sprite: Sprite, duration: f32 },
     },
@@ -38,7 +38,7 @@ pub const Farm = struct {
 pub const actor: struct { player: Actor } = @import("zon/actor.zon");
 pub const farm: Farm = @import("zon/farm.zon");
 
-pub fn item(itemType: component.ItemEnum) Item {
+pub fn item(itemType: component.item.ItemEnum) Item {
     return farm.items[@intFromEnum(itemType)];
 }
 

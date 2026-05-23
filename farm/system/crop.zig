@@ -3,8 +3,8 @@ const zhu = @import("zhu");
 
 const factory = @import("../factory.zig");
 const component = @import("../component.zig");
-const Crop = component.Crop;
-const Sprite = component.Sprite;
+const Crop = component.farm.Crop;
+const Sprite = component.render.Sprite;
 
 pub fn update(world: *zhu.ecs.World, delta: f32) void {
     var query = world.query(.{ Crop, Sprite });

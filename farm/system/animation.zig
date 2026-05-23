@@ -2,10 +2,10 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
-const Actor = component.Actor;
-const Animation = component.Animation;
-const Facing = component.Facing;
-const Sprite = component.Sprite;
+const Actor = component.actor.Actor;
+const Animation = component.actor.Animation;
+const Facing = component.actor.Facing;
+const Sprite = component.render.Sprite;
 
 pub fn update(world: *zhu.ecs.World, delta: f32) void {
     updateActor(world);
@@ -36,7 +36,7 @@ fn updateActor(world: *zhu.ecs.World) void {
         sprite.flip = raw < 0;
 
         const row = @abs(raw);
-        const index: u8 = @intFromEnum(actor.animation);
+        const index: u8 = @intFromEnum(actor.action);
         if (animation.sourceIndex != index or animation.row != row) {
             animation.playRow(index, row, true);
         }
@@ -60,7 +60,7 @@ test "动画系统会按角色方向行更新精灵" {
     defer world.deinit();
 
     const entity = world.createEntity();
-    world.add(entity, Actor{ .animation = .walk, .facing = .left });
+    world.add(entity, Actor{ .action = .walk, .facing = .left });
     const sources = [_]zhu.Animation.Source{
         .{ .imageId = 1, .clip = &frames },
         .{ .imageId = 1, .clip = &frames },
@@ -68,7 +68,7 @@ test "动画系统会按角色方向行更新精灵" {
     world.add(entity, Animation{
         .image = image,
         .clip = &frames,
-        .sourceIndex = @intFromEnum(component.PlayerAnimation.walk),
+        .sourceIndex = @intFromEnum(component.actor.Action.walk),
         .sources = &sources,
     });
     world.add(entity, Sprite{ .image = image });
@@ -98,7 +98,7 @@ test "负数行号表示翻转" {
 
     const entity = world.createEntity();
     world.add(entity, Actor{
-        .animation = .idle,
+        .action = .idle,
         .facing = .right,
         .rows = .{ 0, 1, 2, -2 },
     });
@@ -108,7 +108,7 @@ test "负数行号表示翻转" {
     world.add(entity, Animation{
         .image = image,
         .clip = &frames,
-        .sourceIndex = @intFromEnum(component.PlayerAnimation.idle),
+        .sourceIndex = @intFromEnum(component.actor.Action.idle),
         .sources = &sources,
     });
     world.add(entity, Sprite{ .image = image });

@@ -5,8 +5,8 @@ const component = @import("../component.zig");
 const map = @import("../map.zig");
 
 const Position = component.Position;
-const Velocity = component.Velocity;
-const Collider = component.Collider;
+const Velocity = component.motion.Velocity;
+const Collider = component.motion.Collider;
 
 pub fn update(world: *zhu.ecs.World, delta: f32) void {
     var query = world.query(.{ Position, Velocity });

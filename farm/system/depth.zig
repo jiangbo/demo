@@ -3,8 +3,8 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const Position = component.Position;
-const Render = component.Render;
-const YSort = component.YSort;
+const Render = component.render.Render;
+const YSort = component.render.YSort;
 
 pub fn update(world: *zhu.ecs.World) void {
     var query = world.query(.{ Render, Position, YSort });

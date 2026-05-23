@@ -3,8 +3,8 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const Position = component.Position;
-const Render = component.Render;
-const Sprite = component.Sprite;
+const Render = component.render.Render;
+const Sprite = component.render.Sprite;
 
 pub fn draw(world: *zhu.ecs.World) void {
     world.sort(Render, lessThan);

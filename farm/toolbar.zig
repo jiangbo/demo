@@ -4,7 +4,7 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const prefab = @import("prefab.zig");
 
-const ItemEnum = component.ItemEnum;
+const ItemEnum = component.item.ItemEnum;
 const NineOption = zhu.batch.NineOption;
 const ImageId = zhu.graphics.ImageId;
 

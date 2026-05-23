@@ -3,9 +3,9 @@ const zhu = @import("zhu");
 const component = @import("../component.zig");
 const toolbar = @import("../toolbar.zig");
 
-const Player = component.Player;
+const Player = component.actor.Player;
 const Position = component.Position;
-const Pickup = component.Pickup;
+const Pickup = component.item.Pickup;
 
 const collectRadius: f32 = 12;
 

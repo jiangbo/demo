@@ -4,11 +4,11 @@ const zhu = @import("zhu");
 const component = @import("../component.zig");
 const context = @import("../context.zig");
 
-const Actor = component.Actor;
-const Facing = component.Facing;
-const Player = component.Player;
-const PlayerAnimation = component.PlayerAnimation;
-const Velocity = component.Velocity;
+const Actor = component.actor.Actor;
+const Facing = component.actor.Facing;
+const Player = component.actor.Player;
+const Action = component.actor.Action;
+const Velocity = component.motion.Velocity;
 
 const playerSpeed: f32 = 60;
 
@@ -20,11 +20,11 @@ pub fn update(world: *zhu.ecs.World) void {
 
     const actor = world.getPtr(player, Actor).?;
     if (direction.length2() == 0) {
-        actor.animation = PlayerAnimation.idle;
+        actor.action = Action.idle;
         return;
     }
 
-    actor.animation = PlayerAnimation.walk;
+    actor.action = Action.walk;
     actor.facing = facingFromDirection(direction);
 }
 
@@ -80,7 +80,7 @@ test "玩家控制会把方向键写入速度" {
     try std.testing.expectApproxEqAbs(playerSpeed, velocity.value.length(), 0.01);
 
     const actor = world.get(player, Actor).?;
-    try std.testing.expectEqual(PlayerAnimation.walk, actor.animation);
+    try std.testing.expectEqual(Action.walk, actor.action);
     try std.testing.expectEqual(Facing.up, actor.facing);
 }
 

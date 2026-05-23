@@ -3,9 +3,9 @@ const zhu = @import("zhu");
 const component = @import("../component.zig");
 const map = @import("../map.zig");
 
-const Player = component.Player;
+const Player = component.actor.Player;
 const Position = component.Position;
-const Target = component.Target;
+const Target = component.ui.Target;
 
 const tileRange: i32 = 1;
 

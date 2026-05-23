@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 
-const Player = component.Player;
+const Player = component.actor.Player;
 const Position = component.Position;
 
 const followSmooth: f32 = 0.15;

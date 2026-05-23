@@ -4,6 +4,14 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const prefab = @import("prefab.zig");
 
+const actor = component.actor;
+const farm = component.farm;
+const item = component.item;
+const map = component.map;
+const motion = component.motion;
+const render = component.render;
+const ui = component.ui;
+
 const World = zhu.ecs.World;
 const Entity = zhu.ecs.Entity;
 const Object = zhu.extend.tiled.Object;
@@ -16,28 +24,28 @@ pub fn init() void {
 pub fn loadFarm(world: *World) void {
     const config = prefab.actor.player;
 
-    const player = world.createIdentity(component.Player);
+    const player = world.createIdentity(actor.Player);
     world.add(player, component.Position.xy(160, 96));
-    world.add(player, component.Velocity{});
-    world.add(player, component.Collider{
+    world.add(player, motion.Velocity{});
+    world.add(player, motion.Collider{
         .size = .xy(10, 6),
         .offset = .xy(-5, -6),
     });
-    world.add(player, component.Actor{ .rows = config.rows });
+    world.add(player, actor.Actor{ .rows = config.rows });
 
     const sources = comptime animationSources(config.animations);
     const animation = zhu.Animation.initSource(&sources);
 
-    world.add(player, component.Sprite{
+    world.add(player, render.Sprite{
         .image = animation.image,
         .offset = config.sprite.offset,
         .size = config.sprite.size,
     });
 
     world.add(player, animation);
-    world.add(player, component.Render{ .layer = .actor });
-    world.add(player, component.YSort{});
-    world.add(player, component.Target{});
+    world.add(player, render.Render{ .layer = .actor });
+    world.add(player, render.YSort{});
+    world.add(player, ui.Target{});
 }
 
 pub fn spawnMapObject(world: *World, object: Object, image: Image) void {
@@ -46,34 +54,34 @@ pub fn spawnMapObject(world: *World, object: Object, image: Image) void {
 
     const entity = world.createEntity();
     world.add(entity, object.position);
-    world.add(entity, component.Sprite{
+    world.add(entity, render.Sprite{
         .image = image,
         .offset = .xy(0, -size.y),
         .size = size,
         .flip = object.extend.flipX,
     });
-    world.add(entity, component.Render{ .layer = .actor });
-    world.add(entity, component.YSort{});
-    world.add(entity, component.MapObject{});
+    world.add(entity, render.Render{ .layer = .actor });
+    world.add(entity, render.YSort{});
+    world.add(entity, map.Object{});
 }
 
 pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
     const stage = prefab.farm.crop.stages[0];
     const entity = world.createEntity();
-    world.add(entity, component.Crop{ .next = stage.duration });
+    world.add(entity, farm.Crop{ .next = stage.duration });
     world.add(entity, component.Position.xy(position.x, position.y));
-    world.add(entity, component.Sprite{
+    world.add(entity, render.Sprite{
         .image = prefab.resolveImage(stage.sprite),
         .offset = stage.sprite.offset,
     });
-    world.add(entity, component.Render{ .layer = .crop });
-    world.add(entity, component.YSort{});
+    world.add(entity, render.Render{ .layer = .crop });
+    world.add(entity, render.YSort{});
     return entity;
 }
 
-pub fn advanceCrop(crop: *component.Crop) component.Sprite {
+pub fn advanceCrop(crop: *farm.Crop) render.Sprite {
     crop.timer = 0;
-    crop.stage = zhu.nextEnum(component.GrowthEnum, crop.stage);
+    crop.stage = zhu.nextEnum(farm.GrowthEnum, crop.stage);
     const stage = prefab.farm.crop.stages[@intFromEnum(crop.stage)];
     crop.next = stage.duration;
     return .{
@@ -82,17 +90,17 @@ pub fn advanceCrop(crop: *component.Crop) component.Sprite {
     };
 }
 
-pub fn spawnPickup(world: *World, item: component.ItemEnum) Entity {
-    const config = prefab.item(item);
+pub fn spawnPickup(world: *World, itemType: item.ItemEnum) Entity {
+    const config = prefab.item(itemType);
 
     const entity = world.createEntity();
-    world.add(entity, component.Pickup{ .item = item, .count = 1 });
-    world.add(entity, component.Sprite{
+    world.add(entity, item.Pickup{ .item = itemType, .count = 1 });
+    world.add(entity, render.Sprite{
         .image = prefab.resolveImage(config.icon),
         .size = .xy(10, 10),
     });
-    world.add(entity, component.Render{ .layer = .crop });
-    world.add(entity, component.YSort{});
+    world.add(entity, render.Render{ .layer = .crop });
+    world.add(entity, render.YSort{});
     return entity;
 }
 
@@ -119,13 +127,13 @@ test "加载农场会创建初始实体" {
 
     loadFarm(&world);
 
-    const player = world.getIdentity(component.Player).?;
+    const player = world.getIdentity(actor.Player).?;
     try expectEqual(160, world.get(player, component.Position).?.x);
-    try expectEqual(1, world.raw(component.Velocity).len);
-    try expectEqual(1, world.raw(component.Actor).len);
-    try expectEqual(1, world.raw(component.Sprite).len);
-    try expectEqual(1, world.raw(component.Render).len);
-    try expectEqual(1, world.assure(component.YSort).dense.items.len);
+    try expectEqual(1, world.raw(motion.Velocity).len);
+    try expectEqual(1, world.raw(actor.Actor).len);
+    try expectEqual(1, world.raw(render.Sprite).len);
+    try expectEqual(1, world.raw(render.Render).len);
+    try expectEqual(1, world.assure(render.YSort).dense.items.len);
 }
 
 test "spawnCrop 创建作物实体并设置初始 next" {
@@ -137,8 +145,8 @@ test "spawnCrop 创建作物实体并设置初始 next" {
     defer world.deinit();
 
     const entity = spawnCrop(&world, .xy(32, 48));
-    const crop = world.get(entity, component.Crop).?;
-    try expectEqual(component.GrowthEnum.seed, crop.stage);
+    const crop = world.get(entity, farm.Crop).?;
+    try expectEqual(farm.GrowthEnum.seed, crop.stage);
     try expectEqual(prefab.farm.crop.stages[0].duration, crop.next);
     try expectEqual(32, world.get(entity, component.Position).?.x);
 }
@@ -148,11 +156,11 @@ test "advanceCrop 推进阶段并累加 next" {
     defer zhu.assets.deinit();
     putMockCropImages();
 
-    var crop = component.Crop{
+    var crop = farm.Crop{
         .next = prefab.farm.crop.stages[0].duration,
     };
     _ = advanceCrop(&crop);
-    try expectEqual(component.GrowthEnum.sprout, crop.stage);
+    try expectEqual(farm.GrowthEnum.sprout, crop.stage);
     try expectEqual(prefab.farm.crop.stages[1].duration, crop.next);
     try expectEqual(@as(f32, 0), crop.timer);
 }
@@ -180,10 +188,10 @@ test "地图图片对象按底边定位生成实体" {
         .extend = .{},
     }, image);
 
-    var query = world.query(.{ component.Position, component.Sprite });
+    var query = world.query(.{ component.Position, render.Sprite });
     while (query.next()) |entity| {
         const position = query.get(entity, component.Position);
-        const sprite = query.get(entity, component.Sprite);
+        const sprite = query.get(entity, render.Sprite);
 
         try expectEqual(@as(f32, 12), position.x);
         try expectEqual(@as(f32, 34), position.y);
