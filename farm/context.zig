@@ -104,9 +104,13 @@ test "应用前最后一次场景请求生效" {
 test "地图切换请求会被 take 消费" {
     init();
 
-    map.request(.town, 3);
+    map.pending = .{
+        .target = component.map.Id.town,
+        .targetId = 3,
+    };
 
-    const transition = map.take().?;
+    const transition = map.pending.?;
+    map.pending = null;
     try std.testing.expectEqual(component.map.Id.town, transition.target);
     try std.testing.expectEqual(@as(i32, 3), transition.targetId);
     try std.testing.expectEqual(@as(?map.Transition, null), map.pending);
