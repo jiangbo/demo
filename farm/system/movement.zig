@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const map = @import("../map.zig");
+const physics = map.physics;
 
 const Position = component.Position;
 const Velocity = component.motion.Velocity;
@@ -19,13 +20,12 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
         if (collider) |c| {
             // 轴分离碰撞解析：先尝试 X 轴移动，再尝试 Y 轴移动
             // 碰撞时回退到原始坐标，这样可以沿墙滑动而不会卡死
-            var pos = position.*;
-            pos.x += offset.x;
-            if (map.isSolid(pos, c)) pos.x = position.x;
-            pos.y += offset.y;
-            if (map.isSolid(pos, c)) pos.y = position.y;
-
-            position.* = pos;
+            var next = position.*;
+            next.x += offset.x;
+            if (map.physics.isSolid(next, c)) next.x = position.x;
+            next.y += offset.y;
+            if (map.physics.isSolid(next, c)) next.y = position.y;
+            position.* = next;
         } else {
             position.* = position.add(offset);
         }
@@ -47,15 +47,12 @@ test "移动系统会按速度更新位置" {
 }
 
 test "有 Collider 的实体会被 solid 格子阻挡" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    const count = map.data.width * map.data.height;
-    map.solids = zhu.assets.oomAlloc(bool, count);
-    defer zhu.assets.free(map.solids);
-    @memset(map.solids, false);
+    zhu.assets.allocator = std.testing.allocator;
+    map.physics.reset(map.data);
+    defer map.physics.clear();
 
     // 标记 tile (2,2) 为 solid（世界坐标 32~48, 32~48）
-    map.solids[map.data.worldToTileIndex(.xy(40, 40)).?] = true;
+    map.physics.markTile(.xy(40, 40));
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -75,15 +72,12 @@ test "有 Collider 的实体会被 solid 格子阻挡" {
 }
 
 test "有 Collider 的实体会被 solid 格子垂直阻挡" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    const count = map.data.width * map.data.height;
-    map.solids = zhu.assets.oomAlloc(bool, count);
-    defer zhu.assets.free(map.solids);
-    @memset(map.solids, false);
+    zhu.assets.allocator = std.testing.allocator;
+    map.physics.reset(map.data);
+    defer physics.clear();
 
     // 标记 tile (2,2) 为 solid（世界坐标 32~48, 32~48）
-    map.solids[map.data.worldToTileIndex(.xy(40, 40)).?] = true;
+    physics.markTile(.xy(40, 40));
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -100,15 +94,12 @@ test "有 Collider 的实体会被 solid 格子垂直阻挡" {
 }
 
 test "斜向撞墙时未碰撞轴仍会滑动" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    const count = map.data.width * map.data.height;
-    map.solids = zhu.assets.oomAlloc(bool, count);
-    defer zhu.assets.free(map.solids);
-    @memset(map.solids, false);
+    zhu.assets.allocator = std.testing.allocator;
+    map.physics.reset(map.data);
+    defer physics.clear();
 
     // 标记 tile (2,2) 为 solid（世界坐标 32~48, 32~48）
-    map.solids[map.data.worldToTileIndex(.xy(40, 40)).?] = true;
+    physics.markTile(.xy(40, 40));
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
