@@ -360,7 +360,6 @@ pub const World = struct {
     pub fn queryBy(self: *World, By: type, All: anytype,
         None: anytype) Query(.{By} ++ All, None) {
     // zig fmt: on
-        inline for (All) |T| std.debug.assert(T != By);
         var rs: Query(.{By} ++ All, None) = .{};
         rs.dense = self.assure(By).dense.items;
 
