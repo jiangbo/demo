@@ -52,7 +52,7 @@ test "有 Collider 的实体会被 solid 格子阻挡" {
     defer map.physics.clear();
 
     // 标记 tile (2,2) 为 solid（世界坐标 32~48, 32~48）
-    map.physics.markTile(.xy(40, 40));
+    map.physics.markSolidTile(.xy(40, 40));
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -77,7 +77,7 @@ test "有 Collider 的实体会被 solid 格子垂直阻挡" {
     defer physics.clear();
 
     // 标记 tile (2,2) 为 solid（世界坐标 32~48, 32~48）
-    physics.markTile(.xy(40, 40));
+    physics.markSolidTile(.xy(40, 40));
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -99,7 +99,7 @@ test "斜向撞墙时未碰撞轴仍会滑动" {
     defer physics.clear();
 
     // 标记 tile (2,2) 为 solid（世界坐标 32~48, 32~48）
-    physics.markTile(.xy(40, 40));
+    physics.markSolidTile(.xy(40, 40));
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
