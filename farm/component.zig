@@ -36,7 +36,18 @@ pub const render = struct {
 };
 
 pub const map = struct {
+    pub const Id = enum { school, town };
+    pub const StartOffset = enum { none, left, right, top, bottom };
+
     pub const Object = struct {};
+
+    pub const Trigger = struct {
+        rect: zhu.Rect,
+        selfId: i32,
+        targetId: i32,
+        targetMap: Id,
+        startOffset: StartOffset,
+    };
 };
 
 pub const actor = struct {

@@ -48,7 +48,7 @@ pub fn loadFarm(world: *World) void {
     world.add(player, ui.Target{});
 }
 
-pub fn spawnMapObject(world: *World, object: Object, image: Image) void {
+pub fn spawnMapProp(world: *World, object: Object, image: Image) Entity {
     const hasSize = object.size.x > 0 and object.size.y > 0;
     const size = if (hasSize) object.size else image.size;
 
@@ -63,6 +63,14 @@ pub fn spawnMapObject(world: *World, object: Object, image: Image) void {
     world.add(entity, render.Render{ .layer = .actor });
     world.add(entity, render.YSort{});
     world.add(entity, map.Object{});
+    return entity;
+}
+
+pub fn spawnMapTrigger(world: *World, trigger: map.Trigger) Entity {
+    const entity = world.createEntity();
+    world.add(entity, trigger);
+    world.add(entity, map.Object{});
+    return entity;
 }
 
 pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
@@ -165,7 +173,7 @@ test "advanceCrop 推进阶段并累加 next" {
     try expectEqual(@as(f32, 0), crop.timer);
 }
 
-test "地图图片对象按底边定位生成实体" {
+test "地图摆件按底边定位生成实体" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
     const image = zhu.graphics.Image{
@@ -176,7 +184,7 @@ test "地图图片对象按底边定位生成实体" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    spawnMapObject(&world, .{
+    const entity = spawnMapProp(&world, .{
         .id = 1,
         .gid = 1,
         .name = "",
@@ -188,17 +196,14 @@ test "地图图片对象按底边定位生成实体" {
         .extend = .{},
     }, image);
 
-    var query = world.query(.{ component.Position, render.Sprite });
-    while (query.next()) |entity| {
-        const position = query.get(entity, component.Position);
-        const sprite = query.get(entity, render.Sprite);
+    const position = world.get(entity, component.Position).?;
+    const sprite = world.get(entity, render.Sprite).?;
 
-        try expectEqual(@as(f32, 12), position.x);
-        try expectEqual(@as(f32, 34), position.y);
-        try expectEqual(@as(f32, -30), sprite.offset.y);
-        try expectEqual(@as(f32, 20), sprite.size.?.x);
-        try expectEqual(@as(f32, 30), sprite.size.?.y);
-    }
+    try expectEqual(@as(f32, 12), position.x);
+    try expectEqual(@as(f32, 34), position.y);
+    try expectEqual(@as(f32, -30), sprite.offset.y);
+    try expectEqual(@as(f32, 20), sprite.size.?.x);
+    try expectEqual(@as(f32, 30), sprite.size.?.y);
 }
 
 fn putMockFarmImages() void {
