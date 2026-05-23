@@ -13,9 +13,10 @@ pub fn update(world: *zhu.ecs.World) void {
         const trigger = query.get(entity, Trigger);
         if (trigger.rect.contains(position)) {
             context.map.pending = .{
-                .target = trigger.target,
+                .target = trigger.targetMap,
                 .targetId = trigger.selfId,
             };
+            return;
         }
     }
 }

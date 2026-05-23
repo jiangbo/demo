@@ -39,7 +39,7 @@ pub const map = struct {
     pub const Id = enum { school, town };
     pub const StartOffset = enum { none, left, right, top, bottom };
 
-    pub const Object = struct {};
+    pub const Scoped = struct {};
 
     pub const Trigger = struct {
         rect: zhu.Rect,

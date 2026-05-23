@@ -62,14 +62,14 @@ pub fn spawnMapProp(world: *World, object: Object, image: Image) Entity {
     });
     world.add(entity, render.Render{ .layer = .actor });
     world.add(entity, render.YSort{});
-    world.add(entity, map.Object{});
+    world.add(entity, map.Scoped{});
     return entity;
 }
 
 pub fn spawnMapTrigger(world: *World, trigger: map.Trigger) Entity {
     const entity = world.createEntity();
     world.add(entity, trigger);
-    world.add(entity, map.Object{});
+    world.add(entity, map.Scoped{});
     return entity;
 }
 
