@@ -61,10 +61,10 @@ pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {
 
     const animals = prefab.farm.animals;
     const sources = switch (kind) {
-        .cow => comptime animationSources(animals[0].animations),
-        .sheep => comptime animationSources(animals[1].animations),
+        .cow => &comptime animationSources(animals[0].animations),
+        .sheep => &comptime animationSources(animals[1].animations),
     };
-    const animation = zhu.Animation.initSource(&sources);
+    const animation = zhu.Animation.initSource(sources);
 
     world.add(entity, render.Sprite{
         .image = animation.image,
