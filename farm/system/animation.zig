@@ -34,8 +34,8 @@ fn updateActor(world: *zhu.ecs.World) void {
 
         const raw = actor.rows[@intFromEnum(actor.facing)];
         sprite.flip = raw < 0;
-
-        const row = @abs(raw);
+        std.debug.assert(raw != 0);
+        const row: u8 = @intCast(@abs(raw) - 1);
         const index: u8 = @intFromEnum(actor.action);
         if (animation.sourceIndex != index or animation.row != row) {
             animation.playRow(index, row, true);
@@ -100,7 +100,7 @@ test "负数行号表示翻转" {
     world.add(entity, Actor{
         .action = .idle,
         .facing = .right,
-        .rows = .{ 0, 1, 2, -2 },
+        .rows = .{ 1, 2, 3, -1 },
     });
     const sources = [_]zhu.Animation.Source{
         .{ .imageId = 1, .clip = &frames },
@@ -117,5 +117,5 @@ test "负数行号表示翻转" {
 
     const sprite = world.get(entity, Sprite).?;
     try std.testing.expect(sprite.flip);
-    try std.testing.expectEqual(64, sprite.image.offset.y);
+    try std.testing.expectEqual(0, sprite.image.offset.y);
 }

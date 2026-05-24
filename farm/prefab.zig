@@ -15,6 +15,14 @@ pub const Actor = struct {
     animations: []const Animation,
 };
 
+pub const Animal = struct {
+    sprite: Sprite,
+    rows: [4]i8,
+    animations: []const Animation,
+    speed: f32,
+    wanderRadius: f32,
+};
+
 pub const Sprite = struct {
     imageId: zhu.Id,
     rect: zhu.Rect,
@@ -29,6 +37,7 @@ pub const Item = struct {
 
 pub const Farm = struct {
     items: [std.meta.fields(component.item.ItemEnum).len]Item,
+    animals: [std.meta.fields(component.actor.AnimalKind).len]Animal,
     crop: struct {
         stages: [4]struct { sprite: Sprite, duration: f32 },
     },

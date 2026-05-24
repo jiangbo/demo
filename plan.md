@@ -19,26 +19,6 @@ zig build test
 
 ## 功能实现计划
 
-- [x] 27-加载 Tiled 地图背景
-  - 可见效果：从 `.tmj` 显示真实地图 tile layer。
-  - 需要系统：Tiled JSON 解析、tileset 图片加载、tile layer 绘制。
-  - 参考源码：`engine/loader/level_loader.*`
-
-- [x] 28-地图对象生成实体
-  - 可见效果：Tiled object layer 里的玩家出生点、房子、树等生成出来。
-  - 需要系统：BasicEntityBuilder、EntityBuilder、对象属性读取。
-  - 参考源码：`engine/loader/basic_entity_builder.*`、`game/loader/entity_builder.*`
-
-- [ ] 29-地图切换
-  - 可见效果：走到门口/边界后切换到另一个地图。
-  - 需要系统：MapManager、Transition 触发区、玩家出生点。
-  - 参考源码：`game/world/map_manager.*`、`map_transition_system.*`
-
-- [ ] 30-NPC 显示与简单漫游
-  - 可见效果：NPC 在地图上出现并随机走动。
-  - 需要系统：NPC 组件、Animal/NPC wander、动画复用。
-  - 参考源码：`game/system/npc_wander_system.*`、`animal_behavior_system.*`
-
 - [ ] 31-对话气泡
   - 可见效果：靠近 NPC 按键弹出对话框。
   - 需要系统：InteractionSystem、DialogueSystem、UI 文本。
@@ -102,6 +82,16 @@ zig build test
   跨地图动态状态。
 - 29-地图切换：C++ 支持邻接地图预加载、外部地图注册、环境色覆盖和相机缩放配置；
   Zig 本步只更新当前地图、碰撞和相机边界。
+- 30-NPC 显示与简单漫游：C++ `AnimalBehaviorSystem` 支持睡觉、进食和时间判断；
+  Zig 本步先只做显示和随机漫游。
+- 30-NPC 显示与简单漫游：C++ 会从 `animal_blueprint.json` 读取动物蓝图；
+  Zig 本步先用 `farm.zon` 中的静态配置。
+- 30-NPC 显示与简单漫游：C++ 动物有叫声音效和动作音效；
+  Zig 本步不接入音频。
+- 30-NPC 显示与简单漫游：C++ NPC 可挂对话组件；
+  Zig 本步不做对话交互，留到 31。
+- 30-NPC 显示与简单漫游：C++ 后续可接空间索引、寻路和更完整的行为状态；
+  Zig 本步只在出生点半径内选随机目标，碰撞后放弃当前目标。
 
 ## 暂缓的大系统
 

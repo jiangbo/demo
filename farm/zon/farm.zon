@@ -52,6 +52,76 @@
             },
         },
     },
+    .animals = .{
+        .{ // cow
+            .speed = 10.0,
+            .wanderRadius = 32.0,
+            .sprite = .{
+                // .path = "farm-rpg/Farm Animals/Cow/Common Cow/Female Cow Black.png",
+                .imageId = 1920799980,
+                .rect = .{
+                    .min = .{ .x = 0, .y = 0 },
+                    .size = .{ .x = 32, .y = 32 },
+                },
+                .offset = .{ .x = -16, .y = -29 },
+                .size = .{ .x = 32, .y = 32 },
+            },
+            .rows = .{ 2, 3, 1, -1 },
+            .animations = .{
+                .{ // idle
+                    .type = .idle,
+                    .imageId = 1920799980,
+                    .frames = .{
+                        .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.2 },
+                    },
+                },
+                .{ // walk
+                    .type = .walk,
+                    .imageId = 1920799980,
+                    .frames = .{
+                        .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 32, .y = 0 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 64, .y = 0 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 96, .y = 0 }, .duration = 0.2 },
+                    },
+                },
+            },
+        },
+        .{ // sheep
+            .speed = 10.0,
+            .wanderRadius = 32.0,
+            .sprite = .{
+                // .path = "farm-rpg/Farm Animals/Sheep/Sheep Male 2.png",
+                .imageId = 3986680349,
+                .rect = .{
+                    .min = .{ .x = 0, .y = 0 },
+                    .size = .{ .x = 32, .y = 32 },
+                },
+                .offset = .{ .x = -16, .y = -29 },
+                .size = .{ .x = 32, .y = 32 },
+            },
+            .rows = .{ 2, 3, 1, -1 },
+            .animations = .{
+                .{ // idle
+                    .type = .idle,
+                    .imageId = 3986680349,
+                    .frames = .{
+                        .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.2 },
+                    },
+                },
+                .{ // walk
+                    .type = .walk,
+                    .imageId = 3986680349,
+                    .frames = .{
+                        .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 32, .y = 0 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 64, .y = 0 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 96, .y = 0 }, .duration = 0.2 },
+                    },
+                },
+            },
+        },
+    },
     .crop = .{
         .stages = .{
             // .path = "farm-rpg/Farm Crops/Spring Crops.png",

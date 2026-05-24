@@ -3,11 +3,13 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 const factory = @import("factory.zig");
+const prefab = @import("prefab.zig");
 pub const physics = @import("map/physics.zig");
 pub const land = @import("map/land.zig");
 
 const tiled = zhu.extend.tiled;
 const World = zhu.ecs.World;
+const actor = component.actor;
 pub const Id = component.map.Id;
 pub const StartOffset = component.map.StartOffset;
 const Trigger = component.map.Trigger;
@@ -143,11 +145,21 @@ fn triggerSpawnPosition(trigger: Trigger) zhu.Vector2 {
 }
 
 fn loadObject(world: *World, object: tiled.Object) void {
+    // animal 是没有 gid 的 Tiled 点对象，name 直接对应 AnimalKind。
+    if (object.point and object.isType("animal")) {
+        const kind = zhu.toEnum(actor.AnimalKind, object.name);
+        const entity = factory.spawnAnimal(world, kind);
+        // Tiled 点对象的位置就是动物脚底点，和玩家、YSort 使用同一套坐标。
+        world.add(entity, object.position);
+        world.getPtr(entity, actor.Wander).?.home = object.position;
+        return;
+    }
+
     if (object.isType("map_trigger")) {
         std.debug.assert(object.size.x > 0 and object.size.y > 0);
 
         const target = object.getProperty("target_map", []const u8).?;
-        const targetMap = std.meta.stringToEnum(Id, target).?;
+        const targetMap = zhu.toEnum(Id, target);
         const start = object.getProperty("start_offset", []const u8).?;
         const startOffset = std.meta.stringToEnum(StartOffset, start);
 

@@ -51,6 +51,8 @@ pub const map = struct {
 };
 
 pub const actor = struct {
+    pub const AnimalKind = enum { cow, sheep };
+
     pub const Action = enum {
         idle, // 待机
         walk, // 行走
@@ -65,11 +67,27 @@ pub const actor = struct {
     pub const Animation = zhu.graphics.Animation;
 
     pub const Player = struct {};
+    pub const Npc = struct {};
+    pub const Animal = struct { kind: AnimalKind };
     pub const Facing = enum { down, up, left, right };
     pub const Actor = struct {
         action: Action = .idle,
         facing: Facing = .down,
-        rows: [4]i8 = .{ 0, 1, -2, 2 },
+        rows: [4]i8 = .{ 1, 2, -3, 3 },
+    };
+
+    pub const Wander = struct {
+        home: zhu.Vector2 = .zero,
+        radius: f32 = 0,
+        speed: f32 = 0,
+        target: zhu.Vector2 = .zero,
+        waitTimer: f32 = 0,
+        moving: bool = false,
+        minWait: f32 = 0.6,
+        maxWait: f32 = 1.8,
+        lastDistance2: f32 = 0,
+        stuckTimer: f32 = 0,
+        stuckReset: f32 = 1.0,
     };
 };
 

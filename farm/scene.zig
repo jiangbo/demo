@@ -27,6 +27,7 @@ const system = struct {
     const target = @import("system/target.zig");
     const tool = @import("system/tool.zig");
     const transition = @import("system/transition.zig");
+    const wander = @import("system/wander.zig");
 };
 
 pub fn init(world: *World) void {
@@ -61,6 +62,7 @@ fn updateFarm(world: *World, delta: f32) void {
     if (context.map.takePending()) |request| changeMap(world, request);
 
     system.control.update(world);
+    system.wander.update(world, delta);
     system.movement.update(world, delta);
     system.transition.update(world);
     system.animation.update(world, delta);

@@ -48,6 +48,43 @@ pub fn spawnPlayer(world: *World, spawn: zhu.Vector2) void {
     world.add(player, ui.Target{});
 }
 
+pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {
+    const config = prefab.farm.animals[@intFromEnum(kind)];
+
+    const entity = world.createEntity();
+    world.add(entity, motion.Velocity{});
+    world.add(entity, motion.Collider{
+        .size = .xy(10, 6),
+        .offset = .xy(-5, -6),
+    });
+    world.add(entity, actor.Actor{ .rows = config.rows });
+
+    const animals = prefab.farm.animals;
+    const sources = switch (kind) {
+        .cow => comptime animationSources(animals[0].animations),
+        .sheep => comptime animationSources(animals[1].animations),
+    };
+    const animation = zhu.Animation.initSource(&sources);
+
+    world.add(entity, render.Sprite{
+        .image = animation.image,
+        .offset = config.sprite.offset,
+        .size = config.sprite.size,
+    });
+    world.add(entity, animation);
+    world.add(entity, render.Render{ .layer = .actor });
+    world.add(entity, render.YSort{});
+    world.add(entity, map.Scoped{});
+    world.add(entity, actor.Npc{});
+    world.add(entity, actor.Animal{ .kind = kind });
+    world.add(entity, actor.Wander{
+        .radius = config.wanderRadius,
+        .speed = config.speed,
+    });
+
+    return entity;
+}
+
 pub fn spawnMapProp(world: *World, object: Object, image: Image) Entity {
     const hasSize = object.size.x > 0 and object.size.y > 0;
     const size = if (hasSize) object.size else image.size;
@@ -146,6 +183,26 @@ test "spawnPlayer 会创建玩家实体" {
     try expectEqual(1, world.assure(render.YSort).dense.items.len);
 }
 
+test "spawnAnimal 会创建可漫游动物实体" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    putMockAnimalImages();
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = spawnAnimal(&world, .cow);
+    world.add(entity, component.Position.xy(12, 34));
+    world.getPtr(entity, actor.Wander).?.home = .xy(12, 34);
+
+    try expectEqual(12, world.get(entity, component.Position).?.x);
+    try expectEqual(actor.AnimalKind.cow, world.get(entity, actor.Animal).?.kind);
+    try expectEqual(1, world.assure(actor.Npc).dense.items.len);
+    try expectEqual(1, world.raw(actor.Wander).len);
+    try expectEqual(1, world.raw(motion.Velocity).len);
+    try expectEqual(1, world.raw(render.Sprite).len);
+}
+
 test "spawnCrop 创建作物实体并设置初始 next" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
@@ -226,5 +283,15 @@ fn putMockCropImages() void {
     };
     for (prefab.farm.crop.stages) |stage| {
         zhu.assets.putImage(stage.sprite.imageId, image);
+    }
+}
+
+fn putMockAnimalImages() void {
+    const image = zhu.graphics.Image{
+        .texture = .{ .id = 1 },
+        .size = .xy(128, 288),
+    };
+    for (prefab.farm.animals) |animalConfig| {
+        zhu.assets.putImage(animalConfig.sprite.imageId, image);
     }
 }

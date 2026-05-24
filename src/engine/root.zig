@@ -40,6 +40,13 @@ pub fn nextEnum(E: type, value: anytype) E {
     return @enumFromInt((@intFromEnum(value) + 1) % len);
 }
 
+pub fn toEnum(E: type, value: anytype) E {
+    const T = @TypeOf(value);
+    if (T == []const u8) return std.meta.stringToEnum(E, value).?;
+    if (@typeInfo(T) == .int) return @enumFromInt(value);
+    @compileError("unsupported enum value type: " ++ T);
+}
+
 pub fn enumArray(E: type, V: type, values: []V) std.EnumArray(E, V) {
     var array: std.EnumArray(E, V) = .initUndefined();
     for (values, 0..) |value, i| array.set(@enumFromInt(i), value);

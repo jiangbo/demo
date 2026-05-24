@@ -10,7 +10,7 @@
             .size = .{ .x = 32, .y = 32 },
             .offset = .{ .x = -16, .y = -24 },
         },
-        .rows = .{ 0, 1, -2, 2 },
+        .rows = .{ 1, 2, -3, 3 },
         .animations = .{
             .{ // 0: idle
                 .type = .idle,
