@@ -35,7 +35,7 @@ pub fn init() void {
     events.init();
     map.init();
     factory.init();
-    scene.init();
+    scene.init(&world);
 }
 
 pub fn event(ev: *const zhu.window.Event) void {

@@ -34,7 +34,7 @@ const slotWidth: f32 = zon.slotCount * (zon.slotSize + zon.spacing);
 const panelWidth: f32 = slotWidth - zon.spacing + zon.panelPadding * 2;
 const panelHeight: f32 = zon.panelPadding * 2 + zon.slotSize;
 
-pub fn init() void {
+pub fn enter() void {
     slotIndex = 0;
     add(.hoe, 1);
     add(.water, 1);

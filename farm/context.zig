@@ -50,6 +50,12 @@ pub const map = struct {
     };
 
     pub var pending: ?Transition = null;
+
+    pub fn takePending() ?Transition {
+        const request = pending;
+        pending = null;
+        return request;
+    }
 };
 
 const Config = struct {
@@ -109,8 +115,7 @@ test "地图切换请求会被 take 消费" {
         .targetId = 3,
     };
 
-    const transition = map.pending.?;
-    map.pending = null;
+    const transition = map.takePending().?;
     try std.testing.expectEqual(component.map.Id.town, transition.target);
     try std.testing.expectEqual(@as(i32, 3), transition.targetId);
     try std.testing.expectEqual(@as(?map.Transition, null), map.pending);

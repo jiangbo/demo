@@ -4,73 +4,70 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const context = @import("context.zig");
 const map = @import("map.zig");
-const factory = @import("factory.zig");
 const title = @import("title.zig");
 const toolbar = @import("toolbar.zig");
+
+const World = zhu.ecs.World;
+const actor = component.actor;
+const motion = component.motion;
+const ui = component.ui;
+const Position = component.Position;
 
 const system = struct {
     const animation = @import("system/animation.zig");
     const camera = @import("system/camera.zig");
     const control = @import("system/control.zig");
     const crop = @import("system/crop.zig");
-    const depth = @import("system/depth.zig");
     const movement = @import("system/movement.zig");
     const pickup = @import("system/pickup.zig");
     const render = @import("system/render.zig");
     const target = @import("system/target.zig");
     const tool = @import("system/tool.zig");
+    const transition = @import("system/transition.zig");
 };
 
-var farmLoaded: bool = false;
-
-pub fn init() void {
-    farmLoaded = false;
-    std.log.info("scene init current={s}", .{@tagName(context.currentScene)});
+pub fn init(world: *World) void {
+    std.log.info("scene init current={s}", .{@tagName(context.scene.current)});
+    if (context.scene.current == .farm) enterFarm(world);
 }
 
-pub fn deinit() void {
-    farmLoaded = false;
-}
+pub fn deinit() void {}
 
-pub fn update(world: *zhu.ecs.World, delta: f32) void {
-    if (context.paused) return;
+pub fn update(world: *World, delta: f32) void {
+    if (context.time.paused) return;
 
-    const scaled = delta * context.timeScale;
-    switch (context.currentScene) {
+    const scaled = delta * context.time.scale;
+    switch (context.scene.current) {
         .title => title.update(scaled),
         .farm => updateFarm(world, scaled),
     }
 
-    context.applyPendingScene();
+    const previous = context.scene.current;
+    context.scene.apply();
+    if (previous != .farm and context.scene.current == .farm) enterFarm(world);
 }
 
-pub fn draw(world: *zhu.ecs.World) void {
-    switch (context.currentScene) {
+pub fn draw(world: *World) void {
+    switch (context.scene.current) {
         .title => title.draw(),
         .farm => drawFarm(world),
     }
 }
 
-fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
-    if (!farmLoaded) {
-        factory.loadFarm(world);
-        map.loadObjects(world);
-        toolbar.init();
-        rebuildCells(world);
-        zhu.camera.bound = map.data.size();
-        farmLoaded = true;
-    }
+fn updateFarm(world: *World, delta: f32) void {
+    if (context.map.takePending()) |request| changeMap(world, request);
 
     system.control.update(world);
     system.movement.update(world, delta);
+    system.transition.update(world);
     system.animation.update(world, delta);
     system.crop.update(world, delta);
-    system.depth.update(world);
+    system.render.update(world);
     system.pickup.update(world);
 
-    if (context.uiWantCaptureMouse) {
-        const player = world.getIdentityEntity(component.Player).?;
-        world.getPtr(player, component.Target).?.active = false;
+    if (context.ui.wantCaptureMouse) {
+        const player = world.getIdentity(actor.Player).?;
+        world.getPtr(player, ui.Target).?.active = false;
         return;
     }
 
@@ -80,7 +77,12 @@ fn updateFarm(world: *zhu.ecs.World, delta: f32) void {
     toolbar.update();
 }
 
-fn drawFarm(world: *zhu.ecs.World) void {
+fn enterFarm(world: *World) void {
+    _ = map.enter(world, .school, null);
+    toolbar.enter();
+}
+
+fn drawFarm(world: *World) void {
     map.drawBack();
     system.render.draw(world);
     map.drawFront();
@@ -98,17 +100,19 @@ fn drawFarm(world: *zhu.ecs.World) void {
 
 fn drawSolids() void {
     const tileSize = map.data.tileSize;
-    for (map.solids, 0..) |solid, index| {
+    for (map.physics.tiles, 0..) |solid, index| {
         if (!solid) continue;
         const position = map.data.tileIndexToWorld(index);
         zhu.batch.debugDraw(.init(position, tileSize));
     }
+
+    for (map.physics.areas.items) |rect| zhu.batch.debugDraw(rect);
 }
 
 fn drawCollider(world: *zhu.ecs.World) void {
-    const player = world.getIdentityEntity(component.Player) orelse return;
-    const position = world.get(player, component.Position) orelse return;
-    const collider = world.get(player, component.Collider) orelse return;
+    const player = world.getIdentity(actor.Player).?;
+    const position = world.get(player, Position).?;
+    const collider = world.get(player, motion.Collider).?;
     const rect = zhu.Rect.init(
         position.add(collider.offset),
         collider.size,
@@ -116,13 +120,12 @@ fn drawCollider(world: *zhu.ecs.World) void {
     zhu.batch.drawRect(rect, .{ .color = .rgba(0, 1, 0, 0.4) });
 }
 
-fn rebuildCells(world: *zhu.ecs.World) void {
-    for (map.cells) |*cell| cell.crop = null;
+fn changeMap(world: *World, request: context.map.Transition) void {
+    map.exit(world);
+    const spawn = map.enter(world, request.target, request.targetId);
 
-    var query = world.query(.{ component.Position, component.Crop });
-    while (query.next()) |entity| {
-        const position = query.get(entity, component.Position);
-        const cell = map.getCell(position) orelse continue;
-        cell.crop = entity;
-    }
+    const player = world.getIdentity(actor.Player).?;
+    world.getPtr(player, Position).?.* = spawn;
+    world.getPtr(player, motion.Velocity).?.value = .zero;
+    world.getPtr(player, ui.Target).?.active = false;
 }
