@@ -16,14 +16,14 @@ pub fn update(world: *zhu.ecs.World) void {
     const target = world.get(player, Target).?;
     if (!target.active) return;
 
-    const cell = land.getCell(target.position) orelse return;
+    const tile = land.getTile(target.position) orelse return;
 
-    if (cell.crop) |entity| {
+    if (tile.crop) |entity| {
         const crop = world.get(entity, Crop) orelse return;
         if (crop.stage != .mature) return;
 
         world.destroyEntity(entity);
-        cell.crop = null;
+        tile.crop = null;
         const pickupEntity = factory.spawnPickup(world, .crop);
         world.add(pickupEntity, target.position);
         return;
@@ -42,8 +42,8 @@ pub fn update(world: *zhu.ecs.World) void {
 fn waterTarget(world: *zhu.ecs.World, position: zhu.Vector2) void {
     land.water(position);
 
-    const cell = land.getCell(position) orelse return;
-    if (cell.crop) |entity| {
+    const tile = land.getTile(position) orelse return;
+    if (tile.crop) |entity| {
         if (world.getPtr(entity, Crop)) |crop| {
             crop.watered = true;
         }
@@ -51,10 +51,10 @@ fn waterTarget(world: *zhu.ecs.World, position: zhu.Vector2) void {
 }
 
 fn plant(world: *zhu.ecs.World, position: zhu.Vector2) void {
-    const cell = land.getCell(position) orelse return;
-    if (cell.land == null or cell.crop != null) return;
+    const tile = land.getTile(position) orelse return;
+    if (tile.land == null or tile.crop != null) return;
 
     toolbar.active().?.count -= 1;
     const entity = factory.spawnCrop(world, position);
-    cell.crop = entity;
+    tile.crop = entity;
 }

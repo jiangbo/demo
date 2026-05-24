@@ -105,23 +105,4 @@
             },
         },
     },
-    .farmland = .{
-        // .path = "farm-rpg/Farm/Tileset/Modular/Tilled Soil and wet soil.png",
-        .dry = .{
-            .imageId = 3338481385,
-            .rect = .{
-                .min = .{ .x = 0, .y = 48 },
-                .size = .{ .x = 16, .y = 16 },
-            },
-            .size = .{ .x = 16, .y = 16 },
-        },
-        .wet = .{
-            .imageId = 3338481385,
-            .rect = .{
-                .min = .{ .x = 192, .y = 48 },
-                .size = .{ .x = 16, .y = 16 },
-            },
-            .size = .{ .x = 16, .y = 16 },
-        },
-    },
 }

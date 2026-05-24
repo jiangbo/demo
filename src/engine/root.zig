@@ -15,6 +15,7 @@ pub const extend = struct {
 };
 
 pub const Timer = math.Timer;
+pub const Image = graphics.Image;
 pub const Atlas = graphics.Atlas;
 pub const Vector2 = math.Vector2;
 pub const Rect = math.Rect;

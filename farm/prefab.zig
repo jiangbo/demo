@@ -32,7 +32,6 @@ pub const Farm = struct {
     crop: struct {
         stages: [4]struct { sprite: Sprite, duration: f32 },
     },
-    farmland: struct { dry: Sprite, wet: Sprite },
 };
 
 pub const actor: struct { player: Actor } = @import("zon/actor.zon");
@@ -54,13 +53,6 @@ test "玩家图片配置来自 actor.zon" {
     try std.testing.expectEqual(32, sprite.rect.size.y);
     try std.testing.expectEqual(-16, sprite.offset.x);
     try std.testing.expectEqual(-24, sprite.offset.y);
-}
-
-test "农田配置包含干湿两种贴图" {
-    try std.testing.expectEqual(0, farm.farmland.dry.rect.min.x);
-    try std.testing.expectEqual(192, farm.farmland.wet.rect.min.x);
-    try std.testing.expectEqual(48, farm.farmland.dry.rect.min.y);
-    try std.testing.expectEqual(48, farm.farmland.wet.rect.min.y);
 }
 
 test "作物配置包含四个阶段" {

@@ -247,7 +247,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
         },
     };
 
-    vertexBuffer.appendSliceAssumeCapacity(&.{Vertex{
+    vertexBuffer.appendAssumeCapacity(Vertex{
         .position = worldPos.sub(scaledSize.mul(option.anchor)),
         .radian = option.radian,
         .mask = option.mask,
@@ -255,7 +255,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
         .pivot = option.pivot,
         .texturePosition = image.toTexturePosition(),
         .color = option.color,
-    }});
+    });
 }
 
 pub fn addDrawCommand(texture: graphics.Texture) *Command {

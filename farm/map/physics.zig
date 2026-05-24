@@ -68,17 +68,19 @@ pub fn addSolidObject(object: tiled.Object) void {
     const topLeft = object.position.addY(-object.size.y);
 
     for (group.objects) |local| {
-        addSolidRect(zhu.Rect.init(
-            topLeft.add(local.position),
-            local.size,
-        ));
+        const position = topLeft.add(local.position);
+        addSolidRect(zhu.Rect.init(position, local.size));
     }
 }
 
+/// 检查碰撞框在指定位置是否与 solid 格子重叠
 pub fn isSolid(position: zhu.Vector2, collider: Collider) bool {
+    // 计算碰撞框在世界中的矩形
     const pos = position.add(collider.offset);
     const rect = zhu.Rect.init(pos, collider.size);
 
+    // 用半开矩形 [min, max) 计算覆盖到的 tile 范围。
+    // 右下边界回退一点，避免刚好贴边时多查相邻 tile。
     const tileMin = map.worldToTilePosition(rect.min);
     const max = rect.max().sub(.square(zhu.math.epsilon));
     const tileMax = map.worldToTilePosition(max);
@@ -101,15 +103,20 @@ test "isSolid 检测碰撞框是否与 solid 格子重叠" {
     reset(&testMaps[0]);
     defer deinit();
 
+    // 空地图不应碰撞
     const collider: Collider = .{
         .size = .xy(10, 6),
         .offset = .xy(-5, -6),
     };
     try std.testing.expect(!isSolid(.xy(24, 40), collider));
 
+    // 标记 tile (1,2) 为 solid（世界坐标 16~32, 32~48）
     tiles[map.worldToTileIndex(.xy(24, 40)).?] = true;
 
+    // 碰撞框与 solid 格子重叠时应返回 true
     try std.testing.expect(isSolid(.xy(24, 40), collider));
+
+    // 碰撞框不与 solid 格子重叠时应返回 false
     try std.testing.expect(!isSolid(.xy(80, 80), collider));
 }
 
@@ -119,14 +126,18 @@ test "isSolid 不会把贴边当成碰撞" {
     reset(&testMaps[0]);
     defer deinit();
 
+    // solid tile (2,2) 的世界范围是 32~48, 32~48
     tiles[map.worldToTileIndex(.xy(40, 40)).?] = true;
 
-    const collider: Collider = .{
-        .size = .xy(10, 6),
-    };
+    const collider: Collider = .{ .size = .xy(10, 6) };
 
+    // 右边界刚好贴到 solid 的左边界 x=32，不应算重叠
     try std.testing.expect(!isSolid(.xy(22, 36), collider));
+
+    // 下边界刚好贴到 solid 的上边界 y=32，不应算重叠
     try std.testing.expect(!isSolid(.xy(36, 26), collider));
+
+    // 真正进入 solid 1 像素后才应算碰撞
     try std.testing.expect(isSolid(.xy(23, 36), collider));
 }
 
@@ -136,9 +147,7 @@ test "isSolid 会把地图外当成阻挡" {
     reset(&testMaps[0]);
     defer deinit();
 
-    const collider: Collider = .{
-        .size = .xy(4, 4),
-    };
+    const collider: Collider = .{ .size = .xy(4, 4) };
 
     try std.testing.expect(isSolid(.xy(-1, 16), collider));
     try std.testing.expect(isSolid(.xy(16, -1), collider));
