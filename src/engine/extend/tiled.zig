@@ -218,6 +218,14 @@ pub const Object = struct {
         }
         return null;
     }
+
+    pub fn isNamed(self: Object, name: []const u8) bool {
+        return std.mem.eql(u8, self.name, name);
+    }
+
+    pub fn isType(self: Object, typeName: []const u8) bool {
+        return std.mem.eql(u8, self.type, typeName);
+    }
 };
 
 pub var backgroundColor: ?graphics.Color = null;
