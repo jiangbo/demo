@@ -10,6 +10,7 @@ const Position = component.Position;
 const Velocity = component.motion.Velocity;
 const Wander = component.actor.Wander;
 
+// 到达目标的距离阈值（平方），对应实际距离约 2.0
 const arriveDistance2: f32 = 4.0;
 
 pub fn update(world: *zhu.ecs.World, delta: f32) void {
@@ -20,37 +21,50 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
         const actor = query.getPtr(entity, Actor);
         const wander = query.getPtr(entity, Wander);
 
+        // 无效参数，直接停止
         if (wander.radius <= 0 or wander.speed <= 0) {
             stop(actor, velocity, wander);
             continue;
         }
 
+        // --- 等待阶段：倒计时未结束则原地不动 ---
         if (!wander.moving) {
             wander.waitTimer -= delta;
             velocity.value = .zero;
             actor.action = .idle;
             if (wander.waitTimer > 0) continue;
+            // 倒计时结束，随机选一个新目标
             chooseTarget(wander, position);
         }
 
+        // --- 移动阶段：计算到目标的方向和距离 ---
         const toTarget = wander.target.sub(position);
         const distance2 = toTarget.length2();
+
+        // 距离足够近，视为已到达
         if (distance2 <= arriveDistance2) {
             stop(actor, velocity, wander);
             wander.waitTimer = zhu.randomF32(wander.minWait, wander.maxWait);
             continue;
         }
 
+        // 设置速度方向和朝向
         const direction = toTarget.normalize();
         velocity.value = direction.scale(wander.speed);
         actor.action = Action.walk;
         actor.facing = facingFromDirection(direction);
 
+        // --- 卡住检测：如果距离没有明显缩短，说明被卡住了 ---
+        // 允许 1.0 的容差，避免浮点误差误判
         if (distance2 >= wander.lastDistance2 - 1.0) {
             wander.stuckTimer += delta;
+            // 卡住时间超过阈值，放弃当前目标，重新等待
             if (wander.stuckTimer >= wander.stuckReset) {
                 stop(actor, velocity, wander);
-                wander.waitTimer = zhu.randomF32(wander.minWait, wander.maxWait);
+                wander.waitTimer = zhu.randomF32(
+                    wander.minWait,
+                    wander.maxWait,
+                );
                 continue;
             }
         } else {
@@ -60,22 +74,27 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
     }
 }
 
+// 在 home 为圆心、wander.radius 为半径的圆内随机选一个点
 fn chooseTarget(wander: *Wander, position: zhu.Vector2) void {
     const angle = zhu.randomF32(0, std.math.pi * 2.0);
     const radius = zhu.randomF32(0, wander.radius);
     const direction = zhu.Vector2.xy(@cos(angle), @sin(angle));
+    // 目标 = 家 + 随机方向 * 随机距离
     wander.target = wander.home.add(direction.scale(radius));
     wander.moving = true;
     wander.stuckTimer = 0;
+    // 记录初始距离，后续用于卡住检测
     wander.lastDistance2 = wander.target.sub(position).length2();
 }
 
+// 停止移动，清零速度，切换为待机状态
 fn stop(actor: *Actor, velocity: *Velocity, wander: *Wander) void {
     velocity.value = .zero;
     actor.action = .idle;
     wander.moving = false;
 }
 
+// 根据移动方向决定朝向：取 x/y 分量绝对值较大的那个轴
 fn facingFromDirection(direction: zhu.Vector2) Facing {
     if (@abs(direction.x) > @abs(direction.y)) {
         return if (direction.x < 0) .left else .right;
