@@ -21,11 +21,11 @@ pub fn init() void {
     std.log.info("spawn init", .{});
 }
 
-pub fn loadFarm(world: *World) void {
+pub fn spawnPlayer(world: *World, spawn: zhu.Vector2) void {
     const config = prefab.actor.player;
 
     const player = world.createIdentity(actor.Player);
-    world.add(player, component.Position.xy(160, 96));
+    world.add(player, spawn);
     world.add(player, motion.Velocity{});
     world.add(player, motion.Collider{
         .size = .xy(10, 6),
@@ -127,7 +127,7 @@ fn animationSources(comptime animations: []const prefab.Animation) //
 }
 
 const expectEqual = std.testing.expectEqual;
-test "加载农场会创建初始实体" {
+test "spawnPlayer 会创建玩家实体" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
     putMockFarmImages();
@@ -135,7 +135,7 @@ test "加载农场会创建初始实体" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    loadFarm(&world);
+    spawnPlayer(&world, .xy(160, 96));
 
     const player = world.getIdentity(actor.Player).?;
     try expectEqual(160, world.get(player, component.Position).?.x);
