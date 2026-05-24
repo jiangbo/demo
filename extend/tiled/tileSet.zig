@@ -10,6 +10,7 @@ const TileSet = struct {
     columns: u32,
     tileCount: u32,
     image: u32,
+    tileSize: Vector2,
     tiles: []const Tile,
 };
 
@@ -129,6 +130,10 @@ fn parseTileSet(id: u32, value: tiled.Tileset) !TileSet {
         .columns = @intCast(value.columns),
         .tileCount = @intCast(value.tilecount),
         .image = imageId,
+        .tileSize = .{
+            .x = @floatFromInt(value.tilewidth),
+            .y = @floatFromInt(value.tileheight),
+        },
         .tiles = tiles,
     };
 }
