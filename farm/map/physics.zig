@@ -10,21 +10,21 @@ var map: *const tiled.Map = undefined;
 pub var tiles: []bool = &.{};
 pub var areas: std.ArrayList(zhu.Rect) = .empty;
 
-pub fn reset(data: *const tiled.Map) void {
-    clear();
+pub fn enter(data: *const tiled.Map) void {
+    exit();
     map = data;
     tiles = zhu.assets.oomAlloc(bool, map.width * map.height);
     @memset(tiles, false);
 }
 
-pub fn clear() void {
+pub fn exit() void {
     if (tiles.len > 0) zhu.assets.free(tiles);
     tiles = &.{};
     areas.clearRetainingCapacity();
 }
 
 pub fn deinit() void {
-    clear();
+    exit();
     areas.clearAndFree(zhu.assets.allocator);
 }
 
@@ -100,7 +100,7 @@ pub fn isSolid(position: zhu.Vector2, collider: Collider) bool {
 test "isSolid 检测碰撞框是否与 solid 格子重叠" {
     zhu.assets.allocator = std.testing.allocator;
     const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
-    reset(&testMaps[0]);
+    enter(&testMaps[0]);
     defer deinit();
 
     // 空地图不应碰撞
@@ -123,7 +123,7 @@ test "isSolid 检测碰撞框是否与 solid 格子重叠" {
 test "isSolid 不会把贴边当成碰撞" {
     zhu.assets.allocator = std.testing.allocator;
     const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
-    reset(&testMaps[0]);
+    enter(&testMaps[0]);
     defer deinit();
 
     // solid tile (2,2) 的世界范围是 32~48, 32~48
@@ -144,7 +144,7 @@ test "isSolid 不会把贴边当成碰撞" {
 test "isSolid 会把地图外当成阻挡" {
     zhu.assets.allocator = std.testing.allocator;
     const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
-    reset(&testMaps[0]);
+    enter(&testMaps[0]);
     defer deinit();
 
     const collider: Collider = .{ .size = .xy(4, 4) };
@@ -157,7 +157,7 @@ test "isSolid 会把地图外当成阻挡" {
 test "对象 collider 使用精确矩形保留桌子间通道" {
     zhu.assets.allocator = std.testing.allocator;
     const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
-    reset(&testMaps[0]);
+    enter(&testMaps[0]);
     defer deinit();
 
     addSolidRect(.init(.xy(83.083336, 106.208336), .xy(26.5, 28.25)));
@@ -175,7 +175,7 @@ test "对象 collider 使用精确矩形保留桌子间通道" {
 test "markSolidRect 会标记矩形覆盖到的格子" {
     zhu.assets.allocator = std.testing.allocator;
     const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
-    reset(&testMaps[0]);
+    enter(&testMaps[0]);
     defer deinit();
 
     markSolidRect(.init(.xy(32, 32), .xy(16, 16)));

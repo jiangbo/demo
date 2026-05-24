@@ -48,8 +48,8 @@ test "移动系统会按速度更新位置" {
 
 test "有 Collider 的实体会被 solid 格子阻挡" {
     zhu.assets.allocator = std.testing.allocator;
-    map.physics.reset(map.data);
-    defer map.physics.clear();
+    map.physics.enter(map.data);
+    defer map.physics.exit();
 
     // 标记 tile (2,2) 为 solid（世界坐标 32~48, 32~48）
     map.physics.markSolidTile(.xy(40, 40));
@@ -73,8 +73,8 @@ test "有 Collider 的实体会被 solid 格子阻挡" {
 
 test "有 Collider 的实体会被 solid 格子垂直阻挡" {
     zhu.assets.allocator = std.testing.allocator;
-    map.physics.reset(map.data);
-    defer physics.clear();
+    map.physics.enter(map.data);
+    defer physics.exit();
 
     // 标记 tile (2,2) 为 solid（世界坐标 32~48, 32~48）
     physics.markSolidTile(.xy(40, 40));
@@ -95,8 +95,8 @@ test "有 Collider 的实体会被 solid 格子垂直阻挡" {
 
 test "斜向撞墙时未碰撞轴仍会滑动" {
     zhu.assets.allocator = std.testing.allocator;
-    map.physics.reset(map.data);
-    defer physics.clear();
+    map.physics.enter(map.data);
+    defer physics.exit();
 
     // 标记 tile (2,2) 为 solid（世界坐标 32~48, 32~48）
     physics.markSolidTile(.xy(40, 40));

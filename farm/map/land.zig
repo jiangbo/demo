@@ -21,8 +21,8 @@ pub fn init() void {
     wetImage = image.sub(.init(.xy(192, 48), .xy(16, 16)));
 }
 
-pub fn reset(mapData: *const tiled.Map) void {
-    clear();
+pub fn enter(mapData: *const tiled.Map) void {
+    exit();
 
     map = mapData;
     const count = map.width * map.height;
@@ -30,13 +30,13 @@ pub fn reset(mapData: *const tiled.Map) void {
     @memset(tiles, .{});
 }
 
-pub fn clear() void {
+pub fn exit() void {
     if (tiles.len > 0) zhu.assets.free(tiles);
     tiles = &.{};
 }
 
 pub fn deinit() void {
-    clear();
+    exit();
 }
 
 pub fn getTile(position: zhu.Vector2) ?*Tile {
@@ -83,8 +83,8 @@ fn appendVertex(position: zhu.Vector2, image: zhu.Image) void {
 test "锄地会记录目标格" {
     zhu.assets.allocator = std.testing.allocator;
     const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
-    reset(&testMaps[0]);
-    defer clear();
+    enter(&testMaps[0]);
+    defer exit();
 
     hoe(.xy(32, 48));
 
@@ -94,8 +94,8 @@ test "锄地会记录目标格" {
 test "浇水只会影响已有耕地" {
     zhu.assets.allocator = std.testing.allocator;
     const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
-    reset(&testMaps[0]);
-    defer clear();
+    enter(&testMaps[0]);
+    defer exit();
 
     water(.xy(32, 48));
     try std.testing.expectEqual(null, getTile(.xy(32, 48)).?.land);
@@ -108,8 +108,8 @@ test "浇水只会影响已有耕地" {
 test "目标格有作物时不会锄地" {
     zhu.assets.allocator = std.testing.allocator;
     const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
-    reset(&testMaps[0]);
-    defer clear();
+    enter(&testMaps[0]);
+    defer exit();
 
     getTile(.xy(32, 48)).?.crop = 1;
 
