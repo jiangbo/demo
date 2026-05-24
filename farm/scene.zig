@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 const context = @import("context.zig");
+const factory = @import("factory.zig");
 const map = @import("map.zig");
 const title = @import("title.zig");
 const toolbar = @import("toolbar.zig");
@@ -12,6 +13,8 @@ const actor = component.actor;
 const motion = component.motion;
 const ui = component.ui;
 const Position = component.Position;
+
+const initialTargetId: i32 = -1;
 
 const system = struct {
     const animation = @import("system/animation.zig");
@@ -78,7 +81,8 @@ fn updateFarm(world: *World, delta: f32) void {
 }
 
 fn enterFarm(world: *World) void {
-    _ = map.enter(world, .school, null);
+    const spawn = map.enter(world, .school, initialTargetId);
+    factory.spawnPlayer(world, spawn);
     toolbar.enter();
 }
 
