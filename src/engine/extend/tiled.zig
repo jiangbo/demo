@@ -96,12 +96,6 @@ pub const Map = struct {
         const area = Rect.init(position, tileSet.tileSize);
         return assets.getImage(tileSet.image).?.sub(area);
     }
-
-    pub fn tileArea(self: Map, index: u32, columns: u32) Rect {
-        const x: f32 = @floatFromInt(index % columns);
-        const y: f32 = @floatFromInt(index / columns);
-        return .init(self.tileSize.mul(.xy(x, y)), self.tileSize);
-    }
 };
 pub const TileSetRef = struct { id: u32, firstGid: u32, max: u32 };
 
