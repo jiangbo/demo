@@ -4,6 +4,7 @@
         .columns = 24,
         .tileCount = 480,
         .image = 1019784215,
+        .tileSize = .{ .x = 16, .y = 16 },
         .tiles = .{
             .{
                 .id = 0,
@@ -748,6 +749,7 @@
         .columns = 6,
         .tileCount = 60,
         .image = 2681834420,
+        .tileSize = .{ .x = 16, .y = 16 },
         .tiles = .{
             .{
                 .id = 0,
@@ -852,6 +854,7 @@
         .columns = 24,
         .tileCount = 192,
         .image = 3338481385,
+        .tileSize = .{ .x = 16, .y = 16 },
         .tiles = .{},
     },
     .{
@@ -859,6 +862,7 @@
         .columns = 22,
         .tileCount = 264,
         .image = 2910937375,
+        .tileSize = .{ .x = 16, .y = 16 },
         .tiles = .{},
     },
     .{
@@ -866,6 +870,7 @@
         .columns = 9,
         .tileCount = 108,
         .image = 1639636028,
+        .tileSize = .{ .x = 16, .y = 16 },
         .tiles = .{
             .{
                 .id = 0,
@@ -1150,6 +1155,7 @@
         .columns = 48,
         .tileCount = 768,
         .image = 2497534328,
+        .tileSize = .{ .x = 16, .y = 16 },
         .tiles = .{
             .{
                 .id = 0,
@@ -2182,6 +2188,7 @@
         .columns = 8,
         .tileCount = 24,
         .image = 2670844398,
+        .tileSize = .{ .x = 16, .y = 16 },
         .tiles = .{
             .{
                 .id = 0,
@@ -2270,6 +2277,7 @@
         .columns = 24,
         .tileCount = 960,
         .image = 3500083545,
+        .tileSize = .{ .x = 16, .y = 16 },
         .tiles = .{
             .{
                 .id = 192,
@@ -3142,6 +3150,7 @@
         .columns = 4,
         .tileCount = 8,
         .image = 4080084179,
+        .tileSize = .{ .x = 48, .y = 64 },
         .tiles = .{ .{
             .id = 0,
             .objectGroup = .{ .visible = true, .objects = .{.{
@@ -3199,6 +3208,7 @@
         .columns = 10,
         .tileCount = 80,
         .image = 2117267560,
+        .tileSize = .{ .x = 16, .y = 16 },
         .tiles = .{},
     },
     .{
@@ -3206,6 +3216,7 @@
         .columns = 0,
         .tileCount = 1,
         .image = 0,
+        .tileSize = .{ .x = 32, .y = 48 },
         .tiles = .{.{
             .id = 3632935980,
             .objectGroup = .{ .visible = true, .objects = .{.{
@@ -3233,6 +3244,7 @@
         .columns = 12,
         .tileCount = 108,
         .image = 2393912069,
+        .tileSize = .{ .x = 16, .y = 16 },
         .tiles = .{},
     },
     .{
@@ -3240,6 +3252,7 @@
         .columns = 1,
         .tileCount = 2,
         .image = 2635476912,
+        .tileSize = .{ .x = 16, .y = 16 },
         .tiles = .{ .{
             .id = 0,
             .objectGroup = .{ .visible = true, .objects = .{.{
@@ -3276,6 +3289,7 @@
         .columns = 52,
         .tileCount = 1248,
         .image = 2185395808,
+        .tileSize = .{ .x = 16, .y = 16 },
         .tiles = .{},
     },
     .{
@@ -3283,6 +3297,7 @@
         .columns = 0,
         .tileCount = 3,
         .image = 0,
+        .tileSize = .{ .x = 128, .y = 116 },
         .tiles = .{
             .{
                 .id = 2150676121,
@@ -3354,6 +3369,7 @@
         .columns = 4,
         .tileCount = 12,
         .image = 3632935980,
+        .tileSize = .{ .x = 32, .y = 48 },
         .tiles = .{
             .{
                 .id = 0,

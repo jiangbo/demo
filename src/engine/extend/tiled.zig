@@ -90,7 +90,10 @@ pub const Map = struct {
             return assets.getImage(tile.id).?;
         }
 
-        const area = self.tileArea(localId, tileSet.columns);
+        const x: f32 = @floatFromInt(localId % tileSet.columns);
+        const y: f32 = @floatFromInt(localId / tileSet.columns);
+        const position = tileSet.tileSize.mul(.xy(x, y));
+        const area = Rect.init(position, tileSet.tileSize);
         return assets.getImage(tileSet.image).?.sub(area);
     }
 
@@ -172,6 +175,7 @@ pub const TileSet = struct {
     columns: u32,
     tileCount: i32,
     image: u32,
+    tileSize: graphics.Vector2,
     tiles: []const Tile,
 
     pub fn tileByLocalId(self: TileSet, id: u32) ?*const Tile {
