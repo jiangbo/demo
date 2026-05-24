@@ -25,8 +25,7 @@ pub fn enter(mapData: *const tiled.Map) void {
     exit();
 
     map = mapData;
-    const count = map.width * map.height;
-    tiles = zhu.assets.oomAlloc(Tile, count);
+    tiles = zhu.assets.oomAlloc(Tile, map.width * map.height);
     @memset(tiles, .{});
 }
 
