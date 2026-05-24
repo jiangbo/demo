@@ -1,214 +1,172 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const prefab = @import("prefab.zig");
 const component = @import("component.zig");
 const factory = @import("factory.zig");
-const Position = component.Position;
-const Collider = component.Collider;
+pub const physics = @import("map/physics.zig");
+pub const land = @import("map/land.zig");
 
 const tiled = zhu.extend.tiled;
+const World = zhu.ecs.World;
+pub const Id = component.map.Id;
+pub const StartOffset = component.map.StartOffset;
+const Trigger = component.map.Trigger;
 
 pub const maps = [_]tiled.Map{
     @import("zon/school.zon"),
     @import("zon/town.zon"),
 };
 
+const triggerOffset = 8;
+
+pub var current: Id = .school;
 pub var data: *const tiled.Map = &maps[0];
 var vertexes: std.ArrayList(zhu.batch.Vertex) = .empty;
 var frontLayerStart: usize = 0;
-var staticLayerEnd: usize = 0;
-pub var cells: []Cell = &.{};
-pub var solids: []bool = &.{};
-var dryImage: zhu.graphics.Image = undefined;
-var wetImage: zhu.graphics.Image = undefined;
 var mapTexture: zhu.graphics.Texture = undefined;
 
-pub const Land = enum { dry, wet };
-
-pub const Cell = struct {
-    land: ?Land = null,
-    crop: ?zhu.ecs.Entity = null,
-};
-
 pub fn init() void {
-    std.log.info("map init", .{});
     tiled.init(@import("zon/tile.zon"));
-    vertexes.clearRetainingCapacity();
-    frontLayerStart = 0;
-    staticLayerEnd = 0;
     mapTexture = zhu.getImage("circle.png").?.texture;
+    land.init();
+}
 
-    const count = data.width * data.height;
-    cells = zhu.assets.oomAlloc(Cell, count);
-    solids = zhu.assets.oomAlloc(bool, count);
-    @memset(cells, .{});
-    @memset(solids, false);
+pub fn deinit() void {
+    physics.deinit();
+    land.deinit();
+    vertexes.clearAndFree(zhu.assets.allocator);
+}
 
-    dryImage = prefab.resolveImage(prefab.farm.farmland.dry);
-    wetImage = prefab.resolveImage(prefab.farm.farmland.wet);
+pub fn enter(world: *World, id: Id, targetId: i32) zhu.Vector2 {
+    current = id;
+    data = &maps[@intFromEnum(id)];
+    zhu.camera.bound = data.size();
 
+    land.enter(data);
+    physics.enter(data);
+
+    parseLayers(world);
+
+    var spawn: ?zhu.Vector2 = null;
+    var query = world.query(.{Trigger});
+    while (query.next()) |entity| {
+        const trigger = query.get(entity, Trigger);
+        if (trigger.selfId == targetId) {
+            spawn = triggerSpawnPosition(trigger);
+            break;
+        }
+    }
+
+    for (land.tiles) |*tile| tile.crop = null;
+
+    var crops = world.query(.{ component.Position, component.farm.Crop });
+    while (crops.next()) |entity| {
+        const position = crops.get(entity, component.Position);
+        const tile = land.getTile(position) orelse continue;
+        tile.crop = entity;
+    }
+
+    return spawn orelse zhu.Vector2.xy(100, 100);
+}
+
+fn parseLayers(world: *World) void {
     var foundFrontLayer = false;
     for (data.layers) |*layer| {
         std.log.info("parsing layer: {s}", .{layer.name});
         switch (layer.type) {
-            .tile => {
-                if (std.mem.eql(u8, layer.name, "solid"))
-                    parseSolidLayer(layer)
-                else
-                    parseTileLayer(layer);
-            },
+            .tile => if (layer.isNamed("solid")) {
+                physics.parseSolidLayer(layer);
+            } else parseTileLayer(layer),
             .image => parseImageLayer(layer),
             .object => {
-                if (!foundFrontLayer and std.mem.eql(u8, layer.name, "main")) {
+                if (!foundFrontLayer and layer.isNamed("main")) {
                     frontLayerStart = vertexes.items.len;
                     foundFrontLayer = true;
                 }
+                loadObjects(world, layer);
             },
         }
     }
 
-    staticLayerEnd = vertexes.items.len;
-    if (!foundFrontLayer) frontLayerStart = staticLayerEnd;
+    if (!foundFrontLayer) frontLayerStart = vertexes.items.len;
 
     std.log.info("map loaded: {}x{}, tiles: {}", //
         .{ data.width, data.height, vertexes.items.len });
 }
 
-pub fn deinit() void {
-    zhu.assets.free(cells);
-    zhu.assets.free(solids);
-    vertexes.clearAndFree(zhu.assets.allocator);
+pub fn exit(world: *World) void {
+    world.destroyEntities(component.map.Scoped);
+    land.exit();
+    physics.exit();
+    frontLayerStart = 0;
+    vertexes.clearRetainingCapacity();
 }
 
 pub fn drawBack() void {
-    if (vertexes.items.len == 0) return;
+    if (vertexes.items.len != 0) {
+        _ = zhu.batch.addDrawCommand(mapTexture);
+        const back = vertexes.items[0..frontLayerStart];
+        zhu.batch.vertexBuffer.appendSliceAssumeCapacity(back);
+    }
 
-    _ = zhu.batch.addDrawCommand(mapTexture);
-    const back = vertexes.items[0..frontLayerStart];
-    zhu.batch.vertexBuffer.appendSliceAssumeCapacity(back);
-    const land = vertexes.items[staticLayerEnd..];
-    zhu.batch.vertexBuffer.appendSliceAssumeCapacity(land);
+    land.draw();
 }
 
 pub fn drawFront() void {
-    if (frontLayerStart == staticLayerEnd) return;
-    const front = vertexes.items[frontLayerStart..staticLayerEnd];
+    if (frontLayerStart == vertexes.items.len) return;
+    const front = vertexes.items[frontLayerStart..];
     zhu.batch.vertexBuffer.appendSliceAssumeCapacity(front);
 }
 
-pub fn loadObjects(world: *zhu.ecs.World) void {
-    for (data.layers) |layer| {
-        if (layer.type != .object) continue;
-
-        if (std.mem.eql(u8, layer.name, "collider")) {
-            for (layer.objects) |object| {
-                markSolidRect(.init(object.position, object.size));
-            }
-        } else {
-            for (layer.objects) |object| loadObject(world, object);
+pub fn loadObjects(world: *World, layer: *const tiled.Layer) void {
+    if (layer.isNamed("collider")) {
+        for (layer.objects) |object| {
+            physics.addSolidRect(.init(object.position, object.size));
         }
+        return;
+    }
+
+    for (layer.objects) |object| {
+        loadObject(world, object);
     }
 }
 
-fn loadObject(world: *zhu.ecs.World, object: tiled.Object) void {
+fn triggerSpawnPosition(trigger: Trigger) zhu.Vector2 {
+    const center = trigger.rect.center();
+    return switch (trigger.startOffset) {
+        .left => .xy(trigger.rect.min.x - triggerOffset, center.y),
+        .right => .xy(trigger.rect.max().x + triggerOffset, center.y),
+        .top => .xy(center.x, trigger.rect.min.y - triggerOffset),
+        .bottom => .xy(center.x, trigger.rect.max().y + triggerOffset),
+        .none => center,
+    };
+}
+
+fn loadObject(world: *World, object: tiled.Object) void {
+    if (object.isType("map_trigger")) {
+        std.debug.assert(object.size.x > 0 and object.size.y > 0);
+
+        const target = object.getProperty("target_map", []const u8).?;
+        const targetMap = std.meta.stringToEnum(Id, target).?;
+        const start = object.getProperty("start_offset", []const u8).?;
+        const startOffset = std.meta.stringToEnum(StartOffset, start);
+
+        const trigger: Trigger = .{
+            .rect = .init(object.position, object.size),
+            .selfId = object.getProperty("self_id", i32).?,
+            .targetId = object.getProperty("target_id", i32).?,
+            .targetMap = targetMap,
+            .startOffset = startOffset orelse .none,
+        };
+        _ = factory.spawnMapTrigger(world, trigger);
+        return;
+    }
+
     if (object.gid == 0) return;
 
     const image = data.imageByGid(object.gid);
-    factory.spawnMapObject(world, object, image);
-    markTileColliders(object, image);
-}
-
-pub fn hoe(position: zhu.Vector2) void {
-    const cell = getCell(position) orelse return;
-    if (cell.land != null or cell.crop != null) return;
-
-    cell.land = .dry;
-    rebuildLandVertexes();
-}
-
-pub fn water(position: zhu.Vector2) void {
-    const cell = getCell(position) orelse return;
-    if (cell.land == null) return;
-    cell.land = .wet;
-    rebuildLandVertexes();
-}
-
-pub fn getCell(position: zhu.Vector2) ?*Cell {
-    std.debug.assert(cells.len != 0);
-    const tile = data.worldToTilePosition(position);
-    if (tile.x < 0 or tile.y < 0) return null;
-
-    const width: i32 = @intCast(data.width);
-    const height: i32 = @intCast(data.height);
-    if (tile.x >= width or tile.y >= height) return null;
-
-    return &cells[@as(usize, @intCast(tile.y * width + tile.x))];
-}
-
-/// 检查碰撞框在指定位置是否与 solid 格子重叠
-pub fn isSolid(position: zhu.Vector2, collider: Collider) bool {
-    // 计算碰撞框在世界中的矩形
-    const pos = position.add(collider.offset);
-    const rect = zhu.Rect.init(pos, collider.size);
-
-    // 用半开矩形 [min, max) 计算覆盖到的 tile 范围。
-    // 右下边界回退一点，避免刚好贴边时多查相邻 tile。
-    const tileMin = data.worldToTilePosition(rect.min);
-    const max = rect.max().sub(.square(zhu.math.epsilon));
-    const tileMax = data.worldToTilePosition(max);
-    var y = tileMin.y;
-    while (y <= tileMax.y) : (y += 1) {
-        var x = tileMin.x;
-        while (x <= tileMax.x) : (x += 1) {
-            const index = data.tilePositionToIndex(.xy(x, y));
-            if (solids[index orelse return true]) return true;
-        }
-    }
-    return false;
-}
-
-fn parseSolidLayer(layer: *const tiled.Layer) void {
-    for (layer.data, 0..) |gid, index| {
-        if (gid != 0) solids[index] = true;
-    }
-}
-
-pub fn markSolidRect(rect: zhu.Rect) void {
-    if (rect.size.x <= 0 or rect.size.y <= 0) return;
-
-    const tileMin = data.worldToTilePosition(rect.min);
-    const max = rect.max().sub(.square(zhu.math.epsilon));
-    const tileMax = data.worldToTilePosition(max);
-
-    var y = tileMin.y;
-    while (y <= tileMax.y) : (y += 1) {
-        var x = tileMin.x;
-        while (x <= tileMax.x) : (x += 1) {
-            const index = data.tilePositionToIndex(.xy(x, y));
-            solids[index orelse continue] = true;
-        }
-    }
-}
-
-fn markTileColliders(object: tiled.Object, image: zhu.graphics.Image) void {
-    const tile = data.tileByGid(object.gid) orelse return;
-    const group = tile.objectGroup orelse return;
-
-    const size = if (object.size.x > 0 and object.size.y > 0)
-        object.size
-    else
-        image.size;
-    const scale = size.div(image.size);
-    const topLeft = object.position.addY(-size.y);
-
-    for (group.objects) |local| {
-        const rect = zhu.Rect.init(
-            topLeft.add(local.position.mul(scale)),
-            local.size.mul(scale),
-        );
-        markSolidRect(rect);
-    }
+    _ = factory.spawnMapProp(world, object, image);
+    physics.addSolidObject(object);
 }
 
 /// 将 tile 层的每个瓦片转为预构建顶点
@@ -237,81 +195,6 @@ fn appendVertex(position: zhu.Vector2, image: zhu.graphics.Image) void {
         .size = image.size,
         .texturePosition = image.toTexturePosition(),
     }) catch @panic("map oom");
-}
-
-fn rebuildLandVertexes() void {
-    vertexes.shrinkRetainingCapacity(staticLayerEnd);
-
-    for (cells, 0..) |cell, index| {
-        const land = cell.land orelse continue;
-        const position = data.tileIndexToWorld(index);
-        appendVertex(position, dryImage);
-        if (land == .wet) appendVertex(position, wetImage);
-    }
-}
-
-test "isSolid 检测碰撞框是否与 solid 格子重叠" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    solids = zhu.assets.oomAlloc(bool, data.width * data.height);
-    defer zhu.assets.free(solids);
-    @memset(solids, false);
-
-    // 空地图不应碰撞
-    const collider: component.Collider = .{
-        .size = .xy(10, 6),
-        .offset = .xy(-5, -6),
-    };
-    try std.testing.expect(!isSolid(.xy(24, 40), collider));
-
-    // 标记 tile (1,2) 为 solid（世界坐标 16~32, 32~48）
-    solids[data.worldToTileIndex(.xy(24, 40)).?] = true;
-
-    // 碰撞框与 solid 格子重叠时应返回 true
-    try std.testing.expect(isSolid(.xy(24, 40), collider));
-
-    // 碰撞框不与 solid 格子重叠时应返回 false
-    try std.testing.expect(!isSolid(.xy(80, 80), collider));
-}
-
-test "isSolid 不会把贴边当成碰撞" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    solids = zhu.assets.oomAlloc(bool, data.width * data.height);
-    defer zhu.assets.free(solids);
-    @memset(solids, false);
-
-    // solid tile (2,2) 的世界范围是 32~48, 32~48
-    solids[data.worldToTileIndex(.xy(40, 40)).?] = true;
-
-    const collider: component.Collider = .{
-        .size = .xy(10, 6),
-    };
-
-    // 右边界刚好贴到 solid 的左边界 x=32，不应算重叠
-    try std.testing.expect(!isSolid(.xy(22, 36), collider));
-
-    // 下边界刚好贴到 solid 的上边界 y=32，不应算重叠
-    try std.testing.expect(!isSolid(.xy(36, 26), collider));
-
-    // 真正进入 solid 1 像素后才应算碰撞
-    try std.testing.expect(isSolid(.xy(23, 36), collider));
-}
-
-test "isSolid 会把地图外当成阻挡" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    solids = zhu.assets.oomAlloc(bool, data.width * data.height);
-    defer zhu.assets.free(solids);
-    @memset(solids, false);
-
-    const collider: component.Collider = .{
-        .size = .xy(4, 4),
-    };
-
-    try std.testing.expect(isSolid(.xy(-1, 16), collider));
-    try std.testing.expect(isSolid(.xy(16, -1), collider));
-    try std.testing.expect(isSolid(data.size().sub(.xy(3, 3)), collider));
 }
 
 test "gid 图片解析支持单图和集合图块集" {
@@ -355,88 +238,6 @@ test "gid 图片解析支持单图和集合图块集" {
     try std.testing.expectEqual(@as(u32, 1), data.imageByGid(collectionGid).texture.id);
 }
 
-test "markSolidRect 会标记矩形覆盖到的格子" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-
-    solids = zhu.assets.oomAlloc(bool, data.width * data.height);
-    defer zhu.assets.free(solids);
-    @memset(solids, false);
-
-    markSolidRect(.init(.xy(32, 32), .xy(16, 16)));
-
-    try std.testing.expect(solids[data.worldToTileIndex(.xy(40, 40)).?]);
-    try std.testing.expect(!solids[data.worldToTileIndex(.xy(24, 40)).?]);
-}
-
-test "锄地会记录目标格" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    cells = zhu.assets.oomAlloc(Cell, data.width * data.height);
-    defer zhu.assets.free(cells);
-    @memset(cells, .{});
-    putMockLandImages();
-    defer vertexes.clearAndFree(std.testing.allocator);
-
-    hoe(.xy(32, 48));
-
-    try std.testing.expectEqual(Land.dry, getCell(.xy(32, 48)).?.land);
-}
-
-test "浇水只会影响已有耕地" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    cells = zhu.assets.oomAlloc(Cell, data.width * data.height);
-    defer zhu.assets.free(cells);
-    @memset(cells, .{});
-    putMockLandImages();
-    defer vertexes.clearAndFree(std.testing.allocator);
-
-    water(.xy(32, 48));
-    try std.testing.expectEqual(null, getCell(.xy(32, 48)).?.land);
-
-    hoe(.xy(32, 48));
-    water(.xy(32, 48));
-    try std.testing.expectEqual(Land.wet, getCell(.xy(32, 48)).?.land);
-}
-
-test "目标格有作物时不会锄地" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    cells = zhu.assets.oomAlloc(Cell, data.width * data.height);
-    defer zhu.assets.free(cells);
-    @memset(cells, .{});
-    putMockLandImages();
-    defer vertexes.clearAndFree(std.testing.allocator);
-
-    getCell(.xy(32, 48)).?.crop = 1;
-
-    hoe(.xy(32, 48));
-    try std.testing.expectEqual(null, getCell(.xy(32, 48)).?.land);
-}
-
-test "土地绘制会追加干湿图块" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    cells = zhu.assets.oomAlloc(Cell, data.width * data.height);
-    defer zhu.assets.free(cells);
-    putMockLandImages();
-    defer vertexes.clearAndFree(std.testing.allocator);
-    @memset(cells, .{});
-
-    var vertices: [8]zhu.batch.Vertex = undefined;
-    var commands: [16]zhu.batch.Command = undefined;
-    zhu.batch.vertexBuffer = .initBuffer(&vertices);
-    zhu.batch.commandBuffer = .initBuffer(&commands);
-    zhu.batch.commandBuffer.appendAssumeCapacity(.{});
-
-    hoe(.xy(32, 48));
-    water(.xy(32, 48));
-    drawBack();
-
-    try std.testing.expectEqual(2, zhu.batch.vertexBuffer.items.len);
-}
-
 test "地图绘制会把前景留到实体之后" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
@@ -444,7 +245,6 @@ test "地图绘制会把前景留到实体之后" {
 
     vertexes.clearRetainingCapacity();
     frontLayerStart = 0;
-    staticLayerEnd = 0;
 
     const image = zhu.graphics.Image{
         .texture = .{ .id = 1 },
@@ -455,8 +255,6 @@ test "地图绘制会把前景留到实体之后" {
     appendVertex(.xy(1, 0), image); // back
     frontLayerStart = vertexes.items.len;
     appendVertex(.xy(2, 0), image); // front
-    staticLayerEnd = vertexes.items.len;
-    appendVertex(.xy(3, 0), image); // dynamic land
 
     var vertices: [8]zhu.batch.Vertex = undefined;
     var commands: [4]zhu.batch.Command = undefined;
@@ -465,25 +263,95 @@ test "地图绘制会把前景留到实体之后" {
 
     drawBack();
 
-    try std.testing.expectEqual(@as(usize, 2), zhu.batch.vertexBuffer.items.len);
+    try std.testing.expectEqual(@as(usize, 1), zhu.batch.vertexBuffer.items.len);
     try std.testing.expectEqual(@as(f32, 1), zhu.batch.vertexBuffer.items[0].position.x);
-    try std.testing.expectEqual(@as(f32, 3), zhu.batch.vertexBuffer.items[1].position.x);
 
     drawFront();
 
-    try std.testing.expectEqual(@as(usize, 3), zhu.batch.vertexBuffer.items.len);
-    try std.testing.expectEqual(@as(f32, 2), zhu.batch.vertexBuffer.items[2].position.x);
+    try std.testing.expectEqual(@as(usize, 2), zhu.batch.vertexBuffer.items.len);
+    try std.testing.expectEqual(@as(f32, 2), zhu.batch.vertexBuffer.items[1].position.x);
 }
 
-fn putMockLandImages() void {
-    const image = zhu.graphics.Image{
-        .texture = .{ .id = 1 },
-        .size = .xy(256, 256),
+test "地图触发器会读取目标地图和落点方向" {
+    const properties = [_]tiled.Property{
+        .{ .name = "self_id", .value = .{ .int = 1 } },
+        .{ .name = "start_offset", .value = .{ .string = "top" } },
+        .{ .name = "target_id", .value = .{ .int = 1 } },
+        .{ .name = "target_map", .value = .{ .string = "town" } },
     };
 
-    frontLayerStart = 0;
-    staticLayerEnd = 0;
-    mapTexture = image.texture;
-    dryImage = image.sub(prefab.farm.farmland.dry.rect);
-    wetImage = image.sub(prefab.farm.farmland.wet.rect);
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    loadObject(&world, .{
+        .id = 1,
+        .gid = 0,
+        .name = "",
+        .type = "map_trigger",
+        .position = .xy(10, 20),
+        .size = .xy(30, 40),
+        .point = false,
+        .properties = &properties,
+        .extend = .{},
+    });
+
+    var query = world.query(.{ Trigger, component.map.Scoped });
+    const entity = query.next().?;
+    const trigger = query.get(entity, Trigger);
+
+    try std.testing.expectEqual(@as(i32, 1), trigger.selfId);
+    try std.testing.expectEqual(@as(i32, 1), trigger.targetId);
+    try std.testing.expectEqual(Id.town, trigger.targetMap);
+    try std.testing.expectEqual(StartOffset.top, trigger.startOffset);
+}
+
+test "trigger 对象会创建 ECS 触发器实体" {
+    const properties = [_]tiled.Property{
+        .{ .name = "self_id", .value = .{ .int = 2 } },
+        .{ .name = "start_offset", .value = .{ .string = "bottom" } },
+        .{ .name = "target_id", .value = .{ .int = 3 } },
+        .{ .name = "target_map", .value = .{ .string = "school" } },
+    };
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    loadObject(&world, .{
+        .id = 1,
+        .gid = 0,
+        .name = "",
+        .type = "map_trigger",
+        .position = .xy(10, 20),
+        .size = .xy(30, 40),
+        .point = false,
+        .properties = &properties,
+        .extend = .{},
+    });
+
+    var query = world.query(.{ component.map.Trigger, component.map.Scoped });
+    const entity = query.next().?;
+    const trigger = query.get(entity, component.map.Trigger);
+
+    try std.testing.expectEqual(@as(i32, 2), trigger.selfId);
+    try std.testing.expectEqual(@as(i32, 3), trigger.targetId);
+    try std.testing.expectEqual(Id.school, trigger.targetMap);
+    try std.testing.expectEqual(StartOffset.bottom, trigger.startOffset);
+    try std.testing.expectEqual(@as(f32, 10), trigger.rect.min.x);
+    try std.testing.expectEqual(@as(f32, 20), trigger.rect.min.y);
+    try std.testing.expectEqual(null, query.next());
+}
+
+test "触发器落点会按 start_offset 放到区域外侧" {
+    const trigger = Trigger{
+        .rect = .init(.xy(10, 20), .xy(30, 40)),
+        .selfId = 1,
+        .targetId = 1,
+        .targetMap = .school,
+        .startOffset = .bottom,
+    };
+
+    const position = triggerSpawnPosition(trigger);
+
+    try std.testing.expectEqual(@as(f32, 25), position.x);
+    try std.testing.expectEqual(@as(f32, 68), position.y);
 }
