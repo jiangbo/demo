@@ -349,8 +349,8 @@ pub const World = struct {
                 result.dense = map.dense.items;
             }
         }
-        inline for (None, &result.none) |T, *sparse| {
-            sparse.* = self.assure(T).sparse.items;
+        inline for (None, &result.none) |T, *none| {
+            none.* = self.assure(T).sparse.items;
         }
 
         return result;
@@ -367,8 +367,8 @@ pub const World = struct {
             const map = self.assure(T);
             s.*, v.* = .{ map.sparse.items, map.valuePtr };
         }
-        inline for (None, &rs.none) |T, *sparse| {
-            sparse.* = self.assure(T).sparse.items;
+        inline for (None, &rs.none) |T, *none| {
+            none.* = self.assure(T).sparse.items;
         }
         return rs;
     }
