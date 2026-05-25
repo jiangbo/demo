@@ -24,19 +24,12 @@ pub const Command = struct {
 };
 
 pub const Vertex = extern struct {
-    pub const Mask = packed struct(u32) {
-        flipX: bool = false,
-        flipY: bool = false,
-        padding: u6 = 0,
-        extend: u24 = 0,
-    };
-
     position: math.Vector2, // 顶点坐标
+    padding: u32 = 0, // 填充字节，保持对齐
     radian: f32 = 0, // 旋转弧度
-    mask: Mask = .{},
     size: math.Vector2, // 大小
     pivot: math.Vector2 = .zero, // 旋转中心
-    texturePosition: math.Vector4, // 纹理坐标
+    uvRect: math.Vector4, // 纹理 UV 区域
     color: graphics.Color = .white, // 顶点颜色
 };
 
@@ -76,8 +69,8 @@ pub const Option = struct {
     anchor: Vector2 = .zero, // 锚点
     pivot: Vector2 = .center, // 旋转中心
     radian: f32 = 0, // 旋转弧度
+    uvRect: ?math.Vector4 = null, // 纹理 UV 区域
     color: graphics.Color = .white, // 颜色
-    mask: Vertex.Mask = .{}, // 绘制标记
 };
 
 pub fn beginDraw(color: graphics.Color) void {
@@ -250,10 +243,9 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     vertexBuffer.appendAssumeCapacity(Vertex{
         .position = worldPos.sub(scaledSize.mul(option.anchor)),
         .radian = option.radian,
-        .mask = option.mask,
         .size = scaledSize,
         .pivot = option.pivot,
-        .texturePosition = image.toTexturePosition(),
+        .uvRect = option.uvRect orelse image.toUvRect(),
         .color = option.color,
     });
 }
@@ -309,13 +301,12 @@ fn doDraw(cmd: Command) void {
 fn createQuadPipeline(shaderDesc: sk.gfx.ShaderDesc) sk.gfx.Pipeline {
     var vertexLayout = sk.gfx.VertexLayoutState{};
 
-    vertexLayout.attrs[0].format = .FLOAT2;
+    vertexLayout.attrs[0].format = .FLOAT3;
     vertexLayout.attrs[1].format = .FLOAT;
-    vertexLayout.attrs[2].format = .UINT;
+    vertexLayout.attrs[2].format = .FLOAT2;
     vertexLayout.attrs[3].format = .FLOAT2;
-    vertexLayout.attrs[4].format = .FLOAT2;
+    vertexLayout.attrs[4].format = .FLOAT4;
     vertexLayout.attrs[5].format = .FLOAT4;
-    vertexLayout.attrs[6].format = .FLOAT4;
     vertexLayout.buffers[0].step_func = .PER_INSTANCE;
 
     return sk.gfx.makePipeline(.{

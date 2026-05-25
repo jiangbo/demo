@@ -32,7 +32,7 @@ pub fn draw(world: *zhu.ecs.World) void {
         zhu.batch.drawImage(sprite.image, position.add(sprite.offset), .{
             .size = sprite.size,
             .color = render.color,
-            .mask = .{ .flipX = sprite.flip },
+            .uvRect = sprite.image.uvFlip(sprite.flip, false),
         });
     }
 }
