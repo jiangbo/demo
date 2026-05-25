@@ -245,7 +245,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
         .radian = option.radian,
         .size = scaledSize,
         .pivot = option.pivot,
-        .uvRect = option.uvRect orelse image.toUvRect(),
+        .uvRect = option.uvRect orelse image.uvRect(),
         .color = option.color,
     });
 }

@@ -205,7 +205,7 @@ fn appendVertex(position: zhu.Vector2, image: zhu.graphics.Image) void {
     vertexes.append(zhu.assets.allocator, .{
         .position = position,
         .size = image.size,
-        .uvRect = image.toUvRect(),
+        .uvRect = image.uvRect(),
     }) catch @panic("map oom");
 }
 

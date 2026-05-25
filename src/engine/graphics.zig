@@ -163,13 +163,13 @@ pub const Image = struct {
     }
 
     pub fn uvFlip(self: Image, x: bool, y: bool) math.Vector4 {
-        var uv = self.toUvRect();
+        var uv = self.uvRect();
         if (x) uv.x, uv.z = .{ uv.x + uv.z, -uv.z };
         if (y) uv.y, uv.w = .{ uv.y + uv.w, -uv.w };
         return uv;
     }
 
-    pub fn toUvRect(self: Image) math.Vector4 {
+    pub fn uvRect(self: Image) math.Vector4 {
         return .initSize(self.offset, self.size);
     }
 };
