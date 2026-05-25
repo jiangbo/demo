@@ -311,7 +311,7 @@ pub const World = struct {
         var index: [types.len]Entity = undefined;
         inline for (types, &index) |T, *i| {
             var map = self.assure(T);
-            i.* = map.swapRemove(entity);
+            i.* = map.remove(entity);
         }
         for (index[1..]) |i| std.debug.assert(index[0] == i);
     }
