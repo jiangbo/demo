@@ -24,7 +24,7 @@ zig build test
   - 需要系统：InteractionSystem、DialogueSystem、UI 文本。
   - 参考源码：`game/system/dialogue_system.*`、`game/ui/dialogue_bubble.*`
 
-- [ ] 32-游戏时间与时钟 UI
+- [x] 32-游戏时间与时钟 UI
   - 可见效果：屏幕显示时间，时间会推进。
   - 需要系统：GameTime、TimeSystem、TimeClockUI。
   - 参考源码：`game/data/game_time.*`、`game/ui/time_clock_ui.*`
@@ -106,6 +106,16 @@ zig build test
   Zig 本步不实现。
 - 31-对话气泡：C++ 对话结束后有冷却计时器防止连续误触；
   Zig 不需要，因为 `pressed()` 只在按键按下帧触发一次，不会误触。
+- 32-游戏时间与时钟 UI：C++ 从 `game_time_config.json` 运行时加载配置；
+  Zig 本步先直接扩展已有 `context.time`，使用与配置相同的默认值。
+- 32-游戏时间与时钟 UI：C++ `GameTime` 是 registry ctx 数据；
+  Zig 本步不再新增平行 `game_time` 模块，`context.time` 作为唯一时间状态。
+- 32-游戏时间与时钟 UI：C++ 支持 `AdvanceTimeRequest` 快进；
+  Zig 本步只做自然时间推进。
+- 32-游戏时间与时钟 UI：C++ `TimeClockUI` 使用完整 UI 框架；
+  Zig 本步直接用 `zhu.batch` 和 `zhu.text` 画 HUD。
+- 32-游戏时间与时钟 UI：C++ 同一讲还实现昼夜光照和灯光显隐；
+  Zig 已拆到 33、34，当前步骤不做。
 
 ## 暂缓的大系统
 

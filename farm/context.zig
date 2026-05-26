@@ -1,4 +1,5 @@
 const std = @import("std");
+const zhu = @import("zhu");
 
 const component = @import("component.zig");
 
@@ -29,8 +30,32 @@ pub const scene = struct {
 };
 
 pub const time = struct {
+    pub const Period = component.time.Period;
+
     pub var paused: bool = false;
+    // 整体更新倍率，影响场景里所有按 delta 推进的系统
     pub var scale: f32 = config.time_scale;
+
+    pub var day: u32 = 1;
+    pub var hour: u8 = 6;
+    pub var minute: f32 = 0.0;
+    pub var period: Period = .dawn;
+
+    pub fn reset() void {
+        paused = false;
+        scale = config.time_scale;
+        day = 1;
+        hour = 6;
+        minute = 0.0;
+        period = .dawn;
+    }
+
+    pub fn formatClock(buffer: []u8) []const u8 {
+        const hourMinute = @as(f32, @floatFromInt(hour)) * 60;
+        const total: u32 = @intFromFloat(@round(hourMinute + minute));
+        const args = .{ total / 60, total % 60 };
+        return zhu.format(buffer, "{d:0>2}:{d:0>2}", args);
+    }
 };
 
 pub const debug = struct {
@@ -72,8 +97,7 @@ const config: Config = @import("zon/context.zon");
 pub fn init() void {
     scene.current = config.scene;
     scene.pending = null;
-    time.paused = false;
-    time.scale = config.time_scale;
+    time.reset();
     debug.showEngine = false;
     debug.showGame = false;
     ui.wantCaptureMouse = false;
@@ -123,4 +147,17 @@ test "地图切换请求会被 take 消费" {
     try std.testing.expectEqual(component.map.Id.town, transition.target);
     try std.testing.expectEqual(@as(i32, 3), transition.targetId);
     try std.testing.expectEqual(@as(?map.Transition, null), map.pending);
+}
+
+test "时间文本按 Day 和 HH:MM 格式输出" {
+    init();
+    time.day = 3;
+    time.hour = 9;
+    time.minute = 5;
+
+    var dayBuffer: [16]u8 = undefined;
+    var clockBuffer: [16]u8 = undefined;
+
+    try std.testing.expectEqualStrings("Day 3", time.formatDay(&dayBuffer));
+    try std.testing.expectEqualStrings("09:05", time.formatClock(&clockBuffer));
 }

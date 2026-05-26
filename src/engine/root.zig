@@ -59,6 +59,7 @@ pub fn enumTypeArray(E: type, V: type, values: []V) std.EnumArray(E, V) {
     return array;
 }
 
+pub const format = text.format;
 pub const random = math.random;
 pub const randomF32 = math.randomF32;
 pub const randomInt = math.randomInt;
