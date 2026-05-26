@@ -44,7 +44,7 @@ fn findScript(id: []const u8) ?[]const []const u8 {
 // 处理 ECS 事件队列中的对话事件
 pub fn update(world: *zhu.ecs.World) void {
     // 处理开始对话事件
-    const starts = world.getEvents(component.event.DialogStart);
+    const starts = world.getEvent(component.event.DialogStart);
     for (starts.items) |event| {
         const found = findScript(event.scriptId) orelse continue;
         if (found.len == 0) continue;
@@ -56,7 +56,7 @@ pub fn update(world: *zhu.ecs.World) void {
     world.clearEvent(component.event.DialogStart);
 
     // 处理推进对话事件
-    const advances = world.getEvents(component.event.DialogAdvance);
+    const advances = world.getEvent(component.event.DialogAdvance);
     for (advances.items) |event| {
         const active = world.getIdentity(Dialog) orelse continue;
         if (active != event.entity or lines.len == 0) continue;
@@ -71,7 +71,7 @@ pub fn update(world: *zhu.ecs.World) void {
     world.clearEvent(component.event.DialogAdvance);
 
     // 处理关闭对话事件
-    const closes = world.getEvents(component.event.DialogClose);
+    const closes = world.getEvent(component.event.DialogClose);
     for (closes.items) |event| {
         doClose(world, event.entity);
     }

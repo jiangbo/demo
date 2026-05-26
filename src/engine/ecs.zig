@@ -231,7 +231,12 @@ pub const World = struct {
         return self.identityMap.remove(hashTypeId(T));
     }
 
-    fn assureEvent(self: *World, T: type) *std.ArrayList(T) {
+    pub fn addEvent(self: *World, value: anytype) void {
+        var list = self.getEvent(@TypeOf(value));
+        list.append(self.allocator, value) catch oom();
+    }
+
+    pub fn getEvent(self: *World, T: type) *std.ArrayList(T) {
         const v = self.eventMap.getOrPut(self.allocator, //
             hashTypeId(T)) catch oom();
         const list: *EventList(T) = @ptrCast(@alignCast(v.value_ptr));
@@ -239,17 +244,8 @@ pub const World = struct {
         return &list.list;
     }
 
-    pub fn addEvent(self: *World, value: anytype) void {
-        var list = self.assureEvent(@TypeOf(value));
-        list.append(self.allocator, value) catch oom();
-    }
-
-    pub fn getEvents(self: *World, T: type) *std.ArrayList(T) {
-        return self.assureEvent(T);
-    }
-
     pub fn clearEvent(self: *World, T: type) void {
-        self.assureEvent(T).clearRetainingCapacity();
+        self.getEvent(T).clearRetainingCapacity();
     }
 
     pub fn removeEvent(self: *World, T: type) void {
