@@ -9,13 +9,13 @@ const Vector2 = math.Vector2;
 const Color = graphics.Color;
 pub const String = []const u8;
 
-pub const BitMapFont = struct {
+pub const Font = struct {
     size: f32,
     lineHeight: f32,
-    chars: []const BitMapChar,
+    chars: []const Char,
 };
 
-pub const BitMapChar = struct {
+pub const Char = struct {
     id: u32,
     area: math.Rect,
     offset: Vector2,
@@ -23,21 +23,16 @@ pub const BitMapChar = struct {
 
 var invalidIndex: usize = 0;
 
-var font: BitMapFont = undefined;
+var font: Font = undefined;
 var fontImage: graphics.Image = undefined;
 var fontScale: f32 = undefined;
 var halfAdvance: f32 = undefined; // 英文只需要前进半个距离
 
-pub fn initBitMapFont(image: Image, zon: BitMapFont) void {
+pub fn initBitMapFont(image: Image, zon: Font) void {
     font = zon;
     fontImage = image;
     invalidIndex = binarySearch('?').?;
     changeFontSize(font.size);
-    // font.init(fontZon);
-    // font.initSDF(.{
-    //     .font = fontZon,
-    //     .image = image,
-    // });
 }
 
 pub fn changeFontSize(size: f32) void {
@@ -46,14 +41,14 @@ pub fn changeFontSize(size: f32) void {
 }
 
 fn binarySearch(unicode: u32) ?usize {
-    return std.sort.binarySearch(BitMapChar, font.chars, unicode, struct {
-        fn compare(a: u32, b: BitMapChar) std.math.Order {
+    return std.sort.binarySearch(Char, font.chars, unicode, struct {
+        fn compare(a: u32, b: Char) std.math.Order {
             return std.math.order(a, b.id);
         }
     }.compare);
 }
 
-pub fn searchChar(code: u32) *const BitMapChar {
+pub fn searchChar(code: u32) *const Char {
     return &font.chars[binarySearch(code) orelse invalidIndex];
 }
 
@@ -65,22 +60,10 @@ pub const Option = struct {
     alignment: ?Vector2 = null, // 文字对齐
 };
 
-pub fn drawNumber(number: anytype, pos: Vector2) void {
-    drawNumberColor(number, pos, .white);
-}
-
-pub fn drawNumberColor(number: anytype, pos: Vector2, color: Color) void {
+pub fn drawNumber(number: anytype, pos: Vector2, option: Option) void {
     var textBuffer: [15]u8 = undefined;
     const string = format(&textBuffer, "{d}", .{number});
-    drawColor(string, pos, color);
-}
-
-pub fn draw(string: String, pos: math.Vector) void {
-    drawOption(string, pos, .{});
-}
-
-pub fn drawColor(str: String, pos: Vector2, color: Color) void {
-    drawOption(str, pos, .{ .color = color });
+    drawString(string, pos, option);
 }
 
 // zig fmt: off
@@ -88,16 +71,16 @@ pub fn drawFormat(comptime fmt: String, pos: Vector2, args: anytype,
     option: Option) void {
 // zig fmt: on
     var buffer: [1024]u8 = undefined;
-    drawOption(format(&buffer, fmt, args), pos, option);
+    drawString(format(&buffer, fmt, args), pos, option);
 }
 
 const Utf8View = std.unicode.Utf8View;
-pub fn drawOption(text: String, position: Vector2, option: Option) void {
+pub fn drawString(text: String, position: Vector2, option: Option) void {
     const scale = if (option.size) |s| s / font.size else fontScale;
     const height = font.lineHeight * scale;
     var pos = position;
     if (option.alignment) |a| {
-        const width = computeTextWidthOption(text, option);
+        const width = computeTextWidth(text, option);
         pos = pos.sub(.xy(width * a.x, height * a.y));
     }
 
@@ -124,11 +107,7 @@ pub fn drawOption(text: String, position: Vector2, option: Option) void {
     }
 }
 
-pub fn computeTextWidth(text: String) f32 {
-    return computeTextWidthOption(text, .{});
-}
-
-pub fn computeTextWidthOption(text: String, option: Option) f32 {
+pub fn computeTextWidth(text: String, option: Option) f32 {
     var width: f32 = 0;
     const scale = if (option.size) |s| s / font.size else fontScale;
     var iterator = Utf8View.initUnchecked(text).iterator();
@@ -136,7 +115,7 @@ pub fn computeTextWidthOption(text: String, option: Option) f32 {
         const advance = if (code < 128) halfAdvance else font.size;
         width += advance * scale + option.spacing;
     }
-    return width - option.spacing;
+    return @min(width - option.spacing, option.maxWidth);
 }
 
 pub fn computeTextCount(text: String) u32 {

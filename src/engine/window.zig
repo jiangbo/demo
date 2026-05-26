@@ -305,7 +305,7 @@ pub fn drawDebugInfo() void {
     });
 
     debutTextCount = text.computeTextCount(t);
-    text.drawColor(t, .xy(10, 10), .green);
+    text.drawString(t, .xy(10, 10), .{ .color = .green });
 }
 
 pub fn statFileTime(path: [:0]const u8) i64 {

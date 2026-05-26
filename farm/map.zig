@@ -68,7 +68,7 @@ pub fn enter(world: *World, id: Id, targetId: i32) zhu.Vector2 {
         tile.crop = entity;
     }
 
-    return spawn orelse zhu.Vector2.xy(100, 100);
+    return spawn orelse zhu.Vector2.xy(100, 300);
 }
 
 fn parseLayers(world: *World) void {
