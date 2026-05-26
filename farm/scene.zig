@@ -26,6 +26,7 @@ const system = struct {
     const movement = @import("system/movement.zig");
     const pickup = @import("system/pickup.zig");
     const render = @import("system/render.zig");
+    const light = @import("system/light.zig");
     const target = @import("system/target.zig");
     const time = @import("system/time.zig");
     const tool = @import("system/tool.zig");
@@ -109,6 +110,7 @@ fn drawFarm(world: *World) void {
     drawCollider(world);
 
     zhu.camera.mode = .window;
+    system.light.draw();
     system.time.draw();
     toolbar.draw();
     dialog.draw(world);

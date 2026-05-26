@@ -14,6 +14,7 @@ test {
     std.testing.refAllDeclsRecursive(@import("system/animation.zig"));
     std.testing.refAllDeclsRecursive(@import("system/control.zig"));
     std.testing.refAllDeclsRecursive(@import("system/crop.zig"));
+    std.testing.refAllDeclsRecursive(@import("system/light.zig"));
     std.testing.refAllDeclsRecursive(@import("system/talk.zig"));
     std.testing.refAllDeclsRecursive(@import("system/time.zig"));
     std.testing.refAllDeclsRecursive(@import("system/movement.zig"));

@@ -77,7 +77,10 @@ pub fn draw() void {
     var labelPos = pos.add(.xy(34, 3));
     drawLabel(.init(labelPos, labelSize), day);
     labelPos = labelPos.addY(labelSize.y + 2);
-    const clock = context.time.formatClock(&buffer);
+    const clock = zhu.format(&buffer, "{d:0>2}:{d:0>2}", .{
+        context.time.hour,
+        @as(u8, @intFromFloat(context.time.minute)),
+    });
     drawLabel(.init(labelPos, labelSize), clock);
 }
 
@@ -168,4 +171,14 @@ test "时段判断按整点小时分段" {
     try std.testing.expectEqual(currentPeriod(21), .night);
     try std.testing.expectEqual(currentPeriod(3), .night);
     try std.testing.expectEqual(currentPeriod(5), .dawn);
+}
+
+test "时间文本不会提前进位到下一分钟" {
+    var buffer: [16]u8 = undefined;
+    const clock = zhu.format(&buffer, "{d:0>2}:{d:0>2}", .{
+        @as(u8, 23),
+        @as(u8, @intFromFloat(@as(f32, 59.9))),
+    });
+
+    try std.testing.expectEqualStrings("23:59", clock);
 }

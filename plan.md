@@ -29,7 +29,7 @@ zig build test
   - 需要系统：GameTime、TimeSystem、TimeClockUI。
   - 参考源码：`game/data/game_time.*`、`game/ui/time_clock_ui.*`
 
-- [ ] 33-昼夜颜色变化
+- [x] 33-昼夜颜色变化
   - 可见效果：白天/夜晚画面色调明显变化。
   - 需要系统：DayNightSystem、环境色参数、Renderer tint/overlay 最小实现。
   - 参考源码：`game/system/day_night_system.*`、`assets/data/light_config.json`
@@ -116,6 +116,16 @@ zig build test
   Zig 本步直接用 `zhu.batch` 和 `zhu.text` 画 HUD。
 - 32-游戏时间与时钟 UI：C++ 同一讲还实现昼夜光照和灯光显隐；
   Zig 已拆到 33、34，当前步骤不做。
+- 33-昼夜颜色变化：C++ `DayNightSystem` 会计算环境光、太阳方向光和月亮方向光，
+  再写入 `GlobalLightingState` 交给引擎 `LightSystem`；Zig 本步先在
+  `system/light.zig` 中按时间计算全屏 overlay，直接画出可见色调变化。
+- 33-昼夜颜色变化：C++ 从 `light_config.json` 运行时加载关键帧和太阳/月亮参数；
+  Zig 本步先使用编译期关键帧插值，保留 4/6/9/14/18/22 这些参考时点的色调；
+  用 28 点表示次日 4 点处理跨午夜插值，后续需要调参时再挪到 ZON 配置。
+- 33-昼夜颜色变化：C++ 会区分室外地图和室内 `ambient_override`；
+  Zig 当前地图还没有室内外元数据，本步默认当前地图都受昼夜色调影响。
+- 33-昼夜颜色变化：C++ 同节包含 `TimeOfDayLightSystem` 控制夜间灯光显隐；
+  Zig 已拆到 34，本步不实现路灯、窗户光、点光源或光圈。
 
 ## 暂缓的大系统
 

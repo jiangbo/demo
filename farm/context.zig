@@ -49,13 +49,6 @@ pub const time = struct {
         minute = 0.0;
         period = .dawn;
     }
-
-    pub fn formatClock(buffer: []u8) []const u8 {
-        const hourMinute = @as(f32, @floatFromInt(hour)) * 60;
-        const total: u32 = @intFromFloat(hourMinute + minute);
-        const args = .{ total / 60, total % 60 };
-        return zhu.format(buffer, "{d:0>2}:{d:0>2}", args);
-    }
 };
 
 pub const debug = struct {
@@ -147,13 +140,4 @@ test "地图切换请求会被 take 消费" {
     try std.testing.expectEqual(component.map.Id.town, transition.target);
     try std.testing.expectEqual(@as(i32, 3), transition.targetId);
     try std.testing.expectEqual(@as(?map.Transition, null), map.pending);
-}
-
-test "时间文本HH:MM 格式输出" {
-    init();
-    time.hour = 9;
-    time.minute = 5;
-
-    var clockBuffer: [16]u8 = undefined;
-    try std.testing.expectEqualStrings("09:05", time.formatClock(&clockBuffer));
 }

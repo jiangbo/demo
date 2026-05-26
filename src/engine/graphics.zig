@@ -227,6 +227,15 @@ pub const Color = extern struct {
     pub fn gray(v: f32, a: f32) Color {
         return .{ .r = v, .g = v, .b = v, .a = a };
     }
+
+    pub fn mix(self: Color, other: Color, t: f32) Color {
+        return .{
+            .r = std.math.lerp(self.r, other.r, t),
+            .g = std.math.lerp(self.g, other.g, t),
+            .b = std.math.lerp(self.b, other.b, t),
+            .a = std.math.lerp(self.a, other.a, t),
+        };
+    }
 };
 
 // pub fn init(size: Vector2, buffer: []Vertex) void {
