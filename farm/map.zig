@@ -68,7 +68,11 @@ pub fn enter(world: *World, id: Id, targetId: i32) zhu.Vector2 {
         tile.crop = entity;
     }
 
-    return spawn orelse zhu.Vector2.xy(100, 300);
+    zhu.camera.bound = data.size();
+    const result = spawn orelse zhu.Vector2.xy(100, 300);
+    zhu.camera.directFollow(result);
+
+    return result;
 }
 
 fn parseLayers(world: *World) void {
