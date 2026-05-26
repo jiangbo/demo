@@ -52,7 +52,7 @@ pub const time = struct {
 
     pub fn formatClock(buffer: []u8) []const u8 {
         const hourMinute = @as(f32, @floatFromInt(hour)) * 60;
-        const total: u32 = @intFromFloat(@round(hourMinute + minute));
+        const total: u32 = @intFromFloat(hourMinute + minute);
         const args = .{ total / 60, total % 60 };
         return zhu.format(buffer, "{d:0>2}:{d:0>2}", args);
     }
