@@ -41,6 +41,10 @@ pub const debug = struct {
 pub const ui = struct {
     pub var wantCaptureMouse: bool = false;
     pub var wantCaptureKeyboard: bool = false;
+
+    pub fn wantCapture() bool {
+        return wantCaptureMouse or wantCaptureKeyboard;
+    }
 };
 
 pub const map = struct {

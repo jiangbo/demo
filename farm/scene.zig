@@ -6,6 +6,7 @@ const context = @import("context.zig");
 const factory = @import("factory.zig");
 const map = @import("map.zig");
 const title = @import("title.zig");
+const dialog = @import("dialog.zig");
 const toolbar = @import("toolbar.zig");
 
 const World = zhu.ecs.World;
@@ -21,6 +22,7 @@ const system = struct {
     const camera = @import("system/camera.zig");
     const control = @import("system/control.zig");
     const crop = @import("system/crop.zig");
+    const dialog = @import("system/dialog.zig");
     const movement = @import("system/movement.zig");
     const pickup = @import("system/pickup.zig");
     const render = @import("system/render.zig");
@@ -69,13 +71,15 @@ fn updateFarm(world: *World, delta: f32) void {
     system.crop.update(world, delta);
     system.render.update(world);
     system.pickup.update(world);
+    dialog.update(world);
 
-    if (context.ui.wantCaptureMouse) {
+    if (context.ui.wantCapture()) {
         const player = world.getIdentity(actor.Player).?;
         world.getPtr(player, ui.Target).?.active = false;
         return;
     }
 
+    system.dialog.update(world, delta);
     system.camera.update(world);
     system.target.update(world);
     system.tool.update(world);
@@ -83,7 +87,7 @@ fn updateFarm(world: *World, delta: f32) void {
 }
 
 fn enterFarm(world: *World) void {
-    const spawn = map.enter(world, .school, initialTargetId);
+    const spawn = map.enter(world, .town, initialTargetId);
     factory.spawnPlayer(world, spawn);
     toolbar.enter();
 }
@@ -100,6 +104,7 @@ fn drawFarm(world: *World) void {
 
     zhu.camera.mode = .window;
     toolbar.draw();
+    dialog.draw(world);
     zhu.window.drawDebugInfo();
     zhu.camera.mode = .world;
 }

@@ -89,6 +89,15 @@ pub const actor = struct {
         stuckTimer: f32 = 0,
         stuckReset: f32 = 1.0,
     };
+
+    // 对话组件：挂载到可交互的 NPC 上
+    // 同时用作 Identity 标记当前正在对话的实体
+    pub const Dialog = struct {
+        scriptId: []const u8 = "", // 对话脚本 ID
+
+        pub const interactDist: f32 = 64.0; // 触发对话的最大距离
+        pub const closeDist: f32 = 96.0; // 自动关闭对话的距离
+    };
 };
 
 pub const farm = struct {
@@ -113,4 +122,16 @@ pub const ui = struct {
 pub const item = struct {
     pub const ItemEnum = enum { hoe, water, seed, crop };
     pub const Pickup = struct { item: ItemEnum, count: u32 = 1 };
+};
+
+// 事件类型：系统间通信的一次性消息
+pub const event = struct {
+    const Entity = zhu.ecs.Entity;
+
+    pub const DialogStart = struct {
+        entity: Entity,
+        scriptId: []const u8,
+    };
+    pub const DialogAdvance = struct { entity: Entity };
+    pub const DialogClose = struct { entity: Entity };
 };

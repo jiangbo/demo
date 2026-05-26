@@ -36,7 +36,7 @@ pub const key = struct {
     pub var lastState: std.StaticBitSet(512) = .initEmpty();
     pub var state: std.StaticBitSet(512) = .initEmpty();
 
-    pub fn down(keyCode: KeyCode) bool {
+    pub fn held(keyCode: KeyCode) bool {
         return state.isSet(@intCast(@intFromEnum(keyCode)));
     }
 
@@ -50,8 +50,8 @@ pub const key = struct {
         return lastState.isSet(code) and !state.isSet(code);
     }
 
-    pub fn anyDown(keys: []const KeyCode) bool {
-        for (keys) |k| if (down(k)) return true;
+    pub fn anyHeld(keys: []const KeyCode) bool {
+        for (keys) |k| if (held(k)) return true;
         return false;
     }
 

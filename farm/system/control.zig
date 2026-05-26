@@ -32,10 +32,10 @@ fn readDirection() zhu.Vector2 {
     if (context.ui.wantCaptureKeyboard) return .zero;
 
     var direction: zhu.Vector2 = .zero;
-    if (zhu.input.key.anyDown(&.{ .A, .LEFT })) direction.x -= 1;
-    if (zhu.input.key.anyDown(&.{ .D, .RIGHT })) direction.x += 1;
-    if (zhu.input.key.anyDown(&.{ .W, .UP })) direction.y -= 1;
-    if (zhu.input.key.anyDown(&.{ .S, .DOWN })) direction.y += 1;
+    if (zhu.input.key.anyHeld(&.{ .A, .LEFT })) direction.x -= 1;
+    if (zhu.input.key.anyHeld(&.{ .D, .RIGHT })) direction.x += 1;
+    if (zhu.input.key.anyHeld(&.{ .W, .UP })) direction.y -= 1;
+    if (zhu.input.key.anyHeld(&.{ .S, .DOWN })) direction.y += 1;
 
     if (direction.length2() > 1) return direction.normalize();
     return direction;
