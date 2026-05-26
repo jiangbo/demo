@@ -22,7 +22,7 @@ const system = struct {
     const camera = @import("system/camera.zig");
     const control = @import("system/control.zig");
     const crop = @import("system/crop.zig");
-    const dialog = @import("system/dialog.zig");
+    const talk = @import("system/talk.zig");
     const movement = @import("system/movement.zig");
     const pickup = @import("system/pickup.zig");
     const render = @import("system/render.zig");
@@ -79,7 +79,7 @@ fn updateFarm(world: *World, delta: f32) void {
         return;
     }
 
-    system.dialog.update(world);
+    system.talk.update(world);
     system.camera.update(world);
     system.target.update(world);
     system.tool.update(world);
