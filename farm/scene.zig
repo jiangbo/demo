@@ -27,6 +27,7 @@ const system = struct {
     const pickup = @import("system/pickup.zig");
     const render = @import("system/render.zig");
     const target = @import("system/target.zig");
+    const time = @import("system/time.zig");
     const tool = @import("system/tool.zig");
     const transition = @import("system/transition.zig");
     const wander = @import("system/wander.zig");
@@ -34,12 +35,15 @@ const system = struct {
 
 pub fn init(world: *World) void {
     std.log.info("scene init current={s}", .{@tagName(context.scene.current)});
+    system.time.init();
     if (context.scene.current == .farm) enterFarm(world);
 }
 
 pub fn deinit() void {}
 
 pub fn update(world: *World, delta: f32) void {
+    if (zhu.input.key.pressed(.X)) drawDebug = !drawDebug;
+
     if (context.time.paused) return;
 
     const scaled = delta * context.time.scale;
@@ -63,6 +67,7 @@ pub fn draw(world: *World) void {
 fn updateFarm(world: *World, delta: f32) void {
     if (context.map.takePending()) |request| changeMap(world, request);
 
+    system.time.update(world, delta);
     system.control.update(world);
     system.wander.update(world, delta);
     system.movement.update(world, delta);
@@ -104,11 +109,14 @@ fn drawFarm(world: *World) void {
     drawCollider(world);
 
     zhu.camera.mode = .window;
+    system.time.draw();
     toolbar.draw();
     dialog.draw(world);
-    zhu.window.drawDebugInfo();
+    if (drawDebug) zhu.window.drawDebugInfo();
     zhu.camera.mode = .world;
 }
+
+var drawDebug: bool = true;
 
 fn drawSolids() void {
     const tileSize = map.data.tileSize;

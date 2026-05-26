@@ -124,6 +124,10 @@ pub const item = struct {
     pub const Pickup = struct { item: ItemEnum, count: u32 = 1 };
 };
 
+pub const time = struct {
+    pub const Period = enum { dawn, day, dusk, night };
+};
+
 // 事件类型：系统间通信的一次性消息
 pub const event = struct {
     const Entity = zhu.ecs.Entity;
@@ -134,4 +138,15 @@ pub const event = struct {
     };
     pub const DialogAdvance = struct { entity: Entity };
     pub const DialogClose = struct { entity: Entity };
+
+    pub const HourChanged = struct {
+        day: u32,
+        hour: u8,
+    };
+    pub const DayChanged = struct { day: u32 };
+    pub const PeriodChanged = struct {
+        day: u32,
+        hour: u8,
+        period: time.Period,
+    };
 };
