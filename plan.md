@@ -19,7 +19,7 @@ zig build test
 
 ## 功能实现计划
 
-- [ ] 31-对话气泡
+- [x] 31-对话气泡
   - 可见效果：靠近 NPC 按键弹出对话框。
   - 需要系统：InteractionSystem、DialogueSystem、UI 文本。
   - 参考源码：`game/system/dialogue_system.*`、`game/ui/dialogue_bubble.*`
@@ -92,6 +92,20 @@ zig build test
   Zig 本步不做对话交互，留到 31。
 - 30-NPC 显示与简单漫游：C++ 后续可接空间索引、寻路和更完整的行为状态；
   Zig 本步只在出生点半径内选随机目标，碰撞后放弃当前目标。
+- 31-对话气泡：C++ 使用事件总线（InteractRequest / DialogueShowEvent 等）解耦系统；
+  Zig 本步保留 ECS 事件队列，用 DialogStart/Advance/Close 连接交互和显示。
+- 31-对话气泡：C++ 使用 SpatialIndexManager 做朝向方向的空间探测；
+  Zig 本步遍历所有 NPC 用距离判断。
+- 31-对话气泡：C++ 有 3 个气泡频道（对话/通知/物品提示）；
+  Zig 本步只做对话频道。
+- 31-对话气泡：C++ 从 JSON 运行时加载对话脚本；
+  Zig 本步用代码内编译时常量。
+- 31-对话气泡：C++ DialogueBubble 使用九宫格图片背景；
+  Zig 本步用半透明矩形背景。
+- 31-对话气泡：C++ 支持说话者名称显示和打字机逐字效果；
+  Zig 本步不实现。
+- 31-对话气泡：C++ 对话结束后有冷却计时器防止连续误触；
+  Zig 不需要，因为 `pressed()` 只在按键按下帧触发一次，不会误触。
 
 ## 暂缓的大系统
 

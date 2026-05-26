@@ -81,6 +81,12 @@ pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {
         .radius = config.wanderRadius,
         .speed = config.speed,
     });
+    world.add(entity, actor.Dialog{
+        .scriptId = switch (kind) {
+            .cow => "cow",
+            .sheep => "sheep",
+        },
+    });
 
     return entity;
 }

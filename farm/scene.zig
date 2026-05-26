@@ -71,19 +71,20 @@ fn updateFarm(world: *World, delta: f32) void {
     system.crop.update(world, delta);
     system.render.update(world);
     system.pickup.update(world);
-    dialog.update(world);
 
     if (context.ui.wantCapture()) {
         const player = world.getIdentity(actor.Player).?;
         world.getPtr(player, ui.Target).?.active = false;
+        dialog.update(world);
         return;
     }
 
-    system.dialog.update(world, delta);
+    system.dialog.update(world);
     system.camera.update(world);
     system.target.update(world);
     system.tool.update(world);
     toolbar.update();
+    dialog.update(world);
 }
 
 fn enterFarm(world: *World) void {
