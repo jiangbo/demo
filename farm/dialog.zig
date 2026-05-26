@@ -159,7 +159,7 @@ test "DialogStart 事件会激活第一句台词" {
     try std.testing.expectEqualStrings("哞~", text);
     try std.testing.expectEqual(
         @as(usize, 0),
-        world.getEvents(component.event.DialogStart).items.len,
+        world.getEvent(component.event.DialogStart).items.len,
     );
 }
 
