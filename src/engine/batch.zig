@@ -4,7 +4,6 @@ const sk = @import("sokol");
 const math = @import("math.zig");
 const shader = @import("shader/quad.glsl.zig");
 const graphics = @import("graphics.zig");
-const assets = @import("assets.zig");
 const camera = @import("camera.zig");
 
 const Image = graphics.Image;
@@ -122,10 +121,6 @@ pub fn debugDraw(rect: math.Rect) void {
     drawRect(rect, .{ .color = .rgba(1, 0, 1, 0.4) });
 }
 
-pub fn draw(image: ImageId, pos: math.Vector2) void {
-    drawImageId(image, pos, .{});
-}
-
 pub const LineOption = struct { color: Color = .white, width: f32 = 1 };
 
 /// 绘制轴对齐的线
@@ -218,10 +213,6 @@ pub fn drawNine(image: Image, rect: math.Rect, option: NineOption) void {
             });
         }
     }
-}
-
-pub fn drawImageId(id: ImageId, pos: Vector2, option: Option) void {
-    drawImage(assets.getImage(id).?, pos, option);
 }
 
 pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
