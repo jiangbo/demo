@@ -49,6 +49,10 @@ pub const time = struct {
         minute = 0.0;
         period = .dawn;
     }
+
+    pub fn isDark() bool {
+        return hour >= 18 or hour < 6;
+    }
 };
 
 pub const debug = struct {
@@ -140,4 +144,28 @@ test "地图切换请求会被 take 消费" {
     try std.testing.expectEqual(component.map.Id.town, transition.target);
     try std.testing.expectEqual(@as(i32, 3), transition.targetId);
     try std.testing.expectEqual(@as(?map.Transition, null), map.pending);
+}
+
+test "时间暗时段从 18:00 开始" {
+    init();
+
+    time.hour = 17;
+    time.minute = 59;
+    try std.testing.expect(!time.isDark());
+
+    time.hour = 18;
+    time.minute = 0;
+    try std.testing.expect(time.isDark());
+}
+
+test "时间暗时段在 06:00 结束" {
+    init();
+
+    time.hour = 5;
+    time.minute = 59;
+    try std.testing.expect(time.isDark());
+
+    time.hour = 6;
+    time.minute = 0;
+    try std.testing.expect(!time.isDark());
 }

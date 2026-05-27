@@ -37,6 +37,7 @@ const system = struct {
 pub fn init(world: *World) void {
     std.log.info("scene init current={s}", .{@tagName(context.scene.current)});
     system.time.init();
+    system.light.init();
     if (context.scene.current == .farm) enterFarm(world);
 }
 
@@ -69,6 +70,7 @@ fn updateFarm(world: *World, delta: f32) void {
     if (context.map.takePending()) |request| changeMap(world, request);
 
     system.time.update(world, delta);
+    system.light.update(world);
     system.control.update(world);
     system.wander.update(world, delta);
     system.movement.update(world, delta);
@@ -110,7 +112,10 @@ fn drawFarm(world: *World) void {
     drawCollider(world);
 
     zhu.camera.mode = .window;
-    system.light.draw();
+    system.light.drawOverlay();
+    zhu.camera.mode = .world;
+    system.light.drawWorld(world);
+    zhu.camera.mode = .window;
     system.time.draw();
     toolbar.draw();
     dialog.draw(world);

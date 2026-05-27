@@ -128,6 +128,27 @@ pub const time = struct {
     pub const Period = enum { dawn, day, dusk, night };
 };
 
+pub const light = struct {
+    pub const Point = struct {
+        radius: f32 = 96,
+        offset: zhu.Vector2 = .zero,
+        color: zhu.Color = .rgba(1.0, 0.72, 0.34, 1.0),
+        intensity: f32 = 1.0,
+    };
+
+    pub const Spot = struct {
+        radius: f32 = 128,
+        direction: zhu.Vector2 = .xy(0, -1),
+        color: zhu.Color = .rgba(1.0, 0.72, 0.34, 1.0),
+        intensity: f32 = 1.0,
+    };
+
+    pub const Disabled = struct {};
+    pub const NightOnly = struct {};
+    pub const DayOnly = struct {};
+    pub const Manual = struct { wantedOn: bool = false };
+};
+
 // 事件类型：系统间通信的一次性消息
 pub const event = struct {
     const Entity = zhu.ecs.Entity;

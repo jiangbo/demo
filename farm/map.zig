@@ -178,11 +178,27 @@ fn loadObject(world: *World, object: tiled.Object) void {
         return;
     }
 
+    if (object.isType("light")) {
+        loadLightObject(world, object);
+        return;
+    }
+
     if (object.gid == 0) return;
 
     const image = data.imageByGid(object.gid);
     _ = factory.spawnMapProp(world, object, image);
     physics.addSolidObject(object);
+}
+
+fn loadLightObject(world: *World, object: tiled.Object) void {
+    if (object.isNamed("point")) {
+        _ = factory.spawnPointLight(world, object);
+        return;
+    }
+
+    if (object.isNamed("spot")) {
+        _ = factory.spawnSpotLight(world, object);
+    }
 }
 
 /// 将 tile 层的每个瓦片转为预构建顶点
