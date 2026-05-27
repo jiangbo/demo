@@ -39,9 +39,9 @@ zig build test
   - 需要系统：PointLight/Emissive 组件、LightToggleSystem、简化光照绘制。
   - 参考源码：`engine/component/light_component.h`、`light_system.*`
 
-- [ ] 35-音效反馈
+- [x] 35-音效反馈
   - 可见效果：锄地、浇水、拾取时播放声音。
-  - 需要系统：AudioPlayer、AudioManager、ActionSoundSystem。
+  - 需要系统：SoundPlay 事件、`system/sound.zig`、现有 `zhu.audio`。
   - 参考源码：`engine/audio/*`、`game/system/action_sound_system.*`
 
 - [ ] 36-暂停菜单
@@ -135,6 +135,15 @@ zig build test
   Zig 本节暂不实现自发光矩形和自发光精灵。
 - 34-夜间灯光占位效果：C++ 的玩家灯有独立事件和配置；Zig 已取消玩家跟随灯，
   只保留地图光源。
+- 35-音效反馈：C++ 使用 `resource_mapping.json`、`AudioManager`、
+  `AudioPlayer`、`PlaySoundEvent` 和 `AudioSystem` 形成完整音频链路；Zig
+  已有 `zhu.audio`，本节只新增 `SoundPlay` 事件和 `system/sound.zig`
+  收口播放，不新增资源管理层。
+- 35-音效反馈：C++ 支持 2D 空间声、实体 `AudioComponent` 映射、音量配置和
+  Debug 面板；Zig 本节先全局播放 OGG 音效，不做空间声、配置文件或调试 UI。
+- 35-音效反馈：C++ `ActionSoundSystem` 监听动作状态变化并支持概率/冷却；
+  Zig 当前工具结算没有完整动画关键帧链，本节直接在锄地、浇水、种植、收获和
+  拾取的成功路径发出音效事件。
 - 渲染稳定性：当前 Zig 直接绘制到 swapchain viewport，没有像 C++ 一样先渲染到固定
   `320x180` 逻辑分辨率 FBO 再整体放大；默认窗口下 normalized 斜向移动会更容易暴露
   像素滚动抖动，后续计划实现离屏渲染后再统一处理。

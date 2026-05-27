@@ -50,16 +50,18 @@ pub fn getTile(position: zhu.Vector2) ?*Tile {
     return &tiles[@as(usize, @intCast(tile.y * width + tile.x))];
 }
 
-pub fn hoe(position: zhu.Vector2) void {
-    const tile = getTile(position) orelse return;
-    if (tile.land != null or tile.crop != null) return;
+pub fn hoe(position: zhu.Vector2) bool {
+    const tile = getTile(position) orelse return false;
+    if (tile.land != null or tile.crop != null) return false;
     tile.land = .dry;
+    return true;
 }
 
-pub fn water(position: zhu.Vector2) void {
-    const tile = getTile(position) orelse return;
-    if (tile.land == null) return;
+pub fn water(position: zhu.Vector2) bool {
+    const tile = getTile(position) orelse return false;
+    if (tile.land == null) return false;
     tile.land = .wet;
+    return true;
 }
 
 pub fn draw() void {
@@ -85,7 +87,7 @@ test "锄地会记录目标格" {
     enter(&testMaps[0]);
     defer exit();
 
-    hoe(.xy(32, 48));
+    try std.testing.expect(hoe(.xy(32, 48)));
 
     try std.testing.expectEqual(.dry, getTile(.xy(32, 48)).?.land);
 }
@@ -96,11 +98,11 @@ test "浇水只会影响已有耕地" {
     enter(&testMaps[0]);
     defer exit();
 
-    water(.xy(32, 48));
+    try std.testing.expect(!water(.xy(32, 48)));
     try std.testing.expectEqual(null, getTile(.xy(32, 48)).?.land);
 
-    hoe(.xy(32, 48));
-    water(.xy(32, 48));
+    try std.testing.expect(hoe(.xy(32, 48)));
+    try std.testing.expect(water(.xy(32, 48)));
     try std.testing.expectEqual(.wet, getTile(.xy(32, 48)).?.land);
 }
 
@@ -112,6 +114,6 @@ test "目标格有作物时不会锄地" {
 
     getTile(.xy(32, 48)).?.crop = 1;
 
-    hoe(.xy(32, 48));
+    try std.testing.expect(!hoe(.xy(32, 48)));
     try std.testing.expectEqual(null, getTile(.xy(32, 48)).?.land);
 }

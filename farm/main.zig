@@ -61,6 +61,7 @@ pub fn deinit() void {
     context.deinit();
     gui.deinit();
     world.deinit();
+    zhu.audio.deinit();
     zhu.assets.free(vertexBuffer);
 }
 

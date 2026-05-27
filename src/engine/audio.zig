@@ -79,6 +79,8 @@ pub fn playSound(path: [:0]const u8) void {
 }
 
 pub fn playSoundOption(path: [:0]const u8, loop: bool) ?usize {
+    if (@import("builtin").is_test) return null;
+
     const sound = assets.loadSound(path, loop);
     if (sound == null) return null;
 

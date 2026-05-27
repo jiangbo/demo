@@ -27,6 +27,7 @@ const system = struct {
     const pickup = @import("system/pickup.zig");
     const render = @import("system/render.zig");
     const light = @import("system/light.zig");
+    const sound = @import("system/sound.zig");
     const target = @import("system/target.zig");
     const time = @import("system/time.zig");
     const tool = @import("system/tool.zig");
@@ -84,6 +85,7 @@ fn updateFarm(world: *World, delta: f32) void {
         const player = world.getIdentity(actor.Player).?;
         world.getPtr(player, ui.Target).?.active = false;
         dialog.update(world);
+        system.sound.update(world);
         return;
     }
 
@@ -93,6 +95,7 @@ fn updateFarm(world: *World, delta: f32) void {
     system.tool.update(world);
     toolbar.update();
     dialog.update(world);
+    system.sound.update(world);
 }
 
 fn enterFarm(world: *World) void {

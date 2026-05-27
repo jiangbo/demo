@@ -148,6 +148,10 @@ pub const light = struct {
     pub const DayOnly = struct {};
 };
 
+pub const sound = struct {
+    pub const Id = enum { hoe, water, harvest, pickup, plant };
+};
+
 // 事件类型：系统间通信的一次性消息
 pub const event = struct {
     const Entity = zhu.ecs.Entity;
@@ -169,4 +173,6 @@ pub const event = struct {
         hour: u8,
         period: time.Period,
     };
+
+    pub const SoundPlay = struct { id: sound.Id };
 };
