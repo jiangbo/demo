@@ -34,7 +34,7 @@ zig build test
   - 需要系统：DayNightSystem、环境色参数、Renderer tint/overlay 最小实现。
   - 参考源码：`game/system/day_night_system.*`、`assets/data/light_config.json`
 
-- [ ] 34-夜间灯光占位效果
+- [x] 34-夜间灯光占位效果
   - 可见效果：夜晚路灯/窗户附近有简单亮色覆盖或光圈。
   - 需要系统：PointLight/Emissive 组件、LightToggleSystem、简化光照绘制。
   - 参考源码：`engine/component/light_component.h`、`light_system.*`
@@ -126,6 +126,21 @@ zig build test
   Zig 当前地图还没有室内外元数据，本步默认当前地图都受昼夜色调影响。
 - 33-昼夜颜色变化：C++ 同节包含 `TimeOfDayLightSystem` 控制夜间灯光显隐；
   Zig 已拆到 34，本步不实现路灯、窗户光、点光源或光圈。
+- 34-夜间灯光占位效果：C++ 使用完整多 pass renderer，包括 LightingPass、
+  EmissivePass、BloomPass 和 CompositePass；Zig 本节只做 ECS 光源数据、
+  时间显隐规则和 `circle.png` 圆形光圈占位。
+- 34-夜间灯光占位效果：C++ 支持真实 `SpotLight` 参数解析；Zig 当前
+  `Spot` 只保留默认数据，没有保留 Tiled class 嵌套属性。
+- 34-夜间灯光占位效果：C++ 支持 `EmissiveRect` 和 `EmissiveSprite`；
+  Zig 本节暂不实现自发光矩形和自发光精灵。
+- 34-夜间灯光占位效果：C++ 的玩家灯有独立事件和配置；Zig 本节直接用
+  `light.Manual`、`L` 键和暗时段判断控制玩家跟随点光。
+- 渲染稳定性：当前 Zig 直接绘制到 swapchain viewport，没有像 C++ 一样先渲染到固定
+  `320x180` 逻辑分辨率 FBO 再整体放大；默认窗口下 normalized 斜向移动会更容易暴露
+  像素滚动抖动，后续计划实现离屏渲染后再统一处理。
+- 渲染稳定性：默认窗口斜向移动时曾观察到 tile 网格附近短暂竖线；将 clear color
+  临时改成红色后，竖线中可见红色像素，说明至少部分问题是相邻 tile quad 之间露出背景，
+  不是单纯 UV 采样区域错误。后续实现离屏渲染后需要复查是否仍存在。
 
 ## 暂缓的大系统
 

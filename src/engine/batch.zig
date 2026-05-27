@@ -35,6 +35,7 @@ pub const Vertex = extern struct {
 pub var pipeline: sk.gfx.Pipeline = undefined;
 pub var vertexBuffer: std.ArrayList(Vertex) = .empty;
 pub var whiteImage: graphics.Image = undefined;
+pub var circleImage: graphics.Image = undefined;
 var nearestSampler: sk.gfx.Sampler = undefined;
 
 pub var commandBuffer: std.ArrayList(Command) = .empty;
@@ -179,6 +180,10 @@ pub fn drawTriangle(rect: math.Rect, option: TriangleOption) void {
         .color = option.color,
         .mask = .{ .flipX = option.flip },
     });
+}
+
+pub fn drawCircle(position: Vector2, option: Option) void {
+    drawImage(circleImage, position, option);
 }
 
 pub const NineOption = struct { topLeft: Vector2, bottomRight: Vector2 };
