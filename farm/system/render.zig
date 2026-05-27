@@ -102,7 +102,7 @@ test "视口外精灵不会被绘制" {
 
     draw(&world);
 
-    try std.testing.expectEqual(@as(usize, 0), zhu.batch.vertexBuffer.items.len);
+    try std.testing.expectEqual(0, zhu.batch.vertexBuffer.items.len);
 }
 
 test "混合场景只绘制视口内精灵" {

@@ -32,55 +32,51 @@ pub fn init() void {
 }
 
 pub fn update(world: *zhu.ecs.World) void {
-    // 手动灯光切换（按 L 键）
-    const toggle = !context.ui.wantCapture() and zhu.input.key.pressed(.L);
-    const dark = context.time.isDark();
-    var manuals = world.query(.{light.Manual});
-    while (manuals.next()) |entity| {
-        const manual = manuals.getPtr(entity, light.Manual);
-        if (toggle) manual.wantedOn = !manual.wantedOn;
-        setDisabled(world, entity, !(dark and manual.wantedOn));
+    var nextDark: ?bool = null;
+    for (world.getEvent(event.HourChanged).items) |evt| {
+        nextDark = switch (evt.hour) {
+            18 => true,
+            6 => false,
+            else => nextDark,
+        };
     }
 
-    // 整点事件时切换昼夜灯光
-    if (world.getEvent(event.HourChanged).items.len == 0) return;
+    const dark = nextDark orelse return;
+    world.clear(light.Disabled);
 
-    var nightQuery = world.query(.{light.NightOnly});
-    while (nightQuery.next()) |entity| setDisabled(world, entity, !dark);
-
-    var dayQuery = world.query(.{light.DayOnly});
-    while (dayQuery.next()) |entity| setDisabled(world, entity, dark);
+    if (dark) {
+        var query = world.query(.{light.DayOnly});
+        while (query.next()) |e| world.add(e, light.Disabled{});
+    } else {
+        var query = world.query(.{light.NightOnly});
+        while (query.next()) |e| world.add(e, light.Disabled{});
+    }
 }
 
-pub fn draw() void {
+pub fn draw(world: *zhu.ecs.World) void {
     drawOverlay();
+    drawLights(world);
 }
 
-pub fn drawOverlay() void {
+fn drawOverlay() void {
     const hour = @as(f32, @floatFromInt(context.time.hour)) +
         context.time.minute / 60;
     const overlay = overlayAt(hour);
     if (overlay.a <= 0.001) return;
 
-    zhu.batch.drawRect(.init(.zero, zhu.camera.size), .{
-        .color = overlay,
-    });
+    zhu.batch.drawRect(zhu.camera.viewport(), .{ .color = overlay });
 }
 
-pub fn drawWorld(world: *zhu.ecs.World) void {
+fn drawLights(world: *zhu.ecs.World) void {
     const allPoint = .{ Position, light.Point };
     var points = world.queryNone(allPoint, .{light.Disabled});
     while (points.next()) |entity| {
-        const pos = points.get(entity, Position);
+        const position = points.get(entity, Position);
         const point = points.get(entity, light.Point);
-        const center = pos.add(point.offset);
+        const center = position.add(point.offset);
         const alpha = std.math.clamp(point.intensity, 0, 1);
-        const color = zhu.Color.rgba(
-            point.color.r,
-            point.color.g,
-            point.color.b,
-            0.68 * alpha,
-        );
+        var color = point.color;
+        color.a *= 0.68 * alpha;
         drawGlow(center, point.radius * 2.0, color);
     }
 
@@ -91,17 +87,13 @@ pub fn drawWorld(world: *zhu.ecs.World) void {
         const pos = spots.get(entity, Position);
         const spot = spots.get(entity, light.Spot);
         const alpha = std.math.clamp(spot.intensity, 0, 1);
-        const color = zhu.Color.rgba(
-            spot.color.r,
-            spot.color.g,
-            spot.color.b,
-            0.56 * alpha,
-        );
+        var color = spot.color;
+        color.a *= 0.56 * alpha;
         drawGlow(pos, spot.radius * 1.6, color);
     }
 }
 
-pub fn overlayAt(hour: f32) zhu.Color {
+fn overlayAt(hour: f32) zhu.Color {
     const sampleHour = if (hour < 4) hour + 24 else hour;
 
     var i: usize = 0;
@@ -118,16 +110,9 @@ pub fn overlayAt(hour: f32) zhu.Color {
     return keyframes[keyframes.len - 1].color;
 }
 
-fn setDisabled(world: *zhu.ecs.World, entity: zhu.ecs.Entity, disabled: bool) void {
-    if (disabled) {
-        world.add(entity, light.Disabled{});
-    } else {
-        world.remove(entity, light.Disabled);
-    }
-}
-
 fn drawGlow(center: zhu.Vector2, size: f32, color: zhu.Color) void {
-    zhu.batch.drawImage(glowImage, center.add(.xy(-size * 0.5, -size * 0.5)), .{
+    const position = center.add(.xy(-size * 0.5, -size * 0.5));
+    zhu.batch.drawImage(glowImage, position, .{
         .size = .square(size),
         .color = color,
     });
@@ -140,7 +125,7 @@ fn smoothStep(value: f32) f32 {
 
 test "light overlay 正午不改变画面" {
     const color = overlayAt(12);
-    try std.testing.expectApproxEqAbs(@as(f32, 0), color.a, 0.001);
+    try std.testing.expectApproxEqAbs(0, color.a, 0.001);
 }
 
 test "light overlay 深夜比白天更明显" {
@@ -180,15 +165,13 @@ test "light update 没有整点事件时不切换显隐" {
 
     const entity = world.createEntity();
     world.add(entity, light.NightOnly{});
-    context.time.hour = 19;
-    context.time.minute = 0;
 
     update(&world);
 
     try std.testing.expect(!world.has(entity, light.Disabled));
 }
 
-test "light update 夜晚启用 night-only 并禁用 day-only" {
+test "light update 18 点启用 night-only 并禁用 day-only" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
@@ -199,9 +182,7 @@ test "light update 夜晚启用 night-only 并禁用 day-only" {
     const day = world.createEntity();
     world.add(day, light.DayOnly{});
 
-    context.time.hour = 19;
-    context.time.minute = 0;
-    world.addEvent(event.HourChanged{ .day = 1, .hour = 19 });
+    world.addEvent(event.HourChanged{ .day = 1, .hour = 18 });
 
     update(&world);
 
@@ -209,7 +190,7 @@ test "light update 夜晚启用 night-only 并禁用 day-only" {
     try std.testing.expect(world.has(day, light.Disabled));
 }
 
-test "light update 白天禁用 night-only 并启用 day-only" {
+test "light update 6 点禁用 night-only 并启用 day-only" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
@@ -220,9 +201,7 @@ test "light update 白天禁用 night-only 并启用 day-only" {
     world.add(day, light.DayOnly{});
     world.add(day, light.Disabled{});
 
-    context.time.hour = 12;
-    context.time.minute = 0;
-    world.addEvent(event.HourChanged{ .day = 1, .hour = 12 });
+    world.addEvent(event.HourChanged{ .day = 1, .hour = 6 });
 
     update(&world);
 
@@ -230,7 +209,26 @@ test "light update 白天禁用 night-only 并启用 day-only" {
     try std.testing.expect(!world.has(day, light.Disabled));
 }
 
-test "light drawWorld 只绘制启用点光" {
+test "light update 非边界整点不切换显隐" {
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const night = world.createEntity();
+    world.add(night, light.NightOnly{});
+
+    const day = world.createEntity();
+    world.add(day, light.DayOnly{});
+    world.add(day, light.Disabled{});
+
+    world.addEvent(event.HourChanged{ .day = 1, .hour = 12 });
+
+    update(&world);
+
+    try std.testing.expect(!world.has(night, light.Disabled));
+    try std.testing.expect(world.has(day, light.Disabled));
+}
+
+test "light drawLights 只绘制启用点光" {
     glowImage = .{ .texture = .{ .id = 1 }, .size = .xy(128, 128) };
 
     var vertices: [8]zhu.batch.Vertex = undefined;
@@ -250,12 +248,12 @@ test "light drawWorld 只绘制启用点光" {
     world.add(disabled, light.Point{ .radius = 16 });
     world.add(disabled, light.Disabled{});
 
-    drawWorld(&world);
+    drawLights(&world);
 
-    try std.testing.expectEqual(@as(usize, 1), zhu.batch.vertexBuffer.items.len);
+    try std.testing.expectEqual(1, zhu.batch.vertexBuffer.items.len);
 }
 
-test "light drawWorld 会把 spot 退化成占位光圈" {
+test "light drawLights 会把 spot 退化成占位光圈" {
     glowImage = .{ .texture = .{ .id = 1 }, .size = .xy(128, 128) };
 
     var vertices: [8]zhu.batch.Vertex = undefined;
@@ -270,67 +268,7 @@ test "light drawWorld 会把 spot 退化成占位光圈" {
     world.add(entity, Position.xy(10, 20));
     world.add(entity, light.Spot{ .radius = 16 });
 
-    drawWorld(&world);
+    drawLights(&world);
 
-    try std.testing.expectEqual(@as(usize, 1), zhu.batch.vertexBuffer.items.len);
-}
-
-fn resetInput() void {
-    zhu.input.key.state = .initEmpty();
-    zhu.input.key.lastState = .initEmpty();
-    context.ui.wantCaptureKeyboard = false;
-}
-
-fn pressKey(keyCode: zhu.input.KeyCode) void {
-    zhu.input.key.state.set(@intCast(@intFromEnum(keyCode)));
-}
-
-test "manual light 白天保持禁用" {
-    resetInput();
-    defer resetInput();
-    context.time.hour = 12;
-    context.time.minute = 0;
-    pressKey(.L);
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const entity = world.createEntity();
-    world.add(entity, light.Manual{});
-
-    update(&world);
-
-    try std.testing.expect(world.has(entity, light.Disabled));
-    try std.testing.expect(world.get(entity, light.Manual).?.wantedOn);
-}
-
-test "manual light 夜晚按键切换启用和禁用" {
-    resetInput();
-    defer resetInput();
-    context.time.hour = 19;
-    context.time.minute = 0;
-    pressKey(.L);
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const entity = world.createEntity();
-    world.add(entity, light.Manual{});
-    world.add(entity, light.Disabled{});
-
-    update(&world);
-
-    try std.testing.expect(!world.has(entity, light.Disabled));
-    try std.testing.expect(world.get(entity, light.Manual).?.wantedOn);
-
-    zhu.input.key.lastState = zhu.input.key.state;
-    update(&world);
-
-    try std.testing.expect(!world.has(entity, light.Disabled));
-
-    zhu.input.key.lastState = .initEmpty();
-    update(&world);
-
-    try std.testing.expect(world.has(entity, light.Disabled));
-    try std.testing.expect(!world.get(entity, light.Manual).?.wantedOn);
+    try std.testing.expectEqual(1, zhu.batch.vertexBuffer.items.len);
 }

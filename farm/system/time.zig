@@ -176,8 +176,8 @@ test "时段判断按整点小时分段" {
 test "时间文本不会提前进位到下一分钟" {
     var buffer: [16]u8 = undefined;
     const clock = zhu.format(&buffer, "{d:0>2}:{d:0>2}", .{
-        @as(u8, 23),
-        @as(u8, @intFromFloat(@as(f32, 59.9))),
+        23,
+        @as(u8, @intFromFloat(59.9)),
     });
 
     try std.testing.expectEqualStrings("23:59", clock);

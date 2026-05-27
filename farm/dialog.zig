@@ -158,7 +158,7 @@ test "DialogStart 事件会激活第一句台词" {
     try std.testing.expectEqual(npc, world.getIdentity(Dialog).?);
     try std.testing.expectEqualStrings("哞~", text);
     try std.testing.expectEqual(
-        @as(usize, 0),
+        0,
         world.getEvent(component.event.DialogStart).items.len,
     );
 }

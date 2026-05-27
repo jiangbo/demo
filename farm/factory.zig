@@ -48,14 +48,6 @@ pub fn spawnPlayer(world: *World, spawn: zhu.Vector2) void {
     world.add(player, render.Render{ .layer = .actor });
     world.add(player, render.YSort{});
     world.add(player, ui.Target{});
-    world.add(player, light.Point{
-        .radius = 128,
-        .offset = .xy(0, -10),
-        .color = .rgba(1.0, 0.95, 0.8, 1.0),
-        .intensity = 1.0,
-    });
-    world.add(player, light.Manual{});
-    world.add(player, light.Disabled{});
 }
 
 pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {

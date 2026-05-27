@@ -252,7 +252,7 @@ test "gid 图片解析支持单图和集合图块集" {
         break;
     }
     try std.testing.expect(singleGid != 0);
-    try std.testing.expectEqual(@as(u32, 1), data.imageByGid(singleGid).texture.id);
+    try std.testing.expectEqual(1, data.imageByGid(singleGid).texture.id);
 
     var collectionGid: u32 = 0;
     for (data.tileSetRefs) |ref| {
@@ -267,7 +267,7 @@ test "gid 图片解析支持单图和集合图块集" {
         if (collectionGid != 0) break;
     }
     try std.testing.expect(collectionGid != 0);
-    try std.testing.expectEqual(@as(u32, 1), data.imageByGid(collectionGid).texture.id);
+    try std.testing.expectEqual(1, data.imageByGid(collectionGid).texture.id);
 }
 
 test "地图绘制会把前景留到实体之后" {
@@ -295,13 +295,13 @@ test "地图绘制会把前景留到实体之后" {
 
     drawBack();
 
-    try std.testing.expectEqual(@as(usize, 1), zhu.batch.vertexBuffer.items.len);
-    try std.testing.expectEqual(@as(f32, 1), zhu.batch.vertexBuffer.items[0].position.x);
+    try std.testing.expectEqual(1, zhu.batch.vertexBuffer.items.len);
+    try std.testing.expectEqual(1, zhu.batch.vertexBuffer.items[0].position.x);
 
     drawFront();
 
-    try std.testing.expectEqual(@as(usize, 2), zhu.batch.vertexBuffer.items.len);
-    try std.testing.expectEqual(@as(f32, 2), zhu.batch.vertexBuffer.items[1].position.x);
+    try std.testing.expectEqual(2, zhu.batch.vertexBuffer.items.len);
+    try std.testing.expectEqual(2, zhu.batch.vertexBuffer.items[1].position.x);
 }
 
 test "地图触发器会读取目标地图和落点方向" {
@@ -331,8 +331,8 @@ test "地图触发器会读取目标地图和落点方向" {
     const entity = query.next().?;
     const trigger = query.get(entity, Trigger);
 
-    try std.testing.expectEqual(@as(i32, 1), trigger.selfId);
-    try std.testing.expectEqual(@as(i32, 1), trigger.targetId);
+    try std.testing.expectEqual(1, trigger.selfId);
+    try std.testing.expectEqual(1, trigger.targetId);
     try std.testing.expectEqual(Id.town, trigger.targetMap);
     try std.testing.expectEqual(StartOffset.top, trigger.startOffset);
 }
@@ -364,12 +364,12 @@ test "trigger 对象会创建 ECS 触发器实体" {
     const entity = query.next().?;
     const trigger = query.get(entity, component.map.Trigger);
 
-    try std.testing.expectEqual(@as(i32, 2), trigger.selfId);
-    try std.testing.expectEqual(@as(i32, 3), trigger.targetId);
+    try std.testing.expectEqual(2, trigger.selfId);
+    try std.testing.expectEqual(3, trigger.targetId);
     try std.testing.expectEqual(Id.school, trigger.targetMap);
     try std.testing.expectEqual(StartOffset.bottom, trigger.startOffset);
-    try std.testing.expectEqual(@as(f32, 10), trigger.rect.min.x);
-    try std.testing.expectEqual(@as(f32, 20), trigger.rect.min.y);
+    try std.testing.expectEqual(10, trigger.rect.min.x);
+    try std.testing.expectEqual(20, trigger.rect.min.y);
     try std.testing.expectEqual(null, query.next());
 }
 
@@ -384,6 +384,6 @@ test "触发器落点会按 start_offset 放到区域外侧" {
 
     const position = triggerSpawnPosition(trigger);
 
-    try std.testing.expectEqual(@as(f32, 25), position.x);
-    try std.testing.expectEqual(@as(f32, 68), position.y);
+    try std.testing.expectEqual(25, position.x);
+    try std.testing.expectEqual(68, position.y);
 }

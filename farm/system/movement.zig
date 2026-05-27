@@ -68,7 +68,7 @@ test "有 Collider 的实体会被 solid 格子阻挡" {
 
     // 向左移动会碰到 solid 格子，x 应被阻挡
     const position = world.get(entity, Position).?;
-    try std.testing.expectEqual(@as(f32, 56), position.x);
+    try std.testing.expectEqual(56, position.x);
 }
 
 test "有 Collider 的实体会被 solid 格子垂直阻挡" {
@@ -90,7 +90,7 @@ test "有 Collider 的实体会被 solid 格子垂直阻挡" {
     update(&world, 1.0);
 
     const position = world.get(entity, Position).?;
-    try std.testing.expectEqual(@as(f32, 60), position.y);
+    try std.testing.expectEqual(60, position.y);
 }
 
 test "斜向撞墙时未碰撞轴仍会滑动" {
@@ -112,6 +112,6 @@ test "斜向撞墙时未碰撞轴仍会滑动" {
     update(&world, 1.0);
 
     const position = world.get(entity, Position).?;
-    try std.testing.expectEqual(@as(f32, 56), position.x);
-    try std.testing.expectEqual(@as(f32, 45), position.y);
+    try std.testing.expectEqual(56, position.x);
+    try std.testing.expectEqual(45, position.y);
 }

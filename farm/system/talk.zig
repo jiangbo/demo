@@ -103,7 +103,7 @@ test "按 F 会向最近的 NPC 发起对话事件" {
     update(&world);
 
     const events = world.getEvent(component.event.DialogStart).items;
-    try std.testing.expectEqual(@as(usize, 1), events.len);
+    try std.testing.expectEqual(1, events.len);
     try std.testing.expectEqual(near, events[0].entity);
     try std.testing.expectEqualStrings("cow", events[0].scriptId);
 }
@@ -127,7 +127,7 @@ test "对话激活后按 F 会发送推进事件" {
     update(&world);
 
     const events = world.getEvent(component.event.DialogAdvance).items;
-    try std.testing.expectEqual(@as(usize, 1), events.len);
+    try std.testing.expectEqual(1, events.len);
     try std.testing.expectEqual(npc, events[0].entity);
 }
 
@@ -149,6 +149,6 @@ test "当前对话目标太远时会发送关闭事件" {
     update(&world);
 
     const events = world.getEvent(component.event.DialogClose).items;
-    try std.testing.expectEqual(@as(usize, 1), events.len);
+    try std.testing.expectEqual(1, events.len);
     try std.testing.expectEqual(npc, events[0].entity);
 }

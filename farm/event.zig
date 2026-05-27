@@ -120,7 +120,7 @@ test "enqueue 会等待 update 处理" {
 
     enqueue(.{ .scene_request = .farm });
 
-    try std.testing.expectEqual(@as(?context.scene.Scene, null), context.scene.pending);
+    try std.testing.expectEqual(null, context.scene.pending);
 
     update();
 

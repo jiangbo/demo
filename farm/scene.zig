@@ -111,10 +111,7 @@ fn drawFarm(world: *World) void {
     drawSolids();
     drawCollider(world);
 
-    zhu.camera.mode = .window;
-    system.light.drawOverlay();
-    zhu.camera.mode = .world;
-    system.light.drawWorld(world);
+    system.light.draw(world);
     zhu.camera.mode = .window;
     system.time.draw();
     toolbar.draw();

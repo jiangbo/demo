@@ -117,7 +117,7 @@ test "场景请求会等待到应用阶段才生效" {
     scene.apply();
 
     try std.testing.expectEqual(requested, scene.current);
-    try std.testing.expectEqual(@as(?scene.Scene, null), scene.pending);
+    try std.testing.expectEqual(null, scene.pending);
 }
 
 test "应用前最后一次场景请求生效" {
@@ -129,7 +129,7 @@ test "应用前最后一次场景请求生效" {
     scene.apply();
 
     try std.testing.expectEqual(config.scene, scene.current);
-    try std.testing.expectEqual(@as(?scene.Scene, null), scene.pending);
+    try std.testing.expectEqual(null, scene.pending);
 }
 
 test "地图切换请求会被 take 消费" {
@@ -142,8 +142,8 @@ test "地图切换请求会被 take 消费" {
 
     const transition = map.takePending().?;
     try std.testing.expectEqual(component.map.Id.town, transition.target);
-    try std.testing.expectEqual(@as(i32, 3), transition.targetId);
-    try std.testing.expectEqual(@as(?map.Transition, null), map.pending);
+    try std.testing.expectEqual(3, transition.targetId);
+    try std.testing.expectEqual(null, map.pending);
 }
 
 test "时间暗时段从 18:00 开始" {

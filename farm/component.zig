@@ -146,7 +146,6 @@ pub const light = struct {
     pub const Disabled = struct {};
     pub const NightOnly = struct {};
     pub const DayOnly = struct {};
-    pub const Manual = struct { wantedOn: bool = false };
 };
 
 // 事件类型：系统间通信的一次性消息
