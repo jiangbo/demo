@@ -112,7 +112,7 @@ pub fn drawBack() void {
     if (vertexes.items.len != 0) {
         _ = zhu.batch.addDrawCommand(mapTexture);
         const back = vertexes.items[0..frontLayerStart];
-        zhu.batch.appendVertexes(back);
+        zhu.batch.vertexBuffer().appendSliceAssumeCapacity(back);
     }
 
     land.draw();
@@ -121,7 +121,7 @@ pub fn drawBack() void {
 pub fn drawFront() void {
     if (frontLayerStart == vertexes.items.len) return;
     const front = vertexes.items[frontLayerStart..];
-    zhu.batch.appendVertexes(front);
+    zhu.batch.vertexBuffer().appendSliceAssumeCapacity(front);
 }
 
 pub fn loadObjects(world: *World, layer: *const tiled.Layer) void {
@@ -290,18 +290,18 @@ test "地图绘制会把前景留到实体之后" {
 
     var vertices: [8]zhu.batch.Vertex = undefined;
     var commands: [4]zhu.batch.Command = undefined;
-    zhu.batch.vertexBuffer = .initBuffer(&vertices);
-    zhu.batch.commandBuffer = .initBuffer(&commands);
+    zhu.batch.vertexBuffer().* = .initBuffer(&vertices);
+    zhu.batch.commandBuffer().* = .initBuffer(&commands);
 
     drawBack();
 
-    try std.testing.expectEqual(1, zhu.batch.vertexBuffer.items.len);
-    try std.testing.expectEqual(1, zhu.batch.vertexBuffer.items[0].position.x);
+    try std.testing.expectEqual(1, zhu.batch.vertexBuffer().items.len);
+    try std.testing.expectEqual(1, zhu.batch.vertexBuffer().items[0].position.x);
 
     drawFront();
 
-    try std.testing.expectEqual(2, zhu.batch.vertexBuffer.items.len);
-    try std.testing.expectEqual(2, zhu.batch.vertexBuffer.items[1].position.x);
+    try std.testing.expectEqual(2, zhu.batch.vertexBuffer().items.len);
+    try std.testing.expectEqual(2, zhu.batch.vertexBuffer().items[1].position.x);
 }
 
 test "地图触发器会读取目标地图和落点方向" {

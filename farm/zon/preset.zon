@@ -1,10 +1,10 @@
 .{
     .imageId = 1103560250,
-    .slotSize = 16,
+    .slotSize = 18,
     .spacing = 2,
     .slotCount = 10,
     .panelPadding = 4,
-    .bottomMargin = 2.5,
+    .bottomMargin = 2,
     .panel = .{
         .rect = .{
             .min = .{ .x = 6, .y = 105 },

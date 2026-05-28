@@ -233,8 +233,8 @@ test "light drawLights 只绘制启用点光" {
 
     var vertices: [8]zhu.batch.Vertex = undefined;
     var commands: [4]zhu.batch.Command = undefined;
-    zhu.batch.vertexBuffer = .initBuffer(&vertices);
-    zhu.batch.commandBuffer = .initBuffer(&commands);
+    zhu.batch.vertexBuffer().* = .initBuffer(&vertices);
+    zhu.batch.commandBuffer().* = .initBuffer(&commands);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -250,7 +250,7 @@ test "light drawLights 只绘制启用点光" {
 
     drawLights(&world);
 
-    try std.testing.expectEqual(1, zhu.batch.vertexBuffer.items.len);
+    try std.testing.expectEqual(1, zhu.batch.vertexBuffer().items.len);
 }
 
 test "light drawLights 会把 spot 退化成占位光圈" {
@@ -258,8 +258,8 @@ test "light drawLights 会把 spot 退化成占位光圈" {
 
     var vertices: [8]zhu.batch.Vertex = undefined;
     var commands: [4]zhu.batch.Command = undefined;
-    zhu.batch.vertexBuffer = .initBuffer(&vertices);
-    zhu.batch.commandBuffer = .initBuffer(&commands);
+    zhu.batch.vertexBuffer().* = .initBuffer(&vertices);
+    zhu.batch.commandBuffer().* = .initBuffer(&commands);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -270,5 +270,5 @@ test "light drawLights 会把 spot 退化成占位光圈" {
 
     drawLights(&world);
 
-    try std.testing.expectEqual(1, zhu.batch.vertexBuffer.items.len);
+    try std.testing.expectEqual(1, zhu.batch.vertexBuffer().items.len);
 }

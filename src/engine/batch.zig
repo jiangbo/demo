@@ -9,6 +9,7 @@ const window = @import("window.zig");
 
 const Image = graphics.Image;
 const ImageId = graphics.ImageId;
+const Texture = graphics.Texture;
 const Color = graphics.Color;
 const Vector2 = math.Vector2;
 const Matrix = math.Matrix;
@@ -41,44 +42,54 @@ pub const Option = struct {
     radian: f32 = 0, // 旋转弧度
     uvRect: ?math.Vector4 = null, // 纹理 UV 区域
     color: graphics.Color = .white, // 颜色
-    layer: Layer = .default, // 绘制层级
+    layer: Layer.Name = .default, // 绘制层级
 };
 
-const Layer = enum { default, extend, text, debug };
-const LayerBuffer = struct {
+pub const Layer = struct {
+    pub const Name = enum { default, extend, text, debug };
     pipeline: sk.gfx.Pipeline = undefined,
     sampler: sk.gfx.Sampler = undefined,
     vertices: std.ArrayList(Vertex) = .empty,
     commands: std.ArrayList(Command) = .empty,
     vertexHandle: sk.gfx.Buffer = .{},
 
-    fn currentCommand(self: *LayerBuffer) ?*Command {
+    pub fn currentCommand(self: *Layer) ?*Command {
         if (self.commands.items.len == 0) return null;
         return &self.commands.items[self.commands.items.len - 1];
     }
 
-    fn addDrawCommand(self: *LayerBuffer, texture: graphics.Texture) *Command {
-        const index: u32 = if (self.currentCommand()) |cmd| blk: {
+    pub fn addDrawCommand(self: *Layer, command: Command) *Command {
+        var finalCommand = command;
+        finalCommand.start = if (self.currentCommand()) |cmd| blk: {
             cmd.end = @intCast(self.vertices.items.len);
             break :blk cmd.end;
         } else 0;
-
-        self.commands.appendAssumeCapacity(.{
-            .start = index,
-            .texture = texture,
-            .position = camera.position,
-            .scale = camera.scale,
-            .size = camera.size,
-        });
+        self.commands.appendAssumeCapacity(finalCommand);
         return &self.commands.items[self.commands.items.len - 1];
+    }
+
+    pub fn drawCommand(self: *Layer, command: Command) *Command {
+        if (self.currentCommand()) |cmd| {
+            if (cmd.texture.id == command.texture.id) return cmd;
+            return self.addDrawCommand(command);
+        } else return self.addDrawCommand(command);
+    }
+
+    fn upload(self: *Layer) void {
+        if (self.currentCommand()) |cmd| {
+            cmd.end = @intCast(self.vertices.items.len);
+        } else return;
+
+        const buffer = sk.gfx.asRange(self.vertices.items);
+        _ = sk.gfx.updateBuffer(self.vertexHandle, buffer);
     }
 };
 
-const Stats = struct { sprites: usize = 0, commands: usize = 0 };
+pub const Stats = struct { sprites: usize = 0, commands: usize = 0 };
 
 pub var whiteImage: graphics.Image = undefined;
 pub var circleImage: graphics.Image = undefined;
-pub var layers: std.EnumArray(Layer, LayerBuffer) = .initFill(.{});
+pub var layers: std.EnumArray(Layer.Name, Layer) = .initFill(.{});
 pub var lastStats: Stats = .{};
 
 var renderTarget: ?graphics.RenderTarget = null;
@@ -106,8 +117,8 @@ pub fn init(vertexes: []Vertex, commands: []Command) void {
     camera.init();
 }
 
-pub fn beginPass(pass: graphics.RenderPass) void {
-    var renderPass = pass;
+pub fn beginPass(clear: graphics.Color) void {
+    var renderPass = graphics.RenderPass{ .clear = clear };
     if (renderTarget) |target| renderPass.target = target;
     graphics.beginPass(renderPass);
 
@@ -120,9 +131,46 @@ pub fn beginPass(pass: graphics.RenderPass) void {
 
 pub fn flush() void {
     lastStats = .{};
+
+    if (renderTarget) |target| {
+        const defaultLayer = layers.getPtr(.default);
+        const presentIndex = defaultLayer.commands.items.len;
+
+        const mode = camera.mode;
+        camera.mode = .window;
+        drawImage(target.image, .zero, .{});
+        camera.mode = mode;
+
+        defaultLayer.upload();
+        drawCommands(.default, defaultLayer.commands.items[0..presentIndex]);
+
+        const textCount = graphics.textCount;
+        graphics.endPass();
+        graphics.beginPass(.{ .clear = .black });
+        graphics.textCount = textCount;
+
+        drawCommands(.default, defaultLayer.commands.items[presentIndex..]);
+
+        var iterator = layers.iterator();
+        while (iterator.next()) |entry| {
+            if (entry.key == .default) continue;
+            entry.value.upload();
+            drawCommands(entry.key, entry.value.commands.items);
+        }
+
+        updateStats();
+        return;
+    }
+
+    var iterator = layers.iterator();
+    while (iterator.next()) |entry| {
+        entry.value.upload();
+        drawCommands(entry.key, entry.value.commands.items);
+    }
+    updateStats();
 }
 
-fn drawCommands(value: Layer, commands: []const Command) void {
+fn drawCommands(value: Layer.Name, commands: []const Command) void {
     for (commands) |cmd| {
         switch (cmd.type) {
             .draw => {
@@ -144,12 +192,24 @@ pub fn currentCommand() ?*Command {
 }
 
 pub fn addDrawCommand(texture: graphics.Texture) *Command {
-    return layers.getPtr(.default).addDrawCommand(texture);
+    return layers.getPtr(.default).addDrawCommand(defaultCommand(texture));
 }
 
-pub fn appendVertexes(vertexes: []const Vertex) void {
-    const layer = layers.getPtr(.default);
-    layer.vertices.appendSliceAssumeCapacity(vertexes);
+fn defaultCommand(texture: graphics.Texture) Command {
+    return .{
+        .texture = texture,
+        .position = camera.position,
+        .scale = camera.scale,
+        .size = camera.size,
+    };
+}
+
+pub fn vertexBuffer() *std.ArrayList(Vertex) {
+    return &layers.getPtr(.default).vertices;
+}
+
+pub fn commandBuffer() *std.ArrayList(Command) {
+    return &layers.getPtr(.default).commands;
 }
 
 pub fn debugDraw(rect: math.Rect) void {
@@ -256,10 +316,7 @@ pub fn drawNine(image: Image, rect: math.Rect, option: NineOption) void {
 
 pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     const layer = layers.getPtr(option.layer);
-    var cmd = layer.currentCommand() orelse layer.addDrawCommand(image.texture);
-    if (cmd.texture.id != image.texture.id) {
-        cmd = layer.addDrawCommand(image.texture); // 纹理切换
-    }
+    const cmd = layer.drawCommand(defaultCommand(image.texture));
 
     const size = option.size orelse image.size;
     var scaledSize = size.mul(option.scale);
@@ -281,7 +338,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     });
 }
 
-fn doDraw(layerType: Layer, cmd: Command) void {
+fn doDraw(layerType: Layer.Name, cmd: Command) void {
     const layer = layers.getPtr(layerType);
 
     // 绑定流水线
@@ -350,20 +407,11 @@ pub fn commandCount() usize {
     return count;
 }
 
-// fn updateStats() void {
-//     var sprites = vertexBuffer.items.len;
-//     var commands = commandBuffer.items.len;
-
-//     sprites += layers.getPtr(.extend).vertices.items.len;
-//     sprites += layers.getPtr(.text).vertices.items.len;
-//     sprites += layers.getPtr(.debug).vertices.items.len;
-
-//     commands += layers.getPtr(.extend).commands.items.len;
-//     commands += layers.getPtr(.text).commands.items.len;
-//     commands += layers.getPtr(.debug).commands.items.len;
-
-//     lastStats = .{
-//         .sprites = sprites,
-//         .commands = commands,
-//     };
-// }
+fn updateStats() void {
+    var stats = Stats{};
+    for (layers.values) |layer| {
+        stats.sprites += layer.vertices.items.len;
+        stats.commands += layer.commands.items.len;
+    }
+    lastStats = stats;
+}

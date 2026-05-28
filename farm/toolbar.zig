@@ -121,12 +121,13 @@ pub fn draw() void {
         }
 
         if (slot.count > 0) {
-            const iconMargin = zon.slotSize * 0.1;
-            const iconPosition = position.add(.square(iconMargin));
+            const iconSize = prefab.item(slot.type).icon.size;
+            const iconOffset = zon.slotSize - iconSize.x;
+            const iconPosition = position.add(.square(@round(iconOffset / 2)));
 
-            drawItemIcon(slot.type, iconPosition);
+            drawItemIcon(slot.type, iconPosition, iconSize);
 
-            if (slot.count > 1) drawItemCount(slot.count, iconPosition);
+            if (slot.count > 1) drawItemCount(slot.count, iconPosition, iconSize);
         }
 
         if (i == slotIndex) {
@@ -137,14 +138,12 @@ pub fn draw() void {
     }
 }
 
-fn drawItemIcon(itemType: ItemEnum, position: zhu.Vector2) void {
-    const iconSize = zhu.Vector2.square(zon.slotSize * 0.8);
+fn drawItemIcon(itemType: ItemEnum, position: zhu.Vector2, size: zhu.Vector2) void {
     const image = prefab.resolveImage(prefab.item(itemType).icon);
-    zhu.batch.drawImage(image, position, .{ .size = iconSize });
+    zhu.batch.drawImage(image, position, .{ .size = size });
 }
 
-fn drawItemCount(count: u32, position: zhu.Vector2) void {
-    const iconSize = zhu.Vector2.square(zon.slotSize * 0.8);
-    const pos = position.add(iconSize).sub(.square(1));
+fn drawItemCount(count: u32, position: zhu.Vector2, size: zhu.Vector2) void {
+    const pos = position.add(size).sub(.square(1));
     zhu.text.drawFormat("{d}", pos, .{count}, .{ .alignment = .one });
 }

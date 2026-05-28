@@ -144,9 +144,10 @@ zig build test
 - 35-音效反馈：C++ `ActionSoundSystem` 监听动作状态变化并支持概率/冷却；
   Zig 当前工具结算没有完整动画关键帧链，本节直接在锄地、浇水、种植、收获和
   拾取的成功路径发出音效事件。
-- 渲染稳定性：当前 Zig 直接绘制到 swapchain viewport，没有像 C++ 一样先渲染到固定
-  `320x180` 逻辑分辨率 FBO 再整体放大；默认窗口下 normalized 斜向移动会更容易暴露
-  像素滚动抖动，后续计划实现离屏渲染后再统一处理。
+- 渲染稳定性：Zig 已新增 `graphics.RenderTarget` / `graphics.RenderPass`；
+  当前已把 `farm` 对 render target 的直接使用收回，并在 `batch`
+  内部按窗口视口尺寸创建可选 render target，自动完成逻辑画面绘制和
+  swapchain 缩放绘制。
 - 渲染稳定性：默认窗口斜向移动时曾观察到 tile 网格附近短暂竖线；将 clear color
   临时改成红色后，竖线中可见红色像素，说明至少部分问题是相邻 tile quad 之间露出背景，
   不是单纯 UV 采样区域错误。后续实现离屏渲染后需要复查是否仍存在。

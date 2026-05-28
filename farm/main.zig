@@ -13,12 +13,10 @@ var vertexBuffer: []zhu.batch.Vertex = undefined;
 var commandBuffer: [128]zhu.batch.Command = undefined;
 var soundBuffer: [20]zhu.audio.Sound = undefined;
 var world: zhu.ecs.World = undefined;
-var target: zhu.graphics.RenderTarget = undefined;
 
 pub fn init() void {
     vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 4096);
     zhu.batch.init(vertexBuffer, &commandBuffer);
-    target = zhu.graphics.createRenderTarget(zhu.window.size);
     world = .init(zhu.assets.allocator);
 
     zhu.audio.init(44100 / 2, &soundBuffer);
@@ -30,7 +28,6 @@ pub fn init() void {
 
     const fontImage = zhu.assets.loadImage("assets/font.png");
     zhu.text.initBitMapFont(fontImage, @import("zon/font.zon"));
-    zhu.text.changeFontSize(8);
 
     gui.init();
     context.init();
@@ -48,21 +45,13 @@ pub fn frame(delta: f32) void {
     scene.update(&world, delta);
     gui.update(delta);
 
-    const clear = zhu.Color.rgb(0.23, 0.31, 0.27);
-    zhu.batch.beginPass(.{ .clear = clear, .target = target });
+    zhu.batch.beginPass(.rgb(0.23, 0.31, 0.27));
     scene.draw(&world);
-    zhu.batch.flush();
-    zhu.graphics.endPass();
-
-    zhu.batch.beginPass(.{ .clear = .black });
-    zhu.camera.mode = .window;
-    zhu.batch.drawImage(target.image, .zero, .{});
     zhu.batch.flush();
 
     gui.draw();
     zhu.graphics.endPass();
     zhu.graphics.commit();
-    zhu.camera.mode = .world;
     events.update();
 }
 
