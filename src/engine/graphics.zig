@@ -15,7 +15,6 @@ pub const queryFrameStats = sk.gfx.queryFrameStats;
 pub const queryBackend = sk.gfx.queryBackend;
 
 pub const Vector2 = math.Vector2;
-
 pub const ImageId = assets.Id;
 
 pub fn queryTextureSize(texture: Texture) math.Vector {
@@ -154,12 +153,16 @@ pub const Image = struct {
     offset: math.Vector2 = .zero,
     size: math.Vector2,
 
-    pub fn sub(self: *const Image, rect: math.Rect) Image {
+    pub fn sub(self: *const Image, subRect: math.Rect) Image {
         return Image{
             .texture = self.texture,
-            .offset = self.offset.add(rect.min),
-            .size = rect.size,
+            .offset = self.offset.add(subRect.min),
+            .size = subRect.size,
         };
+    }
+
+    pub fn rect(self: *const Image) math.Rect {
+        return .init(self.offset, self.size);
     }
 
     pub fn uvFlip(self: Image, x: bool, y: bool) math.Vector4 {
@@ -181,23 +184,78 @@ pub const Atlas = struct {
 };
 
 pub var textCount: u32 = 0;
-pub fn beginDraw(clearColor: Color) void {
+
+pub const RenderTarget = struct {
+    pass: sk.gfx.Pass = .{},
+    image: Image = .{ .texture = .{}, .size = .zero },
+};
+
+pub fn createRenderTarget(size: math.Vector2) RenderTarget {
+    const colorImage = sk.gfx.makeImage(.{
+        .usage = .{ .color_attachment = true },
+        .width = @intFromFloat(size.x),
+        .height = @intFromFloat(size.y),
+        .sample_count = 1,
+    });
+
+    var pass = sk.gfx.Pass{};
+    pass.attachments.colors[0] = sk.gfx.makeView(.{
+        .color_attachment = .{ .image = colorImage },
+    });
+
+    const depthImage = sk.gfx.makeImage(.{
+        .usage = .{ .depth_stencil_attachment = true },
+        .width = @intFromFloat(size.x),
+        .height = @intFromFloat(size.y),
+        .sample_count = 1,
+        .pixel_format = @enumFromInt(sk.app.depthFormat()),
+    });
+    pass.attachments.depth_stencil = sk.gfx.makeView(.{
+        .depth_stencil_attachment = .{ .image = depthImage },
+    });
+
+    const texture = sk.gfx.makeView(.{
+        .texture = .{ .image = colorImage },
+    });
+    return .{
+        .pass = pass,
+        .image = .{ .texture = texture, .size = size },
+    };
+}
+
+pub const RenderPass = struct {
+    clear: Color,
+    target: ?RenderTarget = null,
+    viewport: ?math.Rect = null,
+};
+
+pub fn beginPass(renderPass: RenderPass) void {
     var action = sk.gfx.PassAction{};
     action.colors[0] = .{
         .load_action = .CLEAR,
-        .clear_value = @bitCast(clearColor),
+        .clear_value = @bitCast(renderPass.clear),
     };
-    sk.gfx.beginPass(.{ .action = action, .swapchain = sk.glue.swapchain() });
-    const view = window.viewRect;
+
+    var viewport: ?math.Rect = renderPass.viewport;
+    if (renderPass.target) |target| {
+        var pass = target.pass;
+        pass.action = action;
+        sk.gfx.beginPass(pass);
+        if (viewport == null) viewport = target.image.rect();
+    } else {
+        const chain = sk.glue.swapchain();
+        sk.gfx.beginPass(.{ .action = action, .swapchain = chain });
+        if (viewport == null) viewport = window.viewRect;
+    }
+
+    const view = viewport.?;
     sk.gfx.applyViewportf(view.min.x, view.min.y, //
         view.size.x, view.size.y, true);
     textCount = 0;
 }
 
-pub fn endDraw() void {
-    sk.gfx.endPass();
-    sk.gfx.commit();
-}
+pub const endPass = sk.gfx.endPass;
+pub const commit = sk.gfx.commit;
 
 pub const Color = extern struct {
     r: f32,
