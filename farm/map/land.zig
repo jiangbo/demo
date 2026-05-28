@@ -74,11 +74,11 @@ pub fn draw() void {
 }
 
 fn appendVertex(position: zhu.Vector2, image: zhu.Image) void {
-    zhu.batch.vertexBuffer.appendAssumeCapacity(.{
+    zhu.batch.appendVertexes(&.{zhu.batch.Vertex{
         .position = position,
         .size = image.size,
         .uvRect = image.uvRect(),
-    });
+    }});
 }
 
 test "锄地会记录目标格" {
