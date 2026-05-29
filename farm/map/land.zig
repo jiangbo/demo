@@ -74,7 +74,7 @@ pub fn draw() void {
 }
 
 fn appendVertex(position: zhu.Vector2, image: zhu.Image) void {
-    zhu.batch.vertexBuffer().appendAssumeCapacity(.{
+    zhu.batch.vertexBuffer.appendAssumeCapacity(.{
         .position = position,
         .size = image.size,
         .uvRect = image.uvRect(),

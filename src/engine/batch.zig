@@ -47,11 +47,11 @@ pub const Option = struct {
 
 pub const Layer = struct {
     pub const Name = enum { default, extend, text, debug };
-    pipeline: sk.gfx.Pipeline = undefined,
-    sampler: sk.gfx.Sampler = undefined,
+    pipeline: sk.gfx.Pipeline,
+    sampler: sk.gfx.Sampler,
     vertices: std.ArrayList(Vertex) = .empty,
     commands: std.ArrayList(Command) = .empty,
-    vertexHandle: sk.gfx.Buffer = .{},
+    vertexHandle: sk.gfx.Buffer,
 
     pub fn currentCommand(self: *Layer) ?*Command {
         if (self.commands.items.len == 0) return null;
@@ -89,23 +89,22 @@ pub const Stats = struct { sprites: usize = 0, commands: usize = 0 };
 
 pub var whiteImage: graphics.Image = undefined;
 pub var circleImage: graphics.Image = undefined;
-pub var layers: std.EnumArray(Layer.Name, Layer) = .initFill(.{});
+pub var layers: std.EnumArray(Layer.Name, Layer) = .initUndefined();
+pub var vertexBuffer = &layers.getPtr(.default).vertices;
+pub var commandBuffer = &layers.getPtr(.default).commands;
 pub var lastStats: Stats = .{};
 
 var renderTarget: ?graphics.RenderTarget = null;
 
 pub fn init(vertexes: []Vertex, commands: []Command) void {
-    const shaderDesc = shader.quadShaderDesc(sk.gfx.queryBackend());
-    const pipeline = createQuadPipeline(shaderDesc);
-    const nearestSampler = sk.gfx.makeSampler(.{});
-    for (&layers.values) |*layer| {
-        layer.pipeline = pipeline;
-        layer.sampler = nearestSampler;
-    }
-
     const defaultLayer = layers.getPtr(.default);
     defaultLayer.vertices = .initBuffer(vertexes);
     defaultLayer.commands = .initBuffer(commands);
+    if (@import("builtin").is_test) return;
+
+    const shaderDesc = shader.quadShaderDesc(sk.gfx.queryBackend());
+    defaultLayer.pipeline = createQuadPipeline(shaderDesc);
+    defaultLayer.sampler = sk.gfx.makeSampler(.{});
     defaultLayer.vertexHandle = sk.gfx.makeBuffer(.{
         .size = @sizeOf(Vertex) * vertexes.len,
         .usage = .{ .stream_update = true },
@@ -202,14 +201,6 @@ fn defaultCommand(texture: graphics.Texture) Command {
         .scale = camera.scale,
         .size = camera.size,
     };
-}
-
-pub fn vertexBuffer() *std.ArrayList(Vertex) {
-    return &layers.getPtr(.default).vertices;
-}
-
-pub fn commandBuffer() *std.ArrayList(Command) {
-    return &layers.getPtr(.default).commands;
 }
 
 pub fn debugDraw(rect: math.Rect) void {

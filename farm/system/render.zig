@@ -63,9 +63,10 @@ test "视口内精灵会被绘制" {
     setupCamera();
     var vertices: [4]zhu.batch.Vertex = undefined;
     var commands: [16]zhu.batch.Command = undefined;
-    zhu.batch.vertexBuffer().* = .initBuffer(&vertices);
-    zhu.batch.commandBuffer().* = .initBuffer(&commands);
-    zhu.batch.commandBuffer().appendAssumeCapacity(.{});
+    zhu.batch.init(&vertices, &commands);
+    const vertexBuffer = zhu.batch.vertexBuffer;
+    const commandBuffer = zhu.batch.commandBuffer;
+    commandBuffer.appendAssumeCapacity(.{});
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -79,16 +80,17 @@ test "视口内精灵会被绘制" {
 
     draw(&world);
 
-    try std.testing.expectEqual(1, zhu.batch.vertexBuffer().items.len);
+    try std.testing.expectEqual(1, vertexBuffer.items.len);
 }
 
 test "视口外精灵不会被绘制" {
     setupCamera();
     var vertices: [4]zhu.batch.Vertex = undefined;
     var commands: [16]zhu.batch.Command = undefined;
-    zhu.batch.vertexBuffer().* = .initBuffer(&vertices);
-    zhu.batch.commandBuffer().* = .initBuffer(&commands);
-    zhu.batch.commandBuffer().appendAssumeCapacity(.{});
+    zhu.batch.init(&vertices, &commands);
+    const vertexBuffer = zhu.batch.vertexBuffer;
+    const commandBuffer = zhu.batch.commandBuffer;
+    commandBuffer.appendAssumeCapacity(.{});
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -102,16 +104,17 @@ test "视口外精灵不会被绘制" {
 
     draw(&world);
 
-    try std.testing.expectEqual(0, zhu.batch.vertexBuffer().items.len);
+    try std.testing.expectEqual(0, vertexBuffer.items.len);
 }
 
 test "混合场景只绘制视口内精灵" {
     setupCamera();
     var vertices: [4]zhu.batch.Vertex = undefined;
     var commands: [16]zhu.batch.Command = undefined;
-    zhu.batch.vertexBuffer().* = .initBuffer(&vertices);
-    zhu.batch.commandBuffer().* = .initBuffer(&commands);
-    zhu.batch.commandBuffer().appendAssumeCapacity(.{});
+    zhu.batch.init(&vertices, &commands);
+    const vertexBuffer = zhu.batch.vertexBuffer;
+    const commandBuffer = zhu.batch.commandBuffer;
+    commandBuffer.appendAssumeCapacity(.{});
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -132,7 +135,7 @@ test "混合场景只绘制视口内精灵" {
 
     draw(&world);
 
-    try std.testing.expectEqual(1, zhu.batch.vertexBuffer().items.len);
+    try std.testing.expectEqual(1, vertexBuffer.items.len);
 }
 
 test "YSort 会把位置 y 写入渲染深度" {
