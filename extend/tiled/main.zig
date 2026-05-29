@@ -192,14 +192,14 @@ fn parseProperties(properties: []tiled.Property) ![]parsed.Property {
     for (properties, 0..) |property, i| {
         result[i] = .{
             .name = property.name,
-            .value = parsePropertyValue(property),
+            .value = try parsePropertyValue(property),
         };
     }
     return result;
 }
 
 const toEnum = std.meta.stringToEnum;
-fn parsePropertyValue(property: tiled.Property) parsed.PropertyValue {
+fn parsePropertyValue(property: tiled.Property) !parsed.PropertyValue {
     return switch (toEnum(parsed.PropertyEnum, property.type).?) {
         .string => .{ .string = property.value.string },
         .int => .{ .int = @intCast(property.value.integer) },
@@ -209,8 +209,43 @@ fn parsePropertyValue(property: tiled.Property) parsed.PropertyValue {
             else => @panic("Expected a number type for .float"),
         },
         .bool => .{ .bool = property.value.bool },
-        .class => .{ .class = property.propertytype.? },
+        .class => .{ .class = try parseClassProperty(property) },
         .object => .{ .object = @intCast(property.value.integer) },
+    };
+}
+
+fn parseClassProperty(property: tiled.Property) !parsed.ClassProperty {
+    return .{
+        .type = property.propertytype orelse return error.MissingClassType,
+        .properties = try parseClassProperties(property.value),
+    };
+}
+
+fn parseClassProperties(value: std.json.Value) ![]const parsed.ClassMember {
+    var object = switch (value) {
+        .object => |object| object,
+        else => return error.InvalidClassProperty,
+    };
+
+    const result = try allocator.alloc(parsed.ClassMember, object.count());
+    var it = object.iterator();
+    var index: usize = 0;
+    while (it.next()) |entry| : (index += 1) {
+        result[index] = .{
+            .name = entry.key_ptr.*,
+            .value = try parseClassMemberValue(entry.value_ptr.*),
+        };
+    }
+    return result;
+}
+
+fn parseClassMemberValue(value: std.json.Value) !parsed.ClassMemberValue {
+    return switch (value) {
+        .string => |v| .{ .string = v },
+        .integer => |v| .{ .float = @floatFromInt(v) },
+        .float => |v| .{ .float = @floatCast(v) },
+        .bool => |v| .{ .bool = v },
+        else => error.InvalidClassMemberValue,
     };
 }
 

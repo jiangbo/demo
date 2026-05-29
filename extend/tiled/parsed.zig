@@ -20,7 +20,26 @@ pub const PropertyValue = union(PropertyEnum) {
     // color: []const u8, // 颜色值 (#RRGGBB)
     // file: []const u8, // 文件路径
     object: i64, // 引用物体 ID
-    class: []const u8, // Tiled 1.8+ 类类型
+    class: ClassProperty, // Tiled 1.8+ 类属性
+};
+
+pub const ClassProperty = struct {
+    type: []const u8, // 类名，例如 Spotlight
+    properties: []const ClassMember, // 类内部成员
+};
+
+pub const ClassMemberEnum = enum { string, int, float, bool };
+
+pub const ClassMemberValue = union(ClassMemberEnum) {
+    string: []const u8, // 字符串值
+    int: i32, // 整数值
+    float: f32, // 浮点数值
+    bool: bool, // 布尔值
+};
+
+pub const ClassMember = struct {
+    name: []const u8, // 成员名称
+    value: ClassMemberValue, // 成员值
 };
 
 pub const Property = struct {

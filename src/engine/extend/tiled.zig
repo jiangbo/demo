@@ -144,14 +144,31 @@ pub const PropertyValue = union(PropertyEnum) {
     float: f32, // 浮点数值
     bool: bool, // 布尔值
     object: i32, // 引用物体 ID
-    class: []const u8, // Tiled 1.8+ 类类型
+    class: ClassProperty, // Tiled 1.8+ 类属性
 
     pub fn get(self: PropertyValue, comptime T: type) ?T {
         if (T == []const u8) return self.string;
         if (T == bool) return self.bool;
+        if (T == ClassProperty) return self.class;
         if (@typeInfo(T) == .int) return @intCast(self.int);
         if (@typeInfo(T) == .float) return @floatCast(self.float);
         @compileError("unsupported property type: " ++ @typeName(T));
+    }
+};
+
+pub const ClassProperty = struct {
+    type: []const u8, // 类名，例如 Spotlight
+    properties: []const Property, // 类内部成员
+
+    pub fn is(self: ClassProperty, typeName: []const u8) bool {
+        return std.mem.eql(u8, self.type, typeName);
+    }
+
+    pub fn get(self: ClassProperty, name: []const u8, T: type) ?T {
+        for (self.properties) |property| {
+            if (property.is(name)) return property.value.get(T);
+        }
+        return null;
     }
 };
 
@@ -215,6 +232,10 @@ pub const Object = struct {
             if (property.is(name)) return property.value.get(T);
         }
         return null;
+    }
+
+    pub fn getClass(self: Object, name: []const u8) ?ClassProperty {
+        return self.getProperty(name, ClassProperty);
     }
 
     pub fn isNamed(self: Object, name: []const u8) bool {

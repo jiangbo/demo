@@ -131,13 +131,22 @@ pub fn spawnPointLight(world: *World, object: Object) Entity {
 
 pub fn spawnSpotLight(world: *World, object: Object) Entity {
     const entity = world.createEntity();
+    const spot = object.getClass("spot").?;
+    std.debug.assert(spot.is("Spotlight"));
     world.add(entity, light.Spot{
-        .radius = object.getProperty("radius", f32) orelse 128,
+        .radius = spot.get("radius", f32).?,
+        .direction = spotDirection(spot),
     });
     world.add(entity, object.position);
     world.add(entity, map.Scoped{});
     applyLight(world, entity, object);
     return entity;
+}
+
+fn spotDirection(spot: zhu.extend.tiled.ClassProperty) zhu.Vector2 {
+    const degrees = spot.get("direction_deg", f32).?;
+    const radians = std.math.degreesToRadians(degrees);
+    return .xy(@cos(radians), @sin(radians));
 }
 
 // 根据 Tiled 属性设置灯光的昼夜可见性
@@ -355,7 +364,13 @@ test "spawnSpotLight 创建地图作用域聚光" {
         .size = .zero,
         .point = true,
         .properties = &.{
-            .{ .name = "radius", .value = .{ .float = 96 } },
+            .{ .name = "spot", .value = .{ .class = .{
+                .type = "Spotlight",
+                .properties = &.{
+                    .{ .name = "direction_deg", .value = .{ .float = 90 } },
+                    .{ .name = "radius", .value = .{ .float = 96 } },
+                },
+            } } },
         },
         .extend = .{},
     });

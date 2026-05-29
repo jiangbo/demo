@@ -6550,7 +6550,12 @@
                 .position = .{ .x = 244.58002, .y = 282.1658 },
                 .size = .{ .x = 0, .y = 0 },
                 .point = true,
-                .properties = .{ .{ .name = "night_only", .value = .{ .bool = true } }, .{ .name = "spot", .value = .{ .class = "Spotlight" } } },
+                .properties = .{ .{ .name = "night_only", .value = .{ .bool = true } }, .{ .name = "spot", .value = .{ .class = .{ .type = "Spotlight", .properties = .{
+                    .{ .name = "direction_deg", .value = .{ .float = 90 } },
+                    .{ .name = "inner_deg", .value = .{ .float = 25 } },
+                    .{ .name = "outer_deg", .value = .{ .float = 45 } },
+                    .{ .name = "radius", .value = .{ .float = 64 } },
+                } } } } },
                 .extend = .{
                     .flipX = false,
                     .flipY = false,
