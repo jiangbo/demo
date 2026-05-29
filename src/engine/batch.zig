@@ -42,6 +42,7 @@ pub const Option = struct {
     radian: f32 = 0, // 旋转弧度
     uvRect: ?math.Vector4 = null, // 纹理 UV 区域
     color: graphics.Color = .white, // 颜色
+    mode: ?@TypeOf(camera.mode) = null, // 相机模式
     layer: Layer.Name = .default, // 绘制层级
 };
 
@@ -128,64 +129,6 @@ pub fn beginPass(color: graphics.Color) void {
     graphics.beginPass(renderPass);
 }
 
-pub fn flush() void {
-    if (renderTarget) |target| {
-        const layer = layers.getPtr(.default);
-        const presentIndex = layer.commands.items.len;
-
-        const mode = camera.mode;
-        camera.mode = .window;
-        drawImage(target.image, .zero, .{});
-        camera.mode = mode;
-
-        layer.uploadVertices();
-        drawCommands(.default, layer.commands.items[0..presentIndex]);
-
-        graphics.endPass();
-        graphics.beginPass(.{ .clear = .black });
-
-        drawCommands(.default, layer.commands.items[presentIndex..]);
-
-        var iterator = layers.iterator();
-        while (iterator.next()) |entry| {
-            if (entry.key == .default) continue;
-            entry.value.uploadVertices();
-            drawCommands(entry.key, entry.value.commands.items);
-        }
-        updateStats();
-        return;
-    }
-
-    var iterator = layers.iterator();
-    while (iterator.next()) |entry| {
-        entry.value.uploadVertices();
-        drawCommands(entry.key, entry.value.commands.items);
-    }
-    updateStats();
-}
-
-pub fn endPass() void {
-    graphics.endPass();
-    graphics.commit();
-}
-
-fn drawCommands(value: Layer.Name, commands: []const Command) void {
-    for (commands) |cmd| {
-        switch (cmd.type) {
-            .draw => {
-                if (cmd.texture.id != 0 and cmd.end > cmd.start) {
-                    doDraw(value, cmd);
-                }
-            },
-            .scissor => {
-                const x, const y = .{ cmd.position.x, cmd.position.y };
-                const w, const h = .{ cmd.size.x, cmd.size.y };
-                sk.gfx.applyScissorRectf(x, y, w, h, true);
-            },
-        }
-    }
-}
-
 pub fn currentCommand() ?*Command {
     return layers.getPtr(.default).currentCommand();
 }
@@ -203,7 +146,7 @@ fn defaultCommand(texture: graphics.Texture) Command {
     };
 }
 
-pub fn debugDraw(rect: math.Rect) void {
+pub fn drawDebug(rect: math.Rect) void {
     drawRect(rect, .{ .color = .rgba(1, 0, 1, 0.4) });
 }
 
@@ -311,7 +254,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
 
     const size = option.size orelse image.size;
     var scaledSize = size.mul(option.scale);
-    const worldPos = switch (camera.mode) {
+    const worldPos = switch (option.mode orelse camera.mode) {
         .world => pos,
         .window => blk: {
             scaledSize = scaledSize.div(cmd.scale);
@@ -329,9 +272,52 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     });
 }
 
-fn doDraw(layerType: Layer.Name, cmd: Command) void {
-    const layer = layers.getPtr(layerType);
+pub fn flush() void {
+    if (renderTarget) |target| {
+        const layer = layers.getPtr(.default);
+        const index = layer.commands.items.len;
 
+        drawImage(target.image, .zero, .{ .mode = .window });
+        layer.uploadVertices();
+        drawCommands(layer, layer.commands.items[0..index]);
+        for (layers.values[1..]) |*other| {
+            other.uploadVertices();
+            drawCommands(other, other.commands.items);
+        }
+
+        graphics.endPass();
+        graphics.beginPass(.{ .clear = .black });
+        drawCommands(layer, layer.commands.items[index..]);
+    } else for (&layers.values) |*layer| {
+        layer.uploadVertices();
+        drawCommands(layer, layer.commands.items);
+    }
+
+    for (layers.values) |layer| {
+        graphics.stats.sprite += layer.vertices.items.len;
+        graphics.stats.command += layer.commands.items.len;
+    }
+}
+
+pub fn endPass() void {
+    graphics.endPass();
+    graphics.commit();
+}
+
+fn drawCommands(layer: *const Layer, commands: []const Command) void {
+    for (commands) |cmd| {
+        switch (cmd.type) {
+            .draw => if (cmd.texture.id != 0) doDraw(layer, cmd),
+            .scissor => {
+                const x, const y = .{ cmd.position.x, cmd.position.y };
+                const w, const h = .{ cmd.size.x, cmd.size.y };
+                sk.gfx.applyScissorRectf(x, y, w, h, true);
+            },
+        }
+    }
+}
+
+fn doDraw(layer: *const Layer, cmd: Command) void {
     // 绑定流水线
     sk.gfx.applyPipeline(layer.pipeline);
 
@@ -390,17 +376,4 @@ fn createQuadPipeline(shaderDesc: sk.gfx.ShaderDesc) sk.gfx.Pipeline {
             break :init c;
         },
     });
-}
-
-pub fn commandCount() usize {
-    var count: usize = 0;
-    for (layers.values) |layer| count += layer.commands.items.len;
-    return count;
-}
-
-fn updateStats() void {
-    for (layers.values) |layer| {
-        graphics.stats.sprite += layer.vertices.items.len;
-        graphics.stats.command += layer.commands.items.len;
-    }
 }

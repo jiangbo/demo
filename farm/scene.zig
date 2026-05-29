@@ -131,10 +131,10 @@ fn drawSolids() void {
     for (map.physics.tiles, 0..) |solid, index| {
         if (!solid) continue;
         const position = map.data.tileIndexToWorld(index);
-        zhu.batch.debugDraw(.init(position, tileSize));
+        zhu.batch.drawDebug(.init(position, tileSize));
     }
 
-    for (map.physics.areas.items) |rect| zhu.batch.debugDraw(rect);
+    for (map.physics.areas.items) |rect| zhu.batch.drawDebug(rect);
 }
 
 fn drawCollider(world: *zhu.ecs.World) void {
