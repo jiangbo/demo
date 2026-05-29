@@ -1,7 +1,5 @@
 const std = @import("std");
 
-pub const Direction2 = enum { left, right };
-pub const Direction4 = enum { up, down, left, right };
 pub const epsilon = 1e-4;
 
 pub const Timer = struct {
@@ -292,50 +290,6 @@ pub const Rect = struct {
         return distance2 < std.math.pow(f32, radiusSum, 2);
     }
 };
-
-// pub const Rectangle1 = struct {
-//     min: Vector2 = .zero,
-//     max: Vector2 = .zero,
-
-//     pub fn init(position: Vector2, sizeV: Vector2) Rectangle {
-//         return Rectangle{ .min = position, .max = position.add(sizeV) };
-//     }
-
-//     pub fn size(self: Rectangle) Vector2 {
-//         return self.max.sub(self.min);
-//     }
-
-//     pub fn center(self: Rectangle) Vector2 {
-//         return self.min.add(self.size().scale(0.5));
-//     }
-
-//     pub fn move(self: Rectangle, offset: Vector2) Rectangle {
-//         return .{ .min = self.min.add(offset), .max = self.max.add(offset) };
-//     }
-
-//     pub fn intersect(self: Rectangle, other: Rectangle) bool {
-//         return self.min.x < other.max.x and self.max.x > other.min.x and
-//             self.min.y < other.max.y and self.max.y > other.min.y;
-//     }
-
-//     pub fn contains(self: Rectangle, point: Vector2) bool {
-//         return point.x >= self.min.x and point.x <= self.max.x and
-//             point.y >= self.min.y and point.y <= self.max.y;
-//     }
-
-//     pub fn sub(self: Rectangle, area: Rectangle) Rectangle {
-//         return .init(self.min.add(area.min), area.size());
-//     }
-
-//     pub fn toVector4(self: Rectangle) Vector4 {
-//         return .{
-//             .x = self.min.x,
-//             .y = self.min.y,
-//             .z = self.max.x,
-//             .w = self.max.y,
-//         };
-//     }
-// };
 
 pub const Matrix = struct {
     mat: [16]f32,
