@@ -85,14 +85,11 @@ pub const Layer = struct {
     }
 };
 
-pub const Stats = struct { sprites: usize = 0, commands: usize = 0 };
-
 pub var whiteImage: graphics.Image = undefined;
 pub var circleImage: graphics.Image = undefined;
 pub var layers: std.EnumArray(Layer.Name, Layer) = .initFill(.{});
 pub const vertexBuffer = &layers.getPtr(.default).vertices;
 pub const commandBuffer = &layers.getPtr(.default).commands;
-pub var lastStats: Stats = .{};
 
 var renderTarget: ?graphics.RenderTarget = null;
 
@@ -117,7 +114,7 @@ pub fn init(vertexes: []Vertex, commands: []Command) void {
 }
 
 pub fn clear() void {
-    lastStats = .{};
+    graphics.stats = .{};
     for (&layers.values) |*layer| {
         layer.vertices.clearRetainingCapacity();
         layer.commands.clearRetainingCapacity();
@@ -132,8 +129,6 @@ pub fn beginPass(color: graphics.Color) void {
 }
 
 pub fn flush() void {
-    lastStats = .{};
-
     if (renderTarget) |target| {
         const layer = layers.getPtr(.default);
         const presentIndex = layer.commands.items.len;
@@ -146,10 +141,8 @@ pub fn flush() void {
         layer.uploadVertices();
         drawCommands(.default, layer.commands.items[0..presentIndex]);
 
-        const textCount = graphics.textCount;
         graphics.endPass();
         graphics.beginPass(.{ .clear = .black });
-        graphics.textCount = textCount;
 
         drawCommands(.default, layer.commands.items[presentIndex..]);
 
@@ -159,7 +152,6 @@ pub fn flush() void {
             entry.value.uploadVertices();
             drawCommands(entry.key, entry.value.commands.items);
         }
-
         updateStats();
         return;
     }
@@ -407,10 +399,8 @@ pub fn commandCount() usize {
 }
 
 fn updateStats() void {
-    var stats = Stats{};
     for (layers.values) |layer| {
-        stats.sprites += layer.vertices.items.len;
-        stats.commands += layer.commands.items.len;
+        graphics.stats.sprite += layer.vertices.items.len;
+        graphics.stats.command += layer.commands.items.len;
     }
-    lastStats = stats;
 }

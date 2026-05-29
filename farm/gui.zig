@@ -139,18 +139,19 @@ fn boolText(value: bool) [:0]const u8 {
 
 fn drawBatchStats() void {
     const gpuStats = zhu.graphics.queryFrameStats();
-    const batchStats = zhu.batch.lastStats;
-    const ratio = if (batchStats.commands == 0)
+    const stats = zhu.graphics.stats;
+    const ratio = if (stats.command == 0)
         0
     else
-        batchStats.sprites / batchStats.commands;
+        stats.sprite / stats.command;
 
-    _ = imgui.igText("Batch Stats");
+    _ = imgui.igText("Graphics Stats");
     // _ = imgui.igCheckbox("Pixel Snap", &zhu.batch.pixelSnap);
-    _ = imgui.igText("GPU draw calls: %d", @as(i32, @intCast(gpuStats.num_draw)));
-    _ = imgui.igText("Batch sprites: %d", @as(i32, @intCast(batchStats.sprites)));
-    _ = imgui.igText("Batch commands: %d", @as(i32, @intCast(batchStats.commands)));
-    _ = imgui.igText("Sprites / command: %d", @as(i32, @intCast(ratio)));
+    _ = imgui.igText("GPU draw calls: %u", gpuStats.num_draw);
+    _ = imgui.igText("Batch sprites: %zu", stats.sprite);
+    _ = imgui.igText("Batch commands: %zu", stats.command);
+    _ = imgui.igText("Text glyphs: %zu", stats.text);
+    _ = imgui.igText("Sprites / command: %zu", ratio);
 }
 
 fn drawEventControls() void {
@@ -172,7 +173,7 @@ fn drawEventControls() void {
 
 fn drawEventTrace() void {
     const items = events.recentTrace();
-    _ = imgui.igText("Recent events: %d", @as(i32, @intCast(items.len)));
+    _ = imgui.igText("Recent events: %zu", items.len);
 
     for (items) |entry| {
         _ = imgui.igText(

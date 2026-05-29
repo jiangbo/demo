@@ -94,7 +94,7 @@ pub fn drawString(text: String, position: Vector2, option: Option) void {
             pos = .xy(position.x, pos.y + height);
         }
         const char = searchChar(code);
-        graphics.textCount += 1;
+        graphics.stats.text += 1;
 
         const image = fontImage.sub(char.area);
         batch.drawImage(image, pos.add(char.offset.scale(scale)), .{
@@ -118,9 +118,9 @@ pub fn computeTextWidth(text: String, option: Option) f32 {
     return @min(width - option.spacing, option.maxWidth);
 }
 
-pub fn computeTextCount(text: String) u32 {
+pub fn computeTextCount(text: String) usize {
     var iterator = Utf8View.initUnchecked(text).iterator();
-    var total: u32 = 0;
+    var total: usize = 0;
     while (iterator.nextCodepoint()) |code| {
         if (code != '\n') total += 1;
     }

@@ -183,7 +183,13 @@ pub const Atlas = struct {
     images: []const struct { id: ImageId, rect: math.Rect },
 };
 
-pub var textCount: u32 = 0;
+pub const Stats = struct {
+    sprite: usize = 0,
+    command: usize = 0,
+    text: usize = 0,
+};
+
+pub var stats: Stats = .{};
 
 pub const RenderTarget = struct {
     pass: sk.gfx.Pass = .{},
@@ -251,7 +257,6 @@ pub fn beginPass(renderPass: RenderPass) void {
     const view = viewport.?;
     sk.gfx.applyViewportf(view.min.x, view.min.y, //
         view.size.x, view.size.y, true);
-    textCount = 0;
 }
 
 pub const endPass = sk.gfx.endPass;

@@ -263,7 +263,7 @@ pub fn relativeTime() u64 {
     return timer.read();
 }
 
-var debutTextCount: u32 = 0;
+var debutTextCount: usize = 0;
 pub fn drawDebugInfo() void {
     var buffer: [1024]u8 = undefined;
     const format =
@@ -293,7 +293,7 @@ pub fn drawDebugInfo() void {
         stats.num_draw,
         batch.commandCount(),
         // Debug 信息本身的次数也应该统计进去
-        graphics.textCount + debutTextCount,
+        graphics.stats.text + debutTextCount,
         countingAllocator.used,
         mousePosition.x,
         mousePosition.y,
