@@ -77,16 +77,11 @@ pub fn toggleFullScreen() void {
 
 /// 缩放模式枚举
 pub const ScaleEnum = enum {
-    /// 无缩放，使用原始尺寸
-    none,
-    /// 拉伸缩放，忽略宽高比填满屏幕
-    stretch,
-    /// 适配缩放，保持宽高比可能有黑边
-    fit,
-    /// 填充缩放，保持宽高比可能超出屏幕
-    fill,
-    /// 整数缩放，整数倍数（无滤镜失真）
-    integer,
+    none, // 无缩放，使用原始尺寸
+    stretch, // 拉伸缩放，忽略宽高比填满屏幕
+    fit, // 适配缩放，保持宽高比可能有黑边
+    fill, // 填充缩放，保持宽高比可能超出屏幕
+    integer, // 整数缩放，整数倍数（无滤镜失真）
 };
 
 pub const WindowInfo = struct {

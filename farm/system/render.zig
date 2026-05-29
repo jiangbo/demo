@@ -55,7 +55,7 @@ test "渲染排序先比较图层再比较深度" {
 
 fn setupCamera() void {
     zhu.camera.position = .zero;
-    zhu.camera.size = .xy(320, 180);
+    zhu.camera.size = .xy(640, 360);
     zhu.camera.scale = .one;
 }
 
@@ -96,7 +96,7 @@ test "视口外精灵不会被绘制" {
     defer world.deinit();
 
     const entity = world.createEntity();
-    world.add(entity, Position.xy(400, 50));
+    world.add(entity, Position.xy(700, 50));
     world.add(entity, Sprite{
         .image = .{ .texture = .{ .id = 1 }, .size = .xy(16, 16) },
     });

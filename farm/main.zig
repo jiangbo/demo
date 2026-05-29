@@ -50,8 +50,7 @@ pub fn frame(delta: f32) void {
     zhu.batch.flush();
 
     gui.draw();
-    zhu.graphics.endPass();
-    zhu.graphics.commit();
+    zhu.batch.endPass();
     events.update();
 }
 
@@ -83,8 +82,8 @@ pub fn main() void {
 
     zhu.window.run(allocator, .{
         .title = "迷你农场",
-        .size = .xy(960, 540),
-        .logicSize = .xy(320, 180),
+        .size = .xy(1280, 720),
+        .logicSize = .xy(640, 360),
         .scaleEnum = .integer,
         .maxFileSize = 2 * 1024 * 1024,
     });

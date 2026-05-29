@@ -47,11 +47,11 @@ pub const Option = struct {
 
 pub const Layer = struct {
     pub const Name = enum { default, extend, text, debug };
-    pipeline: sk.gfx.Pipeline,
-    sampler: sk.gfx.Sampler,
+    pipeline: sk.gfx.Pipeline = .{},
+    sampler: sk.gfx.Sampler = .{},
     vertices: std.ArrayList(Vertex) = .empty,
     commands: std.ArrayList(Command) = .empty,
-    vertexHandle: sk.gfx.Buffer,
+    vertexHandle: sk.gfx.Buffer = .{},
 
     pub fn currentCommand(self: *Layer) ?*Command {
         if (self.commands.items.len == 0) return null;
@@ -89,9 +89,9 @@ pub const Stats = struct { sprites: usize = 0, commands: usize = 0 };
 
 pub var whiteImage: graphics.Image = undefined;
 pub var circleImage: graphics.Image = undefined;
-pub var layers: std.EnumArray(Layer.Name, Layer) = .initUndefined();
-pub var vertexBuffer = &layers.getPtr(.default).vertices;
-pub var commandBuffer = &layers.getPtr(.default).commands;
+pub var layers: std.EnumArray(Layer.Name, Layer) = .initFill(.{});
+pub const vertexBuffer = &layers.getPtr(.default).vertices;
+pub const commandBuffer = &layers.getPtr(.default).commands;
 pub var lastStats: Stats = .{};
 
 var renderTarget: ?graphics.RenderTarget = null;
@@ -170,6 +170,11 @@ pub fn flush() void {
         drawCommands(entry.key, entry.value.commands.items);
     }
     updateStats();
+}
+
+pub fn endPass() void {
+    graphics.endPass();
+    graphics.commit();
 }
 
 fn drawCommands(value: Layer.Name, commands: []const Command) void {

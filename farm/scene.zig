@@ -99,6 +99,7 @@ fn updateFarm(world: *World, delta: f32) void {
 }
 
 fn enterFarm(world: *World) void {
+    zhu.camera.scale = .square(2);
     const spawn = map.enter(world, .town, initialTargetId);
     factory.spawnPlayer(world, spawn);
     toolbar.enter();

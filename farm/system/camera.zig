@@ -27,15 +27,15 @@ fn updateScale() void {
 
 test "相机跟随会向玩家位置移动" {
     zhu.camera.position = .zero;
-    zhu.camera.size = .xy(320, 180);
+    zhu.camera.size = .xy(640, 360);
     zhu.camera.scale = .one;
-    zhu.camera.bound = .xy(640, 360);
+    zhu.camera.bound = .xy(1280, 720);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const player = world.createIdentity(Player);
-    world.add(player, Position.xy(300, 200));
+    world.add(player, Position.xy(700, 400));
 
     update(&world);
 
