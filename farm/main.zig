@@ -28,8 +28,7 @@ pub fn init() void {
 
     const fontImage = zhu.assets.loadImage("assets/font.png");
     zhu.text.init(fontImage, @import("zon/font.zon"));
-    const textLayer = zhu.text.enableLayer(vertexBuffer[3500..]);
-    textLayer.sampler = zhu.batch.linearSampler;
+    _ = zhu.text.enableLayer(vertexBuffer[3500..]);
 
     gui.init();
     context.init();

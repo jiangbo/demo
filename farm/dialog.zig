@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 
 const Dialog = component.actor.Dialog;
+const Position = component.Position;
 
 // 对话脚本数据：scriptId → 台词数组
 const scripts = [_]struct {
@@ -98,45 +99,30 @@ fn resetState() void {
 const padding: f32 = 4.0;
 const headOffset: f32 = 30.0;
 const maxWidth: f32 = 200.0;
-const lineHeight: f32 = 8.0;
 
 // 绘制对话气泡（在窗口坐标系下调用）
 pub fn draw(world: *zhu.ecs.World) void {
     const entity = world.getIdentity(Dialog) orelse return;
     if (text.len == 0) return;
 
-    const pos = world.get(entity, component.Position) //
-        orelse return;
+    const pos = world.get(entity, Position) orelse return;
+    const head = zhu.camera.toWindow(pos.addY(-headOffset));
 
-    // NPC 头顶位置转屏幕坐标
-    const headWorld = pos.addY(-headOffset);
-    const screen = zhu.camera.toWindow(headWorld);
-
-    // 计算文本宽度来确定气泡大小
-    const textWidth = zhu.text.computeTextWidth(text, .{});
-    const actualWidth = @min(textWidth, maxWidth);
-    const linesCount: u32 = @intFromFloat(@max(
-        @ceil(textWidth / maxWidth),
-        1,
-    ));
-    const bubbleHeight = padding * 2 + //
-        @as(f32, @floatFromInt(linesCount)) * lineHeight;
+    const textOption = zhu.text.Option{
+        .color = .white,
+        .maxWidth = maxWidth,
+    };
+    const textSize = zhu.text.measure(text, textOption);
 
     // 气泡背景
-    const bubbleRect = zhu.Rect.init(
-        .xy(screen.x - actualWidth / 2 - padding, screen.y - bubbleHeight),
-        .xy(actualWidth + padding * 2, bubbleHeight),
-    );
-    zhu.batch.drawRect(bubbleRect, .{
-        .color = .rgba(0, 0, 0, 0.75),
-    });
+    const bubbleSize = textSize.add(.xy(padding * 2, padding * 2));
+    const bubblePos = head.addXY(-bubbleSize.x / 2, -bubbleSize.y);
+    const bubbleRect: zhu.Rect = .init(bubblePos, bubbleSize);
+    zhu.batch.drawRect(bubbleRect, .{ .color = .rgba(0, 0, 0, 0.75) });
 
     // 气泡文字
     const textPos = bubbleRect.min.add(.xy(padding, padding));
-    zhu.text.drawString(text, textPos, .{
-        .color = .white,
-        .maxWidth = textPos.x + actualWidth,
-    });
+    zhu.text.drawString(text, textPos, textOption);
 }
 
 test "DialogStart 事件会激活第一句台词" {

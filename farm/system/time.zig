@@ -109,7 +109,7 @@ fn drawLabel(rect: zhu.Rect, text: []const u8) void {
         .bottomRight = .xy(1, 1),
     });
 
-    const width = zhu.text.computeTextWidth(text, .{});
+    const width = zhu.text.measure(text, .{}).x;
     const textPos = rect.min.add(.xy(
         @max(0.0, (rect.size.x - width) / 2),
         2,
