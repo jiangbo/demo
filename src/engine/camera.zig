@@ -44,6 +44,10 @@ pub fn directFollow(pos: Vector2) void {
     clampBound();
 }
 
+pub fn roundPosition() void {
+    position = position.mul(scale).round().div(scale);
+}
+
 pub fn smoothFollow(pos: Vector2, smooth: f32) void {
     const target = pos.sub(size.div(scale).scale(0.5));
     const distance = target.sub(position);

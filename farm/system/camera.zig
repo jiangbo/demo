@@ -14,6 +14,7 @@ pub fn update(world: *zhu.ecs.World) void {
     const player = world.getIdentity(Player).?;
     const position = world.get(player, Position).?;
     zhu.camera.smoothFollow(position, followSmooth);
+    zhu.camera.roundPosition();
 }
 
 fn updateScale() void {
