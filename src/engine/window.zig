@@ -428,7 +428,9 @@ pub fn useWindowIcon(path: [:0]const u8) void {
 }
 
 pub fn drawCenter(str: text.String, y: f32, option: text.Option) void {
-    text.drawCenter(str, size.mul(.init(0.5, y)), option);
+    const textSize = text.measure(str, option);
+    const pos = size.mul(.init(0.5, y)).sub(.xy(textSize.x / 2, 0));
+    text.drawString(str, pos, option);
 }
 
 pub const key = input.key;

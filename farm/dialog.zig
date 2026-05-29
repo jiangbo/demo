@@ -98,7 +98,7 @@ fn resetState() void {
 // 气泡绘制参数
 const padding: f32 = 4.0;
 const headOffset: f32 = 30.0;
-const maxWidth: f32 = 200.0;
+const max: f32 = 200.0;
 
 // 绘制对话气泡（在窗口坐标系下调用）
 pub fn draw(world: *zhu.ecs.World) void {
@@ -108,11 +108,8 @@ pub fn draw(world: *zhu.ecs.World) void {
     const pos = world.get(entity, Position) orelse return;
     const head = zhu.camera.toWindow(pos.addY(-headOffset));
 
-    const textOption = zhu.text.Option{
-        .color = .white,
-        .maxWidth = maxWidth,
-    };
-    const textSize = zhu.text.measure(text, textOption);
+    const option = zhu.text.Option{ .color = .white, .max = max };
+    const textSize = zhu.text.measure(text, option);
 
     // 气泡背景
     const bubbleSize = textSize.add(.xy(padding * 2, padding * 2));
@@ -122,7 +119,7 @@ pub fn draw(world: *zhu.ecs.World) void {
 
     // 气泡文字
     const textPos = bubbleRect.min.add(.xy(padding, padding));
-    zhu.text.drawString(text, textPos, textOption);
+    zhu.text.drawString(text, textPos, option);
 }
 
 test "DialogStart 事件会激活第一句台词" {

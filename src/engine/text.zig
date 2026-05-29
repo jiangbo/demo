@@ -22,7 +22,7 @@ pub const Char = struct {
 };
 
 var commandArray: [4]batch.Command = undefined;
-var enableLayered: bool = false;
+var layered: bool = false;
 
 var invalidIndex: usize = 0;
 
@@ -35,12 +35,12 @@ pub fn init(image: Image, zon: Font) void {
     font = zon;
     fontImage = image;
     invalidIndex = binarySearch('?').?;
+    halfAdvance = font.size / 2;
     changeFontSize(font.size);
 }
 
 pub fn changeFontSize(size: f32) void {
     fontScale = size / font.size;
-    halfAdvance = font.size / 2;
 }
 
 pub fn enableLayer(vertices: []batch.Vertex) *batch.Layer {
@@ -52,7 +52,7 @@ pub fn enableLayer(vertices: []batch.Vertex) *batch.Layer {
     textLayer.commands = .initBuffer(&commandArray);
     textLayer.vertices = .initBuffer(vertices);
     textLayer.vertexHandle = batch.createVertexHandle(vertices);
-    enableLayered = true;
+    layered = true;
     return textLayer;
 }
 
@@ -69,9 +69,9 @@ pub fn searchChar(code: u32) *const Char {
 }
 
 pub const Option = struct {
-    size: ?f32 = null, // 文字的大小，没有则使用默认值
+    scale: Vector2 = .one, // 基于默认字号的缩放
     color: graphics.Color = .white, // 文字的颜色
-    maxWidth: f32 = std.math.floatMax(f32), // 最大宽度，超过换行
+    max: f32 = std.math.floatMax(f32), // 最大宽度，超过换行
     spacing: f32 = 0, // 文字间的间距
     alignment: ?Vector2 = null, // 文字对齐
 };
@@ -92,47 +92,82 @@ pub fn drawFormat(comptime fmt: String, pos: Vector2, args: anytype,
 
 const Utf8View = std.unicode.Utf8View;
 pub fn drawString(text: String, position: Vector2, option: Option) void {
-    const scale = if (option.size) |s| s / font.size else fontScale;
-    const height = font.lineHeight * scale;
+    if (text.len == 0) return;
+    const scale = option.scale.scale(fontScale);
+    const height = font.lineHeight * scale.y;
     var pos = position;
-    if (option.alignment) |a| {
-        const width = computeTextWidth(text, option);
-        pos = pos.sub(.xy(width * a.x, height * a.y));
+    if (option.alignment) |a| { // 计算文字的对齐
+        pos = pos.sub(measure(text, option).mul(a));
     }
 
+    var width: f32, const startX = .{ 0, pos.x };
     var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {
         if (code == '\n') {
-            pos = .xy(position.x, pos.y + height);
+            width, pos = .{ 0, .xy(startX, pos.y + height) };
             continue;
         }
-        if (pos.x > option.maxWidth) {
-            pos = .xy(position.x, pos.y + height);
+
+        const advance = charAdvance(code, scale.x);
+        if (width > 0) {
+            if (width + option.spacing + advance > option.max) {
+                width, pos = .{ 0, .xy(startX, pos.y + height) };
+            } else {
+                width += option.spacing;
+                pos = pos.addX(option.spacing);
+            }
         }
+        width += advance;
+
         const char = searchChar(code);
-        graphics.stats.text += 1;
-
         const image = fontImage.sub(char.area);
-        batch.drawImage(image, pos.add(char.offset.scale(scale)), .{
-            .size = char.area.size.scale(scale),
+        batch.drawImage(image, pos.add(char.offset.mul(scale)), .{
+            .size = char.area.size.mul(scale),
             .color = option.color,
-            .layer = if (enableLayered) .text else .default,
+            .layer = if (layered) .text else .default,
         });
-
-        const advance = if (char.id < 128) halfAdvance else font.size;
-        pos = pos.addX(advance * scale + option.spacing);
+        graphics.stats.text += 1;
+        pos = .xy(startX + width, pos.y);
     }
 }
 
-pub fn computeTextWidth(text: String, option: Option) f32 {
-    var width: f32 = 0;
-    const scale = if (option.size) |s| s / font.size else fontScale;
+pub fn measure(text: String, option: Option) Vector2 {
+    if (text.len == 0) return .zero;
+    const scale = option.scale.scale(fontScale);
+    const height = font.lineHeight * scale.y;
+
+    var max: f32, var line: f32, var width: f32 = .{ 0, 1, 0 };
     var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {
-        const advance = if (code < 128) halfAdvance else font.size;
-        width += advance * scale + option.spacing;
+        if (code == '\n') {
+            line, width = .{ line + 1, 0 };
+            continue;
+        }
+
+        const advance = charAdvance(code, scale.x);
+        if (width > 0) {
+            if (width + option.spacing + advance > option.max) {
+                line, width = .{ line + 1, 0 };
+            } else width += option.spacing;
+        }
+        width += advance;
+        max = @max(max, width);
     }
-    return @min(width - option.spacing, option.maxWidth);
+
+    return .xy(max, line * height);
+}
+
+pub fn lineHeight(option: Option) f32 {
+    return font.lineHeight * fontScale * option.scale.y;
+}
+
+pub fn sizeToScale(size: f32) Vector2 {
+    return .square(size / (font.size * fontScale));
+}
+
+fn charAdvance(code: u32, scale: f32) f32 {
+    const advance = if (code < 128) halfAdvance else font.size;
+    return advance * scale;
 }
 
 pub fn computeTextCount(text: String) usize {
