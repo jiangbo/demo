@@ -21,6 +21,9 @@ pub const Char = struct {
     offset: Vector2,
 };
 
+var commandArray: [4]batch.Command = undefined;
+var enableLayered: bool = false;
+
 var invalidIndex: usize = 0;
 
 var font: Font = undefined;
@@ -28,7 +31,7 @@ var fontImage: graphics.Image = undefined;
 var fontScale: f32 = undefined;
 var halfAdvance: f32 = undefined; // 英文只需要前进半个距离
 
-pub fn initBitMapFont(image: Image, zon: Font) void {
+pub fn init(image: Image, zon: Font) void {
     font = zon;
     fontImage = image;
     invalidIndex = binarySearch('?').?;
@@ -38,6 +41,19 @@ pub fn initBitMapFont(image: Image, zon: Font) void {
 pub fn changeFontSize(size: f32) void {
     fontScale = size / font.size;
     halfAdvance = font.size / 2;
+}
+
+pub fn enableLayer(vertices: []batch.Vertex) *batch.Layer {
+    const defaultLayer = batch.layers.getPtrConst(.default);
+    const textLayer = batch.layers.getPtr(.text);
+
+    textLayer.pipeline = defaultLayer.pipeline;
+    textLayer.sampler = defaultLayer.sampler;
+    textLayer.commands = .initBuffer(&commandArray);
+    textLayer.vertices = .initBuffer(vertices);
+    textLayer.vertexHandle = batch.createVertexHandle(vertices);
+    enableLayered = true;
+    return textLayer;
 }
 
 fn binarySearch(unicode: u32) ?usize {
@@ -100,6 +116,7 @@ pub fn drawString(text: String, position: Vector2, option: Option) void {
         batch.drawImage(image, pos.add(char.offset.scale(scale)), .{
             .size = char.area.size.scale(scale),
             .color = option.color,
+            .layer = if (enableLayered) .text else .default,
         });
 
         const advance = if (char.id < 128) halfAdvance else font.size;

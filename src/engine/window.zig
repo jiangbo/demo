@@ -433,5 +433,3 @@ pub fn drawCenter(str: text.String, y: f32, option: text.Option) void {
 
 pub const key = input.key;
 pub const mouse = input.mouse;
-
-pub const initText = text.initBitMapFont;

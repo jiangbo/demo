@@ -86,6 +86,9 @@ pub const Layer = struct {
     }
 };
 
+pub var nearestSampler: sk.gfx.Sampler = undefined;
+pub var linearSampler: sk.gfx.Sampler = undefined;
+
 pub var whiteImage: graphics.Image = undefined;
 pub var circleImage: graphics.Image = undefined;
 pub var layers: std.EnumArray(Layer.Name, Layer) = .initFill(.{});
@@ -94,19 +97,22 @@ pub const commandBuffer = &layers.getPtr(.default).commands;
 
 var renderTarget: ?graphics.RenderTarget = null;
 
-pub fn init(vertexes: []Vertex, commands: []Command) void {
+pub fn init(vertices: []Vertex, commands: []Command) void {
     const layer = layers.getPtr(.default);
-    layer.vertices = .initBuffer(vertexes);
+    layer.vertices = .initBuffer(vertices);
     layer.commands = .initBuffer(commands);
     if (@import("builtin").is_test) return;
 
+    nearestSampler = sk.gfx.makeSampler(.{});
+    linearSampler = sk.gfx.makeSampler(.{
+        .min_filter = .LINEAR,
+        .mag_filter = .LINEAR,
+    });
+
     const shaderDesc = shader.quadShaderDesc(sk.gfx.queryBackend());
     layer.pipeline = createQuadPipeline(shaderDesc);
-    layer.sampler = sk.gfx.makeSampler(.{});
-    layer.vertexHandle = sk.gfx.makeBuffer(.{
-        .size = @sizeOf(Vertex) * vertexes.len,
-        .usage = .{ .stream_update = true },
-    });
+    layer.sampler = nearestSampler;
+    layer.vertexHandle = createVertexHandle(vertices);
 
     if (!window.viewRect.size.approxEqual(window.size)) {
         renderTarget = graphics.createRenderTarget(window.size);
@@ -120,6 +126,13 @@ pub fn clear() void {
         layer.vertices.clearRetainingCapacity();
         layer.commands.clearRetainingCapacity();
     }
+}
+
+pub fn createVertexHandle(vertices: []Vertex) sk.gfx.Buffer {
+    return sk.gfx.makeBuffer(.{
+        .size = @sizeOf(Vertex) * vertices.len,
+        .usage = .{ .stream_update = true },
+    });
 }
 
 pub fn beginPass(color: graphics.Color) void {
@@ -307,7 +320,7 @@ pub fn endPass() void {
 fn drawCommands(layer: *const Layer, commands: []const Command) void {
     for (commands) |cmd| {
         switch (cmd.type) {
-            .draw => if (cmd.texture.id != 0) doDraw(layer, cmd),
+            .draw => if (cmd.end > cmd.start) doDraw(layer, cmd),
             .scissor => {
                 const x, const y = .{ cmd.position.x, cmd.position.y };
                 const w, const h = .{ cmd.size.x, cmd.size.y };

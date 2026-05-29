@@ -16,7 +16,7 @@ var world: zhu.ecs.World = undefined;
 
 pub fn init() void {
     vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 4096);
-    zhu.batch.init(vertexBuffer, &commandBuffer);
+    zhu.batch.init(vertexBuffer[0..3500], &commandBuffer);
     world = .init(zhu.assets.allocator);
 
     zhu.audio.init(44100 / 2, &soundBuffer);
@@ -27,7 +27,9 @@ pub fn init() void {
     zhu.batch.whiteImage = whiteCircle.sub(area);
 
     const fontImage = zhu.assets.loadImage("assets/font.png");
-    zhu.text.initBitMapFont(fontImage, @import("zon/font.zon"));
+    zhu.text.init(fontImage, @import("zon/font.zon"));
+    const textLayer = zhu.text.enableLayer(vertexBuffer[3500..]);
+    textLayer.sampler = zhu.batch.linearSampler;
 
     gui.init();
     context.init();
