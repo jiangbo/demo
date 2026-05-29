@@ -75,7 +75,7 @@ pub const Layer = struct {
         } else return self.addDrawCommand(command);
     }
 
-    fn upload(self: *Layer) void {
+    fn uploadVertices(self: *Layer) void {
         if (self.currentCommand()) |cmd| {
             cmd.end = @intCast(self.vertices.items.len);
         } else return;
@@ -97,15 +97,15 @@ pub var lastStats: Stats = .{};
 var renderTarget: ?graphics.RenderTarget = null;
 
 pub fn init(vertexes: []Vertex, commands: []Command) void {
-    const defaultLayer = layers.getPtr(.default);
-    defaultLayer.vertices = .initBuffer(vertexes);
-    defaultLayer.commands = .initBuffer(commands);
+    const layer = layers.getPtr(.default);
+    layer.vertices = .initBuffer(vertexes);
+    layer.commands = .initBuffer(commands);
     if (@import("builtin").is_test) return;
 
     const shaderDesc = shader.quadShaderDesc(sk.gfx.queryBackend());
-    defaultLayer.pipeline = createQuadPipeline(shaderDesc);
-    defaultLayer.sampler = sk.gfx.makeSampler(.{});
-    defaultLayer.vertexHandle = sk.gfx.makeBuffer(.{
+    layer.pipeline = createQuadPipeline(shaderDesc);
+    layer.sampler = sk.gfx.makeSampler(.{});
+    layer.vertexHandle = sk.gfx.makeBuffer(.{
         .size = @sizeOf(Vertex) * vertexes.len,
         .usage = .{ .stream_update = true },
     });
@@ -132,28 +132,28 @@ pub fn flush() void {
     lastStats = .{};
 
     if (renderTarget) |target| {
-        const defaultLayer = layers.getPtr(.default);
-        const presentIndex = defaultLayer.commands.items.len;
+        const layer = layers.getPtr(.default);
+        const presentIndex = layer.commands.items.len;
 
         const mode = camera.mode;
         camera.mode = .window;
         drawImage(target.image, .zero, .{});
         camera.mode = mode;
 
-        defaultLayer.upload();
-        drawCommands(.default, defaultLayer.commands.items[0..presentIndex]);
+        layer.uploadVertices();
+        drawCommands(.default, layer.commands.items[0..presentIndex]);
 
         const textCount = graphics.textCount;
         graphics.endPass();
         graphics.beginPass(.{ .clear = .black });
         graphics.textCount = textCount;
 
-        drawCommands(.default, defaultLayer.commands.items[presentIndex..]);
+        drawCommands(.default, layer.commands.items[presentIndex..]);
 
         var iterator = layers.iterator();
         while (iterator.next()) |entry| {
             if (entry.key == .default) continue;
-            entry.value.upload();
+            entry.value.uploadVertices();
             drawCommands(entry.key, entry.value.commands.items);
         }
 
@@ -163,7 +163,7 @@ pub fn flush() void {
 
     var iterator = layers.iterator();
     while (iterator.next()) |entry| {
-        entry.value.upload();
+        entry.value.uploadVertices();
         drawCommands(entry.key, entry.value.commands.items);
     }
     updateStats();
