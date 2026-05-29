@@ -85,6 +85,5 @@ pub fn main() void {
         .size = .xy(1280, 720),
         .logicSize = .xy(640, 360),
         .scaleEnum = .integer,
-        .maxFileSize = 2 * 1024 * 1024,
     });
 }
