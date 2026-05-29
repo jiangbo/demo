@@ -116,16 +116,19 @@ pub fn init(vertexes: []Vertex, commands: []Command) void {
     camera.init();
 }
 
-pub fn beginPass(clear: graphics.Color) void {
-    var renderPass = graphics.RenderPass{ .clear = clear };
+pub fn clear() void {
+    lastStats = .{};
+    for (&layers.values) |*layer| {
+        layer.vertices.clearRetainingCapacity();
+        layer.commands.clearRetainingCapacity();
+    }
+}
+
+pub fn beginPass(color: graphics.Color) void {
+    clear();
+    var renderPass = graphics.RenderPass{ .clear = color };
     if (renderTarget) |target| renderPass.target = target;
     graphics.beginPass(renderPass);
-
-    var iterator = layers.iterator();
-    while (iterator.next()) |entry| {
-        entry.value.vertices.clearRetainingCapacity();
-        entry.value.commands.clearRetainingCapacity();
-    }
 }
 
 pub fn flush() void {
