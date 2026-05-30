@@ -68,7 +68,11 @@ pub const Animation = struct {
     }
 
     pub fn subImage(self: *const Animation) Image {
-        const index = @min(self.clip.len - 1, self.index);
+        return self.subImageAt(@intCast(self.index));
+    }
+
+    pub fn subImageAt(self: *const Animation, idx: usize) Image {
+        const index = @min(self.clip.len - 1, idx);
         var offset = self.clip[index].offset;
         offset.y += self.image.size.y * @as(f32, @floatFromInt(self.row));
         return self.image.sub(.init(offset, self.image.size));

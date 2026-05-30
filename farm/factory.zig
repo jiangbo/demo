@@ -99,11 +99,15 @@ pub fn spawnMapProp(world: *World, data: *const tiled.Map, object: Object) Entit
 
     var image: zhu.graphics.Image = undefined;
     const tile = data.getTileByGid(object.gid).?;
-    // anim_id 表示由玩法触发的动画，不随地图加载自动播放。
-    if (tile.animation.len > 0 and !tile.hasProperty("anim_id")) {
-        const animation = data.getAnimationByGid(object.gid).?;
-        world.add(entity, animation);
+    if (tile.animation.len > 0) {
+        var animation = data.getAnimationByGid(object.gid).?;
         image = animation.subImage();
+        // anim_id 表示由玩法触发的动画，地图加载时只挂组件不自动播放。
+        if (tile.hasProperty("anim_id")) {
+            animation.loop = false;
+            animation.stop();
+        }
+        world.add(entity, animation);
     } else {
         image = data.getImageByGid(object.gid);
     }
@@ -305,17 +309,50 @@ test "advanceCrop 推进阶段并累加 next" {
 test "地图摆件按底边定位生成实体" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
+
+    const imageId = 1234;
+    const tileSetId = 5678;
     const image = zhu.graphics.Image{
         .texture = .{ .id = 1 },
         .size = .xy(16, 16),
     };
-    zhu.assets.putImage(2185395808, image);
-    const testMaps = [_]tiled.Map{@import("zon/school.zon")};
+    zhu.assets.putImage(imageId, image);
+
+    const tiles = [_]tiled.Tile{
+        .{
+            .id = imageId,
+            .objectGroup = null,
+            .properties = &.{},
+            .animation = &.{},
+        },
+    };
+    const tileSets = [_]tiled.TileSet{
+        .{
+            .id = tileSetId,
+            .columns = 0,
+            .tileCount = 1,
+            .image = imageId,
+            .tileSize = .xy(16, 16),
+            .tiles = &tiles,
+        },
+    };
+    const refs = [_]tiled.TileSetRef{
+        .{ .id = tileSetId, .firstGid = 1, .max = 2 },
+    };
+    const testMap = tiled.Map{
+        .height = 1,
+        .width = 1,
+        .tileSize = .xy(16, 16),
+        .layers = &.{},
+        .tileSetRefs = &refs,
+    };
+    tiled.init(&tileSets);
+    defer tiled.init(@import("zon/tile.zon"));
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    const entity = spawnMapProp(&world, &testMaps[0], .{
+    const entity = spawnMapProp(&world, &testMap, .{
         .id = 1,
         .gid = 1,
         .name = "",
@@ -335,6 +372,80 @@ test "地图摆件按底边定位生成实体" {
     try expectEqual(-30, sprite.offset.y);
     try expectEqual(20, sprite.size.?.x);
     try expectEqual(30, sprite.size.?.y);
+}
+
+test "带 anim_id 的地图摆件会创建停止的非循环动画" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+
+    const imageId = 1234;
+    const tileSetId = 5678;
+    const image = zhu.graphics.Image{
+        .texture = .{ .id = 1 },
+        .size = .xy(32, 16),
+    };
+    zhu.assets.putImage(imageId, image);
+
+    const frames = [_]zhu.graphics.Frame{
+        .{ .offset = .xy(0, 0), .duration = 0.1 },
+        .{ .offset = .xy(16, 0), .duration = 0.1 },
+    };
+    const properties = [_]tiled.Property{
+        .{ .name = "anim_id", .value = .{ .string = "open" } },
+    };
+    const tiles = [_]tiled.Tile{
+        .{
+            .id = 0,
+            .objectGroup = null,
+            .properties = &properties,
+            .animation = &frames,
+        },
+    };
+    const tileSets = [_]tiled.TileSet{
+        .{
+            .id = tileSetId,
+            .columns = 2,
+            .tileCount = 2,
+            .image = imageId,
+            .tileSize = .xy(16, 16),
+            .tiles = &tiles,
+        },
+    };
+    const refs = [_]tiled.TileSetRef{
+        .{ .id = tileSetId, .firstGid = 1, .max = 3 },
+    };
+    const testMap = tiled.Map{
+        .height = 1,
+        .width = 1,
+        .tileSize = .xy(16, 16),
+        .layers = &.{},
+        .tileSetRefs = &refs,
+    };
+    tiled.init(&tileSets);
+    defer tiled.init(@import("zon/tile.zon"));
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = spawnMapProp(&world, &testMap, .{
+        .id = 1,
+        .gid = 1,
+        .name = "",
+        .type = "",
+        .position = .xy(12, 34),
+        .size = .zero,
+        .point = false,
+        .properties = &.{},
+        .extend = .{},
+    });
+
+    const animation = world.get(entity, actor.Animation).?;
+    const sprite = world.get(entity, render.Sprite).?;
+
+    try std.testing.expect(!animation.loop);
+    try std.testing.expect(animation.isFinished());
+    try expectEqual(0, sprite.image.offset.x);
+    try expectEqual(0, sprite.image.offset.y);
 }
 
 test "spawnPointLight 创建地图作用域点光" {
