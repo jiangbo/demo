@@ -80,7 +80,7 @@ pub const Map = struct {
         return tileSet.tileByLocalId(gid - ref.firstGid);
     }
 
-    pub fn imageByGid(self: Map, gid: u32) graphics.Image {
+    pub fn getImageByGid(self: Map, gid: u32) graphics.Image {
         const ref = self.tileSetRefByGid(gid);
         const tileSet = tileSetByRef(ref);
         const localId = gid - ref.firstGid;
@@ -202,6 +202,20 @@ pub const Tile = struct {
     objectGroup: ?ObjectGroup = null,
     properties: []const Property,
     animation: []const graphics.Frame = &.{},
+
+    pub fn hasProperty(self: Tile, name: []const u8) bool {
+        for (self.properties) |property| {
+            if (property.is(name)) return true;
+        }
+        return false;
+    }
+
+    pub fn getProperty(self: Object, name: []const u8, T: type) ?T {
+        for (self.properties) |property| {
+            if (property.is(name)) return property.value.get(T);
+        }
+        return null;
+    }
 };
 
 pub const ObjectGroup = struct {
@@ -226,6 +240,13 @@ pub const Object = struct {
     point: bool, // 是否为点物体
     properties: []const Property, // 物体自定义属性
     extend: ObjectExtend, // 扩展信息
+
+    pub fn hasProperty(self: Object, name: []const u8) bool {
+        for (self.properties) |property| {
+            if (property.is(name)) return true;
+        }
+        return false;
+    }
 
     pub fn getProperty(self: Object, name: []const u8, T: type) ?T {
         for (self.properties) |property| {

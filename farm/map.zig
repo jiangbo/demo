@@ -185,9 +185,22 @@ fn loadObject(world: *World, object: tiled.Object) void {
 
     if (object.gid == 0) return;
 
-    const image = data.imageByGid(object.gid);
-    _ = factory.spawnMapProp(world, object, image);
+    const image = data.getImageByGid(object.gid);
+    const entity = factory.spawnMapProp(world, object, image);
     physics.addSolidObject(object);
+
+    const tile = data.tileByGid(object.gid).?;
+    if (tile.animation.len > 0 and !tile.hasProperty("anim_id")) {
+        // object 层 prop 需要继续走 Render/YSort，不能放到 map 背景里画。
+        const ref = data.tileSetRefByGid(object.gid);
+        const tileSet = tiled.tileSetByRef(ref);
+        const animation = zhu.graphics.Animation.init(
+            zhu.assets.getImage(tileSet.image).?,
+            tileSet.tileSize,
+            tile.animation,
+        );
+        world.add(entity, animation);
+    }
 }
 
 fn loadLightObject(world: *World, object: tiled.Object) void {
@@ -208,7 +221,7 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
     for (layer.data, 0..) |globalId, index| {
         if (globalId == 0) continue; // 0 表示空瓦片，跳过
 
-        const image = data.imageByGid(globalId);
+        const image = data.getImageByGid(globalId);
         appendVertex(data.tileIndexToWorld(index), image);
     }
 }
