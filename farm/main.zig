@@ -22,9 +22,9 @@ pub fn init() void {
     zhu.audio.init(44100 / 2, &soundBuffer);
 
     zhu.assets.loadAtlas(@import("zon/atlas.zon"));
-    const whiteCircle = zhu.getImage("circle.png").?;
+    zhu.batch.circleImage = zhu.getImage("circle.png").?;
     const area: zhu.Rect = .init(.xy(16, 16), .xy(32, 32));
-    zhu.batch.whiteImage = whiteCircle.sub(area);
+    zhu.batch.whiteImage = zhu.batch.circleImage.sub(area);
 
     const fontImage = zhu.assets.loadImage("assets/font.png");
     zhu.text.init(fontImage, @import("zon/font.zon"));
