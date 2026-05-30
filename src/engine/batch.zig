@@ -290,7 +290,13 @@ pub fn flush() void {
         const layer = layers.getPtr(.default);
         const index = layer.commands.items.len;
 
-        drawImage(target.image, .zero, .{ .mode = .window });
+        const flipY = !sk.gfx.queryFeatures().origin_top_left;
+        drawImage(target.image, .zero, .{
+            .mode = .window,
+            .uvRect = target.image.uvFlip(false, flipY),
+        });
+
+        // drawImage(target.image, .zero, .{ .mode = .window });
         layer.uploadVertices();
         drawCommands(layer, layer.commands.items[0..index]);
         for (layers.values[1..]) |*other| {
