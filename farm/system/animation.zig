@@ -16,10 +16,7 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
         const sprite = query.getPtr(entity, Sprite);
 
         switch (animation.update(delta)) {
-            .next, .loop => {
-                const size = sprite.size orelse sprite.image.size;
-                sprite.image = animation.subImage(size);
-            },
+            .next, .loop => sprite.image = animation.subImage(),
             else => {},
         }
     }
@@ -65,12 +62,7 @@ test "动画系统会按角色方向行更新精灵" {
         .{ .imageId = 1, .clip = &frames },
         .{ .imageId = 1, .clip = &frames },
     };
-    world.add(entity, Animation{
-        .image = image,
-        .clip = &frames,
-        .sourceIndex = @intFromEnum(component.actor.Action.walk),
-        .sources = &sources,
-    });
+    world.add(entity, Animation.initSource(&sources, image.size));
     world.add(entity, Sprite{ .image = image });
 
     update(&world, 0);
@@ -105,12 +97,7 @@ test "负数行号表示翻转" {
     const sources = [_]zhu.Animation.Source{
         .{ .imageId = 1, .clip = &frames },
     };
-    world.add(entity, Animation{
-        .image = image,
-        .clip = &frames,
-        .sourceIndex = @intFromEnum(component.actor.Action.idle),
-        .sources = &sources,
-    });
+    world.add(entity, Animation.initSource(&sources, image.size));
     world.add(entity, Sprite{ .image = image });
 
     update(&world, 0);

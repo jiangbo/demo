@@ -36,10 +36,11 @@ pub fn spawnPlayer(world: *World, spawn: zhu.Vector2) void {
     world.add(player, actor.Actor{ .rows = config.rows });
 
     const sources = comptime animationSources(config.animations);
-    const animation = zhu.Animation.initSource(&sources);
+    const size = config.sprite.rect.size;
+    const animation = zhu.Animation.initSource(&sources, size);
 
     world.add(player, render.Sprite{
-        .image = animation.image,
+        .image = animation.subImage(),
         .offset = config.sprite.offset,
         .size = config.sprite.size,
     });
@@ -66,10 +67,10 @@ pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {
         .cow => &comptime animationSources(animals[0].animations),
         .sheep => &comptime animationSources(animals[1].animations),
     };
-    const animation = zhu.Animation.initSource(sources);
+    const animation = zhu.Animation.initSource(sources, config.sprite.rect.size);
 
     world.add(entity, render.Sprite{
-        .image = animation.image,
+        .image = animation.subImage(),
         .offset = config.sprite.offset,
         .size = config.sprite.size,
     });

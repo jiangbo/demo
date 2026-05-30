@@ -50,37 +50,39 @@ pub const Animation = struct {
     sourceIndex: u8 = 0,
     sources: []const Source = &.{},
 
-    pub fn init(image: Image, clip: Clip) Animation {
-        return .{ .image = image, .clip = clip };
+    pub fn init(img: Image, size: Vector2, clip: Clip) Animation {
+        return .{ .image = img.sub(.init(.zero, size)), .clip = clip };
     }
 
-    pub fn initFinished(image: Image, clip: Clip) Animation {
+    pub fn initFinished(img: Image, size: Vector2, clip: Clip) Animation {
         const idx: u8 = @intCast(clip.len);
+        const image = img.sub(.init(.zero, size));
         return .{ .image = image, .clip = clip, .index = idx };
     }
 
-    pub fn initSource(sources: []const Source) Animation {
-        var self = Animation{ .image = undefined, .clip = undefined };
-        self.sources = sources;
-        self.play(0, true);
+    pub fn initSource(src: []const Source, size: Vector2) Animation {
+        const image = assets.getImage(src[0].imageId).?;
+        var self = Animation.init(image, size, src[0].clip);
+        self.sources = src;
         return self;
     }
 
-    pub fn subImage(self: *const Animation, size: Vector2) Image {
+    pub fn subImage(self: *const Animation) Image {
         const index = @min(self.clip.len - 1, self.index);
         var offset = self.clip[index].offset;
-        offset.y += size.y * @as(f32, @floatFromInt(self.row));
-        return self.image.sub(.init(offset, size));
+        offset.y += self.image.size.y * @as(f32, @floatFromInt(self.row));
+        return self.image.sub(.init(offset, self.image.size));
     }
 
     pub fn play(self: *Animation, index: u8, loop: bool) void {
         self.playRow(index, self.row, loop);
     }
 
-    pub fn playRow(self: *Animation, index: u8, row: u8, loop: bool) void {
-        const next = self.sources[index];
-        self.image = assets.getImage(next.imageId).?;
-        self.clip, self.sourceIndex = .{ next.clip, index };
+    pub fn playRow(self: *Animation, idx: u8, row: u8, loop: bool) void {
+        const next = self.sources[idx];
+        const image = assets.getImage(next.imageId).?;
+        self.image = image.sub(.init(.zero, self.image.size));
+        self.clip, self.sourceIndex = .{ next.clip, idx };
         self.row, self.loop = .{ row, loop };
         self.reset();
     }
