@@ -185,22 +185,8 @@ fn loadObject(world: *World, object: tiled.Object) void {
 
     if (object.gid == 0) return;
 
-    const image = data.getImageByGid(object.gid);
-    const entity = factory.spawnMapProp(world, object, image);
+    _ = factory.spawnMapProp(world, data, object);
     physics.addSolidObject(object);
-
-    const tile = data.tileByGid(object.gid).?;
-    if (tile.animation.len > 0 and !tile.hasProperty("anim_id")) {
-        // object 层 prop 需要继续走 Render/YSort，不能放到 map 背景里画。
-        const ref = data.tileSetRefByGid(object.gid);
-        const tileSet = tiled.tileSetByRef(ref);
-        const animation = zhu.graphics.Animation.init(
-            zhu.assets.getImage(tileSet.image).?,
-            tileSet.tileSize,
-            tile.animation,
-        );
-        world.add(entity, animation);
-    }
 }
 
 fn loadLightObject(world: *World, object: tiled.Object) void {
@@ -264,8 +250,9 @@ test "gid 图片解析支持单图和集合图块集" {
         singleGid = ref.firstGid;
         break;
     }
+    var image = data.getImageByGid(singleGid);
     try std.testing.expect(singleGid != 0);
-    try std.testing.expectEqual(1, data.imageByGid(singleGid).texture.id);
+    try std.testing.expectEqual(1, image.texture.id);
 
     var collectionGid: u32 = 0;
     for (data.tileSetRefs) |ref| {
@@ -279,8 +266,9 @@ test "gid 图片解析支持单图和集合图块集" {
         }
         if (collectionGid != 0) break;
     }
+    image = data.getImageByGid(collectionGid);
     try std.testing.expect(collectionGid != 0);
-    try std.testing.expectEqual(1, data.imageByGid(collectionGid).texture.id);
+    try std.testing.expectEqual(1, image.texture.id);
 }
 
 test "地图绘制会把前景留到实体之后" {

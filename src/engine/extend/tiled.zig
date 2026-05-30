@@ -63,26 +63,26 @@ pub const Map = struct {
         return self.tilePositionToIndex(tilePos);
     }
 
-    pub fn tileSetRefByGid(self: Map, gid: u32) TileSetRef {
+    pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {
         std.debug.assert(gid != 0);
         for (self.tileSetRefs) |ref| {
             if (gid >= ref.firstGid and gid < ref.max) return ref;
         } else unreachable;
     }
 
-    pub fn tileSetByGid(self: Map, gid: u32) TileSet {
-        return tileSetByRef(self.tileSetRefByGid(gid));
+    pub fn getTileSetByGid(self: Map, gid: u32) TileSet {
+        return getTileSetByRef(self.tileSetRefByGid(gid));
     }
 
-    pub fn tileByGid(self: Map, gid: u32) ?*const Tile {
-        const ref = self.tileSetRefByGid(gid);
-        const tileSet = tileSetByRef(ref);
+    pub fn getTileByGid(self: Map, gid: u32) ?*const Tile {
+        const ref = self.getTileSetRefByGid(gid);
+        const tileSet = getTileSetByRef(ref);
         return tileSet.tileByLocalId(gid - ref.firstGid);
     }
 
     pub fn getImageByGid(self: Map, gid: u32) graphics.Image {
-        const ref = self.tileSetRefByGid(gid);
-        const tileSet = tileSetByRef(ref);
+        const ref = self.getTileSetRefByGid(gid);
+        const tileSet = getTileSetByRef(ref);
         const localId = gid - ref.firstGid;
 
         if (tileSet.columns == 0) {
@@ -95,6 +95,19 @@ pub const Map = struct {
         const position = tileSet.tileSize.mul(.xy(x, y));
         const area = Rect.init(position, tileSet.tileSize);
         return assets.getImage(tileSet.image).?.sub(area);
+    }
+
+    pub fn getAnimationByGid(self: Map, gid: u32) ?graphics.Animation {
+        const ref = self.getTileSetRefByGid(gid);
+        const tileSet = getTileSetByRef(ref);
+        if (tileSet.tileByLocalId(gid - ref.firstGid)) |tile| {
+            if (tile.animation.len == 0) return null;
+            return graphics.Animation.init(
+                assets.getImage(tileSet.image).?,
+                tileSet.tileSize,
+                tile.animation,
+            );
+        } else return null;
     }
 };
 pub const TileSetRef = struct { id: u32, firstGid: u32, max: u32 };
@@ -275,16 +288,16 @@ pub fn init(ts: []const TileSet) void {
     tileSets = ts;
 }
 
-pub fn tileSetById(id: assets.Id) TileSet {
+pub fn getTileSetById(id: assets.Id) TileSet {
     for (tileSets) |ts| if (ts.id == id) return ts;
     unreachable;
 }
 
-pub fn tileSetByRef(ref: TileSetRef) TileSet {
-    return tileSetById(ref.id);
+pub fn getTileSetByRef(ref: TileSetRef) TileSet {
+    return getTileSetById(ref.id);
 }
 
-pub fn tileByImageId(id: graphics.ImageId) Tile {
+pub fn getTileByImageId(id: graphics.ImageId) Tile {
     for (tileSets) |ts| {
         for (ts.tiles) |tile| if (tile.id == id) return tile;
     } else unreachable;

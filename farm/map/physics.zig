@@ -63,7 +63,7 @@ pub fn addSolidRect(rect: zhu.Rect) void {
 }
 
 pub fn addSolidObject(object: tiled.Object) void {
-    const tile = map.tileByGid(object.gid) orelse return;
+    const tile = map.getTileByGid(object.gid) orelse return;
     const group = tile.objectGroup orelse return;
     const topLeft = object.position.addY(-object.size.y);
 

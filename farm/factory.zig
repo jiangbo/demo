@@ -16,8 +16,8 @@ const ui = component.ui;
 
 const World = zhu.ecs.World;
 const Entity = zhu.ecs.Entity;
-const Object = zhu.extend.tiled.Object;
-const Image = zhu.graphics.Image;
+const tiled = zhu.extend.tiled;
+const Object = tiled.Object;
 
 pub fn init() void {
     std.log.info("spawn init", .{});
@@ -94,11 +94,23 @@ pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {
     return entity;
 }
 
-pub fn spawnMapProp(world: *World, object: Object, image: Image) Entity {
+pub fn spawnMapProp(world: *World, data: *const tiled.Map, object: Object) Entity {
+    const entity = world.createEntity();
+
+    var image: zhu.graphics.Image = undefined;
+    const tile = data.getTileByGid(object.gid).?;
+    // anim_id 表示由玩法触发的动画，不随地图加载自动播放。
+    if (tile.animation.len > 0 and !tile.hasProperty("anim_id")) {
+        const animation = data.getAnimationByGid(object.gid).?;
+        world.add(entity, animation);
+        image = animation.subImage();
+    } else {
+        image = data.getImageByGid(object.gid);
+    }
+
     const hasSize = object.size.x > 0 and object.size.y > 0;
     const size = if (hasSize) object.size else image.size;
 
-    const entity = world.createEntity();
     world.add(entity, object.position);
     world.add(entity, render.Sprite{
         .image = image,
@@ -297,11 +309,13 @@ test "地图摆件按底边定位生成实体" {
         .texture = .{ .id = 1 },
         .size = .xy(16, 16),
     };
+    zhu.assets.putImage(2185395808, image);
+    const testMaps = [_]tiled.Map{@import("zon/school.zon")};
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    const entity = spawnMapProp(&world, .{
+    const entity = spawnMapProp(&world, &testMaps[0], .{
         .id = 1,
         .gid = 1,
         .name = "",
@@ -311,7 +325,7 @@ test "地图摆件按底边定位生成实体" {
         .point = false,
         .properties = &.{},
         .extend = .{},
-    }, image);
+    });
 
     const position = world.get(entity, component.Position).?;
     const sprite = world.get(entity, render.Sprite).?;
