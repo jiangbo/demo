@@ -244,7 +244,7 @@ test "gid 图片解析支持单图和集合图块集" {
 
     var singleGid: u32 = 0;
     for (data.tileSetRefs) |ref| {
-        const tileSet = tiled.tileSetByRef(ref);
+        const tileSet = tiled.getTileSetByRef(ref);
         if (tileSet.columns == 0) continue;
         zhu.assets.putImage(tileSet.image, mockImage);
         singleGid = ref.firstGid;
@@ -256,7 +256,7 @@ test "gid 图片解析支持单图和集合图块集" {
 
     var collectionGid: u32 = 0;
     for (data.tileSetRefs) |ref| {
-        const tileSet = tiled.tileSetByRef(ref);
+        const tileSet = tiled.getTileSetByRef(ref);
         if (tileSet.columns != 0) continue;
         for (tileSet.tiles, 0..) |tile, localId| {
             if (tile.id == 0) continue;
