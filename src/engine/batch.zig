@@ -296,7 +296,6 @@ pub fn flush() void {
             .uvRect = target.image.uvFlip(false, flipY),
         });
 
-        // drawImage(target.image, .zero, .{ .mode = .window });
         layer.uploadVertices();
         drawCommands(layer, layer.commands.items[0..index]);
         for (layers.values[1..]) |*other| {

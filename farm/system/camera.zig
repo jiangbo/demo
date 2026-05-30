@@ -10,20 +10,21 @@ const followSmooth: f32 = 0.15;
 const scaleStep: f32 = 0.1;
 
 pub fn update(world: *zhu.ecs.World) void {
-    updateScale();
     const player = world.getIdentity(Player).?;
     const position = world.get(player, Position).?;
+    updateScale(position);
     zhu.camera.smoothFollow(position, followSmooth);
     zhu.camera.roundPosition();
 }
 
-fn updateScale() void {
+fn updateScale(position: Position) void {
     const scroll = zhu.input.mouseScrollY;
     if (scroll == 0) return;
 
     const delta = if (scroll > 0) scaleStep else -scaleStep;
     const scale = std.math.clamp(zhu.camera.scale.x + delta, 0.5, 4);
     zhu.camera.scale = .xy(scale, scale);
+    zhu.camera.directFollow(position); // 直接跟踪
 }
 
 test "相机跟随会向玩家位置移动" {
