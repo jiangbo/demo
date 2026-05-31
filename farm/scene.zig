@@ -21,7 +21,8 @@ const initialTargetId: i32 = -1;
 pub fn init(world: *World) void {
     std.log.info("scene init current={s}", .{@tagName(context.scene.current)});
     system.init();
-    if (context.scene.current == .farm) enterFarm(world);
+    title.init();
+    enterScene(world, context.scene.current);
 }
 
 pub fn deinit() void {}
@@ -67,9 +68,7 @@ pub fn update(world: *World, delta: f32) void {
         .farm => updateFarm(world, scaled),
     }
 
-    const previous = context.scene.current;
-    context.scene.apply();
-    if (previous != .farm and context.scene.current == .farm) enterFarm(world);
+    applyScene(world);
 }
 
 pub fn draw(world: *World) void {
@@ -97,6 +96,31 @@ fn updateFarm(world: *World, delta: f32) void {
     system.update(world, delta);
     ui.toolbar.update();
     ui.dialog.update(world);
+}
+
+fn applyScene(world: *World) void {
+    const previous = context.scene.current;
+    context.scene.apply();
+
+    const current = context.scene.current;
+    if (previous == current) return;
+
+    exitScene(previous);
+    enterScene(world, current);
+}
+
+fn enterScene(world: *World, next: context.scene.Scene) void {
+    switch (next) {
+        .title => title.enter(),
+        .farm => enterFarm(world),
+    }
+}
+
+fn exitScene(previous: context.scene.Scene) void {
+    switch (previous) {
+        .title => title.exit(),
+        .farm => {},
+    }
 }
 
 fn enterFarm(world: *World) void {

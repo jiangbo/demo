@@ -131,6 +131,7 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
         .frame_cb = windowFrame,
         .cleanup_cb = windowDeinit,
         .allocator = @bitCast(assets.skAllocator),
+        .high_dpi = false,
     });
 }
 
@@ -156,7 +157,22 @@ export fn windowEvent(event: ?*const Event) void {
             mouseMoved = true;
             const position = input.mousePosition.sub(viewRect.min);
             mousePosition = position.mul(size).div(viewRect.size);
-        } else if (ev.type == .RESIZED) resized = true;
+        } else if (ev.type == .RESIZED) {
+            resized = true;
+            // 打印逻辑窗口尺寸和 framebuffer 像素尺寸，方便检查 DPI 缩放。
+            std.log.info("resize dpi scale={d:.2}", .{sk.app.dpiScale()});
+            std.log.info(
+                "resize window={}x{} framebuffer={}x{} app={}x{}",
+                .{
+                    ev.window_width,
+                    ev.window_height,
+                    ev.framebuffer_width,
+                    ev.framebuffer_height,
+                    sk.app.width(),
+                    sk.app.height(),
+                },
+            );
+        }
 
         call(root, "event", .{ev});
     }

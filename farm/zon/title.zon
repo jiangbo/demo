@@ -1,0 +1,77 @@
+.{
+    .hoverSound = "assets/audio/UI_button11.ogg",
+    .clickSound = "assets/audio/UI_button08.ogg",
+    .textNormal = .{ .r = 1, .g = 1, .b = 1, .a = 1 },
+    .textHover = .{ .r = 0.99, .g = 0.91, .b = 0.53, .a = 1 },
+    .textPressed = .{ .r = 0.6, .g = 0.6, .b = 0.6, .a = 1 },
+    .textHoverOffset = .{ .x = 0, .y = -0.5 },
+    .textPressedOffset = .{ .x = 0, .y = 2 },
+    .buttons = .{
+        .{
+            .label = "Start",
+            .offset = .{ .x = 272, .y = 198 },
+            .size = .{ .x = 96, .y = 32 },
+            .normal = .{
+                .min = .{ .x = 0, .y = 64 },
+                .size = .{ .x = 48, .y = 16 },
+            },
+            .hover = .{
+                .min = .{ .x = 0, .y = 64 },
+                .size = .{ .x = 48, .y = 16 },
+            },
+            .pressed = .{
+                .min = .{ .x = 0, .y = 80 },
+                .size = .{ .x = 48, .y = 16 },
+            },
+            .nine = .{
+                .topLeft = .{ .x = 3, .y = 5 },
+                .bottomRight = .{ .x = 3, .y = 5 },
+            },
+            .event = .start,
+        },
+        .{
+            .label = "Load",
+            .offset = .{ .x = 272, .y = 246 },
+            .size = .{ .x = 96, .y = 32 },
+            .normal = .{
+                .min = .{ .x = 0, .y = 64 },
+                .size = .{ .x = 48, .y = 16 },
+            },
+            .hover = .{
+                .min = .{ .x = 0, .y = 64 },
+                .size = .{ .x = 48, .y = 16 },
+            },
+            .pressed = .{
+                .min = .{ .x = 0, .y = 80 },
+                .size = .{ .x = 48, .y = 16 },
+            },
+            .nine = .{
+                .topLeft = .{ .x = 3, .y = 5 },
+                .bottomRight = .{ .x = 3, .y = 5 },
+            },
+            .event = .load,
+        },
+        .{
+            .label = "Exit",
+            .offset = .{ .x = 272, .y = 294 },
+            .size = .{ .x = 96, .y = 32 },
+            .normal = .{
+                .min = .{ .x = 0, .y = 64 },
+                .size = .{ .x = 48, .y = 16 },
+            },
+            .hover = .{
+                .min = .{ .x = 0, .y = 64 },
+                .size = .{ .x = 48, .y = 16 },
+            },
+            .pressed = .{
+                .min = .{ .x = 0, .y = 80 },
+                .size = .{ .x = 48, .y = 16 },
+            },
+            .nine = .{
+                .topLeft = .{ .x = 3, .y = 5 },
+                .bottomRight = .{ .x = 3, .y = 5 },
+            },
+            .event = .exit,
+        },
+    },
+}

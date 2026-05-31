@@ -95,7 +95,8 @@ pub var layers: std.EnumArray(Layer.Name, Layer) = .initFill(.{});
 pub const vertexBuffer = &layers.getPtr(.default).vertices;
 pub const commandBuffer = &layers.getPtr(.default).commands;
 
-var renderTarget: ?graphics.RenderTarget = null;
+pub var offscreen: bool = false;
+var renderTarget: graphics.RenderTarget = .{};
 
 pub fn init(vertices: []Vertex, commands: []Command) void {
     const layer = layers.getPtr(.default);
@@ -116,6 +117,7 @@ pub fn init(vertices: []Vertex, commands: []Command) void {
 
     if (!window.viewRect.size.approxEqual(window.size)) {
         renderTarget = graphics.createRenderTarget(window.size);
+        offscreen = true;
     }
     camera.init();
 }
@@ -138,7 +140,7 @@ pub fn createVertexHandle(vertices: []Vertex) sk.gfx.Buffer {
 pub fn beginPass(color: graphics.Color) void {
     clear();
     var renderPass = graphics.RenderPass{ .clear = color };
-    if (renderTarget) |target| renderPass.target = target;
+    if (offscreen) renderPass.target = renderTarget;
     graphics.beginPass(renderPass);
 }
 
@@ -319,14 +321,14 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
 }
 
 pub fn flush() void {
-    if (renderTarget) |target| {
+    if (offscreen) {
         const layer = layers.getPtr(.default);
         const index = layer.commands.items.len;
 
         const flipY = !sk.gfx.queryFeatures().origin_top_left;
-        drawImage(target.image, .zero, .{
+        drawImage(renderTarget.image, .zero, .{
             .mode = .window,
-            .uvRect = target.image.uvFlip(false, flipY),
+            .uvRect = renderTarget.image.uvFlip(false, flipY),
         });
 
         layer.uploadVertices();
