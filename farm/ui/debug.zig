@@ -3,8 +3,8 @@ const zhu = @import("zhu");
 
 const imgui = @import("cimgui");
 
-const context = @import("context.zig");
-const events = @import("event.zig");
+const context = @import("../context.zig");
+const events = @import("../event.zig");
 
 pub fn init() void {
     sk.imgui.setup(.{

@@ -2,7 +2,6 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
-const context = @import("../context.zig");
 
 const Actor = component.actor.Actor;
 const Facing = component.actor.Facing;
@@ -29,8 +28,6 @@ pub fn update(world: *zhu.ecs.World) void {
 }
 
 fn readDirection() zhu.Vector2 {
-    if (context.ui.wantCaptureKeyboard) return .zero;
-
     var direction: zhu.Vector2 = .zero;
     if (zhu.input.key.anyHeld(&.{ .A, .LEFT })) direction.x -= 1;
     if (zhu.input.key.anyHeld(&.{ .D, .RIGHT })) direction.x += 1;
@@ -51,7 +48,6 @@ fn facingFromDirection(direction: zhu.Vector2) Facing {
 fn resetInput() void {
     zhu.input.key.state = .initEmpty();
     zhu.input.key.lastState = .initEmpty();
-    context.ui.wantCaptureKeyboard = false;
 }
 
 fn setKey(keyCode: zhu.input.KeyCode) void {
@@ -82,24 +78,4 @@ test "玩家控制会把方向键写入速度" {
     const actor = world.get(player, Actor).?;
     try std.testing.expectEqual(Action.walk, actor.action);
     try std.testing.expectEqual(Facing.up, actor.facing);
-}
-
-test "界面捕获键盘时玩家不会移动" {
-    resetInput();
-    defer resetInput();
-
-    context.ui.wantCaptureKeyboard = true;
-    setKey(.D);
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const player = world.createIdentity(Player);
-    world.add(player, Velocity{});
-    world.add(player, Actor{});
-
-    update(&world);
-
-    const velocity = world.get(player, Velocity).?;
-    try std.testing.expect(velocity.value.approxEqual(.zero));
 }

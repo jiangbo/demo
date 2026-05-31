@@ -4,10 +4,10 @@ const zhu = @import("zhu");
 
 const context = @import("context.zig");
 const events = @import("event.zig");
-const gui = @import("gui.zig");
 const map = @import("map.zig");
 const scene = @import("scene.zig");
 const factory = @import("factory.zig");
+const ui = @import("ui.zig");
 
 var vertexBuffer: []zhu.batch.Vertex = undefined;
 var commandBuffer: [128]zhu.batch.Command = undefined;
@@ -30,7 +30,7 @@ pub fn init() void {
     zhu.text.init(fontImage, @import("zon/font.zon"));
     _ = zhu.text.enableLayer(vertexBuffer[3500..]);
 
-    gui.init();
+    ui.init();
     context.init();
     events.init();
     map.init();
@@ -39,18 +39,18 @@ pub fn init() void {
 }
 
 pub fn event(ev: *const zhu.window.Event) void {
-    gui.event(ev);
+    ui.debug.event(ev);
 }
 
 pub fn frame(delta: f32) void {
     scene.update(&world, delta);
-    gui.update(delta);
+    ui.debug.update(delta);
 
     zhu.batch.beginPass(.rgb(0.23, 0.31, 0.27));
     scene.draw(&world);
     zhu.batch.flush();
 
-    gui.draw();
+    ui.debug.draw();
     zhu.batch.endPass();
     events.update();
 }
@@ -60,7 +60,7 @@ pub fn deinit() void {
     map.deinit();
     events.deinit();
     context.deinit();
-    gui.deinit();
+    ui.deinit();
     world.deinit();
     zhu.audio.deinit();
     zhu.assets.free(vertexBuffer);
