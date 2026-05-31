@@ -211,20 +211,55 @@ pub fn drawRect(rect: math.Rect, option: RectOption) void {
     });
 }
 
-pub const TriangleOption = struct {
-    color: Color = .white,
-    flip: bool = false,
-};
-pub fn drawTriangle(rect: math.Rect, option: TriangleOption) void {
-    drawImage(whiteImage, rect.min, .{
-        .size = rect.size,
-        .color = option.color,
-        .mask = .{ .flipX = option.flip },
-    });
-}
-
 pub fn drawCircle(position: Vector2, option: Option) void {
     drawImage(circleImage, position, option);
+}
+
+pub const CapsuleOption = struct { color: Color = .white };
+pub fn drawAxisCapsule(rect: math.Rect, option: CapsuleOption) void {
+    if (rect.size.x <= 0 or rect.size.y <= 0) return;
+
+    const color = option.color;
+    if (rect.size.x >= rect.size.y) {
+        const radius = rect.size.y * 0.5;
+        const half = circleImage.size.mul(.xy(0.5, 1));
+        const size = Vector2.xy(radius, rect.size.y);
+
+        var image = circleImage.sub(.init(.zero, half));
+        drawImage(image, rect.min, .{ .size = size, .color = color });
+
+        const middleRect = math.Rect.init(
+            rect.min.addX(radius),
+            .xy(rect.size.x - rect.size.y, rect.size.y),
+        );
+        if (middleRect.size.x > 0 and middleRect.size.y > 0) {
+            drawRect(middleRect, .{ .color = color });
+        }
+
+        image = circleImage.sub(.init(.xy(half.x, 0), half));
+        const pos = rect.min.addX(middleRect.size.x + radius);
+        drawImage(image, pos, .{ .size = size, .color = color });
+        return;
+    }
+
+    const radius = rect.size.x * 0.5;
+    const half = circleImage.size.mul(.xy(1, 0.5));
+    const size = Vector2.xy(rect.size.x, radius);
+
+    var image = circleImage.sub(.init(.zero, half));
+    drawImage(image, rect.min, .{ .size = size, .color = color });
+
+    const middleRect = math.Rect.init(
+        rect.min.addY(radius),
+        .xy(rect.size.x, rect.size.y - rect.size.x),
+    );
+    if (middleRect.size.x > 0 and middleRect.size.y > 0) {
+        drawRect(middleRect, .{ .color = color });
+    }
+
+    image = circleImage.sub(.init(.xy(0, half.y), half));
+    const pos = rect.min.addY(middleRect.size.y + radius);
+    drawImage(image, pos, .{ .size = size, .color = color });
 }
 
 pub const NineOption = struct { topLeft: Vector2, bottomRight: Vector2 };
