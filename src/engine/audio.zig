@@ -46,6 +46,7 @@ pub fn playMusic(path: [:0]const u8) void {
 }
 
 pub fn playMusicOption(path: [:0]const u8, loop: bool) void {
+    if (!sk.audio.isvalid()) return;
     const source = assets.loadMusic(path, loop);
     if (source == null) return;
 
@@ -80,6 +81,7 @@ pub fn playSound(path: [:0]const u8) void {
 
 pub fn playSoundOption(path: [:0]const u8, loop: bool) ?usize {
     if (@import("builtin").is_test) return null;
+    if (!sk.audio.isvalid()) return null;
 
     const sound = assets.loadSound(path, loop);
     if (sound == null) return null;
