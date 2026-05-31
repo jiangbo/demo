@@ -215,11 +215,9 @@ pub fn drawCircle(position: Vector2, option: Option) void {
     drawImage(circleImage, position, option);
 }
 
-pub const CapsuleOption = struct { color: Color = .white };
-pub fn drawAxisCapsule(rect: math.Rect, option: CapsuleOption) void {
+pub fn drawAxisCapsule(rect: math.Rect, color: Color) void {
     if (rect.size.x <= 0 or rect.size.y <= 0) return;
 
-    const color = option.color;
     if (rect.size.x >= rect.size.y) {
         const radius = rect.size.y * 0.5;
         const half = circleImage.size.mul(.xy(0.5, 1));
