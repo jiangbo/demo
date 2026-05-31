@@ -139,6 +139,10 @@ pub const Vector2 = extern struct {
         return self.x * self.x + self.y * self.y;
     }
 
+    pub fn dot(self: Vector2, other: Vector2) f32 {
+        return self.x * other.x + self.y * other.y;
+    }
+
     pub fn abs(self: Vector2) Vector2 {
         return .{ .x = @abs(self.x), .y = @abs(self.y) };
     }
@@ -268,10 +272,11 @@ pub const Rect = struct {
             point.y >= self.min.y and point.y <= self.max().y;
     }
 
-    /// 两个矩形是否相交
-    pub fn intersect(self: Rect, other: Rect) bool {
-        return self.min.x < other.max().x and self.max().x > other.min.x and
-            self.min.y < other.max().y and self.max().y > other.min.y;
+    pub fn closestPoint(self: Rect, point: Vector2) Vector2 {
+        const maxV = self.max();
+        const x = std.math.clamp(point.x, self.min.x, maxV.x);
+        const y = std.math.clamp(point.y, self.min.y, maxV.y);
+        return .{ .x = x, .y = y };
     }
 
     /// 返回重叠区域
@@ -281,13 +286,150 @@ pub const Rect = struct {
         return Rect.fromMax(overlapMin, overlapMax);
     }
 
-    /// 按圆形判断是否相交
-    pub fn intersectCircle(self: Rect, other: Rect) bool {
-        std.debug.assert(self.size.x == self.size.y);
-        std.debug.assert(other.size.x == other.size.y);
-        const distance2 = self.center().sub(other.center()).length2();
-        const radiusSum = (self.size.x + other.size.x) * 0.5;
-        return distance2 < std.math.pow(f32, radiusSum, 2);
+    pub fn intersect(self: Rect, other: anytype) bool {
+        const T = @TypeOf(other);
+        if (T == Rect) return self.intersectRect(other);
+        if (T == Circle) return self.intersectCircle(other);
+        if (T == AxisCapsule) return self.intersectCapsule(other);
+        @compileError("unsupported Rect.intersect type");
+    }
+
+    fn intersectRect(self: Rect, other: Rect) bool {
+        const maxS, const maxO = .{ self.max(), other.max() };
+        return self.min.x < maxO.x and maxS.x > other.min.x and
+            self.min.y < maxO.y and maxS.y > other.min.y;
+    }
+
+    fn intersectCircle(self: Rect, circle: Circle) bool {
+        const closest = self.closestPoint(circle.center);
+        return closest.sub(circle.center).length2() <= circle.radius * circle.radius;
+    }
+
+    fn intersectCapsule(self: Rect, capsule: AxisCapsule) bool {
+        const c1, const rect, const c2 = capsule.parts();
+        return self.intersect(rect) or self.intersect(c1) or
+            self.intersect(c2);
+    }
+};
+
+pub const Circle = struct {
+    center: Vector2 = .zero,
+    radius: f32 = 0,
+
+    pub fn init(center: Vector2, radius: f32) Circle {
+        return .{ .center = center, .radius = radius };
+    }
+
+    pub fn toRect(self: Circle) Rect {
+        const size = Vector2.square(self.radius * 2);
+        return .init(self.center.sub(.square(self.radius)), size);
+    }
+
+    pub fn contains(self: Circle, point: Vector2) bool {
+        return point.sub(self.center).length2() <= self.radius * self.radius;
+    }
+
+    pub fn intersect(self: Circle, other: anytype) bool {
+        const T = @TypeOf(other);
+        if (T == Rect) return other.intersect(self);
+        if (T == Circle) return {
+            const radius = self.radius + other.radius;
+            const d2 = self.center.sub(other.center).length2();
+            return d2 <= radius * radius;
+        };
+        if (T == AxisCapsule) return other.intersect(self);
+        @compileError("unsupported Circle.intersect type");
+    }
+};
+
+pub const AxisCapsule = struct {
+    const Parts = struct { Circle, Rect, Circle };
+    rect: Rect = .{},
+
+    pub fn init(rect: Rect) AxisCapsule {
+        return .{ .rect = rect };
+    }
+
+    pub fn toRect(self: AxisCapsule) Rect {
+        return self.rect;
+    }
+
+    pub fn contains(self: AxisCapsule, point: Vector2) bool {
+        const c1, const rect, const c2 = self.parts();
+        return rect.contains(point) or c1.contains(point) or
+            c2.contains(point);
+    }
+
+    pub fn intersect(self: AxisCapsule, other: anytype) bool {
+        const T = @TypeOf(other);
+        if (T == Rect) return other.intersectCapsule(self);
+        if (T == Circle) return self.intersectCircle(other);
+        if (T == AxisCapsule) return self.intersectCapsule(other);
+        @compileError("unsupported AxisCapsule.intersect type");
+    }
+
+    fn intersectCircle(self: AxisCapsule, circle: Circle) bool {
+        const c1, const rect, const c2 = self.parts();
+        return circle.intersect(rect) or circle.intersect(c1) or
+            circle.intersect(c2);
+    }
+
+    fn intersectCapsule(self: AxisCapsule, other: AxisCapsule) bool {
+        const c1, const rect, const c2 = self.parts();
+        return other.intersect(rect) or other.intersect(c1) or
+            other.intersect(c2);
+    }
+
+    fn parts(self: AxisCapsule) Parts {
+        const rect = self.rect;
+        const radius = @min(rect.size.x, rect.size.y) * 0.5;
+
+        if (rect.size.x >= rect.size.y) {
+            const pos = rect.min.addX(radius);
+            const rectWidth = rect.size.x - radius * 2;
+
+            return .{
+                .init(pos.addY(radius), radius),
+                .init(pos, .xy(rectWidth, rect.size.y)),
+                .init(pos.addXY(rectWidth, radius), radius),
+            };
+        }
+
+        const pos = rect.min.addY(radius);
+        const rectHeight = rect.size.y - radius * 2;
+
+        return .{
+            .init(pos.addX(radius), radius),
+            .init(pos, .xy(rect.size.x, rectHeight)),
+            .init(pos.addXY(radius, rectHeight), radius),
+        };
+    }
+};
+
+pub const Shape = union(enum) {
+    rect: Rect,
+    circle: Circle,
+    capsule: AxisCapsule,
+
+    pub fn toRect(self: Shape) Rect {
+        return switch (self) {
+            .rect => |rect| rect,
+            inline else => |shape| shape.toRect(),
+        };
+    }
+
+    pub fn contains(self: Shape, point: Vector2) bool {
+        return switch (self) {
+            inline else => |shape| shape.contains(point),
+        };
+    }
+
+    pub fn intersect(self: Shape, other: Shape) bool {
+        return switch (self) {
+            inline else => |a| switch (other) {
+                inline else => |b| a.intersect(b),
+            },
+        };
     }
 };
 
