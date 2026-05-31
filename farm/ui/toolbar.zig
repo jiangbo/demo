@@ -1,8 +1,8 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const component = @import("component.zig");
-const prefab = @import("prefab.zig");
+const component = @import("../component.zig");
+const prefab = @import("../prefab.zig");
 
 const ItemEnum = component.item.ItemEnum;
 const NineOption = zhu.batch.NineOption;
@@ -24,7 +24,7 @@ const Config = struct {
 
 pub const Item = struct { type: ItemEnum, count: u32 = 0 };
 
-const zon: Config = @import("zon/preset.zon");
+const zon: Config = @import("../zon/preset.zon");
 
 pub var slots: [zon.slotCount]Item = @splat(.{ .type = .hoe });
 pub var slotIndex: usize = 0;

@@ -1,7 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const component = @import("component.zig");
+const component = @import("../component.zig");
 
 const Dialog = component.actor.Dialog;
 const Position = component.Position;

@@ -4,7 +4,7 @@ const zhu = @import("zhu");
 const factory = @import("../factory.zig");
 const component = @import("../component.zig");
 const prefab = @import("../prefab.zig");
-const toolbar = @import("../toolbar.zig");
+const toolbar = @import("../ui/toolbar.zig");
 const land = @import("../map.zig").land;
 
 const Crop = component.farm.Crop;

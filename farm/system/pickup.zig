@@ -2,7 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
-const toolbar = @import("../toolbar.zig");
+const toolbar = @import("../ui/toolbar.zig");
 
 const Player = component.actor.Player;
 const Position = component.Position;
