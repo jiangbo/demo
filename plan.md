@@ -1,6 +1,8 @@
 教程路径：C:\workspace\github\cppgamedev\backend\src\courses\OpenGL与迷你农场
 CPP 源码路径：C:\workspace\github\TinyFarm
 
+如果是linux环境，路径前缀为：/root/workspace/github，其它路径一样。
+
 ## 实现原则
 
 这份计划不再按原教程章节推进，而是按“每节实现一个能在屏幕上看到的功能点”推进。每节都要能独立编译、独立验证；如果某个可见功能依赖前置系统，就先实现该功能需要的最小系统，不提前铺完整框架。
@@ -18,31 +20,6 @@ zig build test
 ```
 
 ## 功能实现计划
-
-- [x] 31-对话气泡
-  - 可见效果：靠近 NPC 按键弹出对话框。
-  - 需要系统：InteractionSystem、DialogueSystem、UI 文本。
-  - 参考源码：`game/system/dialogue_system.*`、`game/ui/dialogue_bubble.*`
-
-- [x] 32-游戏时间与时钟 UI
-  - 可见效果：屏幕显示时间，时间会推进。
-  - 需要系统：GameTime、TimeSystem、TimeClockUI。
-  - 参考源码：`game/data/game_time.*`、`game/ui/time_clock_ui.*`
-
-- [x] 33-昼夜颜色变化
-  - 可见效果：白天/夜晚画面色调明显变化。
-  - 需要系统：DayNightSystem、环境色参数、Renderer tint/overlay 最小实现。
-  - 参考源码：`game/system/day_night_system.*`、`assets/data/light_config.json`
-
-- [x] 34-夜间灯光占位效果
-  - 可见效果：夜晚路灯/窗户附近有简单亮色覆盖或光圈。
-  - 需要系统：PointLight/Emissive 组件、LightToggleSystem、简化光照绘制。
-  - 参考源码：`engine/component/light_component.h`、`light_system.*`
-
-- [x] 35-音效反馈
-  - 可见效果：锄地、浇水、拾取时播放声音。
-  - 需要系统：SoundPlay 事件、`system/sound.zig`、现有 `zhu.audio`。
-  - 参考源码：`engine/audio/*`、`game/system/action_sound_system.*`
 
 - [ ] 36-暂停菜单
   - 可见效果：按键打开暂停菜单，游戏更新暂停。
