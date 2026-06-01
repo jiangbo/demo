@@ -77,6 +77,9 @@ pub fn draw(world: *World) void {
         .farm => drawFarm(world),
     }
     if (ui.pause.active) ui.pause.draw();
+    zhu.camera.mode = .window;
+    if (drawDebug) zhu.window.drawDebugInfo();
+    zhu.camera.mode = .world;
 }
 
 fn updateFarm(world: *World, delta: f32) void {
@@ -140,10 +143,6 @@ fn drawFarm(world: *World) void {
     drawCollider(world);
 
     ui.draw(world);
-
-    zhu.camera.mode = .window;
-    if (drawDebug) zhu.window.drawDebugInfo();
-    zhu.camera.mode = .world;
 }
 
 var drawDebug: bool = true;

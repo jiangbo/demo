@@ -98,8 +98,8 @@ pub fn draw() void {
         });
     }
 
-    // 按钮
-    for (buttons, 0..) |button, index| {
+    // 按钮背景
+    for (buttons, 0..) |*button, index| {
         const rect = zhu.Rect.init(button.offset, button.size);
         const state = if (hover == index) buttonState else .normal;
 
@@ -109,8 +109,12 @@ pub fn draw() void {
             .pressed => button.pressed,
         });
         zhu.batch.drawNine(image, rect, button.nine);
+    }
 
-        // 按钮文字
+    // 按钮文字，将文字绘制到一起，避免多次 draw call
+    for (buttons, 0..) |*button, index| {
+        const rect = zhu.Rect.init(button.offset, button.size);
+        const state = if (hover == index) buttonState else .normal;
         const color: zhu.Color = switch (state) {
             .normal => .white,
             .hover => .{ .r = 0.99, .g = 0.91, .b = 0.53 },
