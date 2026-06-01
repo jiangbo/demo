@@ -11,6 +11,7 @@ pub fn init() void {
         .logger = .{ .func = sk.log.func },
         .no_default_font = true,
         .ini_filename = "assets/imgui.ini",
+        .disable_set_mouse_cursor = true,
     });
 
     const io = imgui.igGetIO();

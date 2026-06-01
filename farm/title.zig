@@ -63,7 +63,7 @@ pub fn update(delta: f32) void {
     const contains = menuRect.contains(mousePos);
     menuPressed = contains and zhu.input.mouse.held(.LEFT);
     if (contains and zhu.input.mouse.released(.LEFT)) {
-        ui.pause.enter(false);
+        ui.pause.enter(true);
     }
 }
 

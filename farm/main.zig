@@ -30,6 +30,8 @@ pub fn init() void {
     zhu.text.init(fontImage, @import("zon/font.zon"));
     _ = zhu.text.enableLayer(vertexBuffer[3500..]);
 
+    zhu.window.bindAndUseMouseIcon("assets/farm-rpg/UI/cursor.png", .{});
+
     ui.init();
     context.init();
     events.init();

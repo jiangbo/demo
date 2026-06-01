@@ -16,9 +16,8 @@ pub const Event = enum {
     sfxUp,
 };
 
-const ButtonState = enum { normal, hover, pressed };
-
 const Button = struct {
+    const State = enum { normal, hover, pressed, disabled };
     label: []const u8,
     offset: zhu.Vector2,
     size: zhu.Vector2,
@@ -57,16 +56,16 @@ pub var active: bool = false;
 
 var image: zhu.Image = undefined;
 var hover: ?usize = null;
-var buttonState: ButtonState = .normal;
+var buttonState: Button.State = .normal;
 
 pub fn init() void {
     image = zhu.getImage("farm-rpg/UI/button.png").?;
 }
 
-var enableSave: bool = false;
-pub fn enter(save: bool) void {
+var disabledSaveLoad: bool = false;
+pub fn enter(disabled: bool) void {
     active = true;
-    enableSave = save;
+    disabledSaveLoad = disabled;
 }
 
 pub fn update() ?Event {
@@ -77,6 +76,7 @@ pub fn update() ?Event {
     const mousePos = zhu.window.mousePosition;
 
     for (zon.buttons, 0..) |button, index| {
+        if (getButtonState(index) == .disabled) continue; // 禁用按钮不响应交互
         const rect = zhu.Rect.init(panel.min.add(button.offset), button.size);
         if (!rect.contains(mousePos)) continue;
         return updateButton(index, button.event);
@@ -141,14 +141,22 @@ pub fn draw() void {
     }
 }
 
+// Save 按钮 index=1, Load 按钮 index=2
+fn getButtonState(index: usize) Button.State {
+    if (disabledSaveLoad) {
+        if (index == 1 or index == 2) return .disabled;
+    }
+    return if (hover == index) buttonState else .normal;
+}
+
 fn drawButtonImage(start: zhu.Vector2) void {
     for (zon.buttons, 0..) |*button, index| {
         const position = start.add(button.offset);
         const rect = zhu.Rect.init(position, button.size);
-        const state = if (hover == index) buttonState else .normal;
 
+        const state = getButtonState(index);
         const source = switch (state) {
-            .normal, .hover => button.normal,
+            .normal, .hover, .disabled => button.normal,
             .pressed => button.pressed,
         };
 
@@ -159,18 +167,15 @@ fn drawButtonText(start: zhu.Vector2) void {
     for (zon.buttons, 0..) |button, index| {
         const position = start.add(button.offset);
         const rect = zhu.Rect.init(position, button.size);
-        const state = if (hover == index) buttonState else .normal;
+
+        const state = getButtonState(index);
         const color: zhu.Color = switch (state) {
             .normal => .white,
             .hover => .rgba(0.99, 0.91, 0.53, 1),
             .pressed => .gray(0.6, 1),
+            .disabled => .gray(0.4, 1),
         };
-        const offset: zhu.Vector2 = switch (state) {
-            .normal => .zero,
-            .hover => .xy(0, -0.5),
-            .pressed => .xy(0, 2),
-        };
-        const center = rect.center().add(offset);
+        const center = rect.center();
         zhu.text.drawString(button.label, center, .{
             .color = color,
             .alignment = .center,
