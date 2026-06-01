@@ -70,7 +70,13 @@ var hoverIndex: ?usize = null;
 var buttonState: ButtonState = .normal;
 
 pub fn init() void {
-    image = zhu.assets.getImage(zon.imageId).?;
+    image = zhu.getImage("farm-rpg/UI/button.png").?;
+}
+
+var enableSave: bool = false;
+pub fn enter(save: bool) void {
+    active = true;
+    enableSave = save;
 }
 
 pub fn update() ?Event {

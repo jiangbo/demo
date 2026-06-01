@@ -2,6 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const context = @import("context.zig");
+const ui = @import("ui.zig");
 
 const NineOption = zhu.batch.NineOption;
 
@@ -44,6 +45,10 @@ pub fn exit() void {
 }
 
 pub fn update(delta: f32) void {
+    if (ui.pause.active) {
+        _ = ui.pause.update();
+        return;
+    }
     elapsed += delta;
 
     const mousePos = zhu.window.mousePosition;
@@ -62,7 +67,7 @@ pub fn update(delta: f32) void {
     const contains = menuRect.contains(mousePos);
     menuPressed = contains and zhu.input.mouse.held(.LEFT);
     if (contains and zhu.input.mouse.released(.LEFT)) {
-        std.log.info("menu not implemented", .{});
+        ui.pause.enter(false);
     }
 }
 
@@ -135,4 +140,7 @@ pub fn draw() void {
     const size = zhu.Vector2.xy(32, 32);
     const posX = zhu.window.size.x - 10 - size.x;
     zhu.batch.drawImage(image, .xy(posX, 10), .{ .size = size });
+
+    // 暂停菜单
+    if (ui.pause.active) ui.pause.draw();
 }
