@@ -46,17 +46,7 @@ const Row = struct {
 };
 
 const Config = struct {
-    imageId: ImageId,
     size: zhu.Vector2,
-    overlayColor: zhu.Color,
-    panelColor: zhu.Color,
-    hoverSound: [:0]const u8,
-    clickSound: [:0]const u8,
-    textNormal: zhu.Color,
-    textHover: zhu.Color,
-    textPressed: zhu.Color,
-    textHoverOffset: zhu.Vector2,
-    textPressedOffset: zhu.Vector2,
     buttons: []const Button,
     rows: []const Row,
 };
@@ -66,7 +56,7 @@ const zon: Config = @import("../zon/pause.zon");
 pub var active: bool = false;
 
 var image: zhu.Image = undefined;
-var hoverIndex: ?usize = null;
+var hover: ?usize = null;
 var buttonState: ButtonState = .normal;
 
 pub fn init() void {
@@ -114,45 +104,75 @@ pub fn update() ?Event {
     }
 
     if (!press) {
-        hoverIndex = null;
+        hover = null;
         buttonState = .normal;
     }
     return null;
 }
 
 pub fn draw() void {
-    const previousMode = zhu.camera.mode;
-    zhu.camera.mode = .window;
-    defer zhu.camera.mode = previousMode;
+    zhu.camera.layer = .text;
+    defer zhu.camera.layer = .default;
 
     const overlay = zhu.Rect.init(.zero, zhu.window.size);
-    zhu.batch.drawRect(overlay, .{ .color = zon.overlayColor });
+    zhu.batch.drawRect(overlay, .{ .color = .gray(0, 0.35) });
 
-    const panel = zhu.Rect.init(zhu.window.size.sub(zon.size).scale(0.5), zon.size);
-    zhu.batch.drawRect(panel, .{ .color = zon.panelColor });
+    const pos = zhu.window.size.sub(zon.size).scale(0.5);
+    const back = zhu.Rect.init(pos, zon.size);
+    zhu.batch.drawRect(back, .{ .color = .gray(0, 0.45) });
 
-    for (zon.buttons, 0..) |button, index| drawButton(panel, button, index);
-    for (zon.rows, 0..) |row, index| drawRow(panel, row, index);
+    for (zon.buttons, 0..) |*button, index| {
+        const rect = zhu.Rect.init(pos.add(button.offset), button.size);
+        const state = if (hover == index) buttonState else .normal;
+
+        const source = switch (state) {
+            .normal, .hover => button.normal,
+            .pressed => button.pressed,
+        };
+
+        zhu.batch.drawNine(image.sub(source), rect, button.nine);
+    }
+
+    for (zon.buttons, 0..) |button, index| {
+        const rect = zhu.Rect.init(pos.add(button.offset), button.size);
+        const state = if (hover == index) buttonState else .normal;
+        const color: zhu.Color = switch (state) {
+            .normal => .white,
+            .hover => .rgba(0.99, 0.91, 0.53, 1),
+            .pressed => .gray(0.6, 1),
+        };
+        const offset: zhu.Vector2 = switch (state) {
+            .normal => .zero,
+            .hover => .xy(0, -0.5),
+            .pressed => .xy(0, 2),
+        };
+        const position = rect.center().add(offset);
+        zhu.text.drawString(button.label, position, .{
+            .color = color,
+            .alignment = .center,
+        });
+    }
+
+    // for (zon.rows, 0..) |row, index| drawRow(pos, row, index);
 }
 
 fn updateButton(index: usize, press: bool, event: Event) ?Event {
-    if (hoverIndex == null or hoverIndex.? != index) {
-        zhu.audio.playSound(zon.hoverSound);
+    if (hover == null or hover.? != index) {
+        zhu.audio.playSound("assets/audio/Fantasy_UI (1).ogg");
     }
-    hoverIndex = index;
+    hover = index;
     buttonState = if (press) .pressed else .hover;
 
     if (!zhu.window.mouse.released(.LEFT)) return null;
-    zhu.audio.playSound(zon.clickSound);
+    zhu.audio.playSound("assets/audio/Fantasy_UI (10).ogg");
     return event;
 }
 
-fn drawButton(panel: zhu.Rect, button: Button, index: usize) void {
-    const rect = zhu.Rect.init(panel.min.add(button.offset), button.size);
-    const state = if (hoverIndex == index) buttonState else .normal;
+fn drawButton(pos: zhu.Vector2, button: Button, index: usize) void {
+    const rect = zhu.Rect.init(pos.add(button.offset), button.size);
+    const state = if (hover == index) buttonState else .normal;
     const source = switch (state) {
-        .normal => button.normal,
-        .hover => button.hover,
+        .normal, .hover => button.normal,
         .pressed => button.pressed,
     };
 
@@ -168,11 +188,14 @@ fn drawButton(panel: zhu.Rect, button: Button, index: usize) void {
         .hover => zon.textHoverOffset,
         .pressed => zon.textPressedOffset,
     };
-    drawTextCenter(button.label, rect, color, offset);
+    zhu.text.drawString(button.label, rect.min.add(offset), .{
+        .color = color,
+        .alignment = .center,
+    });
 }
 
-fn drawRow(panel: zhu.Rect, row: Row, rowIndex: usize) void {
-    const rect = zhu.Rect.init(panel.min.add(row.offset), row.size);
+fn drawRow(pos: zhu.Vector2, row: Row, rowIndex: usize) void {
+    const rect = zhu.Rect.init(pos.add(row.offset), row.size);
     const startIndex = zon.buttons.len + rowIndex * 2;
 
     drawIcon(rect, row.left, startIndex);
@@ -182,7 +205,7 @@ fn drawRow(panel: zhu.Rect, row: Row, rowIndex: usize) void {
 
 fn drawIcon(rowRect: zhu.Rect, icon: Icon, index: usize) void {
     const rect = zhu.Rect.init(rowRect.min.add(icon.offset), icon.size);
-    const pressed = hoverIndex == index and buttonState == .pressed;
+    const pressed = hover == index and buttonState == .pressed;
     const source = if (pressed) icon.pressed else icon.normal;
     zhu.batch.drawImage(image.sub(source), rect.min, .{ .size = rect.size });
 }

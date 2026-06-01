@@ -43,11 +43,11 @@ pub const Option = struct {
     uvRect: ?math.Vector4 = null, // 纹理 UV 区域
     color: graphics.Color = .white, // 颜色
     mode: ?@TypeOf(camera.mode) = null, // 相机模式
-    layer: Layer.Name = .default, // 绘制层级
+    layer: ?camera.Layer = null, // 绘制层级
 };
 
 pub const Layer = struct {
-    pub const Name = enum { default, extend, text, debug };
+    pub const Name = camera.Layer;
     pipeline: sk.gfx.Pipeline = .{},
     sampler: sk.gfx.Sampler = .{},
     vertices: std.ArrayList(Vertex) = .empty,
@@ -91,7 +91,7 @@ pub var linearSampler: sk.gfx.Sampler = undefined;
 
 pub var whiteImage: graphics.Image = undefined;
 pub var circleImage: graphics.Image = undefined;
-pub var layers: std.EnumArray(Layer.Name, Layer) = .initFill(.{});
+pub var layers: std.EnumArray(camera.Layer, Layer) = .initFill(.{});
 pub const vertexBuffer = &layers.getPtr(.default).vertices;
 pub const commandBuffer = &layers.getPtr(.default).commands;
 
@@ -297,7 +297,7 @@ pub fn drawNine(image: Image, rect: math.Rect, option: NineOption) void {
 }
 
 pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
-    const layer = layers.getPtr(option.layer);
+    const layer = layers.getPtr(option.layer orelse camera.layer);
     const cmd = layer.drawCommand(defaultCommand(image.texture));
 
     const size = option.size orelse image.size;

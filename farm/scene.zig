@@ -76,8 +76,8 @@ pub fn draw(world: *World) void {
         .title => title.draw(),
         .farm => drawFarm(world),
     }
-    if (ui.pause.active) ui.pause.draw();
     zhu.camera.mode = .window;
+    if (ui.pause.active) ui.pause.draw();
     if (drawDebug) zhu.window.drawDebugInfo();
     zhu.camera.mode = .world;
 }
