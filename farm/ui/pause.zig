@@ -121,8 +121,16 @@ pub fn draw() void {
     const back = zhu.Rect.init(pos, zon.size);
     zhu.batch.drawRect(back, .{ .color = .gray(0, 0.45) });
 
+    drawButtonImage(pos);
+    drawButtonText(pos);
+
+    // for (zon.rows, 0..) |row, index| drawRow(pos, row, index);
+}
+
+fn drawButtonImage(start: zhu.Vector2) void {
     for (zon.buttons, 0..) |*button, index| {
-        const rect = zhu.Rect.init(pos.add(button.offset), button.size);
+        const position = start.add(button.offset);
+        const rect = zhu.Rect.init(position, button.size);
         const state = if (hover == index) buttonState else .normal;
 
         const source = switch (state) {
@@ -132,9 +140,11 @@ pub fn draw() void {
 
         zhu.batch.drawNine(image.sub(source), rect, button.nine);
     }
-
+}
+fn drawButtonText(start: zhu.Vector2) void {
     for (zon.buttons, 0..) |button, index| {
-        const rect = zhu.Rect.init(pos.add(button.offset), button.size);
+        const position = start.add(button.offset);
+        const rect = zhu.Rect.init(position, button.size);
         const state = if (hover == index) buttonState else .normal;
         const color: zhu.Color = switch (state) {
             .normal => .white,
@@ -146,14 +156,12 @@ pub fn draw() void {
             .hover => .xy(0, -0.5),
             .pressed => .xy(0, 2),
         };
-        const position = rect.center().add(offset);
-        zhu.text.drawString(button.label, position, .{
+        const center = rect.center().add(offset);
+        zhu.text.drawString(button.label, center, .{
             .color = color,
             .alignment = .center,
         });
     }
-
-    // for (zon.rows, 0..) |row, index| drawRow(pos, row, index);
 }
 
 fn updateButton(index: usize, press: bool, event: Event) ?Event {
@@ -166,32 +174,6 @@ fn updateButton(index: usize, press: bool, event: Event) ?Event {
     if (!zhu.window.mouse.released(.LEFT)) return null;
     zhu.audio.playSound("assets/audio/Fantasy_UI (10).ogg");
     return event;
-}
-
-fn drawButton(pos: zhu.Vector2, button: Button, index: usize) void {
-    const rect = zhu.Rect.init(pos.add(button.offset), button.size);
-    const state = if (hover == index) buttonState else .normal;
-    const source = switch (state) {
-        .normal, .hover => button.normal,
-        .pressed => button.pressed,
-    };
-
-    zhu.batch.drawNine(image.sub(source), rect, button.nine);
-
-    const color = switch (state) {
-        .normal => zon.textNormal,
-        .hover => zon.textHover,
-        .pressed => zon.textPressed,
-    };
-    const offset = switch (state) {
-        .normal => zhu.Vector2.zero,
-        .hover => zon.textHoverOffset,
-        .pressed => zon.textPressedOffset,
-    };
-    zhu.text.drawString(button.label, rect.min.add(offset), .{
-        .color = color,
-        .alignment = .center,
-    });
 }
 
 fn drawRow(pos: zhu.Vector2, row: Row, rowIndex: usize) void {
