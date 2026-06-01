@@ -131,7 +131,7 @@ pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
         .frame_cb = windowFrame,
         .cleanup_cb = windowDeinit,
         .allocator = @bitCast(assets.skAllocator),
-        .high_dpi = false,
+        .high_dpi = true,
     });
 }
 
