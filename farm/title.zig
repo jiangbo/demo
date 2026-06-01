@@ -19,15 +19,16 @@ const buttons: []const Button = @import("zon/title.zon");
 
 var background: zhu.Image = undefined;
 var logo: zhu.Image = undefined;
-var buttonImage: zhu.Image = undefined;
+var iconImage: zhu.Image = undefined;
 var elapsed: f32 = 0;
 var hover: ?usize = null;
 var buttonState: Button.State = .normal;
+var menuPressed: bool = false;
 
 pub fn init() void {
     background = zhu.getImage("textures/UI/farm-rpg-bg.png").?;
     logo = zhu.getImage("textures/UI/farm-rpg-logo.png").?;
-    buttonImage = zhu.getImage("farm-rpg/UI/button.png").?;
+    iconImage = zhu.getImage("farm-rpg/UI/button.png").?;
 }
 
 pub fn enter() void {
@@ -53,6 +54,16 @@ pub fn update(delta: f32) void {
         return updateButton(index);
     }
     hover, buttonState = .{ null, .normal };
+
+    // 右上角菜单按钮：32x32，离右边缘 10，离顶部 10
+    const size = zhu.Vector2.xy(32, 32);
+    const x = zhu.window.size.x - 10 - size.x;
+    const menuRect = zhu.Rect.init(.xy(x, 10), size);
+    const contains = menuRect.contains(mousePos);
+    menuPressed = contains and zhu.input.mouse.held(.LEFT);
+    if (contains and zhu.input.mouse.released(.LEFT)) {
+        std.log.info("menu not implemented", .{});
+    }
 }
 
 fn updateButton(index: usize) void {
@@ -92,7 +103,7 @@ pub fn draw() void {
         const state = if (hover == index) buttonState else .normal;
 
         // 按钮背景图片
-        const image = buttonImage.sub(switch (state) {
+        const image = iconImage.sub(switch (state) {
             .normal, .hover => button.normal,
             .pressed => button.pressed,
         });
@@ -116,4 +127,12 @@ pub fn draw() void {
             .alignment = .center,
         });
     }
+
+    // 右上角菜单按钮
+    const y: f32 = if (menuPressed) 224 else 208;
+    const image = iconImage.sub(.init(.xy(432, y), .square(16)));
+
+    const size = zhu.Vector2.xy(32, 32);
+    const posX = zhu.window.size.x - 10 - size.x;
+    zhu.batch.drawImage(image, .xy(posX, 10), .{ .size = size });
 }
