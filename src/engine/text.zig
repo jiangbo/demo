@@ -21,7 +21,7 @@ pub const Char = struct {
     offset: Vector2,
 };
 
-var commandArray: [4]batch.Command = undefined;
+var commandArray: [8]batch.Command = undefined;
 var layered: bool = false;
 
 var invalidIndex: usize = 0;

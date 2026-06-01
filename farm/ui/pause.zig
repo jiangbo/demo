@@ -116,14 +116,25 @@ pub fn draw() void {
     const overlay = zhu.Rect.init(.zero, zhu.window.size);
     zhu.batch.drawRect(overlay, .{ .color = .gray(0, 0.35) });
 
-    const pos = zhu.window.size.sub(zon.size).scale(0.5);
-    const back = zhu.Rect.init(pos, zon.size);
+    const start = zhu.window.size.sub(zon.size).scale(0.5);
+    const back = zhu.Rect.init(start, zon.size);
     zhu.batch.drawRect(back, .{ .color = .gray(0, 0.45) });
 
-    drawButtonImage(pos);
-    drawButtonText(pos);
+    drawButtonImage(start);
+    for (zon.rows, 0..) |row, index| {
+        const startIndex = zon.buttons.len + index * 2;
+        const pos = start.add(row.offset);
+        drawIcon(pos, row.left, startIndex);
+        drawIcon(pos, row.right, startIndex + 1);
+    }
 
-    // for (zon.rows, 0..) |row, index| drawRow(pos, row, index);
+    drawButtonText(start);
+    for (zon.rows) |row| {
+        const rect = zhu.Rect.init(start.add(row.offset), row.size);
+        zhu.text.drawString(row.label, rect.center(), .{
+            .alignment = .center,
+        });
+    }
 }
 
 fn drawButtonImage(start: zhu.Vector2) void {
@@ -176,30 +187,10 @@ fn updateButton(index: usize, event: Event) ?Event {
     return event;
 }
 
-fn drawRow(pos: zhu.Vector2, row: Row, rowIndex: usize) void {
-    const rect = zhu.Rect.init(pos.add(row.offset), row.size);
-    const startIndex = zon.buttons.len + rowIndex * 2;
-
-    drawIcon(rect, row.left, startIndex);
-    drawIcon(rect, row.right, startIndex + 1);
-    drawTextCenter(row.label, rect, zon.textNormal, .zero);
-}
-
-fn drawIcon(rowRect: zhu.Rect, icon: Icon, index: usize) void {
-    const rect = zhu.Rect.init(rowRect.min.add(icon.offset), icon.size);
+fn drawIcon(pos: zhu.Vector2, icon: Icon, index: usize) void {
+    const position = pos.add(icon.offset);
     const pressed = hover == index and buttonState == .pressed;
     const source = if (pressed) icon.pressed else icon.normal;
-    zhu.batch.drawImage(image.sub(source), rect.min, .{ .size = rect.size });
-}
-
-fn drawTextCenter(
-    text: []const u8,
-    rect: zhu.Rect,
-    color: zhu.Color,
-    offset: zhu.Vector2,
-) void {
-    const option = zhu.text.Option{ .color = color };
-    const size = zhu.text.measure(text, option);
-    const position = rect.min.add(rect.size.sub(size).scale(0.5)).add(offset);
-    zhu.text.drawString(text, position, option);
+    const option: zhu.batch.Option = .{ .size = icon.size };
+    zhu.batch.drawImage(image.sub(source), position, option);
 }
