@@ -113,13 +113,16 @@ pub fn draw() void {
     zhu.camera.layer = .text;
     defer zhu.camera.layer = .default;
 
+    // 全屏覆盖
     const overlay = zhu.Rect.init(.zero, zhu.window.size);
     zhu.batch.drawRect(overlay, .{ .color = .gray(0, 0.35) });
 
+    // 暂停面板背景
     const start = zhu.window.size.sub(zon.size).scale(0.5);
     const back = zhu.Rect.init(start, zon.size);
     zhu.batch.drawRect(back, .{ .color = .gray(0, 0.45) });
 
+    // 按钮的图片和icon
     drawButtonImage(start);
     for (zon.rows, 0..) |row, index| {
         const startIndex = zon.buttons.len + index * 2;
@@ -128,6 +131,7 @@ pub fn draw() void {
         drawIcon(pos, row.right, startIndex + 1);
     }
 
+    // 将图片和文字分开绘制，避免多次 draw call
     drawButtonText(start);
     for (zon.rows) |row| {
         const rect = zhu.Rect.init(start.add(row.offset), row.size);
