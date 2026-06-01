@@ -74,6 +74,7 @@ pub const Option = struct {
     max: f32 = std.math.floatMax(f32), // 最大宽度，超过换行
     spacing: f32 = 0, // 文字间的间距
     alignment: ?Vector2 = null, // 文字对齐
+    layer: ?batch.Layer.Name = null, // 绘制的层
 };
 
 pub fn drawNumber(number: anytype, pos: Vector2, option: Option) void {
@@ -124,7 +125,7 @@ pub fn drawString(text: String, position: Vector2, option: Option) void {
         batch.drawImage(image, pos.add(char.offset.mul(scale)), .{
             .size = char.area.size.mul(scale),
             .color = option.color,
-            .layer = if (layered) .text else .default,
+            .layer = option.layer orelse if (layered) .text else .default,
         });
         graphics.stats.text += 1;
         pos = .xy(startX + width, pos.y);

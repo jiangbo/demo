@@ -126,6 +126,7 @@ pub fn draw() void {
         zhu.text.drawString(button.label, position, .{
             .color = color,
             .alignment = .center,
+            .layer = .default,
         });
     }
 
