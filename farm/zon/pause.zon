@@ -1,8 +1,8 @@
 .{
     .imageId = 2508770722,
     .size = .{ .x = 208, .y = 344 },
-    .overlayColor = .{ .r = 0, .g = 0, .b = 0, .a = 0.6 },
-    .panelColor = .{ .r = 0, .g = 0, .b = 0, .a = 0.75 },
+    .overlayColor = .{ .r = 0, .g = 0, .b = 0, .a = 0.35 },
+    .panelColor = .{ .r = 0, .g = 0, .b = 0, .a = 0.45 },
     .hoverSound = "assets/audio/button_hover.ogg",
     .clickSound = "assets/audio/button_click.ogg",
     .textNormal = .{ .r = 1, .g = 1, .b = 1, .a = 1 },

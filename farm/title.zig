@@ -45,10 +45,6 @@ pub fn exit() void {
 }
 
 pub fn update(delta: f32) void {
-    if (ui.pause.active) {
-        _ = ui.pause.update();
-        return;
-    }
     elapsed += delta;
 
     const mousePos = zhu.window.mousePosition;
@@ -140,7 +136,4 @@ pub fn draw() void {
     const size = zhu.Vector2.xy(32, 32);
     const posX = zhu.window.size.x - 10 - size.x;
     zhu.batch.drawImage(image, .xy(posX, 10), .{ .size = size });
-
-    // 暂停菜单
-    if (ui.pause.active) ui.pause.draw();
 }
