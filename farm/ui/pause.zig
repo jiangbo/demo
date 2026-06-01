@@ -70,14 +70,16 @@ pub fn enter(save: bool) void {
 }
 
 pub fn update() ?Event {
-    const panel = zhu.Rect.init(zhu.window.size.sub(zon.size).scale(0.5), zon.size);
+    const panel = zhu.Rect.init(
+        zhu.window.size.sub(zon.size).scale(0.5),
+        zon.size,
+    );
     const mousePos = zhu.window.mousePosition;
-    const press = zhu.window.mouse.held(.LEFT);
 
     for (zon.buttons, 0..) |button, index| {
         const rect = zhu.Rect.init(panel.min.add(button.offset), button.size);
         if (!rect.contains(mousePos)) continue;
-        return updateButton(index, press, button.event);
+        return updateButton(index, button.event);
     }
 
     const startIndex = zon.buttons.len;
@@ -90,7 +92,7 @@ pub fn update() ?Event {
         );
         const leftIndex = startIndex + rowIndex * 2;
         if (leftRect.contains(mousePos)) {
-            return updateButton(leftIndex, press, row.left.event);
+            return updateButton(leftIndex, row.left.event);
         }
 
         const rightRect = zhu.Rect.init(
@@ -99,14 +101,11 @@ pub fn update() ?Event {
         );
         const rightIndex = leftIndex + 1;
         if (rightRect.contains(mousePos)) {
-            return updateButton(rightIndex, press, row.right.event);
+            return updateButton(rightIndex, row.right.event);
         }
     }
 
-    if (!press) {
-        hover = null;
-        buttonState = .normal;
-    }
+    hover, buttonState = .{ null, .normal };
     return null;
 }
 
@@ -164,12 +163,13 @@ fn drawButtonText(start: zhu.Vector2) void {
     }
 }
 
-fn updateButton(index: usize, press: bool, event: Event) ?Event {
+fn updateButton(index: usize, event: Event) ?Event {
     if (hover == null or hover.? != index) {
         zhu.audio.playSound("assets/audio/Fantasy_UI (1).ogg");
     }
     hover = index;
-    buttonState = if (press) .pressed else .hover;
+    const pressed = zhu.window.mouse.held(.LEFT);
+    buttonState = if (pressed) .pressed else .hover;
 
     if (!zhu.window.mouse.released(.LEFT)) return null;
     zhu.audio.playSound("assets/audio/Fantasy_UI (10).ogg");
