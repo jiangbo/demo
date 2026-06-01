@@ -70,7 +70,7 @@ pub const mouse = struct {
     pub var lastState: std.StaticBitSet(3) = .initEmpty();
     pub var state: std.StaticBitSet(3) = .initEmpty();
 
-    pub fn down(button: sk.app.Mousebutton) bool {
+    pub fn held(button: sk.app.Mousebutton) bool {
         return state.isSet(@intCast(@intFromEnum(button)));
     }
 

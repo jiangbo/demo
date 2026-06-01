@@ -269,10 +269,10 @@ pub const endPass = sk.gfx.endPass;
 pub const commit = sk.gfx.commit;
 
 pub const Color = extern struct {
-    r: f32,
-    g: f32,
-    b: f32,
-    a: f32,
+    r: f32 = 1,
+    g: f32 = 1,
+    b: f32 = 1,
+    a: f32 = 1,
 
     pub const black = Color.rgb(0, 0, 0); // 黑色
     pub const white = Color.rgb(1, 1, 1); // 白色

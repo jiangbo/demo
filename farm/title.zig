@@ -5,39 +5,24 @@ const context = @import("context.zig");
 
 const NineOption = zhu.batch.NineOption;
 
-const Event = enum { start, load, exit };
-const ButtonState = enum { normal, hover, pressed };
-
 const Button = struct {
+    const State = enum { normal, hover, pressed };
     label: []const u8,
     offset: zhu.Vector2,
     size: zhu.Vector2,
     normal: zhu.Rect,
-    hover: zhu.Rect,
     pressed: zhu.Rect,
     nine: NineOption,
-    event: Event,
 };
 
-const Config = struct {
-    hoverSound: [:0]const u8,
-    clickSound: [:0]const u8,
-    textNormal: zhu.Color,
-    textHover: zhu.Color,
-    textPressed: zhu.Color,
-    textHoverOffset: zhu.Vector2,
-    textPressedOffset: zhu.Vector2,
-    buttons: []const Button,
-};
-
-const zon: Config = @import("zon/title.zon");
+const buttons: []const Button = @import("zon/title.zon");
 
 var background: zhu.Image = undefined;
 var logo: zhu.Image = undefined;
 var buttonImage: zhu.Image = undefined;
 var elapsed: f32 = 0;
-var hoverIndex: ?usize = null;
-var buttonState: ButtonState = .normal;
+var hover: ?usize = null;
+var buttonState: Button.State = .normal;
 
 pub fn init() void {
     background = zhu.getImage("textures/UI/farm-rpg-bg.png").?;
@@ -47,100 +32,88 @@ pub fn init() void {
 
 pub fn enter() void {
     zhu.batch.offscreen = false;
+    zhu.camera.mode = .window;
+    zhu.audio.playMusic("assets/audio/02_spring_fairy_tale.ogg");
 }
 
 pub fn exit() void {
     zhu.batch.offscreen = true;
+    zhu.camera.mode = .world;
+    zhu.audio.setMusicState(.stopped);
 }
 
 pub fn update(delta: f32) void {
     elapsed += delta;
 
     const mousePos = zhu.window.mousePosition;
-    const press = zhu.window.mouse.down(.LEFT);
-    for (zon.buttons, 0..) |button, index| {
+    for (buttons, 0..) |button, index| {
         const rect = zhu.Rect.init(button.offset, button.size);
         if (!rect.contains(mousePos)) continue;
-
-        if (updateButton(index, press, button.event)) return;
-        return;
+        // 鼠标进入按钮了
+        return updateButton(index);
     }
+    hover, buttonState = .{ null, .normal };
+}
 
-    if (!press) {
-        hoverIndex = null;
-        buttonState = .normal;
+fn updateButton(index: usize) void {
+    if (hover == null or hover.? != index) {
+        zhu.audio.playSound("assets/audio/Fantasy_UI (1).ogg");
+    }
+    hover = index;
+    const pressed = zhu.window.mouse.held(.LEFT);
+    buttonState = if (pressed) .pressed else .hover;
+
+    if (zhu.window.mouse.released(.LEFT)) {
+        zhu.audio.playSound("assets/audio/Fantasy_UI (10).ogg");
+        switch (index) {
+            0 => context.scene.request(.farm),
+            1 => std.log.info("load not implemented", .{}),
+            2 => zhu.window.exit(),
+            else => unreachable,
+        }
     }
 }
 
 pub fn draw() void {
-    const previousMode = zhu.camera.mode;
-    zhu.camera.mode = .window;
-    defer zhu.camera.mode = previousMode;
-
-    zhu.batch.drawImage(background, .zero, .{ .size = zhu.window.size });
-
-    const y = 115 + @sin(elapsed * 2) * 5;
-    zhu.batch.drawImage(logo, .xy(320, y), .{
-        .size = .xy(293, 125),
-        .anchor = .center,
-    });
-
-    for (zon.buttons, 0..) |button, index| drawButton(button, index);
-}
-
-fn updateButton(index: usize, press: bool, event: Event) bool {
-    if (hoverIndex == null or hoverIndex.? != index) {
-        zhu.audio.playSound(zon.hoverSound);
+    { // 背景
+        zhu.batch.drawImage(background, .zero, .{
+            .size = zhu.window.size,
+        });
+        const y = 115 + @sin(elapsed * 2) * 5;
+        zhu.batch.drawImage(logo, .xy(320, y), .{
+            .size = .xy(293, 125),
+            .anchor = .center,
+        });
     }
-    hoverIndex = index;
-    buttonState = if (press) .pressed else .hover;
 
-    if (!zhu.window.mouse.released(.LEFT)) return false;
-    zhu.audio.playSound(zon.clickSound);
-    handleEvent(event);
-    return true;
-}
+    // 按钮
+    for (buttons, 0..) |button, index| {
+        const rect = zhu.Rect.init(button.offset, button.size);
+        const state = if (hover == index) buttonState else .normal;
 
-fn handleEvent(event: Event) void {
-    switch (event) {
-        .start => context.scene.request(.farm),
-        .load => std.log.info("title load clicked: not implemented", .{}),
-        .exit => zhu.window.exit(),
+        // 按钮背景图片
+        const image = buttonImage.sub(switch (state) {
+            .normal, .hover => button.normal,
+            .pressed => button.pressed,
+        });
+        zhu.batch.drawNine(image, rect, button.nine);
+
+        // 按钮文字
+        const color: zhu.Color = switch (state) {
+            .normal => .white,
+            .hover => .{ .r = 0.99, .g = 0.91, .b = 0.53 },
+            .pressed => .{ .r = 0.6, .g = 0.6, .b = 0.6 },
+        };
+        const offset: zhu.Vector2 = switch (state) {
+            .normal => zhu.Vector2.zero,
+            .hover => .{ .x = 0, .y = -0.5 },
+            .pressed => .{ .x = 0, .y = 2 },
+        };
+
+        const position = rect.center().add(offset);
+        zhu.text.drawString(button.label, position, .{
+            .color = color,
+            .alignment = .center,
+        });
     }
-}
-
-fn drawButton(button: Button, index: usize) void {
-    const rect = zhu.Rect.init(button.offset, button.size);
-    const state = if (hoverIndex == index) buttonState else .normal;
-    const source = switch (state) {
-        .normal => button.normal,
-        .hover => button.hover,
-        .pressed => button.pressed,
-    };
-
-    zhu.batch.drawNine(buttonImage.sub(source), rect, button.nine);
-
-    const color = switch (state) {
-        .normal => zon.textNormal,
-        .hover => zon.textHover,
-        .pressed => zon.textPressed,
-    };
-    const offset = switch (state) {
-        .normal => zhu.Vector2.zero,
-        .hover => zon.textHoverOffset,
-        .pressed => zon.textPressedOffset,
-    };
-    drawTextCenter(button.label, rect, color, offset);
-}
-
-fn drawTextCenter(
-    text: []const u8,
-    rect: zhu.Rect,
-    color: zhu.Color,
-    offset: zhu.Vector2,
-) void {
-    const option = zhu.text.Option{ .color = color };
-    const size = zhu.text.measure(text, option);
-    const position = rect.min.add(rect.size.sub(size).scale(0.5)).add(offset);
-    zhu.text.drawString(text, position, option);
 }

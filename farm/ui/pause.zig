@@ -76,7 +76,7 @@ pub fn init() void {
 pub fn update() ?Event {
     const panel = zhu.Rect.init(zhu.window.size.sub(zon.size).scale(0.5), zon.size);
     const mousePos = zhu.window.mousePosition;
-    const press = zhu.window.mouse.down(.LEFT);
+    const press = zhu.window.mouse.held(.LEFT);
 
     for (zon.buttons, 0..) |button, index| {
         const rect = zhu.Rect.init(panel.min.add(button.offset), button.size);
