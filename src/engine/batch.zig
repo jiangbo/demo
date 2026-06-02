@@ -17,7 +17,7 @@ const Matrix = math.Matrix;
 pub const Command = struct {
     start: u32 = 0, // 起始顶点索引
     end: u32 = 0, // 结束顶点索引
-    texture: graphics.Texture = .{}, // 纹理
+    view: graphics.View = .{}, // 视图
     position: Vector2 = .zero, // 位置
     scale: Vector2 = .one, // 缩放
     size: Vector2 = .zero, // 大小
@@ -26,7 +26,7 @@ pub const Command = struct {
 
 pub const Vertex = extern struct {
     position: math.Vector2 = .zero, // 顶点坐标
-    padding: u32 = 0, // 填充字节，保持对齐
+    layer: f32 = 0, // 绘制层级
     radian: f32 = 0, // 旋转弧度
     size: math.Vector2, // 大小
     pivot: math.Vector2 = .zero, // 旋转中心
@@ -43,11 +43,11 @@ pub const Option = struct {
     uvRect: ?math.Vector4 = null, // 纹理 UV 区域
     color: graphics.Color = .white, // 颜色
     mode: ?@TypeOf(camera.mode) = null, // 相机模式
-    layer: ?camera.Layer = null, // 绘制层级
+    layer: ?Layer.Name = null, // 绘制层级
 };
 
 pub const Layer = struct {
-    pub const Name = camera.Layer;
+    pub const Name = enum { default };
     pipeline: sk.gfx.Pipeline = .{},
     sampler: sk.gfx.Sampler = .{},
     vertices: std.ArrayList(Vertex) = .empty,
@@ -71,7 +71,7 @@ pub const Layer = struct {
 
     pub fn drawCommand(self: *Layer, command: Command) *Command {
         if (self.currentCommand()) |cmd| {
-            if (cmd.texture.id == command.texture.id) return cmd;
+            if (cmd.view.id == command.view.id) return cmd;
             return self.addDrawCommand(command);
         } else return self.addDrawCommand(command);
     }
@@ -91,7 +91,7 @@ pub var linearSampler: sk.gfx.Sampler = undefined;
 
 pub var whiteImage: graphics.Image = undefined;
 pub var circleImage: graphics.Image = undefined;
-pub var layers: std.EnumArray(camera.Layer, Layer) = .initFill(.{});
+pub var layers: std.EnumArray(Layer.Name, Layer) = .initFill(.{});
 pub const vertexBuffer = &layers.getPtr(.default).vertices;
 pub const commandBuffer = &layers.getPtr(.default).commands;
 
@@ -152,9 +152,9 @@ pub fn addDrawCommand(texture: graphics.Texture) *Command {
     return layers.getPtr(.default).addDrawCommand(defaultCommand(texture));
 }
 
-fn defaultCommand(texture: graphics.Texture) Command {
+fn defaultCommand(view: graphics.View) Command {
     return .{
-        .texture = texture,
+        .view = view,
         .position = camera.position,
         .scale = camera.scale,
         .size = camera.size,
@@ -297,8 +297,8 @@ pub fn drawNine(image: Image, rect: math.Rect, option: NineOption) void {
 }
 
 pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
-    const layer = layers.getPtr(option.layer orelse camera.layer);
-    const cmd = layer.drawCommand(defaultCommand(image.texture));
+    const layer = layers.getPtr(option.layer orelse .default);
+    const cmd = layer.drawCommand(defaultCommand(image.view));
 
     const size = option.size orelse image.size;
     var scaledSize = size.mul(option.scale);
@@ -383,7 +383,7 @@ fn doDraw(layer: *const Layer, cmd: Command) void {
     const scaleMatrix = math.Matrix.scaleVec(cmd.scale.toVector3(1));
     const view = math.Matrix.mul(scaleMatrix, translate);
 
-    const size = graphics.queryTextureSize(cmd.texture);
+    const size = graphics.queryViewSize(cmd.view);
     const uniforms = shader.VsParams{
         .viewMatrix = math.Matrix.mul(orth, view).mat,
         .textureVec = [4]f32{ 1 / size.x, 1 / size.y, 1, 1 },
@@ -392,7 +392,7 @@ fn doDraw(layer: *const Layer, cmd: Command) void {
 
     // 绑定组
     var bindings = sk.gfx.Bindings{};
-    bindings.views[0] = cmd.texture;
+    bindings.views[0] = cmd.view;
     bindings.vertex_buffers[0] = layer.vertexHandle;
     bindings.vertex_buffer_offsets[0] = @intCast(cmd.start * @sizeOf(Vertex));
     bindings.samplers[0] = layer.sampler;
@@ -405,12 +405,13 @@ fn doDraw(layer: *const Layer, cmd: Command) void {
 fn createQuadPipeline(shaderDesc: sk.gfx.ShaderDesc) sk.gfx.Pipeline {
     var vertexLayout = sk.gfx.VertexLayoutState{};
 
-    vertexLayout.attrs[0].format = .FLOAT3;
+    vertexLayout.attrs[0].format = .FLOAT2;
     vertexLayout.attrs[1].format = .FLOAT;
-    vertexLayout.attrs[2].format = .FLOAT2;
+    vertexLayout.attrs[2].format = .FLOAT;
     vertexLayout.attrs[3].format = .FLOAT2;
-    vertexLayout.attrs[4].format = .FLOAT4;
+    vertexLayout.attrs[4].format = .FLOAT2;
     vertexLayout.attrs[5].format = .FLOAT4;
+    vertexLayout.attrs[6].format = .FLOAT4;
     vertexLayout.buffers[0].step_func = .PER_INSTANCE;
 
     return sk.gfx.makePipeline(.{

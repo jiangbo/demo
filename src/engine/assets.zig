@@ -26,7 +26,7 @@ pub fn init(allocator1: std.mem.Allocator, maxSize: usize) void {
 
 pub fn initCaches(allocator1: std.mem.Allocator) void {
     allocator, imageCache = .{ allocator1, .empty };
-    Texture.cache, File.cache = .{ .empty, .empty };
+    View.cache, File.cache = .{ .empty, .empty };
     Sound.cache, Music.cache = .{ .empty, .empty };
 }
 
@@ -44,7 +44,7 @@ fn sk_free(ptr: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
 
 pub fn deinit() void {
     imageCache.deinit(allocator);
-    Texture.cache.deinit(allocator);
+    View.cache.deinit(allocator);
     Sound.cache.deinit(allocator);
     Music.deinit();
     File.deinit();
@@ -71,8 +71,8 @@ pub fn oom() noreturn {
 pub fn loadImage(path: Path) Image {
     const entry = imageCache.getOrPut(allocator, id(path)) catch oom();
     if (!entry.found_existing) {
-        const texture = Texture.load(path);
-        entry.value_ptr.* = .{ .texture = texture, .size = .zero };
+        const view = View.load(path);
+        entry.value_ptr.* = .{ .view = view, .size = .zero };
     }
     return entry.value_ptr.*;
 }
@@ -124,7 +124,7 @@ pub fn loadIcon(path: Path, handle: u64, handler: IconHandler) void {
     }.callback);
 }
 
-const Texture = struct {
+const View = struct {
     var cache: std.AutoHashMapUnmanaged(Id, sk.gfx.View) = .empty;
 
     fn load(path: Path) sk.gfx.View {
@@ -157,6 +157,7 @@ const Texture = struct {
         return sk.gfx.makeImage(.{
             .width = w,
             .height = h,
+            .type = .ARRAY,
             .data = init: {
                 var imageData = sk.gfx.ImageData{};
                 imageData.mip_levels[0] = sk.gfx.asRange(data);
