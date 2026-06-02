@@ -5,7 +5,7 @@ const math = @import("math.zig");
 const assets = @import("assets.zig");
 const window = @import("window.zig");
 
-pub const Texture = sk.gfx.View;
+pub const View = sk.gfx.View;
 
 pub fn frameStats(enable: bool) void {
     if (enable) sk.gfx.enableFrameStats() else sk.gfx.disableFrameStats();
@@ -17,8 +17,8 @@ pub const queryBackend = sk.gfx.queryBackend;
 pub const Vector2 = math.Vector2;
 pub const ImageId = assets.Id;
 
-pub fn queryTextureSize(texture: Texture) math.Vector {
-    const image = sk.gfx.queryViewImage(texture);
+pub fn queryViewSize(view: View) math.Vector {
+    const image = sk.gfx.queryViewImage(view);
     return .{
         .x = @floatFromInt(sk.gfx.queryImageWidth(image)),
         .y = @floatFromInt(sk.gfx.queryImageHeight(image)),
@@ -155,13 +155,13 @@ pub fn loopFramesX(comptime count: u8, size: Vector2, d: f32) //
 }
 
 pub const Image = struct {
-    texture: Texture,
+    view: sk.gfx.View,
     offset: math.Vector2 = .zero,
     size: math.Vector2,
 
     pub fn sub(self: *const Image, subRect: math.Rect) Image {
         return Image{
-            .texture = self.texture,
+            .view = self.view,
             .offset = self.offset.add(subRect.min),
             .size = subRect.size,
         };
@@ -199,7 +199,7 @@ pub var stats: Stats = .{};
 
 pub const RenderTarget = struct {
     pass: sk.gfx.Pass = .{},
-    image: Image = .{ .texture = .{}, .size = .zero },
+    image: Image = .{ .view = .{}, .size = .zero },
 };
 
 pub fn createRenderTarget(size: math.Vector2) RenderTarget {
@@ -226,12 +226,12 @@ pub fn createRenderTarget(size: math.Vector2) RenderTarget {
         .depth_stencil_attachment = .{ .image = depthImage },
     });
 
-    const texture = sk.gfx.makeView(.{
+    const view = sk.gfx.makeView(.{
         .texture = .{ .image = colorImage },
     });
     return .{
         .pass = pass,
-        .image = .{ .texture = texture, .size = size },
+        .image = .{ .view = view, .size = size },
     };
 }
 
