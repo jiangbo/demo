@@ -6,15 +6,24 @@ const component = @import("../component.zig");
 const tiled = zhu.extend.tiled;
 const Collider = component.motion.Collider;
 
+// 方向阻挡位标记
+pub const Block = struct {
+    pub const N: u8 = 1 << 0; // 北面阻挡
+    pub const S: u8 = 1 << 1;
+    pub const W: u8 = 1 << 2;
+    pub const E: u8 = 1 << 3;
+    pub const SOLID: u8 = N | S | W | E;
+};
+
 var map: *const tiled.Map = undefined;
-pub var tiles: []bool = &.{};
+pub var tiles: []u8 = &.{};
 pub var areas: std.ArrayList(zhu.Rect) = .empty;
 
 pub fn enter(data: *const tiled.Map) void {
     exit();
     map = data;
-    tiles = zhu.assets.oomAlloc(bool, map.width * map.height);
-    @memset(tiles, false);
+    tiles = zhu.assets.oomAlloc(u8, map.width * map.height);
+    @memset(tiles, 0);
 }
 
 pub fn exit() void {
@@ -30,8 +39,20 @@ pub fn deinit() void {
 
 pub fn parseSolidLayer(layer: *const tiled.Layer) void {
     for (layer.data, 0..) |gid, index| {
-        if (gid != 0) tiles[index] = true;
+        if (gid != 0) tiles[index] = Block.SOLID;
     }
+}
+
+/// 根据 tile_flag 字符串设置方向阻挡标记
+pub fn setTileFlag(index: usize, flag: []const u8) void {
+    if (std.mem.containsAtLeast(u8, flag, 1, "SOLID")) {
+        tiles[index] = Block.SOLID;
+        return;
+    }
+    if (std.mem.containsAtLeast(u8, flag, 1, "BLOCK_N")) tiles[index] |= Block.N;
+    if (std.mem.containsAtLeast(u8, flag, 1, "BLOCK_S")) tiles[index] |= Block.S;
+    if (std.mem.containsAtLeast(u8, flag, 1, "BLOCK_W")) tiles[index] |= Block.W;
+    if (std.mem.containsAtLeast(u8, flag, 1, "BLOCK_E")) tiles[index] |= Block.E;
 }
 
 pub fn markSolidRect(rect: zhu.Rect) void {
@@ -46,7 +67,7 @@ pub fn markSolidRect(rect: zhu.Rect) void {
         var x = tileMin.x;
         while (x <= tileMax.x) : (x += 1) {
             const index = map.tilePositionToIndex(.xy(x, y));
-            tiles[index orelse continue] = true;
+            tiles[index orelse continue] = Block.SOLID;
         }
     }
 }
@@ -73,23 +94,32 @@ pub fn addSolidObject(object: tiled.Object) void {
     }
 }
 
-/// 检查碰撞框在指定位置是否与 solid 格子重叠
-pub fn isSolid(position: zhu.Vector2, collider: Collider) bool {
-    // 计算碰撞框在世界中的矩形
+/// 检查碰撞框在指定位置移动 delta 后是否被阻挡
+/// delta 表示进入方向：向南移动(d.y>0)遇到 BLOCK_N 表示从北面进入被挡
+pub fn isBlocked(
+    position: zhu.Vector2,
+    collider: Collider,
+    delta: zhu.Vector2,
+) bool {
     const pos = position.add(collider.offset);
     const rect = zhu.Rect.init(pos, collider.size);
 
-    // 用半开矩形 [min, max) 计算覆盖到的 tile 范围。
-    // 右下边界回退一点，避免刚好贴边时多查相邻 tile。
     const tileMin = map.worldToTilePosition(rect.min);
     const max = rect.max().sub(.square(zhu.math.epsilon));
     const tileMax = map.worldToTilePosition(max);
+
     var y = tileMin.y;
     while (y <= tileMax.y) : (y += 1) {
         var x = tileMin.x;
         while (x <= tileMax.x) : (x += 1) {
             const index = map.tilePositionToIndex(.xy(x, y));
-            if (tiles[index orelse return true]) return true;
+            const flags = tiles[index orelse return true];
+            if (flags == Block.SOLID) return true;
+            // 从北面进入（向南移动），遇到 BLOCK_N 被挡
+            if (delta.y > 0 and flags & Block.N != 0) return true;
+            if (delta.y < 0 and flags & Block.S != 0) return true;
+            if (delta.x > 0 and flags & Block.W != 0) return true;
+            if (delta.x < 0 and flags & Block.E != 0) return true;
         }
     }
 
@@ -97,61 +127,70 @@ pub fn isSolid(position: zhu.Vector2, collider: Collider) bool {
     return false;
 }
 
-test "isSolid 检测碰撞框是否与 solid 格子重叠" {
+test "isBlocked 检测碰撞框是否与 solid 格子重叠" {
     zhu.assets.allocator = std.testing.allocator;
     const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
     enter(&testMaps[0]);
     defer deinit();
 
-    // 空地图不应碰撞
     const collider: Collider = .{
         .size = .xy(10, 6),
         .offset = .xy(-5, -6),
     };
-    try std.testing.expect(!isSolid(.xy(24, 40), collider));
+    // 空地图不应碰撞
+    try std.testing.expect(!isBlocked(.xy(24, 40), collider, .xy(1, 1)));
 
-    // 标记 tile (1,2) 为 solid（世界坐标 16~32, 32~48）
-    tiles[map.worldToTileIndex(.xy(24, 40)).?] = true;
-
-    // 碰撞框与 solid 格子重叠时应返回 true
-    try std.testing.expect(isSolid(.xy(24, 40), collider));
-
-    // 碰撞框不与 solid 格子重叠时应返回 false
-    try std.testing.expect(!isSolid(.xy(80, 80), collider));
+    // 标记 tile (1,2) 为 solid
+    tiles[map.worldToTileIndex(.xy(24, 40)).?] = Block.SOLID;
+    try std.testing.expect(isBlocked(.xy(24, 40), collider, .xy(1, 1)));
+    try std.testing.expect(!isBlocked(.xy(80, 80), collider, .xy(1, 1)));
 }
 
-test "isSolid 不会把贴边当成碰撞" {
+test "isBlocked 方向阻挡只在对应方向生效" {
     zhu.assets.allocator = std.testing.allocator;
     const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
     enter(&testMaps[0]);
     defer deinit();
 
-    // solid tile (2,2) 的世界范围是 32~48, 32~48
-    tiles[map.worldToTileIndex(.xy(40, 40)).?] = true;
-
     const collider: Collider = .{ .size = .xy(10, 6) };
+    const index = map.worldToTileIndex(.xy(40, 40)).?;
+    tiles[index] = Block.N; // 北面边缘阻挡
 
-    // 右边界刚好贴到 solid 的左边界 x=32，不应算重叠
-    try std.testing.expect(!isSolid(.xy(22, 36), collider));
-
-    // 下边界刚好贴到 solid 的上边界 y=32，不应算重叠
-    try std.testing.expect(!isSolid(.xy(36, 26), collider));
-
-    // 真正进入 solid 1 像素后才应算碰撞
-    try std.testing.expect(isSolid(.xy(23, 36), collider));
+    // 从北面进入（向南移动 delta.y>0）被阻挡
+    try std.testing.expect(isBlocked(.xy(36, 27), collider, .xy(0, 1)));
+    // 从南面进入（向北移动 delta.y<0）不被阻挡
+    try std.testing.expect(!isBlocked(.xy(36, 27), collider, .xy(0, -1)));
+    // 水平移动不被阻挡
+    try std.testing.expect(!isBlocked(.xy(36, 27), collider, .xy(1, 0)));
 }
 
-test "isSolid 会把地图外当成阻挡" {
+test "isBlocked 不会把贴边当成碰撞" {
+    zhu.assets.allocator = std.testing.allocator;
+    const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
+    enter(&testMaps[0]);
+    defer deinit();
+
+    tiles[map.worldToTileIndex(.xy(40, 40)).?] = Block.SOLID;
+    const collider: Collider = .{ .size = .xy(10, 6) };
+    const d = zhu.Vector2.xy(1, 1);
+
+    try std.testing.expect(!isBlocked(.xy(22, 36), collider, d));
+    try std.testing.expect(!isBlocked(.xy(36, 26), collider, d));
+    try std.testing.expect(isBlocked(.xy(23, 36), collider, d));
+}
+
+test "isBlocked 会把地图外当成阻挡" {
     zhu.assets.allocator = std.testing.allocator;
     const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
     enter(&testMaps[0]);
     defer deinit();
 
     const collider: Collider = .{ .size = .xy(4, 4) };
+    const d = zhu.Vector2.xy(1, 1);
 
-    try std.testing.expect(isSolid(.xy(-1, 16), collider));
-    try std.testing.expect(isSolid(.xy(16, -1), collider));
-    try std.testing.expect(isSolid(map.size().sub(.xy(3, 3)), collider));
+    try std.testing.expect(isBlocked(.xy(-1, 16), collider, d));
+    try std.testing.expect(isBlocked(.xy(16, -1), collider, d));
+    try std.testing.expect(isBlocked(map.size().sub(.xy(3, 3)), collider, d));
 }
 
 test "对象 collider 使用精确矩形保留桌子间通道" {
@@ -167,9 +206,10 @@ test "对象 collider 使用精确矩形保留桌子间通道" {
         .size = .xy(10, 6),
         .offset = .xy(-5, -6),
     };
+    const d = zhu.Vector2.xy(1, 1);
 
-    try std.testing.expect(!isSolid(.xy(96, 144), collider));
-    try std.testing.expect(isSolid(.xy(96, 120), collider));
+    try std.testing.expect(!isBlocked(.xy(96, 144), collider, d));
+    try std.testing.expect(isBlocked(.xy(96, 120), collider, d));
 }
 
 test "markSolidRect 会标记矩形覆盖到的格子" {
@@ -180,6 +220,6 @@ test "markSolidRect 会标记矩形覆盖到的格子" {
 
     markSolidRect(.init(.xy(32, 32), .xy(16, 16)));
 
-    try std.testing.expect(tiles[map.worldToTileIndex(.xy(40, 40)).?]);
-    try std.testing.expect(!tiles[map.worldToTileIndex(.xy(24, 40)).?]);
+    try std.testing.expect(tiles[map.worldToTileIndex(.xy(40, 40)).?] == Block.SOLID);
+    try std.testing.expect(tiles[map.worldToTileIndex(.xy(24, 40)).?] == 0);
 }

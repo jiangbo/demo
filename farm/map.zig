@@ -208,7 +208,19 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
         if (globalId == 0) continue; // 0 表示空瓦片，跳过
 
         const image = data.getImageByGid(globalId);
-        appendVertex(data.tileIndexToWorld(index), image);
+        const world = data.tileIndexToWorld(index);
+        appendVertex(world, image);
+
+        // 带 tile_flag 标记的瓦片设置方向碰撞
+        const tile = data.getTileByGid(globalId) orelse continue;
+        if (!tile.hasProperty("tile_flag")) continue;
+        for (tile.properties) |prop| {
+            if (!prop.is("tile_flag")) continue;
+            const flag = prop.value.get([]const u8) orelse break;
+            const tileIndex = data.worldToTileIndex(world).?;
+            physics.setTileFlag(tileIndex, flag);
+            break;
+        }
     }
 }
 

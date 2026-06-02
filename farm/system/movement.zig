@@ -22,9 +22,9 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
             // 碰撞时回退到原始坐标，这样可以沿墙滑动而不会卡死
             var next = position.*;
             next.x += offset.x;
-            if (map.physics.isSolid(next, c)) next.x = position.x;
+            if (physics.isBlocked(next, c, .xy(offset.x, 0))) next.x = position.x;
             next.y += offset.y;
-            if (map.physics.isSolid(next, c)) next.y = position.y;
+            if (physics.isBlocked(next, c, .xy(0, offset.y))) next.y = position.y;
             position.* = next;
         } else {
             position.* = position.add(offset);
@@ -48,11 +48,11 @@ test "移动系统会按速度更新位置" {
 
 test "有 Collider 的实体会被 solid 格子阻挡" {
     zhu.assets.allocator = std.testing.allocator;
-    map.physics.enter(map.data);
-    defer map.physics.exit();
+    physics.enter(map.data);
+    defer physics.exit();
 
     // 标记 tile (2,2) 为 solid（世界坐标 32~48, 32~48）
-    map.physics.markSolidTile(.xy(40, 40));
+    physics.markSolidTile(.xy(40, 40));
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
