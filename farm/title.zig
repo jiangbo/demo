@@ -87,16 +87,23 @@ fn updateButton(index: usize) void {
 }
 
 pub fn draw() void {
-    { // 背景
-        zhu.batch.drawImage(background, .zero, .{
-            .size = zhu.window.size,
-        });
-        const y = 115 + @sin(elapsed * 2) * 5;
-        zhu.batch.drawImage(logo, .xy(320, y), .{
-            .size = .xy(293, 125),
-            .anchor = .center,
-        });
-    }
+    // 背景
+    zhu.batch.drawImage(background, .zero, .{
+        .size = zhu.window.size,
+    });
+    var y = 115 + @sin(elapsed * 2) * 5;
+    zhu.batch.drawImage(logo, .xy(320, y), .{
+        .size = .xy(293, 125),
+        .anchor = .center,
+    });
+
+    // 右上角菜单按钮
+    y = if (menuPressed) 224 else 208;
+    const image = iconImage.sub(.init(.xy(432, y), .square(16)));
+
+    const size = zhu.Vector2.xy(32, 32);
+    const posX = zhu.window.size.x - 10 - size.x;
+    zhu.batch.drawImage(image, .xy(posX, 10), .{ .size = size });
 
     // 按钮背景
     for (buttons, 0..) |*button, index| {
@@ -104,11 +111,11 @@ pub fn draw() void {
         const state = if (hover == index) buttonState else .normal;
 
         // 按钮背景图片
-        const image = iconImage.sub(switch (state) {
+        const buttonImage = iconImage.sub(switch (state) {
             .normal, .hover => button.normal,
             .pressed => button.pressed,
         });
-        zhu.batch.drawNine(image, rect, button.nine);
+        zhu.batch.drawNine(buttonImage, rect, button.nine);
     }
 
     // 按钮文字，将文字绘制到一起，避免多次 draw call
@@ -132,12 +139,4 @@ pub fn draw() void {
             .alignment = .center,
         });
     }
-
-    // 右上角菜单按钮
-    const y: f32 = if (menuPressed) 224 else 208;
-    const image = iconImage.sub(.init(.xy(432, y), .square(16)));
-
-    const size = zhu.Vector2.xy(32, 32);
-    const posX = zhu.window.size.x - 10 - size.x;
-    zhu.batch.drawImage(image, .xy(posX, 10), .{ .size = size });
 }
