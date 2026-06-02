@@ -209,6 +209,7 @@ pub fn createRenderTarget(size: math.Vector2) RenderTarget {
         .width = @intFromFloat(size.x),
         .height = @intFromFloat(size.y),
         .sample_count = 1,
+        .type = .ARRAY,
     });
 
     var pass = sk.gfx.Pass{};
