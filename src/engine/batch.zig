@@ -9,7 +9,6 @@ const window = @import("window.zig");
 
 const Image = graphics.Image;
 const ImageId = graphics.ImageId;
-const Texture = graphics.Texture;
 const Color = graphics.Color;
 const Vector2 = math.Vector2;
 const Matrix = math.Matrix;
@@ -43,77 +42,32 @@ pub const Option = struct {
     uvRect: ?math.Vector4 = null, // 纹理 UV 区域
     color: graphics.Color = .white, // 颜色
     mode: ?@TypeOf(camera.mode) = null, // 相机模式
-    layer: ?Layer.Name = null, // 绘制层级
 };
-
-pub const Layer = struct {
-    pub const Name = enum { default };
-    pipeline: sk.gfx.Pipeline = .{},
-    sampler: sk.gfx.Sampler = .{},
-    vertices: std.ArrayList(Vertex) = .empty,
-    commands: std.ArrayList(Command) = .empty,
-    vertexHandle: sk.gfx.Buffer = .{},
-
-    pub fn currentCommand(self: *Layer) ?*Command {
-        if (self.commands.items.len == 0) return null;
-        return &self.commands.items[self.commands.items.len - 1];
-    }
-
-    pub fn addDrawCommand(self: *Layer, command: Command) *Command {
-        var finalCommand = command;
-        finalCommand.start = if (self.currentCommand()) |cmd| blk: {
-            cmd.end = @intCast(self.vertices.items.len);
-            break :blk cmd.end;
-        } else 0;
-        self.commands.appendAssumeCapacity(finalCommand);
-        return &self.commands.items[self.commands.items.len - 1];
-    }
-
-    pub fn drawCommand(self: *Layer, command: Command) *Command {
-        if (self.currentCommand()) |cmd| {
-            if (cmd.view.id == command.view.id) return cmd;
-            return self.addDrawCommand(command);
-        } else return self.addDrawCommand(command);
-    }
-
-    fn uploadVertices(self: *Layer) void {
-        if (self.currentCommand()) |cmd| {
-            cmd.end = @intCast(self.vertices.items.len);
-        } else return;
-
-        const buffer = sk.gfx.asRange(self.vertices.items);
-        _ = sk.gfx.updateBuffer(self.vertexHandle, buffer);
-    }
-};
-
-pub var nearestSampler: sk.gfx.Sampler = undefined;
-pub var linearSampler: sk.gfx.Sampler = undefined;
 
 pub var whiteImage: graphics.Image = undefined;
 pub var circleImage: graphics.Image = undefined;
-pub var layers: std.EnumArray(Layer.Name, Layer) = .initFill(.{});
-pub const vertexBuffer = &layers.getPtr(.default).vertices;
-pub const commandBuffer = &layers.getPtr(.default).commands;
+
+pub var vertexBuffer: std.ArrayList(Vertex) = undefined;
+pub var commandBuffer: std.ArrayList(Command) = undefined;
+
+var pipeline: sk.gfx.Pipeline = .{};
+var sampler: sk.gfx.Sampler = .{};
+var vertexHandle: sk.gfx.Buffer = .{};
 
 pub var offscreen: bool = false;
 var renderTarget: graphics.RenderTarget = .{};
 
-pub fn init(vertices: []Vertex, commands: []Command) void {
-    const layer = layers.getPtr(.default);
-    layer.vertices = .initBuffer(vertices);
-    layer.commands = .initBuffer(commands);
+pub fn init(vertices: []Vertex, cmds: []Command) void {
+    vertexBuffer = .initBuffer(vertices);
+    commandBuffer = .initBuffer(cmds);
     if (@import("builtin").is_test) return;
 
-    nearestSampler = sk.gfx.makeSampler(.{});
-    linearSampler = sk.gfx.makeSampler(.{
-        .min_filter = .LINEAR,
-        .mag_filter = .LINEAR,
-    });
+    const nearestSampler = sk.gfx.makeSampler(.{});
 
     const shaderDesc = shader.quadShaderDesc(sk.gfx.queryBackend());
-    layer.pipeline = createQuadPipeline(shaderDesc);
-    layer.sampler = nearestSampler;
-    layer.vertexHandle = createVertexHandle(vertices);
+    pipeline = createQuadPipeline(shaderDesc);
+    sampler = nearestSampler;
+    vertexHandle = createVertexHandle(vertices);
 
     if (!window.viewRect.size.approxEqual(window.size)) {
         renderTarget = graphics.createRenderTarget(window.size);
@@ -124,10 +78,8 @@ pub fn init(vertices: []Vertex, commands: []Command) void {
 
 pub fn clear() void {
     graphics.stats = .{};
-    for (&layers.values) |*layer| {
-        layer.vertices.clearRetainingCapacity();
-        layer.commands.clearRetainingCapacity();
-    }
+    vertexBuffer.clearRetainingCapacity();
+    commandBuffer.clearRetainingCapacity();
 }
 
 pub fn createVertexHandle(vertices: []Vertex) sk.gfx.Buffer {
@@ -145,20 +97,33 @@ pub fn beginPass(color: graphics.Color) void {
 }
 
 pub fn currentCommand() ?*Command {
-    return layers.getPtr(.default).currentCommand();
+    if (commandBuffer.items.len == 0) return null;
+    return &commandBuffer.items[commandBuffer.items.len - 1];
 }
 
-pub fn addDrawCommand(texture: graphics.Texture) *Command {
-    return layers.getPtr(.default).addDrawCommand(defaultCommand(texture));
-}
+pub fn addDrawCommand(view: graphics.View) *Command {
+    const index: u32 = if (currentCommand()) |cmd| blk: {
+        cmd.end = @intCast(vertexBuffer.items.len);
+        break :blk cmd.end;
+    } else 0;
 
-fn defaultCommand(view: graphics.View) Command {
-    return .{
+    commandBuffer.appendAssumeCapacity(.{
+        .start = index,
         .view = view,
         .position = camera.position,
         .scale = camera.scale,
         .size = camera.size,
-    };
+    });
+    return &commandBuffer.items[commandBuffer.items.len - 1];
+}
+
+fn uploadVertices() void {
+    if (currentCommand()) |cmd| {
+        cmd.end = @intCast(vertexBuffer.items.len);
+    } else return;
+
+    const buffer = sk.gfx.asRange(vertexBuffer.items);
+    _ = sk.gfx.updateBuffer(vertexHandle, buffer);
 }
 
 pub fn drawDebug(rect: math.Rect) void {
@@ -297,8 +262,10 @@ pub fn drawNine(image: Image, rect: math.Rect, option: NineOption) void {
 }
 
 pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
-    const layer = layers.getPtr(option.layer orelse .default);
-    const cmd = layer.drawCommand(defaultCommand(image.view));
+    var cmd = currentCommand() orelse addDrawCommand(image.view);
+    if (cmd.view.id != image.view.id) {
+        cmd = addDrawCommand(image.view); // 纹理视图切换
+    }
 
     const size = option.size orelse image.size;
     var scaledSize = size.mul(option.scale);
@@ -310,7 +277,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
         },
     };
 
-    layer.vertices.appendAssumeCapacity(Vertex{
+    vertexBuffer.appendAssumeCapacity(Vertex{
         .position = worldPos.sub(scaledSize.mul(option.anchor)),
         .radian = option.radian,
         .size = scaledSize,
@@ -322,8 +289,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
 
 pub fn flush() void {
     if (offscreen) {
-        const layer = layers.getPtr(.default);
-        const index = layer.commands.items.len;
+        const index = commandBuffer.items.len;
 
         const flipY = !sk.gfx.queryFeatures().origin_top_left;
         drawImage(renderTarget.image, .zero, .{
@@ -331,25 +297,19 @@ pub fn flush() void {
             .uvRect = renderTarget.image.uvFlip(false, flipY),
         });
 
-        layer.uploadVertices();
-        drawCommands(layer, layer.commands.items[0..index]);
-        for (layers.values[1..]) |*other| {
-            other.uploadVertices();
-            drawCommands(other, other.commands.items);
-        }
+        uploadVertices();
+        drawCommands(commandBuffer.items[0..index]);
 
         graphics.endPass();
         graphics.beginPass(.{ .clear = .black });
-        drawCommands(layer, layer.commands.items[index..]);
-    } else for (&layers.values) |*layer| {
-        layer.uploadVertices();
-        drawCommands(layer, layer.commands.items);
+        drawCommands(commandBuffer.items[index..]);
+    } else {
+        uploadVertices();
+        drawCommands(commandBuffer.items);
     }
 
-    for (layers.values) |layer| {
-        graphics.stats.sprite += layer.vertices.items.len;
-        graphics.stats.command += layer.commands.items.len;
-    }
+    graphics.stats.sprite += vertexBuffer.items.len;
+    graphics.stats.command += commandBuffer.items.len;
 }
 
 pub fn endPass() void {
@@ -357,10 +317,10 @@ pub fn endPass() void {
     graphics.commit();
 }
 
-fn drawCommands(layer: *const Layer, commands: []const Command) void {
+fn drawCommands(commands: []const Command) void {
     for (commands) |cmd| {
         switch (cmd.type) {
-            .draw => if (cmd.end > cmd.start) doDraw(layer, cmd),
+            .draw => if (cmd.end > cmd.start) doDraw(cmd),
             .scissor => {
                 const x, const y = .{ cmd.position.x, cmd.position.y };
                 const w, const h = .{ cmd.size.x, cmd.size.y };
@@ -370,9 +330,9 @@ fn drawCommands(layer: *const Layer, commands: []const Command) void {
     }
 }
 
-fn doDraw(layer: *const Layer, cmd: Command) void {
+fn doDraw(cmd: Command) void {
     // 绑定流水线
-    sk.gfx.applyPipeline(layer.pipeline);
+    sk.gfx.applyPipeline(pipeline);
 
     // 处理 uniform 变量
     const x, const y = .{ cmd.size.x, cmd.size.y };
@@ -393,9 +353,9 @@ fn doDraw(layer: *const Layer, cmd: Command) void {
     // 绑定组
     var bindings = sk.gfx.Bindings{};
     bindings.views[0] = cmd.view;
-    bindings.vertex_buffers[0] = layer.vertexHandle;
+    bindings.vertex_buffers[0] = vertexHandle;
     bindings.vertex_buffer_offsets[0] = @intCast(cmd.start * @sizeOf(Vertex));
-    bindings.samplers[0] = layer.sampler;
+    bindings.samplers[0] = sampler;
     sk.gfx.applyBindings(bindings);
 
     // 绘制
