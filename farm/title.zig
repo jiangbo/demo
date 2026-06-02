@@ -78,8 +78,8 @@ fn updateButton(index: usize) void {
     if (zhu.window.mouse.released(.LEFT)) {
         zhu.audio.playSound("assets/audio/Fantasy_UI (10).ogg");
         switch (index) {
-            0 => context.scene.request(.farm),
-            1 => std.log.info("load not implemented", .{}),
+            0 => context.scene.requestNewGame(),
+            1 => ui.save_slot.enter(.titleLoad),
             2 => zhu.window.exit(),
             else => unreachable,
         }

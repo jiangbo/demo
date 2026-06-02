@@ -6,6 +6,7 @@ const context = @import("context.zig");
 const factory = @import("factory.zig");
 const map = @import("map.zig");
 const render = @import("system/render.zig");
+const save = @import("save.zig");
 const system = @import("system.zig");
 const title = @import("title.zig");
 const ui = @import("ui.zig");
@@ -31,6 +32,19 @@ pub fn update(world: *World, delta: f32) void {
     if (zhu.input.key.pressed(.X)) drawDebug = !drawDebug;
 
     const pauseKey = zhu.input.key.anyPressed(&.{ .ESCAPE, .P });
+    if (ui.save_slot.active) {
+        // 槽位选择是顶层覆盖层，底下的标题或暂停菜单都不再吃输入。
+        if (context.scene.current == .farm) system.updatePause(world, delta);
+        if (pauseKey) {
+            ui.save_slot.cancel();
+            return;
+        }
+        ui.save_slot.update(world);
+        if (ui.save_slot.takeClosePauseAfterLoad()) ui.pause.active = false;
+        applyScene(world);
+        return;
+    }
+
     if (ui.pause.active) {
         // 暂停时只更新覆盖菜单，保持底层农场画面静止。
         system.updatePause(world, delta);
@@ -39,6 +53,7 @@ pub fn update(world: *World, delta: f32) void {
             return;
         }
         ui.pause.update(world);
+        applyScene(world);
         return;
     }
 
@@ -47,7 +62,10 @@ pub fn update(world: *World, delta: f32) void {
         return;
     }
 
-    if (context.time.paused) return;
+    if (context.scene.current == .farm and context.time.paused) {
+        applyScene(world);
+        return;
+    }
 
     const scaled = delta * context.time.scale;
     switch (context.scene.current) {
@@ -65,6 +83,7 @@ pub fn draw(world: *World) void {
     }
     zhu.camera.mode = .window;
     if (ui.pause.active) ui.pause.draw();
+    if (ui.save_slot.active) ui.save_slot.draw();
     if (drawDebug) zhu.window.drawDebugInfo();
     zhu.camera.mode = .world;
 }
@@ -95,7 +114,7 @@ fn applyScene(world: *World) void {
     const current = context.scene.current;
     if (previous == current) return;
 
-    exitScene(previous);
+    exitScene(world, previous);
     enterScene(world, current);
 }
 
@@ -106,18 +125,31 @@ fn enterScene(world: *World, next: context.scene.Scene) void {
     }
 }
 
-fn exitScene(previous: context.scene.Scene) void {
+fn exitScene(world: *World, previous: context.scene.Scene) void {
     switch (previous) {
         .title => title.exit(),
-        .farm => {},
+        .farm => map.exit(world),
     }
 }
 
 fn enterFarm(world: *World) void {
     zhu.camera.scale = .square(2);
+    const loadSlot = context.scene.takeLoadSlot();
+    if (loadSlot == null) context.time.reset();
+
     const spawn = map.enter(world, .town, initialTargetId);
     factory.spawnPlayer(world, spawn);
     ui.toolbar.enter();
+
+    if (loadSlot) |slot| {
+        save.loadSlot(world, slot) catch |err| {
+            std.log.err("load slot {} failed when entering farm: {}", .{
+                slot,
+                err,
+            });
+            context.scene.request(.title);
+        };
+    }
 }
 
 fn drawFarm(world: *World) void {

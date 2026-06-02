@@ -8,6 +8,7 @@ pub const scene = struct {
 
     pub var current: Scene = config.scene;
     pub var pending: ?Scene = null;
+    var pendingLoadSlot: ?usize = null;
 
     pub fn request(next: Scene) void {
         std.log.debug("request scene: {s} -> {s}", .{
@@ -15,6 +16,22 @@ pub const scene = struct {
             @tagName(next),
         });
         pending = next;
+    }
+
+    pub fn requestNewGame() void {
+        pendingLoadSlot = null;
+        request(.farm);
+    }
+
+    pub fn requestLoad(slot: usize) void {
+        pendingLoadSlot = slot;
+        request(.farm);
+    }
+
+    pub fn takeLoadSlot() ?usize {
+        const slot = pendingLoadSlot;
+        pendingLoadSlot = null;
+        return slot;
     }
 
     pub fn apply() void {
@@ -56,7 +73,6 @@ pub const time = struct {
 };
 
 pub const debug = struct {
-    pub var showEngine: bool = false;
     pub var showGame: bool = false;
 };
 
@@ -94,8 +110,8 @@ const config: Config = @import("zon/context.zon");
 pub fn init() void {
     scene.current = config.scene;
     scene.pending = null;
+    _ = scene.takeLoadSlot();
     time.reset();
-    debug.showEngine = false;
     debug.showGame = false;
     ui.wantCaptureMouse = false;
     ui.wantCaptureKeyboard = false;
@@ -130,6 +146,16 @@ test "应用前最后一次场景请求生效" {
 
     try std.testing.expectEqual(config.scene, scene.current);
     try std.testing.expectEqual(null, scene.pending);
+}
+
+test "读档请求会携带一次性槽位" {
+    init();
+
+    scene.requestLoad(4);
+
+    try std.testing.expectEqual(scene.Scene.farm, scene.pending.?);
+    try std.testing.expectEqual(4, scene.takeLoadSlot().?);
+    try std.testing.expectEqual(null, scene.takeLoadSlot());
 }
 
 test "地图切换请求会被 take 消费" {

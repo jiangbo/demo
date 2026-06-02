@@ -8,6 +8,7 @@ const audio = @import("audio.zig");
 const input = @import("input.zig");
 const text = @import("text.zig");
 const graphics = @import("graphics.zig");
+const camera = @import("camera.zig");
 const batch = @import("batch.zig");
 
 pub const Event = sk.app.Event;
@@ -289,30 +290,39 @@ pub fn drawDebugInfo() void {
         \\帧时：{d:.2}
         \\用时：{d:.2}
         \\显存：{}
-        \\常量：{}
         \\绘制：{}
-        \\图片：{}
         \\文字：{}
         \\内存：{}
-        \\鼠标：{d:.2}，{d:.2}
+        \\实际：{d:.2}，{d:.2}
+        \\游戏：{d:.2}，{d:.2}
+        \\相机：{d:.2}，{d:.2}
+        \\缩放：{d:.2}，{d:.2}
+        \\精灵：{}
+        \\命令：{}
     ;
 
-    const stats = graphics.queryFrameStats();
+    const frameStats = graphics.queryFrameStats();
     const t = text.format(&buffer, format, .{
         @tagName(graphics.queryBackend()),
         frameRate,
         currentSmoothTime * 1000,
         frameDeltaPerSecond,
         usedDeltaPerSecond,
-        stats.size_append_buffer + stats.size_update_buffer,
-        stats.size_apply_uniforms,
-        stats.num_draw,
-        graphics.stats.command,
+        frameStats.size_append_buffer + frameStats.size_update_buffer,
+        frameStats.num_draw,
         // Debug 信息本身的次数也应该统计进去
         graphics.stats.text + debutTextCount,
         countingAllocator.used,
+        input.mousePosition.x,
+        input.mousePosition.y,
         mousePosition.x,
         mousePosition.y,
+        camera.position.x,
+        camera.position.y,
+        camera.scale.x,
+        camera.scale.y,
+        batch.vertices.items.len,
+        batch.commands.items.len,
     });
 
     debutTextCount = text.computeTextCount(t);

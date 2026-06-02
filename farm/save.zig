@@ -17,9 +17,14 @@ const Sprite = component.render.Sprite;
 const Target = component.ui.Target;
 const Velocity = component.motion.Velocity;
 
-const slotPath = "saves/slot0.zon";
+pub const slotCount: usize = 10;
 const schemaVersion = 1;
 const maxSaveSize = 128 * 1024;
+
+pub const SlotSummary = struct {
+    day: u32 = 0,
+    timestamp: i64 = 0,
+};
 
 const TimeSave = struct {
     paused: bool = false,
@@ -68,13 +73,32 @@ const MapSave = struct {
 
 const SaveData = struct {
     schemaVersion: u32 = schemaVersion,
+    timestamp: i64 = 0,
     time: TimeSave = .{},
     player: PlayerSave = .{},
     toolbar: ToolbarSave = .{},
     map: MapSave = .{},
 };
 
-pub fn saveSlot(world: *World) !void {
+const SummaryTime = struct {
+    day: u32 = 0,
+};
+
+const SummaryData = struct {
+    schemaVersion: u32 = 0,
+    timestamp: i64 = 0,
+    time: SummaryTime = .{},
+};
+
+pub fn slotPath(slot: usize, buffer: []u8) ![:0]const u8 {
+    if (slot >= slotCount) return error.InvalidSaveSlot;
+    return try std.fmt.bufPrintZ(buffer, "saves/slot{d}.zon", .{slot});
+}
+
+pub fn saveSlot(world: *World, slot: usize) !void {
+    var pathBuffer: [32]u8 = undefined;
+    const path = try slotPath(slot, &pathBuffer);
+
     const data = try capture(world);
     defer freeCaptured(data);
 
@@ -83,13 +107,16 @@ pub fn saveSlot(world: *World) !void {
 
     var writer = std.Io.Writer.fixed(buffer);
     try std.zon.stringify.serialize(data, .{}, &writer);
-    try zhu.window.saveAll(slotPath, buffer[0..writer.end]);
+    try zhu.window.saveAll(path, buffer[0..writer.end]);
 
-    std.log.info("game saved: {s}", .{slotPath});
+    std.log.info("game saved: {s}", .{path});
 }
 
-pub fn loadSlot(world: *World) !void {
-    const content = try zhu.window.readAll(slotPath);
+pub fn loadSlot(world: *World, slot: usize) !void {
+    var pathBuffer: [32]u8 = undefined;
+    const path = try slotPath(slot, &pathBuffer);
+
+    const content = try zhu.window.readAll(path);
     defer zhu.assets.free(content);
 
     const terminated = try std.fmt.allocPrintSentinel(
@@ -110,7 +137,50 @@ pub fn loadSlot(world: *World) !void {
     defer std.zon.parse.free(zhu.assets.allocator, data);
 
     try apply(world, data);
-    std.log.info("game loaded: {s}", .{slotPath});
+    std.log.info("game loaded: {s}", .{path});
+}
+
+pub fn readSlotSummary(slot: usize) !?SlotSummary {
+    var pathBuffer: [32]u8 = undefined;
+    const path = try slotPath(slot, &pathBuffer);
+
+    const content = zhu.window.readAll(path) catch |err| switch (err) {
+        error.FileNotFound => return null,
+        else => return err,
+    };
+    defer zhu.assets.free(content);
+
+    return try parseSlotSummary(content, zhu.assets.allocator);
+}
+
+pub fn parseSlotSummary(
+    content: []const u8,
+    allocator: std.mem.Allocator,
+) !SlotSummary {
+    const terminated = try std.fmt.allocPrintSentinel(
+        allocator,
+        "{s}",
+        .{content},
+        0,
+    );
+    defer allocator.free(terminated);
+
+    const data = try std.zon.parse.fromSlice(
+        SummaryData,
+        allocator,
+        terminated,
+        null,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer std.zon.parse.free(allocator, data);
+
+    if (data.schemaVersion == 0) return error.MissingSaveVersion;
+    if (data.schemaVersion > schemaVersion) return error.UnsupportedSaveVersion;
+
+    return .{
+        .day = data.time.day,
+        .timestamp = data.timestamp,
+    };
 }
 
 fn capture(world: *World) !SaveData {
@@ -121,6 +191,7 @@ fn capture(world: *World) !SaveData {
     const actor = world.get(player, Actor) orelse Actor{};
 
     return .{
+        .timestamp = std.time.timestamp(),
         .time = .{
             .paused = context.time.paused,
             .scale = context.time.scale,
@@ -272,6 +343,51 @@ fn restoreToolbar(data: ToolbarSave) void {
         } else .{ .type = .hoe, .count = 0 };
     }
     toolbar.slotIndex = @min(data.slotIndex, toolbar.slots.len - 1);
+}
+
+test "slotPath builds save slot path" {
+    var buffer: [32]u8 = undefined;
+    const path = try slotPath(3, &buffer);
+
+    try std.testing.expectEqualStrings("saves/slot3.zon", path);
+    try std.testing.expectError(error.InvalidSaveSlot, slotPath(slotCount, &buffer));
+}
+
+test "parseSlotSummary reads day and timestamp" {
+    const content =
+        \\.{
+        \\    .schemaVersion = 1,
+        \\    .timestamp = 42,
+        \\    .time = .{
+        \\        .paused = false,
+        \\        .scale = 1,
+        \\        .day = 7,
+        \\        .hour = 6,
+        \\    },
+        \\    .player = .{},
+        \\    .toolbar = .{},
+        \\    .map = .{},
+        \\}
+    ;
+
+    const summary = try parseSlotSummary(content, std.testing.allocator);
+
+    try std.testing.expectEqual(7, summary.day);
+    try std.testing.expectEqual(42, summary.timestamp);
+}
+
+test "parseSlotSummary rejects future save version" {
+    const content =
+        \\.{
+        \\    .schemaVersion = 2,
+        \\    .time = .{ .day = 1 },
+        \\}
+    ;
+
+    try std.testing.expectError(
+        error.UnsupportedSaveVersion,
+        parseSlotSummary(content, std.testing.allocator),
+    );
 }
 
 test "restoreToolbar restores slots and clamps index" {

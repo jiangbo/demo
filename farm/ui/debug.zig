@@ -3,8 +3,17 @@ const zhu = @import("zhu");
 
 const imgui = @import("cimgui");
 
+const component = @import("../component.zig");
 const context = @import("../context.zig");
-const events = @import("../event.zig");
+const map = @import("../map.zig");
+
+const World = zhu.ecs.World;
+const Actor = component.actor.Actor;
+const Collider = component.motion.Collider;
+const Player = component.actor.Player;
+const Position = component.Position;
+const Target = component.ui.Target;
+const Velocity = component.motion.Velocity;
 
 pub fn init() void {
     sk.imgui.setup(.{
@@ -35,22 +44,18 @@ pub fn event(ev: *const zhu.window.Event) void {
     _ = sk.imgui.handleEvent(ev.*);
 }
 
-pub fn update(delta: f32) void {
+pub fn update(world: *World, delta: f32) void {
     sk.imgui.newFrame(.{
         .width = sk.app.width(),
         .height = sk.app.height(),
         .delta_time = delta,
     });
 
-    if (zhu.input.key.pressed(.F5)) {
-        context.debug.showEngine = !context.debug.showEngine;
-    }
     if (zhu.input.key.pressed(.F6)) {
         context.debug.showGame = !context.debug.showGame;
     }
 
-    if (context.debug.showEngine) drawEnginePanel();
-    if (context.debug.showGame) drawGamePanel();
+    if (context.debug.showGame) drawGamePanel(world);
 
     const io = imgui.igGetIO();
     context.ui.wantCaptureMouse = io.*.WantCaptureMouse;
@@ -65,47 +70,7 @@ pub fn deinit() void {
     sk.imgui.shutdown();
 }
 
-fn drawEnginePanel() void {
-    if (!imgui.igBegin(
-        "Engine Debug",
-        &context.debug.showEngine,
-        imgui.ImGuiWindowFlags_AlwaysAutoResize,
-    )) {
-        imgui.igEnd();
-        return;
-    }
-
-    const mouse = zhu.input.mousePosition;
-    _ = imgui.igText("Current scene: %s", sceneName(context.scene.current).ptr);
-    _ = imgui.igText("Pending scene: %s", pendingSceneName().ptr);
-    _ = imgui.igText("Paused: %s", boolText(context.time.paused).ptr);
-    _ = imgui.igText("Time scale: %.2f", context.time.scale);
-    _ = imgui.igSeparator();
-    _ = imgui.igText("Mouse: %.1f, %.1f", mouse.x, mouse.y);
-    _ = imgui.igText(
-        "Capture mouse: %s",
-        boolText(context.ui.wantCaptureMouse).ptr,
-    );
-    _ = imgui.igText(
-        "Capture keyboard: %s",
-        boolText(context.ui.wantCaptureKeyboard).ptr,
-    );
-    _ = imgui.igText(
-        "Camera: %.1f, %.1f  scale: %.2f",
-        zhu.camera.position.x,
-        zhu.camera.position.y,
-        zhu.camera.scale.x,
-    );
-    imgui.igSeparator();
-    drawBatchStats();
-    imgui.igSeparator();
-    drawEventControls();
-    drawEventTrace();
-
-    imgui.igEnd();
-}
-
-fn drawGamePanel() void {
+fn drawGamePanel(world: *World) void {
     if (!imgui.igBegin(
         "Game Debug",
         &context.debug.showGame,
@@ -115,72 +80,225 @@ fn drawGamePanel() void {
         return;
     }
 
-    _ = imgui.igText("Game debug enabled: %s", "true");
-    _ = imgui.igText("Gameplay data is not available yet.");
-    _ = imgui.igText("This panel will grow with later farm systems.");
+    drawGameControls();
+    imgui.igSeparator();
+    drawPlayerPanel(world);
+    imgui.igSeparator();
+    drawMapPanel(world);
+    imgui.igSeparator();
+    drawTimePanel();
+    imgui.igSeparator();
+    drawEntityCounts(world);
 
     imgui.igEnd();
-}
-
-fn pendingSceneName() [:0]const u8 {
-    if (context.scene.pending) |next| return sceneName(next);
-    return "none";
-}
-
-fn sceneName(value: context.scene.Scene) [:0]const u8 {
-    return switch (value) {
-        .title => "title",
-        .farm => "farm",
-    };
 }
 
 fn boolText(value: bool) [:0]const u8 {
     return if (value) "true" else "false";
 }
 
-fn drawBatchStats() void {
-    const gpuStats = zhu.graphics.queryFrameStats();
-    const stats = zhu.graphics.stats;
-    const ratio = if (stats.command == 0)
-        0
-    else
-        stats.sprite / stats.command;
-
-    _ = imgui.igText("Graphics Stats");
-    // _ = imgui.igCheckbox("Pixel Snap", &zhu.batch.pixelSnap);
-    _ = imgui.igText("GPU draw calls: %u", gpuStats.num_draw);
-    _ = imgui.igText("Batch sprites: %zu", stats.sprite);
-    _ = imgui.igText("Batch commands: %zu", stats.command);
-    _ = imgui.igText("Text glyphs: %zu", stats.text);
-    _ = imgui.igText("Sprites / command: %zu", ratio);
-}
-
-fn drawEventControls() void {
-    if (imgui.igButton("Queue farm scene")) {
-        events.enqueue(.{ .scene_request = .farm });
+fn drawGameControls() void {
+    if (imgui.igButton("Reset time")) {
+        context.time.reset();
     }
     imgui.igSameLine();
-    if (imgui.igButton("Trigger title scene")) {
-        events.trigger(.{ .scene_request = .title });
-    }
-    if (imgui.igButton("Queue debug note")) {
-        events.enqueue(.{ .debug_note = "debug note from panel" });
+    if (context.time.paused) {
+        if (imgui.igButton("Resume time")) context.time.paused = false;
+    } else {
+        if (imgui.igButton("Pause time")) context.time.paused = true;
     }
     imgui.igSameLine();
-    if (imgui.igButton("Clear trace")) {
-        events.clearTrace();
-    }
+    if (imgui.igButton("Normal speed")) context.time.scale = 1;
 }
 
-fn drawEventTrace() void {
-    const items = events.recentTrace();
-    _ = imgui.igText("Recent events: %zu", items.len);
+fn drawPlayerPanel(world: *World) void {
+    if (!imgui.igCollapsingHeader(
+        "Player",
+        imgui.ImGuiTreeNodeFlags_DefaultOpen,
+    )) return;
 
-    for (items) |entry| {
+    const player = world.getIdentity(Player) orelse {
+        _ = imgui.igText("Player: missing");
+        return;
+    };
+
+    _ = imgui.igText("Entity: %u", player);
+    if (world.get(player, Position)) |position| {
+        _ = imgui.igText("Position: %.1f, %.1f", position.x, position.y);
+        const tile = map.data.worldToTilePosition(position);
+        _ = imgui.igText("Tile: %d, %d", tile.x, tile.y);
+    } else {
+        _ = imgui.igText("Position: missing");
+    }
+
+    if (world.get(player, Velocity)) |velocity| {
         _ = imgui.igText(
-            "%s  %s",
-            events.modeName(entry.mode).ptr,
-            events.eventName(entry.event).ptr,
+            "Velocity: %.2f, %.2f",
+            velocity.value.x,
+            velocity.value.y,
         );
     }
+
+    if (world.get(player, Actor)) |actor| {
+        _ = imgui.igText(
+            "Facing/action: %s / %s",
+            actorFacingName(actor.facing).ptr,
+            actorActionName(actor.action).ptr,
+        );
+    }
+
+    if (world.get(player, Collider)) |collider| {
+        _ = imgui.igText(
+            "Collider: %.1fx%.1f offset %.1f, %.1f",
+            collider.size.x,
+            collider.size.y,
+            collider.offset.x,
+            collider.offset.y,
+        );
+    }
+
+    if (world.get(player, Target)) |target| {
+        _ = imgui.igText("Target active: %s", boolText(target.active).ptr);
+        _ = imgui.igText(
+            "Target pos: %.1f, %.1f",
+            target.position.x,
+            target.position.y,
+        );
+    }
+}
+
+fn drawMapPanel(world: *World) void {
+    if (!imgui.igCollapsingHeader(
+        "Map",
+        imgui.ImGuiTreeNodeFlags_DefaultOpen,
+    )) return;
+
+    const loaded = map.land.tiles.len > 0;
+    _ = imgui.igText("Current: %s", mapName(map.current).ptr);
+    _ = imgui.igText("Loaded: %s", boolText(loaded).ptr);
+    _ = imgui.igText("Map size: %u x %u", map.data.width, map.data.height);
+    _ = imgui.igText(
+        "World size: %.0f x %.0f",
+        map.data.size().x,
+        map.data.size().y,
+    );
+
+    const physicsStats = countPhysicsTiles();
+    _ = imgui.igText("Collision tiles: %zu", physicsStats.blocked);
+    _ = imgui.igText("Directional tiles: %zu", physicsStats.directional);
+    _ = imgui.igText("Collision rects: %zu", map.physics.areas.items.len);
+
+    const landStats = countLandTiles();
+    _ = imgui.igText("Tilled dry: %zu", landStats.dry);
+    _ = imgui.igText("Tilled wet: %zu", landStats.wet);
+    _ = imgui.igText("Crops on land: %zu", landStats.crops);
+
+    _ = imgui.igText("Map triggers: %zu", world.raw(component.map.Trigger).len);
+}
+
+fn drawTimePanel() void {
+    if (!imgui.igCollapsingHeader(
+        "Time",
+        imgui.ImGuiTreeNodeFlags_DefaultOpen,
+    )) return;
+
+    _ = imgui.igText("Day: %u", context.time.day);
+    _ = imgui.igText(
+        "Clock: %02u:%02u",
+        context.time.hour,
+        @as(u8, @intFromFloat(context.time.minute)),
+    );
+    _ = imgui.igText("Minute raw: %.2f", context.time.minute);
+    _ = imgui.igText("Period: %s", periodName(context.time.period).ptr);
+    _ = imgui.igText("Paused: %s", boolText(context.time.paused).ptr);
+    _ = imgui.igText("Scale: %.2fx", context.time.scale);
+    _ = imgui.igText("Dark: %s", boolText(context.time.isDark()).ptr);
+}
+
+fn drawEntityCounts(world: *World) void {
+    if (!imgui.igCollapsingHeader(
+        "Entity Counts",
+        imgui.ImGuiTreeNodeFlags_DefaultOpen,
+    )) return;
+
+    _ = imgui.igText("Positions: %zu", world.count(Position));
+    _ = imgui.igText("Sprites: %zu", world.count(component.render.Sprite));
+    _ = imgui.igText("Render comps: %zu", world.count(component.render.Render));
+    _ = imgui.igText("Animals: %zu", world.count(component.actor.Animal));
+    _ = imgui.igText("NPCs: %zu", world.count(component.actor.Npc));
+    _ = imgui.igText("Crops: %zu", world.count(component.farm.Crop));
+    _ = imgui.igText("Pickups: %zu", world.count(component.item.Pickup));
+    _ = imgui.igText("Point lights: %zu", world.count(component.light.Point));
+    _ = imgui.igText("Spot lights: %zu", world.count(component.light.Spot));
+}
+
+const PhysicsStats = struct {
+    blocked: usize = 0,
+    directional: usize = 0,
+};
+
+fn countPhysicsTiles() PhysicsStats {
+    var result = PhysicsStats{};
+    for (map.physics.tiles) |flags| {
+        if (flags == 0) continue;
+        result.blocked += 1;
+        if (flags != map.physics.Block.SOLID) result.directional += 1;
+    }
+    return result;
+}
+
+const LandStats = struct {
+    dry: usize = 0,
+    wet: usize = 0,
+    crops: usize = 0,
+};
+
+fn countLandTiles() LandStats {
+    var result = LandStats{};
+    for (map.land.tiles) |tile| {
+        if (tile.land) |land| switch (land) {
+            .dry => result.dry += 1,
+            .wet => result.wet += 1,
+        };
+        if (tile.crop != null) result.crops += 1;
+    }
+    return result;
+}
+
+fn mapName(value: component.map.Id) [:0]const u8 {
+    return switch (value) {
+        .school => "school",
+        .town => "town",
+    };
+}
+
+fn actorFacingName(value: component.actor.Facing) [:0]const u8 {
+    return switch (value) {
+        .down => "down",
+        .up => "up",
+        .left => "left",
+        .right => "right",
+    };
+}
+
+fn actorActionName(value: component.actor.Action) [:0]const u8 {
+    return switch (value) {
+        .idle => "idle",
+        .walk => "walk",
+        .hoe => "hoe",
+        .watering => "watering",
+        .planting => "planting",
+        .sickle => "sickle",
+        .axe => "axe",
+        .pickaxe => "pickaxe",
+    };
+}
+
+fn periodName(value: context.time.Period) [:0]const u8 {
+    return switch (value) {
+        .dawn => "dawn",
+        .day => "day",
+        .dusk => "dusk",
+        .night => "night",
+    };
 }

@@ -24,6 +24,11 @@ pub fn init() void {
 }
 
 pub fn spawnPlayer(world: *World, spawn: zhu.Vector2) void {
+    if (world.getIdentity(actor.Player)) |oldPlayer| {
+        world.destroyEntity(oldPlayer);
+        _ = world.removeIdentity(actor.Player);
+    }
+
     const config = prefab.actor.player;
 
     const player = world.createIdentity(actor.Player);
@@ -114,11 +119,14 @@ pub fn spawnMapProp(world: *World, data: *const tiled.Map, object: Object) Entit
 
     const hasSize = object.size.x > 0 and object.size.y > 0;
     const size = if (hasSize) object.size else image.size;
+    const drawPosition = object.position.addY(-size.y);
+    const sortY = mapPropSortY(object, tile, size);
+    const sortPosition = zhu.Vector2.xy(object.position.x, sortY);
 
-    world.add(entity, object.position);
+    world.add(entity, sortPosition);
     world.add(entity, render.Sprite{
         .image = image,
-        .offset = .xy(0, -size.y),
+        .offset = drawPosition.sub(sortPosition),
         .size = size,
         .flip = object.extend.flipX,
     });
@@ -126,6 +134,25 @@ pub fn spawnMapProp(world: *World, data: *const tiled.Map, object: Object) Entit
     world.add(entity, render.YSort{});
     world.add(entity, map.Scoped{});
     return entity;
+}
+
+fn mapPropSortY(object: Object, tile: *const tiled.Tile, size: zhu.Vector2) f32 {
+    const group = tile.objectGroup orelse return object.position.y;
+    var result: f32 = 0;
+    var found = false;
+
+    for (group.objects) |local| {
+        if (local.size.x <= 0 or local.size.y <= 0) continue;
+
+        // Tiled 瓦片对象 position 是图片底边，碰撞框坐标从图片左上角开始。
+        const bottom = object.position.y - size.y + local.position.y + local.size.y;
+        if (!found or bottom > result) {
+            result = bottom;
+            found = true;
+        }
+    }
+
+    return if (found) result else object.position.y;
 }
 
 pub fn spawnMapTrigger(world: *World, trigger: map.Trigger) Entity {
@@ -257,6 +284,24 @@ test "spawnPlayer 会创建玩家实体" {
     try expectEqual(1, world.assure(render.YSort).dense.items.len);
 }
 
+test "spawnPlayer 重复调用只保留一个玩家" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    putMockFarmImages();
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    spawnPlayer(&world, .xy(160, 96));
+    spawnPlayer(&world, .xy(200, 128));
+
+    const player = world.getIdentity(actor.Player).?;
+    try expectEqual(200, world.get(player, component.Position).?.x);
+    try expectEqual(1, world.raw(component.Position).len);
+    try expectEqual(1, world.raw(motion.Velocity).len);
+    try expectEqual(1, world.raw(actor.Actor).len);
+}
+
 test "spawnAnimal 会创建可漫游动物实体" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
@@ -369,6 +414,77 @@ test "地图摆件按底边定位生成实体" {
     try expectEqual(-30, sprite.offset.y);
     try expectEqual(20, sprite.size.?.x);
     try expectEqual(30, sprite.size.?.y);
+}
+
+test "地图摆件优先用碰撞底边作为排序点" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+
+    const imageId = 1234;
+    const tileSetId = 5678;
+    const image = zhu.graphics.Image{ .size = .xy(20, 40) };
+    zhu.assets.putImage(imageId, image);
+
+    const collisions = [_]tiled.Object{.{
+        .id = 1,
+        .gid = 0,
+        .name = "",
+        .type = "",
+        .position = .xy(2, 12),
+        .size = .xy(16, 8),
+        .point = false,
+        .properties = &.{},
+        .extend = .{},
+    }};
+    const tiles = [_]tiled.Tile{.{
+        .id = imageId,
+        .objectGroup = .{ .visible = true, .objects = &collisions },
+        .properties = &.{},
+        .animation = &.{},
+    }};
+    const tileSets = [_]tiled.TileSet{.{
+        .id = tileSetId,
+        .columns = 0,
+        .tileCount = 1,
+        .image = imageId,
+        .tileSize = .xy(20, 40),
+        .tiles = &tiles,
+    }};
+    const refs = [_]tiled.TileSetRef{
+        .{ .id = tileSetId, .firstGid = 1, .max = 2 },
+    };
+    const testMap = tiled.Map{
+        .height = 1,
+        .width = 1,
+        .tileSize = .xy(16, 16),
+        .layers = &.{},
+        .tileSetRefs = &refs,
+    };
+    tiled.init(&tileSets);
+    defer tiled.init(@import("zon/tile.zon"));
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = spawnMapProp(&world, &testMap, .{
+        .id = 1,
+        .gid = 1,
+        .name = "",
+        .type = "",
+        .position = .xy(12, 50),
+        .size = .xy(20, 40),
+        .point = false,
+        .properties = &.{},
+        .extend = .{},
+    });
+
+    const position = world.get(entity, component.Position).?;
+    const sprite = world.get(entity, render.Sprite).?;
+
+    try expectEqual(12, position.x);
+    try expectEqual(30, position.y);
+    try expectEqual(-20, sprite.offset.y);
+    try expectEqual(10, position.y + sprite.offset.y);
 }
 
 test "带 anim_id 的地图摆件会创建停止的非循环动画" {
