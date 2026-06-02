@@ -100,10 +100,7 @@ fn addPlayerTarget(world: *zhu.ecs.World, position: zhu.Vector2) void {
 }
 
 fn putMockImages() void {
-    const image = zhu.graphics.Image{
-        .texture = .{ .id = 1 },
-        .size = .xy(256, 256),
-    };
+    const image = zhu.Image{ .size = .xy(256, 256) };
     for (prefab.farm.crop.stages) |stage| {
         zhu.assets.putImage(stage.sprite.imageId, image);
     }

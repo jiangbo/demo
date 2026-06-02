@@ -158,7 +158,7 @@ pub const Image = struct {
     view: sk.gfx.View = .{},
     layer: f32 = 0,
     offset: math.Vector2 = .zero,
-    size: math.Vector2,
+    size: math.Vector2 = .zero,
 
     pub fn sub(self: *const Image, subRect: math.Rect) Image {
         return Image{

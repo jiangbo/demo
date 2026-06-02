@@ -110,9 +110,6 @@ pub fn update() ?Event {
 }
 
 pub fn draw() void {
-    zhu.camera.layer = .text;
-    defer zhu.camera.layer = .default;
-
     // 全屏覆盖
     const overlay = zhu.Rect.init(.zero, zhu.window.size);
     zhu.batch.drawRect(overlay, .{ .color = .gray(0, 0.35) });

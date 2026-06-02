@@ -25,11 +25,11 @@ pub var current: Id = .school;
 pub var data: *const tiled.Map = &maps[0];
 var vertexes: std.ArrayList(zhu.batch.Vertex) = .empty;
 var frontLayerStart: usize = 0;
-var mapTexture: zhu.graphics.Texture = undefined;
+var mapView: zhu.graphics.View = undefined;
 
 pub fn init() void {
     tiled.init(@import("zon/tile.zon"));
-    mapTexture = zhu.getImage("circle.png").?.texture;
+    mapView = zhu.getImage("circle.png").?.view;
     land.init();
 }
 
@@ -110,9 +110,9 @@ pub fn exit(world: *World) void {
 
 pub fn drawBack() void {
     if (vertexes.items.len != 0) {
-        _ = zhu.batch.addDrawCommand(mapTexture);
+        _ = zhu.batch.addDrawCommand(mapView);
         const back = vertexes.items[0..frontLayerStart];
-        zhu.batch.vertexBuffer.appendSliceAssumeCapacity(back);
+        zhu.batch.vertices.appendSliceAssumeCapacity(back);
     }
 
     land.draw();
@@ -121,7 +121,7 @@ pub fn drawBack() void {
 pub fn drawFront() void {
     if (frontLayerStart == vertexes.items.len) return;
     const front = vertexes.items[frontLayerStart..];
-    zhu.batch.vertexBuffer.appendSliceAssumeCapacity(front);
+    zhu.batch.vertices.appendSliceAssumeCapacity(front);
 }
 
 pub fn loadObjects(world: *World, layer: *const tiled.Layer) void {
@@ -237,10 +237,7 @@ test "gid 图片解析支持单图和集合图块集" {
     defer data = old;
     data = &maps[1];
 
-    const mockImage = zhu.graphics.Image{
-        .texture = .{ .id = 1 },
-        .size = .xy(10, 10),
-    };
+    const mockImage = zhu.Image{ .view = .{ .id = 1 } };
 
     var singleGid: u32 = 0;
     for (data.tileSetRefs) |ref| {
@@ -252,7 +249,7 @@ test "gid 图片解析支持单图和集合图块集" {
     }
     var image = data.getImageByGid(singleGid);
     try std.testing.expect(singleGid != 0);
-    try std.testing.expectEqual(1, image.texture.id);
+    try std.testing.expectEqual(1, image.view.id);
 
     var collectionGid: u32 = 0;
     for (data.tileSetRefs) |ref| {
@@ -268,7 +265,7 @@ test "gid 图片解析支持单图和集合图块集" {
     }
     image = data.getImageByGid(collectionGid);
     try std.testing.expect(collectionGid != 0);
-    try std.testing.expectEqual(1, image.texture.id);
+    try std.testing.expectEqual(1, image.view.id);
 }
 
 test "地图绘制会把前景留到实体之后" {
@@ -279,12 +276,8 @@ test "地图绘制会把前景留到实体之后" {
     vertexes.clearRetainingCapacity();
     frontLayerStart = 0;
 
-    const image = zhu.graphics.Image{
-        .texture = .{ .id = 1 },
-        .size = .xy(1, 1),
-    };
-    mapTexture = image.texture;
-
+    const image = zhu.Image{ .view = .{ .id = 1 } };
+    mapView = image.view;
     appendVertex(.xy(1, 0), image); // back
     frontLayerStart = vertexes.items.len;
     appendVertex(.xy(2, 0), image); // front
@@ -292,7 +285,7 @@ test "地图绘制会把前景留到实体之后" {
     var vertices: [8]zhu.batch.Vertex = undefined;
     var commands: [4]zhu.batch.Command = undefined;
     zhu.batch.init(&vertices, &commands);
-    const vertexBuffer = zhu.batch.vertexBuffer;
+    const vertexBuffer = &zhu.batch.vertices;
 
     drawBack();
 

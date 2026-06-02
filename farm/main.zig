@@ -28,7 +28,6 @@ pub fn init() void {
 
     const fontImage = zhu.assets.loadImage("assets/font.png");
     zhu.text.init(fontImage, @import("zon/font.zon"));
-    _ = zhu.text.enableLayer(vertexBuffer[3500..]);
 
     zhu.window.bindAndUseMouseIcon("assets/farm-rpg/UI/cursor.png", .{});
 

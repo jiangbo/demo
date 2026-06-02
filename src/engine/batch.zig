@@ -47,27 +47,28 @@ pub const Option = struct {
 pub var whiteImage: graphics.Image = undefined;
 pub var circleImage: graphics.Image = undefined;
 
-pub var vertexBuffer: std.ArrayList(Vertex) = undefined;
-pub var commandBuffer: std.ArrayList(Command) = undefined;
+pub var vertices: std.ArrayList(Vertex) = undefined;
+var vertexHandle: sk.gfx.Buffer = .{};
+pub var commands: std.ArrayList(Command) = undefined;
 
 var pipeline: sk.gfx.Pipeline = .{};
 var sampler: sk.gfx.Sampler = .{};
-var vertexHandle: sk.gfx.Buffer = .{};
 
 pub var offscreen: bool = false;
 var renderTarget: graphics.RenderTarget = .{};
 
-pub fn init(vertices: []Vertex, cmds: []Command) void {
-    vertexBuffer = .initBuffer(vertices);
-    commandBuffer = .initBuffer(cmds);
+pub fn init(vertex: []Vertex, cmds: []Command) void {
+    vertices = .initBuffer(vertex);
+    commands = .initBuffer(cmds);
     if (@import("builtin").is_test) return;
-
-    const nearestSampler = sk.gfx.makeSampler(.{});
 
     const shaderDesc = shader.quadShaderDesc(sk.gfx.queryBackend());
     pipeline = createQuadPipeline(shaderDesc);
-    sampler = nearestSampler;
-    vertexHandle = createVertexHandle(vertices);
+    sampler = sk.gfx.makeSampler(.{});
+    vertexHandle = sk.gfx.makeBuffer(.{
+        .size = @sizeOf(Vertex) * vertex.len,
+        .usage = .{ .stream_update = true },
+    });
 
     if (!window.viewRect.size.approxEqual(window.size)) {
         renderTarget = graphics.createRenderTarget(window.size);
@@ -78,15 +79,8 @@ pub fn init(vertices: []Vertex, cmds: []Command) void {
 
 pub fn clear() void {
     graphics.stats = .{};
-    vertexBuffer.clearRetainingCapacity();
-    commandBuffer.clearRetainingCapacity();
-}
-
-pub fn createVertexHandle(vertices: []Vertex) sk.gfx.Buffer {
-    return sk.gfx.makeBuffer(.{
-        .size = @sizeOf(Vertex) * vertices.len,
-        .usage = .{ .stream_update = true },
-    });
+    vertices.clearRetainingCapacity();
+    commands.clearRetainingCapacity();
 }
 
 pub fn beginPass(color: graphics.Color) void {
@@ -97,32 +91,32 @@ pub fn beginPass(color: graphics.Color) void {
 }
 
 pub fn currentCommand() ?*Command {
-    if (commandBuffer.items.len == 0) return null;
-    return &commandBuffer.items[commandBuffer.items.len - 1];
+    if (commands.items.len == 0) return null;
+    return &commands.items[commands.items.len - 1];
 }
 
 pub fn addDrawCommand(view: graphics.View) *Command {
     const index: u32 = if (currentCommand()) |cmd| blk: {
-        cmd.end = @intCast(vertexBuffer.items.len);
+        cmd.end = @intCast(vertices.items.len);
         break :blk cmd.end;
     } else 0;
 
-    commandBuffer.appendAssumeCapacity(.{
+    commands.appendAssumeCapacity(.{
         .start = index,
         .view = view,
         .position = camera.position,
         .scale = camera.scale,
         .size = camera.size,
     });
-    return &commandBuffer.items[commandBuffer.items.len - 1];
+    return &commands.items[commands.items.len - 1];
 }
 
 fn uploadVertices() void {
     if (currentCommand()) |cmd| {
-        cmd.end = @intCast(vertexBuffer.items.len);
+        cmd.end = @intCast(vertices.items.len);
     } else return;
 
-    const buffer = sk.gfx.asRange(vertexBuffer.items);
+    const buffer = sk.gfx.asRange(vertices.items);
     _ = sk.gfx.updateBuffer(vertexHandle, buffer);
 }
 
@@ -277,7 +271,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
         },
     };
 
-    vertexBuffer.appendAssumeCapacity(Vertex{
+    vertices.appendAssumeCapacity(Vertex{
         .position = worldPos.sub(scaledSize.mul(option.anchor)),
         .radian = option.radian,
         .size = scaledSize,
@@ -289,7 +283,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
 
 pub fn flush() void {
     if (offscreen) {
-        const index = commandBuffer.items.len;
+        const index = commands.items.len;
 
         const flipY = !sk.gfx.queryFeatures().origin_top_left;
         drawImage(renderTarget.image, .zero, .{
@@ -298,18 +292,18 @@ pub fn flush() void {
         });
 
         uploadVertices();
-        drawCommands(commandBuffer.items[0..index]);
+        drawCommands(commands.items[0..index]);
 
         graphics.endPass();
         graphics.beginPass(.{ .clear = .black });
-        drawCommands(commandBuffer.items[index..]);
+        drawCommands(commands.items[index..]);
     } else {
         uploadVertices();
-        drawCommands(commandBuffer.items);
+        drawCommands(commands.items);
     }
 
-    graphics.stats.sprite += vertexBuffer.items.len;
-    graphics.stats.command += commandBuffer.items.len;
+    graphics.stats.sprite += vertices.items.len;
+    graphics.stats.command += commands.items.len;
 }
 
 pub fn endPass() void {
@@ -317,8 +311,8 @@ pub fn endPass() void {
     graphics.commit();
 }
 
-fn drawCommands(commands: []const Command) void {
-    for (commands) |cmd| {
+fn drawCommands(cmds: []const Command) void {
+    for (cmds) |cmd| {
         switch (cmd.type) {
             .draw => if (cmd.end > cmd.start) doDraw(cmd),
             .scissor => {

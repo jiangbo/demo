@@ -47,10 +47,7 @@ test "动画系统会按角色方向行更新精灵" {
     const frames = [_]zhu.graphics.Frame{
         .{ .offset = .zero, .duration = 0.1 },
     };
-    const image = zhu.graphics.Image{
-        .texture = .{ .id = 1 },
-        .size = .xy(32, 32),
-    };
+    const image = zhu.Image{ .size = .xy(32, 32) };
     zhu.assets.putImage(1, image);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
@@ -79,10 +76,7 @@ test "负数行号表示翻转" {
     const frames = [_]zhu.graphics.Frame{
         .{ .offset = .zero, .duration = 0.1 },
     };
-    const image = zhu.graphics.Image{
-        .texture = .{ .id = 1 },
-        .size = .xy(32, 32),
-    };
+    const image = zhu.Image{ .size = .xy(32, 32) };
     zhu.assets.putImage(1, image);
 
     var world = zhu.ecs.World.init(std.testing.allocator);

@@ -229,12 +229,12 @@ test "light update 非边界整点不切换显隐" {
 }
 
 test "light drawLights 只绘制启用点光" {
-    glowImage = .{ .texture = .{ .id = 1 }, .size = .xy(128, 128) };
+    glowImage = .{ .size = .xy(128, 128) };
 
     var vertices: [8]zhu.batch.Vertex = undefined;
     var commands: [4]zhu.batch.Command = undefined;
     zhu.batch.init(&vertices, &commands);
-    const vertexBuffer = zhu.batch.vertexBuffer;
+    const vertexBuffer = &zhu.batch.vertices;
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -254,12 +254,12 @@ test "light drawLights 只绘制启用点光" {
 }
 
 test "light drawLights 会把 spot 退化成占位光圈" {
-    glowImage = .{ .texture = .{ .id = 1 }, .size = .xy(128, 128) };
+    glowImage = .{ .size = .xy(128, 128) };
 
     var vertices: [8]zhu.batch.Vertex = undefined;
     var commands: [4]zhu.batch.Command = undefined;
     zhu.batch.init(&vertices, &commands);
-    const vertexBuffer = zhu.batch.vertexBuffer;
+    const vertexBuffer = &zhu.batch.vertices;
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
