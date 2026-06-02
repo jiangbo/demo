@@ -312,10 +312,7 @@ test "地图摆件按底边定位生成实体" {
 
     const imageId = 1234;
     const tileSetId = 5678;
-    const image = zhu.graphics.Image{
-        .texture = .{ .id = 1 },
-        .size = .xy(16, 16),
-    };
+    const image = zhu.graphics.Image{ .size = .xy(16, 16) };
     zhu.assets.putImage(imageId, image);
 
     const tiles = [_]tiled.Tile{
@@ -380,10 +377,7 @@ test "带 anim_id 的地图摆件会创建停止的非循环动画" {
 
     const imageId = 1234;
     const tileSetId = 5678;
-    const image = zhu.graphics.Image{
-        .texture = .{ .id = 1 },
-        .size = .xy(32, 16),
-    };
+    const image = zhu.graphics.Image{ .size = .xy(32, 16) };
     zhu.assets.putImage(imageId, image);
 
     const frames = [_]zhu.graphics.Frame{
@@ -637,10 +631,7 @@ test "day-only 点光白天启用夜晚禁用" {
 }
 
 fn putMockFarmImages() void {
-    const image = zhu.graphics.Image{
-        .texture = .{ .id = 1 },
-        .size = .xy(256, 256),
-    };
+    const image = zhu.graphics.Image{ .size = .xy(256, 256) };
 
     for (prefab.actor.player.animations) |animation| {
         zhu.assets.putImage(animation.imageId, image);
@@ -648,20 +639,14 @@ fn putMockFarmImages() void {
 }
 
 fn putMockCropImages() void {
-    const image = zhu.graphics.Image{
-        .texture = .{ .id = 1 },
-        .size = .xy(256, 256),
-    };
+    const image = zhu.graphics.Image{ .size = .xy(256, 256) };
     for (prefab.farm.crop.stages) |stage| {
         zhu.assets.putImage(stage.sprite.imageId, image);
     }
 }
 
 fn putMockAnimalImages() void {
-    const image = zhu.graphics.Image{
-        .texture = .{ .id = 1 },
-        .size = .xy(128, 288),
-    };
+    const image = zhu.graphics.Image{ .size = .xy(128, 288) };
     for (prefab.farm.animals) |animalConfig| {
         zhu.assets.putImage(animalConfig.sprite.imageId, image);
     }

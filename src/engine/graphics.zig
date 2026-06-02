@@ -155,7 +155,7 @@ pub fn loopFramesX(comptime count: u8, size: Vector2, d: f32) //
 }
 
 pub const Image = struct {
-    view: sk.gfx.View,
+    view: sk.gfx.View = .{},
     layer: f32 = 0,
     offset: math.Vector2 = .zero,
     size: math.Vector2,
