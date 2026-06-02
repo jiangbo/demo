@@ -126,13 +126,13 @@ pub fn draw() void {
     for (zon.rows, 0..) |row, index| {
         var buffer: [40]u8 = undefined;
         const string: []const u8 = switch (index) {
-            0 => zhu.format(&buffer, "Speed {}x", .{
+            0 => zhu.format(&buffer, "Speed {d:.2}x", .{
                 context.time.scale,
             }),
-            1 => zhu.format(&buffer, "Music {d}%", .{
+            1 => zhu.format(&buffer, "Music {d:.0}%", .{
                 zhu.audio.musicVolume.load(.acquire) * 100,
             }),
-            2 => zhu.format(&buffer, "SFX {d}%", .{
+            2 => zhu.format(&buffer, "SFX {d:.0}%", .{
                 zhu.audio.soundVolume.load(.acquire) * 100,
             }),
             else => unreachable,
