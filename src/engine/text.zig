@@ -21,9 +21,6 @@ pub const Char = struct {
     offset: Vector2,
 };
 
-var commandArray: [8]batch.Command = undefined;
-var layered: bool = false;
-
 var invalidIndex: usize = 0;
 
 var font: Font = undefined;
@@ -41,19 +38,6 @@ pub fn init(image: Image, zon: Font) void {
 
 pub fn changeFontSize(size: f32) void {
     fontScale = size / font.size;
-}
-
-pub fn enableLayer(vertices: []batch.Vertex) *batch.Layer {
-    const defaultLayer = batch.layers.getPtrConst(.default);
-    const textLayer = batch.layers.getPtr(.text);
-
-    textLayer.pipeline = defaultLayer.pipeline;
-    textLayer.sampler = defaultLayer.sampler;
-    textLayer.commands = .initBuffer(&commandArray);
-    textLayer.vertices = .initBuffer(vertices);
-    textLayer.vertexHandle = batch.createVertexHandle(vertices);
-    layered = true;
-    return textLayer;
 }
 
 fn binarySearch(unicode: u32) ?usize {
@@ -74,7 +58,6 @@ pub const Option = struct {
     max: f32 = std.math.floatMax(f32), // 最大宽度，超过换行
     spacing: f32 = 0, // 文字间的间距
     alignment: ?Vector2 = null, // 文字对齐
-    layer: ?batch.Layer.Name = null, // 绘制的层
 };
 
 pub fn drawNumber(number: anytype, pos: Vector2, option: Option) void {
@@ -125,7 +108,6 @@ pub fn drawString(text: String, position: Vector2, option: Option) void {
         batch.drawImage(image, pos.add(char.offset.mul(scale)), .{
             .size = char.area.size.mul(scale),
             .color = option.color,
-            .layer = option.layer orelse if (layered) .text else .default,
         });
         graphics.stats.text += 1;
         pos = .xy(startX + width, pos.y);

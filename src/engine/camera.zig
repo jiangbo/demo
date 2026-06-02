@@ -4,10 +4,8 @@ const math = @import("math.zig");
 const window = @import("window.zig");
 
 const Vector2 = math.Vector2;
-pub const Layer = enum { default, extend, text, debug };
 
 pub var mode: enum { world, window } = .world;
-pub var layer: Layer = .default;
 pub var position: Vector2 = .zero;
 pub var scale: Vector2 = .one;
 pub var size: Vector2 = undefined;
