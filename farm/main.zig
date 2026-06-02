@@ -45,7 +45,7 @@ pub fn event(ev: *const zhu.window.Event) void {
 
 pub fn frame(delta: f32) void {
     scene.update(&world, delta);
-    ui.debug.update(delta);
+    ui.debug.update(&world, delta);
 
     zhu.batch.beginPass(.rgb(0.23, 0.31, 0.27));
     scene.draw(&world);

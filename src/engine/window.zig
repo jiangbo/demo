@@ -327,40 +327,48 @@ pub fn statFileTime(path: [:0]const u8) i64 {
     return @intCast(stat.mtime);
 }
 
-pub fn readBuffer(path: [:0]const u8, buffer: []u8) ![]u8 {
+pub fn readBuffer(path: [:0]const u8, buffer: []u8) ![:0]u8 {
+    const buf = buffer[0 .. buffer.len - 1];
     if (@import("builtin").target.os.tag == .emscripten) {
-        const value = @import("c.zig").em.my_add(1, 1);
-        _ = value; // 强制 emscripten 链接器保留 em_js_file_load 所在的目标文件
-        const len = try readFromJs(path, &buffer);
-        // 长度大于0，读完了内容，直接分配返回。
-        if (len > 0) return buffer[0..@intCast(len)];
+        const len = try readFromJs(path, buf);
+        // 长度大于0，读完了内容，末尾补 0，返回 C 字符串。
+        if (len > 0) return terminateBuffer(buffer, @intCast(len));
         // 长度小于0，没有读完，太长了。
         return error.BufferTooSmall;
     }
-    return std.fs.cwd().readFile(path, buffer);
+    const content = try std.fs.cwd().readFile(path, buf);
+    return terminateBuffer(buffer, content.len);
 }
 
-pub fn readAll(path: [:0]const u8) ![]u8 {
+pub fn readAll(path: [:0]const u8) ![:0]u8 {
     if (@import("builtin").target.os.tag == .emscripten) {
-        const value = @import("c.zig").em.my_add(1, 1);
-        _ = value; // 强制 emscripten 链接器保留 em_js_file_load 所在的目标文件
         var buffer: [1024]u8 = undefined;
         const len = try readFromJs(path, &buffer);
         // 长度大于0，读完了内容，直接分配返回。
-        if (len > 0) return assets.oomDupe(u8, buffer[0..@intCast(len)]);
+        if (len > 0) return assets.oomDupeZ(u8, buffer[0..@intCast(len)]);
 
         // 长度小于0，没有读完，太长了，分配更大的空间再读一次。
-        const large = assets.oomAlloc(u8, buffer.len + @as(usize, @abs(len)));
-        _ = readFromJs(path, large);
-        return large;
+        const fileLen: usize = @as(usize, @intCast(-len));
+        const large = assets.oomAlloc(u8, fileLen + 1);
+        _ = try readFromJs(path, large[0..fileLen]);
+        return terminateBuffer(large, @intCast(fileLen));
     }
     const max = 1024 * 1024;
-    return try std.fs.cwd().readFileAlloc(assets.allocator, path, max);
+    return try std.fs.cwd().readFileAllocOptions( //
+        assets.allocator, path, max, null, .of(u8), 0);
+}
+
+fn terminateBuffer(buffer: []u8, len: usize) [:0]u8 {
+    buffer[len] = 0;
+    return buffer[0..len :0];
 }
 
 fn readFromJs(path: [:0]const u8, content: []u8) !i32 {
+    const value = @import("c.zig").em.my_add(1, 1);
+    _ = value; // 强制 emscripten 链接器保留 em_js_file_load 所在的目标文件
     const len = @import("c.zig").em.em_js_file_load(path.ptr, //
         content.ptr, @intCast(content.len));
+    // JS 端约定：0 表示不存在，正数/负数都表示文件总长度。
     if (len == 0) return error.FileNotFound;
     return len;
 }
@@ -377,11 +385,7 @@ pub fn saveAll(path: [:0]const u8, content: []const u8) !void {
         try cwd.makePath(dir);
     }
 
-    var file = cwd.openFile(path, .{ .mode = .write_only }) //
-        catch |err| switch (err) {
-            error.FileNotFound => try cwd.createFile(path, .{}),
-            else => return err,
-        };
+    var file = try cwd.createFile(path, .{ .truncate = true });
     defer file.close();
 
     try file.writeAll(content);

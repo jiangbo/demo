@@ -60,6 +60,10 @@ pub fn oomDupe(comptime T: type, m: []const T) []T {
     return allocator.dupe(T, m) catch oom();
 }
 
+pub fn oomDupeZ(comptime T: type, m: []const T) [:0]T {
+    return allocator.dupeZ(T, m) catch oom();
+}
+
 pub fn free(memory: anytype) void {
     return allocator.free(memory);
 }
