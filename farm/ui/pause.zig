@@ -124,6 +124,8 @@ pub fn draw() void {
     // 将图片和文字分开绘制，避免多次 draw call
     drawButtonText(start);
     for (zon.rows, 0..) |row, index| {
+
+        // 动态文本
         var buffer: [40]u8 = undefined;
         const string: []const u8 = switch (index) {
             0 => zhu.format(&buffer, "Speed {d:.2}x", .{
