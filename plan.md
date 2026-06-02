@@ -21,7 +21,7 @@ zig build test
 
 ## 功能实现计划
 
-- [ ] 36-暂停菜单
+- [x] 36-暂停菜单
   - 可见效果：按键打开暂停菜单，游戏更新暂停。
   - 需要系统：Scene stack 最小扩展、UI 按钮。
   - 参考源码：`game/scene/pause_menu_scene.*`
@@ -125,6 +125,13 @@ zig build test
   当前已把 `farm` 对 render target 的直接使用收回，并在 `batch`
   内部按窗口视口尺寸创建可选 render target，自动完成逻辑画面绘制和
   swapchain 缩放绘制。
+- 36-暂停菜单：C++ 使用 Scene stack（push/pop）管理暂停菜单嵌套；
+  Zig 当前用 `active` 布尔标记，暂停菜单和游戏在同一场景内切换显示。
+  槽位选择界面需要场景栈时再扩展。
+- 36-暂停菜单：C++ 暂停面板显示存档/读档成功或失败的彩色提示文字；
+  Zig 当前用 `std.log` 输出，待后续补 UI 提示。
+- 36-暂停菜单：C++ 游戏速度使用指数步进（0.01x~100x）；
+  Zig 使用线性 ±0.1，简单够用。
 
 ## 暂缓的大系统
 
