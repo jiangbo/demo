@@ -21,7 +21,6 @@
                 .topLeft = .{ .x = 3, .y = 5 },
                 .bottomRight = .{ .x = 3, .y = 5 },
             },
-            .event = .resumeGame,
         },
         .{
             .label = "Save",
@@ -43,7 +42,6 @@
                 .topLeft = .{ .x = 3, .y = 5 },
                 .bottomRight = .{ .x = 3, .y = 5 },
             },
-            .event = .save,
         },
         .{
             .label = "Load",
@@ -65,7 +63,6 @@
                 .topLeft = .{ .x = 3, .y = 5 },
                 .bottomRight = .{ .x = 3, .y = 5 },
             },
-            .event = .load,
         },
         .{
             .label = "Title",
@@ -87,7 +84,6 @@
                 .topLeft = .{ .x = 3, .y = 5 },
                 .bottomRight = .{ .x = 3, .y = 5 },
             },
-            .event = .title,
         },
     },
     .rows = .{
@@ -106,7 +102,6 @@
                     .min = .{ .x = 384, .y = 32 },
                     .size = .{ .x = 16, .y = 16 },
                 },
-                .event = .speedDown,
             },
             .right = .{
                 .offset = .{ .x = 128, .y = 0 },
@@ -119,7 +114,6 @@
                     .min = .{ .x = 368, .y = 32 },
                     .size = .{ .x = 16, .y = 16 },
                 },
-                .event = .speedUp,
             },
         },
         .{
@@ -137,7 +131,6 @@
                     .min = .{ .x = 256, .y = 32 },
                     .size = .{ .x = 16, .y = 16 },
                 },
-                .event = .musicDown,
             },
             .right = .{
                 .offset = .{ .x = 128, .y = 0 },
@@ -150,7 +143,6 @@
                     .min = .{ .x = 240, .y = 32 },
                     .size = .{ .x = 16, .y = 16 },
                 },
-                .event = .musicUp,
             },
         },
         .{
@@ -168,7 +160,6 @@
                     .min = .{ .x = 256, .y = 32 },
                     .size = .{ .x = 16, .y = 16 },
                 },
-                .event = .sfxDown,
             },
             .right = .{
                 .offset = .{ .x = 128, .y = 0 },
@@ -181,7 +172,6 @@
                     .min = .{ .x = 240, .y = 32 },
                     .size = .{ .x = 16, .y = 16 },
                 },
-                .event = .sfxUp,
             },
         },
     },

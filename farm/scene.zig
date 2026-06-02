@@ -38,20 +38,7 @@ pub fn update(world: *World, delta: f32) void {
             ui.pause.active = false;
             return;
         }
-        if (ui.pause.update()) |event| {
-            switch (event) {
-                .resumeGame => ui.pause.active = false,
-                .save => std.log.info("pause save clicked: not implemented", .{}),
-                .load => std.log.info("pause load clicked: not implemented", .{}),
-                .title => std.log.info("pause title clicked: not implemented", .{}),
-                .speedDown => std.log.info("pause speed down clicked", .{}),
-                .speedUp => std.log.info("pause speed up clicked", .{}),
-                .musicDown => std.log.info("pause music down clicked", .{}),
-                .musicUp => std.log.info("pause music up clicked", .{}),
-                .sfxDown => std.log.info("pause sfx down clicked", .{}),
-                .sfxUp => std.log.info("pause sfx up clicked", .{}),
-            }
-        }
+        ui.pause.update();
         return;
     }
 

@@ -26,8 +26,21 @@ pub fn deinit() void {
 }
 
 pub fn setVolume(volume: f32) void {
-    musicVolume.store(volume, .release);
-    soundVolume.store(volume, .release);
+    const value = std.math.clamp(volume, 0.0, 1.0);
+    musicVolume.store(value, .release);
+    soundVolume.store(value, .release);
+}
+
+pub fn changeMusicVolume(amount: f32) void {
+    const current = musicVolume.load(.acquire);
+    const next = std.math.clamp(current + amount, 0, 1);
+    musicVolume.store(next, .release);
+}
+
+pub fn changeSoundVolume(amount: f32) void {
+    const current = soundVolume.load(.acquire);
+    const next = std.math.clamp(current + amount, 0, 1);
+    soundVolume.store(next, .release);
 }
 
 pub var musicVolume: std.atomic.Value(f32) = .init(1);

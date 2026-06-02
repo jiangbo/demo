@@ -1,4 +1,7 @@
+const std = @import("std");
 const zhu = @import("zhu");
+
+const context = @import("../context.zig");
 
 const ImageId = zhu.graphics.ImageId;
 const NineOption = zhu.batch.NineOption;
@@ -25,7 +28,6 @@ const Button = struct {
     hover: zhu.Rect,
     pressed: zhu.Rect,
     nine: NineOption,
-    event: Event,
 };
 
 const Icon = struct {
@@ -33,7 +35,6 @@ const Icon = struct {
     size: zhu.Vector2,
     normal: zhu.Rect,
     pressed: zhu.Rect,
-    event: Event,
 };
 
 const Row = struct {
@@ -62,51 +63,43 @@ pub fn init() void {
     image = zhu.getImage("farm-rpg/UI/button.png").?;
 }
 
-var disabledSaveLoad: bool = false;
-pub fn enter(disabled: bool) void {
+var disableSaveLoad: bool = false;
+pub fn enter(disable: bool) void {
     active = true;
-    disabledSaveLoad = disabled;
+    disableSaveLoad = disable;
 }
 
-pub fn update() ?Event {
-    const panel = zhu.Rect.init(
-        zhu.window.size.sub(zon.size).scale(0.5),
-        zon.size,
-    );
+pub fn update() void {
+    const panelPos = zhu.window.size.sub(zon.size).scale(0.5);
+    const panel = zhu.Rect.init(panelPos, zon.size);
     const mousePos = zhu.window.mousePosition;
 
     for (zon.buttons, 0..) |button, index| {
         if (getButtonState(index) == .disabled) continue; // 禁用按钮不响应交互
-        const rect = zhu.Rect.init(panel.min.add(button.offset), button.size);
+        const buttonPos = panel.min.add(button.offset);
+        const rect = zhu.Rect.init(buttonPos, button.size);
         if (!rect.contains(mousePos)) continue;
-        return updateButton(index, button.event);
+        return updateButton(index);
     }
 
-    const startIndex = zon.buttons.len;
     for (zon.rows, 0..) |row, rowIndex| {
-        const rowRect = zhu.Rect.init(panel.min.add(row.offset), row.size);
+        const rowPos = panel.min.add(row.offset);
 
-        const leftRect = zhu.Rect.init(
-            rowRect.min.add(row.left.offset),
-            row.left.size,
-        );
-        const leftIndex = startIndex + rowIndex * 2;
+        const leftIndex = zon.buttons.len + rowIndex * 2;
+        const leftPos = rowPos.add(row.left.offset);
+        const leftRect = zhu.Rect.init(leftPos, row.left.size);
         if (leftRect.contains(mousePos)) {
-            return updateButton(leftIndex, row.left.event);
+            return updateButton(leftIndex);
         }
 
-        const rightRect = zhu.Rect.init(
-            rowRect.min.add(row.right.offset),
-            row.right.size,
-        );
-        const rightIndex = leftIndex + 1;
+        const rightPos = rowPos.add(row.right.offset);
+        const rightRect = zhu.Rect.init(rightPos, row.right.size);
         if (rightRect.contains(mousePos)) {
-            return updateButton(rightIndex, row.right.event);
+            return updateButton(leftIndex + 1);
         }
     }
 
     hover, buttonState = .{ null, .normal };
-    return null;
 }
 
 pub fn draw() void {
@@ -130,9 +123,23 @@ pub fn draw() void {
 
     // 将图片和文字分开绘制，避免多次 draw call
     drawButtonText(start);
-    for (zon.rows) |row| {
+    for (zon.rows, 0..) |row, index| {
+        var buffer: [40]u8 = undefined;
+        const string: []const u8 = switch (index) {
+            0 => zhu.format(&buffer, "Speed {}x", .{
+                context.time.scale,
+            }),
+            1 => zhu.format(&buffer, "Music {d}%", .{
+                zhu.audio.musicVolume.load(.acquire) * 100,
+            }),
+            2 => zhu.format(&buffer, "SFX {d}%", .{
+                zhu.audio.soundVolume.load(.acquire) * 100,
+            }),
+            else => unreachable,
+        };
+
         const rect = zhu.Rect.init(start.add(row.offset), row.size);
-        zhu.text.drawString(row.label, rect.center(), .{
+        zhu.text.drawString(string, rect.center(), .{
             .alignment = .center,
         });
     }
@@ -140,7 +147,7 @@ pub fn draw() void {
 
 // Save 按钮 index=1, Load 按钮 index=2
 fn getButtonState(index: usize) Button.State {
-    if (disabledSaveLoad) {
+    if (disableSaveLoad) {
         if (index == 1 or index == 2) return .disabled;
     }
     return if (hover == index) buttonState else .normal;
@@ -172,6 +179,7 @@ fn drawButtonText(start: zhu.Vector2) void {
             .pressed => .gray(0.6, 1),
             .disabled => .gray(0.4, 1),
         };
+
         const center = rect.center();
         zhu.text.drawString(button.label, center, .{
             .color = color,
@@ -180,7 +188,7 @@ fn drawButtonText(start: zhu.Vector2) void {
     }
 }
 
-fn updateButton(index: usize, event: Event) ?Event {
+fn updateButton(index: usize) void {
     if (hover == null or hover.? != index) {
         zhu.audio.playSound("assets/audio/Fantasy_UI (1).ogg");
     }
@@ -188,9 +196,22 @@ fn updateButton(index: usize, event: Event) ?Event {
     const pressed = zhu.window.mouse.held(.LEFT);
     buttonState = if (pressed) .pressed else .hover;
 
-    if (!zhu.window.mouse.released(.LEFT)) return null;
-    zhu.audio.playSound("assets/audio/Fantasy_UI (10).ogg");
-    return event;
+    if (zhu.window.mouse.released(.LEFT)) {
+        zhu.audio.playSound("assets/audio/Fantasy_UI (10).ogg");
+        switch (index) {
+            0 => active = false, // 继续游戏
+            1 => std.log.info("save not implemented", .{}), // 保存
+            2 => std.log.info("load not implemented", .{}), // 加载
+            3 => context.scene.request(.title), // 返回标题
+            4 => context.time.scale -= 0.1, // 减速
+            5 => context.time.scale += 0.1, // 加速
+            6 => zhu.audio.changeMusicVolume(-0.1), // 减小音乐
+            7 => zhu.audio.changeMusicVolume(0.1), // 增大音乐
+            8 => zhu.audio.changeSoundVolume(-0.1), // 减小音效
+            9 => zhu.audio.changeSoundVolume(0.1), // 增加音效
+            else => unreachable,
+        }
+    }
 }
 
 fn drawIcon(pos: zhu.Vector2, icon: Icon, index: usize) void {
