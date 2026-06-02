@@ -38,7 +38,7 @@ pub fn update(world: *World, delta: f32) void {
             ui.pause.active = false;
             return;
         }
-        ui.pause.update();
+        ui.pause.update(world);
         return;
     }
 

@@ -86,6 +86,6 @@ pub fn main() void {
         .title = "迷你农场",
         .size = .xy(1280, 720),
         .logicSize = .xy(640, 360),
-        .scaleEnum = .integer,
+        .scaleEnum = .fit,
     });
 }

@@ -2,6 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const context = @import("../context.zig");
+const save = @import("../save.zig");
 
 const ImageId = zhu.graphics.ImageId;
 const NineOption = zhu.batch.NineOption;
@@ -69,7 +70,7 @@ pub fn enter(disable: bool) void {
     disableSaveLoad = disable;
 }
 
-pub fn update() void {
+pub fn update(world: *zhu.ecs.World) void {
     const panelPos = zhu.window.size.sub(zon.size).scale(0.5);
     const panel = zhu.Rect.init(panelPos, zon.size);
     const mousePos = zhu.window.mousePosition;
@@ -79,7 +80,7 @@ pub fn update() void {
         const buttonPos = panel.min.add(button.offset);
         const rect = zhu.Rect.init(buttonPos, button.size);
         if (!rect.contains(mousePos)) continue;
-        return updateButton(index);
+        return updateButton(world, index);
     }
 
     for (zon.rows, 0..) |row, rowIndex| {
@@ -89,13 +90,13 @@ pub fn update() void {
         const leftPos = rowPos.add(row.left.offset);
         const leftRect = zhu.Rect.init(leftPos, row.left.size);
         if (leftRect.contains(mousePos)) {
-            return updateButton(leftIndex);
+            return updateButton(world, leftIndex);
         }
 
         const rightPos = rowPos.add(row.right.offset);
         const rightRect = zhu.Rect.init(rightPos, row.right.size);
         if (rightRect.contains(mousePos)) {
-            return updateButton(leftIndex + 1);
+            return updateButton(world, leftIndex + 1);
         }
     }
 
@@ -190,7 +191,7 @@ fn drawButtonText(start: zhu.Vector2) void {
     }
 }
 
-fn updateButton(index: usize) void {
+fn updateButton(world: *zhu.ecs.World, index: usize) void {
     if (hover == null or hover.? != index) {
         zhu.audio.playSound("assets/audio/Fantasy_UI (1).ogg");
     }
@@ -202,8 +203,12 @@ fn updateButton(index: usize) void {
         zhu.audio.playSound("assets/audio/Fantasy_UI (10).ogg");
         switch (index) {
             0 => active = false, // 继续游戏
-            1 => std.log.info("save not implemented", .{}), // 保存
-            2 => std.log.info("load not implemented", .{}), // 加载
+            1 => save.saveSlot(world) catch |err| {
+                std.log.err("save failed: {}", .{err});
+            },
+            2 => save.loadSlot(world) catch |err| {
+                std.log.err("load failed: {}", .{err});
+            },
             3 => context.scene.request(.title), // 返回标题
             4 => context.time.scale -= 0.1, // 减速
             5 => context.time.scale += 0.1, // 加速
