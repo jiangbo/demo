@@ -285,6 +285,10 @@ pub const World = struct {
         return self.assure(T).components();
     }
 
+    pub fn count(self: *World, T: type) usize {
+        return self.assure(T).dense.items.len;
+    }
+
     pub fn sort(self: *World, T: type, lessFn: fn (T, T) bool) void {
         self.assure(T).sort(lessFn);
     }
