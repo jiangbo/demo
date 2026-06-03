@@ -278,7 +278,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     });
 }
 
-pub fn endDraw() void {
+pub fn flush() void {
     var drawEnd: u32 = @intCast(vertices.items.len);
     var iterator = std.mem.reverseIterator(commands.items);
     while (iterator.nextPtr()) |cmd| {
@@ -304,10 +304,13 @@ pub fn endDraw() void {
         }
     }
 
-    if (activePass) graphics.endPass();
-
     graphics.stats.sprite += vertices.items.len;
     graphics.stats.command += commands.items.len;
+}
+
+pub fn endDraw() void {
+    if (currentDraw().?.end == 0) flush();
+    graphics.endPass();
     graphics.commit();
 }
 

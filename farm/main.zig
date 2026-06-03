@@ -66,6 +66,7 @@ pub fn frame(delta: f32) void {
             });
         },
     }
+    zhu.batch.flush();
     ui.debug.draw();
     zhu.batch.endDraw();
     events.update();
