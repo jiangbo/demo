@@ -13,10 +13,12 @@ var vertexBuffer: []zhu.batch.Vertex = undefined;
 var commandBuffer: [128]zhu.batch.Command = undefined;
 var soundBuffer: [20]zhu.audio.Sound = undefined;
 var world: zhu.ecs.World = undefined;
+var canvas: zhu.graphics.RenderTarget = .{};
 
 pub fn init() void {
     vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 4096);
     zhu.batch.init(vertexBuffer[0..3500], &commandBuffer);
+    canvas = zhu.graphics.createRenderTarget(zhu.window.size);
     world = .init(zhu.assets.allocator);
 
     zhu.audio.init(44100 / 2, &soundBuffer);
@@ -47,12 +49,25 @@ pub fn frame(delta: f32) void {
     scene.update(&world, delta);
     ui.debug.update(&world, delta);
 
-    zhu.batch.beginPass(.rgb(0.23, 0.31, 0.27));
-    scene.draw(&world);
-    zhu.batch.flush();
+    zhu.batch.beginDraw();
+    const color: zhu.Color = .rgb(0.23, 0.31, 0.27);
+    switch (context.scene.current) {
+        .title => {
+            zhu.batch.useTarget(color, .{});
+            scene.draw(&world);
+        },
+        .farm => {
+            zhu.batch.useTarget(color, .{ .target = &canvas });
+            scene.draw(&world);
 
+            zhu.batch.useTarget(color, .{});
+            zhu.batch.drawImage(canvas.image, .zero, .{
+                .mode = .window,
+            });
+        },
+    }
     ui.debug.draw();
-    zhu.batch.endPass();
+    zhu.batch.endDraw();
     events.update();
 }
 

@@ -33,13 +33,11 @@ pub fn init() void {
 }
 
 pub fn enter() void {
-    zhu.batch.offscreen = false;
     zhu.camera.mode = .window;
     zhu.audio.playMusic("assets/audio/02_spring_fairy_tale.ogg");
 }
 
 pub fn exit() void {
-    zhu.batch.offscreen = true;
     zhu.camera.mode = .world;
     zhu.audio.setMusicState(.stopped);
 }

@@ -5,23 +5,13 @@ const math = @import("math.zig");
 const shader = @import("shader/quad.glsl.zig");
 const graphics = @import("graphics.zig");
 const camera = @import("camera.zig");
-const window = @import("window.zig");
 
 const Image = graphics.Image;
 const ImageId = graphics.ImageId;
 const Color = graphics.Color;
+const RenderPass = graphics.RenderPass;
 const Vector2 = math.Vector2;
 const Matrix = math.Matrix;
-
-pub const Command = struct {
-    start: u32 = 0, // 起始顶点索引
-    end: u32 = 0, // 结束顶点索引
-    view: graphics.View = .{}, // 视图
-    position: Vector2 = .zero, // 位置
-    scale: Vector2 = .one, // 缩放
-    size: Vector2 = .zero, // 大小
-    type: enum { draw, scissor } = .draw, // 类型
-};
 
 pub const Vertex = extern struct {
     position: math.Vector2 = .zero, // 顶点坐标
@@ -44,23 +34,40 @@ pub const Option = struct {
     mode: ?@TypeOf(camera.mode) = null, // 相机模式
 };
 
+pub const Command = union(enum) {
+    target: Target, // 渲染目标
+    draw: Draw, // 绘制命令
+};
+
+pub const Target = struct { color: Color, pass: RenderPass };
+pub const Draw = struct {
+    start: u32 = 0, // 起始顶点索引
+    end: u32 = 0, // 结束顶点索引
+    view: graphics.View = .{}, // 纹理视图
+    position: Vector2 = .zero, // 相机位置
+    scale: Vector2 = .one, // 相机缩放
+    size: Vector2 = .zero, // 相机大小
+    pipeline: sk.gfx.Pipeline = .{}, // 渲染流水线
+    sampler: sk.gfx.Sampler = .{}, // 采样器
+};
+
 pub var whiteImage: graphics.Image = undefined;
 pub var circleImage: graphics.Image = undefined;
 
 pub var vertices: std.ArrayList(Vertex) = undefined;
-var vertexHandle: sk.gfx.Buffer = .{};
 pub var commands: std.ArrayList(Command) = undefined;
 
+var vertexHandle: sk.gfx.Buffer = .{};
 var pipeline: sk.gfx.Pipeline = .{};
 var sampler: sk.gfx.Sampler = .{};
-
-pub var offscreen: bool = false;
-var renderTarget: graphics.RenderTarget = .{};
+var defaultDraw: Draw = .{};
 
 pub fn init(vertex: []Vertex, cmds: []Command) void {
     vertices = .initBuffer(vertex);
     commands = .initBuffer(cmds);
     if (@import("builtin").is_test) return;
+
+    std.log.info("Target: {}, Draw: {}", .{ @sizeOf(Target), @sizeOf(Draw) });
 
     const shaderDesc = shader.quadShaderDesc(sk.gfx.queryBackend());
     pipeline = createQuadPipeline(shaderDesc);
@@ -70,54 +77,70 @@ pub fn init(vertex: []Vertex, cmds: []Command) void {
         .usage = .{ .stream_update = true },
     });
 
-    if (!window.viewRect.size.approxEqual(window.size)) {
-        renderTarget = graphics.createRenderTarget(window.size);
-        offscreen = true;
-    }
     camera.init();
 }
 
-pub fn clear() void {
+pub fn beginDraw() void {
     graphics.stats = .{};
     vertices.clearRetainingCapacity();
     commands.clearRetainingCapacity();
-}
-
-pub fn beginPass(color: graphics.Color) void {
-    clear();
-    var renderPass = graphics.RenderPass{ .clear = color };
-    if (offscreen) renderPass.target = renderTarget;
-    graphics.beginPass(renderPass);
-}
-
-pub fn currentCommand() ?*Command {
-    if (commands.items.len == 0) return null;
-    return &commands.items[commands.items.len - 1];
-}
-
-pub fn addDrawCommand(view: graphics.View) *Command {
-    const index: u32 = if (currentCommand()) |cmd| blk: {
-        cmd.end = @intCast(vertices.items.len);
-        break :blk cmd.end;
-    } else 0;
-
-    commands.appendAssumeCapacity(.{
-        .start = index,
-        .view = view,
+    defaultDraw = .{
         .position = camera.position,
         .scale = camera.scale,
         .size = camera.size,
+        .pipeline = pipeline,
+        .sampler = sampler,
+    };
+}
+
+pub fn useTarget(color: Color, pass: graphics.RenderPass) void {
+    finishCommand();
+    commands.appendAssumeCapacity(.{
+        .target = .{ .color = color, .pass = pass },
     });
-    return &commands.items[commands.items.len - 1];
 }
 
 fn uploadVertices() void {
-    if (currentCommand()) |cmd| {
-        cmd.end = @intCast(vertices.items.len);
-    } else return;
+    finishCommand();
+    if (vertices.items.len == 0) return;
 
     const buffer = sk.gfx.asRange(vertices.items);
     _ = sk.gfx.updateBuffer(vertexHandle, buffer);
+}
+
+pub fn currentCommand() ?*Draw {
+    if (commands.items.len == 0) return null;
+    switch (commands.items[commands.items.len - 1]) {
+        .draw => |*draw| return draw,
+        else => return null,
+    }
+}
+
+pub fn previousCommand() ?Draw {
+    var index = commands.items.len;
+    while (index > 0) {
+        index -= 1;
+        switch (commands.items[index]) {
+            .draw => |draw| return draw,
+            else => {},
+        }
+    }
+    return null;
+}
+
+pub fn addCommand(view: graphics.View) *Draw {
+    finishCommand();
+    var draw = previousCommand() orelse defaultDraw;
+    draw.start = @intCast(vertices.items.len);
+    draw.view = view;
+    commands.appendAssumeCapacity(.{ .draw = draw });
+    return currentCommand().?;
+}
+
+pub fn finishCommand() void {
+    if (currentCommand()) |cmd| {
+        cmd.end = @intCast(vertices.items.len);
+    }
 }
 
 pub fn drawDebug(rect: math.Rect) void {
@@ -256,9 +279,9 @@ pub fn drawNine(image: Image, rect: math.Rect, option: NineOption) void {
 }
 
 pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
-    var cmd = currentCommand() orelse addDrawCommand(image.view);
+    var cmd = currentCommand() orelse addCommand(image.view);
     if (cmd.view.id != image.view.id) {
-        cmd = addDrawCommand(image.view); // 纹理视图切换
+        cmd = addCommand(image.view); // 纹理视图切换
     }
 
     const size = option.size orelse image.size;
@@ -281,56 +304,49 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     });
 }
 
-pub fn flush() void {
-    if (offscreen) {
-        const index = commands.items.len;
+pub fn endDraw() void {
+    uploadVertices();
+    var activePass = false;
+    var flipY = false;
+    var commandCount: usize = 0;
 
-        const flipY = !sk.gfx.queryFeatures().origin_top_left;
-        drawImage(renderTarget.image, .zero, .{
-            .mode = .window,
-            .uvRect = renderTarget.image.uvFlip(false, flipY),
-        });
-
-        uploadVertices();
-        drawCommands(commands.items[0..index]);
-
-        graphics.endPass();
-        graphics.beginPass(.{ .clear = .black });
-        drawCommands(commands.items[index..]);
-    } else {
-        uploadVertices();
-        drawCommands(commands.items);
-    }
-
-    graphics.stats.sprite += vertices.items.len;
-    graphics.stats.command += commands.items.len;
-}
-
-pub fn endPass() void {
-    graphics.endPass();
-    graphics.commit();
-}
-
-fn drawCommands(cmds: []const Command) void {
-    for (cmds) |cmd| {
-        switch (cmd.type) {
-            .draw => if (cmd.end > cmd.start) doDraw(cmd),
-            .scissor => {
-                const x, const y = .{ cmd.position.x, cmd.position.y };
-                const w, const h = .{ cmd.size.x, cmd.size.y };
-                sk.gfx.applyScissorRectf(x, y, w, h, true);
+    for (commands.items) |cmd| {
+        switch (cmd) {
+            .target => |targetCommand| {
+                if (activePass) graphics.endPass();
+                flipY = targetCommand.pass.target != null and
+                    !sk.gfx.queryFeatures().origin_top_left;
+                graphics.beginPass(targetCommand.color, targetCommand.pass);
+                activePass = true;
+            },
+            .draw => |draw| {
+                if (!activePass) @panic("batch draw without target");
+                if (draw.end > draw.start) {
+                    doDraw(draw, flipY);
+                    commandCount += 1;
+                }
             },
         }
     }
+
+    if (activePass) graphics.endPass();
+
+    graphics.stats.sprite += vertices.items.len;
+    graphics.stats.command += commandCount;
+    graphics.commit();
 }
 
-fn doDraw(cmd: Command) void {
+fn doDraw(cmd: Draw, flipY: bool) void {
     // 绑定流水线
-    sk.gfx.applyPipeline(pipeline);
+    sk.gfx.applyPipeline(cmd.pipeline);
 
     // 处理 uniform 变量
     const x, const y = .{ cmd.size.x, cmd.size.y };
-    const orth = math.Matrix.orthographic(x, y, 0, 1);
+    var orth = math.Matrix.orthographic(x, y, 0, 1);
+    if (flipY) {
+        orth.mat[5] *= -1;
+        orth.mat[13] *= -1;
+    }
     const position = cmd.position.scale(-1).toVector3(0);
 
     const translate = math.Matrix.translateVec(position);
@@ -349,7 +365,7 @@ fn doDraw(cmd: Command) void {
     bindings.views[0] = cmd.view;
     bindings.vertex_buffers[0] = vertexHandle;
     bindings.vertex_buffer_offsets[0] = @intCast(cmd.start * @sizeOf(Vertex));
-    bindings.samplers[0] = sampler;
+    bindings.samplers[0] = cmd.sampler;
     sk.gfx.applyBindings(bindings);
 
     // 绘制

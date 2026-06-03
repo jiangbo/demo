@@ -110,8 +110,8 @@ pub fn exit(world: *World) void {
 
 pub fn drawBack() void {
     if (vertexes.items.len != 0) {
-        _ = zhu.batch.addDrawCommand(mapView);
         const back = vertexes.items[0..frontLayerStart];
+        _ = zhu.batch.addCommand(mapView);
         zhu.batch.vertices.appendSliceAssumeCapacity(back);
     }
 

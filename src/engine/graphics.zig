@@ -238,16 +238,15 @@ pub fn createRenderTarget(size: math.Vector2) RenderTarget {
 }
 
 pub const RenderPass = struct {
-    clear: Color,
-    target: ?RenderTarget = null,
+    target: ?*const RenderTarget = null,
     viewport: ?math.Rect = null,
 };
 
-pub fn beginPass(renderPass: RenderPass) void {
+pub fn beginPass(color: Color, renderPass: RenderPass) void {
     var action = sk.gfx.PassAction{};
     action.colors[0] = .{
         .load_action = .CLEAR,
-        .clear_value = @bitCast(renderPass.clear),
+        .clear_value = @bitCast(color),
     };
 
     var viewport: ?math.Rect = renderPass.viewport;
