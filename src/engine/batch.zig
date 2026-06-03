@@ -290,7 +290,6 @@ pub fn flush() void {
     uploadVertices();
     var activePass = false;
     var flipY = false;
-
     for (commands.items) |cmd| {
         switch (cmd) {
             .target => |target| {
