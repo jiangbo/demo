@@ -92,14 +92,12 @@ pub fn beginDraw() void {
 }
 
 pub fn useTarget(color: Color, pass: graphics.RenderPass) void {
-    finishCommand();
     commands.appendAssumeCapacity(.{
         .target = .{ .color = color, .pass = pass },
     });
 }
 
 fn uploadVertices() void {
-    finishCommand();
     if (vertices.items.len == 0) return;
 
     const buffer = sk.gfx.asRange(vertices.items);
@@ -115,18 +113,11 @@ pub fn currentDraw() ?*DrawCommand {
 }
 
 pub fn addCommand(image: Image) *DrawCommand {
-    finishCommand();
     var draw = drawState;
     draw.start = @intCast(vertices.items.len);
     draw.view = image.view;
     commands.appendAssumeCapacity(.{ .draw = draw });
     return currentDraw().?;
-}
-
-pub fn finishCommand() void {
-    if (currentDraw()) |cmd| {
-        cmd.end = @intCast(vertices.items.len);
-    }
 }
 
 pub fn drawDebug(rect: math.Rect) void {
@@ -288,6 +279,14 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
 }
 
 pub fn endDraw() void {
+    var drawEnd: u32 = @intCast(vertices.items.len);
+    var iterator = std.mem.reverseIterator(commands.items);
+    while (iterator.nextPtr()) |cmd| {
+        if (std.meta.activeTag(cmd.*) != .draw) continue;
+        cmd.draw.end = drawEnd;
+        drawEnd = cmd.draw.start;
+    }
+
     uploadVertices();
     var activePass = false;
     var flipY = false;
