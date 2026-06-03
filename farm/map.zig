@@ -25,11 +25,11 @@ pub var current: Id = .school;
 pub var data: *const tiled.Map = &maps[0];
 var vertexes: std.ArrayList(zhu.batch.Vertex) = .empty;
 var frontLayerStart: usize = 0;
-var mapView: zhu.graphics.View = undefined;
+var mapImage: zhu.graphics.Image = undefined;
 
 pub fn init() void {
     tiled.init(@import("zon/tile.zon"));
-    mapView = zhu.getImage("circle.png").?.view;
+    mapImage = zhu.getImage("circle.png").?;
     land.init();
 }
 
@@ -111,7 +111,7 @@ pub fn exit(world: *World) void {
 pub fn drawBack() void {
     if (vertexes.items.len != 0) {
         const back = vertexes.items[0..frontLayerStart];
-        _ = zhu.batch.addCommand(mapView);
+        _ = zhu.batch.addCommand(mapImage);
         zhu.batch.vertices.appendSliceAssumeCapacity(back);
     }
 
@@ -289,7 +289,7 @@ test "地图绘制会把前景留到实体之后" {
     frontLayerStart = 0;
 
     const image = zhu.Image{ .view = .{ .id = 1 } };
-    mapView = image.view;
+    mapImage = image;
     appendVertex(.xy(1, 0), image); // back
     frontLayerStart = vertexes.items.len;
     appendVertex(.xy(2, 0), image); // front

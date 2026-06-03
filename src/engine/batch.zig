@@ -35,12 +35,12 @@ pub const Option = struct {
 };
 
 pub const Command = union(enum) {
-    target: Target, // 渲染目标
-    draw: Draw, // 绘制命令
+    target: TargetCommand, // 渲染目标
+    draw: DrawCommand, // 绘制命令
 };
 
-pub const Target = struct { color: Color, pass: RenderPass };
-pub const Draw = struct {
+pub const TargetCommand = struct { color: Color, pass: RenderPass };
+pub const DrawCommand = struct {
     start: u32 = 0, // 起始顶点索引
     end: u32 = 0, // 结束顶点索引
     view: graphics.View = .{}, // 纹理视图
@@ -60,14 +60,12 @@ pub var commands: std.ArrayList(Command) = undefined;
 var vertexHandle: sk.gfx.Buffer = .{};
 var pipeline: sk.gfx.Pipeline = .{};
 var sampler: sk.gfx.Sampler = .{};
-var defaultDraw: Draw = .{};
+var drawState: DrawCommand = .{};
 
 pub fn init(vertex: []Vertex, cmds: []Command) void {
     vertices = .initBuffer(vertex);
     commands = .initBuffer(cmds);
     if (@import("builtin").is_test) return;
-
-    std.log.info("Target: {}, Draw: {}", .{ @sizeOf(Target), @sizeOf(Draw) });
 
     const shaderDesc = shader.quadShaderDesc(sk.gfx.queryBackend());
     pipeline = createQuadPipeline(shaderDesc);
@@ -84,7 +82,7 @@ pub fn beginDraw() void {
     graphics.stats = .{};
     vertices.clearRetainingCapacity();
     commands.clearRetainingCapacity();
-    defaultDraw = .{
+    drawState = .{
         .position = camera.position,
         .scale = camera.scale,
         .size = camera.size,
@@ -108,7 +106,7 @@ fn uploadVertices() void {
     _ = sk.gfx.updateBuffer(vertexHandle, buffer);
 }
 
-pub fn currentCommand() ?*Draw {
+pub fn currentDraw() ?*DrawCommand {
     if (commands.items.len == 0) return null;
     switch (commands.items[commands.items.len - 1]) {
         .draw => |*draw| return draw,
@@ -116,29 +114,17 @@ pub fn currentCommand() ?*Draw {
     }
 }
 
-pub fn previousCommand() ?Draw {
-    var index = commands.items.len;
-    while (index > 0) {
-        index -= 1;
-        switch (commands.items[index]) {
-            .draw => |draw| return draw,
-            else => {},
-        }
-    }
-    return null;
-}
-
-pub fn addCommand(view: graphics.View) *Draw {
+pub fn addCommand(image: Image) *DrawCommand {
     finishCommand();
-    var draw = previousCommand() orelse defaultDraw;
+    var draw = drawState;
     draw.start = @intCast(vertices.items.len);
-    draw.view = view;
+    draw.view = image.view;
     commands.appendAssumeCapacity(.{ .draw = draw });
-    return currentCommand().?;
+    return currentDraw().?;
 }
 
 pub fn finishCommand() void {
-    if (currentCommand()) |cmd| {
+    if (currentDraw()) |cmd| {
         cmd.end = @intCast(vertices.items.len);
     }
 }
@@ -187,8 +173,7 @@ pub fn drawRectBorder(rect: math.Rect, width: f32, c: Color) void {
 
 pub const RectOption = struct { color: Color = .white, radian: f32 = 0 };
 pub fn drawRect(rect: math.Rect, option: RectOption) void {
-    const white = whiteImage.sub(.init(.xy(0, 4), .xy(4, 4)));
-    drawImage(white, rect.min, .{
+    drawImage(whiteImage, rect.min, .{
         .size = rect.size,
         .color = option.color,
         .radian = option.radian,
@@ -279,10 +264,8 @@ pub fn drawNine(image: Image, rect: math.Rect, option: NineOption) void {
 }
 
 pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
-    var cmd = currentCommand() orelse addCommand(image.view);
-    if (cmd.view.id != image.view.id) {
-        cmd = addCommand(image.view); // 纹理视图切换
-    }
+    var cmd = currentDraw() orelse addCommand(image);
+    if (cmd.view.id != image.view.id) cmd = addCommand(image);
 
     const size = option.size orelse image.size;
     var scaledSize = size.mul(option.scale);
@@ -336,7 +319,7 @@ pub fn endDraw() void {
     graphics.commit();
 }
 
-fn doDraw(cmd: Draw, flipY: bool) void {
+fn doDraw(cmd: DrawCommand, flipY: bool) void {
     // 绑定流水线
     sk.gfx.applyPipeline(cmd.pipeline);
 
