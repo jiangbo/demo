@@ -290,31 +290,24 @@ pub fn endDraw() void {
     uploadVertices();
     var activePass = false;
     var flipY = false;
-    var commandCount: usize = 0;
 
     for (commands.items) |cmd| {
         switch (cmd) {
-            .target => |targetCommand| {
+            .target => |target| {
                 if (activePass) graphics.endPass();
-                flipY = targetCommand.pass.target != null and
+                flipY = target.pass.target != null and
                     !sk.gfx.queryFeatures().origin_top_left;
-                graphics.beginPass(targetCommand.color, targetCommand.pass);
+                graphics.beginPass(target.color, target.pass);
                 activePass = true;
             },
-            .draw => |draw| {
-                if (!activePass) @panic("batch draw without target");
-                if (draw.end > draw.start) {
-                    doDraw(draw, flipY);
-                    commandCount += 1;
-                }
-            },
+            .draw => |draw| doDraw(draw, flipY),
         }
     }
 
     if (activePass) graphics.endPass();
 
     graphics.stats.sprite += vertices.items.len;
-    graphics.stats.command += commandCount;
+    graphics.stats.command += commands.items.len;
     graphics.commit();
 }
 
