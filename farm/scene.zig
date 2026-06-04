@@ -150,6 +150,7 @@ fn enterFarm(world: *World) void {
             context.scene.request(.title);
         };
     }
+    zhu.audio.playMusic("assets/audio/01_spring_journey.ogg");
 }
 
 fn drawFarm(world: *World) void {
