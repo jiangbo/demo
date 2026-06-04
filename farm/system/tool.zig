@@ -71,7 +71,7 @@ fn plant(world: *zhu.ecs.World, position: zhu.Vector2) bool {
     return true;
 }
 
-const testMaps = [_]zhu.extend.tiled.Map{@import("../zon/school.zon")};
+const testMaps = [_]zhu.extend.tiled.Map{@import("../zon/map/school.zon")};
 const testTarget = zhu.Vector2.xy(32, 48);
 
 fn resetMouse() void {

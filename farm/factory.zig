@@ -389,7 +389,7 @@ test "地图摆件按底边定位生成实体" {
         .tileSetRefs = &refs,
     };
     tiled.init(&tileSets);
-    defer tiled.init(@import("zon/tile.zon"));
+    defer tiled.init(@import("zon/map/tile.zon"));
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -461,7 +461,7 @@ test "地图摆件优先用碰撞底边作为排序点" {
         .tileSetRefs = &refs,
     };
     tiled.init(&tileSets);
-    defer tiled.init(@import("zon/tile.zon"));
+    defer tiled.init(@import("zon/map/tile.zon"));
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -532,7 +532,7 @@ test "带 anim_id 的地图摆件会创建停止的非循环动画" {
         .tileSetRefs = &refs,
     };
     tiled.init(&tileSets);
-    defer tiled.init(@import("zon/tile.zon"));
+    defer tiled.init(@import("zon/map/tile.zon"));
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();

@@ -129,7 +129,7 @@ pub fn isBlocked(
 
 test "isBlocked 检测碰撞框是否与 solid 格子重叠" {
     zhu.assets.allocator = std.testing.allocator;
-    const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
     enter(&testMaps[0]);
     defer deinit();
 
@@ -148,7 +148,7 @@ test "isBlocked 检测碰撞框是否与 solid 格子重叠" {
 
 test "isBlocked 方向阻挡只在对应方向生效" {
     zhu.assets.allocator = std.testing.allocator;
-    const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
     enter(&testMaps[0]);
     defer deinit();
 
@@ -166,7 +166,7 @@ test "isBlocked 方向阻挡只在对应方向生效" {
 
 test "isBlocked 不会把贴边当成碰撞" {
     zhu.assets.allocator = std.testing.allocator;
-    const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
     enter(&testMaps[0]);
     defer deinit();
 
@@ -181,7 +181,7 @@ test "isBlocked 不会把贴边当成碰撞" {
 
 test "isBlocked 会把地图外当成阻挡" {
     zhu.assets.allocator = std.testing.allocator;
-    const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
     enter(&testMaps[0]);
     defer deinit();
 
@@ -195,7 +195,7 @@ test "isBlocked 会把地图外当成阻挡" {
 
 test "对象 collider 使用精确矩形保留桌子间通道" {
     zhu.assets.allocator = std.testing.allocator;
-    const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
     enter(&testMaps[0]);
     defer deinit();
 
@@ -214,7 +214,7 @@ test "对象 collider 使用精确矩形保留桌子间通道" {
 
 test "markSolidRect 会标记矩形覆盖到的格子" {
     zhu.assets.allocator = std.testing.allocator;
-    const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
     enter(&testMaps[0]);
     defer deinit();
 

@@ -83,7 +83,7 @@ fn appendVertex(position: zhu.Vector2, image: zhu.Image) void {
 
 test "锄地会记录目标格" {
     zhu.assets.allocator = std.testing.allocator;
-    const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
     enter(&testMaps[0]);
     defer exit();
 
@@ -94,7 +94,7 @@ test "锄地会记录目标格" {
 
 test "浇水只会影响已有耕地" {
     zhu.assets.allocator = std.testing.allocator;
-    const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
     enter(&testMaps[0]);
     defer exit();
 
@@ -108,7 +108,7 @@ test "浇水只会影响已有耕地" {
 
 test "目标格有作物时不会锄地" {
     zhu.assets.allocator = std.testing.allocator;
-    const testMaps = [_]tiled.Map{@import("../zon/school.zon")};
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
     enter(&testMaps[0]);
     defer exit();
 

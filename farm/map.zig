@@ -15,10 +15,10 @@ pub const StartOffset = component.map.StartOffset;
 const Trigger = component.map.Trigger;
 
 pub const maps = [_]tiled.Map{
-    @import("zon/school.zon"),
-    @import("zon/town.zon"),
-    @import("zon/exterior.zon"),
-    @import("zon/interior.zon"),
+    @import("zon/map/school.zon"),
+    @import("zon/map/town.zon"),
+    @import("zon/map/exterior.zon"),
+    @import("zon/map/interior.zon"),
 };
 
 const triggerOffset = 8;
@@ -30,7 +30,7 @@ var frontLayerStart: usize = 0;
 var mapImage: zhu.graphics.Image = undefined;
 
 pub fn init() void {
-    tiled.init(@import("zon/tile.zon"));
+    tiled.init(@import("zon/map/tile.zon"));
     mapImage = zhu.getImage("circle.png").?;
     land.init();
 }
@@ -244,7 +244,7 @@ fn appendVertex(position: zhu.Vector2, image: zhu.graphics.Image) void {
 test "gid 图片解析支持单图和集合图块集" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
-    tiled.init(@import("zon/tile.zon"));
+    tiled.init(@import("zon/map/tile.zon"));
 
     const old = data;
     defer data = old;
