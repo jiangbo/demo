@@ -111,8 +111,7 @@ pub fn exit(world: *World) void {
 pub fn drawBack() void {
     if (vertexes.items.len != 0) {
         const back = vertexes.items[0..frontLayerStart];
-        _ = zhu.batch.addCommand(mapImage);
-        zhu.batch.vertices.appendSliceAssumeCapacity(back);
+        zhu.batch.drawVertices(back, mapImage);
     }
 
     land.draw();
@@ -121,7 +120,7 @@ pub fn drawBack() void {
 pub fn drawFront() void {
     if (frontLayerStart == vertexes.items.len) return;
     const front = vertexes.items[frontLayerStart..];
-    zhu.batch.vertices.appendSliceAssumeCapacity(front);
+    zhu.batch.drawVertices(front, null);
 }
 
 pub fn loadObjects(world: *World, layer: *const tiled.Layer) void {

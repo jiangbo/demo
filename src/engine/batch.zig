@@ -99,12 +99,11 @@ pub fn useTarget(color: Color, pass: graphics.RenderPass) void {
 
 fn uploadVertices() void {
     if (vertices.items.len == 0) return;
-
     const buffer = sk.gfx.asRange(vertices.items);
     _ = sk.gfx.updateBuffer(vertexHandle, buffer);
 }
 
-pub fn currentDraw() ?*DrawCommand {
+fn currentDraw() ?*DrawCommand {
     if (commands.items.len == 0) return null;
     switch (commands.items[commands.items.len - 1]) {
         .draw => |*draw| return draw,
@@ -112,12 +111,20 @@ pub fn currentDraw() ?*DrawCommand {
     }
 }
 
-pub fn addCommand(image: Image) *DrawCommand {
+fn addCommand(image: Image) *DrawCommand {
     var draw = drawState;
     draw.start = @intCast(vertices.items.len);
     draw.view = image.view;
     commands.appendAssumeCapacity(.{ .draw = draw });
     return currentDraw().?;
+}
+
+pub fn drawVertices(items: []const Vertex, image: ?Image) void {
+    if (image) |img| {
+        const cmd = currentDraw() orelse addCommand(img);
+        if (cmd.view.id != img.view.id) _ = addCommand(img);
+    }
+    vertices.appendSliceAssumeCapacity(items);
 }
 
 pub fn drawDebug(rect: math.Rect) void {
