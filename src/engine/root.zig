@@ -8,6 +8,7 @@ pub const batch = @import("batch.zig");
 pub const camera = @import("camera.zig");
 pub const math = @import("math.zig");
 pub const input = @import("input.zig");
+pub const ui = @import("ui.zig");
 pub const ecs = @import("ecs.zig");
 pub const text = @import("text.zig");
 pub const extend = struct {
