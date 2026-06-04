@@ -197,7 +197,10 @@ const Sound = struct {
             .samples = samples,
             .channels = @intCast(channels),
         }) catch oom();
-        _ = audio.playSoundOption(response.path, response.index == 1);
+        // 冷加载首次补播只保留 loop，left/right 使用默认值。
+        _ = audio.playSoundOption(response.path, .{
+            .loop = response.index == 1,
+        });
         return std.mem.sliceAsBytes(samples);
     }
 };

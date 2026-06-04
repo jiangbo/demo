@@ -77,8 +77,15 @@ pub fn setMusicState(state: StateEnum) void {
 }
 
 pub const Sound = struct {
+    pub const Option = struct {
+        loop: bool = false,
+        left: f32 = 1,
+        right: f32 = 1,
+    };
     samples: []const f32 = &.{},
     loop: bool = false,
+    left: f32 = 1,
+    right: f32 = 1,
 
     index: usize = 0,
     channels: u8 = 0,
@@ -89,14 +96,14 @@ pub var soundVolume: std.atomic.Value(f32) = .init(1);
 var sounds: []Sound = &.{};
 
 pub fn playSound(path: [:0]const u8) void {
-    _ = playSoundOption(path, false);
+    _ = playSoundOption(path, .{});
 }
 
-pub fn playSoundOption(path: [:0]const u8, loop: bool) ?usize {
+pub fn playSoundOption(path: [:0]const u8, option: Sound.Option) ?usize {
     if (@import("builtin").is_test) return null;
     if (!sk.audio.isvalid()) return null;
 
-    const sound = assets.loadSound(path, loop);
+    const sound = assets.loadSound(path, option.loop);
     if (sound == null) return null;
 
     mutex.lock();
@@ -106,7 +113,9 @@ pub fn playSoundOption(path: [:0]const u8, loop: bool) ?usize {
     sounds[index] = .{
         .samples = sound.?.samples,
         .channels = sound.?.channels,
-        .loop = loop,
+        .loop = option.loop,
+        .left = std.math.clamp(option.left, 0.0, 1.0),
+        .right = std.math.clamp(option.right, 0.0, 1.0),
     };
     return index;
 }
@@ -184,11 +193,14 @@ fn mixSamples(buffer: []f32, sound: *Sound, volume: f32) usize {
 
 fn mixStereoSamples(dstBuffer: []f32, sound: *Sound, volume: f32) usize {
     const srcBuffer = sound.samples[sound.index..];
-    const len = @min(dstBuffer.len, srcBuffer.len);
+    const len = @min(dstBuffer.len, srcBuffer.len) / 2 * 2;
+    const left = volume * sound.left;
+    const right = volume * sound.right;
 
-    for (0..len) |index| {
-        const src = srcBuffer[index] * volume;
-        dstBuffer[index] += src;
+    var index: usize = 0;
+    while (index < len) : (index += 2) {
+        dstBuffer[index] += srcBuffer[index] * left;
+        dstBuffer[index + 1] += srcBuffer[index + 1] * right;
     }
     sound.index += len;
     return len;
@@ -197,11 +209,13 @@ fn mixStereoSamples(dstBuffer: []f32, sound: *Sound, volume: f32) usize {
 fn mixMonoSamples(dstBuffer: []f32, sound: *Sound, volume: f32) usize {
     const srcBuffer = sound.samples[sound.index..];
     const len = @min(dstBuffer.len / 2, srcBuffer.len);
+    const left = volume * sound.left;
+    const right = volume * sound.right;
 
     for (0..len) |index| {
-        const src = srcBuffer[index] * volume;
-        dstBuffer[index * 2] += src;
-        dstBuffer[index * 2 + 1] += src;
+        const src = srcBuffer[index];
+        dstBuffer[index * 2] += src * left;
+        dstBuffer[index * 2 + 1] += src * right;
     }
     sound.index += len;
     return len * 2;
