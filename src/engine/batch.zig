@@ -42,7 +42,7 @@ pub const Command = union(enum) {
 pub const TargetCommand = struct { color: Color, pass: RenderPass };
 pub const DrawCommand = struct {
     start: u32 = 0, // 起始顶点索引
-    end: u32 = 0, // 结束顶点索引
+    end: usize = 0, // 结束顶点索引
     view: graphics.View = .{}, // 纹理视图
     position: Vector2 = .zero, // 相机位置
     scale: Vector2 = .one, // 相机缩放
@@ -92,6 +92,7 @@ pub fn beginDraw() void {
 }
 
 pub fn useTarget(color: Color, pass: graphics.RenderPass) void {
+    if (currentDraw()) |draw| draw.end = vertices.items.len;
     commands.appendAssumeCapacity(.{
         .target = .{ .color = color, .pass = pass },
     });
@@ -112,6 +113,7 @@ fn currentDraw() ?*DrawCommand {
 }
 
 fn addCommand(image: Image) *DrawCommand {
+    if (currentDraw()) |draw| draw.end = vertices.items.len;
     var draw = drawState;
     draw.start = @intCast(vertices.items.len);
     draw.view = image.view;
@@ -286,13 +288,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
 }
 
 pub fn flush() void {
-    var drawEnd: u32 = @intCast(vertices.items.len);
-    var iterator = std.mem.reverseIterator(commands.items);
-    while (iterator.nextPtr()) |cmd| {
-        if (std.meta.activeTag(cmd.*) != .draw) continue;
-        cmd.draw.end = drawEnd;
-        drawEnd = cmd.draw.start;
-    }
+    if (currentDraw()) |draw| draw.end = vertices.items.len;
 
     uploadVertices();
     var activePass = false;
@@ -353,7 +349,7 @@ fn doDraw(cmd: DrawCommand, flipY: bool) void {
     sk.gfx.applyBindings(bindings);
 
     // 绘制
-    sk.gfx.draw(0, 4, cmd.end - cmd.start);
+    sk.gfx.draw(0, 4, @intCast(cmd.end - cmd.start));
 }
 
 fn createQuadPipeline(shaderDesc: sk.gfx.ShaderDesc) sk.gfx.Pipeline {
