@@ -6,6 +6,7 @@ const Position = component.Position;
 const Render = component.render.Render;
 const Sprite = component.render.Sprite;
 const YSort = component.render.YSort;
+const Hidden = component.render.Hidden;
 
 pub fn update(world: *zhu.ecs.World) void {
     var query = world.query(.{ Render, Position, YSort });
@@ -19,7 +20,7 @@ pub fn draw(world: *zhu.ecs.World) void {
     world.sort(Render, lessThan);
 
     const viewport = zhu.camera.viewport();
-    var query = world.queryBy(Render, .{ Position, Sprite }, .{});
+    var query = world.queryBy(Render, .{ Position, Sprite }, .{Hidden});
     while (query.next()) |entity| {
         const render = query.get(entity, Render);
         const position = query.get(entity, Position);

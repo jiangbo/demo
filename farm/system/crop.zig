@@ -4,10 +4,11 @@ const zhu = @import("zhu");
 const factory = @import("../factory.zig");
 const component = @import("../component.zig");
 const Crop = component.farm.Crop;
+const Render = component.render.Render;
 const Sprite = component.render.Sprite;
 
 pub fn update(world: *zhu.ecs.World, delta: f32) void {
-    var query = world.query(.{ Crop, Sprite });
+    var query = world.query(.{ Crop, Sprite, Render });
     while (query.next()) |entity| {
         const crop = query.getPtr(entity, Crop);
         if (crop.stage == .mature) continue;
@@ -17,5 +18,6 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
 
         const sprite = query.getPtr(entity, Sprite);
         sprite.* = factory.advanceCrop(crop);
+        query.getPtr(entity, Render).layer = .actor;
     }
 }

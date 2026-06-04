@@ -33,6 +33,7 @@ pub const render = struct {
     };
 
     pub const YSort = struct {};
+    pub const Hidden = struct {};
 };
 
 pub const map = struct {
