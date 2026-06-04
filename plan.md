@@ -31,8 +31,8 @@ zig build test
 - [x] 06-事件系统.md
 - [x] 07-场景系统.md
 - [x] 08-ECS 在本项目中的落地.md
-- [ ] 09-2D 渲染最小闭环.md
-- [ ] 10-Renderer 与 GLRenderer.md
+- [x] 09-2D 渲染最小闭环.md
+- [x] 10-Renderer 与 GLRenderer.md
 - [ ] 11-精灵批处理与着色器.md
 - [ ] 12-光照与后处理.md
 - [ ] 13-资源系统.md
