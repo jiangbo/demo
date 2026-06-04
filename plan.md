@@ -35,9 +35,9 @@ zig build test
 - [x] 10-Renderer 与 GLRenderer.md
 - [x] 11-精灵批处理与着色器.md
 - [x] 12-光照与后处理.md
-- [ ] 13-资源系统.md
-- [ ] 14-字体与文本渲染.md
-- [ ] 15-输入系统.md
+- [x] 13-资源系统.md
+- [x] 14-字体与文本渲染.md
+- [x] 15-输入系统.md
 - [ ] 16-音频系统.md
 - [ ] 17-UI 框架基础.md
 - [ ] 18-UI 布局与预设.md
@@ -61,6 +61,9 @@ zig build test
 
 1. 不做 C++ 的后处理光照管线。Zig 项目不实现多 pass Lighting/Emissive/Bloom/Composite，
   光照效果优先使用纹理、全屏覆盖色和简单 sprite 叠加来模拟。
+2. 不做 C++ 的 `ResourceManager`、`resource_mapping.json` 和资源语义 key 映射层。
+3. 不做 C++ 的 FreeType/HarfBuzz 动态字体管线和 TextRenderer 调试面板。
+4. 不做 C++ 的 `InputManager`、`config/input.json` 动作映射和 Input Debug 面板。
 
 ## 待后续完成
 
