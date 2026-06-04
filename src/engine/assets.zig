@@ -123,7 +123,7 @@ pub fn loadIcon(path: Path, handle: u64, handler: IconHandler) void {
             const icon = c.stbImage.loadFromMemory(response.data);
             defer c.stbImage.unload(icon);
             handler(response.index, icon);
-            return oomDupe(u8, icon.data);
+            return &.{};
         }
     }.callback);
 }
@@ -250,7 +250,13 @@ pub const File = struct {
 
     pub fn load(path: Path, index: u64, handler: Handler) *FileCache {
         const entry = cache.getOrPut(allocator, id(path)) catch oom();
-        if (entry.found_existing) return entry.value_ptr;
+        if (entry.found_existing) {
+            const value = entry.value_ptr;
+            if (value.index != index or value.handler != handler) {
+                std.debug.panic("asset path conflict: {s}", .{path});
+            }
+            return entry.value_ptr;
+        }
 
         entry.value_ptr.* = .{ .index = index, .handler = handler };
 
