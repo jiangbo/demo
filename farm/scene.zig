@@ -137,7 +137,7 @@ fn enterFarm(world: *World) void {
     const loadSlot = context.scene.takeLoadSlot();
     if (loadSlot == null) context.time.reset();
 
-    const spawn = map.enter(world, .town, initialTargetId);
+    const spawn = map.enter(world, .exterior, initialTargetId);
     factory.spawnPlayer(world, spawn);
     ui.toolbar.enter();
 

@@ -174,7 +174,7 @@ fn drawMapPanel(world: *World) void {
     )) return;
 
     const loaded = map.land.tiles.len > 0;
-    _ = imgui.igText("Current: %s", mapName(map.current).ptr);
+    _ = imgui.igText("Current: %s", @tagName(map.current).ptr);
     _ = imgui.igText("Loaded: %s", boolText(loaded).ptr);
     _ = imgui.igText("Map size: %u x %u", map.data.width, map.data.height);
     _ = imgui.igText(
@@ -265,12 +265,6 @@ fn countLandTiles() LandStats {
     return result;
 }
 
-fn mapName(value: component.map.Id) [:0]const u8 {
-    return switch (value) {
-        .school => "school",
-        .town => "town",
-    };
-}
 
 fn actorFacingName(value: component.actor.Facing) [:0]const u8 {
     return switch (value) {

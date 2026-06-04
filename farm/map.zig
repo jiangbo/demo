@@ -17,6 +17,8 @@ const Trigger = component.map.Trigger;
 pub const maps = [_]tiled.Map{
     @import("zon/school.zon"),
     @import("zon/town.zon"),
+    @import("zon/exterior.zon"),
+    @import("zon/interior.zon"),
 };
 
 const triggerOffset = 8;
@@ -69,7 +71,7 @@ pub fn enter(world: *World, id: Id, targetId: i32) zhu.Vector2 {
     }
 
     zhu.camera.bound = data.size();
-    const result = spawn orelse zhu.Vector2.xy(100, 300);
+    const result = spawn orelse zhu.Vector2.xy(311, 168);
     zhu.camera.directFollow(result);
 
     return result;
