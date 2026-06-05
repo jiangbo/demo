@@ -7,35 +7,61 @@ const text = @import("text.zig");
 const audio = @import("audio.zig");
 const assets = @import("assets.zig");
 
+const Vector2 = math.Vector2;
+
 pub const Button = struct {
     pub const State = enum { normal, hover, pressed };
-    pub const Option = struct {
-        nine: ?batch.NineOption = null,
+    pub const Style = struct {
+        image: ?graphics.ImageId = null,
+        source: ?math.Rect = null,
+        text: text.Option = .{},
     };
 
     rect: math.Rect,
     event: u8,
     label: []const u8 = "",
-    option: Option = .{},
-    normal: Visual = .{},
-    hover: Visual = .{},
-    pressed: Visual = .{},
-};
+    nine: ?batch.NineOption = null,
+    normal: Style = .{},
+    hover: Style = .{},
+    pressed: Style = .{},
 
-pub const Visual = struct {
-    image: ?graphics.ImageId = null,
-    textColor: ?graphics.Color = null,
+    /// 根据状态返回对应样式
+    pub fn style(self: Button, state: State) Style {
+        return switch (state) {
+            .normal => self.normal,
+            .hover => self.hover,
+            .pressed => self.pressed,
+        };
+    }
+
+    /// 绘制按钮背景图
+    pub fn drawImage(self: Button, state: State, offset: Vector2) void {
+        const visual = self.style(state);
+        var image = assets.getImage(visual.image orelse return).?;
+        if (visual.source) |source| image = image.sub(source);
+
+        const rect = self.rect.move(offset);
+        if (self.nine) |nine| batch.drawNine(image, rect, nine) else {
+            batch.drawImage(image, rect.min, .{ .size = rect.size });
+        }
+    }
+
+    /// 绘制按钮文字
+    pub fn drawText(self: Button, state: State, offset: Vector2) void {
+        if (self.label.len == 0) return;
+
+        var option = self.style(state).text;
+        const rect = self.rect.move(offset);
+        if (option.alignment == null) option.alignment = .center;
+        text.drawString(self.label, rect.center(), option);
+    }
 };
 
 pub const Menu = struct {
-    pub const Option = struct {
-        hoverSound: ?[:0]const u8 = null,
-        clickSound: ?[:0]const u8 = null,
-    };
-
     position: math.Vector2 = .zero,
     buttons: []const Button = &.{},
-    option: Option = .{},
+    hoverSound: ?[:0]const u8 = null,
+    clickSound: ?[:0]const u8 = null,
     hover: ?usize = null,
     pressed: ?usize = null,
 
@@ -66,7 +92,7 @@ pub const Menu = struct {
         };
 
         if (hover != previous) {
-            if (self.option.hoverSound) |sound| audio.playSound(sound);
+            if (self.hoverSound) |sound| audio.playSound(sound);
         }
 
         if (input.mouse.pressed(.LEFT)) self.pressed = hover;
@@ -74,7 +100,7 @@ pub const Menu = struct {
             defer self.pressed = null;
             if (self.pressed) |pressed| {
                 if (pressed == hover) {
-                    if (self.option.clickSound) |sound| audio.playSound(sound);
+                    if (self.clickSound) |sound| audio.playSound(sound);
                     return self.buttons[hover].event;
                 }
             }
@@ -85,7 +111,10 @@ pub const Menu = struct {
 
     pub fn draw(self: Menu) void {
         for (self.buttons, 0..) |button, index| {
-            self.drawButton(button, index);
+            button.drawImage(self.buttonState(index), self.position);
+        }
+        for (self.buttons, 0..) |button, index| {
+            button.drawText(self.buttonState(index), self.position);
         }
     }
 
@@ -99,32 +128,5 @@ pub const Menu = struct {
         }
 
         return .normal;
-    }
-
-    fn drawButton(self: Menu, button: Button, index: usize) void {
-        const state = self.buttonState(index);
-        const visual = switch (state) {
-            .normal => button.normal,
-            .hover => button.hover,
-            .pressed => button.pressed,
-        };
-        const rect = button.rect.move(self.position);
-
-        if (visual.image) |imageId| {
-            const image = assets.getImage(imageId).?;
-            if (button.option.nine) |nine| {
-                batch.drawNine(image, rect, nine);
-            } else {
-                batch.drawImage(image, rect.min, .{
-                    .size = rect.size,
-                });
-            }
-        }
-
-        if (button.label.len == 0) return;
-        text.drawString(button.label, rect.center(), .{
-            .color = visual.textColor,
-            .alignment = .center,
-        });
     }
 };
