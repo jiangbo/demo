@@ -223,7 +223,7 @@ pub const Tile = struct {
         return false;
     }
 
-    pub fn getProperty(self: Object, name: []const u8, T: type) ?T {
+    pub fn getProperty(self: Tile, name: []const u8, T: type) ?T {
         for (self.properties) |property| {
             if (property.is(name)) return property.value.get(T);
         }

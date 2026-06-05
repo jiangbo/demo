@@ -214,13 +214,8 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
 
         // 带 tile_flag 标记的瓦片设置方向碰撞
         const tile = data.getTileByGid(globalId) orelse continue;
-        if (!tile.hasProperty("tile_flag")) continue;
-        for (tile.properties) |prop| {
-            if (!prop.is("tile_flag")) continue;
-            const flag = prop.value.get([]const u8) orelse break;
-            const tileIndex = data.worldToTileIndex(world).?;
-            physics.setTileFlag(tileIndex, flag);
-            break;
+        if (tile.getProperty("tile_flag", []const u8)) |flag| {
+            physics.setTileFlag(index, flag);
         }
     }
 }
