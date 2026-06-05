@@ -119,6 +119,16 @@ pub const Menu = struct {
         }
     }
 
+    pub fn drawText(self: Menu, index: usize, value: []const u8) void {
+        if (value.len == 0) return;
+
+        const button = self.buttons[index];
+        var option = button.style(self.buttonState(index)).text;
+        if (option.alignment == null) option.alignment = .center;
+        const position = button.rect.move(self.position).center();
+        text.drawString(value, position, option);
+    }
+
     pub fn buttonState(self: Menu, index: usize) Button.State {
         if (self.isDisabled(index)) return .disabled;
 
