@@ -33,10 +33,6 @@ pub fn update(world: *World, delta: f32) void {
     if (ui.save_slot.active) {
         // 槽位选择是顶层覆盖层，底下的标题或暂停菜单都不再吃输入。
         if (context.scene.current == .farm) system.updatePause(world, delta);
-        if (pauseKey) {
-            ui.save_slot.cancel();
-            return;
-        }
         ui.save_slot.update(world);
         if (ui.save_slot.takeClosePauseAfterLoad()) ui.pause.active = false;
         applyScene(world);
