@@ -95,22 +95,19 @@ pub const Menu = struct {
             return null;
         };
 
-        if (hover != previous) {
-            if (self.hoverSound) |sound| audio.playSound(sound);
-        }
+        if (hover != previous) if (self.hoverSound) |sound| {
+            audio.playSound(sound);
+        };
 
         if (input.mouse.pressed(.LEFT)) self.pressed = hover;
-        if (input.mouse.released(.LEFT)) {
-            defer self.pressed = null;
-            if (self.pressed) |pressed| {
-                if (pressed == hover) {
-                    if (self.clickSound) |sound| audio.playSound(sound);
-                    return self.buttons[hover].event;
-                }
-            }
-        }
+        if (!input.mouse.released(.LEFT)) return null;
+        defer self.pressed = null;
 
-        return null;
+        const pressed = self.pressed orelse return null;
+        if (pressed != hover) return null;
+
+        if (self.clickSound) |sound| audio.playSound(sound);
+        return self.buttons[hover].event;
     }
 
     pub fn draw(self: Menu) void {
@@ -126,8 +123,8 @@ pub const Menu = struct {
         if (self.isDisabled(index)) return .disabled;
 
         if (self.pressed) |pressed| {
-            const same = pressed == index and self.hover == index;
-            if (same) return .pressed;
+            const active = pressed == index and self.hover == index;
+            if (active) return .pressed;
         }
 
         if (self.hover) |hover| if (hover == index) return .hover;
