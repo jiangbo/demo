@@ -2,8 +2,6 @@ const std = @import("std");
 const sk = @import("sokol");
 const math = @import("math.zig");
 
-pub const KeyCode = sk.app.Keycode;
-
 pub fn handle(ev: *const sk.app.Event) void {
     const keyCode: u16 = @intCast(@intFromEnum(ev.key_code));
     const buttonCode: u16 = @intCast(@intFromEnum(ev.mouse_button));
@@ -44,64 +42,65 @@ pub fn clear() void {
 }
 
 pub const key = struct {
-    pub const Code = KeyCode;
+    pub const Code = sk.app.Keycode;
 
     pub var changed: bool = false;
     var lastState: std.StaticBitSet(512) = .initEmpty();
     var state: std.StaticBitSet(512) = .initEmpty();
 
-    pub fn held(keyCode: KeyCode) bool {
+    pub fn held(keyCode: Code) bool {
         return state.isSet(@intCast(@intFromEnum(keyCode)));
     }
 
-    pub fn pressed(keyCode: KeyCode) bool {
+    pub fn pressed(keyCode: Code) bool {
         const code: usize = @intCast(@intFromEnum(keyCode));
         return !lastState.isSet(code) and state.isSet(code);
     }
 
-    pub fn released(keyCode: KeyCode) bool {
+    pub fn released(keyCode: Code) bool {
         const code: usize = @intCast(@intFromEnum(keyCode));
         return lastState.isSet(code) and !state.isSet(code);
     }
 
-    pub fn anyHeld(keys: []const KeyCode) bool {
+    pub fn anyHeld(keys: []const Code) bool {
         for (keys) |k| if (held(k)) return true;
         return false;
     }
 
-    pub fn anyPressed(keys: []const KeyCode) bool {
+    pub fn anyPressed(keys: []const Code) bool {
         for (keys) |k| if (pressed(k)) return true;
         return false;
     }
 
-    pub fn anyReleased(keys: []const KeyCode) bool {
+    pub fn anyReleased(keys: []const Code) bool {
         for (keys) |k| if (released(k)) return true;
         return false;
     }
 };
 
 pub const mouse = struct {
+    pub const Button = sk.app.Mousebutton;
     pub var changed: bool = false;
     pub var raw: math.Vector = .zero;
     pub var scrollY: f32 = 0;
     var lastState: std.StaticBitSet(3) = .initEmpty();
     var state: std.StaticBitSet(3) = .initEmpty();
 
-    pub fn held(button: sk.app.Mousebutton) bool {
+    pub fn held(button: Button) bool {
         return state.isSet(@intCast(@intFromEnum(button)));
     }
 
-    pub fn pressed(button: sk.app.Mousebutton) bool {
+    pub fn pressed(button: Button) bool {
         const code: usize = @intCast(@intFromEnum(button));
         return !lastState.isSet(code) and state.isSet(code);
     }
 
-    pub fn released(button: sk.app.Mousebutton) bool {
+    pub fn released(button: Button) bool {
         const code: usize = @intCast(@intFromEnum(button));
         return lastState.isSet(code) and !state.isSet(code);
     }
 
-    pub fn anyReleased(buttons: []const sk.app.Mousebutton) bool {
+    pub fn anyReleased(buttons: []const Button) bool {
         for (buttons) |button| if (released(button)) return true;
         return false;
     }
