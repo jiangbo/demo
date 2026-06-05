@@ -8,7 +8,6 @@ const map = @import("map.zig");
 const render = @import("system/render.zig");
 const save = @import("save.zig");
 const system = @import("system.zig");
-const title = @import("title.zig");
 const ui = @import("ui.zig");
 
 const World = zhu.ecs.World;
@@ -22,7 +21,6 @@ const initialTargetId: i32 = -1;
 pub fn init(world: *World) void {
     std.log.info("scene init current={s}", .{@tagName(context.scene.current)});
     system.init();
-    title.init();
     enterScene(world, context.scene.current);
 }
 
@@ -69,7 +67,7 @@ pub fn update(world: *World, delta: f32) void {
 
     const scaled = delta * context.time.scale;
     switch (context.scene.current) {
-        .title => title.update(scaled),
+        .title => ui.title.update(scaled),
         .farm => updateFarm(world, scaled),
     }
 
@@ -78,7 +76,7 @@ pub fn update(world: *World, delta: f32) void {
 
 pub fn draw(world: *World) void {
     switch (context.scene.current) {
-        .title => title.draw(),
+        .title => ui.title.draw(),
         .farm => drawFarm(world),
     }
     zhu.camera.mode = .window;
@@ -114,21 +112,17 @@ fn applyScene(world: *World) void {
     const current = context.scene.current;
     if (previous == current) return;
 
-    exitScene(world, previous);
+    switch (previous) {
+        .title => ui.title.exit(),
+        .farm => map.exit(world),
+    }
     enterScene(world, current);
 }
 
 fn enterScene(world: *World, next: context.scene.Scene) void {
     switch (next) {
-        .title => title.enter(),
+        .title => ui.title.enter(),
         .farm => enterFarm(world),
-    }
-}
-
-fn exitScene(world: *World, previous: context.scene.Scene) void {
-    switch (previous) {
-        .title => title.exit(),
-        .farm => map.exit(world),
     }
 }
 
