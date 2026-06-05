@@ -53,6 +53,7 @@ pub fn searchChar(code: u32) *const Char {
 }
 
 pub const Option = struct {
+    offset: Vector2 = .zero, // 文字位置偏移
     scale: Vector2 = .one, // 基于默认字号的缩放
     color: graphics.Color = .white, // 文字的颜色
     max: f32 = std.math.floatMax(f32), // 最大宽度，超过换行
@@ -79,7 +80,7 @@ pub fn drawString(text: String, position: Vector2, option: Option) void {
     if (text.len == 0) return;
     const scale = option.scale.scale(fontScale);
     const height = font.lineHeight * scale.y;
-    var pos = position;
+    var pos = position.add(option.offset);
     if (option.alignment) |a| { // 计算文字的对齐
         pos = pos.sub(measure(text, option).mul(a));
     }
