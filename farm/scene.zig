@@ -50,13 +50,13 @@ pub fn update(world: *World, delta: f32) void {
             ui.pause.active = false;
             return;
         }
-        ui.pause.update(world);
+        ui.pause.update();
         applyScene(world);
         return;
     }
 
     if (context.scene.current == .farm and pauseKey) {
-        ui.pause.active = true;
+        ui.pause.enter(false);
         return;
     }
 
@@ -112,6 +112,7 @@ fn applyScene(world: *World) void {
     const current = context.scene.current;
     if (previous == current) return;
 
+    ui.pause.active = false;
     switch (previous) {
         .title => ui.title.exit(),
         .farm => map.exit(world),

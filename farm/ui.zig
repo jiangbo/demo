@@ -2,7 +2,6 @@ const zhu = @import("zhu");
 
 pub const debug = @import("ui/debug.zig");
 pub const dialog = @import("ui/dialog.zig");
-pub const pause = @import("ui/pause.zig");
 pub const save_slot = @import("ui/save_slot.zig");
 pub const toolbar = @import("ui/toolbar.zig");
 
@@ -10,11 +9,75 @@ const context = @import("context.zig");
 const light = @import("system/light.zig");
 const target = @import("system/target.zig");
 const time = @import("system/time.zig");
+const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
+
+pub const pause = struct {
+    const panelSize: zhu.Vector2 = .{ .x = 208, .y = 344 };
+    pub var active: bool = false;
+    var menu: zhu.widget.Menu = menus[2];
+
+    pub fn enter(disable: bool) void {
+        active = true;
+        menu.disabled = if (disable) &.{ 1, 2 } else &.{};
+        menu.position = zhu.window.size.sub(panelSize).scale(0.5);
+        menu.reset();
+    }
+
+    pub fn update() void {
+        if (menu.update()) |event| switch (event) {
+            0 => active = false, // 继续游戏
+            1 => save_slot.enter(.pauseSave), // 选择槽位后保存
+            2 => save_slot.enter(.pauseLoad), // 选择槽位后读取
+            3 => context.scene.request(.title), // 返回标题
+            4 => context.time.scale -= 0.1, // 减速
+            5 => context.time.scale += 0.1, // 加速
+            6 => zhu.audio.changeMusicVolume(-0.1), // 减小音乐
+            7 => zhu.audio.changeMusicVolume(0.1), // 增大音乐
+            8 => zhu.audio.changeSoundVolume(-0.1), // 减小音效
+            9 => zhu.audio.changeSoundVolume(0.1), // 增加音效
+            else => unreachable,
+        };
+    }
+
+    pub fn draw() void {
+        // 全屏覆盖
+        const overlay = zhu.Rect.init(.zero, zhu.window.size);
+        zhu.batch.drawRect(overlay, .{ .color = .gray(0, 0.35) });
+
+        // 暂停面板背景
+        const back = zhu.Rect.init(menu.position, panelSize);
+        zhu.batch.drawRect(back, .{ .color = .gray(0, 0.45) });
+
+        menu.draw();
+
+        for (0..3) |index| {
+            var buffer: [40]u8 = undefined;
+            const string: []const u8 = switch (index) {
+                0 => zhu.format(&buffer, "Speed {d:.2}x", .{
+                    context.time.scale,
+                }),
+                1 => zhu.format(&buffer, "Music {d:.0}%", .{
+                    zhu.audio.musicVolume.load(.acquire) * 100,
+                }),
+                2 => zhu.format(&buffer, "SFX {d:.0}%", .{
+                    zhu.audio.soundVolume.load(.acquire) * 100,
+                }),
+                else => unreachable,
+            };
+
+            const y = 212 + @as(f32, @floatFromInt(index)) * 38;
+            const rect = zhu.Rect.init(.xy(24, y), .xy(160, 32));
+            const pos = rect.move(menu.position).center();
+            zhu.text.drawString(string, pos, .{
+                .alignment = .center,
+            });
+        }
+    }
+};
 
 pub const title = struct {
     const MenuEvent = enum(u8) { start, load, exit };
 
-    const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
     var mainMenu: zhu.widget.Menu = menus[0];
     var pauseMenu: zhu.widget.Menu = menus[1];
     var background: zhu.Image = undefined;
@@ -74,7 +137,6 @@ pub const title = struct {
 pub fn init() void {
     debug.init();
     title.init();
-    pause.init();
     save_slot.init();
 }
 
