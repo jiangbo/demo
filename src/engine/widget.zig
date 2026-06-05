@@ -10,7 +10,7 @@ const assets = @import("assets.zig");
 const Vector2 = math.Vector2;
 
 pub const Button = struct {
-    pub const State = enum { normal, hover, pressed };
+    pub const State = enum { normal, hover, pressed, disabled };
     pub const Style = struct {
         image: ?graphics.ImageId = null,
         source: ?math.Rect = null,
@@ -24,6 +24,7 @@ pub const Button = struct {
     normal: Style = .{},
     hover: Style = .{},
     pressed: Style = .{},
+    disabled: Style = .{},
 
     /// 根据状态返回对应样式
     pub fn style(self: Button, state: State) Style {
@@ -31,6 +32,7 @@ pub const Button = struct {
             .normal => self.normal,
             .hover => self.hover,
             .pressed => self.pressed,
+            .disabled => self.disabled,
         };
     }
 
@@ -62,6 +64,7 @@ pub const Menu = struct {
     buttons: []const Button = &.{},
     hoverSound: ?[:0]const u8 = null,
     clickSound: ?[:0]const u8 = null,
+    disabled: []const usize = &.{},
     hover: ?usize = null,
     pressed: ?usize = null,
 
@@ -82,6 +85,7 @@ pub const Menu = struct {
         const previous = self.hover;
 
         self.hover = blk: for (self.buttons, 0..) |button, index| {
+            if (self.isDisabled(index)) continue;
             const rect = button.rect.move(self.position);
             if (rect.contains(window.mouse)) break :blk index;
         } else null;
@@ -119,14 +123,19 @@ pub const Menu = struct {
     }
 
     pub fn buttonState(self: Menu, index: usize) Button.State {
+        if (self.isDisabled(index)) return .disabled;
+
         if (self.pressed) |pressed| {
-            if (pressed == index and self.hover == index) return .pressed;
+            const same = pressed == index and self.hover == index;
+            if (same) return .pressed;
         }
 
-        if (self.hover) |hover| {
-            if (hover == index) return .hover;
-        }
-
+        if (self.hover) |hover| if (hover == index) return .hover;
         return .normal;
+    }
+
+    fn isDisabled(self: Menu, index: usize) bool {
+        for (self.disabled) |d| if (d == index) return true;
+        return false;
     }
 };
