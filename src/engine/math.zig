@@ -76,6 +76,11 @@ pub fn ceilAway(value: f32) f32 {
     return if (value > 0) @ceil(value) else @floor(value);
 }
 
+pub fn isEnumRange(e: anytype, min: @TypeOf(e), max: @TypeOf(e)) bool {
+    const v = @intFromEnum(e);
+    return v >= @intFromEnum(min) and v <= @intFromEnum(max);
+}
+
 pub const Vector = Vector2;
 pub const Vector2 = extern struct {
     x: f32 = 0,

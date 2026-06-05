@@ -29,9 +29,9 @@ pub fn init(world: *World) void {
 pub fn deinit() void {}
 
 pub fn update(world: *World, delta: f32) void {
-    if (zhu.input.key.pressed(.X)) drawDebug = !drawDebug;
+    if (zhu.key.pressed(.X)) drawDebug = !drawDebug;
 
-    const pauseKey = zhu.input.key.anyPressed(&.{ .ESCAPE, .P });
+    const pauseKey = zhu.key.anyPressed(&.{ .ESCAPE, .P });
     if (ui.save_slot.active) {
         // 槽位选择是顶层覆盖层，底下的标题或暂停菜单都不再吃输入。
         if (context.scene.current == .farm) system.updatePause(world, delta);

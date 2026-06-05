@@ -89,7 +89,7 @@ pub fn update(world: *zhu.ecs.World) void {
         return;
     }
 
-    const mousePos = zhu.window.mousePosition;
+    const mousePos = zhu.window.mouse;
     const panel = panelRect();
 
     for (0..save.slotCount) |index| {
@@ -98,7 +98,7 @@ pub fn update(world: *zhu.ecs.World) void {
 
         const enabled = slotEnabled(index);
         updateButton(index, if (enabled) .hover else .disabled);
-        if (enabled and zhu.window.mouse.released(.LEFT)) {
+        if (enabled and zhu.mouse.released(.LEFT)) {
             chooseSlot(world, index);
         }
         return;
@@ -107,7 +107,7 @@ pub fn update(world: *zhu.ecs.World) void {
     const backIndex = save.slotCount;
     if (backRect(panel).contains(mousePos)) {
         updateButton(backIndex, .hover);
-        if (zhu.window.mouse.released(.LEFT)) cancel();
+        if (zhu.mouse.released(.LEFT)) cancel();
         return;
     }
 
@@ -179,13 +179,13 @@ fn saveAndClose(world: *zhu.ecs.World, slot: usize) void {
 }
 
 fn updateConfirm(world: *zhu.ecs.World, slot: usize) void {
-    const mousePos = zhu.window.mousePosition;
+    const mousePos = zhu.window.mouse;
     const panel = confirmRect();
 
     const yesIndex = save.slotCount + 1;
     if (confirmYesRect(panel).contains(mousePos)) {
         updateButton(yesIndex, .hover);
-        if (zhu.window.mouse.released(.LEFT)) {
+        if (zhu.mouse.released(.LEFT)) {
             confirmSlot = null;
             saveAndClose(world, slot);
         }
@@ -195,7 +195,7 @@ fn updateConfirm(world: *zhu.ecs.World, slot: usize) void {
     const noIndex = save.slotCount + 2;
     if (confirmNoRect(panel).contains(mousePos)) {
         updateButton(noIndex, .hover);
-        if (zhu.window.mouse.released(.LEFT)) cancel();
+        if (zhu.mouse.released(.LEFT)) cancel();
         return;
     }
 
@@ -268,7 +268,7 @@ fn updateButton(index: usize, fallback: ButtonState) void {
         zhu.audio.playSound("assets/audio/Fantasy_UI (1).ogg");
     }
     hover = index;
-    buttonState = if (zhu.window.mouse.held(.LEFT)) .pressed else fallback;
+    buttonState = if (zhu.mouse.held(.LEFT)) .pressed else fallback;
 }
 
 fn buttonVisual(index: usize, enabled: bool) ButtonState {

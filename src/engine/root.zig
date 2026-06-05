@@ -11,6 +11,9 @@ pub const input = @import("input.zig");
 pub const ui = @import("ui.zig");
 pub const ecs = @import("ecs.zig");
 pub const text = @import("text.zig");
+pub const key = input.key;
+pub const mouse = input.mouse;
+
 pub const extend = struct {
     pub const tiled = @import("extend/tiled.zig");
 };
@@ -23,6 +26,7 @@ pub const Rect = math.Rect;
 pub const Color = graphics.Color;
 pub const Animation = graphics.Animation;
 pub const EnumAnimation = graphics.EnumAnimation;
+pub const isEnumRange = math.isEnumRange;
 
 pub const Id = assets.Id;
 pub fn id(comptime path: []const u8) assets.Id {

@@ -76,20 +76,20 @@ pub fn active() ?*Item {
 }
 
 pub fn update() void {
-    if (zhu.input.key.pressed(._0)) slotIndex = slots.len - 1;
-    const key1: usize = @intFromEnum(zhu.input.KeyCode._1);
+    if (zhu.key.pressed(._0)) slotIndex = slots.len - 1;
+    const key1: usize = @intFromEnum(zhu.key.Code._1);
     for (0..slots.len - 1) |key| {
-        const keyCode: zhu.input.KeyCode = @enumFromInt(key1 + key);
-        if (zhu.input.key.pressed(keyCode)) slotIndex = @intCast(key);
+        const keyCode: zhu.key.Code = @enumFromInt(key1 + key);
+        if (zhu.key.pressed(keyCode)) slotIndex = @intCast(key);
     }
 
     const start = panelPosition.add(.square(zon.panelPadding));
     for (0..slots.len) |i| {
         const position = slotPosition(@floatFromInt(i), start);
         const rect = zhu.Rect.init(position, .square(zon.slotSize));
-        if (!rect.contains(zhu.window.mousePosition)) continue;
+        if (!rect.contains(zhu.window.mouse)) continue;
 
-        if (zhu.window.mouse.released(.LEFT)) {
+        if (zhu.mouse.released(.LEFT)) {
             slotIndex = i;
             zhu.audio.playSound("assets/audio/UI_button08.ogg");
             break;

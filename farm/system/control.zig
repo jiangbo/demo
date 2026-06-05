@@ -29,10 +29,10 @@ pub fn update(world: *zhu.ecs.World) void {
 
 fn readDirection() zhu.Vector2 {
     var direction: zhu.Vector2 = .zero;
-    if (zhu.input.key.anyHeld(&.{ .A, .LEFT })) direction.x -= 1;
-    if (zhu.input.key.anyHeld(&.{ .D, .RIGHT })) direction.x += 1;
-    if (zhu.input.key.anyHeld(&.{ .W, .UP })) direction.y -= 1;
-    if (zhu.input.key.anyHeld(&.{ .S, .DOWN })) direction.y += 1;
+    if (zhu.key.anyHeld(&.{ .A, .LEFT })) direction.x -= 1;
+    if (zhu.key.anyHeld(&.{ .D, .RIGHT })) direction.x += 1;
+    if (zhu.key.anyHeld(&.{ .W, .UP })) direction.y -= 1;
+    if (zhu.key.anyHeld(&.{ .S, .DOWN })) direction.y += 1;
 
     if (direction.length2() > 1) return direction.normalize();
     return direction;
@@ -46,12 +46,15 @@ fn facingFromDirection(direction: zhu.Vector2) Facing {
 }
 
 fn resetInput() void {
-    zhu.input.key.state = .initEmpty();
-    zhu.input.key.lastState = .initEmpty();
+    zhu.input.clear();
 }
 
-fn setKey(keyCode: zhu.input.KeyCode) void {
-    zhu.input.key.state.set(@intCast(@intFromEnum(keyCode)));
+fn setKey(keyCode: zhu.key.Code) void {
+    var ev = zhu.window.Event{
+        .type = .KEY_DOWN,
+        .key_code = keyCode,
+    };
+    zhu.input.handle(&ev);
 }
 
 test "玩家控制会把方向键写入速度" {

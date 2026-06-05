@@ -15,7 +15,7 @@ pub fn update(world: *zhu.ecs.World) void {
     const playerPos = world.get(player, Position).?;
 
     const playerTile = map.data.worldToTilePosition(playerPos);
-    const mouseWorld = zhu.camera.toWorld(zhu.window.mousePosition);
+    const mouseWorld = zhu.camera.toWorld(zhu.window.mouse);
     const mouseTile = map.data.worldToTilePosition(mouseWorld);
 
     const outOfRangeX = @abs(mouseTile.x - playerTile.x) > tileRange;

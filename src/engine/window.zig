@@ -147,17 +147,15 @@ export fn windowInit() void {
     call(root, "init", .{});
 }
 
-pub var mouseMoved: bool = false;
-pub var mousePosition: math.Vector = .zero;
+pub var mouse: math.Vector = .zero;
 pub var resized: bool = false;
 
 export fn windowEvent(event: ?*const Event) void {
     if (event) |ev| {
-        input.event(ev);
+        input.handle(ev);
         if (ev.type == .MOUSE_MOVE) {
-            mouseMoved = true;
-            const position = input.mousePosition.sub(viewRect.min);
-            mousePosition = position.mul(size).div(viewRect.size);
+            const position = input.mouse.raw.sub(viewRect.min);
+            mouse = position.mul(size).div(viewRect.size);
         } else if (ev.type == .RESIZED) resized = true;
 
         call(root, "event", .{ev});
@@ -239,11 +237,7 @@ export fn windowFrame() void {
     if (currentSmoothTime > 0.1) currentSmoothTime = 0.1;
     if (resized) computeViewRect();
     call(root, "frame", .{currentSmoothTime});
-    key.lastState = key.state;
-    mouse.lastState = mouse.state;
-    input.anyRelease = false;
-    input.mouseScrollY = 0;
-    mouseMoved = false;
+    input.update();
 
     // 执行更新和渲染消耗的时间，单位为纳秒
     usedDelta = timer.read() - start;
@@ -298,10 +292,10 @@ pub fn drawDebugInfo() void {
         // Debug 信息本身的次数也应该统计进去
         graphics.stats.text + debutTextCount,
         countingAllocator.used,
-        input.mousePosition.x,
-        input.mousePosition.y,
-        mousePosition.x,
-        mousePosition.y,
+        input.mouse.raw.x,
+        input.mouse.raw.y,
+        mouse.x,
+        mouse.y,
         camera.position.x,
         camera.position.y,
         camera.scale.x,
@@ -390,10 +384,6 @@ pub fn exit() void {
     sk.app.requestQuit();
 }
 
-pub fn isAnyRelease() bool {
-    return input.anyRelease;
-}
-
 pub const Cursor = sk.app.MouseCursor;
 pub const useMouseIcon = sk.app.setMouseCursor;
 pub const CursorDesc = extern struct {
@@ -447,6 +437,3 @@ pub fn drawCenter(str: text.String, y: f32, option: text.Option) void {
     const pos = size.mul(.init(0.5, y)).sub(.xy(textSize.x / 2, 0));
     text.drawString(str, pos, option);
 }
-
-pub const key = input.key;
-pub const mouse = input.mouse;

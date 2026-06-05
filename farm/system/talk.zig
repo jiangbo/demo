@@ -17,7 +17,7 @@ pub fn update(world: *zhu.ecs.World) void {
     if (activeEntity) |target| checkDistance(world, target);
 
     // 按 F 键触发交互
-    if (!zhu.input.key.pressed(.F)) return;
+    if (!zhu.key.pressed(.F)) return;
 
     if (activeEntity) |target| {
         // 有激活对话，推进下一句
@@ -70,18 +70,16 @@ fn tryInteract(world: *zhu.ecs.World) void {
     });
 }
 
-fn resetInput() void {
-    zhu.input.key.state = .initEmpty();
-    zhu.input.key.lastState = .initEmpty();
-}
-
-fn pressKey(keyCode: zhu.input.KeyCode) void {
-    zhu.input.key.state.set(@intCast(@intFromEnum(keyCode)));
+fn pressKey(keyCode: zhu.key.Code) void {
+    var ev = zhu.window.Event{
+        .type = .KEY_DOWN,
+        .key_code = keyCode,
+    };
+    zhu.input.handle(&ev);
 }
 
 test "按 F 会向最近的 NPC 发起对话事件" {
-    resetInput();
-    defer resetInput();
+    zhu.input.clear();
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -109,8 +107,7 @@ test "按 F 会向最近的 NPC 发起对话事件" {
 }
 
 test "对话激活后按 F 会发送推进事件" {
-    resetInput();
-    defer resetInput();
+    zhu.input.clear();
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -132,8 +129,7 @@ test "对话激活后按 F 会发送推进事件" {
 }
 
 test "当前对话目标太远时会发送关闭事件" {
-    resetInput();
-    defer resetInput();
+    zhu.input.clear();
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();

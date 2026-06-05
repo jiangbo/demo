@@ -13,7 +13,7 @@ const Target = component.ui.Target;
 const event = component.event;
 
 pub fn update(world: *zhu.ecs.World) void {
-    if (!zhu.window.mouse.pressed(.LEFT)) return;
+    if (!zhu.mouse.pressed(.LEFT)) return;
 
     const player = world.getIdentity(Player).?;
     const target = world.get(player, Target).?;
@@ -75,14 +75,16 @@ const testMaps = [_]zhu.extend.tiled.Map{@import("../zon/map/school.zon")};
 const testTarget = zhu.Vector2.xy(32, 48);
 
 fn resetMouse() void {
-    zhu.window.mouse.state = .initEmpty();
-    zhu.window.mouse.lastState = .initEmpty();
+    zhu.input.clear();
 }
 
 fn clickMouse() void {
     resetMouse();
-    const leftMouseButton = 0;
-    zhu.window.mouse.state.set(leftMouseButton);
+    var ev = zhu.window.Event{
+        .type = .MOUSE_DOWN,
+        .mouse_button = .LEFT,
+    };
+    zhu.input.handle(&ev);
 }
 
 fn setActiveItem(item: component.item.ItemEnum, count: u32) void {

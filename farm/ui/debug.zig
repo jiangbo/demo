@@ -51,7 +51,7 @@ pub fn update(world: *World, delta: f32) void {
         .delta_time = delta,
     });
 
-    if (zhu.input.key.pressed(.F6)) {
+    if (zhu.key.pressed(.F6)) {
         context.debug.showGame = !context.debug.showGame;
     }
 
@@ -264,7 +264,6 @@ fn countLandTiles() LandStats {
     }
     return result;
 }
-
 
 fn actorFacingName(value: component.actor.Facing) [:0]const u8 {
     return switch (value) {

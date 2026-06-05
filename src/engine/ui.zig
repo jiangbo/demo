@@ -57,7 +57,7 @@ pub const Menu = struct {
 
         self.hover = blk: for (self.buttons, 0..) |button, index| {
             const rect = button.rect.move(self.position);
-            if (rect.contains(window.mousePosition)) break :blk index;
+            if (rect.contains(window.mouse)) break :blk index;
         } else null;
 
         const hover = self.hover orelse {

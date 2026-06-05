@@ -33,9 +33,9 @@ pub fn update() ?u8 {
     const menu = zon[active];
     const state = &states[active];
 
-    if (window.mouseMoved) {
+    if (zhu.mouse.changed) {
         for (menu.areas, 0..) |area, i| {
-            if (area.contains(window.mousePosition)) {
+            if (area.contains(window.mouse)) {
                 state.current = i;
             }
         }
@@ -52,7 +52,7 @@ pub fn update() ?u8 {
     var confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
     if (window.isMouseRelease(.LEFT)) {
         for (menu.areas, 0..) |area, i| {
-            if (area.contains(window.mousePosition)) {
+            if (area.contains(window.mouse)) {
                 state.current = i;
                 confirm = true;
             }

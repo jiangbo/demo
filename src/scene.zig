@@ -143,8 +143,8 @@ fn drawDebugInfo() void {
         // Debug 信息本身的次数也应该统计进去
         camera.textDrawCount() + debutTextCount,
         window.countingAllocator.used,
-        window.mousePosition.x,
-        window.mousePosition.y,
+        window.mouse.x,
+        window.mouse.y,
         player.position.x,
         player.position.y,
         camera.position.x,

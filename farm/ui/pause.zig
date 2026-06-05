@@ -74,7 +74,7 @@ pub fn update(world: *zhu.ecs.World) void {
 
     const panelPos = zhu.window.size.sub(zon.size).scale(0.5);
     const panel = zhu.Rect.init(panelPos, zon.size);
-    const mousePos = zhu.window.mousePosition;
+    const mousePos = zhu.window.mouse;
 
     for (zon.buttons, 0..) |button, index| {
         if (getButtonState(index) == .disabled) continue; // 禁用按钮不响应交互
@@ -197,10 +197,10 @@ fn updateButton(index: usize) void {
         zhu.audio.playSound("assets/audio/Fantasy_UI (1).ogg");
     }
     hover = index;
-    const pressed = zhu.window.mouse.held(.LEFT);
+    const pressed = zhu.mouse.held(.LEFT);
     buttonState = if (pressed) .pressed else .hover;
 
-    if (zhu.window.mouse.released(.LEFT)) {
+    if (zhu.mouse.released(.LEFT)) {
         zhu.audio.playSound("assets/audio/Fantasy_UI (10).ogg");
         switch (index) {
             0 => active = false, // 继续游戏

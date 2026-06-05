@@ -4,37 +4,51 @@ const math = @import("math.zig");
 
 pub const KeyCode = sk.app.Keycode;
 
-pub var mousePosition: math.Vector = .zero;
-pub var mouseScrollY: f32 = 0;
-pub var anyRelease: bool = false;
+pub fn handle(ev: *const sk.app.Event) void {
+    const keyCode: u16 = @intCast(@intFromEnum(ev.key_code));
+    const buttonCode: u16 = @intCast(@intFromEnum(ev.mouse_button));
 
-pub fn event(ev: *const sk.app.Event) void {
-    const keyCode: usize = @intCast(@intFromEnum(ev.key_code));
-    const buttonCode: usize = @intCast(@intFromEnum(ev.mouse_button));
+    if (math.isEnumRange(ev.type, .KEY_DOWN, .KEY_UP)) key.changed = true;
+    if (math.isEnumRange(ev.type, .MOUSE_DOWN, .MOUSE_LEAVE)) {
+        mouse.changed = true;
+    }
+
     switch (ev.type) {
         .KEY_DOWN => key.state.set(keyCode),
-        .KEY_UP => {
-            key.state.unset(keyCode);
-            anyRelease = true;
-        },
-        .MOUSE_MOVE => mousePosition = .xy(ev.mouse_x, ev.mouse_y),
+        .KEY_UP => key.state.unset(keyCode),
+        .MOUSE_MOVE => mouse.raw = .xy(ev.mouse_x, ev.mouse_y),
         .MOUSE_DOWN => mouse.state.set(buttonCode),
-        .MOUSE_UP => {
-            mouse.state.unset(buttonCode);
-            anyRelease = true;
-        },
-        .MOUSE_SCROLL => mouseScrollY += ev.scroll_y,
-        .ICONIFIED, .UNFOCUSED => {
-            key.state = .initEmpty();
-            mouse.state = .initEmpty();
-        },
+        .MOUSE_UP => mouse.state.unset(buttonCode),
+        .MOUSE_SCROLL => mouse.scrollY += ev.scroll_y,
+        .ICONIFIED, .UNFOCUSED => clear(),
         else => {},
     }
 }
 
+pub fn update() void {
+    key.lastState = key.state;
+    mouse.lastState = mouse.state;
+    mouse.scrollY = 0;
+    key.changed = false;
+    mouse.changed = false;
+}
+
+pub fn clear() void {
+    key.state = .initEmpty();
+    key.lastState = .initEmpty();
+    mouse.state = .initEmpty();
+    mouse.lastState = .initEmpty();
+    mouse.scrollY = 0;
+    key.changed = false;
+    mouse.changed = false;
+}
+
 pub const key = struct {
-    pub var lastState: std.StaticBitSet(512) = .initEmpty();
-    pub var state: std.StaticBitSet(512) = .initEmpty();
+    pub const Code = KeyCode;
+
+    pub var changed: bool = false;
+    var lastState: std.StaticBitSet(512) = .initEmpty();
+    var state: std.StaticBitSet(512) = .initEmpty();
 
     pub fn held(keyCode: KeyCode) bool {
         return state.isSet(@intCast(@intFromEnum(keyCode)));
@@ -67,8 +81,11 @@ pub const key = struct {
 };
 
 pub const mouse = struct {
-    pub var lastState: std.StaticBitSet(3) = .initEmpty();
-    pub var state: std.StaticBitSet(3) = .initEmpty();
+    pub var changed: bool = false;
+    pub var raw: math.Vector = .zero;
+    pub var scrollY: f32 = 0;
+    var lastState: std.StaticBitSet(3) = .initEmpty();
+    var state: std.StaticBitSet(3) = .initEmpty();
 
     pub fn held(button: sk.app.Mousebutton) bool {
         return state.isSet(@intCast(@intFromEnum(button)));

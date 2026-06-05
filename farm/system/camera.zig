@@ -18,7 +18,7 @@ pub fn update(world: *zhu.ecs.World) void {
 }
 
 fn updateScale(position: Position) void {
-    const scroll = zhu.input.mouseScrollY;
+    const scroll = zhu.mouse.scrollY;
     if (scroll == 0) return;
 
     const delta = if (scroll > 0) scaleStep else -scaleStep;
