@@ -61,6 +61,18 @@ pub const Button = struct {
 
 pub const Menu = struct {
     position: math.Vector2 = .zero,
+    overlay: ?graphics.Color = null,
+    panel: struct {
+        size: math.Vector2 = .zero,
+        color: ?graphics.Color = null,
+        image: ?graphics.ImageId = null,
+        source: ?math.Rect = null,
+    } = .{},
+    title: struct {
+        text: []const u8 = "",
+        position: math.Vector2 = .zero,
+        option: text.Option = .{ .alignment = .center },
+    } = .{},
     buttons: []const Button = &.{},
     hoverSound: ?[:0]const u8 = null,
     clickSound: ?[:0]const u8 = null,
@@ -79,6 +91,10 @@ pub const Menu = struct {
     pub fn reset(self: *Menu) void {
         self.hover = null;
         self.pressed = null;
+    }
+
+    pub fn centerInWindow(self: *Menu) void {
+        self.position = window.size.sub(self.panel.size).scale(0.5);
     }
 
     pub fn update(self: *Menu) ?u8 {
@@ -111,9 +127,22 @@ pub const Menu = struct {
     }
 
     pub fn draw(self: Menu) void {
+        if (self.overlay) |overlay| {
+            const rect: math.Rect = .init(.zero, window.size);
+            batch.drawRect(rect, .{ .color = overlay });
+        }
+        self.drawPanel();
+
         for (self.buttons, 0..) |button, index| {
             button.drawImage(self.buttonState(index), self.position);
         }
+
+        const title = self.title;
+        if (title.text.len != 0) {
+            const position = self.position.add(title.position);
+            text.drawString(title.text, position, title.option);
+        }
+
         for (self.buttons, 0..) |button, index| {
             button.drawText(self.buttonState(index), self.position);
         }
@@ -123,6 +152,17 @@ pub const Menu = struct {
         var button = self.buttons[index];
         button.label = value;
         button.drawText(self.buttonState(index), self.position);
+    }
+
+    fn drawPanel(self: Menu) void {
+        const rect = math.Rect.init(self.position, self.panel.size);
+        if (self.panel.color) |color| {
+            batch.drawRect(rect, .{ .color = color });
+        }
+
+        var image = assets.getImage(self.panel.image orelse return).?;
+        if (self.panel.source) |source| image = image.sub(source);
+        batch.drawImage(image, rect.min, .{ .size = rect.size });
     }
 
     pub fn buttonState(self: Menu, index: usize) Button.State {

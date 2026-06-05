@@ -93,6 +93,7 @@ pub const title = struct {
     }
 
     pub fn enter() void {
+        zhu.camera.scale = .one;
         zhu.camera.mode = .window;
         zhu.audio.playMusic("assets/audio/02_spring_fairy_tale.ogg");
         mainMenu.reset();
