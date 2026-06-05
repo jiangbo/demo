@@ -18,7 +18,7 @@ pub fn handle(ev: *const sk.app.Event) void {
         .MOUSE_DOWN => mouse.state.set(buttonCode),
         .MOUSE_UP => mouse.state.unset(buttonCode),
         .MOUSE_SCROLL => mouse.scrollY += ev.scroll_y,
-        .ICONIFIED, .UNFOCUSED => clear(),
+        .ICONIFIED, .UNFOCUSED => reset(),
         else => {},
     }
 }
@@ -31,7 +31,7 @@ pub fn update() void {
     mouse.changed = false;
 }
 
-pub fn clear() void {
+pub fn reset() void {
     key.state = .initEmpty();
     key.lastState = .initEmpty();
     mouse.state = .initEmpty();

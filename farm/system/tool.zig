@@ -75,7 +75,7 @@ const testMaps = [_]zhu.extend.tiled.Map{@import("../zon/map/school.zon")};
 const testTarget = zhu.Vector2.xy(32, 48);
 
 fn resetMouse() void {
-    zhu.input.clear();
+    zhu.input.reset();
 }
 
 fn clickMouse() void {

@@ -46,7 +46,7 @@ fn facingFromDirection(direction: zhu.Vector2) Facing {
 }
 
 fn resetInput() void {
-    zhu.input.clear();
+    zhu.input.reset();
 }
 
 fn setKey(keyCode: zhu.key.Code) void {

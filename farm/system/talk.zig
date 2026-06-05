@@ -79,7 +79,7 @@ fn pressKey(keyCode: zhu.key.Code) void {
 }
 
 test "按 F 会向最近的 NPC 发起对话事件" {
-    zhu.input.clear();
+    zhu.input.reset();
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -107,7 +107,7 @@ test "按 F 会向最近的 NPC 发起对话事件" {
 }
 
 test "对话激活后按 F 会发送推进事件" {
-    zhu.input.clear();
+    zhu.input.reset();
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -129,7 +129,7 @@ test "对话激活后按 F 会发送推进事件" {
 }
 
 test "当前对话目标太远时会发送关闭事件" {
-    zhu.input.clear();
+    zhu.input.reset();
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
