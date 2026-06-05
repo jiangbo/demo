@@ -28,7 +28,7 @@ pub fn init() void {
     const area: zhu.Rect = .init(.xy(16, 16), .xy(32, 32));
     zhu.batch.whiteImage = zhu.batch.circleImage.sub(area);
 
-    const fontImage = zhu.assets.loadImage("assets/font.png");
+    const fontImage = zhu.assets.loadImage("assets/font.png", .zero);
     zhu.text.init(fontImage, @import("zon/font.zon"));
 
     zhu.window.bindAndUseMouseIcon("assets/farm-rpg/UI/cursor.png", .{});
