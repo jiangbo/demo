@@ -63,6 +63,30 @@ pub const Map = struct {
         return self.tilePositionToIndex(tilePos);
     }
 
+    /// 返回矩形覆盖到的地图内瓦片，范围会按地图边界裁剪
+    pub fn tilesInRect(self: Map, rect: Rect) TileRectIter {
+        std.debug.assert(rect.size.y > 0 and rect.size.x > 0);
+
+        const rawMin = self.worldToTilePosition(rect.min);
+        const max = rect.max().sub(.square(math.epsilon));
+        const rawMax = self.worldToTilePosition(max);
+
+        const width: i32 = @intCast(self.width);
+        const height: i32 = @intCast(self.height);
+
+        const min = Position.xy(@max(rawMin.x, 0), @max(rawMin.y, 0));
+        const maxX = @min(rawMax.x, width - 1);
+        const maxY = @min(rawMax.y, height - 1);
+        if (min.x > maxX or min.y > maxY) return .{};
+
+        return .{
+            .width = width,
+            .min = min,
+            .max = .xy(maxX, maxY),
+            .current = min,
+        };
+    }
+
     pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {
         std.debug.assert(gid != 0);
         for (self.tileSetRefs) |ref| {
@@ -108,6 +132,25 @@ pub const Map = struct {
                 tile.animation,
             );
         } else return null;
+    }
+};
+
+pub const TileRectIter = struct {
+    width: i32 = 0,
+    min: Position = .xy(0, 0),
+    max: Position = .xy(-1, -1),
+    current: Position = .xy(0, 0),
+
+    pub fn next(self: *TileRectIter) ?usize {
+        if (self.current.y > self.max.y) return null;
+
+        const i = self.current.y * self.width + self.current.x;
+        self.current.x += 1;
+        if (self.current.x > self.max.x) {
+            self.current.x = self.min.x;
+            self.current.y += 1;
+        }
+        return @intCast(i);
     }
 };
 pub const TileSetRef = struct { id: u32, firstGid: u32, max: u32 };
