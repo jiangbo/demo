@@ -128,7 +128,7 @@ pub fn drawFront() void {
 pub fn loadObjects(world: *World, layer: *const tiled.Layer) void {
     if (layer.isNamed("collider")) {
         for (layer.objects) |object| {
-            physics.addSolidRect(.init(object.position, object.size));
+            physics.addSolidRect(object.rect());
         }
         return;
     }
@@ -169,7 +169,7 @@ fn loadObject(world: *World, object: tiled.Object) void {
         const startOffset = std.meta.stringToEnum(StartOffset, start);
 
         const trigger: Trigger = .{
-            .rect = .init(object.position, object.size),
+            .rect = object.rect(),
             .selfId = object.getProperty("self_id", i32).?,
             .targetId = object.getProperty("target_id", i32).?,
             .targetMap = targetMap,

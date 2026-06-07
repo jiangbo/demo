@@ -297,6 +297,15 @@ pub const Object = struct {
     properties: []const Property, // 物体自定义属性
     extend: ObjectExtend, // 扩展信息
 
+    pub fn topLeft(self: Object) Vector2 {
+        if (self.gid == 0) return self.position;
+        return self.position.addY(-self.size.y);
+    }
+
+    pub fn rect(self: Object) Rect {
+        return .init(self.topLeft(), self.size);
+    }
+
     pub fn hasProperty(self: Object, name: []const u8) bool {
         for (self.properties) |property| {
             if (property.is(name)) return true;
