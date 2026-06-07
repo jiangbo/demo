@@ -87,6 +87,10 @@ pub const Map = struct {
         };
     }
 
+    pub fn grid(self: *const Map, comptime T: type, data: []const T) Grid(T) {
+        return .{ .map = self, .data = data };
+    }
+
     pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {
         std.debug.assert(gid != 0);
         for (self.tileSetRefs) |ref| {
@@ -135,6 +139,175 @@ pub const Map = struct {
     }
 };
 
+pub fn Scan(comptime T: type) type {
+    return struct {
+        dest: f32 = 0,
+        touch: f32 = 0,
+        state: State = .{},
+
+        const State = struct {
+            data: []const T = &.{},
+            index: i32 = 0,
+            remaining: u32 = 0,
+            step: i32 = 1,
+        };
+
+        pub fn reversed(self: @This()) @This() {
+            var scan = self;
+            if (scan.state.remaining > 0) {
+                const last: i32 = @intCast(scan.state.remaining - 1);
+                scan.state.index += last * scan.state.step;
+                scan.state.step = -scan.state.step;
+            }
+            return scan;
+        }
+
+        pub fn next(self: *@This()) ?T {
+            if (self.state.remaining == 0) return null;
+
+            const index = self.state.index;
+            self.state.index += self.state.step;
+            self.state.remaining -= 1;
+
+            std.debug.assert(index >= 0);
+            const i: usize = @intCast(index);
+            std.debug.assert(i < self.state.data.len);
+            return self.state.data[i];
+        }
+    };
+}
+
+pub fn Grid(comptime T: type) type {
+    return struct {
+        map: *const Map,
+        data: []const T = &.{},
+
+        const Self = @This();
+        pub const TileScan = Scan(T);
+
+        const Edge = struct {
+            fixed: i32,
+            touch: f32,
+        };
+
+        pub fn tileAt(self: *const Self, pos: Position) ?T {
+            self.assertValid();
+            const index = self.map.tilePositionToIndex(pos) orelse return null;
+            return self.data[index];
+        }
+
+        /// 扫描 X 轴移动后的前沿瓦片，返回顺序固定为从上到下
+        pub fn scanX(self: *const Self, rect: Rect, dx: f32) TileScan {
+            self.assertValid();
+            std.debug.assert(rect.size.x > 0 and rect.size.y > 0);
+
+            const dest = rect.min.x + dx;
+            if (dx == 0) return .{ .dest = dest };
+
+            const r0 = tileCoord(rect.min.y, self.map.tileSize.y);
+            const bottom = rect.min.y + rect.size.y - math.epsilon;
+            const r1 = tileCoord(bottom, self.map.tileSize.y);
+            const rows = clipRange(r0, r1, self.map.height);
+
+            const edge: Edge = if (dx > 0) right_edge: {
+                // 向右时固定目标右边缘所在列。
+                const right = dest + rect.size.x - math.epsilon;
+                const col = tileCoord(right, self.map.tileSize.x);
+                const left = @as(f32, @floatFromInt(col)) *
+                    self.map.tileSize.x;
+                break :right_edge .{
+                    .fixed = col,
+                    .touch = left - rect.size.x,
+                };
+            } else left_edge: {
+                // 向左时固定目标左边缘所在列。
+                const col = tileCoord(dest, self.map.tileSize.x);
+                const right = (@as(f32, @floatFromInt(col)) + 1) *
+                    self.map.tileSize.x;
+                break :left_edge .{ .fixed = col, .touch = right };
+            };
+
+            const remaining = if (inRange(edge.fixed, self.map.width))
+                rows.count
+            else
+                0;
+            const width: i32 = @intCast(self.map.width);
+            const index = if (remaining > 0)
+                rows.first * width + edge.fixed
+            else
+                0;
+            return .{
+                .dest = dest,
+                .touch = edge.touch,
+                .state = .{
+                    .data = self.data,
+                    .index = index,
+                    .remaining = remaining,
+                    .step = width,
+                },
+            };
+        }
+
+        /// 扫描 Y 轴移动后的前沿瓦片，返回顺序固定为从左到右
+        pub fn scanY(self: *const Self, rect: Rect, dy: f32) TileScan {
+            self.assertValid();
+            std.debug.assert(rect.size.x > 0 and rect.size.y > 0);
+
+            const dest = rect.min.y + dy;
+            if (dy == 0) return .{ .dest = dest };
+
+            const c0 = tileCoord(rect.min.x, self.map.tileSize.x);
+            const right = rect.min.x + rect.size.x - math.epsilon;
+            const c1 = tileCoord(right, self.map.tileSize.x);
+            const cols = clipRange(c0, c1, self.map.width);
+
+            const edge: Edge = if (dy > 0) bottom_edge: {
+                // 向下时固定目标下边缘所在行。
+                const targetBottom = dest + rect.size.y - math.epsilon;
+                const row = tileCoord(targetBottom, self.map.tileSize.y);
+                const top = @as(f32, @floatFromInt(row)) * self.map.tileSize.y;
+                break :bottom_edge .{
+                    .fixed = row,
+                    .touch = top - rect.size.y,
+                };
+            } else top_edge: {
+                // 向上时固定目标上边缘所在行。
+                const row = tileCoord(dest, self.map.tileSize.y);
+                const bottom = (@as(f32, @floatFromInt(row)) + 1) *
+                    self.map.tileSize.y;
+                break :top_edge .{ .fixed = row, .touch = bottom };
+            };
+
+            const remaining = if (inRange(edge.fixed, self.map.height))
+                cols.count
+            else
+                0;
+            const width: i32 = @intCast(self.map.width);
+            const index = if (remaining > 0)
+                edge.fixed * width + cols.first
+            else
+                0;
+            return .{
+                .dest = dest,
+                .touch = edge.touch,
+                .state = .{
+                    .data = self.data,
+                    .index = index,
+                    .remaining = remaining,
+                },
+            };
+        }
+
+        fn assertValid(self: *const Self) void {
+            std.debug.assert(self.map.tileSize.x > 0);
+            std.debug.assert(self.map.tileSize.y > 0);
+            const total = @as(usize, self.map.width) *
+                @as(usize, self.map.height);
+            std.debug.assert(self.data.len >= total);
+        }
+    };
+}
+
 pub const TileRectIter = struct {
     width: i32 = 0,
     min: Position = .xy(0, 0),
@@ -153,6 +326,37 @@ pub const TileRectIter = struct {
         return @intCast(i);
     }
 };
+
+const Range = struct {
+    first: i32 = 0,
+    count: u32 = 0,
+};
+
+fn clipRange(first: i32, last: i32, limit: u32) Range {
+    if (last < first or limit == 0) return .{};
+    if (last < 0) return .{};
+
+    const limitI: i32 = @intCast(limit);
+    if (first >= limitI) return .{};
+
+    const clippedFirst = @max(first, 0);
+    const clippedLast = @min(last, limitI - 1);
+    return .{
+        .first = clippedFirst,
+        .count = @intCast(clippedLast - clippedFirst + 1),
+    };
+}
+
+fn inRange(index: i32, limit: u32) bool {
+    if (index < 0) return false;
+    return @as(u32, @intCast(index)) < limit;
+}
+
+fn tileCoord(value: f32, size: f32) i32 {
+    std.debug.assert(size > 0);
+    return @intFromFloat(@floor(value / size));
+}
+
 pub const TileSetRef = struct { id: u32, firstGid: u32, max: u32 };
 
 pub const LayerEnum = enum { image, tile, object };

@@ -63,7 +63,7 @@ pub fn addSolidRect(rect: zhu.Rect) void {
 pub fn addSolidObject(object: tiled.Object) void {
     const tile = map.getTileByGid(object.gid) orelse return;
     const group = tile.objectGroup orelse return;
-    const topLeft = object.position.addY(-object.size.y);
+    const topLeft = object.topLeft();
 
     for (group.objects) |local| {
         const position = topLeft.add(local.position);
@@ -82,10 +82,8 @@ pub fn isBlocked(
     const rect = zhu.Rect.init(pos, collider.size);
 
     var iter = map.tilesInRect(rect);
-    if (iter.outside) return true;
-
-    while (iter.next()) |tile| {
-        const flags = tiles[tile.index];
+    while (iter.next()) |index| {
+        const flags = tiles[index];
         if (flags == Block.SOLID) return true;
         // 从北面进入（向南移动），遇到 BLOCK_N 被挡
         if (delta.y > 0 and flags & Block.N != 0) return true;
@@ -148,20 +146,6 @@ test "isBlocked 不会把贴边当成碰撞" {
     try std.testing.expect(!isBlocked(.xy(22, 36), collider, d));
     try std.testing.expect(!isBlocked(.xy(36, 26), collider, d));
     try std.testing.expect(isBlocked(.xy(23, 36), collider, d));
-}
-
-test "isBlocked 会把地图外当成阻挡" {
-    zhu.assets.allocator = std.testing.allocator;
-    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
-    enter(&testMaps[0]);
-    defer deinit();
-
-    const collider: Collider = .{ .size = .xy(4, 4) };
-    const d = zhu.Vector2.xy(1, 1);
-
-    try std.testing.expect(isBlocked(.xy(-1, 16), collider, d));
-    try std.testing.expect(isBlocked(.xy(16, -1), collider, d));
-    try std.testing.expect(isBlocked(map.size().sub(.xy(3, 3)), collider, d));
 }
 
 test "对象 collider 使用精确矩形保留桌子间通道" {
