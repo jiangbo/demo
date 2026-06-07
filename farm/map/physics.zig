@@ -55,29 +55,6 @@ pub fn setTileFlag(index: usize, flag: []const u8) void {
     if (std.mem.containsAtLeast(u8, flag, 1, "BLOCK_E")) tiles[index] |= Block.E;
 }
 
-pub fn markSolidRect(rect: zhu.Rect) void {
-    if (rect.size.x <= 0 or rect.size.y <= 0) return;
-
-    const tileMin = map.worldToTilePosition(rect.min);
-    const max = rect.max().sub(.square(zhu.math.epsilon));
-    const tileMax = map.worldToTilePosition(max);
-
-    var y = tileMin.y;
-    while (y <= tileMax.y) : (y += 1) {
-        var x = tileMin.x;
-        while (x <= tileMax.x) : (x += 1) {
-            const index = map.tilePositionToIndex(.xy(x, y));
-            tiles[index orelse continue] = Block.SOLID;
-        }
-    }
-}
-
-pub fn markSolidTile(position: zhu.Vector2) void {
-    const index = map.worldToTileIndex(position).?;
-    const tilePosition = map.tileIndexToWorld(index);
-    markSolidRect(.init(tilePosition, map.tileSize));
-}
-
 pub fn addSolidRect(rect: zhu.Rect) void {
     if (rect.size.x <= 0 or rect.size.y <= 0) return;
     areas.append(zhu.assets.allocator, rect) catch @panic("physics oom");
@@ -104,23 +81,17 @@ pub fn isBlocked(
     const pos = position.add(collider.offset);
     const rect = zhu.Rect.init(pos, collider.size);
 
-    const tileMin = map.worldToTilePosition(rect.min);
-    const max = rect.max().sub(.square(zhu.math.epsilon));
-    const tileMax = map.worldToTilePosition(max);
+    var iter = map.tilesInRect(rect);
+    if (iter.outside) return true;
 
-    var y = tileMin.y;
-    while (y <= tileMax.y) : (y += 1) {
-        var x = tileMin.x;
-        while (x <= tileMax.x) : (x += 1) {
-            const index = map.tilePositionToIndex(.xy(x, y));
-            const flags = tiles[index orelse return true];
-            if (flags == Block.SOLID) return true;
-            // 从北面进入（向南移动），遇到 BLOCK_N 被挡
-            if (delta.y > 0 and flags & Block.N != 0) return true;
-            if (delta.y < 0 and flags & Block.S != 0) return true;
-            if (delta.x > 0 and flags & Block.W != 0) return true;
-            if (delta.x < 0 and flags & Block.E != 0) return true;
-        }
+    while (iter.next()) |tile| {
+        const flags = tiles[tile.index];
+        if (flags == Block.SOLID) return true;
+        // 从北面进入（向南移动），遇到 BLOCK_N 被挡
+        if (delta.y > 0 and flags & Block.N != 0) return true;
+        if (delta.y < 0 and flags & Block.S != 0) return true;
+        if (delta.x > 0 and flags & Block.W != 0) return true;
+        if (delta.x < 0 and flags & Block.E != 0) return true;
     }
 
     for (areas.items) |solid| if (rect.intersect(solid)) return true;
@@ -210,16 +181,4 @@ test "对象 collider 使用精确矩形保留桌子间通道" {
 
     try std.testing.expect(!isBlocked(.xy(96, 144), collider, d));
     try std.testing.expect(isBlocked(.xy(96, 120), collider, d));
-}
-
-test "markSolidRect 会标记矩形覆盖到的格子" {
-    zhu.assets.allocator = std.testing.allocator;
-    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
-    enter(&testMaps[0]);
-    defer deinit();
-
-    markSolidRect(.init(.xy(32, 32), .xy(16, 16)));
-
-    try std.testing.expect(tiles[map.worldToTileIndex(.xy(40, 40)).?] == Block.SOLID);
-    try std.testing.expect(tiles[map.worldToTileIndex(.xy(24, 40)).?] == 0);
 }
