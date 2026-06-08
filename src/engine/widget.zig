@@ -106,24 +106,27 @@ pub const Menu = struct {
             if (rect.contains(window.mouse)) break :blk index;
         } else null;
 
-        const hover = self.hover orelse {
-            self.pressed = null;
-            return null;
-        };
+        if (self.hover) |hover| {
+            if (hover != previous) if (self.hoverSound) |sound| {
+                audio.playSound(sound);
+            };
 
-        if (hover != previous) if (self.hoverSound) |sound| {
-            audio.playSound(sound);
-        };
+            if (input.mouse.pressed(.LEFT)) self.pressed = hover;
+        }
 
-        if (input.mouse.pressed(.LEFT)) self.pressed = hover;
         if (!input.mouse.released(.LEFT)) return null;
         defer self.pressed = null;
 
         const pressed = self.pressed orelse return null;
+        const hover = self.hover orelse return null;
         if (pressed != hover) return null;
 
         if (self.clickSound) |sound| audio.playSound(sound);
         return self.buttons[hover].event;
+    }
+
+    pub fn wantsMouse(self: Menu) bool {
+        return self.hover != null or self.pressed != null;
     }
 
     pub fn draw(self: Menu) void {
