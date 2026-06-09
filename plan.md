@@ -39,8 +39,8 @@ zig build test
 - [x] 14-字体与文本渲染.md
 - [x] 15-输入系统.md
 - [x] 16-音频系统.md
-- [ ] 17-UI 框架基础.md
-- [ ] 18-UI 布局与预设.md
+- [x] 17-UI 框架基础.md
+- [x] 18-UI 布局与预设.md
 - [ ] 19-空间索引.md
 - [ ] 20-碰撞解析与移动.md
 - [ ] 21-地图数据管线.md
@@ -64,12 +64,13 @@ zig build test
 2. 不做 C++ 的 `ResourceManager`、`resource_mapping.json` 和资源语义 key 映射层。
 3. 不做 C++ 的 FreeType/HarfBuzz 动态字体管线和 TextRenderer 调试面板。
 4. 不做 C++ 的完整 `InputManager` 和 Input Debug 面板。
-5. 不做 C++ 的完整 UIManager/UIElement/UIInteractive 框架。
+5. 不做 C++ 的完整 UI 框架、布局和 preset 系统。
 
 ## 待后续完成
 
 遇到未实现跳过的功能，记录到这里。
 
+- UI：考虑做 ZON 文件监听，实时刷新 ZON 中的数据。
 - BUG：exterior ↔ town 之间的连通触发器位置和大小还需调整。
 - BUG：对话只能对话动物，交互范围不对，隔很远也能触发对话。
 - 31-对话气泡：对话框没有引入图片资源（CPP 使用九宫格图片背景）。
