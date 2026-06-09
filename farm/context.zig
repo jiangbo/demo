@@ -109,7 +109,6 @@ pub const input = struct {
         toolbar10,
     };
 
-    // 本帧输入占用；每帧开始清空，避免污染下一帧。
     pub var mouseCaptured: bool = false;
 
     const Entry = struct { type: Command, value: []const zhu.key.Code };

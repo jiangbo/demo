@@ -63,7 +63,8 @@ zig build test
   光照效果优先使用纹理、全屏覆盖色和简单 sprite 叠加来模拟。
 2. 不做 C++ 的 `ResourceManager`、`resource_mapping.json` 和资源语义 key 映射层。
 3. 不做 C++ 的 FreeType/HarfBuzz 动态字体管线和 TextRenderer 调试面板。
-4. 不做 C++ 的 `InputManager`、`config/input.json` 动作映射和 Input Debug 面板。
+4. 不做 C++ 的完整 `InputManager` 和 Input Debug 面板。
+5. 不做 C++ 的完整 UIManager/UIElement/UIInteractive 框架。
 
 ## 待后续完成
 
@@ -192,14 +193,3 @@ zig build test
   不做任意传送、任意改背包、任意改存档。
 - 39-收尾：C++ 收尾课建议继续扩展任务系统、系统更新顺序图和更强调试工具；
   Zig 本步只完成课程计划中的可见调试面板，不实现任务系统或文档图。
-
-## 暂缓的大系统
-
-下面这些系统只在前面的可见功能需要时取最小实现，不提前完整照搬：
-
-- 完整 GLRenderer 多 pass、Bloom、Composite
-- 完整 ResourceManager 路径映射与热重载
-- 完整 UI 框架和预设管理
-- 完整空间索引优化
-- 完整蓝图工厂和地图对象建造器
-- 完整昼夜光照与后处理管线
