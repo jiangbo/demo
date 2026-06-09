@@ -256,11 +256,11 @@ const LandStats = struct {
 fn countLandTiles() LandStats {
     var result = LandStats{};
     for (map.land.tiles) |tile| {
-        if (tile.land) |land| switch (land) {
+        if (tile.ground) |ground| switch (ground) {
             .dry => result.dry += 1,
             .wet => result.wet += 1,
         };
-        if (tile.crop != null) result.crops += 1;
+        if (tile.crop() != null) result.crops += 1;
     }
     return result;
 }

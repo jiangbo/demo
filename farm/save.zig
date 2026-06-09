@@ -233,10 +233,11 @@ fn captureTiles(world: *World) ![]const TileSave {
     errdefer list.deinit(zhu.assets.allocator);
 
     for (map.land.tiles, 0..) |tile, index| {
-        if (tile.land == null and tile.crop == null) continue;
+        const cropEntity = tile.crop();
+        if (tile.ground == null and cropEntity == null) continue;
 
         var cropSave: ?CropSave = null;
-        if (tile.crop) |entity| {
+        if (cropEntity) |entity| {
             if (world.get(entity, Crop)) |crop| {
                 cropSave = .{
                     .stage = crop.stage,
@@ -249,7 +250,7 @@ fn captureTiles(world: *World) ![]const TileSave {
 
         try list.append(zhu.assets.allocator, .{
             .index = @intCast(index),
-            .land = if (tile.land) |land| switch (land) {
+            .land = if (tile.ground) |ground| switch (ground) {
                 .dry => .dry,
                 .wet => .wet,
             } else null,
@@ -285,7 +286,7 @@ fn restoreTiles(world: *World, data: MapSave) void {
 
         const index: usize = @intCast(tileSave.index);
         const tile = &map.land.tiles[index];
-        tile.land = if (tileSave.land) |land| switch (land) {
+        tile.ground = if (tileSave.land) |land| switch (land) {
             .dry => .dry,
             .wet => .wet,
         } else null;
@@ -300,7 +301,7 @@ fn restoreTiles(world: *World, data: MapSave) void {
                 .watered = crop.watered,
             };
             updateCropSprite(world, entity, crop.stage);
-            tile.crop = entity;
+            tile.object = .{ .entity = entity };
         }
     }
 }

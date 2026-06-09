@@ -61,13 +61,11 @@ pub fn enter(world: *World, id: Id, targetId: i32) zhu.Vector2 {
         }
     }
 
-    for (land.tiles) |*tile| tile.crop = null;
-
     var crops = world.query(.{ component.Position, component.farm.Crop });
     while (crops.next()) |entity| {
         const position = crops.get(entity, component.Position);
         const tile = land.getTile(position) orelse continue;
-        tile.crop = entity;
+        tile.object = .{ .entity = entity };
     }
 
     zhu.camera.bound = data.size();

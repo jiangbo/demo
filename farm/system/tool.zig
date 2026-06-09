@@ -23,12 +23,12 @@ pub fn update(world: *zhu.ecs.World) void {
 
     const tile = land.getTile(target.position) orelse return;
 
-    if (tile.crop) |entity| {
+    if (tile.crop()) |entity| {
         const crop = world.get(entity, Crop) orelse return;
         if (crop.stage != .mature) return;
 
         world.destroyEntity(entity);
-        tile.crop = null;
+        tile.object = null;
         const pickupEntity = factory.spawnPickup(world, .crop);
         world.add(pickupEntity, target.position);
         world.addEvent(event.SoundPlay{ .id = .harvest });
@@ -55,7 +55,7 @@ fn waterTarget(world: *zhu.ecs.World, position: zhu.Vector2) bool {
     if (!land.water(position)) return false;
 
     const tile = land.getTile(position) orelse return false;
-    if (tile.crop) |entity| {
+    if (tile.crop()) |entity| {
         if (world.getPtr(entity, Crop)) |crop| {
             crop.watered = true;
         }
@@ -65,11 +65,11 @@ fn waterTarget(world: *zhu.ecs.World, position: zhu.Vector2) bool {
 
 fn plant(world: *zhu.ecs.World, position: zhu.Vector2) bool {
     const tile = land.getTile(position) orelse return false;
-    if (tile.land == null or tile.crop != null) return false;
+    if (tile.ground == null or tile.object != null) return false;
 
     toolbar.active().?.count -= 1;
     const entity = factory.spawnCrop(world, position);
-    tile.crop = entity;
+    tile.object = .{ .entity = entity };
     return true;
 }
 
@@ -198,7 +198,7 @@ test "tool update 种植成功会发出 plant 音效" {
     try std.testing.expectEqual(1, sounds.len);
     try std.testing.expectEqual(.plant, sounds[0].id);
     try std.testing.expectEqual(1, toolbar.slots[0].count);
-    try std.testing.expect(land.getTile(testTarget).?.crop != null);
+    try std.testing.expect(land.getTile(testTarget).?.crop() != null);
 }
 
 test "tool update 收获成熟作物会发出 harvest 音效" {
@@ -216,7 +216,7 @@ test "tool update 收获成熟作物会发出 harvest 音效" {
     addPlayerTarget(&world, testTarget);
     const crop = world.createEntity();
     world.add(crop, Crop{ .stage = .mature });
-    land.getTile(testTarget).?.crop = crop;
+    land.getTile(testTarget).?.object = .{ .entity = crop };
     clickMouse();
 
     update(&world);
@@ -224,5 +224,5 @@ test "tool update 收获成熟作物会发出 harvest 音效" {
     const sounds = world.getEvent(event.SoundPlay).items;
     try std.testing.expectEqual(1, sounds.len);
     try std.testing.expectEqual(.harvest, sounds[0].id);
-    try std.testing.expectEqual(null, land.getTile(testTarget).?.crop);
+    try std.testing.expectEqual(null, land.getTile(testTarget).?.crop());
 }

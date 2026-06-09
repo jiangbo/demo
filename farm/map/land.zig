@@ -9,9 +9,20 @@ pub var tiles: []Tile = &.{};
 var dryImage: zhu.graphics.Image = undefined;
 var wetImage: zhu.graphics.Image = undefined;
 
+const Object = struct {
+    kind: enum { crop, rock, chest } = .crop,
+    entity: zhu.ecs.Entity,
+};
+
 pub const Tile = struct {
-    land: ?enum { dry, wet } = null,
-    crop: ?zhu.ecs.Entity = null,
+    ground: ?enum { dry, wet } = null,
+    object: ?Object = null,
+
+    pub fn crop(self: Tile) ?zhu.ecs.Entity {
+        const object = self.object orelse return null;
+        if (object.kind != .crop) return null;
+        return object.entity;
+    }
 };
 
 pub fn init() void {
@@ -52,24 +63,24 @@ pub fn getTile(position: zhu.Vector2) ?*Tile {
 
 pub fn hoe(position: zhu.Vector2) bool {
     const tile = getTile(position) orelse return false;
-    if (tile.land != null or tile.crop != null) return false;
-    tile.land = .dry;
+    if (tile.ground != null or tile.object != null) return false;
+    tile.ground = .dry;
     return true;
 }
 
 pub fn water(position: zhu.Vector2) bool {
     const tile = getTile(position) orelse return false;
-    if (tile.land == null) return false;
-    tile.land = .wet;
+    if (tile.ground == null) return false;
+    tile.ground = .wet;
     return true;
 }
 
 pub fn draw() void {
     for (tiles, 0..) |tile, index| {
-        const land = tile.land orelse continue;
+        const ground = tile.ground orelse continue;
         const position = map.tileIndexToWorld(index);
         appendVertex(position, dryImage);
-        if (land == .wet) appendVertex(position, wetImage);
+        if (ground == .wet) appendVertex(position, wetImage);
     }
 }
 
@@ -89,7 +100,7 @@ test "锄地会记录目标格" {
 
     try std.testing.expect(hoe(.xy(32, 48)));
 
-    try std.testing.expectEqual(.dry, getTile(.xy(32, 48)).?.land);
+    try std.testing.expectEqual(.dry, getTile(.xy(32, 48)).?.ground);
 }
 
 test "浇水只会影响已有耕地" {
@@ -99,11 +110,11 @@ test "浇水只会影响已有耕地" {
     defer exit();
 
     try std.testing.expect(!water(.xy(32, 48)));
-    try std.testing.expectEqual(null, getTile(.xy(32, 48)).?.land);
+    try std.testing.expectEqual(null, getTile(.xy(32, 48)).?.ground);
 
     try std.testing.expect(hoe(.xy(32, 48)));
     try std.testing.expect(water(.xy(32, 48)));
-    try std.testing.expectEqual(.wet, getTile(.xy(32, 48)).?.land);
+    try std.testing.expectEqual(.wet, getTile(.xy(32, 48)).?.ground);
 }
 
 test "目标格有作物时不会锄地" {
@@ -112,8 +123,8 @@ test "目标格有作物时不会锄地" {
     enter(&testMaps[0]);
     defer exit();
 
-    getTile(.xy(32, 48)).?.crop = 1;
+    getTile(.xy(32, 48)).?.object = .{ .entity = 1 };
 
     try std.testing.expect(!hoe(.xy(32, 48)));
-    try std.testing.expectEqual(null, getTile(.xy(32, 48)).?.land);
+    try std.testing.expectEqual(null, getTile(.xy(32, 48)).?.ground);
 }
