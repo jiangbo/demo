@@ -58,9 +58,12 @@ pub fn enumArray(E: type, V: type, values: []V) std.EnumArray(E, V) {
     return array;
 }
 
-pub fn enumTypeArray(E: type, V: type, values: []V) std.EnumArray(E, V) {
-    var array: std.EnumArray(E, V) = .initUndefined();
-    for (values) |value| array.set(value.type, value);
+fn EnumArrayByType(T: type) type {
+    return std.EnumArray(@FieldType(T, "type"), @FieldType(T, "value"));
+}
+pub fn enumArrayByType(T: type, slice: anytype) EnumArrayByType(T) {
+    var array: EnumArrayByType(T) = .initUndefined();
+    for (slice) |value| array.set(value.type, value.value);
     return array;
 }
 

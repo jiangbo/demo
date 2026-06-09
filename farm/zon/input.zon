@@ -1,0 +1,18 @@
+.{
+    .{ .type = .moveLeft, .value = .{ .A, .LEFT } },
+    .{ .type = .moveRight, .value = .{ .D, .RIGHT } },
+    .{ .type = .moveUp, .value = .{ .W, .UP } },
+    .{ .type = .moveDown, .value = .{ .S, .DOWN } },
+    .{ .type = .pause, .value = .{ .P, .ESCAPE } },
+    .{ .type = .interact, .value = .{.F} },
+    .{ .type = .toolbar1, .value = .{._1} },
+    .{ .type = .toolbar2, .value = .{._2} },
+    .{ .type = .toolbar3, .value = .{._3} },
+    .{ .type = .toolbar4, .value = .{._4} },
+    .{ .type = .toolbar5, .value = .{._5} },
+    .{ .type = .toolbar6, .value = .{._6} },
+    .{ .type = .toolbar7, .value = .{._7} },
+    .{ .type = .toolbar8, .value = .{._8} },
+    .{ .type = .toolbar9, .value = .{._9} },
+    .{ .type = .toolbar10, .value = .{._0} },
+}

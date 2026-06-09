@@ -1,6 +1,7 @@
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
+const context = @import("../context.zig");
 const map = @import("../map.zig");
 
 const Player = component.actor.Player;
@@ -12,6 +13,12 @@ const tileRange: i32 = 1;
 pub fn update(world: *zhu.ecs.World) void {
     const player = world.getIdentity(Player).?;
     const target = world.getPtr(player, Target).?;
+
+    if (context.ui.mouseCaptured() or context.input.mouseCaptured) {
+        target.active = false;
+        return;
+    }
+
     const playerPos = world.get(player, Position).?;
 
     const playerTile = map.data.worldToTilePosition(playerPos);

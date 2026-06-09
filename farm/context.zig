@@ -83,6 +83,76 @@ pub const ui = struct {
     pub fn wantCapture() bool {
         return wantCaptureMouse or wantCaptureKeyboard;
     }
+
+    pub fn mouseCaptured() bool {
+        return wantCaptureMouse;
+    }
+};
+
+pub const input = struct {
+    pub const Command = enum {
+        moveLeft,
+        moveRight,
+        moveUp,
+        moveDown,
+        pause,
+        interact,
+        toolbar1,
+        toolbar2,
+        toolbar3,
+        toolbar4,
+        toolbar5,
+        toolbar6,
+        toolbar7,
+        toolbar8,
+        toolbar9,
+        toolbar10,
+    };
+
+    // 本帧输入占用；每帧开始清空，避免污染下一帧。
+    pub var mouseCaptured: bool = false;
+
+    const Entry = struct { type: Command, value: []const zhu.key.Code };
+    const zon: []const Entry = @import("zon/input.zon");
+    const keys = zhu.enumArrayByType(Entry, zon);
+    const Mouse = zhu.mouse.Button;
+
+    pub fn held(command: Command) bool {
+        return zhu.key.anyHeld(keys.get(command));
+    }
+
+    pub fn pressed(command: Command) bool {
+        return zhu.key.anyPressed(keys.get(command));
+    }
+
+    pub fn released(command: Command) bool {
+        return zhu.key.anyReleased(keys.get(command));
+    }
+
+    pub fn mouseHeld(button: Mouse) bool {
+        if (mouseCaptured) return false;
+        return zhu.mouse.held(button);
+    }
+
+    pub fn mousePressed(button: Mouse) bool {
+        if (mouseCaptured) return false;
+        return zhu.mouse.pressed(button);
+    }
+
+    pub fn mouseReleased(button: Mouse) bool {
+        if (mouseCaptured) return false;
+        return zhu.mouse.released(button);
+    }
+
+    pub fn toolbarIndexPressed() ?u8 {
+        const first: usize = @intFromEnum(Command.toolbar1);
+        const last: usize = @intFromEnum(Command.toolbar10);
+        for (first..last + 1) |value| {
+            const command: Command = @enumFromInt(value);
+            if (pressed(command)) return @intCast(value - first);
+        }
+        return null;
+    }
 };
 
 pub const map = struct {
@@ -115,6 +185,7 @@ pub fn init() void {
     debug.showGame = false;
     ui.wantCaptureMouse = false;
     ui.wantCaptureKeyboard = false;
+    input.mouseCaptured = false;
     map.pending = null;
     std.log.info("context init scene={s}", .{@tagName(scene.current)});
 }

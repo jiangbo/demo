@@ -27,6 +27,8 @@ pub fn init(world: *World) void {
 pub fn deinit() void {}
 
 pub fn update(world: *World, delta: f32) void {
+    context.input.mouseCaptured = false;
+
     if (zhu.key.pressed(.X)) drawDebug = !drawDebug;
 
     const pauseKey = zhu.key.anyPressed(&.{ .ESCAPE, .P });
@@ -96,8 +98,8 @@ fn updateFarm(world: *World, delta: f32) void {
         return;
     }
 
-    system.update(world, delta);
     ui.toolbar.update();
+    system.update(world, delta);
     ui.dialog.update(world);
 }
 

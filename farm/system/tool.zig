@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 const factory = @import("../factory.zig");
 const component = @import("../component.zig");
+const context = @import("../context.zig");
 const prefab = @import("../prefab.zig");
 const toolbar = @import("../ui/toolbar.zig");
 const land = @import("../map.zig").land;
@@ -13,7 +14,8 @@ const Target = component.ui.Target;
 const event = component.event;
 
 pub fn update(world: *zhu.ecs.World) void {
-    if (!zhu.mouse.pressed(.LEFT)) return;
+    if (context.ui.mouseCaptured()) return;
+    if (!context.input.mousePressed(.LEFT)) return;
 
     const player = world.getIdentity(Player).?;
     const target = world.get(player, Target).?;

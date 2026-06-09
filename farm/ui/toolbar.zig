@@ -2,6 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
+const context = @import("../context.zig");
 const prefab = @import("../prefab.zig");
 
 const ItemEnum = component.item.ItemEnum;
@@ -30,6 +31,7 @@ pub var slots: [zon.slotCount]Item = @splat(.{ .type = .hoe });
 pub var slotIndex: usize = 0;
 
 var panelPosition: zhu.Vector2 = undefined; // 初始位置
+var pressedSlot: ?usize = null;
 const slotWidth: f32 = zon.slotCount * (zon.slotSize + zon.spacing);
 const panelWidth: f32 = slotWidth - zon.spacing + zon.panelPadding * 2;
 const panelHeight: f32 = zon.panelPadding * 2 + zon.slotSize;
@@ -45,6 +47,7 @@ pub fn enter() void {
         .x = (zhu.window.size.x - panelWidth) / 2,
         .y = zhu.window.size.y - panelHeight - zon.bottomMargin,
     };
+    pressedSlot = null;
 }
 
 pub fn add(itemType: ItemEnum, count: u32) void {
@@ -76,25 +79,39 @@ pub fn active() ?*Item {
 }
 
 pub fn update() void {
-    if (zhu.key.pressed(._0)) slotIndex = slots.len - 1;
-    const key1: usize = @intFromEnum(zhu.key.Code._1);
-    for (0..slots.len - 1) |key| {
-        const keyCode: zhu.key.Code = @enumFromInt(key1 + key);
-        if (zhu.key.pressed(keyCode)) slotIndex = @intCast(key);
+    if (context.input.toolbarIndexPressed()) |index| {
+        if (index < slots.len) slotIndex = index;
     }
 
+    const hover = hoveredSlot();
+    if (hover != null or pressedSlot != null)
+        context.input.mouseCaptured = true;
+
+    if (zhu.mouse.pressed(.LEFT)) {
+        if (hover) |slot| pressedSlot = slot;
+    }
+
+    if (zhu.mouse.released(.LEFT)) {
+        defer pressedSlot = null;
+        const pressed = pressedSlot orelse return;
+        const slot = hover orelse return;
+        if (pressed != slot) return;
+
+        slotIndex = slot;
+        zhu.audio.playSound("assets/audio/UI_button08.ogg");
+    }
+}
+
+fn hoveredSlot() ?usize {
     const start = panelPosition.add(.square(zon.panelPadding));
     for (0..slots.len) |i| {
         const position = slotPosition(@floatFromInt(i), start);
         const rect = zhu.Rect.init(position, .square(zon.slotSize));
         if (!rect.contains(zhu.window.mouse)) continue;
 
-        if (zhu.mouse.released(.LEFT)) {
-            slotIndex = i;
-            zhu.audio.playSound("assets/audio/UI_button08.ogg");
-            break;
-        }
+        return i;
     }
+    return null;
 }
 
 fn slotPosition(index: f32, position: zhu.Vector2) zhu.Vector2 {
