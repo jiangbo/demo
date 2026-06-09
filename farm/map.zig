@@ -4,7 +4,7 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const factory = @import("factory.zig");
 const prefab = @import("prefab.zig");
-pub const physics = @import("map/physics.zig");
+pub const spatial = @import("map/spatial.zig");
 pub const land = @import("map/land.zig");
 
 const tiled = zhu.extend.tiled;
@@ -36,7 +36,7 @@ pub fn init() void {
 }
 
 pub fn deinit() void {
-    physics.deinit();
+    spatial.deinit();
     land.deinit();
     vertexes.clearAndFree(zhu.assets.allocator);
 }
@@ -47,7 +47,7 @@ pub fn enter(world: *World, id: Id, targetId: i32) zhu.Vector2 {
     zhu.camera.bound = data.size();
 
     land.enter(data);
-    physics.enter(data);
+    spatial.enter(data);
 
     parseLayers(world);
 
@@ -83,7 +83,7 @@ fn parseLayers(world: *World) void {
         std.log.info("parsing layer: {s}", .{layer.name});
         switch (layer.type) {
             .tile => if (layer.isNamed("solid")) {
-                physics.parseSolidLayer(layer);
+                spatial.parseSolidLayer(layer);
             } else parseTileLayer(layer),
             .image => parseImageLayer(layer),
             .object => {
@@ -105,7 +105,7 @@ fn parseLayers(world: *World) void {
 pub fn exit(world: *World) void {
     world.destroyEntities(component.map.Scoped);
     land.exit();
-    physics.exit();
+    spatial.exit();
     frontLayerStart = 0;
     vertexes.clearRetainingCapacity();
 }
@@ -128,7 +128,7 @@ pub fn drawFront() void {
 pub fn loadObjects(world: *World, layer: *const tiled.Layer) void {
     if (layer.isNamed("collider")) {
         for (layer.objects) |object| {
-            physics.addSolidRect(object.rect());
+            spatial.addSolidRect(object.rect());
         }
         return;
     }
@@ -187,7 +187,7 @@ fn loadObject(world: *World, object: tiled.Object) void {
     if (object.gid == 0) return;
 
     _ = factory.spawnMapProp(world, data, object);
-    physics.addSolidObject(object);
+    spatial.addSolidObject(object);
 }
 
 fn loadLightObject(world: *World, object: tiled.Object) void {
@@ -215,7 +215,7 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
         // 带 tile_flag 标记的瓦片设置方向碰撞
         const tile = data.getTileByGid(globalId) orelse continue;
         if (tile.getProperty("tile_flag", []const u8)) |flag| {
-            physics.setTileFlag(index, flag);
+            spatial.setTileFlag(index, flag);
         }
     }
 }

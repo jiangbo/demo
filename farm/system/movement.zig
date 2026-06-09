@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const map = @import("../map.zig");
-const physics = map.physics;
+const spatial = map.spatial;
 
 const Position = component.Position;
 const Velocity = component.motion.Velocity;
@@ -22,9 +22,9 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
             // 碰撞时回退到原始坐标，这样可以沿墙滑动而不会卡死
             var next = position.*;
             next.x += offset.x;
-            if (physics.isBlocked(next, c, .xy(offset.x, 0))) next.x = position.x;
+            if (spatial.isBlocked(next, c, .xy(offset.x, 0))) next.x = position.x;
             next.y += offset.y;
-            if (physics.isBlocked(next, c, .xy(0, offset.y))) next.y = position.y;
+            if (spatial.isBlocked(next, c, .xy(0, offset.y))) next.y = position.y;
             position.* = next;
         } else {
             position.* = position.add(offset);

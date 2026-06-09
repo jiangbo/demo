@@ -183,10 +183,10 @@ fn drawMapPanel(world: *World) void {
         map.data.size().y,
     );
 
-    const physicsStats = countPhysicsTiles();
-    _ = imgui.igText("Collision tiles: %zu", physicsStats.blocked);
-    _ = imgui.igText("Directional tiles: %zu", physicsStats.directional);
-    _ = imgui.igText("Collision rects: %zu", map.physics.areas.items.len);
+    const spatialStats = countSpatialTiles();
+    _ = imgui.igText("Collision tiles: %zu", spatialStats.blocked);
+    _ = imgui.igText("Directional tiles: %zu", spatialStats.directional);
+    _ = imgui.igText("Collision rects: %zu", map.spatial.areas.items.len);
 
     const landStats = countLandTiles();
     _ = imgui.igText("Tilled dry: %zu", landStats.dry);
@@ -232,17 +232,17 @@ fn drawEntityCounts(world: *World) void {
     _ = imgui.igText("Spot lights: %zu", world.count(component.light.Spot));
 }
 
-const PhysicsStats = struct {
+const SpatialStats = struct {
     blocked: usize = 0,
     directional: usize = 0,
 };
 
-fn countPhysicsTiles() PhysicsStats {
-    var result = PhysicsStats{};
-    for (map.physics.tiles) |flags| {
+fn countSpatialTiles() SpatialStats {
+    var result = SpatialStats{};
+    for (map.spatial.tiles) |flags| {
         if (flags == 0) continue;
         result.blocked += 1;
-        if (flags != map.physics.Block.SOLID) result.directional += 1;
+        if (flags != map.spatial.Block.SOLID) result.directional += 1;
     }
     return result;
 }

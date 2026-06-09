@@ -162,13 +162,13 @@ var drawDebug: bool = true;
 
 fn drawSolids() void {
     const tileSize = map.data.tileSize;
-    for (map.physics.tiles, 0..) |solid, index| {
+    for (map.spatial.tiles, 0..) |solid, index| {
         if (solid == 0) continue;
         const position = map.data.tileIndexToWorld(index);
         zhu.batch.drawDebug(.init(position, tileSize));
     }
 
-    for (map.physics.areas.items) |rect| zhu.batch.drawDebug(rect);
+    for (map.spatial.areas.items) |rect| zhu.batch.drawDebug(rect);
 }
 
 fn drawCollider(world: *zhu.ecs.World) void {
