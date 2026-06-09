@@ -116,28 +116,36 @@ pub fn addSolidObject(object: tiled.Object) void {
     }
 }
 
-/// 检查碰撞框在指定位置移动 delta 后是否被阻挡
+/// 检查碰撞体在指定位置移动 delta 后是否被阻挡
 /// delta 表示进入方向：向南移动(d.y>0)遇到 BLOCK_N 表示从北面进入被挡
 pub fn isBlocked(
     position: zhu.Vector2,
     collider: Collider,
     delta: zhu.Vector2,
 ) bool {
-    const pos = position.add(collider.offset);
-    const rect = zhu.Rect.init(pos, collider.size);
+    // 将碰撞体偏移到绝对位置
+    const shape = collider.move(position);
+    const bounds = shape.toRect();
 
-    var iter = map.tilesInRect(rect);
+    var iter = map.tilesInRect(bounds);
     while (iter.next()) |index| {
         const marks = tiles[index];
-        if (isSolid(marks)) return true;
-        // 从北面进入（向南移动），遇到 BLOCK_N 被挡
+        if (isSolid(marks)) {
+            // 精确检测：圆形用圆-矩形相交，矩形用矩形相交
+            const tileRect = map.tileRect(index);
+            if (shape.intersect(.{ .rect = tileRect })) return true;
+        }
+        // 方向阻挡用包围矩形检测（单面墙，精度足够）
         if (delta.y > 0 and marks.contains(.north)) return true;
         if (delta.y < 0 and marks.contains(.south)) return true;
         if (delta.x > 0 and marks.contains(.west)) return true;
         if (delta.x < 0 and marks.contains(.east)) return true;
     }
 
-    for (areas.items) |area| if (rect.intersect(area)) return true;
+    // 精确碰撞检测：用 Shape.intersect 与区域矩形相交
+    for (areas.items) |area| {
+        if (shape.intersect(.{ .rect = area })) return true;
+    }
     return false;
 }
 
@@ -148,8 +156,7 @@ test "isBlocked 检测碰撞框是否与 solid 格子重叠" {
     defer deinit();
 
     const collider: Collider = .{
-        .size = .xy(10, 6),
-        .offset = .xy(-5, -6),
+        .rect = .init(.xy(-5, -6), .xy(10, 6)),
     };
     // 空地图不应碰撞
     try std.testing.expect(!isBlocked(.xy(24, 40), collider, .xy(1, 1)));
@@ -166,7 +173,9 @@ test "isBlocked 方向阻挡只在对应方向生效" {
     enter(&testMaps[0]);
     defer deinit();
 
-    const collider: Collider = .{ .size = .xy(10, 6) };
+    const collider: Collider = .{
+        .rect = .init(.zero, .xy(10, 6)),
+    };
     const index = map.worldToTileIndex(.xy(40, 40)).?;
     tiles[index].insert(.north); // 北面边缘阻挡
 
@@ -185,7 +194,9 @@ test "isBlocked 不会把贴边当成碰撞" {
     defer deinit();
 
     tiles[map.worldToTileIndex(.xy(40, 40)).?].setUnion(solid);
-    const collider: Collider = .{ .size = .xy(10, 6) };
+    const collider: Collider = .{
+        .rect = .init(.zero, .xy(10, 6)),
+    };
     const d = zhu.Vector2.xy(1, 1);
 
     try std.testing.expect(!isBlocked(.xy(22, 36), collider, d));
@@ -203,8 +214,7 @@ test "对象 collider 使用精确矩形保留桌子间通道" {
     addSolidRect(.init(.xy(83.04163, 154.22884), .xy(26.5, 28.25)));
 
     const collider: Collider = .{
-        .size = .xy(10, 6),
-        .offset = .xy(-5, -6),
+        .rect = .init(.xy(-5, -6), .xy(10, 6)),
     };
     const d = zhu.Vector2.xy(1, 1);
 
@@ -245,4 +255,45 @@ test "setTileFlag 支持 SOLID 与其它标记组合" {
     const marks = marksAt(position);
     try std.testing.expect(isSolid(marks));
     try std.testing.expect(marks.contains(.arable));
+}
+
+test "isBlocked 圆形碰撞体检测 solid 瓦片" {
+    zhu.assets.allocator = std.testing.allocator;
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
+    enter(&testMaps[0]);
+    defer deinit();
+
+    const collider: Collider = .{
+        .circle = .init(.xy(0, -5), 5),
+    };
+
+    // 空地图不碰撞
+    try std.testing.expect(!isBlocked(
+        .xy(24, 40), collider, .xy(1, 1),
+    ));
+
+    // solid 格子碰撞
+    tiles[map.worldToTileIndex(.xy(24, 40)).?].setUnion(solid);
+    try std.testing.expect(isBlocked(
+        .xy(24, 40), collider, .xy(1, 1),
+    ));
+}
+
+test "isBlocked 圆形碰撞体与区域矩形精确碰撞" {
+    zhu.assets.allocator = std.testing.allocator;
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
+    enter(&testMaps[0]);
+    defer deinit();
+
+    addSolidRect(.init(.xy(83, 106), .xy(26, 28)));
+
+    const collider: Collider = .{
+        .circle = .init(.xy(0, -5), 5),
+    };
+    const d = zhu.Vector2.xy(1, 1);
+
+    // 圆心远离矩形，不碰撞
+    try std.testing.expect(!isBlocked(.xy(60, 100), collider, d));
+    // 圆心靠近矩形左边缘，碰撞（圆心距矩形 2px，半径 5px）
+    try std.testing.expect(isBlocked(.xy(78, 120), collider, d));
 }

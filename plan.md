@@ -81,6 +81,11 @@ zig build test
 - 19-空间索引：目前 crop 收获时能按已知 tile 清理 `tile.object`；资源节点或宝箱销毁
   需要补一个按 entity 清理所在格的简单函数。
 - UI：考虑做 ZON 文件监听，实时刷新 ZON 中的数据。
+- 20-碰撞解析：薄墙方向阻挡只查单侧标记（向东只查 .west），
+  大位移可能穿墙；C++ 查跨过边界两侧（左格 BLOCK_E 或右格 BLOCK_W 都挡），
+  需改为检测跨过的那条边界。
+- 20-碰撞解析：动态实体碰撞未实现，玩家和动物之间可以重叠；
+  C++ `collision_resolver` 有 `anyDynamicOverlap` 排除 self 后检测其它实体 collider。
 - BUG：exterior ↔ town 之间的连通触发器位置和大小还需调整。
 - BUG：对话只能对话动物，交互范围不对，隔很远也能触发对话。
 - 31-对话气泡：对话框没有引入图片资源（CPP 使用九宫格图片背景）。

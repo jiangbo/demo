@@ -148,13 +148,17 @@ fn drawPlayerPanel(world: *World) void {
     }
 
     if (world.get(player, Collider)) |collider| {
-        _ = imgui.igText(
-            "Collider: %.1fx%.1f offset %.1f, %.1f",
-            collider.size.x,
-            collider.size.y,
-            collider.offset.x,
-            collider.offset.y,
-        );
+        switch (collider) {
+            .rect => |r| _ = imgui.igText(
+                "Collider: rect %.1fx%.1f at %.1f,%.1f",
+                r.size.x, r.size.y,
+                r.min.x, r.min.y,
+            ),
+            .circle => |c| _ = imgui.igText(
+                "Collider: circle r=%.1f at %.1f,%.1f",
+                c.radius, c.center.x, c.center.y,
+            ),
+        }
     }
 
     if (world.get(player, Target)) |target| {

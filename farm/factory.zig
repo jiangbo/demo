@@ -35,8 +35,7 @@ pub fn spawnPlayer(world: *World, spawn: zhu.Vector2) void {
     world.add(player, spawn);
     world.add(player, motion.Velocity{});
     world.add(player, motion.Collider{
-        .size = .xy(10, 6),
-        .offset = .xy(-5, -6),
+        .circle = .init(.xy(0, -5), 5),
     });
     world.add(player, actor.Actor{ .rows = config.rows });
 
@@ -62,8 +61,7 @@ pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {
     const entity = world.createEntity();
     world.add(entity, motion.Velocity{});
     world.add(entity, motion.Collider{
-        .size = .xy(10, 6),
-        .offset = .xy(-5, -6),
+        .circle = .init(.xy(0, -5), 5),
     });
     world.add(entity, actor.Actor{ .rows = config.rows });
 

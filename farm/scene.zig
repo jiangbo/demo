@@ -175,11 +175,17 @@ fn drawCollider(world: *zhu.ecs.World) void {
     const player = world.getIdentity(actor.Player).?;
     const position = world.get(player, Position).?;
     const collider = world.get(player, motion.Collider).?;
-    const rect = zhu.Rect.init(
-        position.add(collider.offset),
-        collider.size,
-    );
-    zhu.batch.drawRect(rect, .{ .color = .rgba(0, 1, 0, 0.4) });
+    const shape = collider.move(position);
+    switch (shape) {
+        .rect => |r| zhu.batch.drawRect(r, .{
+            .color = .rgba(0, 1, 0, 0.4),
+        }),
+        .circle => |c| zhu.batch.drawCircle(c.center, .{
+            .size = .xy(c.radius * 2, c.radius * 2),
+            .anchor = zhu.Vector2.center,
+            .color = .rgba(0, 1, 0, 0.4),
+        }),
+    }
 }
 
 fn changeMap(world: *World, request: context.map.Transition) void {

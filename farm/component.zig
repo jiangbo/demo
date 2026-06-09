@@ -6,10 +6,7 @@ pub const Position = zhu.Vector2;
 pub const motion = struct {
     pub const Velocity = struct { value: zhu.Vector2 = .zero };
 
-    pub const Collider = struct {
-        size: zhu.Vector2,
-        offset: zhu.Vector2 = .zero,
-    };
+    pub const Collider = zhu.math.Shape;
 };
 
 pub const render = struct {

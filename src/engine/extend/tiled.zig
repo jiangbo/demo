@@ -47,6 +47,10 @@ pub const Map = struct {
         return self.tileSize.mul(.xy(x, y));
     }
 
+    pub fn tileRect(self: Map, index: usize) Rect {
+        return .init(self.tileIndexToWorld(index), self.tileSize);
+    }
+
     pub fn worldToTileStart(self: Map, pos: Vector2) Vector2 {
         const tilePos = self.worldToTilePosition(pos);
         return self.tilePositionToWorld(tilePos);

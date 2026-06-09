@@ -325,6 +325,10 @@ pub const Circle = struct {
         return .{ .center = center, .radius = radius };
     }
 
+    pub fn move(self: Circle, offset: Vector2) Circle {
+        return .init(self.center.add(offset), self.radius);
+    }
+
     pub fn toRect(self: Circle) Rect {
         const size = Vector2.square(self.radius * 2);
         return .init(self.center.sub(.square(self.radius)), size);
@@ -353,6 +357,10 @@ pub const AxisCapsule = struct {
 
     pub fn init(rect: Rect) AxisCapsule {
         return .{ .rect = rect };
+    }
+
+    pub fn move(self: AxisCapsule, offset: Vector2) AxisCapsule {
+        return .init(self.rect.move(offset));
     }
 
     pub fn toRect(self: AxisCapsule) Rect {
@@ -414,7 +422,14 @@ pub const AxisCapsule = struct {
 pub const Shape = union(enum) {
     rect: Rect,
     circle: Circle,
-    capsule: AxisCapsule,
+    // capsule: AxisCapsule,
+
+    pub fn move(self: Shape, offset: Vector2) Shape {
+        return switch (self) {
+            inline else => |s, tag| @unionInit(Shape, //
+            @tagName(tag), s.move(offset)),
+        };
+    }
 
     pub fn toRect(self: Shape) Rect {
         return switch (self) {
