@@ -162,8 +162,8 @@ var drawDebug: bool = true;
 
 fn drawSolids() void {
     const tileSize = map.data.tileSize;
-    for (map.spatial.tiles, 0..) |solid, index| {
-        if (solid == 0) continue;
+    for (map.spatial.tiles, 0..) |marks, index| {
+        if (!map.spatial.hasAnyBlock(marks)) continue;
         const position = map.data.tileIndexToWorld(index);
         zhu.batch.drawDebug(.init(position, tileSize));
     }

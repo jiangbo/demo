@@ -239,10 +239,10 @@ const SpatialStats = struct {
 
 fn countSpatialTiles() SpatialStats {
     var result = SpatialStats{};
-    for (map.spatial.tiles) |flags| {
-        if (flags == 0) continue;
+    for (map.spatial.tiles) |marks| {
+        if (!map.spatial.hasAnyBlock(marks)) continue;
         result.blocked += 1;
-        if (flags != map.spatial.Block.SOLID) result.directional += 1;
+        if (!map.spatial.isSolid(marks)) result.directional += 1;
     }
     return result;
 }
