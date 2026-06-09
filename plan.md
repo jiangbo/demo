@@ -65,11 +65,21 @@ zig build test
 3. 不做 C++ 的 FreeType/HarfBuzz 动态字体管线和 TextRenderer 调试面板。
 4. 不做 C++ 的完整 `InputManager` 和 Input Debug 面板。
 5. 不做 C++ 的完整 UI 框架、布局和 preset 系统。
+6. 不做 C++ 的 `StaticTileGrid` 完整结构，不补 `TileCellData`、layer tile entity
+  和相关通用增删查接口。
 
 ## 待后续完成
 
 遇到未实现跳过的功能，记录到这里。
 
+- 19-空间索引：`ROCK` 还只是 `land.Object.kind` 能表达，地图加载没有把石头写入
+  `tile.object`，工具系统也没有敲石头、销毁实体和清理格子的逻辑。
+- 19-空间索引：`CHEST` 还只是 `land.Object.kind` 能表达，地图加载没有把宝箱写入
+  `tile.object`，交互系统也没有打开宝箱逻辑。
+- 19-空间索引：`REST` 休息区还没有明确的数据保存和交互逻辑。实现时优先用简单
+  rect/list 或现有地图对象数据，不引入 C++ 的静态 REST layer。
+- 19-空间索引：目前 crop 收获时能按已知 tile 清理 `tile.object`；资源节点或宝箱销毁
+  需要补一个按 entity 清理所在格的简单函数。
 - UI：考虑做 ZON 文件监听，实时刷新 ZON 中的数据。
 - BUG：exterior ↔ town 之间的连通触发器位置和大小还需调整。
 - BUG：对话只能对话动物，交互范围不对，隔很远也能触发对话。
