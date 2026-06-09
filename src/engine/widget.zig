@@ -59,6 +59,28 @@ pub const Button = struct {
     }
 };
 
+pub const Click = struct {
+    hover: ?usize,
+    pressed: ?usize,
+    captured: bool = false,
+
+    pub const empty: Click = .{ .hover = null, .pressed = null };
+
+    pub fn update(self: *Click, hover: ?usize) ?usize {
+        self.hover = hover;
+        self.captured = self.hover != null or self.pressed != null;
+
+        if (hover) |index| {
+            if (input.mouse.pressed(.LEFT)) self.pressed = index;
+        }
+
+        if (!input.mouse.released(.LEFT)) return null;
+        defer self.pressed = null;
+        if (self.pressed != self.hover) return null;
+        return self.hover;
+    }
+};
+
 pub const Menu = struct {
     position: math.Vector2 = .zero,
     overlay: ?graphics.Color = null,
@@ -77,20 +99,13 @@ pub const Menu = struct {
     hoverSound: ?[:0]const u8 = null,
     clickSound: ?[:0]const u8 = null,
     disabled: []const usize = &.{},
-    hover: ?usize = null,
-    pressed: ?usize = null,
+    click: Click = .empty,
 
     pub fn init(position: math.Vector2, menu: Menu) Menu {
         var result = menu;
         result.position = position;
-        result.hover = null;
-        result.pressed = null;
+        result.click = .empty;
         return result;
-    }
-
-    pub fn reset(self: *Menu) void {
-        self.hover = null;
-        self.pressed = null;
     }
 
     pub fn centerInWindow(self: *Menu) void {
@@ -98,35 +113,23 @@ pub const Menu = struct {
     }
 
     pub fn update(self: *Menu) ?u8 {
-        const previous = self.hover;
+        const previous = self.click.hover;
 
-        self.hover = blk: for (self.buttons, 0..) |button, index| {
+        const hover = blk: for (self.buttons, 0..) |button, index| {
             if (self.isDisabled(index)) continue;
             const rect = button.rect.move(self.position);
             if (rect.contains(window.mouse)) break :blk index;
         } else null;
 
-        if (self.hover) |hover| {
-            if (hover != previous) if (self.hoverSound) |sound| {
+        if (hover) |index| {
+            if (index != previous) if (self.hoverSound) |sound| {
                 audio.playSound(sound);
             };
-
-            if (input.mouse.pressed(.LEFT)) self.pressed = hover;
         }
 
-        if (!input.mouse.released(.LEFT)) return null;
-        defer self.pressed = null;
-
-        const pressed = self.pressed orelse return null;
-        const hover = self.hover orelse return null;
-        if (pressed != hover) return null;
-
+        const index = self.click.update(hover) orelse return null;
         if (self.clickSound) |sound| audio.playSound(sound);
-        return self.buttons[hover].event;
-    }
-
-    pub fn wantsMouse(self: Menu) bool {
-        return self.hover != null or self.pressed != null;
+        return self.buttons[index].event;
     }
 
     pub fn draw(self: Menu) void {
@@ -171,13 +174,11 @@ pub const Menu = struct {
     pub fn buttonState(self: Menu, index: usize) Button.State {
         if (self.isDisabled(index)) return .disabled;
 
-        if (self.pressed) |pressed| {
-            const active = pressed == index and self.hover == index;
-            if (active) return .pressed;
+        const hover = self.click.hover == index;
+        if (self.click.pressed) |pressed| {
+            if (pressed == index and hover) return .pressed;
         }
-
-        if (self.hover) |hover| if (hover == index) return .hover;
-        return .normal;
+        return if (hover) .hover else .normal;
     }
 
     fn isDisabled(self: Menu, index: usize) bool {

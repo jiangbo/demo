@@ -20,7 +20,7 @@ pub const pause = struct {
         active = true;
         menu.disabled = if (disable) &.{ 1, 2 } else &.{};
         menu.position = zhu.window.size.sub(panelSize).scale(0.5);
-        menu.reset();
+        menu.click = .empty;
     }
 
     pub fn update() void {
@@ -96,8 +96,8 @@ pub const title = struct {
         zhu.camera.scale = .one;
         zhu.camera.mode = .window;
         zhu.audio.playMusic("assets/audio/02_spring_fairy_tale.ogg");
-        mainMenu.reset();
-        pauseMenu.reset();
+        mainMenu.click = .empty;
+        pauseMenu.click = .empty;
     }
 
     pub fn exit() void {

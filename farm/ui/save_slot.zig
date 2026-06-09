@@ -49,8 +49,8 @@ pub fn enter(next: Mode) void {
         .pauseSave => "Save Game",
     };
     confirmMenu.title.text = "";
-    slotMenu.reset();
-    confirmMenu.reset();
+    slotMenu.click = .empty;
+    confirmMenu.click = .empty;
 }
 
 pub fn takeClosePauseAfterLoad() bool {
@@ -134,8 +134,8 @@ fn chooseSlot(world: *zhu.ecs.World, slot: usize) void {
                     "Overwrite slot {d}?",
                     .{slot + 1},
                 );
-                slotMenu.reset();
-                confirmMenu.reset();
+                slotMenu.click = .empty;
+                confirmMenu.click = .empty;
                 return;
             }
             saveAndClose(world, slot);

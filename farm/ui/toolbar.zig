@@ -31,7 +31,7 @@ pub var slots: [zon.slotCount]Item = @splat(.{ .type = .hoe });
 pub var slotIndex: usize = 0;
 
 var panelPosition: zhu.Vector2 = undefined; // 初始位置
-var pressedSlot: ?usize = null;
+var click: zhu.widget.Click = .empty;
 const slotWidth: f32 = zon.slotCount * (zon.slotSize + zon.spacing);
 const panelWidth: f32 = slotWidth - zon.spacing + zon.panelPadding * 2;
 const panelHeight: f32 = zon.panelPadding * 2 + zon.slotSize;
@@ -47,7 +47,7 @@ pub fn enter() void {
         .x = (zhu.window.size.x - panelWidth) / 2,
         .y = zhu.window.size.y - panelHeight - zon.bottomMargin,
     };
-    pressedSlot = null;
+    click = .empty;
 }
 
 pub fn add(itemType: ItemEnum, count: u32) void {
@@ -83,23 +83,12 @@ pub fn update() void {
         if (index < slots.len) slotIndex = index;
     }
 
-    const hover = hoveredSlot();
-    if (hover != null or pressedSlot != null)
-        context.input.mouseCaptured = true;
-
-    if (zhu.mouse.pressed(.LEFT)) {
-        if (hover) |slot| pressedSlot = slot;
-    }
-
-    if (zhu.mouse.released(.LEFT)) {
-        defer pressedSlot = null;
-        const pressed = pressedSlot orelse return;
-        const slot = hover orelse return;
-        if (pressed != slot) return;
-
-        slotIndex = slot;
+    if (click.update(hoveredSlot())) |index| {
+        slotIndex = index;
         zhu.audio.playSound("assets/audio/UI_button08.ogg");
     }
+
+    if (click.captured) context.input.mouseCaptured = true;
 }
 
 fn hoveredSlot() ?usize {
