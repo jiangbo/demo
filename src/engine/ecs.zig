@@ -4,7 +4,7 @@ const Allocator = std.mem.Allocator;
 
 pub const Entity = u16;
 const invalid = std.math.maxInt(Entity);
-pub fn hasEntity(slice: []const Entity, entity: Entity) bool {
+fn hasEntity(slice: []const Entity, entity: Entity) bool {
     return entity < slice.len and slice[entity] != invalid;
 }
 pub const Version = u16;
