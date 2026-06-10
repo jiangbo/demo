@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const context = @import("../context.zig");
-const prefab = @import("../prefab.zig");
+const factory = @import("../factory.zig");
 
 const ItemEnum = component.item.ItemEnum;
 const NineOption = zhu.batch.NineOption;
@@ -51,7 +51,7 @@ pub fn enter() void {
 }
 
 pub fn add(itemType: ItemEnum, count: u32) void {
-    const config = prefab.item(itemType);
+    const config = factory.itemConfig(itemType);
 
     var remaining: u32 = count;
     for (&slots) |*slot| { // 先尝试叠加到已有的同类型物品上
@@ -128,7 +128,7 @@ pub fn draw() void {
         }
 
         if (slot.count > 0) {
-            const iconSize = prefab.item(slot.type).icon.size;
+            const iconSize = factory.itemConfig(slot.type).icon.size;
             const iconOffset = zon.slotSize - iconSize.x;
             const iconPosition = position.add(.square(@round(iconOffset / 2)));
 
@@ -146,7 +146,7 @@ pub fn draw() void {
 }
 
 fn drawItemIcon(itemType: ItemEnum, position: zhu.Vector2, size: zhu.Vector2) void {
-    const image = prefab.resolveImage(prefab.item(itemType).icon);
+    const image = factory.resolveImage(factory.itemConfig(itemType).icon);
     zhu.batch.drawImage(image, position, .{ .size = size });
 }
 

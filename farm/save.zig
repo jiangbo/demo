@@ -5,7 +5,6 @@ const component = @import("component.zig");
 const context = @import("context.zig");
 const factory = @import("factory.zig");
 const map = @import("map.zig");
-const prefab = @import("prefab.zig");
 const toolbar = @import("ui/toolbar.zig");
 
 const World = zhu.ecs.World;
@@ -311,9 +310,9 @@ fn updateCropSprite(
     entity: zhu.ecs.Entity,
     stage: component.farm.GrowthEnum,
 ) void {
-    const config = prefab.farm.crop.stages[@intFromEnum(stage)];
+    const config = factory.cropStage(stage);
     world.getPtr(entity, Sprite).?.* = .{
-        .image = prefab.resolveImage(config.sprite),
+        .image = factory.resolveImage(config.sprite),
         .offset = config.sprite.offset,
     };
 }

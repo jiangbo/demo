@@ -3,7 +3,6 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 const factory = @import("factory.zig");
-const prefab = @import("prefab.zig");
 pub const spatial = @import("map/spatial.zig");
 pub const land = @import("map/land.zig");
 

@@ -13,7 +13,6 @@ test {
     std.testing.refAllDeclsRecursive(@import("save.zig"));
     std.testing.refAllDeclsRecursive(@import("ui/save_slot.zig"));
     std.testing.refAllDeclsRecursive(@import("system.zig"));
-    std.testing.refAllDeclsRecursive(@import("prefab.zig"));
 }
 
 test "ECS 查询可以读写缓存的组件值" {

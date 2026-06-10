@@ -3,7 +3,6 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 const context = @import("context.zig");
-const prefab = @import("prefab.zig");
 
 const actor = component.actor;
 const farm = component.farm;
@@ -19,8 +18,65 @@ const Entity = zhu.ecs.Entity;
 const tiled = zhu.extend.tiled;
 const Object = tiled.Object;
 
+pub const Animation = struct {
+    type: actor.Action,
+    imageId: zhu.Id,
+    frames: []const zhu.graphics.Frame,
+};
+
+pub const Actor = struct {
+    sprite: Sprite,
+    rows: [4]i8,
+    animations: []const Animation,
+};
+
+pub const Animal = struct {
+    sprite: Sprite,
+    rows: [4]i8,
+    animations: []const Animation,
+    speed: f32,
+    wanderRadius: f32,
+};
+
+pub const Sprite = struct {
+    imageId: zhu.Id,
+    rect: zhu.Rect,
+    offset: zhu.Vector2 = .zero,
+    size: zhu.Vector2,
+};
+
+pub const Item = struct {
+    limit: u32 = 99,
+    icon: Sprite,
+};
+
+pub const CropStage = struct { sprite: Sprite, duration: f32 };
+
+pub const Config = struct {
+    player: Actor,
+    items: [std.meta.fields(item.ItemEnum).len]Item,
+    animals: [std.meta.fields(actor.AnimalKind).len]Animal,
+    crop: struct {
+        stages: [4]CropStage,
+    },
+};
+
+pub const zon: Config = @import("zon/factory.zon");
+
 pub fn init() void {
     std.log.info("spawn init", .{});
+}
+
+pub fn itemConfig(itemType: item.ItemEnum) Item {
+    return zon.items[@intFromEnum(itemType)];
+}
+
+pub fn cropStage(stage: farm.GrowthEnum) CropStage {
+    return zon.crop.stages[@intFromEnum(stage)];
+}
+
+pub fn resolveImage(sprite: Sprite) zhu.graphics.Image {
+    return zhu.assets.getImage(sprite.imageId).?.sub(sprite.rect);
 }
 
 pub fn spawnPlayer(world: *World, spawn: zhu.Vector2) void {
@@ -29,7 +85,7 @@ pub fn spawnPlayer(world: *World, spawn: zhu.Vector2) void {
         _ = world.removeIdentity(actor.Player);
     }
 
-    const config = prefab.actor.player;
+    const config = zon.player;
 
     const player = world.createIdentity(actor.Player);
     world.add(player, spawn);
@@ -57,7 +113,7 @@ pub fn spawnPlayer(world: *World, spawn: zhu.Vector2) void {
 }
 
 pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {
-    const config = prefab.farm.animals[@intFromEnum(kind)];
+    const config = zon.animals[@intFromEnum(kind)];
 
     const entity = world.createEntity();
     world.add(entity, motion.Velocity{});
@@ -67,7 +123,7 @@ pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {
     world.add(entity, motion.Blocking{});
     world.add(entity, actor.Actor{ .rows = config.rows });
 
-    const animals = prefab.farm.animals;
+    const animals = zon.animals;
     const sources = switch (kind) {
         .cow => &comptime animationSources(animals[0].animations),
         .sheep => &comptime animationSources(animals[1].animations),
@@ -212,12 +268,12 @@ fn applyLight(world: *World, entity: Entity, object: Object) void {
 }
 
 pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
-    const stage = prefab.farm.crop.stages[0];
+    const stage = zon.crop.stages[0];
     const entity = world.createEntity();
     world.add(entity, farm.Crop{ .next = stage.duration });
     world.add(entity, component.Position.xy(position.x, position.y));
     world.add(entity, render.Sprite{
-        .image = prefab.resolveImage(stage.sprite),
+        .image = resolveImage(stage.sprite),
         .offset = stage.sprite.offset,
     });
     world.add(entity, render.Render{ .layer = .crop });
@@ -229,21 +285,21 @@ pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
 pub fn advanceCrop(crop: *farm.Crop) render.Sprite {
     crop.timer = 0;
     crop.stage = zhu.nextEnum(farm.GrowthEnum, crop.stage);
-    const stage = prefab.farm.crop.stages[@intFromEnum(crop.stage)];
+    const stage = cropStage(crop.stage);
     crop.next = stage.duration;
     return .{
-        .image = prefab.resolveImage(stage.sprite),
+        .image = resolveImage(stage.sprite),
         .offset = stage.sprite.offset,
     };
 }
 
 pub fn spawnPickup(world: *World, itemType: item.ItemEnum) Entity {
-    const config = prefab.item(itemType);
+    const config = itemConfig(itemType);
 
     const entity = world.createEntity();
     world.add(entity, item.Pickup{ .item = itemType, .count = 1 });
     world.add(entity, render.Sprite{
-        .image = prefab.resolveImage(config.icon),
+        .image = resolveImage(config.icon),
         .size = .xy(10, 10),
     });
     world.add(entity, render.Render{ .layer = .crop });
@@ -252,7 +308,7 @@ pub fn spawnPickup(world: *World, itemType: item.ItemEnum) Entity {
     return entity;
 }
 
-fn animationSources(comptime animations: []const prefab.Animation) //
+fn animationSources(comptime animations: []const Animation) //
 [animations.len]zhu.Animation.Source {
     var sources: [animations.len]zhu.Animation.Source = undefined;
     inline for (animations) |config| {
@@ -333,7 +389,7 @@ test "spawnCrop 创建作物实体并设置初始 next" {
     const entity = spawnCrop(&world, .xy(32, 48));
     const crop = world.get(entity, farm.Crop).?;
     try expectEqual(farm.GrowthEnum.seed, crop.stage);
-    try expectEqual(prefab.farm.crop.stages[0].duration, crop.next);
+    try expectEqual(zon.crop.stages[0].duration, crop.next);
     try expectEqual(32, world.get(entity, component.Position).?.x);
 }
 
@@ -343,11 +399,11 @@ test "advanceCrop 推进阶段并累加 next" {
     putMockCropImages();
 
     var crop = farm.Crop{
-        .next = prefab.farm.crop.stages[0].duration,
+        .next = zon.crop.stages[0].duration,
     };
     _ = advanceCrop(&crop);
     try expectEqual(farm.GrowthEnum.sprout, crop.stage);
-    try expectEqual(prefab.farm.crop.stages[1].duration, crop.next);
+    try expectEqual(zon.crop.stages[1].duration, crop.next);
     try expectEqual(0, crop.timer);
 }
 
@@ -743,21 +799,21 @@ test "day-only 点光白天启用夜晚禁用" {
 fn putMockFarmImages() void {
     const image = zhu.graphics.Image{ .size = .xy(256, 256) };
 
-    for (prefab.actor.player.animations) |animation| {
+    for (zon.player.animations) |animation| {
         zhu.assets.putImage(animation.imageId, image);
     }
 }
 
 fn putMockCropImages() void {
     const image = zhu.graphics.Image{ .size = .xy(256, 256) };
-    for (prefab.farm.crop.stages) |stage| {
+    for (zon.crop.stages) |stage| {
         zhu.assets.putImage(stage.sprite.imageId, image);
     }
 }
 
 fn putMockAnimalImages() void {
     const image = zhu.graphics.Image{ .size = .xy(128, 288) };
-    for (prefab.farm.animals) |animalConfig| {
+    for (zon.animals) |animalConfig| {
         zhu.assets.putImage(animalConfig.sprite.imageId, image);
     }
 }

@@ -4,7 +4,6 @@ const zhu = @import("zhu");
 const factory = @import("../factory.zig");
 const component = @import("../component.zig");
 const context = @import("../context.zig");
-const prefab = @import("../prefab.zig");
 const toolbar = @import("../ui/toolbar.zig");
 const land = @import("../map.zig").land;
 
@@ -105,10 +104,10 @@ fn addPlayerTarget(world: *zhu.ecs.World, position: zhu.Vector2) void {
 
 fn putMockImages() void {
     const image = zhu.Image{ .size = .xy(256, 256) };
-    for (prefab.farm.crop.stages) |stage| {
+    for (factory.zon.crop.stages) |stage| {
         zhu.assets.putImage(stage.sprite.imageId, image);
     }
-    for (prefab.farm.items) |item| {
+    for (factory.zon.items) |item| {
         zhu.assets.putImage(item.icon.imageId, image);
     }
 }
