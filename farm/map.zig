@@ -127,8 +127,7 @@ pub fn drawFront() void {
 // 对应 CPP 的 PROBE_PADDING_PX
 const probePadding: f32 = 4;
 
-/// 标记玩家正前方一格范围内所有实体的 Hit 组件。
-/// tileSize 直接从当前地图数据读取，不硬编码。
+/// 标记玩家正前方探测框范围内所有实体的 Hit 组件。
 pub fn markFacingHits(world: *World) void {
     const player = world.getIdentity(actor.Player).?;
     const pos = world.get(player, Position).?;
