@@ -10,11 +10,6 @@ const Blocking = component.motion.Blocking;
 const World = zhu.ecs.World;
 const Entity = zhu.ecs.Entity;
 
-pub const Move = struct {
-    from: zhu.Vector2,
-    to: zhu.Vector2,
-};
-
 pub const Hit = struct {};
 
 // 当前地图每个瓦片上的语义标记，可组合使用。
@@ -175,11 +170,11 @@ pub fn isBlocked(position: zhu.Vector2, collider: Shape) bool {
 }
 
 /// 检查实体能否从当前位置移动到目标位置。
-pub fn canMove(world: *World, entity: Entity, move: Move) bool {
+pub fn canMove(world: *World, entity: Entity, to: zhu.Vector2) bool {
     const body = world.get(entity, Shape).?;
-    if (isBlocked(move.to, body)) return false;
+    if (isBlocked(to, body)) return false;
 
-    const moved = body.move(move.to);
+    const moved = body.move(to);
     var query = world.query(.{ Position, Shape, Blocking });
     while (query.next()) |other| {
         if (other == entity) continue;

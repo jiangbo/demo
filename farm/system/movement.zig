@@ -18,21 +18,17 @@ pub fn update(world: *World, delta: f32) void {
         const velocity = query.get(entity, Velocity);
         if (velocity.value.approxEqual(.zero)) continue;
 
-        const position = query.getPtr(entity, Position);
+        const pos = query.getPtr(entity, Position);
         const offset = velocity.value.scale(delta);
 
         // 轴分离碰撞解析：先尝试 X 轴移动，再尝试 Y 轴移动。
         // 碰撞时只回退受阻轴，这样可以沿墙滑动而不会卡死。
-        const posX = position.addX(offset.x);
-        var move = spatial.Move{ .from = position.*, .to = posX };
-        if (spatial.canMove(world, entity, move))
-            position.* = posX;
+        const posX = pos.addX(offset.x);
+        if (spatial.canMove(world, entity, posX)) pos.* = posX;
 
         // Y 轴基于 X 轴已接受的位置继续检测，保持斜向移动和滑动。
-        const posY = position.addY(offset.y);
-        move = .{ .from = position.*, .to = posY };
-        if (spatial.canMove(world, entity, move))
-            position.* = posY;
+        const posY = pos.addY(offset.y);
+        if (spatial.canMove(world, entity, posY)) pos.* = posY;
     }
 }
 
