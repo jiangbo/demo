@@ -457,11 +457,12 @@ pub const Shape = union(enum) {
         };
     }
 
-    pub fn intersect(self: Shape, other: Shape) bool {
+    pub fn intersect(self: Shape, other: anytype) bool {
+        const isShape = (@TypeOf(other) == Shape);
         return switch (self) {
-            inline else => |a| switch (other) {
+            inline else => |a| if (isShape) switch (other) {
                 inline else => |b| a.intersect(b),
-            },
+            } else a.intersect(other),
         };
     }
 };

@@ -10,6 +10,7 @@ pub const land = @import("map/land.zig");
 const tiled = zhu.extend.tiled;
 const World = zhu.ecs.World;
 const actor = component.actor;
+const Position = component.Position;
 pub const Id = component.map.Id;
 pub const StartOffset = component.map.StartOffset;
 const Trigger = component.map.Trigger;
@@ -121,6 +122,28 @@ pub fn drawFront() void {
     if (frontLayerStart == vertexes.items.len) return;
     const front = vertexes.items[frontLayerStart..];
     zhu.batch.drawVertices(front, null);
+}
+
+// 对应 CPP 的 PROBE_PADDING_PX
+const probePadding: f32 = 4;
+
+/// 标记玩家正前方一格范围内所有实体的 Hit 组件。
+/// tileSize 直接从当前地图数据读取，不硬编码。
+pub fn markFacingHits(world: *World) void {
+    const player = world.getIdentity(actor.Player).?;
+    const pos = world.get(player, Position).?;
+    const facing = world.get(player, actor.Actor).?.facing;
+
+    const ts = data.tileSize.x; // 当前地图瓦片大小
+    const probeSize = ts + probePadding * 2;
+    const half = probeSize / 2;
+    const origin = pos.add(switch (facing) {
+        .down => zhu.Vector2.xy(-half, ts - probePadding),
+        .up => zhu.Vector2.xy(-half, -ts - half),
+        .right => zhu.Vector2.xy(ts - probePadding, -half),
+        .left => zhu.Vector2.xy(-ts - half, -half),
+    });
+    spatial.markHits(world, .init(origin, .square(probeSize)));
 }
 
 pub fn loadObjects(world: *World, layer: *const tiled.Layer) void {
