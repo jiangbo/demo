@@ -67,6 +67,9 @@ zig build test
 5. 不做 C++ 的完整 UI 框架、布局和 preset 系统。
 6. 不做 C++ 的 `StaticTileGrid` 完整结构，不补 `TileCellData`、layer tile entity
   和相关通用增删查接口。
+7. 不做 C++ 的 `DynamicEntityGrid`。Zig 当前动态实体数量少，移动碰撞直接在
+  `spatial.canMove()` 中遍历 `Position + Shape + Blocking` 完成，不维护 cell 网格、
+  `entity -> cells` 映射、候选查询和去重结构。
 
 ## 待后续完成
 
