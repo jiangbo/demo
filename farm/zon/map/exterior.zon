@@ -6863,12 +6863,12 @@
             .height = 0,
             .offset = .{ .x = 0, .y = 0 },
             .data = .{},
-            .objects = .{.{
+            .objects = .{ .{
                 .id = 36,
                 .gid = 0,
                 .name = "",
                 .type = "map_trigger",
-                .position = .{ .x = 317.16666, .y = 125.33335 },
+                .position = .{ .x = 317.16666, .y = 120 },
                 .size = .{ .x = 10.6667, .y = 10.999967 },
                 .point = false,
                 .properties = .{
@@ -6883,7 +6883,27 @@
                     .rotation = false,
                     .padding = 0,
                 },
-            }},
+            }, .{
+                .id = 100,
+                .gid = 0,
+                .name = "",
+                .type = "map_trigger",
+                .position = .{ .x = 552, .y = 227 },
+                .size = .{ .x = 7, .y = 25 },
+                .point = false,
+                .properties = .{
+                    .{ .name = "self_id", .value = .{ .int = 2 } },
+                    .{ .name = "start_offset", .value = .{ .string = "left" } },
+                    .{ .name = "target_id", .value = .{ .int = 2 } },
+                    .{ .name = "target_map", .value = .{ .string = "town" } },
+                },
+                .extend = .{
+                    .flipX = false,
+                    .flipY = false,
+                    .rotation = false,
+                    .padding = 0,
+                },
+            } },
             .parallaxX = 1,
             .parallaxY = 1,
             .repeatX = false,

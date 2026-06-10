@@ -43,7 +43,7 @@ zig build test
 - [x] 18-UI 布局与预设.md
 - [x] 19-空间索引.md
 - [x] 20-碰撞解析与移动.md
-- [ ] 21-地图数据管线.md
+- [x] 21-地图数据管线.md
 - [ ] 22-关卡载入器与实体建造者.md
 - [ ] 23-蓝图与实体工厂.md
 - [ ] 24-世界状态.md
@@ -65,6 +65,7 @@ zig build test
 4. 不做 C++ 的完整 `InputManager`、Input Debug 面板、UI 框架、布局和 preset 系统。
 5. 不做 C++ 的 `StaticTileGrid`、`DynamicEntityGrid`、`CollisionResult`、
   空间索引综合框架和空间索引 Debug 面板。
+6. 不做 Debug 面板。
 
 ## 待后续完成
 
@@ -150,8 +151,6 @@ zig build test
   时间显隐规则和 `circle.png` 圆形光圈占位。
 - 34-夜间灯光占位效果：C++ 支持真实 `SpotLight` 参数解析；Zig 当前
   `Spot` 只保留默认数据，没有保留 Tiled class 嵌套属性。
-- 34-夜间灯光占位效果：C++ 支持 `EmissiveRect` 和 `EmissiveSprite`；
-  Zig 本节暂不实现自发光矩形和自发光精灵。
 - 34-夜间灯光占位效果：C++ 的玩家灯有独立事件和配置；Zig 已取消玩家跟随灯，
   只保留地图光源。
 - 35-音效反馈：C++ 使用 `resource_mapping.json`、`AudioManager`、

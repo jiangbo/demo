@@ -6577,7 +6577,7 @@
             .height = 0,
             .offset = .{ .x = 0, .y = 0 },
             .data = .{},
-            .objects = .{.{
+            .objects = .{ .{
                 .id = 26,
                 .gid = 0,
                 .name = "",
@@ -6597,7 +6597,27 @@
                     .rotation = false,
                     .padding = 0,
                 },
-            }},
+            }, .{
+                .id = 100,
+                .gid = 0,
+                .name = "",
+                .type = "map_trigger",
+                .position = .{ .x = 1, .y = 227 },
+                .size = .{ .x = 7, .y = 25 },
+                .point = false,
+                .properties = .{
+                    .{ .name = "self_id", .value = .{ .int = 2 } },
+                    .{ .name = "start_offset", .value = .{ .string = "right" } },
+                    .{ .name = "target_id", .value = .{ .int = 2 } },
+                    .{ .name = "target_map", .value = .{ .string = "exterior" } },
+                },
+                .extend = .{
+                    .flipX = false,
+                    .flipY = false,
+                    .rotation = false,
+                    .padding = 0,
+                },
+            } },
             .parallaxX = 1,
             .parallaxY = 1,
             .repeatX = false,

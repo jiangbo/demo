@@ -14,7 +14,7 @@ pub fn update(world: *zhu.ecs.World) void {
         if (trigger.rect.contains(position)) {
             context.map.pending = .{
                 .target = trigger.targetMap,
-                .targetId = trigger.selfId,
+                .targetId = trigger.targetId,
             };
             return;
         }

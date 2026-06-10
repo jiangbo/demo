@@ -84,6 +84,8 @@ pub fn setTileFlag(index: usize, flag: []const u8) void {
             tiles[index].insert(.arable);
         } else if (std.mem.eql(u8, token, "OCCUPIED")) {
             tiles[index].insert(.occupied);
+        } else {
+            std.debug.panic("unknown tile_flag token: {s}", .{token});
         }
     }
 }

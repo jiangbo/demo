@@ -199,6 +199,9 @@ fn loadObject(world: *World, object: tiled.Object) void {
         return;
     }
 
+    // rest 是后续休息区功能预留对象，本讲只明确识别，不生成实体。
+    if (object.isType("rest")) return;
+
     if (object.isType("light")) {
         loadLightObject(world, object);
         return;
