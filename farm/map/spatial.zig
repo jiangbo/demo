@@ -4,7 +4,16 @@ const zhu = @import("zhu");
 const component = @import("../component.zig");
 
 const tiled = zhu.extend.tiled;
-const Collider = component.motion.Collider;
+const Position = component.Position;
+const Shape = component.motion.Shape;
+const Blocking = component.motion.Blocking;
+const World = zhu.ecs.World;
+const Entity = zhu.ecs.Entity;
+
+pub const Move = struct {
+    from: zhu.Vector2,
+    to: zhu.Vector2,
+};
 
 // 当前地图每个瓦片上的语义标记，可组合使用。
 pub const Mark = enum {
@@ -120,7 +129,7 @@ pub fn addSolidObject(object: tiled.Object) void {
 /// delta 表示进入方向：向南移动(d.y>0)遇到 BLOCK_N 表示从北面进入被挡
 pub fn isBlocked(
     position: zhu.Vector2,
-    collider: Collider,
+    collider: Shape,
     delta: zhu.Vector2,
 ) bool {
     // 将碰撞体偏移到绝对位置
@@ -149,13 +158,33 @@ pub fn isBlocked(
     return false;
 }
 
+/// 检查实体能否从当前位置移动到目标位置。
+pub fn canMove(world: *World, entity: Entity, move: Move) bool {
+    const body = world.get(entity, Shape).?;
+    const delta = move.to.sub(move.from);
+    if (isBlocked(move.to, body, delta)) return false;
+
+    const moved = body.move(move.to);
+    var query = world.query(.{ Position, Shape, Blocking });
+    while (query.next()) |other| {
+        if (other == entity) continue;
+
+        const otherPosition = query.get(other, Position);
+        const otherBody = query.get(other, Shape);
+        const otherShape = otherBody.move(otherPosition);
+        if (moved.intersect(otherShape)) return false;
+    }
+
+    return true;
+}
+
 test "isBlocked 检测碰撞框是否与 solid 格子重叠" {
     zhu.assets.allocator = std.testing.allocator;
     const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
     enter(&testMaps[0]);
     defer deinit();
 
-    const collider: Collider = .{
+    const collider: Shape = .{
         .rect = .init(.xy(-5, -6), .xy(10, 6)),
     };
     // 空地图不应碰撞
@@ -173,7 +202,7 @@ test "isBlocked 方向阻挡只在对应方向生效" {
     enter(&testMaps[0]);
     defer deinit();
 
-    const collider: Collider = .{
+    const collider: Shape = .{
         .rect = .init(.zero, .xy(10, 6)),
     };
     const index = map.worldToTileIndex(.xy(40, 40)).?;
@@ -194,7 +223,7 @@ test "isBlocked 不会把贴边当成碰撞" {
     defer deinit();
 
     tiles[map.worldToTileIndex(.xy(40, 40)).?].setUnion(solid);
-    const collider: Collider = .{
+    const collider: Shape = .{
         .rect = .init(.zero, .xy(10, 6)),
     };
     const d = zhu.Vector2.xy(1, 1);
@@ -213,7 +242,7 @@ test "对象 collider 使用精确矩形保留桌子间通道" {
     addSolidRect(.init(.xy(83.083336, 106.208336), .xy(26.5, 28.25)));
     addSolidRect(.init(.xy(83.04163, 154.22884), .xy(26.5, 28.25)));
 
-    const collider: Collider = .{
+    const collider: Shape = .{
         .rect = .init(.xy(-5, -6), .xy(10, 6)),
     };
     const d = zhu.Vector2.xy(1, 1);
@@ -263,20 +292,20 @@ test "isBlocked 圆形碰撞体检测 solid 瓦片" {
     enter(&testMaps[0]);
     defer deinit();
 
-    const collider: Collider = .{
+    const collider: Shape = .{
         .circle = .init(.xy(0, -5), 5),
     };
 
     // 空地图不碰撞
-    try std.testing.expect(!isBlocked(
-        .xy(24, 40), collider, .xy(1, 1),
-    ));
+    try std.testing.expect(
+        !isBlocked(.xy(24, 40), collider, .xy(1, 1)),
+    );
 
     // solid 格子碰撞
     tiles[map.worldToTileIndex(.xy(24, 40)).?].setUnion(solid);
-    try std.testing.expect(isBlocked(
-        .xy(24, 40), collider, .xy(1, 1),
-    ));
+    try std.testing.expect(
+        isBlocked(.xy(24, 40), collider, .xy(1, 1)),
+    );
 }
 
 test "isBlocked 圆形碰撞体与区域矩形精确碰撞" {
@@ -287,7 +316,7 @@ test "isBlocked 圆形碰撞体与区域矩形精确碰撞" {
 
     addSolidRect(.init(.xy(83, 106), .xy(26, 28)));
 
-    const collider: Collider = .{
+    const collider: Shape = .{
         .circle = .init(.xy(0, -5), 5),
     };
     const d = zhu.Vector2.xy(1, 1);

@@ -6,7 +6,8 @@ pub const Position = zhu.Vector2;
 pub const motion = struct {
     pub const Velocity = struct { value: zhu.Vector2 = .zero };
 
-    pub const Collider = zhu.math.Shape;
+    pub const Shape = zhu.math.Shape;
+    pub const Blocking = struct {};
 };
 
 pub const render = struct {

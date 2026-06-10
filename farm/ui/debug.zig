@@ -9,7 +9,7 @@ const map = @import("../map.zig");
 
 const World = zhu.ecs.World;
 const Actor = component.actor.Actor;
-const Collider = component.motion.Collider;
+const Shape = component.motion.Shape;
 const Player = component.actor.Player;
 const Position = component.Position;
 const Target = component.ui.Target;
@@ -147,16 +147,20 @@ fn drawPlayerPanel(world: *World) void {
         );
     }
 
-    if (world.get(player, Collider)) |collider| {
-        switch (collider) {
+    if (world.get(player, Shape)) |body| {
+        switch (body) {
             .rect => |r| _ = imgui.igText(
-                "Collider: rect %.1fx%.1f at %.1f,%.1f",
-                r.size.x, r.size.y,
-                r.min.x, r.min.y,
+                "Shape: rect %.1fx%.1f at %.1f,%.1f",
+                r.size.x,
+                r.size.y,
+                r.min.x,
+                r.min.y,
             ),
             .circle => |c| _ = imgui.igText(
-                "Collider: circle r=%.1f at %.1f,%.1f",
-                c.radius, c.center.x, c.center.y,
+                "Shape: circle r=%.1f at %.1f,%.1f",
+                c.radius,
+                c.center.x,
+                c.center.y,
             ),
         }
     }

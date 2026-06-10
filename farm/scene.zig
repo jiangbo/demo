@@ -153,7 +153,7 @@ fn drawFarm(world: *World) void {
 
     // 调试绘制碰撞层
     drawSolids();
-    drawCollider(world);
+    drawShape(world);
 
     ui.draw(world);
 }
@@ -171,11 +171,11 @@ fn drawSolids() void {
     for (map.spatial.areas.items) |rect| zhu.batch.drawDebug(rect);
 }
 
-fn drawCollider(world: *zhu.ecs.World) void {
+fn drawShape(world: *zhu.ecs.World) void {
     const player = world.getIdentity(actor.Player).?;
     const position = world.get(player, Position).?;
-    const collider = world.get(player, motion.Collider).?;
-    const shape = collider.move(position);
+    const body = world.get(player, motion.Shape).?;
+    const shape = body.move(position);
     switch (shape) {
         .rect => |r| zhu.batch.drawRect(r, .{
             .color = .rgba(0, 1, 0, 0.4),

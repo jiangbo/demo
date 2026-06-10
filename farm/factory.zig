@@ -34,9 +34,10 @@ pub fn spawnPlayer(world: *World, spawn: zhu.Vector2) void {
     const player = world.createIdentity(actor.Player);
     world.add(player, spawn);
     world.add(player, motion.Velocity{});
-    world.add(player, motion.Collider{
+    world.add(player, motion.Shape{
         .circle = .init(.xy(0, -5), 5),
     });
+    world.add(player, motion.Blocking{});
     world.add(player, actor.Actor{ .rows = config.rows });
 
     const sources = comptime animationSources(config.animations);
@@ -60,9 +61,10 @@ pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {
 
     const entity = world.createEntity();
     world.add(entity, motion.Velocity{});
-    world.add(entity, motion.Collider{
+    world.add(entity, motion.Shape{
         .circle = .init(.xy(0, -5), 5),
     });
+    world.add(entity, motion.Blocking{});
     world.add(entity, actor.Actor{ .rows = config.rows });
 
     const animals = prefab.farm.animals;
