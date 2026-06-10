@@ -97,25 +97,23 @@ pub const Map = struct {
 
     pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {
         std.debug.assert(gid != 0);
-        for (self.tileSetRefs) |ref| {
-            if (gid >= ref.firstGid and gid < ref.max) return ref;
-        } else unreachable;
+        return self.tileSetRefs[(gid >> 24) - 1];
     }
 
     pub fn getTileSetByGid(self: Map, gid: u32) TileSet {
-        return getTileSetByRef(self.tileSetRefByGid(gid));
+        return getTileSetByRef(self.getTileSetRefByGid(gid));
     }
 
     pub fn getTileByGid(self: Map, gid: u32) ?*const Tile {
         const ref = self.getTileSetRefByGid(gid);
         const tileSet = getTileSetByRef(ref);
-        return tileSet.tileByLocalId(gid - ref.firstGid);
+        return tileSet.tileByLocalId(gid & 0x00FFFFFF);
     }
 
     pub fn getImageByGid(self: Map, gid: u32) graphics.Image {
         const ref = self.getTileSetRefByGid(gid);
         const tileSet = getTileSetByRef(ref);
-        const localId = gid - ref.firstGid;
+        const localId = gid & 0x00FFFFFF;
 
         if (tileSet.columns == 0) {
             const tile = tileSet.tileByLocalId(localId).?;
@@ -132,7 +130,8 @@ pub const Map = struct {
     pub fn getAnimationByGid(self: Map, gid: u32) ?graphics.Animation {
         const ref = self.getTileSetRefByGid(gid);
         const tileSet = getTileSetByRef(ref);
-        if (tileSet.tileByLocalId(gid - ref.firstGid)) |tile| {
+        const localId = gid & 0x00FFFFFF;
+        if (tileSet.tileByLocalId(localId)) |tile| {
             if (tile.animation.len == 0) return null;
             return graphics.Animation.init(
                 assets.getImage(tileSet.image).?,
@@ -361,7 +360,7 @@ fn tileCoord(value: f32, size: f32) i32 {
     return @intFromFloat(@floor(value / size));
 }
 
-pub const TileSetRef = struct { id: u32, firstGid: u32, max: u32 };
+pub const TileSetRef = struct { id: u32 };
 
 pub const LayerEnum = enum { image, tile, object };
 

@@ -14,7 +14,7 @@ const TiledMap = struct {
 
     tileSize: Vector2,
     layers: []Layer,
-    tileSetRefs: []const TileSet,
+    tileSetRefs: []const TileSetRef,
 };
 
 const LayerEnum = enum { image, tile, object };
@@ -60,7 +60,9 @@ pub const Object = struct {
     properties: []const parsed.Property,
     extend: ObjectExtend, // 扩展信息
 };
-const TileSet = struct { id: u32, firstGid: u32, max: u32 };
+
+const TileSetRef = struct { id: u32 };
+const TileSetRange = struct { id: u32, firstGid: u32, max: u32 };
 
 pub fn main() !void {
     var debugAllocator: std.heap.DebugAllocator(.{}) = .init;
@@ -78,10 +80,11 @@ pub fn main() !void {
     const content = try std.fs.cwd().readFileAlloc(allocator, name, max);
     const tiledMap = try parseJson(tiled.Map, allocator, content, .{});
 
-    const tileSets = try allocator.alloc(TileSet, tiledMap.tilesets.len);
-    for (tileSets, tiledMap.tilesets, 0..) |*tileSet, old, index| {
+    const tileSetRanges = try allocator.alloc(TileSetRange, tiledMap.tilesets.len);
+    const tileSetRefs = try allocator.alloc(TileSetRef, tiledMap.tilesets.len);
+    for (tileSetRanges, tileSetRefs, tiledMap.tilesets, 0..) |*range, *ref, old, index| {
         var maxGid: u32 = std.math.maxInt(u32);
-        if (index < tileSets.len - 1) {
+        if (index < tileSetRanges.len - 1) {
             maxGid = tiledMap.tilesets[index + 1].firstgid;
         }
 
@@ -92,7 +95,8 @@ pub fn main() !void {
         const id = std.hash.Fnv1a_32.hash(tileSetName);
 
         std.log.info("{s} ----> {}", .{ tileSetName, id });
-        tileSet.* = TileSet{
+        ref.* = .{ .id = id };
+        range.* = TileSetRange{
             .id = id,
             .firstGid = old.firstgid,
             .max = maxGid,
@@ -104,12 +108,12 @@ pub fn main() !void {
     const map = TiledMap{
         .height = tiledMap.height,
         .width = tiledMap.width,
-        .layers = try parseLayers(tiledMap.layers),
+        .layers = try parseLayers(tiledMap.layers, tileSetRanges),
         .tileSize = .{
             .x = @floatFromInt(tiledMap.tilewidth),
             .y = @floatFromInt(tiledMap.tileheight),
         },
-        .tileSetRefs = tileSets,
+        .tileSetRefs = tileSetRefs,
         .backgroundColor = color,
     };
 
@@ -124,7 +128,35 @@ pub fn main() !void {
     try writer.interface.flush();
 }
 
-fn parseLayers(layers: []tiled.Layer) ![]Layer {
+const TileSetMatch = struct { index: u8, localId: u32 };
+
+fn findTileSet(gid: u32, tileSetRanges: []const TileSetRange) ?TileSetMatch {
+    if (gid == 0) return null;
+    const cleanGid = gid & 0x1FFFFFFF;
+    if (cleanGid == 0) return null;
+
+    for (tileSetRanges, 0..) |ts, i| {
+        if (cleanGid >= ts.firstGid and cleanGid < ts.max) {
+            return .{
+                .index = @intCast(i),
+                .localId = cleanGid - ts.firstGid,
+            };
+        }
+    }
+    return null;
+}
+
+fn encodeGid(gid: u32, tileSetRanges: []const TileSetRange) u32 {
+    if (gid == 0) return 0;
+    if (findTileSet(gid, tileSetRanges)) |res| {
+        std.debug.assert(res.localId <= 0x00FFFFFF);
+        const tileSetTag = @as(u32, res.index) + 1;
+        return (tileSetTag << 24) | res.localId;
+    }
+    std.debug.panic("tiled compiler: GID {} has no matching tileSet", .{gid});
+}
+
+fn parseLayers(layers: []tiled.Layer, tileSetRanges: []const TileSetRange) ![]Layer {
     const result: []Layer = try allocator.alloc(Layer, layers.len);
 
     var layerCount: usize = 0;
@@ -133,6 +165,8 @@ fn parseLayers(layers: []tiled.Layer) ![]Layer {
         var width: i32, var height: i32 = .{ 0, 0 };
         var objects: []Object = &.{};
         var image: u32 = 0;
+        var layerData: []const u32 = &.{};
+
         if (std.mem.eql(u8, "imagelayer", old.type)) {
             layerEnum = .image;
             width = old.imagewidth orelse 0;
@@ -142,6 +176,13 @@ fn parseLayers(layers: []tiled.Layer) ![]Layer {
             layerEnum = .tile;
             width = old.width orelse 0;
             height = old.height orelse 0;
+
+            // 编码 Tile Layer 的 GID，高 8 位为 TileSet 序号，低 24 位为 localId
+            const encoded = try allocator.alloc(u32, old.data.len);
+            for (old.data, 0..) |rawGid, idx| {
+                encoded[idx] = encodeGid(rawGid, tileSetRanges);
+            }
+            layerData = encoded;
         } else if (std.mem.eql(u8, "objectgroup", old.type)) {
             layerEnum = .object;
             objects = try allocator.alloc(Object, old.objects.len);
@@ -149,7 +190,7 @@ fn parseLayers(layers: []tiled.Layer) ![]Layer {
                 const gid = obj.gid orelse 0;
                 new.* = Object{
                     .id = obj.id,
-                    .gid = gid & 0x1FFFFFFF,
+                    .gid = encodeGid(gid, tileSetRanges),
                     .name = obj.name,
                     .type = obj.type,
                     .position = .{ .x = obj.x, .y = obj.y },
@@ -173,7 +214,7 @@ fn parseLayers(layers: []tiled.Layer) ![]Layer {
             .width = @floatFromInt(width),
             .height = @floatFromInt(height),
             .offset = .{ .x = old.offsetx, .y = old.offsety },
-            .data = old.data,
+            .data = layerData,
             .objects = objects,
             .parallaxX = old.parallaxx,
             .parallaxY = old.parallaxy,

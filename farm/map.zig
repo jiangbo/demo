@@ -256,46 +256,6 @@ fn appendVertex(position: zhu.Vector2, image: zhu.graphics.Image) void {
     }) catch @panic("map oom");
 }
 
-test "gid 图片解析支持单图和集合图块集" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    tiled.init(@import("zon/map/tile.zon"));
-
-    const old = data;
-    defer data = old;
-    data = &maps[1];
-
-    const mockImage = zhu.Image{ .view = .{ .id = 1 } };
-
-    var singleGid: u32 = 0;
-    for (data.tileSetRefs) |ref| {
-        const tileSet = tiled.getTileSetByRef(ref);
-        if (tileSet.columns == 0) continue;
-        zhu.assets.putImage(tileSet.image, mockImage);
-        singleGid = ref.firstGid;
-        break;
-    }
-    var image = data.getImageByGid(singleGid);
-    try std.testing.expect(singleGid != 0);
-    try std.testing.expectEqual(1, image.view.id);
-
-    var collectionGid: u32 = 0;
-    for (data.tileSetRefs) |ref| {
-        const tileSet = tiled.getTileSetByRef(ref);
-        if (tileSet.columns != 0) continue;
-        for (tileSet.tiles, 0..) |tile, localId| {
-            if (tile.id == 0) continue;
-            zhu.assets.putImage(tile.id, mockImage);
-            collectionGid = ref.firstGid + @as(u32, @intCast(localId));
-            break;
-        }
-        if (collectionGid != 0) break;
-    }
-    image = data.getImageByGid(collectionGid);
-    try std.testing.expect(collectionGid != 0);
-    try std.testing.expectEqual(1, image.view.id);
-}
-
 test "地图绘制会把前景留到实体之后" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();

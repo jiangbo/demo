@@ -378,9 +378,7 @@ test "地图摆件按底边定位生成实体" {
             .tiles = &tiles,
         },
     };
-    const refs = [_]tiled.TileSetRef{
-        .{ .id = tileSetId, .firstGid = 1, .max = 2 },
-    };
+    const refs = [_]tiled.TileSetRef{.{ .id = tileSetId }};
     const testMap = tiled.Map{
         .height = 1,
         .width = 1,
@@ -396,7 +394,7 @@ test "地图摆件按底边定位生成实体" {
 
     const entity = spawnMapProp(&world, &testMap, .{
         .id = 1,
-        .gid = 1,
+        .gid = 0x01000000,
         .name = "",
         .type = "",
         .position = .xy(12, 34),
@@ -450,9 +448,7 @@ test "地图摆件优先用碰撞底边作为排序点" {
         .tileSize = .xy(20, 40),
         .tiles = &tiles,
     }};
-    const refs = [_]tiled.TileSetRef{
-        .{ .id = tileSetId, .firstGid = 1, .max = 2 },
-    };
+    const refs = [_]tiled.TileSetRef{.{ .id = tileSetId }};
     const testMap = tiled.Map{
         .height = 1,
         .width = 1,
@@ -468,7 +464,7 @@ test "地图摆件优先用碰撞底边作为排序点" {
 
     const entity = spawnMapProp(&world, &testMap, .{
         .id = 1,
-        .gid = 1,
+        .gid = 0x01000000,
         .name = "",
         .type = "",
         .position = .xy(12, 50),
@@ -521,9 +517,7 @@ test "带 anim_id 的地图摆件会创建停止的非循环动画" {
             .tiles = &tiles,
         },
     };
-    const refs = [_]tiled.TileSetRef{
-        .{ .id = tileSetId, .firstGid = 1, .max = 3 },
-    };
+    const refs = [_]tiled.TileSetRef{.{ .id = tileSetId }};
     const testMap = tiled.Map{
         .height = 1,
         .width = 1,
@@ -539,7 +533,7 @@ test "带 anim_id 的地图摆件会创建停止的非循环动画" {
 
     const entity = spawnMapProp(&world, &testMap, .{
         .id = 1,
-        .gid = 1,
+        .gid = 0x01000000,
         .name = "",
         .type = "",
         .position = .xy(12, 34),
