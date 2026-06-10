@@ -41,7 +41,7 @@ zig build test
 - [x] 16-音频系统.md
 - [x] 17-UI 框架基础.md
 - [x] 18-UI 布局与预设.md
-- [ ] 19-空间索引.md
+- [x] 19-空间索引.md
 - [ ] 20-碰撞解析与移动.md
 - [ ] 21-地图数据管线.md
 - [ ] 22-关卡载入器与实体建造者.md
@@ -59,17 +59,12 @@ zig build test
 
 ## 不做
 
-1. 不做 C++ 的后处理光照管线。Zig 项目不实现多 pass Lighting/Emissive/Bloom/Composite，
-  光照效果优先使用纹理、全屏覆盖色和简单 sprite 叠加来模拟。
+1. 不做 C++ 的后处理光照管线。
 2. 不做 C++ 的 `ResourceManager`、`resource_mapping.json` 和资源语义 key 映射层。
 3. 不做 C++ 的 FreeType/HarfBuzz 动态字体管线和 TextRenderer 调试面板。
-4. 不做 C++ 的完整 `InputManager` 和 Input Debug 面板。
-5. 不做 C++ 的完整 UI 框架、布局和 preset 系统。
-6. 不做 C++ 的 `StaticTileGrid` 完整结构，不补 `TileCellData`、layer tile entity
-  和相关通用增删查接口。
-7. 不做 C++ 的 `DynamicEntityGrid`。Zig 当前动态实体数量少，移动碰撞直接在
-  `spatial.canMove()` 中遍历 `Position + Shape + Blocking` 完成，不维护 cell 网格、
-  `entity -> cells` 映射、候选查询和去重结构。
+4. 不做 C++ 的完整 `InputManager`、Input Debug 面板、UI 框架、布局和 preset 系统。
+5. 不做 C++ 的 `StaticTileGrid`、`DynamicEntityGrid`、`CollisionResult`、
+  空间索引综合框架和空间索引 Debug 面板。
 
 ## 待后续完成
 
@@ -83,12 +78,9 @@ zig build test
   rect/list 或现有地图对象数据，不引入 C++ 的静态 REST layer。
 - 19-空间索引：目前 crop 收获时能按已知 tile 清理 `tile.object`；资源节点或宝箱销毁
   需要补一个按 entity 清理所在格的简单函数。
+- 30-物品使用与农场循环：农场工具结算前还需要补地图语义检查，例如 ARABLE、
+  SOLID/半格阻挡、OCCUPIED、已有 crop/soil，必要时再检查动态 Blocking 实体。
 - UI：考虑做 ZON 文件监听，实时刷新 ZON 中的数据。
-- 20-碰撞解析：薄墙方向阻挡只查单侧标记（向东只查 .west），
-  大位移可能穿墙；C++ 查跨过边界两侧（左格 BLOCK_E 或右格 BLOCK_W 都挡），
-  需改为检测跨过的那条边界。
-- 20-碰撞解析：动态实体碰撞未实现，玩家和动物之间可以重叠；
-  C++ `collision_resolver` 有 `anyDynamicOverlap` 排除 self 后检测其它实体 collider。
 - BUG：exterior ↔ town 之间的连通触发器位置和大小还需调整。
 - BUG：对话只能对话动物，交互范围不对，隔很远也能触发对话。
 - 31-对话气泡：对话框没有引入图片资源（CPP 使用九宫格图片背景）。
