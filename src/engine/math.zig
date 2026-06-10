@@ -272,9 +272,22 @@ pub const Rect = struct {
         return self.min.add(self.size.scale(0.5));
     }
 
-    pub fn contains(self: Rect, point: Vector2) bool {
+    pub fn contains(self: Rect, other: anytype) bool {
+        const T = @TypeOf(other);
+        if (T == Vector2) return self.containsPoint(other);
+        if (T == Rect) return self.containsRect(other);
+        @compileError("unsupported Rect.contains type");
+    }
+
+    pub fn containsPoint(self: Rect, point: Vector2) bool {
         return point.x >= self.min.x and point.x <= self.max().x and
             point.y >= self.min.y and point.y <= self.max().y;
+    }
+
+    pub fn containsRect(self: Rect, other: Rect) bool {
+        const maxS, const maxO = .{ self.max(), other.max() };
+        return maxO.x <= maxS.x and maxO.y <= maxS.y and
+            other.min.x >= self.min.x and other.min.y >= self.min.y;
     }
 
     pub fn closestPoint(self: Rect, point: Vector2) Vector2 {

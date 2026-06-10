@@ -135,6 +135,8 @@ pub fn isBlocked(
     // 将碰撞体偏移到绝对位置
     const shape = collider.move(position);
     const bounds = shape.toRect();
+    const mapBounds = zhu.Rect.init(.zero, map.size());
+    if (!mapBounds.contains(bounds)) return true;
 
     var iter = map.tilesInRect(bounds);
     while (iter.next()) |index| {
@@ -231,6 +233,46 @@ test "isBlocked 不会把贴边当成碰撞" {
     try std.testing.expect(!isBlocked(.xy(22, 36), collider, d));
     try std.testing.expect(!isBlocked(.xy(36, 26), collider, d));
     try std.testing.expect(isBlocked(.xy(23, 36), collider, d));
+}
+
+test "isBlocked 允许碰撞体贴住地图最大边界" {
+    zhu.assets.allocator = std.testing.allocator;
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
+    enter(&testMaps[0]);
+    defer deinit();
+
+    const collider: Shape = .{
+        .rect = .init(.zero, .xy(10, 10)),
+    };
+    const size = map.size();
+    const position = size.sub(.xy(10, 10));
+
+    try std.testing.expect(!isBlocked(position, collider, .zero));
+}
+
+test "isBlocked 阻挡碰撞体越过地图边界" {
+    zhu.assets.allocator = std.testing.allocator;
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
+    enter(&testMaps[0]);
+    defer deinit();
+
+    const collider: Shape = .{
+        .rect = .init(.zero, .xy(10, 10)),
+    };
+    const size = map.size();
+
+    try std.testing.expect(isBlocked(.xy(-0.1, 0), collider, .zero));
+    try std.testing.expect(isBlocked(
+        .xy(size.x - 9.9, 0),
+        collider,
+        .zero,
+    ));
+    try std.testing.expect(isBlocked(.xy(0, -0.1), collider, .zero));
+    try std.testing.expect(isBlocked(
+        .xy(0, size.y - 9.9),
+        collider,
+        .zero,
+    ));
 }
 
 test "对象 collider 使用精确矩形保留桌子间通道" {
