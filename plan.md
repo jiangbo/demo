@@ -45,7 +45,7 @@ zig build test
 - [x] 20-碰撞解析与移动.md
 - [x] 21-地图数据管线.md
 - [x] 22-关卡载入器与实体建造者.md
-- [ ] 23-蓝图与实体工厂.md
+- [x] 23-蓝图与实体工厂.md
 - [ ] 24-世界状态.md
 - [ ] 25-地图管理器.md
 - [ ] 26-游戏场景初始化与系统编排.md
@@ -71,6 +71,9 @@ zig build test
   每 tile ECS entity、`TileLayerComponent` 和 `ObjectPropertiesReader`。
 8. 21-地图数据管线：不做 C++ 的 Auto-tile 系统（WangSets、
   `AutoTileLibrary`、`AutoTileSystem`），地图瓦片拼接由美术直接处理。
+9. 23-蓝图与实体工厂：不做 C++ 的 `BlueprintManager`、运行时 JSON 蓝图、
+  hash key 查询和 Blueprint Inspector；Zig 使用编译期 `factory.zon`，
+  由 `factory.zig` 直接作为复杂实体的唯一装配点。
 
 ## 待后续完成
 
