@@ -36,6 +36,7 @@ pub const Animal = struct {
     animations: []const Animation,
     speed: f32,
     wanderRadius: f32,
+    name: []const u8,
 };
 
 pub const Sprite = struct {
@@ -123,12 +124,15 @@ pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {
     world.add(entity, motion.Blocking{});
     world.add(entity, actor.Actor{ .rows = config.rows });
 
-    const animals = zon.animals;
-    const sources = switch (kind) {
-        .cow => &comptime animationSources(animals[0].animations),
-        .sheep => &comptime animationSources(animals[1].animations),
+    // inline else 让每种动物的动画源在编译期按枚举值分别计算
+    const sources = blk: switch (kind) {
+        inline else => |k| {
+            const source = zon.animals[@intFromEnum(k)].animations;
+            break :blk &comptime animationSources(source);
+        },
     };
-    const animation = zhu.Animation.initSource(sources, config.sprite.rect.size);
+    const imageSize = config.sprite.rect.size;
+    const animation = zhu.Animation.initSource(sources, imageSize);
 
     world.add(entity, render.Sprite{
         .image = animation.subImage(),
@@ -145,12 +149,7 @@ pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {
         .radius = config.wanderRadius,
         .speed = config.speed,
     });
-    world.add(entity, actor.Dialog{
-        .scriptId = switch (kind) {
-            .cow => "cow",
-            .sheep => "sheep",
-        },
-    });
+    world.add(entity, actor.Dialog{ .scriptId = config.name });
 
     return entity;
 }
