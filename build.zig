@@ -6,24 +6,13 @@ const Options = struct {
     sokol: *std.Build.Dependency,
 };
 
-const cimgui = @import("cimgui");
-
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const sokol = b.dependency("sokol", .{
         .target = target,
         .optimize = optimize,
-        .with_sokol_imgui = true,
     });
-
-    const cimgui_conf = cimgui.getConfig(false);
-    const cimgui_dep = b.dependency("cimgui", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    const include = cimgui_dep.path(cimgui_conf.include_dir);
-    sokol.artifact("sokol_clib").root_module.addIncludePath(include);
 
     const exeModule = b.createModule(.{
         .root_source_file = b.path("farm/main.zig"),
@@ -31,7 +20,6 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "sokol", .module = sokol.module("sokol") },
-            .{ .name = cimgui_conf.module_name, .module = cimgui_dep.module(cimgui_conf.module_name) },
         },
     });
 
@@ -68,7 +56,6 @@ fn buildNative(b: *std.Build, options: Options) !void {
     const sokol = b.dependency("sokol", .{
         .target = target,
         .optimize = optimize,
-        .with_sokol_imgui = true,
     });
     zhuModule.addImport("sokol", sokol.module("sokol"));
 

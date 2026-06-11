@@ -72,23 +72,6 @@ pub const time = struct {
     }
 };
 
-pub const debug = struct {
-    pub var showGame: bool = false;
-};
-
-pub const ui = struct {
-    pub var wantCaptureMouse: bool = false;
-    pub var wantCaptureKeyboard: bool = false;
-
-    pub fn wantCapture() bool {
-        return wantCaptureMouse or wantCaptureKeyboard;
-    }
-
-    pub fn mouseCaptured() bool {
-        return wantCaptureMouse;
-    }
-};
-
 pub const input = struct {
     pub const Command = enum {
         moveLeft,
@@ -181,9 +164,6 @@ pub fn init() void {
     scene.pending = null;
     _ = scene.takeLoadSlot();
     time.reset();
-    debug.showGame = false;
-    ui.wantCaptureMouse = false;
-    ui.wantCaptureKeyboard = false;
     input.mouseCaptured = false;
     map.pending = null;
     std.log.info("context init scene={s}", .{@tagName(scene.current)});

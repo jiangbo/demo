@@ -69,6 +69,8 @@ zig build test
 7. 22-关卡载入器与实体建造者：不做 C++ 的
   `LevelLoader`/`BasicEntityBuilder`/`EntityBuilder` 抽象分层、
   每 tile ECS entity、`TileLayerComponent` 和 `ObjectPropertiesReader`。
+8. 21-地图数据管线：不做 C++ 的 Auto-tile 系统（WangSets、
+  `AutoTileLibrary`、`AutoTileSystem`），地图瓦片拼接由美术直接处理。
 
 ## 待后续完成
 

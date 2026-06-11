@@ -13,7 +13,6 @@ const Target = component.ui.Target;
 const event = component.event;
 
 pub fn update(world: *zhu.ecs.World) void {
-    if (context.ui.mouseCaptured()) return;
     if (!context.input.mousePressed(.LEFT)) return;
 
     const player = world.getIdentity(Player).?;

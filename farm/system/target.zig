@@ -14,7 +14,7 @@ pub fn update(world: *zhu.ecs.World) void {
     const player = world.getIdentity(Player).?;
     const target = world.getPtr(player, Target).?;
 
-    if (context.ui.mouseCaptured() or context.input.mouseCaptured) {
+    if (context.input.mouseCaptured) {
         target.active = false;
         return;
     }

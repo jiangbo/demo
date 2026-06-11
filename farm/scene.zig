@@ -87,17 +87,6 @@ pub fn draw(world: *World) void {
 fn updateFarm(world: *World, delta: f32) void {
     if (context.map.takePending()) |request| changeMap(world, request);
 
-    if (context.ui.wantCapture()) {
-        const player = world.getIdentity(actor.Player).?;
-        world.getPtr(player, motion.Velocity).?.value = .zero;
-        world.getPtr(player, actor.Actor).?.action = .idle;
-        world.getPtr(player, Target).?.active = false;
-
-        system.updateCapture(world, delta);
-        ui.dialog.update(world);
-        return;
-    }
-
     ui.toolbar.update();
     system.update(world, delta);
     ui.dialog.update(world);

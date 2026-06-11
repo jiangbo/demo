@@ -1,6 +1,5 @@
 const zhu = @import("zhu");
 
-pub const debug = @import("ui/debug.zig");
 pub const dialog = @import("ui/dialog.zig");
 pub const save_slot = @import("ui/save_slot.zig");
 pub const toolbar = @import("ui/toolbar.zig");
@@ -136,14 +135,11 @@ pub const title = struct {
 };
 
 pub fn init() void {
-    debug.init();
     title.init();
     save_slot.init();
 }
 
-pub fn deinit() void {
-    debug.deinit();
-}
+pub fn deinit() void {}
 
 pub fn draw(world: *zhu.ecs.World) void {
     target.draw(world);

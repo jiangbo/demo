@@ -42,19 +42,6 @@ pub fn update(world: *World, delta: f32) void {
     sound.update(world);
 }
 
-pub fn updateCapture(world: *World, delta: f32) void {
-    time.update(world, delta);
-    light.update(world);
-    wander.update(world, delta);
-    movement.update(world, delta);
-    transition.update(world);
-    animation.update(world, delta);
-    crop.update(world, delta);
-    render.update(world);
-    pickup.update(world);
-    sound.update(world);
-}
-
 pub fn updatePause(world: *World, delta: f32) void {
     _ = delta;
     sound.update(world);

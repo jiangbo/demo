@@ -39,13 +39,8 @@ pub fn init() void {
     scene.init(&world);
 }
 
-pub fn event(ev: *const zhu.window.Event) void {
-    ui.debug.event(ev);
-}
-
 pub fn frame(delta: f32) void {
     scene.update(&world, delta);
-    ui.debug.update(&world, delta);
 
     zhu.batch.beginDraw();
     const color: zhu.Color = .rgb(0.23, 0.31, 0.27);
@@ -64,8 +59,6 @@ pub fn frame(delta: f32) void {
             });
         },
     }
-    zhu.batch.flush();
-    ui.debug.draw();
     zhu.batch.endDraw();
 }
 
