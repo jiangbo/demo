@@ -39,7 +39,9 @@ pub fn init() void {
     scene.init(&world);
 }
 
+var debug: bool = false;
 pub fn frame(delta: f32) void {
+    if (zhu.key.released(.X)) debug = !debug;
     scene.update(&world, delta);
 
     zhu.batch.beginDraw();
@@ -59,6 +61,7 @@ pub fn frame(delta: f32) void {
             });
         },
     }
+    if (debug) zhu.debug.draw();
     zhu.batch.endDraw();
 }
 

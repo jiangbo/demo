@@ -29,8 +29,6 @@ pub fn deinit() void {}
 pub fn update(world: *World, delta: f32) void {
     context.input.mouseCaptured = false;
 
-    if (zhu.key.pressed(.X)) drawDebug = !drawDebug;
-
     const pauseKey = zhu.key.anyPressed(&.{ .ESCAPE, .P });
     if (ui.save_slot.active) {
         // 槽位选择是顶层覆盖层，底下的标题或暂停菜单都不再吃输入。
@@ -80,7 +78,6 @@ pub fn draw(world: *World) void {
     zhu.camera.mode = .window;
     if (ui.pause.active) ui.pause.draw();
     if (ui.save_slot.active) ui.save_slot.draw();
-    if (drawDebug) zhu.debug.draw();
     zhu.camera.mode = .world;
 }
 
@@ -146,8 +143,6 @@ fn drawFarm(world: *World) void {
 
     ui.draw(world);
 }
-
-var drawDebug: bool = true;
 
 fn drawSolids() void {
     const tileSize = map.data.tileSize;
