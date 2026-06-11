@@ -23,7 +23,7 @@ pub const Char = struct {
 
 var invalidIndex: usize = 0;
 
-var font: Font = undefined;
+pub var font: Font = undefined;
 var fontImage: graphics.Image = undefined;
 var fontScale: f32 = undefined;
 var halfAdvance: f32 = undefined; // 英文只需要前进半个距离

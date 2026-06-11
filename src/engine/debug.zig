@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const sk = @import("sokol");
+const assets = @import("assets.zig");
 const audio = @import("audio.zig");
 const batch = @import("batch.zig");
 const camera = @import("camera.zig");
@@ -60,9 +61,12 @@ pub fn draw() void {
         camera.position.x,
         camera.position.y,
     }, "{d:.2}, {d:.2}", .{ camera.scale.x, camera.scale.y });
-    // 图片/文件/音效/音乐数量目前没有直接内部入口，先显示 0。
-    writeFormatLine(&writer, "资源", "图片 {}", .{0}, "文件 {}", .{0});
-    writeFormatLine(&writer, "音频", "音乐 {}", .{0}, "音效 {}", .{0});
+    // 获取当前已加载的资源统计数据
+    const assetStats = assets.queryStats();
+    writeFormatLine(&writer, "资源", "文件 {}", .{assetStats.file},
+        "图片 {}", .{assetStats.image});
+    writeFormatLine(&writer, "音频", "音乐 {}", .{assetStats.music},
+        "音效 {}", .{assetStats.sound});
     writeFormatLine(&writer, "音量", "音乐 {d:.0}%", .{
         audio.musicVolume.load(.acquire) * 100,
     }, "音效 {d:.0}%", .{audio.soundVolume.load(.acquire) * 100});

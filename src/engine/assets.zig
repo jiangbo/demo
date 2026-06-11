@@ -306,3 +306,20 @@ pub const File = struct {
         cache.deinit(allocator);
     }
 };
+
+pub const Stats = struct {
+    image: usize,
+    file: usize,
+    sound: usize,
+    music: usize,
+};
+
+// 查询当前已加载并缓存的资源统计数据
+pub fn queryStats() Stats {
+    return .{
+        .image = View.cache.count(),
+        .file = File.cache.count(),
+        .sound = Sound.cache.count(),
+        .music = Music.cache.count(),
+    };
+}
