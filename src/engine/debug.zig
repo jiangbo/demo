@@ -13,14 +13,7 @@ const Color = graphics.Color;
 const Vector2 = @import("math.zig").Vector2;
 const Rect = @import("math.zig").Rect;
 
-const panelColor = Color.rgba(0.07, 0.09, 0.11, 0.74);
-const borderColor = Color.rgba(0.45, 0.55, 0.62, 0.38);
-const textColor = Color.rgba(0.86, 0.89, 0.90, 0.96);
 const basePadding = Vector2.xy(10, 9);
-const basePosition = Vector2.xy(10, 10);
-const labelWidth: usize = 6;
-const leftWidth: usize = 14;
-const rightWidth: usize = 18;
 
 var last: u64 = 0;
 var fps: u64 = 0;
@@ -43,8 +36,6 @@ pub fn draw() void {
 
     var buffer: [1000]u8 = undefined;
     const frameStats = graphics.queryFrameStats();
-    const gpuBytes = frameStats.size_append_buffer +
-        frameStats.size_update_buffer;
     var writer = std.Io.Writer.fixed(&buffer);
     writeFormatLine(&writer, "后端", "{s}", .{
         @tagName(graphics.queryBackend()),
@@ -54,7 +45,7 @@ pub fn draw() void {
     }, "用时 {d:.2}ms", .{usedTime});
     writeFormatLine(&writer, "内存", "{}", .{
         window.countingAllocator.used,
-    }, "显存 {}", .{gpuBytes});
+    }, "显存 {}", .{frameStats.size_update_buffer});
     writeFormatLine(&writer, "批次", "命令 {}", .{
         batch.commands.items.len,
     }, "绘制 {}", .{frameStats.num_draw});
@@ -70,12 +61,8 @@ pub fn draw() void {
         camera.position.y,
     }, "{d:.2}, {d:.2}", .{ camera.scale.x, camera.scale.y });
     // 图片/文件/音效/音乐数量目前没有直接内部入口，先显示 0。
-    writeFormatLine(&writer, "资源", "图片 {}", .{@as(usize, 0)}, "文件 {}", .{
-        @as(usize, 0),
-    });
-    writeFormatLine(&writer, "音频", "音乐 {}", .{@as(usize, 0)}, "音效 {}", .{
-        @as(usize, 0),
-    });
+    writeFormatLine(&writer, "资源", "图片 {}", .{0}, "文件 {}", .{0});
+    writeFormatLine(&writer, "音频", "音乐 {}", .{0}, "音效 {}", .{0});
     writeFormatLine(&writer, "音量", "音乐 {d:.0}%", .{
         audio.musicVolume.load(.acquire) * 100,
     }, "音效 {d:.0}%", .{audio.soundVolume.load(.acquire) * 100});
@@ -88,16 +75,15 @@ pub fn draw() void {
 
     const scale = debugTextScale(debugText);
     const padding = basePadding.scale(scale.x);
-    const position = basePosition.scale(scale.x);
+    const position = Vector2.xy(10, 10).scale(scale.x);
     const textOption = text.Option{
-        .color = textColor,
+        .color = .rgba(0.86, 0.89, 0.90, 0.96),
         .scale = scale,
     };
     const textSize = text.measure(debugText, textOption);
     const panel = Rect.init(position, textSize.add(padding.scale(2)));
 
-    batch.drawRect(panel, .{ .color = panelColor });
-    batch.drawRectBorder(panel, scale.x, borderColor);
+    batch.drawRect(panel, .{ .color = .rgba(0.07, 0.09, 0.11, 0.74) });
 
     const contentPosition = position.add(padding);
     text.drawString(debugText, contentPosition, textOption);
@@ -131,10 +117,10 @@ fn writeFormatLine(
     var rightBuffer: [80]u8 = undefined;
     const left = text.format(&leftBuffer, leftFormat, leftArgs);
     const right = text.format(&rightBuffer, rightFormat, rightArgs);
-    appendCell(writer, label, labelWidth);
-    appendCell(writer, left, leftWidth);
+    appendCell(writer, label, 6);
+    appendCell(writer, left, 14);
     writeAll(writer, "  ");
-    appendCell(writer, right, rightWidth);
+    appendCell(writer, right, 18);
     writeAll(writer, "\n");
 }
 
