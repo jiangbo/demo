@@ -29,7 +29,7 @@ pub fn init() void {
 
     const fontImage = zhu.assets.loadImage("assets/font.png", .zero);
     zhu.text.init(fontImage, @import("zon/font.zon"));
-    zhu.text.font.lineHeight *= 1.1; // 适当增大行高，避免换行后文字紧贴
+    zhu.text.font.lineHeight += 2;
 
     zhu.window.bindAndUseMouseIcon("assets/farm-rpg/UI/cursor.png", .{});
 
