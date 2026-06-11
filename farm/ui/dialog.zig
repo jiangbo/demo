@@ -4,79 +4,45 @@ const zhu = @import("zhu");
 const component = @import("../component.zig");
 
 const Dialog = component.actor.Dialog;
+const DialogAdvance = component.actor.DialogAdvance;
+const DialogClose = component.actor.DialogClose;
+const DialogStart = component.actor.DialogStart;
 const Position = component.Position;
-
-// 对话脚本数据：scriptId → 台词数组
-const scripts = [_]struct {
-    id: []const u8,
-    lines: []const []const u8,
-}{
-    .{
-        .id = "cow",
-        .lines = &.{
-            "哞~",
-            "今天天气不错呢。",
-            "你要给我喂草吗？",
-        },
-    },
-    .{
-        .id = "sheep",
-        .lines = &.{
-            "咩~",
-            "我的毛又长长了。",
-            "离我远点，我在吃草。",
-        },
-    },
-};
 
 // 对话气泡当前显示的文本
 pub var text: []const u8 = "";
 var lines: []const []const u8 = &.{};
 var lineIndex: usize = 0;
 
-// 根据 scriptId 查找对话脚本
-fn findScript(id: []const u8) ?[]const []const u8 {
-    for (&scripts) |entry| {
-        if (std.mem.eql(u8, entry.id, id)) return entry.lines;
-    }
-    return null;
-}
-
-// 处理 ECS 事件队列中的对话事件
+// 处理 talk 系统写入的对话请求 identity。
 pub fn update(world: *zhu.ecs.World) void {
     // 处理开始对话事件
-    const starts = world.getEvent(component.event.DialogStart);
-    for (starts.items) |event| {
-        const found = findScript(event.scriptId) orelse continue;
-        if (found.len == 0) continue;
-        lines = found;
-        lineIndex = 0;
-        text = lines[0]; // 显示第一句台词
-        world.addIdentity(event.entity, Dialog); // 标记为当前对话实体
-    }
-    world.clearEvent(component.event.DialogStart);
-
-    // 处理推进对话事件
-    const advances = world.getEvent(component.event.DialogAdvance);
-    for (advances.items) |event| {
-        const active = world.getIdentity(Dialog) orelse continue;
-        if (active != event.entity or lines.len == 0) continue;
-
-        lineIndex += 1;
-        if (lineIndex >= lines.len) {
-            doClose(world, event.entity);
-        } else {
-            text = lines[lineIndex];
+    if (world.takeIdentity(DialogStart)) |entity| {
+        const dialog = world.get(entity, Dialog).?;
+        if (dialog.lines.len != 0) {
+            lines = dialog.lines;
+            lineIndex = 0;
+            text = lines[0]; // 显示第一句台词
+            world.addIdentity(entity, Dialog); // 标记为当前对话实体
         }
     }
-    world.clearEvent(component.event.DialogAdvance);
+
+    // 处理推进对话事件
+    if (world.takeIdentity(DialogAdvance)) |entity| {
+        if (world.getIdentity(Dialog)) |active| {
+            if (active == entity and lines.len != 0) {
+                lineIndex += 1;
+                if (lineIndex >= lines.len) {
+                    doClose(world, entity);
+                } else {
+                    text = lines[lineIndex];
+                }
+            }
+        }
+    }
 
     // 处理关闭对话事件
-    const closes = world.getEvent(component.event.DialogClose);
-    for (closes.items) |event| {
-        doClose(world, event.entity);
-    }
-    world.clearEvent(component.event.DialogClose);
+    if (world.takeIdentity(DialogClose)) |entity| doClose(world, entity);
 }
 
 // 关闭对话并重置状态
@@ -122,7 +88,7 @@ pub fn draw(world: *zhu.ecs.World) void {
     zhu.text.drawString(text, textPos, option);
 }
 
-test "DialogStart 事件会激活第一句台词" {
+test "DialogStart identity 会激活第一句台词" {
     resetState();
     defer resetState();
 
@@ -130,23 +96,20 @@ test "DialogStart 事件会激活第一句台词" {
     defer world.deinit();
 
     const npc = world.createEntity();
-    world.add(npc, Dialog{ .scriptId = "cow" });
-    world.addEvent(component.event.DialogStart{
-        .entity = npc,
-        .scriptId = "cow",
-    });
+    world.add(npc, Dialog{ .lines = &.{
+        "哞~",
+        "今天天气不错呢。",
+    } });
+    world.addIdentity(npc, DialogStart);
 
     update(&world);
 
     try std.testing.expectEqual(npc, world.getIdentity(Dialog).?);
     try std.testing.expectEqualStrings("哞~", text);
-    try std.testing.expectEqual(
-        0,
-        world.getEvent(component.event.DialogStart).items.len,
-    );
+    try std.testing.expectEqual(null, world.getIdentity(DialogStart));
 }
 
-test "DialogAdvance 事件会推进并在末尾关闭" {
+test "DialogAdvance identity 会推进并在末尾关闭" {
     resetState();
     defer resetState();
 
@@ -154,28 +117,29 @@ test "DialogAdvance 事件会推进并在末尾关闭" {
     defer world.deinit();
 
     const npc = world.createEntity();
-    world.add(npc, Dialog{ .scriptId = "cow" });
-    world.addEvent(component.event.DialogStart{
-        .entity = npc,
-        .scriptId = "cow",
-    });
+    world.add(npc, Dialog{ .lines = &.{
+        "哞~",
+        "今天天气不错呢。",
+        "你要给我喂草吗？",
+    } });
+    world.addIdentity(npc, DialogStart);
     update(&world);
 
-    world.addEvent(component.event.DialogAdvance{ .entity = npc });
+    world.addIdentity(npc, DialogAdvance);
     update(&world);
     try std.testing.expectEqualStrings("今天天气不错呢。", text);
 
-    world.addEvent(component.event.DialogAdvance{ .entity = npc });
+    world.addIdentity(npc, DialogAdvance);
     update(&world);
     try std.testing.expectEqualStrings("你要给我喂草吗？", text);
 
-    world.addEvent(component.event.DialogAdvance{ .entity = npc });
+    world.addIdentity(npc, DialogAdvance);
     update(&world);
     try std.testing.expectEqual(null, world.getIdentity(Dialog));
     try std.testing.expectEqualStrings("", text);
 }
 
-test "DialogClose 事件只关闭当前对话实体" {
+test "DialogClose identity 只关闭当前对话实体" {
     resetState();
     defer resetState();
 
@@ -184,20 +148,17 @@ test "DialogClose 事件只关闭当前对话实体" {
 
     const active = world.createEntity();
     const other = world.createEntity();
-    world.add(active, Dialog{ .scriptId = "cow" });
-    world.add(other, Dialog{ .scriptId = "sheep" });
-    world.addEvent(component.event.DialogStart{
-        .entity = active,
-        .scriptId = "cow",
-    });
+    world.add(active, Dialog{ .lines = &.{"哞~"} });
+    world.add(other, Dialog{ .lines = &.{"咩~"} });
+    world.addIdentity(active, DialogStart);
     update(&world);
 
-    world.addEvent(component.event.DialogClose{ .entity = other });
+    world.addIdentity(other, DialogClose);
     update(&world);
     try std.testing.expectEqual(active, world.getIdentity(Dialog).?);
     try std.testing.expectEqualStrings("哞~", text);
 
-    world.addEvent(component.event.DialogClose{ .entity = active });
+    world.addIdentity(active, DialogClose);
     update(&world);
 
     try std.testing.expectEqual(null, world.getIdentity(Dialog));

@@ -50,7 +50,7 @@ pub const map = struct {
 };
 
 pub const actor = struct {
-    pub const AnimalKind = enum { cow, sheep };
+    pub const AnimalEnum = enum { cow, sheep };
 
     pub const Action = enum {
         idle, // 待机
@@ -67,7 +67,7 @@ pub const actor = struct {
 
     pub const Player = struct {};
     pub const Npc = struct {};
-    pub const Animal = struct { kind: AnimalKind };
+    pub const Animal = AnimalEnum;
     pub const Facing = enum { down, up, left, right };
     pub const Actor = struct {
         action: Action = .idle,
@@ -92,11 +92,16 @@ pub const actor = struct {
     // 对话组件：挂载到可交互的 NPC 上
     // 同时用作 Identity 标记当前正在对话的实体
     pub const Dialog = struct {
-        scriptId: []const u8 = "", // 对话脚本 ID
+        lines: []const []const u8 = &.{}, // 当前角色的对话内容
 
         pub const interactDist: f32 = 64.0; // 触发对话的最大距离
         pub const closeDist: f32 = 96.0; // 自动关闭对话的距离
     };
+
+    // 对话请求只需要记录一个目标实体，用 identity 临时保存。
+    pub const DialogStart = struct {};
+    pub const DialogAdvance = struct {};
+    pub const DialogClose = struct {};
 };
 
 pub const farm = struct {
@@ -163,15 +168,6 @@ pub const sound = struct {
 
 // 事件类型：系统间通信的一次性消息
 pub const event = struct {
-    const Entity = zhu.ecs.Entity;
-
-    pub const DialogStart = struct {
-        entity: Entity,
-        scriptId: []const u8,
-    };
-    pub const DialogAdvance = struct { entity: Entity };
-    pub const DialogClose = struct { entity: Entity };
-
     pub const HourChanged = struct {
         day: u32,
         hour: u8,

@@ -30,13 +30,14 @@ pub const Actor = struct {
     animations: []const Animation,
 };
 
-pub const Animal = struct {
+pub const Character = struct {
     sprite: Sprite,
     rows: [4]i8,
     animations: []const Animation,
     speed: f32,
     wanderRadius: f32,
     name: []const u8,
+    dialog: []const []const u8 = &.{},
 };
 
 pub const Sprite = struct {
@@ -58,7 +59,8 @@ pub const CropConfig = struct { stages: [4]CropStage };
 pub const Config = struct {
     player: Actor,
     items: [std.meta.fields(item.ItemEnum).len]Item,
-    animals: [std.meta.fields(actor.AnimalKind).len]Animal,
+    animals: [std.meta.fields(actor.AnimalEnum).len]Character,
+    friend: Character,
     // crops 按 farm.CropEnum 枚举下标索引，每种作物对应一组阶段配置
     crops: [std.meta.fields(farm.CropEnum).len]CropConfig,
 };
@@ -73,27 +75,29 @@ pub fn itemConfig(itemType: item.ItemEnum) Item {
     return zon.items[@intFromEnum(itemType)];
 }
 
-// 种子类在 ItemEnum 中的起始下标
-const seedOffset: usize = 2;
-const harvestOffset: usize = seedOffset +
-    std.meta.fields(farm.CropEnum).len;
-
 // 从 CropEnum 得到对应的种子 ItemEnum
 pub fn seedItem(kind: farm.CropEnum) item.ItemEnum {
-    return @enumFromInt(seedOffset + @intFromEnum(kind));
+    return switch (kind) {
+        .strawberry => .strawberrySeed,
+        .potato => .potatoSeed,
+    };
 }
 
 // 从 CropEnum 得到对应的产出 ItemEnum
 pub fn harvestItem(kind: farm.CropEnum) item.ItemEnum {
-    return @enumFromInt(harvestOffset + @intFromEnum(kind));
+    return switch (kind) {
+        .strawberry => .strawberry,
+        .potato => .potato,
+    };
 }
 
 // 判断某个 ItemEnum 是否是种子，是则返回对应的 CropEnum
 pub fn asSeed(it: item.ItemEnum) ?farm.CropEnum {
-    const idx = @intFromEnum(it);
-    if (idx < seedOffset) return null;
-    if (idx >= harvestOffset) return null;
-    return @enumFromInt(idx - seedOffset);
+    return switch (it) {
+        .strawberrySeed => .strawberry,
+        .potatoSeed => .potato,
+        else => null,
+    };
 }
 
 pub fn cropStage(kind: farm.CropEnum, stage: farm.GrowthEnum) CropStage {
@@ -137,7 +141,7 @@ pub fn spawnPlayer(world: *World, spawn: zhu.Vector2) void {
     world.add(player, ui.Target{});
 }
 
-pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {
+pub fn spawnAnimal(world: *World, kind: actor.Animal) Entity {
     const config = zon.animals[@intFromEnum(kind)];
 
     const entity = world.createEntity();
@@ -168,12 +172,51 @@ pub fn spawnAnimal(world: *World, kind: actor.AnimalKind) Entity {
     world.add(entity, render.YSort{});
     world.add(entity, map.Scoped{});
     world.add(entity, actor.Npc{});
-    world.add(entity, actor.Animal{ .kind = kind });
+    world.add(entity, kind);
     world.add(entity, actor.Wander{
         .radius = config.wanderRadius,
         .speed = config.speed,
     });
-    world.add(entity, actor.Dialog{ .scriptId = config.name });
+    if (config.dialog.len != 0) {
+        world.add(entity, actor.Dialog{ .lines = config.dialog });
+    }
+
+    return entity;
+}
+
+pub fn spawnFriend(world: *World) Entity {
+    const config = zon.friend;
+
+    const entity = world.createEntity();
+    world.add(entity, motion.Velocity{});
+    world.add(entity, motion.Shape{
+        .circle = .init(.xy(0, -5), 5),
+    });
+    world.add(entity, motion.Blocking{});
+    world.add(entity, actor.Actor{ .rows = config.rows });
+
+    // friend 动画源在编译期计算，配置缺失会直接编译失败。
+    const sources = comptime animationSources(zon.friend.animations);
+    const imageSize = config.sprite.rect.size;
+    const animation = zhu.Animation.initSource(&sources, imageSize);
+
+    world.add(entity, render.Sprite{
+        .image = animation.subImage(),
+        .offset = config.sprite.offset,
+        .size = config.sprite.size,
+    });
+    world.add(entity, animation);
+    world.add(entity, render.Render{ .layer = .actor });
+    world.add(entity, render.YSort{});
+    world.add(entity, map.Scoped{});
+    world.add(entity, actor.Npc{});
+    world.add(entity, actor.Wander{
+        .radius = config.wanderRadius,
+        .speed = config.speed,
+    });
+    if (config.dialog.len != 0) {
+        world.add(entity, actor.Dialog{ .lines = config.dialog });
+    }
 
     return entity;
 }
@@ -396,11 +439,36 @@ test "spawnAnimal 会创建可漫游动物实体" {
     world.getPtr(entity, actor.Wander).?.home = .xy(12, 34);
 
     try expectEqual(12, world.get(entity, component.Position).?.x);
-    try expectEqual(actor.AnimalKind.cow, world.get(entity, actor.Animal).?.kind);
+    try expectEqual(actor.AnimalEnum.cow, world.get(entity, actor.Animal).?);
     try expectEqual(1, world.assure(actor.Npc).dense.items.len);
     try expectEqual(1, world.raw(actor.Wander).len);
     try expectEqual(1, world.raw(motion.Velocity).len);
     try expectEqual(1, world.raw(render.Sprite).len);
+    try expectEqual(null, world.get(entity, actor.Dialog));
+}
+
+test "spawnFriend 会创建可对话 NPC 实体" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    putMockNpcImages();
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = spawnFriend(&world);
+    world.add(entity, component.Position.xy(95, 274));
+    world.getPtr(entity, actor.Wander).?.home = .xy(95, 274);
+
+    try expectEqual(95, world.get(entity, component.Position).?.x);
+    try expectEqual(1, world.assure(actor.Npc).dense.items.len);
+    try expectEqual(1, world.raw(actor.Wander).len);
+    try expectEqual(1, world.raw(actor.Dialog).len);
+    const dialog = world.get(entity, actor.Dialog).?;
+    try expectEqual(2, dialog.lines.len);
+    try std.testing.expectEqualStrings(
+        "早上好，今天也要照顾好农场哦。",
+        dialog.lines[0],
+    );
 }
 
 test "spawnCrop 创建作物实体并设置初始 next" {
@@ -877,5 +945,13 @@ fn putMockAnimalImages() void {
     const image = zhu.graphics.Image{ .size = .xy(128, 288) };
     for (zon.animals) |animalConfig| {
         zhu.assets.putImage(animalConfig.sprite.imageId, image);
+    }
+}
+
+fn putMockNpcImages() void {
+    const image = zhu.graphics.Image{ .size = .xy(192, 96) };
+    zhu.assets.putImage(zon.friend.sprite.imageId, image);
+    for (zon.friend.animations) |animation| {
+        zhu.assets.putImage(animation.imageId, image);
     }
 }

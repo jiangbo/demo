@@ -169,9 +169,23 @@ fn triggerSpawnPosition(trigger: Trigger) zhu.Vector2 {
 }
 
 fn loadObject(world: *World, object: tiled.Object) void {
-    // animal 是没有 gid 的 Tiled 点对象，name 直接对应 AnimalKind。
+    if (object.point and object.isType("actor")) {
+        // player 由 scene 统一创建，地图中的点只作为 Tiled 标记保留。
+        if (object.isNamed("player")) return;
+
+        if (object.isNamed("friend")) {
+            const entity = factory.spawnFriend(world);
+            // Tiled 点对象的位置就是 NPC 脚底点，和 YSort 使用同一套坐标。
+            world.add(entity, object.position);
+            world.getPtr(entity, actor.Wander).?.home = object.position;
+            return;
+        }
+        std.debug.panic("unknown actor object: {s}", .{object.name});
+    }
+
+    // animal 是没有 gid 的 Tiled 点对象，name 直接对应 AnimalEnum。
     if (object.point and object.isType("animal")) {
-        const kind = zhu.toEnum(actor.AnimalKind, object.name);
+        const kind = zhu.toEnum(actor.AnimalEnum, object.name);
         const entity = factory.spawnAnimal(world, kind);
         // Tiled 点对象的位置就是动物脚底点，和玩家、YSort 使用同一套坐标。
         world.add(entity, object.position);
@@ -321,6 +335,64 @@ test "地图触发器会读取目标地图和落点方向" {
     try std.testing.expectEqual(StartOffset.top, trigger.startOffset);
 }
 
+test "actor 点对象会生成 NPC，player 点对象只保留标记" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    putMockNpcImages();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    loadObject(&world, .{
+        .id = 1,
+        .gid = 0,
+        .name = "player",
+        .type = "actor",
+        .position = .xy(10, 20),
+        .size = .zero,
+        .point = true,
+        .properties = &.{},
+        .extend = .{},
+    });
+
+    try std.testing.expectEqual(0, world.assure(actor.Npc).dense.items.len);
+
+    loadObject(&world, .{
+        .id = 2,
+        .gid = 0,
+        .name = "friend",
+        .type = "actor",
+        .position = .xy(95, 274),
+        .size = .zero,
+        .point = true,
+        .properties = &.{},
+        .extend = .{},
+    });
+
+    var query = world.query(.{
+        Position,
+        actor.Npc,
+        actor.Wander,
+        actor.Dialog,
+        component.map.Scoped,
+    });
+    const entity = query.next().?;
+    const position = query.get(entity, Position);
+    const wander = query.get(entity, actor.Wander);
+    const dialog = query.get(entity, actor.Dialog);
+
+    try std.testing.expectEqual(95, position.x);
+    try std.testing.expectEqual(274, position.y);
+    try std.testing.expectEqual(95, wander.home.x);
+    try std.testing.expectEqual(274, wander.home.y);
+    try std.testing.expectEqual(2, dialog.lines.len);
+    try std.testing.expectEqualStrings(
+        "早上好，今天也要照顾好农场哦。",
+        dialog.lines[0],
+    );
+    try std.testing.expectEqual(null, query.next());
+}
+
 test "trigger 对象会创建 ECS 触发器实体" {
     const properties = [_]tiled.Property{
         .{ .name = "self_id", .value = .{ .int = 2 } },
@@ -370,4 +442,12 @@ test "触发器落点会按 start_offset 放到区域外侧" {
 
     try std.testing.expectEqual(25, position.x);
     try std.testing.expectEqual(68, position.y);
+}
+
+fn putMockNpcImages() void {
+    const image = zhu.graphics.Image{ .size = .xy(192, 96) };
+    zhu.assets.putImage(factory.zon.friend.sprite.imageId, image);
+    for (factory.zon.friend.animations) |animation| {
+        zhu.assets.putImage(animation.imageId, image);
+    }
 }

@@ -10,8 +10,10 @@ const Player = component.actor.Player;
 const Npc = component.actor.Npc;
 const Actor = component.actor.Actor;
 const Dialog = component.actor.Dialog;
+const DialogAdvance = component.actor.DialogAdvance;
+const DialogClose = component.actor.DialogClose;
+const DialogStart = component.actor.DialogStart;
 const Shape = component.motion.Shape;
-const event = component.event;
 
 pub fn update(world: *zhu.ecs.World) void {
     // 通过 Identity 查找当前正在对话的实体
@@ -25,7 +27,7 @@ pub fn update(world: *zhu.ecs.World) void {
 
     if (activeEntity) |target| {
         // 有激活对话，推进下一句
-        world.addEvent(event.DialogAdvance{ .entity = target });
+        world.addIdentity(target, DialogAdvance);
     } else {
         // 没有激活对话，找最近的可交互 NPC
         tryInteract(world);
@@ -37,13 +39,13 @@ fn checkDistance(world: *zhu.ecs.World, target: zhu.ecs.Entity) void {
     const player = world.getIdentity(Player).?;
     const playerPos = world.get(player, Position).?;
     const targetPos = world.get(target, Position) orelse {
-        world.addEvent(event.DialogClose{ .entity = target });
+        world.addIdentity(target, DialogClose);
         return;
     };
 
     const dist = playerPos.sub(targetPos).length();
     if (dist > Dialog.closeDist) {
-        world.addEvent(event.DialogClose{ .entity = target });
+        world.addIdentity(target, DialogClose);
     }
 }
 
@@ -71,10 +73,7 @@ fn tryInteract(world: *zhu.ecs.World) void {
 
     const target = bestEntity orelse return;
 
-    world.addEvent(event.DialogStart{
-        .entity = target,
-        .scriptId = world.getPtr(target, Dialog).?.scriptId,
-    });
+    world.addIdentity(target, DialogStart);
 }
 
 fn pressKey(keyCode: zhu.key.Code) void {
@@ -100,23 +99,20 @@ test "按 F 会向最近的 NPC 发起对话事件" {
     const far = world.createEntity();
     world.add(far, Position.xy(48, 0));
     world.add(far, Npc{});
-    world.add(far, Dialog{ .scriptId = "sheep" });
+    world.add(far, Dialog{ .lines = &.{"远处 NPC"} });
     world.add(far, Shape{ .rect = .init(.zero, .xy(8, 8)) });
 
     // 近处 NPC，在玩家正下方探测框内
     const near = world.createEntity();
     world.add(near, Position.xy(0, 20));
     world.add(near, Npc{});
-    world.add(near, Dialog{ .scriptId = "cow" });
+    world.add(near, Dialog{ .lines = &.{"近处 NPC"} });
     world.add(near, Shape{ .rect = .init(.zero, .xy(8, 8)) });
 
     pressKey(.F);
     update(&world);
 
-    const events = world.getEvent(component.event.DialogStart).items;
-    try std.testing.expectEqual(1, events.len);
-    try std.testing.expectEqual(near, events[0].entity);
-    try std.testing.expectEqualStrings("cow", events[0].scriptId);
+    try std.testing.expectEqual(near, world.takeIdentity(DialogStart).?);
 }
 
 test "对话激活后按 F 会发送推进事件" {
@@ -130,15 +126,13 @@ test "对话激活后按 F 会发送推进事件" {
 
     const npc = world.createEntity();
     world.add(npc, Position.xy(16, 0));
-    world.add(npc, Dialog{ .scriptId = "cow" });
+    world.add(npc, Dialog{ .lines = &.{"你好"} });
     world.addIdentity(npc, Dialog);
 
     pressKey(.F);
     update(&world);
 
-    const events = world.getEvent(component.event.DialogAdvance).items;
-    try std.testing.expectEqual(1, events.len);
-    try std.testing.expectEqual(npc, events[0].entity);
+    try std.testing.expectEqual(npc, world.takeIdentity(DialogAdvance).?);
 }
 
 test "当前对话目标太远时会发送关闭事件" {
@@ -152,12 +146,10 @@ test "当前对话目标太远时会发送关闭事件" {
 
     const npc = world.createEntity();
     world.add(npc, Position.xy(Dialog.closeDist + 1, 0));
-    world.add(npc, Dialog{ .scriptId = "cow" });
+    world.add(npc, Dialog{ .lines = &.{"你好"} });
     world.addIdentity(npc, Dialog);
 
     update(&world);
 
-    const events = world.getEvent(component.event.DialogClose).items;
-    try std.testing.expectEqual(1, events.len);
-    try std.testing.expectEqual(npc, events[0].entity);
+    try std.testing.expectEqual(npc, world.takeIdentity(DialogClose).?);
 }
