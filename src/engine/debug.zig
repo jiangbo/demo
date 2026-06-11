@@ -22,29 +22,24 @@ const labelWidth: usize = 6;
 const leftWidth: usize = 14;
 const rightWidth: usize = 18;
 
-var fps: u32 = 0;
-var fpsLastTime: u64 = 0;
-var fpsLastFrame: u64 = 0;
-var displayFrameMs: f64 = 0;
-var displayCostMs: f64 = 0;
-var lastTextCount: usize = 0;
+var last: u64 = 0;
+var fps: u64 = 0;
+var fpsFrame: u64 = 0;
+var start: u64 = 0;
+var usedTime: f64 = 0;
 
 pub fn draw() void {
-    // 获取当前时间和帧数
     const time = sk.time.now();
     const frame = sk.app.frameCount();
-    // 首次运行初始化
-    if (fpsLastTime == 0) {
-        fpsLastTime = time;
-        fpsLastFrame = frame;
-    } else if (sk.time.diff(time, fpsLastTime) >= std.time.ns_per_s) {
-        // 每秒更新一次性能统计数据
-        fps = @intCast(frame - fpsLastFrame);
-        fpsLastTime = time;
-        fpsLastFrame = frame;
-        displayFrameMs = sk.app.frameDuration() * 1000;
-        displayCostMs = sk.time.ms(window.frameTicks);
+
+    if (frame != last + 1) {
+        start, fpsFrame = .{ time, frame };
+    } else if (sk.time.diff(time, start) >= std.time.ns_per_s) {
+        fps = frame - fpsFrame;
+        start, fpsFrame = .{ time, frame };
+        usedTime = sk.time.ms(window.frameTicks);
     }
+    last = frame;
 
     var buffer: [1000]u8 = undefined;
     const frameStats = graphics.queryFrameStats();
@@ -55,8 +50,8 @@ pub fn draw() void {
         @tagName(graphics.queryBackend()),
     }, "帧率 {}", .{fps});
     writeFormatLine(&writer, "帧时", "{d:.2}ms", .{
-        displayFrameMs,
-    }, "用时 {d:.2}ms", .{displayCostMs});
+        sk.app.frameDuration() * 1000,
+    }, "用时 {d:.2}ms", .{usedTime});
     writeFormatLine(&writer, "内存", "{}", .{
         window.countingAllocator.used,
     }, "显存 {}", .{gpuBytes});
@@ -65,7 +60,7 @@ pub fn draw() void {
     }, "绘制 {}", .{frameStats.num_draw});
     writeFormatLine(&writer, "绘制", "精灵 {}", .{
         batch.vertices.items.len,
-    }, "文字 {}", .{graphics.stats.text + lastTextCount});
+    }, "文字 {}", .{graphics.stats.text});
     writeFormatLine(&writer, "鼠标", "{d:.1}, {d:.1}", .{
         input.mouse.raw.x,
         input.mouse.raw.y,
@@ -106,8 +101,6 @@ pub fn draw() void {
 
     const contentPosition = position.add(padding);
     text.drawString(debugText, contentPosition, textOption);
-
-    lastTextCount = text.computeTextCount(debugText);
 }
 
 fn debugTextScale(debugText: text.String) Vector2 {
