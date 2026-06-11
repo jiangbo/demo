@@ -186,39 +186,13 @@ pub fn computeViewRect() void {
     }
 }
 
-const smoothFrameTime: [4]f32 = .{
-    @as(f32, 1) / 30, // 30 帧
-    @as(f32, 1) / 60, // 60 帧
-    @as(f32, 1) / 144, // 144 帧
-    @as(f32, 1) / 240, // 240 帧
-};
-var currentSmoothTime: f32 = 0;
-var lastTime: u64 = 0;
-
 export fn windowFrame() void {
-    const start = timer.read(); // 当前帧的起始时间
-    const deltaNano: f32 = @floatFromInt(start - lastTime);
-    const delta: f32 = deltaNano / std.time.ns_per_s;
-
     sk.fetch.dowork();
 
-    const threshold = 0.002; // 帧平滑阈值，毫秒
-    if (@abs(currentSmoothTime - delta) > threshold) {
-        // 超过误差，重新平滑时间
-        for (smoothFrameTime) |time| {
-            if (@abs(time - delta) < threshold) {
-                currentSmoothTime = time;
-                break;
-            }
-        } else currentSmoothTime = delta; // 没有找到平滑的时间
-    }
-
-    if (currentSmoothTime > 0.1) currentSmoothTime = 0.1;
     if (resized) computeViewRect();
-    call(root, "frame", .{currentSmoothTime});
+    call(root, "frame", .{frameDuration()});
     input.update();
 
-    lastTime = start; // 记录上一帧的时间
     resized = false;
 }
 
@@ -234,6 +208,10 @@ pub fn frameCount() u64 {
 
 pub fn relativeTime() u64 {
     return timer.read();
+}
+
+pub fn frameDuration() f32 {
+    return @floatCast(sk.app.frameDuration());
 }
 
 pub fn statFileTime(path: [:0]const u8) i64 {

@@ -22,7 +22,6 @@ const leftWidth: usize = 14;
 const rightWidth: usize = 18;
 
 var fps: u32 = 0;
-var lastFrameTime: u64 = 0;
 var fpsTime: u64 = 0;
 var fpsFrameCount: u64 = 0;
 var lastTextCount: usize = 0;
@@ -39,11 +38,7 @@ pub fn draw() void {
         fpsFrameCount = currentFrame;
     }
 
-    const frameMs = if (lastFrameTime == 0)
-        0
-    else
-        @as(f32, @floatFromInt(now - lastFrameTime)) / std.time.ns_per_ms;
-    lastFrameTime = now;
+    const frameMs = window.frameDuration() * 1000;
 
     var buffer: [1000]u8 = undefined;
     const frameStats = graphics.queryFrameStats();
