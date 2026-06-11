@@ -245,6 +245,81 @@
             },
         },
     },
+    .friend = .{
+        .speed = 20.0,
+        .wanderRadius = 48.0,
+        .name = "Lyria",
+        .dialog = .{
+            "早上好，今天也要照顾好农场哦。",
+            "镇上的大家都很期待你的收成。",
+        },
+        .sprite = .{
+            // .path =
+            // "farm-rpg/Character and Portrait/Character/Pre-made/Lyria/Idle.png",
+            .imageId = 1355702369,
+            .rect = .{
+                .min = .{ .x = 0, .y = 0 },
+                .size = .{ .x = 32, .y = 32 },
+            },
+            .offset = .{ .x = -16, .y = -24 },
+            .size = .{ .x = 32, .y = 32 },
+        },
+        .rows = .{ 1, 2, -3, 3 },
+        .animations = .{
+            .{ // idle
+                .type = .idle,
+                .imageId = 1355702369,
+                .frames = .{
+                    .{
+                        .offset = .{ .x = 0, .y = 0 },
+                        .duration = 0.2,
+                    },
+                    .{
+                        .offset = .{ .x = 32, .y = 0 },
+                        .duration = 0.2,
+                    },
+                    .{
+                        .offset = .{ .x = 64, .y = 0 },
+                        .duration = 0.2,
+                    },
+                    .{
+                        .offset = .{ .x = 96, .y = 0 },
+                        .duration = 0.2,
+                    },
+                },
+            },
+            .{ // walk
+                .type = .walk,
+                .imageId = 1120279514,
+                .frames = .{
+                    .{
+                        .offset = .{ .x = 0, .y = 0 },
+                        .duration = 0.1,
+                    },
+                    .{
+                        .offset = .{ .x = 32, .y = 0 },
+                        .duration = 0.1,
+                    },
+                    .{
+                        .offset = .{ .x = 64, .y = 0 },
+                        .duration = 0.1,
+                    },
+                    .{
+                        .offset = .{ .x = 96, .y = 0 },
+                        .duration = 0.1,
+                    },
+                    .{
+                        .offset = .{ .x = 128, .y = 0 },
+                        .duration = 0.1,
+                    },
+                    .{
+                        .offset = .{ .x = 160, .y = 0 },
+                        .duration = 0.1,
+                    },
+                },
+            },
+        },
+    },
     .crops = .{
         .{ // index 0: strawberry，对应 farm.CropEnum.strawberry
             // .path = "farm-rpg/Farm Crops/Spring Crops.png"

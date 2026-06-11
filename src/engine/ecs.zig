@@ -223,6 +223,11 @@ pub const World = struct {
         return self.toEntity(self.identityMap.get(hashTypeId(T)));
     }
 
+    pub fn takeIdentity(self: *World, T: type) ?Entity {
+        const removed = self.identityMap.fetchRemove(hashTypeId(T));
+        return self.toEntity((removed orelse return null).value);
+    }
+
     pub fn isIdentity(self: *World, entity: Entity, T: type) bool {
         return self.getIdentity(T) orelse return false == entity;
     }
