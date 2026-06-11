@@ -30,17 +30,20 @@ var displayCostMs: f64 = 0;
 var lastTextCount: usize = 0;
 
 pub fn draw() void {
-    const now = sk.time.now();
-    const currentFrame = sk.app.frameCount();
+    // 获取当前时间和帧数
+    const time = sk.time.now();
+    const frame = sk.app.frameCount();
+    // 首次运行初始化
     if (fpsLastTime == 0) {
-        fpsLastTime = now;
-        fpsLastFrame = currentFrame;
-    } else if (sk.time.sec(sk.time.diff(now, fpsLastTime)) >= 1.0) {
-        fps = @intCast(currentFrame - fpsLastFrame);
-        fpsLastTime = now;
-        fpsLastFrame = currentFrame;
+        fpsLastTime = time;
+        fpsLastFrame = frame;
+    } else if (sk.time.diff(time, fpsLastTime) >= std.time.ns_per_s) {
+        // 每秒更新一次性能统计数据
+        fps = @intCast(frame - fpsLastFrame);
+        fpsLastTime = time;
+        fpsLastFrame = frame;
         displayFrameMs = sk.app.frameDuration() * 1000;
-        displayCostMs = sk.time.ms(window.frameCost);
+        displayCostMs = sk.time.ms(window.frameTicks);
     }
 
     var buffer: [1000]u8 = undefined;
