@@ -74,6 +74,42 @@ pub const pause = struct {
     }
 };
 
+pub const dialog = struct {
+    var image: zhu.Image = undefined;
+
+    pub fn init() void {
+        image = zhu.getImage("farm-rpg/UI/dialogue box.png").?
+            .sub(.init(.xy(0, 48), .xy(48, 48)));
+    }
+
+    // 对话气泡只读取 talk 系统维护的当前对话状态。
+    pub fn draw(world: *zhu.ecs.World) void {
+        const Dialog = component.actor.Dialog;
+
+        const entity = world.getIdentity(Dialog) orelse return;
+        const state = world.get(entity, Dialog).?;
+        if (state.index >= state.lines.len) return;
+
+        const text = state.lines[state.index];
+
+        const pos = world.get(entity, component.Position).?;
+        const head = zhu.camera.toWindow(pos.addY(-30));
+        const option = zhu.text.Option{ .color = .black, .max = 144 };
+        const textSize = zhu.text.measure(text, option);
+        const size = textSize.add(.xy(16, 16)).max(.xy(160, 48));
+
+        const bubblePos = head.addXY(-size.x / 2, -4 - size.y);
+        const bubbleRect: zhu.Rect = .init(bubblePos, size);
+        zhu.batch.drawNine(image, bubbleRect, .{
+            .topLeft = .xy(3, 4),
+            .bottomRight = .xy(3, 3),
+        });
+
+        const textPos = bubbleRect.min.add(.xy(8, 8));
+        zhu.text.drawString(text, textPos, option);
+    }
+};
+
 pub const title = struct {
     const MenuEvent = enum(u8) { start, load, exit };
 
@@ -137,6 +173,7 @@ pub const title = struct {
 pub fn init() void {
     title.init();
     save_slot.init();
+    dialog.init();
 }
 
 pub fn deinit() void {}
@@ -149,37 +186,7 @@ pub fn draw(world: *zhu.ecs.World) void {
     zhu.camera.mode = .window;
     defer zhu.camera.mode = previousMode;
 
+    dialog.draw(world);
     time.draw();
     toolbar.draw();
-    drawDialog(world);
 }
-
-// 对话气泡只读取 talk 系统维护的当前对话状态。
-fn drawDialog(world: *zhu.ecs.World) void {
-    const Dialog = component.actor.Dialog;
-
-    const entity = world.getIdentity(Dialog) orelse return;
-    const dialog = world.get(entity, Dialog) orelse return;
-    if (dialog.index >= dialog.lines.len) return;
-
-    const text = dialog.lines[dialog.index];
-    if (text.len == 0) return;
-
-    const pos = world.get(entity, component.Position) orelse return;
-    const head = zhu.camera.toWindow(pos.addY(-dialogHeadOffset));
-
-    const option = zhu.text.Option{ .color = .white, .max = dialogMaxWidth };
-    const textSize = zhu.text.measure(text, option);
-
-    const bubbleSize = textSize.add(.xy(dialogPadding * 2, dialogPadding * 2));
-    const bubblePos = head.addXY(-bubbleSize.x / 2, -bubbleSize.y);
-    const bubbleRect: zhu.Rect = .init(bubblePos, bubbleSize);
-    zhu.batch.drawRect(bubbleRect, .{ .color = .rgba(0, 0, 0, 0.75) });
-
-    const textPos = bubbleRect.min.add(.xy(dialogPadding, dialogPadding));
-    zhu.text.drawString(text, textPos, option);
-}
-
-const dialogPadding: f32 = 4.0;
-const dialogHeadOffset: f32 = 30.0;
-const dialogMaxWidth: f32 = 200.0;
