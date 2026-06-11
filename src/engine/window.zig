@@ -101,13 +101,12 @@ pub var viewRect: math.Rect = undefined;
 pub var countingAllocator: CountingAllocator = undefined;
 pub var alignment: math.Vector2 = .center; // 默认居中
 var scaleEnum: ScaleEnum = .stretch; // 当前缩放模式
-var timer: std.time.Timer = undefined;
 
 pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
 
 const root = @import("root");
 pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
-    timer = std.time.Timer.start() catch unreachable;
+    sk.time.setup();
     size = info.logicSize orelse info.size;
     viewRect = .init(.zero, size);
     alignment = info.alignment;
@@ -139,7 +138,7 @@ export fn windowInit() void {
         .logger = .{ .func = sk.log.func },
         .allocator = assets.skAllocator,
     });
-    math.setRandomSeed(timer.read());
+    math.setRandomSeed(sk.time.now());
     call(root, "init", .{});
 }
 
@@ -199,10 +198,6 @@ export fn windowDeinit() void {
     call(root, "deinit", .{});
     sk.gfx.shutdown();
     assets.deinit();
-}
-
-pub fn relativeTime() u64 {
-    return timer.read();
 }
 
 pub fn statFileTime(path: [:0]const u8) i64 {
