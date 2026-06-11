@@ -135,7 +135,7 @@ test "按 F 会激活最近 NPC 的第一句对话" {
     try std.testing.expectEqual(0, world.get(near, Dialog).?.index);
 }
 
-test "对话激活后按 F 会推进到下一句" {
+test "对话激活后按 F 会推进并在末尾关闭" {
     zhu.input.reset();
 
     var world = zhu.ecs.World.init(std.testing.allocator);
@@ -154,6 +154,13 @@ test "对话激活后按 F 会推进到下一句" {
 
     try std.testing.expectEqual(npc, world.getIdentity(Dialog).?);
     try std.testing.expectEqual(1, world.get(npc, Dialog).?.index);
+
+    zhu.input.reset();
+    pressKey(.F);
+    update(&world);
+
+    try std.testing.expectEqual(null, world.getIdentity(Dialog));
+    try std.testing.expectEqual(0, world.get(npc, Dialog).?.index);
 }
 
 test "当前对话目标太远时会直接关闭" {
@@ -170,27 +177,6 @@ test "当前对话目标太远时会直接关闭" {
     world.add(npc, Dialog{ .lines = &.{"你好"}, .index = 1 });
     world.addIdentity(npc, Dialog);
 
-    update(&world);
-
-    try std.testing.expectEqual(null, world.getIdentity(Dialog));
-    try std.testing.expectEqual(0, world.get(npc, Dialog).?.index);
-}
-
-test "对话推进超过最后一句会关闭" {
-    zhu.input.reset();
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const player = world.createIdentity(Player);
-    world.add(player, Position.xy(0, 0));
-
-    const npc = world.createEntity();
-    world.add(npc, Position.xy(16, 0));
-    world.add(npc, Dialog{ .lines = &.{"你好"}, .index = 0 });
-    world.addIdentity(npc, Dialog);
-
-    pressKey(.F);
     update(&world);
 
     try std.testing.expectEqual(null, world.getIdentity(Dialog));

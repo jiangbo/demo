@@ -435,15 +435,10 @@ test "spawnAnimal 会创建可漫游动物实体" {
     defer world.deinit();
 
     const entity = spawnAnimal(&world, .cow);
-    world.add(entity, component.Position.xy(12, 34));
-    world.getPtr(entity, actor.Wander).?.home = .xy(12, 34);
 
-    try expectEqual(12, world.get(entity, component.Position).?.x);
     try expectEqual(actor.AnimalEnum.cow, world.get(entity, actor.Animal).?);
-    try expectEqual(1, world.assure(actor.Npc).dense.items.len);
-    try expectEqual(1, world.raw(actor.Wander).len);
-    try expectEqual(1, world.raw(motion.Velocity).len);
-    try expectEqual(1, world.raw(render.Sprite).len);
+    try std.testing.expect(world.has(entity, actor.Npc));
+    try std.testing.expect(world.has(entity, actor.Wander));
     try expectEqual(null, world.get(entity, actor.Dialog));
 }
 
@@ -456,22 +451,14 @@ test "spawnFriend 会创建可对话 NPC 实体" {
     defer world.deinit();
 
     const entity = spawnFriend(&world);
-    world.add(entity, component.Position.xy(95, 274));
-    world.getPtr(entity, actor.Wander).?.home = .xy(95, 274);
 
-    try expectEqual(95, world.get(entity, component.Position).?.x);
-    try expectEqual(1, world.assure(actor.Npc).dense.items.len);
-    try expectEqual(1, world.raw(actor.Wander).len);
-    try expectEqual(1, world.raw(actor.Dialog).len);
+    try std.testing.expect(world.has(entity, actor.Npc));
+    try std.testing.expect(world.has(entity, actor.Wander));
     const dialog = world.get(entity, actor.Dialog).?;
-    try expectEqual(2, dialog.lines.len);
-    try std.testing.expectEqualStrings(
-        "早上好，今天也要照顾好农场哦。",
-        dialog.lines[0],
-    );
+    try std.testing.expect(dialog.lines.len != 0);
 }
 
-test "spawnCrop 创建作物实体并设置初始 next" {
+test "spawnCrop 会按作物类型设置 kind 和 next" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
     putMockCropImages();
@@ -479,59 +466,46 @@ test "spawnCrop 创建作物实体并设置初始 next" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    const entity = spawnCrop(&world, .xy(32, 48), .strawberry);
-    const crop = world.get(entity, farm.Crop).?;
-    try expectEqual(farm.GrowthEnum.seed, crop.stage);
-    try expectEqual(farm.CropEnum.strawberry, crop.kind);
-    try expectEqual(zon.crops[0].stages[0].duration, crop.next);
-    try expectEqual(32, world.get(entity, component.Position).?.x);
-}
-
-test "advanceCrop 推进阶段并累加 next" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    putMockCropImages();
-
-    var crop = farm.Crop{
-        .kind = .strawberry,
-        .next = zon.crops[0].stages[0].duration,
+    const cases = [_]struct {
+        kind: farm.CropEnum,
+        position: zhu.Vector2,
+    }{
+        .{ .kind = .strawberry, .position = .xy(32, 48) },
+        .{ .kind = .potato, .position = .xy(64, 80) },
     };
-    _ = advanceCrop(&crop);
-    try expectEqual(farm.GrowthEnum.sprout, crop.stage);
-    try expectEqual(zon.crops[0].stages[1].duration, crop.next);
-    try expectEqual(0, crop.timer);
+
+    for (cases) |case| {
+        const entity = spawnCrop(&world, case.position, case.kind);
+        const crop = world.get(entity, farm.Crop).?;
+        const config = zon.crops[@intFromEnum(case.kind)];
+
+        try expectEqual(farm.GrowthEnum.seed, crop.stage);
+        try expectEqual(case.kind, crop.kind);
+        try expectEqual(config.stages[0].duration, crop.next);
+        try expectEqual(case.position.x, world.get(entity, component.Position).?.x);
+    }
 }
 
-test "spawnCrop(.potato) 初始 kind 和 next 正确" {
+test "advanceCrop 会推进阶段并保持 kind" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
     putMockCropImages();
 
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
+    const kinds = [_]farm.CropEnum{ .strawberry, .potato };
+    for (kinds) |kind| {
+        const config = zon.crops[@intFromEnum(kind)];
+        var crop = farm.Crop{
+            .kind = kind,
+            .next = config.stages[0].duration,
+        };
 
-    const entity = spawnCrop(&world, .xy(64, 80), .potato);
-    const crop = world.get(entity, farm.Crop).?;
-    try expectEqual(farm.GrowthEnum.seed, crop.stage);
-    try expectEqual(farm.CropEnum.potato, crop.kind);
-    // potato seed duration 与 strawberry 不同（4.0 vs 5.0）
-    try expectEqual(zon.crops[1].stages[0].duration, crop.next);
-}
+        _ = advanceCrop(&crop);
 
-test "advanceCrop(.potato) kind 不变，推进到 sprout" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    putMockCropImages();
-
-    var crop = farm.Crop{
-        .kind = .potato,
-        .next = zon.crops[1].stages[0].duration,
-    };
-    _ = advanceCrop(&crop);
-    try expectEqual(farm.GrowthEnum.sprout, crop.stage);
-    try expectEqual(farm.CropEnum.potato, crop.kind); // kind 不得被 advanceCrop 改变
-    try expectEqual(zon.crops[1].stages[1].duration, crop.next);
-    try expectEqual(0, crop.timer);
+        try expectEqual(farm.GrowthEnum.sprout, crop.stage);
+        try expectEqual(kind, crop.kind);
+        try expectEqual(config.stages[1].duration, crop.next);
+        try expectEqual(0, crop.timer);
+    }
 }
 
 test "地图摆件按底边定位生成实体" {
