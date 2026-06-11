@@ -186,12 +186,15 @@ pub fn computeViewRect() void {
     resized = false;
 }
 
+pub var frameCost: u64 = 0;
 export fn windowFrame() void {
+    const frameStart = sk.time.now();
     sk.fetch.dowork();
     if (resized) computeViewRect();
     const delta: f32 = @floatCast(sk.app.frameDuration());
     call(root, "frame", .{delta});
     input.update();
+    frameCost = sk.time.since(frameStart);
 }
 
 export fn windowDeinit() void {

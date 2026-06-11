@@ -23,20 +23,24 @@ const leftWidth: usize = 14;
 const rightWidth: usize = 18;
 
 var fps: u32 = 0;
-var fpsTime: u64 = 0;
-var fpsFrameCount: u64 = 0;
+var fpsLastTime: u64 = 0;
+var fpsLastFrame: u64 = 0;
+var displayFrameMs: f64 = 0;
+var displayCostMs: f64 = 0;
 var lastTextCount: usize = 0;
 
 pub fn draw() void {
-    const now = window.relativeTime();
+    const now = sk.time.now();
     const currentFrame = sk.app.frameCount();
-    if (fpsTime == 0) {
-        fpsTime = now;
-        fpsFrameCount = currentFrame;
-    } else if (now > fpsTime + std.time.ns_per_s) {
-        fps = @intCast(currentFrame - fpsFrameCount);
-        fpsTime = now;
-        fpsFrameCount = currentFrame;
+    if (fpsLastTime == 0) {
+        fpsLastTime = now;
+        fpsLastFrame = currentFrame;
+    } else if (sk.time.sec(sk.time.diff(now, fpsLastTime)) >= 1.0) {
+        fps = @intCast(currentFrame - fpsLastFrame);
+        fpsLastTime = now;
+        fpsLastFrame = currentFrame;
+        displayFrameMs = sk.app.frameDuration() * 1000;
+        displayCostMs = sk.time.ms(window.frameCost);
     }
 
     var buffer: [1000]u8 = undefined;
@@ -47,10 +51,9 @@ pub fn draw() void {
     writeFormatLine(&writer, "后端", "{s}", .{
         @tagName(graphics.queryBackend()),
     }, "帧率 {}", .{fps});
-    // used 需要主循环额外记录耗时，这里先按约定显示 0。
     writeFormatLine(&writer, "帧时", "{d:.2}ms", .{
-        sk.app.frameDuration() * 1000,
-    }, "用时 {d:.2}ms", .{@as(f32, 0)});
+        displayFrameMs,
+    }, "用时 {d:.2}ms", .{displayCostMs});
     writeFormatLine(&writer, "内存", "{}", .{
         window.countingAllocator.used,
     }, "显存 {}", .{gpuBytes});
