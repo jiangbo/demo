@@ -93,15 +93,11 @@ pub const actor = struct {
     // 同时用作 Identity 标记当前正在对话的实体
     pub const Dialog = struct {
         lines: []const []const u8 = &.{}, // 当前角色的对话内容
+        index: usize = 0, // 当前显示到第几行
 
         pub const interactDist: f32 = 64.0; // 触发对话的最大距离
         pub const closeDist: f32 = 96.0; // 自动关闭对话的距离
     };
-
-    // 对话请求只需要记录一个目标实体，用 identity 临时保存。
-    pub const DialogStart = struct {};
-    pub const DialogAdvance = struct {};
-    pub const DialogClose = struct {};
 };
 
 pub const farm = struct {

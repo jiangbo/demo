@@ -1,9 +1,9 @@
 const zhu = @import("zhu");
 
-pub const dialog = @import("ui/dialog.zig");
 pub const save_slot = @import("ui/save_slot.zig");
 pub const toolbar = @import("ui/toolbar.zig");
 
+const component = @import("component.zig");
 const context = @import("context.zig");
 const light = @import("system/light.zig");
 const target = @import("system/target.zig");
@@ -151,5 +151,35 @@ pub fn draw(world: *zhu.ecs.World) void {
 
     time.draw();
     toolbar.draw();
-    dialog.draw(world);
+    drawDialog(world);
 }
+
+// 对话气泡只读取 talk 系统维护的当前对话状态。
+fn drawDialog(world: *zhu.ecs.World) void {
+    const Dialog = component.actor.Dialog;
+
+    const entity = world.getIdentity(Dialog) orelse return;
+    const dialog = world.get(entity, Dialog) orelse return;
+    if (dialog.index >= dialog.lines.len) return;
+
+    const text = dialog.lines[dialog.index];
+    if (text.len == 0) return;
+
+    const pos = world.get(entity, component.Position) orelse return;
+    const head = zhu.camera.toWindow(pos.addY(-dialogHeadOffset));
+
+    const option = zhu.text.Option{ .color = .white, .max = dialogMaxWidth };
+    const textSize = zhu.text.measure(text, option);
+
+    const bubbleSize = textSize.add(.xy(dialogPadding * 2, dialogPadding * 2));
+    const bubblePos = head.addXY(-bubbleSize.x / 2, -bubbleSize.y);
+    const bubbleRect: zhu.Rect = .init(bubblePos, bubbleSize);
+    zhu.batch.drawRect(bubbleRect, .{ .color = .rgba(0, 0, 0, 0.75) });
+
+    const textPos = bubbleRect.min.add(.xy(dialogPadding, dialogPadding));
+    zhu.text.drawString(text, textPos, option);
+}
+
+const dialogPadding: f32 = 4.0;
+const dialogHeadOffset: f32 = 30.0;
+const dialogMaxWidth: f32 = 200.0;

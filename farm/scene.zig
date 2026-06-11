@@ -86,7 +86,6 @@ fn updateFarm(world: *World, delta: f32) void {
 
     ui.toolbar.update();
     system.update(world, delta);
-    ui.dialog.update(world);
 }
 
 fn applyScene(world: *World) void {

@@ -10,26 +10,18 @@ const Player = component.actor.Player;
 const Npc = component.actor.Npc;
 const Actor = component.actor.Actor;
 const Dialog = component.actor.Dialog;
-const DialogAdvance = component.actor.DialogAdvance;
-const DialogClose = component.actor.DialogClose;
-const DialogStart = component.actor.DialogStart;
 const Shape = component.motion.Shape;
 
 pub fn update(world: *zhu.ecs.World) void {
-    // 通过 Identity 查找当前正在对话的实体
-    const activeEntity = world.getIdentity(Dialog);
-
-    // 检查激活对话的距离，走远则自动关闭
-    if (activeEntity) |target| checkDistance(world, target);
+    // 当前对话目标走远或消失时，直接关闭对话。
+    if (world.getIdentity(Dialog)) |target| checkDistance(world, target);
 
     // 按 F 键触发交互
     if (!zhu.key.pressed(.F)) return;
 
-    if (activeEntity) |target| {
-        // 有激活对话，推进下一句
-        world.addIdentity(target, DialogAdvance);
+    if (world.getIdentity(Dialog)) |target| {
+        advanceDialog(world, target);
     } else {
-        // 没有激活对话，找最近的可交互 NPC
         tryInteract(world);
     }
 }
@@ -39,14 +31,12 @@ fn checkDistance(world: *zhu.ecs.World, target: zhu.ecs.Entity) void {
     const player = world.getIdentity(Player).?;
     const playerPos = world.get(player, Position).?;
     const targetPos = world.get(target, Position) orelse {
-        world.addIdentity(target, DialogClose);
+        closeDialog(world, target);
         return;
     };
 
     const dist = playerPos.sub(targetPos).length();
-    if (dist > Dialog.closeDist) {
-        world.addIdentity(target, DialogClose);
-    }
+    if (dist > Dialog.closeDist) closeDialog(world, target);
 }
 
 // 根据朝向构建探测矩形，用 markFacingHits 查找可交互 NPC
@@ -73,7 +63,36 @@ fn tryInteract(world: *zhu.ecs.World) void {
 
     const target = bestEntity orelse return;
 
-    world.addIdentity(target, DialogStart);
+    startDialog(world, target);
+}
+
+// 开始对话时把行号重置到第一句，并记录当前对话实体。
+fn startDialog(world: *zhu.ecs.World, target: zhu.ecs.Entity) void {
+    const dialog = world.getPtr(target, Dialog).?;
+    if (dialog.lines.len == 0) return;
+
+    dialog.index = 0;
+    world.addIdentity(target, Dialog);
+}
+
+// 推进到下一句，超过最后一句就关闭。
+fn advanceDialog(world: *zhu.ecs.World, target: zhu.ecs.Entity) void {
+    const dialog = world.getPtr(target, Dialog) orelse {
+        closeDialog(world, target);
+        return;
+    };
+
+    dialog.index += 1;
+    if (dialog.index >= dialog.lines.len) closeDialog(world, target);
+}
+
+// 关闭当前对话，并重置 NPC 自己的对话行号。
+fn closeDialog(world: *zhu.ecs.World, target: zhu.ecs.Entity) void {
+    const active = world.getIdentity(Dialog) orelse return;
+    if (active != target) return;
+
+    if (world.getPtr(target, Dialog)) |dialog| dialog.index = 0;
+    _ = world.removeIdentity(Dialog);
 }
 
 fn pressKey(keyCode: zhu.key.Code) void {
@@ -84,7 +103,7 @@ fn pressKey(keyCode: zhu.key.Code) void {
     zhu.input.handle(&ev);
 }
 
-test "按 F 会向最近的 NPC 发起对话事件" {
+test "按 F 会激活最近 NPC 的第一句对话" {
     zhu.input.reset();
 
     var world = zhu.ecs.World.init(std.testing.allocator);
@@ -112,10 +131,11 @@ test "按 F 会向最近的 NPC 发起对话事件" {
     pressKey(.F);
     update(&world);
 
-    try std.testing.expectEqual(near, world.takeIdentity(DialogStart).?);
+    try std.testing.expectEqual(near, world.getIdentity(Dialog).?);
+    try std.testing.expectEqual(0, world.get(near, Dialog).?.index);
 }
 
-test "对话激活后按 F 会发送推进事件" {
+test "对话激活后按 F 会推进到下一句" {
     zhu.input.reset();
 
     var world = zhu.ecs.World.init(std.testing.allocator);
@@ -126,16 +146,17 @@ test "对话激活后按 F 会发送推进事件" {
 
     const npc = world.createEntity();
     world.add(npc, Position.xy(16, 0));
-    world.add(npc, Dialog{ .lines = &.{"你好"} });
+    world.add(npc, Dialog{ .lines = &.{ "你好", "明天见" } });
     world.addIdentity(npc, Dialog);
 
     pressKey(.F);
     update(&world);
 
-    try std.testing.expectEqual(npc, world.takeIdentity(DialogAdvance).?);
+    try std.testing.expectEqual(npc, world.getIdentity(Dialog).?);
+    try std.testing.expectEqual(1, world.get(npc, Dialog).?.index);
 }
 
-test "当前对话目标太远时会发送关闭事件" {
+test "当前对话目标太远时会直接关闭" {
     zhu.input.reset();
 
     var world = zhu.ecs.World.init(std.testing.allocator);
@@ -146,10 +167,32 @@ test "当前对话目标太远时会发送关闭事件" {
 
     const npc = world.createEntity();
     world.add(npc, Position.xy(Dialog.closeDist + 1, 0));
-    world.add(npc, Dialog{ .lines = &.{"你好"} });
+    world.add(npc, Dialog{ .lines = &.{"你好"}, .index = 1 });
     world.addIdentity(npc, Dialog);
 
     update(&world);
 
-    try std.testing.expectEqual(npc, world.takeIdentity(DialogClose).?);
+    try std.testing.expectEqual(null, world.getIdentity(Dialog));
+    try std.testing.expectEqual(0, world.get(npc, Dialog).?.index);
+}
+
+test "对话推进超过最后一句会关闭" {
+    zhu.input.reset();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const player = world.createIdentity(Player);
+    world.add(player, Position.xy(0, 0));
+
+    const npc = world.createEntity();
+    world.add(npc, Position.xy(16, 0));
+    world.add(npc, Dialog{ .lines = &.{"你好"}, .index = 0 });
+    world.addIdentity(npc, Dialog);
+
+    pressKey(.F);
+    update(&world);
+
+    try std.testing.expectEqual(null, world.getIdentity(Dialog));
+    try std.testing.expectEqual(0, world.get(npc, Dialog).?.index);
 }

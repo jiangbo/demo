@@ -7,7 +7,6 @@ const QueryHidden = struct {};
 
 test {
     std.testing.refAllDeclsRecursive(@import("context.zig"));
-    std.testing.refAllDeclsRecursive(@import("ui/dialog.zig"));
     std.testing.refAllDeclsRecursive(@import("map.zig"));
     std.testing.refAllDeclsRecursive(@import("factory.zig"));
     std.testing.refAllDeclsRecursive(@import("save.zig"));
