@@ -201,10 +201,6 @@ export fn windowDeinit() void {
     assets.deinit();
 }
 
-pub fn frameCount() u64 {
-    return sk.app.frameCount();
-}
-
 pub fn relativeTime() u64 {
     return timer.read();
 }

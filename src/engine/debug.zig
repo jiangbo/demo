@@ -29,7 +29,7 @@ var lastTextCount: usize = 0;
 
 pub fn draw() void {
     const now = window.relativeTime();
-    const currentFrame = window.frameCount();
+    const currentFrame = sk.app.frameCount();
     if (fpsTime == 0) {
         fpsTime = now;
         fpsFrameCount = currentFrame;
