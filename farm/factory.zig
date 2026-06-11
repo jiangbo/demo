@@ -15,6 +15,7 @@ const ui = component.ui;
 
 const World = zhu.ecs.World;
 const Entity = zhu.ecs.Entity;
+const Sources = []const zhu.Animation.Source;
 const tiled = zhu.extend.tiled;
 const Object = tiled.Object;
 
@@ -144,14 +145,6 @@ pub fn spawnPlayer(world: *World, spawn: zhu.Vector2) void {
 pub fn spawnAnimal(world: *World, kind: actor.Animal) Entity {
     const config = zon.animals[@intFromEnum(kind)];
 
-    const entity = world.createEntity();
-    world.add(entity, motion.Velocity{});
-    world.add(entity, motion.Shape{
-        .circle = .init(.xy(0, -5), 5),
-    });
-    world.add(entity, motion.Blocking{});
-    world.add(entity, actor.Actor{ .rows = config.rows });
-
     // inline else 让每种动物的动画源在编译期按枚举值分别计算
     const sources = blk: switch (kind) {
         inline else => |k| {
@@ -159,34 +152,19 @@ pub fn spawnAnimal(world: *World, kind: actor.Animal) Entity {
             break :blk &comptime animationSources(source);
         },
     };
-    const imageSize = config.sprite.rect.size;
-    const animation = zhu.Animation.initSource(sources, imageSize);
 
-    world.add(entity, render.Sprite{
-        .image = animation.subImage(),
-        .offset = config.sprite.offset,
-        .size = config.sprite.size,
-    });
-    world.add(entity, animation);
-    world.add(entity, render.Render{ .layer = .actor });
-    world.add(entity, render.YSort{});
-    world.add(entity, map.Scoped{});
-    world.add(entity, actor.Npc{});
+    const entity = spawnNpc(world, config, sources);
     world.add(entity, kind);
-    world.add(entity, actor.Wander{
-        .radius = config.wanderRadius,
-        .speed = config.speed,
-    });
-    if (config.dialog.len != 0) {
-        world.add(entity, actor.Dialog{ .lines = config.dialog });
-    }
-
     return entity;
 }
 
 pub fn spawnFriend(world: *World) Entity {
-    const config = zon.friend;
+    // friend 动画源在编译期计算，配置缺失会直接编译失败。
+    const sources = comptime animationSources(zon.friend.animations);
+    return spawnNpc(world, zon.friend, &sources);
+}
 
+fn spawnNpc(world: *World, config: Character, sources: Sources) Entity {
     const entity = world.createEntity();
     world.add(entity, motion.Velocity{});
     world.add(entity, motion.Shape{
@@ -194,11 +172,8 @@ pub fn spawnFriend(world: *World) Entity {
     });
     world.add(entity, motion.Blocking{});
     world.add(entity, actor.Actor{ .rows = config.rows });
-
-    // friend 动画源在编译期计算，配置缺失会直接编译失败。
-    const sources = comptime animationSources(zon.friend.animations);
     const imageSize = config.sprite.rect.size;
-    const animation = zhu.Animation.initSource(&sources, imageSize);
+    const animation = zhu.Animation.initSource(sources, imageSize);
 
     world.add(entity, render.Sprite{
         .image = animation.subImage(),
