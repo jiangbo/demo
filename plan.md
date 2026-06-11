@@ -72,7 +72,8 @@ zig build test
 8. 21-地图数据管线：不做 C++ 的 Auto-tile 系统（WangSets、
   `AutoTileLibrary`、`AutoTileSystem`），地图瓦片拼接由美术直接处理；
   不做地图边缘切图（edge transition），所有跨地图切换统一通过 Tiled
-  `map_trigger` 触发器完成。
+  `map_trigger` 触发器完成；
+  不做 `.world` 文件解析，地图布局和邻接关系使用编译期 ZON 配置。
 9. 23-蓝图与实体工厂：不做 C++ 的 `BlueprintManager`、运行时 JSON 蓝图、
   hash key 查询和 Blueprint Inspector；Zig 使用编译期 `factory.zon`，
   由 `factory.zig` 直接作为复杂实体的唯一装配点。
