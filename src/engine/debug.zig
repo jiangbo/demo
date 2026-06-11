@@ -47,14 +47,14 @@ pub fn draw() void {
     var writer = std.Io.Writer.fixed(&buffer);
     writeFormatLine(&writer, "后端", "{s}", .{
         @tagName(graphics.queryBackend()),
-    }, "显存 {}", .{gpuBytes});
-    writeFormatLine(&writer, "帧率", "{}", .{fps}, "帧时 {d:.2}ms", .{
-        frameMs,
-    });
+    }, "帧率 {}", .{fps});
     // used 需要主循环额外记录耗时，这里先按约定显示 0。
-    writeFormatLine(&writer, "用时", "{d:.2}ms", .{@as(f32, 0)}, "内存 {}", .{
+    writeFormatLine(&writer, "帧时", "{d:.2}ms", .{
+        frameMs,
+    }, "用时 {d:.2}ms", .{@as(f32, 0)});
+    writeFormatLine(&writer, "内存", "{}", .{
         window.countingAllocator.used,
-    });
+    }, "显存 {}", .{gpuBytes});
     writeFormatLine(&writer, "批次", "命令 {}", .{
         batch.commands.items.len,
     }, "绘制 {}", .{frameStats.num_draw});
