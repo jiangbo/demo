@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const sk = @import("sokol");
 const audio = @import("audio.zig");
 const batch = @import("batch.zig");
 const camera = @import("camera.zig");
@@ -38,8 +39,6 @@ pub fn draw() void {
         fpsFrameCount = currentFrame;
     }
 
-    const frameMs = window.frameDuration() * 1000;
-
     var buffer: [1000]u8 = undefined;
     const frameStats = graphics.queryFrameStats();
     const gpuBytes = frameStats.size_append_buffer +
@@ -50,7 +49,7 @@ pub fn draw() void {
     }, "帧率 {}", .{fps});
     // used 需要主循环额外记录耗时，这里先按约定显示 0。
     writeFormatLine(&writer, "帧时", "{d:.2}ms", .{
-        frameMs,
+        sk.app.frameDuration() * 1000,
     }, "用时 {d:.2}ms", .{@as(f32, 0)});
     writeFormatLine(&writer, "内存", "{}", .{
         window.countingAllocator.used,

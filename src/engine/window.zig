@@ -184,16 +184,15 @@ pub fn computeViewRect() void {
             viewRect = .init(position, intSize);
         },
     }
+    resized = false;
 }
 
 export fn windowFrame() void {
     sk.fetch.dowork();
-
     if (resized) computeViewRect();
-    call(root, "frame", .{frameDuration()});
+    const delta: f32 = @floatCast(sk.app.frameDuration());
+    call(root, "frame", .{delta});
     input.update();
-
-    resized = false;
 }
 
 export fn windowDeinit() void {
@@ -208,10 +207,6 @@ pub fn frameCount() u64 {
 
 pub fn relativeTime() u64 {
     return timer.read();
-}
-
-pub fn frameDuration() f32 {
-    return @floatCast(sk.app.frameDuration());
 }
 
 pub fn statFileTime(path: [:0]const u8) i64 {
