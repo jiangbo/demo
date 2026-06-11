@@ -4,12 +4,8 @@ const builtin = @import("builtin");
 const sk = @import("sokol");
 const math = @import("math.zig");
 const assets = @import("assets.zig");
-const audio = @import("audio.zig");
 const input = @import("input.zig");
 const text = @import("text.zig");
-const graphics = @import("graphics.zig");
-const camera = @import("camera.zig");
-const batch = @import("batch.zig");
 
 pub const Event = sk.app.Event;
 
@@ -190,14 +186,6 @@ pub fn computeViewRect() void {
     }
 }
 
-var frameRate: u32 = 0;
-var frameDeltaPerSecond: f32 = 0;
-var usedDeltaPerSecond: f32 = 0;
-
-var frameRateTime: u64 = 0;
-var frameRateCount: u64 = 0;
-var usedDelta: u64 = 0;
-
 const smoothFrameTime: [4]f32 = .{
     @as(f32, 1) / 30, // 30 帧
     @as(f32, 1) / 60, // 60 帧
@@ -211,15 +199,6 @@ export fn windowFrame() void {
     const start = timer.read(); // 当前帧的起始时间
     const deltaNano: f32 = @floatFromInt(start - lastTime);
     const delta: f32 = deltaNano / std.time.ns_per_s;
-
-    if (start > frameRateTime + std.time.ns_per_s) { // 一秒统计一次
-        frameRateTime = start;
-        frameRate = @intCast(frameCount() - frameRateCount);
-        frameRateCount = frameCount();
-        frameDeltaPerSecond = delta * 1000;
-        const deltaUsed: f32 = @floatFromInt(usedDelta);
-        usedDeltaPerSecond = deltaUsed / std.time.ns_per_ms;
-    }
 
     sk.fetch.dowork();
 
@@ -239,8 +218,6 @@ export fn windowFrame() void {
     call(root, "frame", .{currentSmoothTime});
     input.update();
 
-    // 执行更新和渲染消耗的时间，单位为纳秒
-    usedDelta = timer.read() - start;
     lastTime = start; // 记录上一帧的时间
     resized = false;
 }
@@ -257,55 +234,6 @@ pub fn frameCount() u64 {
 
 pub fn relativeTime() u64 {
     return timer.read();
-}
-
-var debutTextCount: usize = 0;
-pub fn drawDebugInfo() void {
-    var buffer: [1024]u8 = undefined;
-    const format =
-        \\后端：{s}
-        \\帧率：{}
-        \\平滑：{d:.2}
-        \\帧时：{d:.2}
-        \\用时：{d:.2}
-        \\显存：{}
-        \\绘制：{}
-        \\文字：{}
-        \\内存：{}
-        \\实际：{d:.2}，{d:.2}
-        \\游戏：{d:.2}，{d:.2}
-        \\相机：{d:.2}，{d:.2}
-        \\缩放：{d:.2}，{d:.2}
-        \\精灵：{}
-        \\命令：{}
-    ;
-
-    const frameStats = graphics.queryFrameStats();
-    const t = text.format(&buffer, format, .{
-        @tagName(graphics.queryBackend()),
-        frameRate,
-        currentSmoothTime * 1000,
-        frameDeltaPerSecond,
-        usedDeltaPerSecond,
-        frameStats.size_append_buffer + frameStats.size_update_buffer,
-        frameStats.num_draw,
-        // Debug 信息本身的次数也应该统计进去
-        graphics.stats.text + debutTextCount,
-        countingAllocator.used,
-        input.mouse.raw.x,
-        input.mouse.raw.y,
-        mouse.x,
-        mouse.y,
-        camera.position.x,
-        camera.position.y,
-        camera.scale.x,
-        camera.scale.y,
-        batch.vertices.items.len,
-        batch.commands.items.len,
-    });
-
-    debutTextCount = text.computeTextCount(t);
-    text.drawString(t, .xy(10, 10), .{ .color = .green });
 }
 
 pub fn statFileTime(path: [:0]const u8) i64 {

@@ -80,7 +80,7 @@ pub fn draw(world: *World) void {
     zhu.camera.mode = .window;
     if (ui.pause.active) ui.pause.draw();
     if (ui.save_slot.active) ui.save_slot.draw();
-    if (drawDebug) zhu.window.drawDebugInfo();
+    if (drawDebug) zhu.debug.draw();
     zhu.camera.mode = .world;
 }
 
