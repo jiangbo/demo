@@ -118,54 +118,57 @@
         },
     },
     .items = .{
-        .{ // hoe
+        .{ // hoe (index 0)
             .limit = 1,
             .icon = .{
-                // .path = "farm-rpg/Icons/Weapons/RPG/5.png",
+                // .path = "farm-rpg/Icons/Weapons/RPG/5.png"
                 .imageId = 4096884281,
-                .rect = .{
-                    .min = .{ .x = 96, .y = 0 },
-                    .size = .{ .x = 16, .y = 16 },
-                },
+                .rect = .{ .min = .{ .x = 96, .y = 0 }, .size = .{ .x = 16, .y = 16 } },
                 .size = .{ .x = 16, .y = 16 },
             },
         },
-
-        .{ // water
+        .{ // water (index 1)
             .limit = 1,
             .icon = .{
-                // .path = "farm-rpg/Icons/Weapons/RPG/5.png",
+                // .path = "farm-rpg/Icons/Weapons/RPG/5.png"
                 .imageId = 4096884281,
-                .rect = .{
-                    .min = .{ .x = 0, .y = 0 },
-                    .size = .{ .x = 16, .y = 16 },
-                },
+                .rect = .{ .min = .{ .x = 0, .y = 0 }, .size = .{ .x = 16, .y = 16 } },
                 .size = .{ .x = 16, .y = 16 },
             },
         },
-
-        .{ // seed
+        .{ // strawberrySeed (index 2)，对应 CropEnum.strawberry
             .limit = 99,
             .icon = .{
-                // .path = "farm-rpg/Icons/Crops.png",
+                // .path = "farm-rpg/Icons/Crops.png"
                 .imageId = 2346538291,
-                .rect = .{
-                    .min = .{ .x = 0, .y = 32 },
-                    .size = .{ .x = 16, .y = 16 },
-                },
+                .rect = .{ .min = .{ .x = 0, .y = 32 }, .size = .{ .x = 16, .y = 16 } },
                 .size = .{ .x = 16, .y = 16 },
             },
         },
-
-        .{ // crop
+        .{ // potatoSeed (index 3)，对应 CropEnum.potato
             .limit = 99,
             .icon = .{
-                // .path = "farm-rpg/Icons/Crops.png",
+                // .path = "farm-rpg/Icons/Crops.png"
                 .imageId = 2346538291,
-                .rect = .{
-                    .min = .{ .x = 32, .y = 32 },
-                    .size = .{ .x = 16, .y = 16 },
-                },
+                .rect = .{ .min = .{ .x = 16, .y = 32 }, .size = .{ .x = 16, .y = 16 } },
+                .size = .{ .x = 16, .y = 16 },
+            },
+        },
+        .{ // strawberry (index 4)，收获产出
+            .limit = 99,
+            .icon = .{
+                // .path = "farm-rpg/Icons/Crops.png"
+                .imageId = 2346538291,
+                .rect = .{ .min = .{ .x = 32, .y = 32 }, .size = .{ .x = 16, .y = 16 } },
+                .size = .{ .x = 16, .y = 16 },
+            },
+        },
+        .{ // potato (index 5)，收获产出
+            .limit = 99,
+            .icon = .{
+                // .path = "farm-rpg/Icons/Crops.png"
+                .imageId = 2346538291,
+                .rect = .{ .min = .{ .x = 48, .y = 32 }, .size = .{ .x = 16, .y = 16 } },
                 .size = .{ .x = 16, .y = 16 },
             },
         },
@@ -242,56 +245,111 @@
             },
         },
     },
-    .crop = .{
-        .stages = .{
-            // .path = "farm-rpg/Farm Crops/Spring Crops.png",
-            .{
-                .sprite = .{
-                    .imageId = 4041761859,
-                    .rect = .{
-                        .min = .{ .x = 0, .y = 16 },
+    .crops = .{
+        .{ // index 0: strawberry，对应 farm.CropEnum.strawberry
+            // .path = "farm-rpg/Farm Crops/Spring Crops.png"
+            .stages = .{
+                .{
+                    .sprite = .{
+                        .imageId = 4041761859,
+                        .rect = .{
+                            .min = .{ .x = 0, .y = 16 },
+                            .size = .{ .x = 16, .y = 16 },
+                        },
+                        .offset = .{ .x = 2.5, .y = -2.5 },
                         .size = .{ .x = 16, .y = 16 },
                     },
-                    .offset = .{ .x = 2.5, .y = -2.5 },
-                    .size = .{ .x = 16, .y = 16 },
+                    .duration = 5.0,
                 },
-                .duration = 5.0,
+                .{
+                    .sprite = .{
+                        .imageId = 4041761859,
+                        .rect = .{
+                            .min = .{ .x = 16, .y = 16 },
+                            .size = .{ .x = 16, .y = 16 },
+                        },
+                        .offset = .{ .x = 1.0, .y = -4.0 },
+                        .size = .{ .x = 16, .y = 16 },
+                    },
+                    .duration = 8.0,
+                },
+                .{
+                    .sprite = .{
+                        .imageId = 4041761859,
+                        .rect = .{
+                            .min = .{ .x = 32, .y = 16 },
+                            .size = .{ .x = 16, .y = 16 },
+                        },
+                        .offset = .{ .x = 0.5, .y = -3.0 },
+                        .size = .{ .x = 16, .y = 16 },
+                    },
+                    .duration = 8.0,
+                },
+                .{
+                    .sprite = .{
+                        .imageId = 4041761859,
+                        .rect = .{
+                            .min = .{ .x = 80, .y = 16 },
+                            .size = .{ .x = 16, .y = 16 },
+                        },
+                        .offset = .{ .x = 0.5, .y = -0.5 },
+                        .size = .{ .x = 16, .y = 16 },
+                    },
+                    .duration = 0.0,
+                },
             },
-            .{
-                .sprite = .{
-                    .imageId = 4041761859,
-                    .rect = .{
-                        .min = .{ .x = 16, .y = 16 },
+        },
+        .{ // index 1: potato，对应 farm.CropEnum.potato
+            // .path = "farm-rpg/Farm Crops/Spring/Spring Crops.png"
+            .stages = .{
+                .{
+                    .sprite = .{
+                        .imageId = 4041761859,
+                        .rect = .{
+                            .min = .{ .x = 0, .y = 80 },
+                            .size = .{ .x = 16, .y = 16 },
+                        },
+                        .offset = .{ .x = 2.5, .y = -2.5 },
                         .size = .{ .x = 16, .y = 16 },
                     },
-                    .offset = .{ .x = 1.0, .y = -4.0 },
-                    .size = .{ .x = 16, .y = 16 },
+                    .duration = 4.0,
                 },
-                .duration = 8.0,
-            },
-            .{
-                .sprite = .{
-                    .imageId = 4041761859,
-                    .rect = .{
-                        .min = .{ .x = 32, .y = 16 },
+                .{
+                    .sprite = .{
+                        .imageId = 4041761859,
+                        .rect = .{
+                            .min = .{ .x = 32, .y = 80 },
+                            .size = .{ .x = 16, .y = 16 },
+                        },
+                        .offset = .{ .x = 1.0, .y = -4.0 },
                         .size = .{ .x = 16, .y = 16 },
                     },
-                    .offset = .{ .x = 0.5, .y = -3.0 },
-                    .size = .{ .x = 16, .y = 16 },
+                    .duration = 6.0,
                 },
-                .duration = 8.0,
-            },
-            .{
-                .sprite = .{
-                    .imageId = 4041761859,
-                    .rect = .{
-                        .min = .{ .x = 80, .y = 16 },
+                .{
+                    .sprite = .{
+                        .imageId = 4041761859,
+                        .rect = .{
+                            .min = .{ .x = 48, .y = 80 },
+                            .size = .{ .x = 16, .y = 16 },
+                        },
+                        .offset = .{ .x = 0.5, .y = -3.0 },
                         .size = .{ .x = 16, .y = 16 },
                     },
-                    .offset = .{ .x = 0.5, .y = -0.5 },
-                    .size = .{ .x = 16, .y = 16 },
+                    .duration = 6.0,
                 },
-                .duration = 0.0,
+                .{
+                    .sprite = .{
+                        .imageId = 4041761859,
+                        .rect = .{
+                            .min = .{ .x = 80, .y = 80 },
+                            .size = .{ .x = 16, .y = 16 },
+                        },
+                        .offset = .{ .x = 0.5, .y = -0.5 },
+                        .size = .{ .x = 16, .y = 16 },
+                    },
+                    .duration = 0.0,
+                },
             },
         },
     },

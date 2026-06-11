@@ -101,9 +101,11 @@ pub const actor = struct {
 
 pub const farm = struct {
     pub const GrowthEnum = enum { seed, sprout, growing, mature };
+    pub const CropEnum = enum { strawberry, potato };
 
     pub const Crop = struct {
         stage: GrowthEnum = .seed,
+        kind: CropEnum = .strawberry,
         timer: f32 = 0,
         next: f32 = 0,
         watered: bool = false,
@@ -119,7 +121,15 @@ pub const ui = struct {
 };
 
 pub const item = struct {
-    pub const ItemEnum = enum { hoe, water, seed, crop };
+    pub const ItemEnum = enum {
+        hoe,
+        water,
+        strawberrySeed,
+        potatoSeed,
+        strawberry,
+        potato,
+    };
+
     pub const Pickup = struct { item: ItemEnum, count: u32 = 1 };
 };
 

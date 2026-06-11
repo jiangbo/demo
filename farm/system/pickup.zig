@@ -39,7 +39,7 @@ test "pickup update 拾取物品会发出 pickup 音效" {
     world.add(player, Position.xy(0, 0));
 
     const pickup = world.createEntity();
-    world.add(pickup, Pickup{ .item = .crop, .count = 1 });
+    world.add(pickup, Pickup{ .item = .strawberry, .count = 1 });
     world.add(pickup, Position.xy(0, 0));
 
     update(&world);

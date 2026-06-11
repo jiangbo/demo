@@ -54,6 +54,7 @@ const LandSave = enum { dry, wet };
 
 const CropSave = struct {
     stage: component.farm.GrowthEnum = .seed,
+    kind: component.farm.CropEnum = .strawberry,
     timer: f32 = 0,
     next: f32 = 0,
     watered: bool = false,
@@ -240,6 +241,7 @@ fn captureTiles(world: *World) ![]const TileSave {
             if (world.get(entity, Crop)) |crop| {
                 cropSave = .{
                     .stage = crop.stage,
+                    .kind = crop.kind,
                     .timer = crop.timer,
                     .next = crop.next,
                     .watered = crop.watered,
@@ -292,14 +294,15 @@ fn restoreTiles(world: *World, data: MapSave) void {
 
         if (tileSave.crop) |crop| {
             const position = map.data.tileIndexToWorld(index);
-            const entity = factory.spawnCrop(world, position);
+            const entity = factory.spawnCrop(world, position, crop.kind);
             world.getPtr(entity, Crop).?.* = .{
                 .stage = crop.stage,
+                .kind = crop.kind,
                 .timer = crop.timer,
                 .next = crop.next,
                 .watered = crop.watered,
             };
-            updateCropSprite(world, entity, crop.stage);
+            updateCropSprite(world, entity, crop.kind, crop.stage);
             tile.object = .{ .entity = entity };
         }
     }
@@ -308,9 +311,10 @@ fn restoreTiles(world: *World, data: MapSave) void {
 fn updateCropSprite(
     world: *World,
     entity: zhu.ecs.Entity,
+    kind: component.farm.CropEnum,
     stage: component.farm.GrowthEnum,
 ) void {
-    const config = factory.cropStage(stage);
+    const config = factory.cropStage(kind, stage);
     world.getPtr(entity, Sprite).?.* = .{
         .image = factory.resolveImage(config.sprite),
         .offset = config.sprite.offset,
@@ -402,11 +406,11 @@ test "restoreToolbar restores slots and clamps index" {
     toolbar.slotIndex = 0;
 
     var data = ToolbarSave{ .slotIndex = 999 };
-    data.slots[0] = .{ .type = .seed, .count = 7 };
+    data.slots[0] = .{ .type = .strawberrySeed, .count = 7 };
 
     restoreToolbar(data);
 
-    try std.testing.expectEqual(component.item.ItemEnum.seed, toolbar.slots[0].type);
+    try std.testing.expectEqual(component.item.ItemEnum.strawberrySeed, toolbar.slots[0].type);
     try std.testing.expectEqual(7, toolbar.slots[0].count);
     try std.testing.expectEqual(toolbar.slots.len - 1, toolbar.slotIndex);
 }

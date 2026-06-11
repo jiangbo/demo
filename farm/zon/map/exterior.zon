@@ -6632,7 +6632,7 @@
                     .position = .{ .x = 208, .y = 144 },
                     .size = .{ .x = 16, .y = 16 },
                     .point = false,
-                    .properties = .{ .{ .name = "potato_seed", .value = .{ .int = 2 } }, .{ .name = "strawberry_seed", .value = .{ .int = 3 } } },
+                    .properties = .{ .{ .name = "potatoSeed", .value = .{ .int = 2 } }, .{ .name = "strawberrySeed", .value = .{ .int = 3 } } },
                     .extend = .{
                         .flipX = false,
                         .flipY = false,

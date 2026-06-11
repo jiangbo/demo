@@ -52,14 +52,15 @@ pub const Item = struct {
 };
 
 pub const CropStage = struct { sprite: Sprite, duration: f32 };
+// 单种作物的所有生长阶段配置
+pub const CropConfig = struct { stages: [4]CropStage };
 
 pub const Config = struct {
     player: Actor,
     items: [std.meta.fields(item.ItemEnum).len]Item,
     animals: [std.meta.fields(actor.AnimalKind).len]Animal,
-    crop: struct {
-        stages: [4]CropStage,
-    },
+    // crops 按 farm.CropEnum 枚举下标索引，每种作物对应一组阶段配置
+    crops: [std.meta.fields(farm.CropEnum).len]CropConfig,
 };
 
 pub const zon: Config = @import("zon/factory.zon");
@@ -72,8 +73,31 @@ pub fn itemConfig(itemType: item.ItemEnum) Item {
     return zon.items[@intFromEnum(itemType)];
 }
 
-pub fn cropStage(stage: farm.GrowthEnum) CropStage {
-    return zon.crop.stages[@intFromEnum(stage)];
+// 种子类在 ItemEnum 中的起始下标
+const seedOffset: usize = 2;
+const harvestOffset: usize = seedOffset +
+    std.meta.fields(farm.CropEnum).len;
+
+// 从 CropEnum 得到对应的种子 ItemEnum
+pub fn seedItem(kind: farm.CropEnum) item.ItemEnum {
+    return @enumFromInt(seedOffset + @intFromEnum(kind));
+}
+
+// 从 CropEnum 得到对应的产出 ItemEnum
+pub fn harvestItem(kind: farm.CropEnum) item.ItemEnum {
+    return @enumFromInt(harvestOffset + @intFromEnum(kind));
+}
+
+// 判断某个 ItemEnum 是否是种子，是则返回对应的 CropEnum
+pub fn asSeed(it: item.ItemEnum) ?farm.CropEnum {
+    const idx = @intFromEnum(it);
+    if (idx < seedOffset) return null;
+    if (idx >= harvestOffset) return null;
+    return @enumFromInt(idx - seedOffset);
+}
+
+pub fn cropStage(kind: farm.CropEnum, stage: farm.GrowthEnum) CropStage {
+    return zon.crops[@intFromEnum(kind)].stages[@intFromEnum(stage)];
 }
 
 pub fn resolveImage(sprite: Sprite) zhu.graphics.Image {
@@ -266,10 +290,11 @@ fn applyLight(world: *World, entity: Entity, object: Object) void {
     }
 }
 
-pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
-    const stage = zon.crop.stages[0];
+pub fn spawnCrop(world: *World, position: zhu.Vector2, kind: farm.CropEnum) Entity {
+    const stage = zon.crops[@intFromEnum(kind)].stages[0];
     const entity = world.createEntity();
-    world.add(entity, farm.Crop{ .next = stage.duration });
+    // kind 写入组件，后续 advanceCrop 依赖它查找正确的阶段贴图
+    world.add(entity, farm.Crop{ .kind = kind, .next = stage.duration });
     world.add(entity, component.Position.xy(position.x, position.y));
     world.add(entity, render.Sprite{
         .image = resolveImage(stage.sprite),
@@ -284,7 +309,8 @@ pub fn spawnCrop(world: *World, position: zhu.Vector2) Entity {
 pub fn advanceCrop(crop: *farm.Crop) render.Sprite {
     crop.timer = 0;
     crop.stage = zhu.nextEnum(farm.GrowthEnum, crop.stage);
-    const stage = cropStage(crop.stage);
+    // 用 crop.kind 查找该作物对应阶段的贴图
+    const stage = cropStage(crop.kind, crop.stage);
     crop.next = stage.duration;
     return .{
         .image = resolveImage(stage.sprite),
@@ -385,10 +411,11 @@ test "spawnCrop 创建作物实体并设置初始 next" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    const entity = spawnCrop(&world, .xy(32, 48));
+    const entity = spawnCrop(&world, .xy(32, 48), .strawberry);
     const crop = world.get(entity, farm.Crop).?;
     try expectEqual(farm.GrowthEnum.seed, crop.stage);
-    try expectEqual(zon.crop.stages[0].duration, crop.next);
+    try expectEqual(farm.CropEnum.strawberry, crop.kind);
+    try expectEqual(zon.crops[0].stages[0].duration, crop.next);
     try expectEqual(32, world.get(entity, component.Position).?.x);
 }
 
@@ -398,11 +425,44 @@ test "advanceCrop 推进阶段并累加 next" {
     putMockCropImages();
 
     var crop = farm.Crop{
-        .next = zon.crop.stages[0].duration,
+        .kind = .strawberry,
+        .next = zon.crops[0].stages[0].duration,
     };
     _ = advanceCrop(&crop);
     try expectEqual(farm.GrowthEnum.sprout, crop.stage);
-    try expectEqual(zon.crop.stages[1].duration, crop.next);
+    try expectEqual(zon.crops[0].stages[1].duration, crop.next);
+    try expectEqual(0, crop.timer);
+}
+
+test "spawnCrop(.potato) 初始 kind 和 next 正确" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    putMockCropImages();
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = spawnCrop(&world, .xy(64, 80), .potato);
+    const crop = world.get(entity, farm.Crop).?;
+    try expectEqual(farm.GrowthEnum.seed, crop.stage);
+    try expectEqual(farm.CropEnum.potato, crop.kind);
+    // potato seed duration 与 strawberry 不同（4.0 vs 5.0）
+    try expectEqual(zon.crops[1].stages[0].duration, crop.next);
+}
+
+test "advanceCrop(.potato) kind 不变，推进到 sprout" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    putMockCropImages();
+
+    var crop = farm.Crop{
+        .kind = .potato,
+        .next = zon.crops[1].stages[0].duration,
+    };
+    _ = advanceCrop(&crop);
+    try expectEqual(farm.GrowthEnum.sprout, crop.stage);
+    try expectEqual(farm.CropEnum.potato, crop.kind); // kind 不得被 advanceCrop 改变
+    try expectEqual(zon.crops[1].stages[1].duration, crop.next);
     try expectEqual(0, crop.timer);
 }
 
@@ -805,8 +865,11 @@ fn putMockFarmImages() void {
 
 fn putMockCropImages() void {
     const image = zhu.graphics.Image{ .size = .xy(256, 256) };
-    for (zon.crop.stages) |stage| {
-        zhu.assets.putImage(stage.sprite.imageId, image);
+    // 遍历所有作物种类的所有阶段
+    for (zon.crops) |cropConfig| {
+        for (cropConfig.stages) |stage| {
+            zhu.assets.putImage(stage.sprite.imageId, image);
+        }
     }
 }
 
