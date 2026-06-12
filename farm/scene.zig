@@ -129,10 +129,7 @@ fn applyScene() void {
     ui.pause.active = false;
     switch (previous) {
         .title => ui.title.exit(),
-        .farm => {
-            map.saveState(&world);
-            map.exit(&world);
-        },
+        .farm => map.exit(&world),
     }
     enterScene(current);
 }
@@ -209,7 +206,6 @@ fn drawShape() void {
 }
 
 fn changeMap(request: context.map.Transition) void {
-    map.saveState(&world);
     map.exit(&world);
     const spawn = map.enter(&world, request.target, request.targetId);
 
