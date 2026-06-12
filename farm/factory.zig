@@ -294,7 +294,7 @@ fn spotDirection(spot: zhu.extend.tiled.ClassProperty) zhu.Vector2 {
 fn applyLight(world: *World, entity: Entity, object: Object) void {
     const day = object.getProperty("day_only", bool) orelse false;
     const night = object.getProperty("night_only", bool) orelse !day;
-    const dark = context.time.isDark();
+    const dark = context.clock.isDark();
 
     if (day) {
         world.add(entity, light.DayOnly{});
@@ -685,8 +685,8 @@ test "带 anim_id 的地图摆件会创建停止的非循环动画" {
 }
 
 test "spawnPointLight 创建地图作用域点光" {
-    context.time.reset();
-    defer context.time.reset();
+    context.clock.reset();
+    defer context.clock.reset();
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -711,8 +711,8 @@ test "spawnPointLight 创建地图作用域点光" {
 }
 
 test "spawnSpotLight 创建地图作用域聚光" {
-    context.time.reset();
-    defer context.time.reset();
+    context.clock.reset();
+    defer context.clock.reset();
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -743,10 +743,10 @@ test "spawnSpotLight 创建地图作用域聚光" {
 }
 
 test "白天加载 night-only 点光会禁用" {
-    context.time.reset();
-    defer context.time.reset();
-    context.time.hour = 12;
-    context.time.minute = 0;
+    context.clock.reset();
+    defer context.clock.reset();
+    context.clock.hour = 12;
+    context.clock.minute = 0;
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -780,10 +780,10 @@ test "白天加载 night-only 点光会禁用" {
 }
 
 test "夜晚加载 night-only 点光会启用" {
-    context.time.reset();
-    defer context.time.reset();
-    context.time.hour = 19;
-    context.time.minute = 0;
+    context.clock.reset();
+    defer context.clock.reset();
+    context.clock.hour = 19;
+    context.clock.minute = 0;
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -816,8 +816,8 @@ test "夜晚加载 night-only 点光会启用" {
 }
 
 test "day-only 点光白天启用夜晚禁用" {
-    context.time.reset();
-    defer context.time.reset();
+    context.clock.reset();
+    defer context.clock.reset();
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -826,7 +826,7 @@ test "day-only 点光白天启用夜晚禁用" {
         .{ .name = "day_only", .value = .{ .bool = true } },
     };
 
-    context.time.hour = 12;
+    context.clock.hour = 12;
     _ = spawnPointLight(&world, .{
         .id = 1,
         .gid = 0,
@@ -839,7 +839,7 @@ test "day-only 点光白天启用夜晚禁用" {
         .extend = .{},
     });
 
-    context.time.hour = 19;
+    context.clock.hour = 19;
     _ = spawnPointLight(&world, .{
         .id = 2,
         .gid = 0,

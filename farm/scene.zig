@@ -70,7 +70,7 @@ pub fn update(delta: f32) void {
         return;
     }
 
-    if (context.scene.current == .farm and context.time.paused) {
+    if (context.scene.current == .farm and context.clock.paused) {
         applyScene();
         return;
     }
@@ -78,7 +78,7 @@ pub fn update(delta: f32) void {
     switch (context.scene.current) {
         .title => ui.title.update(delta),
         // 速度倍率只影响可游玩的农场场景，不影响标题动画。
-        .farm => updateFarm(delta * context.time.scale),
+        .farm => updateFarm(delta * context.clock.speed),
     }
 
     applyScene();
@@ -148,7 +148,7 @@ fn enterFarm() void {
     zhu.camera.scale = .square(2);
     const loadSlot = context.scene.takeLoadSlot();
     if (loadSlot == null) {
-        context.time.reset();
+        context.clock.reset();
         context.map.resetStates();
     }
 

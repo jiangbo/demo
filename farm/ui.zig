@@ -28,8 +28,8 @@ pub const pause = struct {
             1 => save_slot.enter(.pauseSave), // 选择槽位后保存
             2 => save_slot.enter(.pauseLoad), // 选择槽位后读取
             3 => context.scene.request(.title), // 返回标题
-            4 => context.time.scale -= 0.1, // 减速
-            5 => context.time.scale += 0.1, // 加速
+            4 => context.clock.speed -= 0.1, // 减速
+            5 => context.clock.speed += 0.1, // 加速
             6 => zhu.audio.changeMusicVolume(-0.1), // 减小音乐
             7 => zhu.audio.changeMusicVolume(0.1), // 增大音乐
             8 => zhu.audio.changeSoundVolume(-0.1), // 减小音效
@@ -53,7 +53,7 @@ pub const pause = struct {
             var buffer: [40]u8 = undefined;
             const string: []const u8 = switch (index) {
                 0 => zhu.format(&buffer, "Speed {d:.2}x", .{
-                    context.time.scale,
+                    context.clock.speed,
                 }),
                 1 => zhu.format(&buffer, "Music {d:.0}%", .{
                     zhu.audio.musicVolume.load(.acquire) * 100,

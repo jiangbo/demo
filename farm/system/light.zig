@@ -58,8 +58,8 @@ pub fn draw(world: *zhu.ecs.World) void {
 }
 
 fn drawOverlay() void {
-    const hour = @as(f32, @floatFromInt(context.time.hour)) +
-        context.time.minute / 60;
+    const hour = @as(f32, @floatFromInt(context.clock.hour)) +
+        context.clock.minute / 60;
     const overlay = overlayAt(hour);
     if (overlay.a <= 0.001) return;
 

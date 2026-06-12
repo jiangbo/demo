@@ -5,9 +5,8 @@ const component = @import("../component.zig");
 const context = @import("../context.zig");
 
 const event = component.event;
+const clock = context.clock;
 
-// 游戏内时间流速：真实 1 秒对应多少游戏分钟
-const minutesPerRealSecond: f32 = 10.0;
 const uiScale: f32 = 2.0;
 
 var extras: zhu.Image = undefined;
@@ -25,29 +24,29 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
     world.clearEvent(event.DayChanged);
     world.clearEvent(event.PeriodChanged);
 
-    context.time.minute += delta * minutesPerRealSecond;
-    while (context.time.minute >= 60.0) {
-        context.time.minute -= 60.0;
-        context.time.hour += 1;
+    clock.minute += delta * clock.minutesPerRealSecond;
+    while (clock.minute >= 60.0) {
+        clock.minute -= 60.0;
+        clock.hour += 1;
 
-        if (context.time.hour >= 24) {
-            context.time.hour = 0;
-            context.time.day += 1;
-            world.addEvent(event.DayChanged{ .day = context.time.day });
+        if (clock.hour >= 24) {
+            clock.hour = 0;
+            clock.day += 1;
+            world.addEvent(event.DayChanged{ .day = clock.day });
         }
 
         world.addEvent(event.HourChanged{
-            .day = context.time.day,
-            .hour = context.time.hour,
+            .day = clock.day,
+            .hour = clock.hour,
         });
     }
 
-    const nextPeriod = currentPeriod(context.time.hour);
-    if (nextPeriod != context.time.period) {
-        context.time.period = nextPeriod;
+    const nextPeriod = currentPeriod(clock.hour);
+    if (nextPeriod != clock.period) {
+        clock.period = nextPeriod;
         world.addEvent(event.PeriodChanged{
-            .day = context.time.day,
-            .hour = context.time.hour,
+            .day = clock.day,
+            .hour = clock.hour,
             .period = nextPeriod,
         });
     }
@@ -73,7 +72,7 @@ pub fn draw() void {
         .size = clockSize,
     });
 
-    const index: u8 = ((context.time.hour + 13) % 24) / 3;
+    const index: u8 = ((clock.hour + 13) % 24) / 3;
     const handX = @as(f32, @floatFromInt(index)) * clockSourceSize.x;
     image = clockHand.sub(.init(.xy(handX, 0), clockSourceSize));
     zhu.batch.drawImage(image, pos.addY(-2 * uiScale), .{
@@ -81,15 +80,15 @@ pub fn draw() void {
     });
 
     var buffer: [16]u8 = undefined;
-    const day = zhu.format(&buffer, "Day {d}", .{context.time.day});
+    const day = zhu.format(&buffer, "Day {d}", .{clock.day});
     var labelPos = pos.add(zhu.Vector2.xy(34, 3).scale(uiScale));
     drawLabel(.init(labelPos, labelSize), day);
     labelPos = labelPos.addY(labelSize.y + 2 * uiScale);
-    const clock = zhu.format(&buffer, "{d:0>2}:{d:0>2}", .{
-        context.time.hour,
-        @as(u8, @intFromFloat(context.time.minute)),
+    const clockText = zhu.format(&buffer, "{d:0>2}:{d:0>2}", .{
+        clock.hour,
+        @as(u8, @intFromFloat(clock.minute)),
     });
-    drawLabel(.init(labelPos, labelSize), clock);
+    drawLabel(.init(labelPos, labelSize), clockText);
 }
 
 fn currentPeriod(hour: u8) component.time.Period {
@@ -123,12 +122,12 @@ test "时间推进到整点会发出小时事件" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    context.time.hour = 6;
-    context.time.minute = 59.0;
+    clock.hour = 6;
+    clock.minute = 59.0;
     update(&world, 0.2);
 
-    try std.testing.expectEqual(7, context.time.hour);
-    try std.testing.expectEqual(1.0, context.time.minute);
+    try std.testing.expectEqual(7, clock.hour);
+    try std.testing.expectEqual(1.0, clock.minute);
 
     const hours = world.getEvent(event.HourChanged).items;
     try std.testing.expectEqual(1, hours.len);
@@ -142,14 +141,14 @@ test "时间推进跨天会发出新一天事件" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    context.time.hour = 23;
-    context.time.minute = 59.0;
-    context.time.period = .night;
+    clock.hour = 23;
+    clock.minute = 59.0;
+    clock.period = .night;
     update(&world, 0.2);
 
-    try std.testing.expectEqual(2, context.time.day);
-    try std.testing.expectEqual(0, context.time.hour);
-    try std.testing.expectEqual(1.0, context.time.minute);
+    try std.testing.expectEqual(2, clock.day);
+    try std.testing.expectEqual(0, clock.hour);
+    try std.testing.expectEqual(1.0, clock.minute);
 
     const days = world.getEvent(event.DayChanged).items;
     try std.testing.expectEqual(1, days.len);
@@ -167,12 +166,12 @@ test "时段跨过边界会发出时段事件" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    context.time.hour = 7;
-    context.time.minute = 59.0;
-    context.time.period = .dawn;
+    clock.hour = 7;
+    clock.minute = 59.0;
+    clock.period = .dawn;
     update(&world, 0.2);
 
-    try std.testing.expectEqual(currentPeriod(8), context.time.period);
+    try std.testing.expectEqual(currentPeriod(8), clock.period);
 
     const periods = world.getEvent(event.PeriodChanged).items;
     try std.testing.expectEqual(1, periods.len);
@@ -187,10 +186,10 @@ test "时段判断按整点小时分段" {
 
 test "时间文本不会提前进位到下一分钟" {
     var buffer: [16]u8 = undefined;
-    const clock = zhu.format(&buffer, "{d:0>2}:{d:0>2}", .{
+    const clockText = zhu.format(&buffer, "{d:0>2}:{d:0>2}", .{
         23,
         @as(u8, @intFromFloat(59.9)),
     });
 
-    try std.testing.expectEqualStrings("23:59", clock);
+    try std.testing.expectEqualStrings("23:59", clockText);
 }
