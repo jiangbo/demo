@@ -99,20 +99,10 @@ zig build test
 - 28-交互：宝箱交互功能没有，需要实现。
 - 30-NPC 显示与简单漫游：NPC 一个都没有，需要实现。
 - 31-对话气泡：对话功能没有，需要实现。
-- 29-地图切换：C++ `MapTransitionSystem` 支持地图边缘出界切换；Zig 本步先只做
-  Tiled `map_trigger` 门口切换。
-- 29-地图切换：C++ `WorldState` 会解析 Tiled `.world` 文件来得到地图布局和邻接关系；
-  Zig 本步先用现有 `maps` 表和 `target_map` 属性直接切换。
 - 29-地图切换：C++ 切换时有 `UIScreenFade` 淡入淡出和 `ActionLockedTag`
   行动锁；Zig 本步先瞬时切换。
-- 29-地图切换：C++ 会通过碰撞解析寻找安全出生点；Zig 本步先按
-  `start_offset` 计算固定落点。
-- 29-地图切换：C++ `MapManager` 会按 `MapId` 卸载地图实体并保留玩家；
-  Zig 本步先做最小清理，不实现完整地图作用域组件体系。
 - 29-地图切换：C++ 有地图快照、离线推进、资源节点和宝箱恢复；Zig 本步不保存
   跨地图动态状态。
-- 29-地图切换：C++ 支持邻接地图预加载、外部地图注册、环境色覆盖和相机缩放配置；
-  Zig 本步只更新当前地图、碰撞和相机边界。
 - 30-NPC 显示与简单漫游：C++ `AnimalBehaviorSystem` 支持睡觉、进食和时间判断；
   Zig 本步先只做显示和随机漫游。
 - 30-NPC 显示与简单漫游：C++ 会从 `animal_blueprint.json` 读取动物蓝图；
