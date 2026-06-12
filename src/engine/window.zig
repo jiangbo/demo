@@ -280,7 +280,7 @@ pub fn exit() void {
 }
 
 pub const Cursor = sk.app.MouseCursor;
-pub const useMouseIcon = sk.app.setMouseCursor;
+pub const setCursor = sk.app.setMouseCursor;
 pub const CursorDesc = extern struct {
     cursor: Cursor = .CUSTOM_1,
     offset: extern struct { x: i16 = 0, y: i16 = 0 } = .{},
@@ -288,7 +288,7 @@ pub const CursorDesc = extern struct {
         std.debug.assert(@sizeOf(@This()) == @sizeOf(u64));
     }
 };
-pub fn bindMouseIcon(path: [:0]const u8, desc: CursorDesc) void {
+pub fn loadCursor(path: [:0]const u8, desc: CursorDesc) void {
     assets.loadIcon(path, @bitCast(desc), mouseCallback);
 }
 
@@ -303,12 +303,12 @@ fn mouseCallback(handle: u64, icon: assets.Icon) void {
     });
 }
 
-pub fn bindAndUseMouseIcon(path: [:0]const u8, desc: CursorDesc) void {
+pub fn useCursor(path: [:0]const u8, desc: CursorDesc) void {
     assets.loadIcon(path, @bitCast(desc), struct {
         fn callback(handle: u64, icon: assets.Icon) void {
             mouseCallback(handle, icon);
             const cursorDesc: CursorDesc = @bitCast(handle);
-            useMouseIcon(cursorDesc.cursor);
+            setCursor(cursorDesc.cursor);
         }
     }.callback);
 }

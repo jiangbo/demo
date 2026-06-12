@@ -18,36 +18,50 @@ const Position = component.Position;
 
 const initialTargetId: i32 = -1;
 
-pub fn init(world: *World) void {
+var world: World = undefined;
+var canvas: zhu.graphics.RenderTarget = .{};
+
+pub fn init() void {
+    context.init();
+    world = .init(zhu.assets.allocator);
+    ui.init();
+    map.init();
+    factory.init();
+    canvas = zhu.graphics.createRenderTarget(zhu.window.size);
     std.log.info("scene init current={s}", .{@tagName(context.scene.current)});
     system.init();
-    enterScene(world, context.scene.current);
+    enterScene(context.scene.current);
 }
 
-pub fn deinit() void {}
+pub fn deinit() void {
+    map.deinit();
+    context.deinit();
+    ui.deinit();
+    world.deinit();
+}
 
-pub fn update(world: *World, delta: f32) void {
+pub fn update(delta: f32) void {
     context.input.mouseCaptured = false;
 
     const pauseKey = zhu.key.anyPressed(&.{ .ESCAPE, .P });
     if (ui.save_slot.active) {
         // 槽位选择是顶层覆盖层，底下的标题或暂停菜单都不再吃输入。
-        if (context.scene.current == .farm) system.updatePause(world, delta);
-        ui.save_slot.update(world);
+        if (context.scene.current == .farm) system.updatePause(&world, delta);
+        ui.save_slot.update(&world);
         if (ui.save_slot.takeClosePauseAfterLoad()) ui.pause.active = false;
-        applyScene(world);
+        applyScene();
         return;
     }
 
     if (ui.pause.active) {
         // 暂停时只更新覆盖菜单，保持底层农场画面静止。
-        system.updatePause(world, delta);
+        system.updatePause(&world, delta);
         if (pauseKey) {
             ui.pause.active = false;
             return;
         }
         ui.pause.update();
-        applyScene(world);
+        applyScene();
         return;
     }
 
@@ -57,38 +71,55 @@ pub fn update(world: *World, delta: f32) void {
     }
 
     if (context.scene.current == .farm and context.time.paused) {
-        applyScene(world);
+        applyScene();
         return;
     }
 
-    const scaled = delta * context.time.scale;
     switch (context.scene.current) {
-        .title => ui.title.update(scaled),
-        .farm => updateFarm(world, scaled),
+        .title => ui.title.update(delta),
+        // 速度倍率只影响可游玩的农场场景，不影响标题动画。
+        .farm => updateFarm(delta * context.time.scale),
     }
 
-    applyScene(world);
+    applyScene();
 }
 
-pub fn draw(world: *World) void {
+pub fn draw() void {
+    const clearColor: zhu.Color = .rgb(0.23, 0.31, 0.27);
     switch (context.scene.current) {
-        .title => ui.title.draw(),
-        .farm => drawFarm(world),
+        .title => {
+            zhu.batch.useTarget(clearColor, .{});
+            ui.title.draw();
+            drawOverlay();
+        },
+        .farm => {
+            zhu.batch.useTarget(clearColor, .{ .target = &canvas });
+            drawFarm();
+            drawOverlay();
+
+            zhu.batch.useTarget(clearColor, .{});
+            zhu.batch.drawImage(canvas.image, .zero, .{
+                .mode = .window,
+            });
+        },
     }
+}
+
+fn drawOverlay() void {
     zhu.camera.mode = .window;
     if (ui.pause.active) ui.pause.draw();
     if (ui.save_slot.active) ui.save_slot.draw();
     zhu.camera.mode = .world;
 }
 
-fn updateFarm(world: *World, delta: f32) void {
-    if (context.map.takePending()) |request| changeMap(world, request);
+fn updateFarm(delta: f32) void {
+    if (context.map.takePending()) |request| changeMap(request);
 
     ui.toolbar.update();
-    system.update(world, delta);
+    system.update(&world, delta);
 }
 
-fn applyScene(world: *World) void {
+fn applyScene() void {
     const previous = context.scene.current;
     context.scene.apply();
 
@@ -98,29 +129,35 @@ fn applyScene(world: *World) void {
     ui.pause.active = false;
     switch (previous) {
         .title => ui.title.exit(),
-        .farm => map.exit(world),
+        .farm => {
+            map.saveState(&world);
+            map.exit(&world);
+        },
     }
-    enterScene(world, current);
+    enterScene(current);
 }
 
-fn enterScene(world: *World, next: context.scene.Scene) void {
+fn enterScene(next: context.scene.Scene) void {
     switch (next) {
         .title => ui.title.enter(),
-        .farm => enterFarm(world),
+        .farm => enterFarm(),
     }
 }
 
-fn enterFarm(world: *World) void {
+fn enterFarm() void {
     zhu.camera.scale = .square(2);
     const loadSlot = context.scene.takeLoadSlot();
-    if (loadSlot == null) context.time.reset();
+    if (loadSlot == null) {
+        context.time.reset();
+        context.map.resetStates();
+    }
 
-    const spawn = map.enter(world, .exterior, initialTargetId);
-    factory.spawnPlayer(world, spawn);
+    const spawn = map.enter(&world, .exterior, initialTargetId);
+    factory.spawnPlayer(&world, spawn);
     ui.toolbar.enter();
 
     if (loadSlot) |slot| {
-        save.loadSlot(world, slot) catch |err| {
+        save.loadSlot(&world, slot) catch |err| {
             std.log.err("load slot {} failed when entering farm: {}", .{
                 slot,
                 err,
@@ -131,16 +168,16 @@ fn enterFarm(world: *World) void {
     zhu.audio.playMusic("assets/audio/01_spring_journey.ogg");
 }
 
-fn drawFarm(world: *World) void {
+fn drawFarm() void {
     map.drawBack();
-    render.draw(world);
+    render.draw(&world);
     map.drawFront();
 
     // 调试绘制碰撞层
     drawSolids();
-    drawShape(world);
+    drawShape();
 
-    ui.draw(world);
+    ui.draw(&world);
 }
 
 fn drawSolids() void {
@@ -154,7 +191,7 @@ fn drawSolids() void {
     for (map.spatial.areas.items) |rect| zhu.batch.drawDebug(rect);
 }
 
-fn drawShape(world: *zhu.ecs.World) void {
+fn drawShape() void {
     const player = world.getIdentity(actor.Player).?;
     const position = world.get(player, Position).?;
     const body = world.get(player, motion.Shape).?;
@@ -171,9 +208,10 @@ fn drawShape(world: *zhu.ecs.World) void {
     }
 }
 
-fn changeMap(world: *World, request: context.map.Transition) void {
-    map.exit(world);
-    const spawn = map.enter(world, request.target, request.targetId);
+fn changeMap(request: context.map.Transition) void {
+    map.saveState(&world);
+    map.exit(&world);
+    const spawn = map.enter(&world, request.target, request.targetId);
 
     const player = world.getIdentity(actor.Player).?;
     world.getPtr(player, Position).?.* = spawn;
