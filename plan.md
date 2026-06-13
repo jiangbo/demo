@@ -96,7 +96,6 @@ zig build test
 - 30-物品使用与农场循环：农场工具结算前还需要补地图语义检查，例如 ARABLE、
   SOLID/半格阻挡、OCCUPIED、已有 crop/soil，必要时再检查动态 Blocking 实体。
 - UI：考虑做 ZON 文件监听，实时刷新 ZON 中的数据。
-- 28-交互：宝箱打开后还没有视觉反馈，例如打开帧或打开动画。
 - 28-交互：`REST` 休息区还没有交互逻辑，后续用于睡觉或时间推进。
 - 30-NPC 显示与简单漫游：NPC 一个都没有，需要实现。
 - 29-地图切换：C++ 切换时有 `UIScreenFade` 淡入淡出和 `ActionLockedTag`

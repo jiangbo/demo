@@ -17,6 +17,8 @@ const Dialog = component.actor.Dialog;
 const Shape = component.motion.Shape;
 const ItemEnum = component.item.ItemEnum;
 const Chest = component.item.Chest;
+const Animation = component.actor.Animation;
+const Sprite = component.render.Sprite;
 
 pub fn update(world: *World) void {
     // 当前对话目标走远或消失时，直接关闭对话。
@@ -101,6 +103,10 @@ fn openChest(world: *World, target: Entity) void {
         toolbar.add(itemType, count);
     }
     chest.opened = true;
+
+    const animation = world.getPtr(target, Animation).?;
+    // anim_id 地图摆件已经是非循环动画，交互只负责重新播放。
+    animation.reset();
 }
 
 // 开始对话时把行号重置到第一句，并记录当前对话实体。
@@ -219,4 +225,49 @@ test "当前对话目标太远时会直接关闭" {
 
     try std.testing.expectEqual(null, world.getIdentity(Dialog));
     try std.testing.expectEqual(0, world.get(npc, Dialog).?.index);
+}
+
+test "按 F 打开宝箱会重置打开动画" {
+    zhu.input.reset();
+
+    const oldSlots = toolbar.slots;
+    const oldIndex = toolbar.slotIndex;
+    defer {
+        toolbar.slots = oldSlots;
+        toolbar.slotIndex = oldIndex;
+        zhu.input.reset();
+    }
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const player = world.createIdentity(Player);
+    world.add(player, Position.xy(0, 0));
+    world.add(player, Actor{});
+    world.add(player, Shape{ .rect = .init(.zero, .xy(8, 8)) });
+
+    const frames = [_]zhu.graphics.Frame{
+        .{ .offset = .xy(0, 0), .duration = 0.1 },
+        .{ .offset = .xy(16, 0), .duration = 0.1 },
+    };
+    const image = zhu.graphics.Image{ .size = .xy(32, 16) };
+    var animation = zhu.Animation.init(image, .xy(16, 16), &frames);
+    animation.loop = false;
+    animation.stop();
+
+    const chest = world.createEntity();
+    world.add(chest, Position.xy(0, 20));
+    world.add(chest, Shape{ .rect = .init(.zero, .xy(8, 8)) });
+    world.add(chest, Chest{});
+    world.add(chest, animation);
+    world.add(chest, Sprite{
+        .image = image.sub(.init(.xy(16, 0), .xy(16, 16))),
+    });
+
+    pressKey(.F);
+    update(&world);
+
+    try std.testing.expect(world.get(chest, Chest).?.opened);
+    try std.testing.expect(world.get(chest, Animation).?.isRunning());
+    try std.testing.expect(!world.get(chest, Animation).?.loop);
 }

@@ -185,6 +185,13 @@ fn restoreThing(world: *World, index: usize, thing: Thing) void {
             std.debug.assert(object.kind == .chest);
             const chest = world.getPtr(object.entity, item.Chest).?;
             chest.opened = saved.opened;
+            if (!saved.opened) return;
+
+            const animation = world.getPtr(object.entity, actor.Animation).?;
+            const sprite = world.getPtr(object.entity, render.Sprite).?;
+            // 已打开宝箱只需要固定打开帧，后续不再参与动画系统。
+            sprite.image = animation.subImageAt(animation.clip.len - 1);
+            world.remove(object.entity, actor.Animation);
         },
         .rock => {},
     }
@@ -618,6 +625,33 @@ test "湿地离线跨天只加速一天" {
     try std.testing.expectEqual(farm.GrowthEnum.seed, crop.stage);
     try std.testing.expectEqual(@as(f32, 1), crop.next);
     try std.testing.expectEqual(component.farm.Ground.dry, state.tiles[0].ground);
+}
+
+test "恢复已打开宝箱会移除动画组件" {
+    zhu.assets.allocator = std.testing.allocator;
+    land.enter(&maps[0]);
+    defer land.exit();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const frames = [_]zhu.graphics.Frame{
+        .{ .offset = .xy(0, 0), .duration = 0.1 },
+        .{ .offset = .xy(16, 0), .duration = 0.1 },
+    };
+    const image = zhu.graphics.Image{ .size = .xy(32, 16) };
+
+    const chest = world.createEntity();
+    world.add(chest, item.Chest{});
+    world.add(chest, actor.Animation.init(image, .xy(16, 16), &frames));
+    world.add(chest, render.Sprite{ .image = image });
+    land.tiles[0].object = .{ .kind = .chest, .entity = chest };
+
+    restoreThing(&world, 0, .{ .chest = .{ .opened = true } });
+
+    try std.testing.expect(world.get(chest, item.Chest).?.opened);
+    try std.testing.expect(!world.has(chest, actor.Animation));
+    try std.testing.expectEqual(16, world.get(chest, render.Sprite).?.image.offset.x);
 }
 
 test "当前地图跨天会推进作物并清干湿地" {
