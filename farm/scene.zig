@@ -25,7 +25,6 @@ const system = struct {
 const World = zhu.ecs.World;
 const actor = component.actor;
 const motion = component.motion;
-const Target = component.ui.Target;
 const Position = component.Position;
 
 const initialTargetId: i32 = -1;
@@ -268,5 +267,4 @@ fn changeMap(request: context.map.Transition) void {
     const player = world.getIdentity(actor.Player).?;
     world.getPtr(player, Position).?.* = spawn;
     world.getPtr(player, motion.Velocity).?.value = .zero;
-    world.getPtr(player, Target).?.active = false;
 }
