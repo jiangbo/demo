@@ -41,8 +41,6 @@ pub fn enter() void {
     slotIndex = 0;
     add(.hoe, 1);
     add(.water, 1);
-    add(.strawberrySeed, 99);
-    add(.potatoSeed, 99);
 
     panelPosition = zhu.Vector2{
         .x = (zhu.window.size.x - panelWidth) / 2,

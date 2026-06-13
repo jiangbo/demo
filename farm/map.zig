@@ -180,7 +180,13 @@ fn restoreThing(world: *World, index: usize, thing: Thing) void {
             refreshCropSprite(world, entity, crop);
             land.tiles[index].object = .{ .entity = entity };
         },
-        .chest, .rock => {},
+        .chest => |saved| {
+            const object = land.tiles[index].object.?;
+            std.debug.assert(object.kind == .chest);
+            const chest = world.getPtr(object.entity, item.Chest).?;
+            chest.opened = saved.opened;
+        },
+        .rock => {},
     }
 }
 

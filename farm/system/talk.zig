@@ -5,6 +5,7 @@ const component = @import("../component.zig");
 const context = @import("../context.zig");
 const map = @import("../map.zig");
 const spatial = map.spatial;
+const toolbar = @import("../ui/toolbar.zig");
 
 const World = zhu.ecs.World;
 const Entity = zhu.ecs.Entity;
@@ -14,6 +15,7 @@ const Npc = component.actor.Npc;
 const Actor = component.actor.Actor;
 const Dialog = component.actor.Dialog;
 const Shape = component.motion.Shape;
+const ItemEnum = component.item.ItemEnum;
 const Chest = component.item.Chest;
 
 pub fn update(world: *World) void {
@@ -57,8 +59,7 @@ fn tryInteract(world: *World) void {
         return startDialog(world, target);
     }
 
-    // 宝箱打开逻辑下一步接入，这里先确保 talk 能选中宝箱。
-    if (world.has(target, Chest)) return;
+    if (world.has(target, Chest)) return openChest(world, target);
 }
 
 fn nearestTarget(world: *World, playerPos: Position) ?Entity {
@@ -86,6 +87,20 @@ fn targetCenter(world: *World, entity: Entity) Position {
     const position = world.get(entity, Position).?;
     const shape = world.get(entity, Shape).?;
     return shape.move(position).toRect().center();
+}
+
+fn openChest(world: *World, target: Entity) void {
+    const chest = world.getPtr(target, Chest).?;
+    if (chest.opened) return;
+
+    // 宝箱奖励直接进入快捷栏，不额外引入事件和提示 UI。
+    for (std.enums.values(ItemEnum)) |itemType| {
+        const count = chest.items.get(itemType);
+        if (count == 0) continue;
+
+        toolbar.add(itemType, count);
+    }
+    chest.opened = true;
 }
 
 // 开始对话时把行号重置到第一句，并记录当前对话实体。
