@@ -13,6 +13,7 @@ const actor = component.actor;
 const render = component.render;
 const farm = component.farm;
 const item = component.item;
+const motion = component.motion;
 const Position = component.Position;
 pub const Id = component.map.Id;
 pub const StartOffset = component.map.StartOffset;
@@ -292,59 +293,76 @@ fn triggerSpawnPosition(trigger: Trigger) zhu.Vector2 {
 
 fn loadObject(world: *World, object: tiled.Object) void {
     if (object.point and object.isType("actor")) {
-        // player 由 scene 统一创建，地图中的点只作为 Tiled 标记保留。
-        if (object.isNamed("player")) return;
-
-        if (object.isNamed("friend")) {
-            const entity = factory.spawnFriend(world);
-            // Tiled 点对象的位置就是 NPC 脚底点，和 YSort 使用同一套坐标。
-            world.add(entity, object.position);
-            world.getPtr(entity, actor.Wander).?.home = object.position;
-            return;
-        }
-        std.debug.panic("unknown actor object: {s}", .{object.name});
+        return loadActor(world, object);
     }
-
-    // animal 是没有 gid 的 Tiled 点对象，name 直接对应 AnimalEnum。
     if (object.point and object.isType("animal")) {
-        const kind = zhu.toEnum(actor.AnimalEnum, object.name);
-        const entity = factory.spawnAnimal(world, kind);
-        // Tiled 点对象的位置就是动物脚底点，和玩家、YSort 使用同一套坐标。
+        return loadAnimal(world, object);
+    }
+    if (object.isType("map_trigger")) {
+        return loadTrigger(world, object);
+    }
+    if (object.isType("rest")) return loadRest();
+    if (object.isType("light")) return loadLightObject(world, object);
+    if (object.gid != 0) return loadProp(world, object);
+}
+
+fn loadActor(world: *World, object: tiled.Object) void {
+    // player 由 scene 统一创建，地图中的点只作为 Tiled 标记保留。
+    if (object.isNamed("player")) return;
+
+    if (object.isNamed("friend")) {
+        const entity = factory.spawnFriend(world);
+        // Tiled 点对象的位置就是 NPC 脚底点，和 YSort 使用同一套坐标。
         world.add(entity, object.position);
         world.getPtr(entity, actor.Wander).?.home = object.position;
         return;
     }
+    std.debug.panic("unknown actor object: {s}", .{object.name});
+}
 
-    if (object.isType("map_trigger")) {
-        std.debug.assert(object.size.x > 0 and object.size.y > 0);
+fn loadAnimal(world: *World, object: tiled.Object) void {
+    // animal 是没有 gid 的 Tiled 点对象，name 直接对应 AnimalEnum。
+    const kind = zhu.toEnum(actor.AnimalEnum, object.name);
+    const entity = factory.spawnAnimal(world, kind);
+    // Tiled 点对象的位置就是动物脚底点，和玩家、YSort 使用同一套坐标。
+    world.add(entity, object.position);
+    world.getPtr(entity, actor.Wander).?.home = object.position;
+}
 
-        const target = object.getProperty("target_map", []const u8).?;
-        const targetMap = zhu.toEnum(Id, target);
-        const start = object.getProperty("start_offset", []const u8).?;
-        const startOffset = std.meta.stringToEnum(StartOffset, start);
+fn loadTrigger(world: *World, object: tiled.Object) void {
+    std.debug.assert(object.size.x > 0 and object.size.y > 0);
 
-        const trigger: Trigger = .{
-            .rect = object.rect(),
-            .selfId = object.getProperty("self_id", i32).?,
-            .targetId = object.getProperty("target_id", i32).?,
-            .targetMap = targetMap,
-            .startOffset = startOffset orelse .none,
-        };
-        _ = factory.spawnMapTrigger(world, trigger);
-        return;
-    }
+    const target = object.getProperty("target_map", []const u8).?;
+    const targetMap = zhu.toEnum(Id, target);
+    const start = object.getProperty("start_offset", []const u8).?;
+    const startOffset = std.meta.stringToEnum(StartOffset, start);
 
+    const trigger: Trigger = .{
+        .rect = object.rect(),
+        .selfId = object.getProperty("self_id", i32).?,
+        .targetId = object.getProperty("target_id", i32).?,
+        .targetMap = targetMap,
+        .startOffset = startOffset orelse .none,
+    };
+    _ = factory.spawnMapTrigger(world, trigger);
+}
+
+fn loadRest() void {
     // rest 是后续休息区功能预留对象，本讲只明确识别，不生成实体。
-    if (object.isType("rest")) return;
+}
 
-    if (object.isType("light")) {
-        loadLightObject(world, object);
-        return;
+fn loadProp(world: *World, object: tiled.Object) void {
+    const entity = factory.spawnMapProp(world, data, object);
+    if (world.has(entity, item.Chest)) {
+        const rect = object.rect();
+        const position = world.get(entity, Position).?;
+        world.add(entity, motion.Shape{
+            .rect = rect.move(position.neg()),
+        });
+
+        const tile = land.getTile(rect.center()).?;
+        tile.object = .{ .kind = .chest, .entity = entity };
     }
-
-    if (object.gid == 0) return;
-
-    _ = factory.spawnMapProp(world, data, object);
     spatial.addSolidObject(object);
 }
 
