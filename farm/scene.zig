@@ -37,13 +37,19 @@ var world: World = undefined;
 var canvas: zhu.graphics.RenderTarget = .{};
 
 pub fn init() void {
+    // 组合根只负责装配顺序，具体玩法仍放在各自模块里。
     context.init();
     world = .init(zhu.assets.allocator);
+
+    // UI 和数据模块先就位，后面的入场流程会立即使用它们。
     ui.init();
     map.init();
     factory.init();
+
     canvas = zhu.graphics.createRenderTarget(zhu.window.size);
     std.log.info("scene init current={s}", .{@tagName(context.scene.current)});
+
+    // 有独立资源或初始状态的系统在进入首个场景前完成初始化。
     system.time.init();
     system.light.init();
     enterScene(context.scene.current);
@@ -130,25 +136,37 @@ fn drawOverlay() void {
 
 fn updateFarm(delta: f32) void {
     // 农场主循环顺序在这里显式编排，新增系统需要在这里确定位置。
+    // 上一帧提交的切图请求先落地，避免旧地图实体继续参与本帧逻辑。
     if (context.map.takePending()) |request| changeMap(request);
 
+    // 时间先推进，地图跨天逻辑和灯光都依赖本帧最新时间事件。
     system.time.update(&world, delta);
     map.update(&world);
-
-    ui.toolbar.update();
     system.light.update(&world);
+
+    // 输入先写入意图，移动系统统一结算位置和碰撞。
+    ui.toolbar.update();
     system.control.update(&world);
     system.wander.update(&world, delta);
     system.movement.update(&world, delta);
-    system.transition.update(&world);
-    system.animation.update(&world, delta);
-    system.render.update(&world);
-    system.pickup.update(&world);
 
-    system.talk.update(&world);
-    system.camera.update(&world);
+    // 触发器必须读取移动后的玩家位置；真正切图放到下一帧开头。
+    system.transition.update(&world);
+
+    // 光标目标读取移动后的玩家位置，工具再使用这个目标结算农场操作。
     system.target.update(&world);
     system.tool.update(&world);
+
+    // 工具可能生成拾取物，所以拾取放在工具之后，减少一帧延迟。
+    system.pickup.update(&world);
+
+    // 对话距离、相机跟随、动画和排序都读取本帧已结算的位置。
+    system.talk.update(&world);
+    system.camera.update(&world);
+    system.animation.update(&world, delta);
+    system.render.update(&world);
+
+    // 音效最后播放，统一消费本帧前面系统发出的 SoundPlay 事件。
     system.sound.update(&world);
 }
 
@@ -178,15 +196,18 @@ fn enterFarm() void {
     zhu.camera.scale = .square(2);
     const loadSlot = context.scene.takeLoadSlot();
     if (loadSlot == null) {
+        // 新游戏重置世界级状态；读档会在基础地图创建后覆盖状态。
         context.clock.reset();
         context.map.resetStates();
     }
 
+    // 地图先生成静态对象和触发器，玩家随后由场景统一创建。
     const spawn = map.enter(&world, .exterior, initialTargetId);
     factory.spawnPlayer(&world, spawn);
     ui.toolbar.enter();
 
     if (loadSlot) |slot| {
+        // 存档恢复依赖已经存在的 world/map/player 基础结构。
         save.loadSlot(&world, slot) catch |err| {
             std.log.err("load slot {} failed when entering farm: {}", .{
                 slot,
