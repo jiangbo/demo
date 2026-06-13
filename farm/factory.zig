@@ -230,7 +230,25 @@ pub fn spawnMapProp(world: *World, data: *const tiled.Map, object: Object) Entit
     world.add(entity, render.Render{ .layer = .actor });
     world.add(entity, render.YSort{});
     world.add(entity, map.Scoped{});
+
+    // Tiled 转换数据沿用 obj_type，值为 chest 时挂宝箱组件。
+    if (tile.getProperty("obj_type", []const u8)) |kind| {
+        if (std.mem.eql(u8, kind, "chest")) {
+            world.add(entity, item.Chest{ .items = chestItems(object) });
+        }
+    }
+
     return entity;
+}
+
+fn chestItems(object: Object) item.Counts {
+    var result = item.Counts.initFill(0);
+
+    for (std.enums.values(item.ItemEnum)) |itemType| {
+        const count = object.getProperty(@tagName(itemType), u32);
+        result.set(itemType, count orelse continue);
+    }
+    return result;
 }
 
 fn mapPropSortY(object: Object, tile: *const tiled.Tile, size: zhu.Vector2) f32 {
