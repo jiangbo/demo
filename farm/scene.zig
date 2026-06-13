@@ -5,10 +5,25 @@ const component = @import("component.zig");
 const context = @import("context.zig");
 const factory = @import("factory.zig");
 const map = @import("map.zig");
-const render = @import("system/render.zig");
 const save = @import("save.zig");
-const system = @import("system.zig");
 const ui = @import("ui.zig");
+
+const system = struct {
+    const animation = @import("system/animation.zig");
+    const camera = @import("system/camera.zig");
+    const control = @import("system/control.zig");
+    const light = @import("system/light.zig");
+    const movement = @import("system/movement.zig");
+    const pickup = @import("system/pickup.zig");
+    const render = @import("system/render.zig");
+    const sound = @import("system/sound.zig");
+    const talk = @import("system/talk.zig");
+    const target = @import("system/target.zig");
+    const time = @import("system/time.zig");
+    const tool = @import("system/tool.zig");
+    const transition = @import("system/transition.zig");
+    const wander = @import("system/wander.zig");
+};
 
 const World = zhu.ecs.World;
 const actor = component.actor;
@@ -29,7 +44,8 @@ pub fn init() void {
     factory.init();
     canvas = zhu.graphics.createRenderTarget(zhu.window.size);
     std.log.info("scene init current={s}", .{@tagName(context.scene.current)});
-    system.init();
+    system.time.init();
+    system.light.init();
     enterScene(context.scene.current);
 }
 
@@ -46,7 +62,7 @@ pub fn update(delta: f32) void {
     const pauseKey = zhu.key.anyPressed(&.{ .ESCAPE, .P });
     if (ui.save_slot.active) {
         // 槽位选择是顶层覆盖层，底下的标题或暂停菜单都不再吃输入。
-        if (context.scene.current == .farm) system.updatePause(&world, delta);
+        if (context.scene.current == .farm) system.sound.update(&world);
         ui.save_slot.update(&world);
         if (ui.save_slot.takeClosePauseAfterLoad()) ui.pause.active = false;
         applyScene();
@@ -55,7 +71,7 @@ pub fn update(delta: f32) void {
 
     if (ui.pause.active) {
         // 暂停时只更新覆盖菜单，保持底层农场画面静止。
-        system.updatePause(&world, delta);
+        system.sound.update(&world);
         if (pauseKey) {
             ui.pause.active = false;
             return;
@@ -113,10 +129,27 @@ fn drawOverlay() void {
 }
 
 fn updateFarm(delta: f32) void {
+    // 农场主循环顺序在这里显式编排，新增系统需要在这里确定位置。
     if (context.map.takePending()) |request| changeMap(request);
 
+    system.time.update(&world, delta);
+    map.update(&world);
+
     ui.toolbar.update();
-    system.update(&world, delta);
+    system.light.update(&world);
+    system.control.update(&world);
+    system.wander.update(&world, delta);
+    system.movement.update(&world, delta);
+    system.transition.update(&world);
+    system.animation.update(&world, delta);
+    system.render.update(&world);
+    system.pickup.update(&world);
+
+    system.talk.update(&world);
+    system.camera.update(&world);
+    system.target.update(&world);
+    system.tool.update(&world);
+    system.sound.update(&world);
 }
 
 fn applyScene() void {
@@ -167,7 +200,7 @@ fn enterFarm() void {
 
 fn drawFarm() void {
     map.drawBack();
-    render.draw(&world);
+    system.render.draw(&world);
     map.drawFront();
 
     // 调试绘制碰撞层
@@ -206,8 +239,7 @@ fn drawShape() void {
 }
 
 fn changeMap(request: context.map.Transition) void {
-    map.exit(&world);
-    const spawn = map.enter(&world, request.target, request.targetId);
+    const spawn = map.change(&world, request.target, request.targetId);
 
     const player = world.getIdentity(actor.Player).?;
     world.getPtr(player, Position).?.* = spawn;

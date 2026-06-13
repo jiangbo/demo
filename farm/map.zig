@@ -72,6 +72,28 @@ pub fn enter(world: *World, id: Id, targetId: i32) zhu.Vector2 {
     return result;
 }
 
+pub fn change(world: *World, id: Id, targetId: i32) zhu.Vector2 {
+    exit(world);
+    return enter(world, id, targetId);
+}
+
+pub fn update(world: *World) void {
+    for (world.getEvent(component.event.DayChanged).items) |_| {
+        for (land.tiles) |*tile| {
+            const watered = tile.ground == .wet;
+            // 当前地图和离线地图一致：每天结束湿地变干。
+            if (tile.ground == .wet) tile.ground = .dry;
+
+            const entity = tile.crop() orelse continue;
+            const crop = world.getPtr(entity, farm.Crop).?;
+            if (advanceCropOneDay(crop, watered)) {
+                refreshCropSprite(world, entity, crop.*);
+            }
+            crop.watered = false;
+        }
+    }
+}
+
 fn parseLayers(world: *World) void {
     var foundFrontLayer = false;
     for (data.layers) |*layer| {
@@ -119,7 +141,7 @@ pub fn saveState(world: *World) void {
             saved.crop = world.get(entity, farm.Crop).?;
         } else saved.crop = null;
     }
-    state.minute = context.clock.totalMinutes();
+    state.day = context.clock.day;
 }
 
 fn restoreState(world: *World) void {
@@ -135,35 +157,52 @@ fn restoreState(world: *World) void {
         const position = data.tileIndexToWorld(index);
         const entity = factory.spawnCrop(world, position, crop.kind);
         world.getPtr(entity, farm.Crop).?.* = crop;
-        const cfg = factory.cropStage(crop.kind, crop.stage);
-        world.getPtr(entity, render.Sprite).?.* = .{
-            .image = factory.resolveImage(cfg.sprite),
-            .offset = cfg.sprite.offset,
-        };
-        if (crop.stage != .seed) {
-            world.getPtr(entity, render.Render).?.layer = .actor;
-        }
+        refreshCropSprite(world, entity, crop);
         tile.object = .{ .entity = entity };
     }
 
-    state.minute = context.clock.totalMinutes();
+    state.day = context.clock.day;
 }
 
 fn advanceState(state: *context.map.State) void {
-    const seconds = context.clock.secondsSince(state.minute);
-    if (seconds <= 0) return;
+    if (context.clock.day <= state.day) return;
 
+    const days = context.clock.day - state.day;
+    for (0..days) |_| advanceStateOneDay(state);
+    state.day = context.clock.day;
+}
+
+fn advanceStateOneDay(state: *context.map.State) void {
     for (state.tiles) |*tile| {
-        const crop = &(tile.crop orelse continue);
-        if (crop.stage == .mature) continue;
+        const watered = tile.ground == .wet;
+        // 浇水只影响当天，跨天后湿地统一变回干地。
+        if (tile.ground == .wet) tile.ground = .dry;
 
-        crop.timer += seconds;
-        while (crop.timer >= crop.next and crop.stage != .mature) {
-            crop.timer -= crop.next;
-            crop.stage = zhu.nextEnum(farm.GrowthEnum, crop.stage);
-            crop.next = factory.cropStage(crop.kind, crop.stage).duration;
-        }
+        var crop = tile.crop orelse continue;
+        _ = advanceCropOneDay(&crop, watered);
+        tile.crop = crop;
     }
+}
+
+pub fn advanceCropOneDay(crop: *farm.Crop, watered: bool) bool {
+    if (crop.stage == .mature) return false;
+
+    crop.next -= if (watered) 2 else 1;
+    crop.timer = 0;
+    if (crop.next > 0) return false;
+
+    crop.stage = zhu.nextEnum(farm.GrowthEnum, crop.stage);
+    crop.next = factory.cropStage(crop.kind, crop.stage).duration;
+    return true;
+}
+
+fn refreshCropSprite(world: *World, entity: zhu.ecs.Entity, crop: farm.Crop) void {
+    const cfg = factory.cropStage(crop.kind, crop.stage);
+    world.getPtr(entity, render.Sprite).?.* = .{
+        .image = factory.resolveImage(cfg.sprite),
+        .offset = cfg.sprite.offset,
+    };
+    if (crop.stage != .seed) world.getPtr(entity, render.Render).?.layer = .actor;
 }
 
 pub fn drawBack() void {
@@ -465,38 +504,92 @@ test "触发器落点会按 start_offset 放到区域外侧" {
     try std.testing.expectEqual(68, position.y);
 }
 
-test "地图状态作物会按离线秒数推进" {
+test "地图状态作物会按离线天数推进" {
     context.clock.reset();
     defer context.clock.reset();
 
-    const seed = factory.cropStage(.strawberry, .seed);
-    const sprout = factory.cropStage(.strawberry, .sprout);
     var tiles = [_]context.map.Tile{.{
         .ground = .wet,
         .crop = .{
             .kind = .strawberry,
             .stage = .seed,
             .timer = 0,
-            .next = seed.duration,
+            .next = 2,
         },
     }};
     var state = context.map.State{
         .initialized = true,
-        .minute = context.clock.totalMinutes(),
+        .day = 1,
         .tiles = &tiles,
     };
-    context.clock.minute += (seed.duration + sprout.duration) *
-        context.clock.minutesPerRealSecond;
+    context.clock.day = 2;
 
     advanceState(&state);
 
     const crop = state.tiles[0].crop.?;
-    try std.testing.expectEqual(farm.GrowthEnum.growing, crop.stage);
+    try std.testing.expectEqual(farm.GrowthEnum.sprout, crop.stage);
     try std.testing.expectEqual(0, crop.timer);
     try std.testing.expectEqual(
-        factory.cropStage(.strawberry, .growing).duration,
+        factory.cropStage(.strawberry, .sprout).duration,
         crop.next,
     );
+    try std.testing.expectEqual(component.farm.Ground.dry, state.tiles[0].ground);
+    try std.testing.expectEqual(@as(u32, 2), state.day);
+}
+
+test "湿地离线跨天只加速一天" {
+    context.clock.reset();
+    defer context.clock.reset();
+
+    var tiles = [_]context.map.Tile{.{
+        .ground = .wet,
+        .crop = .{
+            .kind = .strawberry,
+            .stage = .seed,
+            .timer = 0,
+            .next = 4,
+        },
+    }};
+    var state = context.map.State{
+        .initialized = true,
+        .day = 1,
+        .tiles = &tiles,
+    };
+    context.clock.day = 3;
+
+    advanceState(&state);
+
+    const crop = state.tiles[0].crop.?;
+    try std.testing.expectEqual(farm.GrowthEnum.seed, crop.stage);
+    try std.testing.expectEqual(@as(f32, 1), crop.next);
+    try std.testing.expectEqual(component.farm.Ground.dry, state.tiles[0].ground);
+}
+
+test "当前地图跨天会推进作物并清干湿地" {
+    zhu.assets.allocator = std.testing.allocator;
+    land.enter(&maps[0]);
+    defer land.exit();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const target = zhu.Vector2.xy(32, 48);
+    const crop = world.createEntity();
+    world.add(crop, farm.Crop{
+        .kind = .strawberry,
+        .stage = .seed,
+        .next = 4,
+    });
+    const tile = land.getTile(target).?;
+    tile.ground = .wet;
+    tile.object = .{ .entity = crop };
+    world.addEvent(component.event.DayChanged{ .day = 2 });
+
+    update(&world);
+
+    const result = world.get(crop, farm.Crop).?;
+    try std.testing.expectEqual(@as(f32, 2), result.next);
+    try std.testing.expectEqual(component.farm.Ground.dry, tile.ground);
 }
 
 fn putMockNpcImages() void {

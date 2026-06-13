@@ -55,7 +55,7 @@ const TileSave = struct {
 
 const MapSave = struct {
     id: component.map.Id = .town,
-    minute: f32 = 0,
+    day: u32 = 0,
     tiles: []const TileSave = &.{},
 };
 
@@ -230,7 +230,7 @@ fn captureMaps() ![]const MapSave {
         const state = context.map.states.getPtr(id);
         try result.append(zhu.assets.allocator, .{
             .id = id,
-            .minute = state.minute,
+            .day = state.day,
             .tiles = try captureTiles(state),
         });
     }
@@ -311,10 +311,7 @@ fn restoreMap(data: MapSave) void {
         }
     }
 
-    state.minute = if (data.minute > 0)
-        data.minute
-    else
-        context.clock.totalMinutes();
+    state.day = data.day;
 }
 
 fn restorePlayer(world: *World, data: PlayerSave) void {

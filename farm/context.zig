@@ -71,19 +71,6 @@ pub const clock = struct {
     pub fn isDark() bool {
         return hour >= 18 or hour < 6;
     }
-
-    pub fn totalMinutes() f32 {
-        const days = @as(f32, @floatFromInt(day - 1)) * 24.0 * 60.0;
-        const hours = @as(f32, @floatFromInt(hour)) * 60.0;
-        return days + hours + minute;
-    }
-
-    pub fn secondsSince(sinceMinute: f32) f32 {
-        // 地图记录的是游戏分钟，这里换算成真实经过秒数。
-        const minutes = totalMinutes() - sinceMinute;
-        if (minutes <= 0) return 0;
-        return minutes / minutesPerRealSecond;
-    }
 };
 
 pub const input = struct {
@@ -161,7 +148,7 @@ pub const map = struct {
 
     pub const State = struct {
         initialized: bool = false,
-        minute: f32 = 0,
+        day: u32 = 1,
         tiles: []Tile = &.{},
     };
 
@@ -185,7 +172,7 @@ pub const map = struct {
         }
         @memset(result.tiles, .{});
         result.initialized = true;
-        result.minute = clock.totalMinutes();
+        result.day = clock.day;
         return result;
     }
 
@@ -284,21 +271,4 @@ test "时间暗时段在 06:00 结束" {
     clock.hour = 6;
     clock.minute = 0;
     try std.testing.expect(!clock.isDark());
-}
-
-test "时间按游戏分钟计算真实秒数" {
-    init();
-
-    clock.hour = 6;
-    clock.minute = 20;
-
-    try std.testing.expectEqual(@as(f32, 0), clock.secondsSince(
-        clock.totalMinutes(),
-    ));
-    try std.testing.expectEqual(@as(f32, 0), clock.secondsSince(
-        clock.totalMinutes() + 1,
-    ));
-    try std.testing.expectEqual(@as(f32, 2), clock.secondsSince(
-        clock.totalMinutes() - 20,
-    ));
 }
