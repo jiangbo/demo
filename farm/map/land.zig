@@ -1,6 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
+const component = @import("../component.zig");
 const tiled = zhu.extend.tiled;
 
 var map: *const tiled.Map = undefined;
@@ -15,7 +16,7 @@ const Object = struct {
 };
 
 pub const Tile = struct {
-    ground: ?enum { dry, wet } = null,
+    ground: ?component.farm.Ground = null,
     object: ?Object = null,
 
     pub fn crop(self: Tile) ?zhu.ecs.Entity {

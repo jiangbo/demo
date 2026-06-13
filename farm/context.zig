@@ -6,7 +6,7 @@ const component = @import("component.zig");
 pub const scene = struct {
     pub const Scene = enum { title, farm };
 
-    pub var current: Scene = config.scene;
+    pub var current: Scene = .title;
     pub var pending: ?Scene = null;
     var pendingLoadSlot: ?usize = null;
 
@@ -46,12 +46,13 @@ pub const scene = struct {
     }
 };
 
-pub const time = struct {
+pub const clock = struct {
     pub const Period = component.time.Period;
+    pub const minutesPerRealSecond: f32 = 10.0;
 
     pub var paused: bool = false;
-    // 整体更新倍率，影响场景里所有按 delta 推进的系统
-    pub var scale: f32 = config.time_scale;
+    // 时钟速度，影响农场里所有按 delta 推进的系统。
+    pub var speed: f32 = 1;
 
     pub var day: u32 = 1;
     pub var hour: u8 = 6;
@@ -60,7 +61,7 @@ pub const time = struct {
 
     pub fn reset() void {
         paused = false;
-        scale = config.time_scale;
+        speed = 1;
         day = 1;
         hour = 6;
         minute = 0.0;
@@ -69,6 +70,19 @@ pub const time = struct {
 
     pub fn isDark() bool {
         return hour >= 18 or hour < 6;
+    }
+
+    pub fn totalMinutes() f32 {
+        const days = @as(f32, @floatFromInt(day - 1)) * 24.0 * 60.0;
+        const hours = @as(f32, @floatFromInt(hour)) * 60.0;
+        return days + hours + minute;
+    }
+
+    pub fn secondsSince(sinceMinute: f32) f32 {
+        // 地图记录的是游戏分钟，这里换算成真实经过秒数。
+        const minutes = totalMinutes() - sinceMinute;
+        if (minutes <= 0) return 0;
+        return minutes / minutesPerRealSecond;
     }
 };
 
@@ -138,46 +152,73 @@ pub const input = struct {
 };
 
 pub const map = struct {
-    pub const Transition = struct {
-        target: component.map.Id,
-        targetId: i32,
+    pub const Id = component.map.Id;
+
+    pub const Tile = struct {
+        ground: ?component.farm.Ground = null,
+        crop: ?component.farm.Crop = null,
     };
 
+    pub const State = struct {
+        initialized: bool = false,
+        minute: f32 = 0,
+        tiles: []Tile = &.{},
+    };
+
+    pub const Transition = struct { target: Id, targetId: i32 };
+
     pub var pending: ?Transition = null;
+    pub var states: std.EnumArray(Id, State) = .initFill(.{});
 
     pub fn takePending() ?Transition {
         const request = pending;
         pending = null;
         return request;
     }
-};
 
-const Config = struct {
-    scene: scene.Scene = .title,
-    time_scale: f32 = 1,
-};
+    pub fn ensureState(id: Id, tileCount: usize) *State {
+        const result = states.getPtr(id);
+        if (result.initialized) return result;
 
-const config: Config = @import("zon/context.zon");
+        if (result.tiles.len == 0) {
+            result.tiles = zhu.assets.oomAlloc(Tile, tileCount);
+        }
+        @memset(result.tiles, .{});
+        result.initialized = true;
+        result.minute = clock.totalMinutes();
+        return result;
+    }
+
+    pub fn resetStates() void {
+        for (std.enums.values(Id)) |id| {
+            states.getPtr(id).initialized = false;
+        }
+    }
+};
 
 pub fn init() void {
-    scene.current = config.scene;
+    scene.current = .title;
     scene.pending = null;
     _ = scene.takeLoadSlot();
-    time.reset();
+    clock.reset();
     input.mouseCaptured = false;
     map.pending = null;
     std.log.info("context init scene={s}", .{@tagName(scene.current)});
 }
 
-pub fn deinit() void {}
+pub fn deinit() void {
+    for (std.enums.values(map.Id)) |id| {
+        zhu.assets.free(map.states.getPtr(id).tiles);
+    }
+}
 
 test "场景请求会等待到应用阶段才生效" {
     init();
 
-    const requested: scene.Scene = if (config.scene == .title) .farm else .title;
+    const requested: scene.Scene = .farm;
     scene.request(requested);
 
-    try std.testing.expectEqual(config.scene, scene.current);
+    try std.testing.expectEqual(scene.Scene.title, scene.current);
     try std.testing.expectEqual(requested, scene.pending.?);
 
     scene.apply();
@@ -189,12 +230,11 @@ test "场景请求会等待到应用阶段才生效" {
 test "应用前最后一次场景请求生效" {
     init();
 
-    const first: scene.Scene = if (config.scene == .title) .farm else .title;
-    scene.request(first);
-    scene.request(config.scene);
+    scene.request(.farm);
+    scene.request(.title);
     scene.apply();
 
-    try std.testing.expectEqual(config.scene, scene.current);
+    try std.testing.expectEqual(scene.Scene.title, scene.current);
     try std.testing.expectEqual(null, scene.pending);
 }
 
@@ -225,23 +265,40 @@ test "地图切换请求会被 take 消费" {
 test "时间暗时段从 18:00 开始" {
     init();
 
-    time.hour = 17;
-    time.minute = 59;
-    try std.testing.expect(!time.isDark());
+    clock.hour = 17;
+    clock.minute = 59;
+    try std.testing.expect(!clock.isDark());
 
-    time.hour = 18;
-    time.minute = 0;
-    try std.testing.expect(time.isDark());
+    clock.hour = 18;
+    clock.minute = 0;
+    try std.testing.expect(clock.isDark());
 }
 
 test "时间暗时段在 06:00 结束" {
     init();
 
-    time.hour = 5;
-    time.minute = 59;
-    try std.testing.expect(time.isDark());
+    clock.hour = 5;
+    clock.minute = 59;
+    try std.testing.expect(clock.isDark());
 
-    time.hour = 6;
-    time.minute = 0;
-    try std.testing.expect(!time.isDark());
+    clock.hour = 6;
+    clock.minute = 0;
+    try std.testing.expect(!clock.isDark());
+}
+
+test "时间按游戏分钟计算真实秒数" {
+    init();
+
+    clock.hour = 6;
+    clock.minute = 20;
+
+    try std.testing.expectEqual(@as(f32, 0), clock.secondsSince(
+        clock.totalMinutes(),
+    ));
+    try std.testing.expectEqual(@as(f32, 0), clock.secondsSince(
+        clock.totalMinutes() + 1,
+    ));
+    try std.testing.expectEqual(@as(f32, 2), clock.secondsSince(
+        clock.totalMinutes() - 20,
+    ));
 }

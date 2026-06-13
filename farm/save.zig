@@ -3,16 +3,13 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 const context = @import("context.zig");
-const factory = @import("factory.zig");
 const map = @import("map.zig");
 const toolbar = @import("ui/toolbar.zig");
 
 const World = zhu.ecs.World;
 const Actor = component.actor.Actor;
-const Crop = component.farm.Crop;
 const Player = component.actor.Player;
 const Position = component.Position;
-const Sprite = component.render.Sprite;
 const Target = component.ui.Target;
 const Velocity = component.motion.Velocity;
 
@@ -31,7 +28,7 @@ const TimeSave = struct {
     day: u32 = 1,
     hour: u8 = 6,
     minute: f32 = 0,
-    period: context.time.Period = .dawn,
+    period: context.clock.Period = .dawn,
 };
 
 const PlayerSave = struct {
@@ -50,24 +47,15 @@ const ToolbarSave = struct {
     slots: [toolbar.slots.len]ToolbarSlotSave = @splat(.{}),
 };
 
-const LandSave = enum { dry, wet };
-
-const CropSave = struct {
-    stage: component.farm.GrowthEnum = .seed,
-    kind: component.farm.CropEnum = .strawberry,
-    timer: f32 = 0,
-    next: f32 = 0,
-    watered: bool = false,
-};
-
 const TileSave = struct {
     index: u32 = 0,
-    land: ?LandSave = null,
-    crop: ?CropSave = null,
+    land: ?component.farm.Ground = null,
+    crop: ?component.farm.Crop = null,
 };
 
 const MapSave = struct {
     id: component.map.Id = .town,
+    minute: f32 = 0,
     tiles: []const TileSave = &.{},
 };
 
@@ -77,7 +65,7 @@ const SaveData = struct {
     time: TimeSave = .{},
     player: PlayerSave = .{},
     toolbar: ToolbarSave = .{},
-    map: MapSave = .{},
+    maps: []const MapSave = &.{},
 };
 
 const SummaryTime = struct {
@@ -99,6 +87,7 @@ pub fn saveSlot(world: *World, slot: usize) !void {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
+    map.saveState(world);
     const data = try capture(world);
     defer freeCaptured(data);
 
@@ -132,7 +121,7 @@ pub fn loadSlot(world: *World, slot: usize) !void {
         zhu.assets.allocator,
         terminated,
         null,
-        .{ .ignore_unknown_fields = true },
+        .{},
     );
     defer std.zon.parse.free(zhu.assets.allocator, data);
 
@@ -170,7 +159,7 @@ pub fn parseSlotSummary(
         allocator,
         terminated,
         null,
-        .{ .ignore_unknown_fields = true },
+        .{},
     );
     defer std.zon.parse.free(allocator, data);
 
@@ -193,12 +182,12 @@ fn capture(world: *World) !SaveData {
     return .{
         .timestamp = std.time.timestamp(),
         .time = .{
-            .paused = context.time.paused,
-            .scale = context.time.scale,
-            .day = context.time.day,
-            .hour = context.time.hour,
-            .minute = context.time.minute,
-            .period = context.time.period,
+            .paused = context.clock.paused,
+            .scale = context.clock.speed,
+            .day = context.clock.day,
+            .hour = context.clock.hour,
+            .minute = context.clock.minute,
+            .period = context.clock.period,
         },
         .player = .{
             .map = map.current,
@@ -206,15 +195,13 @@ fn capture(world: *World) !SaveData {
             .facing = actor.facing,
         },
         .toolbar = captureToolbar(),
-        .map = .{
-            .id = map.current,
-            .tiles = try captureTiles(world),
-        },
+        .maps = try captureMaps(),
     };
 }
 
 fn freeCaptured(data: SaveData) void {
-    zhu.assets.free(data.map.tiles);
+    for (data.maps) |saved| zhu.assets.free(saved.tiles);
+    zhu.assets.free(data.maps);
 }
 
 fn captureToolbar() ToolbarSave {
@@ -228,34 +215,48 @@ fn captureToolbar() ToolbarSave {
     return result;
 }
 
-fn captureTiles(world: *World) ![]const TileSave {
+fn captureMaps() ![]const MapSave {
+    const ids = std.enums.values(component.map.Id);
+    var result = try std.ArrayList(MapSave).initCapacity(
+        zhu.assets.allocator,
+        ids.len,
+    );
+    errdefer {
+        for (result.items) |saved| zhu.assets.free(saved.tiles);
+        result.deinit(zhu.assets.allocator);
+    }
+
+    for (ids) |id| {
+        const state = context.map.states.getPtr(id);
+        try result.append(zhu.assets.allocator, .{
+            .id = id,
+            .minute = state.minute,
+            .tiles = try captureTiles(state),
+        });
+    }
+
+    return try result.toOwnedSlice(zhu.assets.allocator);
+}
+
+fn captureTiles(state: *const context.map.State) ![]const TileSave {
     var list: std.ArrayList(TileSave) = .empty;
     errdefer list.deinit(zhu.assets.allocator);
 
-    for (map.land.tiles, 0..) |tile, index| {
-        const cropEntity = tile.crop();
-        if (tile.ground == null and cropEntity == null) continue;
+    if (!state.initialized) return try list.toOwnedSlice(zhu.assets.allocator);
 
-        var cropSave: ?CropSave = null;
-        if (cropEntity) |entity| {
-            if (world.get(entity, Crop)) |crop| {
-                cropSave = .{
-                    .stage = crop.stage,
-                    .kind = crop.kind,
-                    .timer = crop.timer,
-                    .next = crop.next,
-                    .watered = crop.watered,
-                };
-            }
-        }
+    for (state.tiles, 0..) |tile, index| {
+        if (tile.ground == null and tile.crop == null) continue;
 
         try list.append(zhu.assets.allocator, .{
             .index = @intCast(index),
-            .land = if (tile.ground) |ground| switch (ground) {
-                .dry => .dry,
-                .wet => .wet,
+            .land = tile.ground,
+            .crop = if (tile.crop) |crop| .{
+                .stage = crop.stage,
+                .kind = crop.kind,
+                .timer = crop.timer,
+                .next = crop.next,
+                .watered = crop.watered,
             } else null,
-            .crop = cropSave,
         });
     }
 
@@ -265,60 +266,55 @@ fn captureTiles(world: *World) ![]const TileSave {
 fn apply(world: *World, data: SaveData) !void {
     if (data.schemaVersion > schemaVersion) return error.UnsupportedSaveVersion;
 
-    context.time.paused = data.time.paused;
-    context.time.scale = data.time.scale;
-    context.time.day = data.time.day;
-    context.time.hour = data.time.hour;
-    context.time.minute = data.time.minute;
-    context.time.period = data.time.period;
+    context.clock.paused = data.time.paused;
+    context.clock.speed = data.time.scale;
+    context.clock.day = data.time.day;
+    context.clock.hour = data.time.hour;
+    context.clock.minute = data.time.minute;
+    context.clock.period = data.time.period;
 
     map.exit(world);
+    context.map.resetStates();
+    restoreMaps(data);
+
     _ = map.enter(world, data.player.map, -1);
-    restoreTiles(world, data.map);
     restorePlayer(world, data.player);
     restoreToolbar(data.toolbar);
 }
 
-fn restoreTiles(world: *World, data: MapSave) void {
-    if (data.id != map.current) return;
+fn restoreMaps(data: SaveData) void {
+    for (data.maps) |saved| restoreMap(saved);
+}
+
+fn restoreMap(data: MapSave) void {
+    const mapData = &map.maps[@intFromEnum(data.id)];
+    const tileCount = mapData.width * mapData.height;
+    const state = context.map.ensureState(data.id, tileCount);
 
     for (data.tiles) |tileSave| {
-        if (tileSave.index >= map.land.tiles.len) continue;
+        if (tileSave.index >= state.tiles.len) continue;
 
         const index: usize = @intCast(tileSave.index);
-        const tile = &map.land.tiles[index];
-        tile.ground = if (tileSave.land) |land| switch (land) {
-            .dry => .dry,
-            .wet => .wet,
-        } else null;
+        const tile = &state.tiles[index];
+        tile.ground = tileSave.land;
 
         if (tileSave.crop) |crop| {
-            const position = map.data.tileIndexToWorld(index);
-            const entity = factory.spawnCrop(world, position, crop.kind);
-            world.getPtr(entity, Crop).?.* = .{
+            tile.crop = .{
                 .stage = crop.stage,
                 .kind = crop.kind,
                 .timer = crop.timer,
                 .next = crop.next,
                 .watered = crop.watered,
             };
-            updateCropSprite(world, entity, crop.kind, crop.stage);
-            tile.object = .{ .entity = entity };
+        } else {
+            tile.crop = null;
         }
     }
-}
 
-fn updateCropSprite(
-    world: *World,
-    entity: zhu.ecs.Entity,
-    kind: component.farm.CropEnum,
-    stage: component.farm.GrowthEnum,
-) void {
-    const config = factory.cropStage(kind, stage);
-    world.getPtr(entity, Sprite).?.* = .{
-        .image = factory.resolveImage(config.sprite),
-        .offset = config.sprite.offset,
-    };
+    state.minute = if (data.minute > 0)
+        data.minute
+    else
+        context.clock.totalMinutes();
 }
 
 fn restorePlayer(world: *World, data: PlayerSave) void {
@@ -363,14 +359,8 @@ test "parseSlotSummary reads day and timestamp" {
         \\    .schemaVersion = 1,
         \\    .timestamp = 42,
         \\    .time = .{
-        \\        .paused = false,
-        \\        .scale = 1,
         \\        .day = 7,
-        \\        .hour = 6,
         \\    },
-        \\    .player = .{},
-        \\    .toolbar = .{},
-        \\    .map = .{},
         \\}
     ;
 

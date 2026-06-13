@@ -101,6 +101,7 @@ pub const actor = struct {
 };
 
 pub const farm = struct {
+    pub const Ground = enum { dry, wet };
     pub const GrowthEnum = enum { seed, sprout, growing, mature };
     pub const CropEnum = enum { strawberry, potato };
 

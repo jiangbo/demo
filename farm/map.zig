@@ -2,6 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("component.zig");
+const context = @import("context.zig");
 const factory = @import("factory.zig");
 pub const spatial = @import("map/spatial.zig");
 pub const land = @import("map/land.zig");
@@ -9,6 +10,8 @@ pub const land = @import("map/land.zig");
 const tiled = zhu.extend.tiled;
 const World = zhu.ecs.World;
 const actor = component.actor;
+const render = component.render;
+const farm = component.farm;
 const Position = component.Position;
 pub const Id = component.map.Id;
 pub const StartOffset = component.map.StartOffset;
@@ -50,6 +53,7 @@ pub fn enter(world: *World, id: Id, targetId: i32) zhu.Vector2 {
     spatial.enter(data);
 
     parseLayers(world);
+    restoreState(world);
 
     var spawn: ?zhu.Vector2 = null;
     var query = world.query(.{Trigger});
@@ -59,13 +63,6 @@ pub fn enter(world: *World, id: Id, targetId: i32) zhu.Vector2 {
             spawn = triggerSpawnPosition(trigger);
             break;
         }
-    }
-
-    var crops = world.query(.{ component.Position, component.farm.Crop });
-    while (crops.next()) |entity| {
-        const position = crops.get(entity, component.Position);
-        const tile = land.getTile(position) orelse continue;
-        tile.object = .{ .entity = entity };
     }
 
     zhu.camera.bound = data.size();
@@ -101,11 +98,72 @@ fn parseLayers(world: *World) void {
 }
 
 pub fn exit(world: *World) void {
+    saveState(world);
+
     world.destroyEntities(component.map.Scoped);
     land.exit();
     spatial.exit();
     frontLayerStart = 0;
     vertexes.clearRetainingCapacity();
+}
+
+pub fn saveState(world: *World) void {
+    if (land.tiles.len == 0) return;
+
+    const state = context.map.ensureState(current, land.tiles.len);
+    for (land.tiles, 0..) |tile, index| {
+        var saved = &state.tiles[index];
+        saved.ground = tile.ground;
+
+        if (tile.crop()) |entity| {
+            saved.crop = world.get(entity, farm.Crop).?;
+        } else saved.crop = null;
+    }
+    state.minute = context.clock.totalMinutes();
+}
+
+fn restoreState(world: *World) void {
+    const state = context.map.ensureState(current, land.tiles.len);
+    advanceState(state);
+
+    for (state.tiles, 0..) |saved, index| {
+        const tile = &land.tiles[index];
+        tile.ground = saved.ground;
+        tile.object = null;
+
+        const crop = saved.crop orelse continue;
+        const position = data.tileIndexToWorld(index);
+        const entity = factory.spawnCrop(world, position, crop.kind);
+        world.getPtr(entity, farm.Crop).?.* = crop;
+        const cfg = factory.cropStage(crop.kind, crop.stage);
+        world.getPtr(entity, render.Sprite).?.* = .{
+            .image = factory.resolveImage(cfg.sprite),
+            .offset = cfg.sprite.offset,
+        };
+        if (crop.stage != .seed) {
+            world.getPtr(entity, render.Render).?.layer = .actor;
+        }
+        tile.object = .{ .entity = entity };
+    }
+
+    state.minute = context.clock.totalMinutes();
+}
+
+fn advanceState(state: *context.map.State) void {
+    const seconds = context.clock.secondsSince(state.minute);
+    if (seconds <= 0) return;
+
+    for (state.tiles) |*tile| {
+        const crop = &(tile.crop orelse continue);
+        if (crop.stage == .mature) continue;
+
+        crop.timer += seconds;
+        while (crop.timer >= crop.next and crop.stage != .mature) {
+            crop.timer -= crop.next;
+            crop.stage = zhu.nextEnum(farm.GrowthEnum, crop.stage);
+            crop.next = factory.cropStage(crop.kind, crop.stage).duration;
+        }
+    }
 }
 
 pub fn drawBack() void {
@@ -405,6 +463,40 @@ test "触发器落点会按 start_offset 放到区域外侧" {
 
     try std.testing.expectEqual(25, position.x);
     try std.testing.expectEqual(68, position.y);
+}
+
+test "地图状态作物会按离线秒数推进" {
+    context.clock.reset();
+    defer context.clock.reset();
+
+    const seed = factory.cropStage(.strawberry, .seed);
+    const sprout = factory.cropStage(.strawberry, .sprout);
+    var tiles = [_]context.map.Tile{.{
+        .ground = .wet,
+        .crop = .{
+            .kind = .strawberry,
+            .stage = .seed,
+            .timer = 0,
+            .next = seed.duration,
+        },
+    }};
+    var state = context.map.State{
+        .initialized = true,
+        .minute = context.clock.totalMinutes(),
+        .tiles = &tiles,
+    };
+    context.clock.minute += (seed.duration + sprout.duration) *
+        context.clock.minutesPerRealSecond;
+
+    advanceState(&state);
+
+    const crop = state.tiles[0].crop.?;
+    try std.testing.expectEqual(farm.GrowthEnum.growing, crop.stage);
+    try std.testing.expectEqual(0, crop.timer);
+    try std.testing.expectEqual(
+        factory.cropStage(.strawberry, .growing).duration,
+        crop.next,
+    );
 }
 
 fn putMockNpcImages() void {
