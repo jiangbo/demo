@@ -8,6 +8,7 @@ const toolbar = @import("ui/toolbar.zig");
 
 const World = zhu.ecs.World;
 const Actor = component.actor.Actor;
+const Busy = component.actor.Busy;
 const Player = component.actor.Player;
 const Position = component.Position;
 const Target = component.ui.Target;
@@ -329,6 +330,7 @@ fn restorePlayer(world: *World, data: PlayerSave) void {
         actor.action = .idle;
         actor.facing = data.facing;
     }
+    world.remove(player, Busy);
     zhu.camera.directFollow(data.position);
 }
 

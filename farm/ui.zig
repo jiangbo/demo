@@ -5,8 +5,8 @@ pub const toolbar = @import("ui/toolbar.zig");
 
 const component = @import("component.zig");
 const context = @import("context.zig");
+const control = @import("system/control.zig");
 const light = @import("system/light.zig");
-const target = @import("system/target.zig");
 const time = @import("system/time.zig");
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
 
@@ -179,7 +179,7 @@ pub fn init() void {
 pub fn deinit() void {}
 
 pub fn draw(world: *zhu.ecs.World) void {
-    target.draw(world);
+    control.draw(world);
     light.draw(world);
 
     const previousMode = zhu.camera.mode;

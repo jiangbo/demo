@@ -81,6 +81,14 @@ pub fn isEnumRange(e: anytype, min: @TypeOf(e), max: @TypeOf(e)) bool {
     return v >= @intFromEnum(min) and v <= @intFromEnum(max);
 }
 
+pub fn asIndexU8(value: anytype) u8 {
+    return switch (@typeInfo(@TypeOf(value))) {
+        .@"enum" => @intCast(@intFromEnum(value)),
+        .int, .comptime_int => @intCast(value),
+        else => @compileError("index must be enum or int"),
+    };
+}
+
 pub const Vector = Vector2;
 pub const Vector2 = extern struct {
     x: f32 = 0,

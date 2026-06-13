@@ -10,7 +10,6 @@ const ui = @import("ui.zig");
 
 const system = struct {
     const animation = @import("system/animation.zig");
-    const camera = @import("system/camera.zig");
     const control = @import("system/control.zig");
     const light = @import("system/light.zig");
     const movement = @import("system/movement.zig");
@@ -18,9 +17,7 @@ const system = struct {
     const render = @import("system/render.zig");
     const sound = @import("system/sound.zig");
     const talk = @import("system/talk.zig");
-    const target = @import("system/target.zig");
     const time = @import("system/time.zig");
-    const tool = @import("system/tool.zig");
     const transition = @import("system/transition.zig");
     const wander = @import("system/wander.zig");
 };
@@ -32,6 +29,7 @@ const Target = component.ui.Target;
 const Position = component.Position;
 
 const initialTargetId: i32 = -1;
+const followSpeed: f32 = 9;
 
 var world: World = undefined;
 var canvas: zhu.graphics.RenderTarget = .{};
@@ -153,16 +151,12 @@ fn updateFarm(delta: f32) void {
     // 触发器必须读取移动后的玩家位置；真正切图放到下一帧开头。
     system.transition.update(&world);
 
-    // 光标目标读取移动后的玩家位置，工具再使用这个目标结算农场操作。
-    system.target.update(&world);
-    system.tool.update(&world);
-
-    // 工具可能生成拾取物，所以拾取放在工具之后，减少一帧延迟。
+    // 控制系统可能生成拾取物，所以拾取放在控制之后。
     system.pickup.update(&world);
 
     // 对话距离、相机跟随、动画和排序都读取本帧已结算的位置。
     system.talk.update(&world);
-    system.camera.update(&world);
+    cameraFollowPlayer(delta);
     system.animation.update(&world, delta);
     system.render.update(&world);
 
@@ -217,6 +211,15 @@ fn enterFarm() void {
         };
     }
     zhu.audio.playMusic("assets/audio/01_spring_journey.ogg");
+}
+
+fn cameraFollowPlayer(delta: f32) void {
+    const player = world.getIdentity(actor.Player).?;
+    const position = world.get(player, Position).?;
+
+    // 平滑值交给引擎相机限制范围，这里只表达速度随 delta 缩放。
+    zhu.camera.smoothFollow(position, followSpeed * delta);
+    zhu.camera.roundPosition();
 }
 
 fn drawFarm() void {

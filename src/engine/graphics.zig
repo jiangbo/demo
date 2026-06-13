@@ -78,16 +78,17 @@ pub const Animation = struct {
         return self.image.sub(.init(offset, self.image.size));
     }
 
-    pub fn play(self: *Animation, index: u8, loop: bool) void {
+    pub fn play(self: *Animation, index: anytype, loop: bool) void {
         self.playRow(index, self.row, loop);
     }
 
-    pub fn playRow(self: *Animation, idx: u8, row: u8, loop: bool) void {
-        const next = self.sources[idx];
+    pub fn playRow(self: *Animation, idx: anytype, row: anytype, loop: bool) void {
+        const sourceIndex = math.asIndexU8(idx);
+        const next = self.sources[sourceIndex];
         const image = assets.getImage(next.imageId).?;
         self.image = image.sub(.init(.zero, self.image.size));
-        self.clip, self.sourceIndex = .{ next.clip, idx };
-        self.row, self.loop = .{ row, loop };
+        self.clip, self.sourceIndex = .{ next.clip, sourceIndex };
+        self.row, self.loop = .{ math.asIndexU8(row), loop };
         self.reset();
     }
 

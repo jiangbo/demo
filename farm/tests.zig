@@ -8,7 +8,6 @@ test {
     std.testing.refAllDeclsRecursive(@import("save.zig"));
     std.testing.refAllDeclsRecursive(@import("ui/save_slot.zig"));
     std.testing.refAllDeclsRecursive(@import("system/animation.zig"));
-    std.testing.refAllDeclsRecursive(@import("system/camera.zig"));
     std.testing.refAllDeclsRecursive(@import("system/control.zig"));
     std.testing.refAllDeclsRecursive(@import("system/light.zig"));
     std.testing.refAllDeclsRecursive(@import("system/movement.zig"));
@@ -16,9 +15,7 @@ test {
     std.testing.refAllDeclsRecursive(@import("system/render.zig"));
     std.testing.refAllDeclsRecursive(@import("system/sound.zig"));
     std.testing.refAllDeclsRecursive(@import("system/talk.zig"));
-    std.testing.refAllDeclsRecursive(@import("system/target.zig"));
     std.testing.refAllDeclsRecursive(@import("system/time.zig"));
-    std.testing.refAllDeclsRecursive(@import("system/tool.zig"));
     std.testing.refAllDeclsRecursive(@import("system/transition.zig"));
     std.testing.refAllDeclsRecursive(@import("system/wander.zig"));
 }

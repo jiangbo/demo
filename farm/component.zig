@@ -74,6 +74,7 @@ pub const actor = struct {
         facing: Facing = .down,
         rows: [4]i8 = .{ 1, 2, -3, 3 },
     };
+    pub const Busy = struct {};
 
     pub const Wander = struct {
         home: zhu.Vector2 = .zero,
