@@ -12,10 +12,12 @@ const World = zhu.ecs.World;
 const actor = component.actor;
 const render = component.render;
 const farm = component.farm;
+const item = component.item;
 const Position = component.Position;
 pub const Id = component.map.Id;
 pub const StartOffset = component.map.StartOffset;
 const Trigger = component.map.Trigger;
+const Thing = context.map.Thing;
 
 pub const maps = [_]tiled.Map{
     @import("zon/map/school.zon"),
@@ -137,11 +139,20 @@ pub fn saveState(world: *World) void {
         var saved = &state.tiles[index];
         saved.ground = tile.ground;
 
-        if (tile.crop()) |entity| {
-            saved.crop = world.get(entity, farm.Crop).?;
-        } else saved.crop = null;
+        saved.thing = thingAt(world, tile);
     }
     state.day = context.clock.day;
+}
+
+fn thingAt(world: *World, tile: land.Tile) ?context.map.Thing {
+    const object = tile.object orelse return null;
+    return switch (object.kind) {
+        .crop => .{ .crop = world.get(object.entity, farm.Crop).? },
+        .chest => .{ .chest = .{
+            .opened = world.get(object.entity, item.Chest).?.opened,
+        } },
+        .rock => .{ .rock = .{} },
+    };
 }
 
 fn restoreState(world: *World) void {
@@ -151,17 +162,25 @@ fn restoreState(world: *World) void {
     for (state.tiles, 0..) |saved, index| {
         const tile = &land.tiles[index];
         tile.ground = saved.ground;
-        tile.object = null;
 
-        const crop = saved.crop orelse continue;
-        const position = data.tileIndexToWorld(index);
-        const entity = factory.spawnCrop(world, position, crop.kind);
-        world.getPtr(entity, farm.Crop).?.* = crop;
-        refreshCropSprite(world, entity, crop);
-        tile.object = .{ .entity = entity };
+        const thing = saved.thing orelse continue;
+        restoreThing(world, index, thing);
     }
 
     state.day = context.clock.day;
+}
+
+fn restoreThing(world: *World, index: usize, thing: Thing) void {
+    switch (thing) {
+        .crop => |crop| {
+            const position = data.tileIndexToWorld(index);
+            const entity = factory.spawnCrop(world, position, crop.kind);
+            world.getPtr(entity, farm.Crop).?.* = crop;
+            refreshCropSprite(world, entity, crop);
+            land.tiles[index].object = .{ .entity = entity };
+        },
+        .chest, .rock => {},
+    }
 }
 
 fn advanceState(state: *context.map.State) void {
@@ -178,9 +197,15 @@ fn advanceStateOneDay(state: *context.map.State) void {
         // 浇水只影响当天，跨天后湿地统一变回干地。
         if (tile.ground == .wet) tile.ground = .dry;
 
-        var crop = tile.crop orelse continue;
-        _ = advanceCropOneDay(&crop, watered);
-        tile.crop = crop;
+        const thing = tile.thing orelse continue;
+        switch (thing) {
+            .crop => |cropState| {
+                var crop = cropState;
+                _ = advanceCropOneDay(&crop, watered);
+                tile.thing = .{ .crop = crop };
+            },
+            .chest, .rock => {},
+        }
     }
 }
 
@@ -510,12 +535,12 @@ test "地图状态作物会按离线天数推进" {
 
     var tiles = [_]context.map.Tile{.{
         .ground = .wet,
-        .crop = .{
+        .thing = .{ .crop = .{
             .kind = .strawberry,
             .stage = .seed,
             .timer = 0,
             .next = 2,
-        },
+        } },
     }};
     var state = context.map.State{
         .initialized = true,
@@ -526,7 +551,10 @@ test "地图状态作物会按离线天数推进" {
 
     advanceState(&state);
 
-    const crop = state.tiles[0].crop.?;
+    const crop = switch (state.tiles[0].thing.?) {
+        .crop => |crop| crop,
+        else => unreachable,
+    };
     try std.testing.expectEqual(farm.GrowthEnum.sprout, crop.stage);
     try std.testing.expectEqual(0, crop.timer);
     try std.testing.expectEqual(
@@ -543,12 +571,12 @@ test "湿地离线跨天只加速一天" {
 
     var tiles = [_]context.map.Tile{.{
         .ground = .wet,
-        .crop = .{
+        .thing = .{ .crop = .{
             .kind = .strawberry,
             .stage = .seed,
             .timer = 0,
             .next = 4,
-        },
+        } },
     }};
     var state = context.map.State{
         .initialized = true,
@@ -559,7 +587,10 @@ test "湿地离线跨天只加速一天" {
 
     advanceState(&state);
 
-    const crop = state.tiles[0].crop.?;
+    const crop = switch (state.tiles[0].thing.?) {
+        .crop => |crop| crop,
+        else => unreachable,
+    };
     try std.testing.expectEqual(farm.GrowthEnum.seed, crop.stage);
     try std.testing.expectEqual(@as(f32, 1), crop.next);
     try std.testing.expectEqual(component.farm.Ground.dry, state.tiles[0].ground);

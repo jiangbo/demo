@@ -51,7 +51,7 @@ const ToolbarSave = struct {
 const TileSave = struct {
     index: u32 = 0,
     land: ?component.farm.Ground = null,
-    crop: ?component.farm.Crop = null,
+    thing: ?context.map.Thing = null,
 };
 
 const MapSave = struct {
@@ -246,18 +246,12 @@ fn captureTiles(state: *const context.map.State) ![]const TileSave {
     if (!state.initialized) return try list.toOwnedSlice(zhu.assets.allocator);
 
     for (state.tiles, 0..) |tile, index| {
-        if (tile.ground == null and tile.crop == null) continue;
+        if (tile.ground == null and tile.thing == null) continue;
 
         try list.append(zhu.assets.allocator, .{
             .index = @intCast(index),
             .land = tile.ground,
-            .crop = if (tile.crop) |crop| .{
-                .stage = crop.stage,
-                .kind = crop.kind,
-                .timer = crop.timer,
-                .next = crop.next,
-                .watered = crop.watered,
-            } else null,
+            .thing = tile.thing,
         });
     }
 
@@ -298,18 +292,7 @@ fn restoreMap(data: MapSave) void {
         const index: usize = @intCast(tileSave.index);
         const tile = &state.tiles[index];
         tile.ground = tileSave.land;
-
-        if (tileSave.crop) |crop| {
-            tile.crop = .{
-                .stage = crop.stage,
-                .kind = crop.kind,
-                .timer = crop.timer,
-                .next = crop.next,
-                .watered = crop.watered,
-            };
-        } else {
-            tile.crop = null;
-        }
+        tile.thing = tileSave.thing;
     }
 
     state.day = data.day;

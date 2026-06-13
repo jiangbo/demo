@@ -141,9 +141,15 @@ pub const input = struct {
 pub const map = struct {
     pub const Id = component.map.Id;
 
+    pub const Thing = union(enum) {
+        crop: component.farm.Crop,
+        chest: struct { opened: bool = false },
+        rock: struct { hitCount: u8 = 0 },
+    };
+
     pub const Tile = struct {
         ground: ?component.farm.Ground = null,
-        crop: ?component.farm.Crop = null,
+        thing: ?Thing = null,
     };
 
     pub const State = struct {
