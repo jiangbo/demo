@@ -2,6 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
+const context = @import("../context.zig");
 const map = @import("../map.zig");
 const spatial = map.spatial;
 
@@ -16,8 +17,8 @@ pub fn update(world: *zhu.ecs.World) void {
     // 当前对话目标走远或消失时，直接关闭对话。
     if (world.getIdentity(Dialog)) |target| checkDistance(world, target);
 
-    // 按 F 键触发交互
-    if (!zhu.key.pressed(.F)) return;
+    // 交互按键由 input.zon 统一配置。
+    if (!context.input.pressed(.interact)) return;
 
     if (world.getIdentity(Dialog)) |target| {
         advanceDialog(world, target);
