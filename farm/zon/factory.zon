@@ -119,6 +119,7 @@
     },
     .items = .{
         .{ // hoe (index 0)
+            .name = "锄头",
             .limit = 1,
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/RPG/5.png"
@@ -128,6 +129,7 @@
             },
         },
         .{ // water (index 1)
+            .name = "水壶",
             .limit = 1,
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/RPG/5.png"
@@ -137,6 +139,7 @@
             },
         },
         .{ // strawberrySeed (index 2)，对应 CropEnum.strawberry
+            .name = "草莓种子",
             .limit = 99,
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png"
@@ -146,6 +149,7 @@
             },
         },
         .{ // potatoSeed (index 3)，对应 CropEnum.potato
+            .name = "土豆种子",
             .limit = 99,
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png"
@@ -155,6 +159,7 @@
             },
         },
         .{ // strawberry (index 4)，收获产出
+            .name = "草莓",
             .limit = 99,
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png"
@@ -164,6 +169,7 @@
             },
         },
         .{ // potato (index 5)，收获产出
+            .name = "土豆",
             .limit = 99,
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png"

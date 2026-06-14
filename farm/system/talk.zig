@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const context = @import("../context.zig");
+const factory = @import("../factory.zig");
 const map = @import("../map.zig");
 const spatial = map.spatial;
 const toolbar = @import("../ui/toolbar.zig");
@@ -118,7 +119,7 @@ fn showChestNotice(chest: *const Chest) void {
 
         const line = zhu.format(buffer[len..], "{s}{s} x{d}", .{
             if (len == 0) "" else "\n",
-            @tagName(itemType),
+            factory.itemConfig(itemType).name,
             count,
         });
         len += line.len;
