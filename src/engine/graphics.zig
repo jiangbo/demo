@@ -83,12 +83,12 @@ pub const Animation = struct {
     }
 
     pub fn playRow(self: *Animation, idx: anytype, row: anytype, loop: bool) void {
-        const sourceIndex = math.asIndexU8(idx);
+        const sourceIndex = math.toIndex(u8, idx);
         const next = self.sources[sourceIndex];
         const image = assets.getImage(next.imageId).?;
         self.image = image.sub(.init(.zero, self.image.size));
         self.clip, self.sourceIndex = .{ next.clip, sourceIndex };
-        self.row, self.loop = .{ math.asIndexU8(row), loop };
+        self.row, self.loop = .{ math.toIndex(u8, row), loop };
         self.reset();
     }
 

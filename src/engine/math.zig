@@ -81,7 +81,7 @@ pub fn isEnumRange(e: anytype, min: @TypeOf(e), max: @TypeOf(e)) bool {
     return v >= @intFromEnum(min) and v <= @intFromEnum(max);
 }
 
-pub fn asIndexU8(value: anytype) u8 {
+pub fn toIndex(T: type, value: anytype) T {
     return switch (@typeInfo(@TypeOf(value))) {
         .@"enum" => @intCast(@intFromEnum(value)),
         .int, .comptime_int => @intCast(value),

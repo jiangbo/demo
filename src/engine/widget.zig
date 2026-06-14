@@ -1,3 +1,5 @@
+const std = @import("std");
+
 const input = @import("input.zig");
 const window = @import("window.zig");
 const math = @import("math.zig");
@@ -59,27 +61,31 @@ pub const Button = struct {
     }
 };
 
-pub const Click = struct {
-    hover: ?usize,
-    pressed: ?usize,
-    captured: bool = false,
+pub fn ClickT(comptime T: type) type {
+    return struct {
+        hover: ?T = null,
+        pressed: ?T = null,
+        captured: bool = false,
 
-    pub const empty: Click = .{ .hover = null, .pressed = null };
+        pub const empty: @This() = .{};
 
-    pub fn update(self: *Click, hover: ?usize) ?usize {
-        self.hover = hover;
-        self.captured = self.hover != null or self.pressed != null;
+        pub fn update(self: *@This(), hover: ?T) ?T {
+            self.hover = hover;
+            self.captured = self.hover != null or self.pressed != null;
 
-        if (hover) |index| {
-            if (input.mouse.pressed(.LEFT)) self.pressed = index;
+            if (hover) |value| {
+                if (input.mouse.pressed(.LEFT)) self.pressed = value;
+            }
+
+            if (!input.mouse.released(.LEFT)) return null;
+            defer self.pressed = null;
+            if (!std.meta.eql(self.pressed, self.hover)) return null;
+            return self.hover;
         }
+    };
+}
 
-        if (!input.mouse.released(.LEFT)) return null;
-        defer self.pressed = null;
-        if (self.pressed != self.hover) return null;
-        return self.hover;
-    }
-};
+pub const Click = ClickT(usize);
 
 pub const Menu = struct {
     position: math.Vector2 = .zero,

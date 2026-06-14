@@ -11,45 +11,62 @@ const ImageId = zhu.graphics.ImageId;
 
 const NineImage = struct { rect: zhu.Rect, nine: NineOption };
 
-const Config = struct {
+const HotbarZon = struct {
     imageId: ImageId,
-    slotSize: f32,
-    spacing: f32,
-    slotCount: u32,
-    panelPadding: f32,
-    bottomMargin: f32,
+    rect: zhu.Rect,
+    slotSize: zhu.Vector2,
+    slots: [10]zhu.Vector2,
     panel: NineImage,
     slot: NineImage,
     selected: NineImage,
 };
 
+const InventoryZon = struct {
+    imageId: ImageId,
+    rect: zhu.Rect,
+    pageCount: usize,
+    slotSize: zhu.Vector2,
+    slots: [20]zhu.Vector2,
+    prev: zhu.Rect,
+    next: zhu.Rect,
+    pageText: zhu.Vector2,
+    panel: NineImage,
+    slot: NineImage,
+};
+
+const Zon = struct { hotbar: HotbarZon, inventory: InventoryZon };
+
 pub const Stack = struct { type: ItemEnum = .hoe, count: u32 = 0 };
 pub const Item = Stack;
 
-const zon: Config = @import("zon/preset.zon");
+const zon: Zon = @import("zon/inventory.zon");
+const pageSize = zon.inventory.slots.len;
+const slotCount = pageSize * zon.inventory.pageCount;
+const hotbarRect = zon.hotbar.rect;
+const inventoryRect = zon.inventory.rect;
+const hotbarPosition = hotbarRect.min;
+const inventoryPosition = inventoryRect.min;
 
-pub var slots: [40]Stack = @splat(.{});
-pub var hotbar: [zon.slotCount]?usize = @splat(null);
+const Hover = union(enum) { body, slot: usize, prev, next };
+
+pub var slots: [slotCount]Stack = @splat(.{});
+pub var hotbar: [zon.hotbar.slots.len]?usize = @splat(null);
 pub var activeHotbar: usize = 0;
 pub var activePage: usize = 0;
+pub var open: bool = false;
 
-var panelPosition: zhu.Vector2 = undefined; // 初始位置
-var click: zhu.widget.Click = .empty;
-const slotWidth: f32 = zon.slotCount * (zon.slotSize + zon.spacing);
-const panelWidth: f32 = slotWidth - zon.spacing + zon.panelPadding * 2;
-const panelHeight: f32 = zon.panelPadding * 2 + zon.slotSize;
+var hotbarClick: zhu.widget.Click = .empty;
+var inventoryClick: zhu.widget.ClickT(Hover) = .empty;
 
 pub fn reset() void {
     slots = @splat(.{});
     hotbar = @splat(null);
     activeHotbar = 0;
     activePage = 0;
+    open = false;
 
-    panelPosition = zhu.Vector2{
-        .x = (zhu.window.size.x - panelWidth) / 2,
-        .y = zhu.window.size.y - panelHeight - zon.bottomMargin,
-    };
-    click = .empty;
+    hotbarClick = .empty;
+    inventoryClick = .empty;
 }
 
 pub fn add(itemType: ItemEnum, count: u32) void {
@@ -85,82 +102,137 @@ pub fn active() ?*Stack {
 }
 
 pub fn update() void {
-    if (context.input.toolbarIndexPressed()) |index| {
+    if (context.input.pressed(.inventory)) open = !open;
+
+    if (context.input.hotbarIndexPressed()) |index| {
         activeHotbar = index;
     }
 
-    if (click.update(hoveredSlot())) |index| {
+    if (hotbarClick.update(hoveredHotbarSlot())) |index| {
         activeHotbar = index;
         zhu.audio.playSound("assets/audio/UI_button08.ogg");
     }
 
-    if (click.captured) context.input.mouseCaptured = true;
+    if (open) updateInventoryPanel() else inventoryClick = .empty;
+
+    if (hotbarClick.captured or inventoryClick.captured) {
+        context.input.mouseCaptured = true;
+    }
 }
 
-fn hoveredSlot() ?usize {
-    const start = panelPosition.add(.square(zon.panelPadding));
-    for (0..hotbar.len) |i| {
-        const position = slotPosition(@floatFromInt(i), start);
-        const rect = zhu.Rect.init(position, .square(zon.slotSize));
-        if (!rect.contains(zhu.window.mouse)) continue;
+fn updateInventoryPanel() void {
+    const clicked = inventoryClick.update(hoveredInventory());
+    activePage = switch (clicked orelse return) {
+        .prev => activePage -| 1,
+        .next => @min(activePage + 1, zon.inventory.pageCount - 1),
+        .body, .slot => return,
+    };
+}
 
-        return i;
+fn hoveredHotbarSlot() ?usize {
+    const slotRect = zhu.Rect.init(.zero, zon.hotbar.slotSize);
+    for (zon.hotbar.slots, 0..) |offset, i| {
+        const rect = slotRect.move(hotbarPosition.add(offset));
+        if (rect.contains(zhu.window.mouse)) return i;
     }
     return null;
 }
 
-fn slotPosition(index: f32, position: zhu.Vector2) zhu.Vector2 {
-    return position.addX(index * (zon.slotSize + zon.spacing));
+fn hoveredInventory() ?Hover {
+    if (!inventoryRect.contains(zhu.window.mouse)) return null;
+
+    const mouse = zhu.window.mouse.sub(inventoryPosition);
+    const slotRect = zhu.Rect.init(.zero, zon.inventory.slotSize);
+    for (zon.inventory.slots, 0..) |offset, i| {
+        const rect = slotRect.move(offset);
+        if (rect.contains(mouse)) return .{ .slot = i };
+    }
+
+    if (zon.inventory.prev.contains(mouse)) return .prev;
+    if (zon.inventory.next.contains(mouse)) return .next;
+    return .body;
 }
 
 pub fn draw() void {
-    const panelImage = zhu.assets.getImage(zon.imageId).?;
-    { // 绘制面板
-        const rect = zhu.Rect{
-            .min = panelPosition,
-            .size = .xy(panelWidth, panelHeight),
-        };
-        const image = panelImage.sub(zon.panel.rect);
-        zhu.batch.drawNine(image, rect, zon.panel.nine);
-    }
+    if (open) drawInventoryPanel();
+    drawHotbar();
+}
 
-    const start = panelPosition.add(.square(zon.panelPadding));
-    for (hotbar, 0..) |slotIndex, i| {
-        const position = slotPosition(@floatFromInt(i), start);
-        { // 绘制槽位
-            const image = panelImage.sub(zon.slot.rect);
-            const rect = zhu.Rect.init(position, .square(zon.slotSize));
-            zhu.batch.drawNine(image, rect, zon.slot.nine);
-        }
+fn drawHotbar() void {
+    const panelImage = zhu.assets.getImage(zon.hotbar.imageId).?;
+    // 绘制面板
+    var image = panelImage.sub(zon.hotbar.panel.rect);
+    zhu.batch.drawNine(image, hotbarRect, zon.hotbar.panel.nine);
 
-        if (slotIndex) |index| {
-            const slot = slots[index];
-            if (slot.count == 0) continue;
-
-            const iconSize = factory.itemConfig(slot.type).icon.size;
-            const iconOffset = zon.slotSize - iconSize.x;
-            const iconPosition = position.add(.square(@round(iconOffset / 2)));
-
-            drawItemIcon(slot.type, iconPosition, iconSize);
-
-            if (slot.count > 1) drawItemCount(slot.count, iconPosition, iconSize);
-        }
+    for (hotbar, zon.hotbar.slots, 0..) |slotIndex, offset, i| {
+        const position = hotbarPosition.add(offset);
+        const rect = zhu.Rect.init(position, zon.hotbar.slotSize);
+        // 绘制槽位
+        image = panelImage.sub(zon.hotbar.slot.rect);
+        zhu.batch.drawNine(image, rect, zon.hotbar.slot.nine);
 
         if (i == activeHotbar) {
-            const image = panelImage.sub(zon.selected.rect);
-            const rect = zhu.Rect.init(position, .square(zon.slotSize));
-            zhu.batch.drawNine(image, rect, zon.selected.nine);
+            image = panelImage.sub(zon.hotbar.selected.rect);
+            zhu.batch.drawNine(image, rect, zon.hotbar.selected.nine);
         }
+
+        const slot = slots[slotIndex orelse continue];
+        if (slot.count == 0) continue;
+
+        const iconSize = factory.itemConfig(slot.type).icon.size;
+        drawItemIcon(slot.type, rect.center(), iconSize);
+        if (slot.count > 1) drawItemCount(slot.count, rect);
     }
+}
+
+fn drawInventoryPanel() void {
+    const inv = zon.inventory;
+    const inventoryImage = zhu.assets.getImage(inv.imageId).?;
+    var image = inventoryImage.sub(inv.panel.rect);
+    zhu.batch.drawNine(image, inventoryRect, inv.panel.nine);
+
+    const first = activePage * pageSize;
+    for (inv.slots, 0..) |offset, i| {
+        const position = inventoryPosition.add(offset);
+        const slotRect = zhu.Rect.init(position, inv.slotSize);
+        image = inventoryImage.sub(inv.slot.rect);
+        zhu.batch.drawNine(image, slotRect, inv.slot.nine);
+
+        const slot = slots[first + i];
+        if (slot.count == 0) continue;
+
+        const iconSize = factory.itemConfig(slot.type).icon.size;
+        drawItemIcon(slot.type, slotRect.center(), iconSize);
+        if (slot.count > 1) drawItemCount(slot.count, slotRect);
+    }
+
+    drawPageButton(inv.prev, "<");
+    drawPageButton(inv.next, ">");
+
+    var buffer: [8]u8 = undefined;
+    const args = .{ activePage + 1, inv.pageCount };
+    const label = zhu.format(&buffer, "{d}/{d}", args);
+    const labelPos = inventoryPosition.add(inv.pageText);
+    zhu.text.drawString(label, labelPos, .{ .alignment = .center });
+}
+
+fn drawPageButton(buttonRect: zhu.Rect, label: []const u8) void {
+    const inv = zon.inventory;
+    const rect = buttonRect.move(inventoryPosition);
+    const invImage = zhu.assets.getImage(inv.imageId).?;
+
+    const image = invImage.sub(inv.slot.rect);
+    zhu.batch.drawNine(image, rect, inv.slot.nine);
+    zhu.text.drawString(label, rect.center(), .{ .alignment = .center });
 }
 
 fn drawItemIcon(itemType: ItemEnum, position: zhu.Vector2, size: zhu.Vector2) void {
     const image = factory.resolveImage(factory.itemConfig(itemType).icon);
-    zhu.batch.drawImage(image, position, .{ .size = size });
+    zhu.batch.drawImage(image, position, .{ .size = size, .anchor = .center });
 }
 
-fn drawItemCount(count: u32, position: zhu.Vector2, size: zhu.Vector2) void {
-    const pos = position.add(size).sub(.square(1));
+fn drawItemCount(count: u32, rect: zhu.Rect) void {
+    const pos = rect.max().sub(.square(1));
     zhu.text.drawFormat("{d}", pos, .{count}, .{ .alignment = .one });
 }
 

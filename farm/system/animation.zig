@@ -43,7 +43,7 @@ fn updateActor(world: *zhu.ecs.World) void {
         const sprite = query.getPtr(entity, Sprite);
 
         const row = actorRow(actor, sprite);
-        const index = zhu.math.asIndexU8(actor.action);
+        const index = zhu.math.toIndex(u8, actor.action);
         const sameAction = animation.sourceIndex == index;
         if (sameAction and animation.row == row) continue;
 

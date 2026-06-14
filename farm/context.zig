@@ -89,16 +89,17 @@ pub const input = struct {
         moveDown,
         pause,
         interact,
-        toolbar1,
-        toolbar2,
-        toolbar3,
-        toolbar4,
-        toolbar5,
-        toolbar6,
-        toolbar7,
-        toolbar8,
-        toolbar9,
-        toolbar10,
+        inventory,
+        hotbar1,
+        hotbar2,
+        hotbar3,
+        hotbar4,
+        hotbar5,
+        hotbar6,
+        hotbar7,
+        hotbar8,
+        hotbar9,
+        hotbar10,
     };
 
     pub var mouseCaptured: bool = false;
@@ -135,9 +136,9 @@ pub const input = struct {
         return zhu.mouse.released(button);
     }
 
-    pub fn toolbarIndexPressed() ?u8 {
-        const first: usize = @intFromEnum(Command.toolbar1);
-        const last: usize = @intFromEnum(Command.toolbar10);
+    pub fn hotbarIndexPressed() ?u8 {
+        const first: usize = @intFromEnum(Command.hotbar1);
+        const last: usize = @intFromEnum(Command.hotbar10);
         for (first..last + 1) |value| {
             const command: Command = @enumFromInt(value);
             if (pressed(command)) return @intCast(value - first);
