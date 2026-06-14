@@ -4,10 +4,10 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const context = @import("context.zig");
 const factory = @import("factory.zig");
+const inventory = @import("inventory.zig");
 const map = @import("map.zig");
 const spatial = map.spatial;
 const ui = @import("ui.zig");
-const toolbar = @import("ui/toolbar.zig");
 
 const World = zhu.ecs.World;
 const Entity = zhu.ecs.Entity;
@@ -101,12 +101,12 @@ fn openChest(world: *World, target: Entity) void {
     const chest = world.getPtr(target, Chest).?;
     showChestNotice(chest);
 
-    // 宝箱奖励直接进入快捷栏。
+    // 宝箱奖励直接进入当前库存模块。
     for (std.enums.values(ItemEnum)) |itemType| {
         const count = chest.items.get(itemType);
         if (count == 0) continue;
 
-        toolbar.add(itemType, count);
+        inventory.add(itemType, count);
     }
     chest.opened = true;
 
@@ -255,11 +255,11 @@ test "当前对话目标太远时会直接关闭" {
 test "按 F 打开宝箱会重置打开动画" {
     zhu.input.reset();
 
-    const oldSlots = toolbar.slots;
-    const oldIndex = toolbar.slotIndex;
+    const oldSlots = inventory.slots;
+    const oldIndex = inventory.slotIndex;
     defer {
-        toolbar.slots = oldSlots;
-        toolbar.slotIndex = oldIndex;
+        inventory.slots = oldSlots;
+        inventory.slotIndex = oldIndex;
         zhu.input.reset();
     }
 

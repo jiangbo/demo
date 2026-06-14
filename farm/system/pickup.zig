@@ -2,7 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
-const toolbar = @import("../ui/toolbar.zig");
+const inventory = @import("../inventory.zig");
 
 const Player = component.actor.Player;
 const Position = component.Position;
@@ -22,15 +22,15 @@ pub fn update(world: *zhu.ecs.World) void {
         const distance2 = position.sub(playerPos).length2();
         if (distance2 > collectRadius * collectRadius) continue;
 
-        toolbar.add(pickup.item, pickup.count);
+        inventory.add(pickup.item, pickup.count);
         world.destroyEntity(entity);
         world.addEvent(event.SoundPlay{ .id = .pickup });
     }
 }
 
 test "pickup update 拾取物品会发出 pickup 音效" {
-    toolbar.slots = @splat(.{ .type = .hoe, .count = 0 });
-    toolbar.slotIndex = 0;
+    inventory.slots = @splat(.{ .type = .hoe, .count = 0 });
+    inventory.slotIndex = 0;
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();

@@ -3,8 +3,8 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 const context = @import("context.zig");
+const inventory = @import("inventory.zig");
 const map = @import("map.zig");
-const toolbar = @import("ui/toolbar.zig");
 
 const World = zhu.ecs.World;
 const Actor = component.actor.Actor;
@@ -45,7 +45,7 @@ const ToolbarSlotSave = struct {
 
 const ToolbarSave = struct {
     slotIndex: usize = 0,
-    slots: [toolbar.slots.len]ToolbarSlotSave = @splat(.{}),
+    slots: [inventory.slots.len]ToolbarSlotSave = @splat(.{}),
 };
 
 const TileSave = struct {
@@ -206,8 +206,8 @@ fn freeCaptured(data: SaveData) void {
 }
 
 fn captureToolbar() ToolbarSave {
-    var result = ToolbarSave{ .slotIndex = toolbar.slotIndex };
-    for (toolbar.slots, 0..) |slot, index| {
+    var result = ToolbarSave{ .slotIndex = inventory.slotIndex };
+    for (inventory.slots, 0..) |slot, index| {
         result.slots[index] = .{
             .type = slot.type,
             .count = slot.count,
@@ -318,13 +318,13 @@ fn restorePlayer(world: *World, data: PlayerSave) void {
 }
 
 fn restoreToolbar(data: ToolbarSave) void {
-    for (&toolbar.slots, 0..) |*slot, index| {
+    for (&inventory.slots, 0..) |*slot, index| {
         slot.* = if (index < data.slots.len) .{
             .type = data.slots[index].type,
             .count = data.slots[index].count,
         } else .{ .type = .hoe, .count = 0 };
     }
-    toolbar.slotIndex = @min(data.slotIndex, toolbar.slots.len - 1);
+    inventory.slotIndex = @min(data.slotIndex, inventory.slots.len - 1);
 }
 
 test "slotPath builds save slot path" {
@@ -367,22 +367,22 @@ test "parseSlotSummary rejects future save version" {
 }
 
 test "restoreToolbar restores slots and clamps index" {
-    const oldSlots = toolbar.slots;
-    const oldIndex = toolbar.slotIndex;
+    const oldSlots = inventory.slots;
+    const oldIndex = inventory.slotIndex;
     defer {
-        toolbar.slots = oldSlots;
-        toolbar.slotIndex = oldIndex;
+        inventory.slots = oldSlots;
+        inventory.slotIndex = oldIndex;
     }
 
-    toolbar.slots = @splat(.{ .type = .hoe, .count = 0 });
-    toolbar.slotIndex = 0;
+    inventory.slots = @splat(.{ .type = .hoe, .count = 0 });
+    inventory.slotIndex = 0;
 
     var data = ToolbarSave{ .slotIndex = 999 };
     data.slots[0] = .{ .type = .strawberrySeed, .count = 7 };
 
     restoreToolbar(data);
 
-    try std.testing.expectEqual(component.item.ItemEnum.strawberrySeed, toolbar.slots[0].type);
-    try std.testing.expectEqual(7, toolbar.slots[0].count);
-    try std.testing.expectEqual(toolbar.slots.len - 1, toolbar.slotIndex);
+    try std.testing.expectEqual(component.item.ItemEnum.strawberrySeed, inventory.slots[0].type);
+    try std.testing.expectEqual(7, inventory.slots[0].count);
+    try std.testing.expectEqual(inventory.slots.len - 1, inventory.slotIndex);
 }

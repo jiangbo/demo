@@ -2,10 +2,10 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 pub const save_slot = @import("ui/save_slot.zig");
-pub const toolbar = @import("ui/toolbar.zig");
 
 const component = @import("component.zig");
 const context = @import("context.zig");
+const inventory = @import("inventory.zig");
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
 
 var bubbleImage: zhu.Image = undefined;
@@ -25,7 +25,7 @@ pub fn deinit() void {}
 pub fn draw(world: *zhu.ecs.World) void {
     dialog.draw(world);
     notice.draw(world);
-    toolbar.draw();
+    inventory.draw();
 }
 
 pub const overlay = struct {

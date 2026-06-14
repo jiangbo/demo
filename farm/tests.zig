@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 test {
     std.testing.refAllDeclsRecursive(@import("context.zig"));
+    std.testing.refAllDeclsRecursive(@import("inventory.zig"));
     std.testing.refAllDeclsRecursive(@import("map.zig"));
     std.testing.refAllDeclsRecursive(@import("factory.zig"));
     std.testing.refAllDeclsRecursive(@import("interact.zig"));

@@ -4,8 +4,8 @@ const zhu = @import("zhu");
 const component = @import("../component.zig");
 const context = @import("../context.zig");
 const factory = @import("../factory.zig");
+const inventory = @import("../inventory.zig");
 const map = @import("../map.zig");
-const toolbar = @import("../ui/toolbar.zig");
 
 const Actor = component.actor.Actor;
 const Facing = component.actor.Facing;
@@ -95,7 +95,7 @@ fn updateTargetAction(world: *World, player: Entity) void {
     const target = world.getPtr(player, Target).?;
     target.active = false;
 
-    const item = toolbar.active() orelse return;
+    const item = inventory.active() orelse return;
     if (!isTargetItem(item.type)) return;
 
     const position = targetPosition(world, player) orelse return;
@@ -183,7 +183,7 @@ fn plant(world: *World, position: zhu.Vector2, kind: CropEnum) bool {
     const tile = map.land.getTile(position) orelse return false;
     if (tile.ground == null or tile.object != null) return false;
 
-    toolbar.active().?.count -= 1;
+    inventory.active().?.count -= 1;
     const entity = factory.spawnCrop(world, position, kind);
     tile.object = .{ .entity = entity };
     return true;
@@ -213,9 +213,9 @@ fn clickMouse(button: zhu.mouse.Button) void {
 }
 
 fn setActiveItem(item: ItemEnum, count: u32) void {
-    toolbar.slots = @splat(.{ .type = .hoe, .count = 0 });
-    toolbar.slotIndex = 0;
-    toolbar.slots[0] = .{ .type = item, .count = count };
+    inventory.slots = @splat(.{ .type = .hoe, .count = 0 });
+    inventory.slotIndex = 0;
+    inventory.slots[0] = .{ .type = item, .count = count };
 }
 
 fn addTestPlayer(world: *World, position: zhu.Vector2) Entity {
@@ -385,7 +385,7 @@ test "工具使用会种植种子并减少数量" {
     const sounds = world.getEvent(event.SoundPlay).items;
     try std.testing.expectEqual(1, sounds.len);
     try std.testing.expectEqual(.plant, sounds[0].id);
-    try std.testing.expectEqual(1, toolbar.slots[0].count);
+    try std.testing.expectEqual(1, inventory.slots[0].count);
 
     const cropEntity = map.land.getTile(testTarget).?.crop().?;
     try std.testing.expectEqual(

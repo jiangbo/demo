@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const context = @import("context.zig");
 const factory = @import("factory.zig");
+const inventory = @import("inventory.zig");
 const interact = @import("interact.zig");
 const map = @import("map.zig");
 const save = @import("save.zig");
@@ -118,7 +119,7 @@ fn updateFarm(delta: f32) void {
     system.light.update(&world);
 
     // 输入先写入意图，移动系统统一结算位置和碰撞。
-    ui.toolbar.update();
+    inventory.update();
     system.control.update(&world);
     system.wander.update(&world, delta);
     system.movement.update(&world, delta);
@@ -174,7 +175,7 @@ fn enterFarm() void {
     // 地图先生成静态对象和触发器，玩家随后由场景统一创建。
     const spawn = map.enter(&world, .exterior, initialTargetId);
     factory.spawnPlayer(&world, spawn);
-    ui.toolbar.enter();
+    inventory.enter();
 
     if (loadSlot) |slot| {
         // 存档恢复依赖已经存在的 world/map/player 基础结构。
