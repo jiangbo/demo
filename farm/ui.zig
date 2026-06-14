@@ -128,7 +128,7 @@ pub const rest = struct {
 
         const position = menu.position.add(.xy(140, 82));
         zhu.text.drawFmt("{d}h", .{hours}, position, .{
-            .alignment = .center,
+            .anchor = .center,
         });
     }
 };
@@ -196,7 +196,7 @@ pub const pause = struct {
             const rect = zhu.Rect.init(.xy(24, y), .xy(160, 32));
             const pos = rect.move(menu.position).center();
             zhu.text.draw(string, pos, .{
-                .alignment = .center,
+                .anchor = .center,
             });
         }
     }

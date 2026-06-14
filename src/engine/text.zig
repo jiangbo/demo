@@ -58,7 +58,7 @@ pub const Option = struct {
     color: graphics.Color = .white, // 文字的颜色
     max: f32 = std.math.floatMax(f32), // 最大宽度，超过换行
     spacing: f32 = 0, // 文字间的间距
-    alignment: ?Vector2 = null, // 文字对齐
+    anchor: ?Vector2 = null, // 锚点
 };
 
 pub fn drawNumber(number: anytype, pos: Vector2, option: Option) void {
@@ -81,8 +81,8 @@ pub fn draw(text: String, position: Vector2, option: Option) void {
     const scale = option.scale.scale(fontScale);
     const height = font.lineHeight * scale.y;
     var pos = position.add(option.offset);
-    if (option.alignment) |a| { // 计算文字的对齐
-        pos = pos.sub(measure(text, option).mul(a));
+    if (option.anchor) |anchor| {
+        pos = pos.sub(measure(text, option).mul(anchor));
     }
 
     var width: f32, const startX = .{ 0, pos.x };

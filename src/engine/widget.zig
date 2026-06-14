@@ -56,7 +56,7 @@ pub const Button = struct {
 
         var option = self.style(state).text;
         const rect = self.rect.move(offset);
-        if (option.alignment == null) option.alignment = .center;
+        if (option.anchor == null) option.anchor = .center;
         text.draw(self.label, rect.center(), option);
     }
 };
@@ -99,7 +99,7 @@ pub const Menu = struct {
     title: struct {
         text: []const u8 = "",
         position: math.Vector2 = .zero,
-        option: text.Option = .{ .alignment = .center },
+        option: text.Option = .{ .anchor = .center },
     } = .{},
     buttons: []const Button = &.{},
     hoverSound: ?[:0]const u8 = null,

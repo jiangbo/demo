@@ -211,7 +211,7 @@ fn drawInventoryPanel() void {
 
     const labelPos = inventoryPosition.add(inv.pageText);
     const args = .{ activePage + 1, inv.pageCount };
-    zhu.text.drawFmt("{d}/{d}", args, labelPos, .{ .alignment = .center });
+    zhu.text.drawFmt("{d}/{d}", args, labelPos, .{ .anchor = .center });
 }
 
 fn drawPageButton(buttonRect: zhu.Rect, label: []const u8) void {
@@ -221,7 +221,7 @@ fn drawPageButton(buttonRect: zhu.Rect, label: []const u8) void {
 
     const image = invImage.sub(inv.slot.rect);
     zhu.batch.drawNine(image, rect, inv.slot.nine);
-    zhu.text.draw(label, rect.center(), .{ .alignment = .center });
+    zhu.text.draw(label, rect.center(), .{ .anchor = .center });
 }
 
 fn drawItemIcon(itemType: ItemEnum, position: zhu.Vector2, size: zhu.Vector2) void {
@@ -231,7 +231,7 @@ fn drawItemIcon(itemType: ItemEnum, position: zhu.Vector2, size: zhu.Vector2) vo
 
 fn drawItemCount(count: u32, rect: zhu.Rect) void {
     const pos = rect.max().sub(.square(1));
-    zhu.text.drawFmt("{d}", .{count}, pos, .{ .alignment = .one });
+    zhu.text.drawFmt("{d}", .{count}, pos, .{ .anchor = .one });
 }
 
 fn autoBind(itemType: ItemEnum) void {
