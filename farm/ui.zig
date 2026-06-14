@@ -127,7 +127,7 @@ pub const rest = struct {
         menu.draw();
 
         const position = menu.position.add(.xy(140, 82));
-        zhu.text.drawFormat("{d}h", position, .{hours}, .{
+        zhu.text.drawFmt("{d}h", .{hours}, position, .{
             .alignment = .center,
         });
     }
@@ -195,7 +195,7 @@ pub const pause = struct {
             const y = 212 + @as(f32, @floatFromInt(index)) * 38;
             const rect = zhu.Rect.init(.xy(24, y), .xy(160, 32));
             const pos = rect.move(menu.position).center();
-            zhu.text.drawString(string, pos, .{
+            zhu.text.draw(string, pos, .{
                 .alignment = .center,
             });
         }
@@ -231,7 +231,7 @@ fn drawBubble(position: zhu.Vector2, text: []const u8) void {
         .bottomRight = .xy(3, 3),
     });
 
-    zhu.text.drawString(text, bubbleRect.min.add(.xy(8, 8)), option);
+    zhu.text.draw(text, bubbleRect.min.add(.xy(8, 8)), option);
 }
 
 pub const title = struct {

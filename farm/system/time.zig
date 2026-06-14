@@ -127,7 +127,7 @@ fn drawLabel(rect: zhu.Rect, text: []const u8) void {
         @max(0.0, (rect.size.x - width) / 2),
         2,
     ));
-    zhu.text.drawString(text, textPos, .{});
+    zhu.text.draw(text, textPos, .{});
 }
 
 test "时间推进到整点会发出小时事件" {

@@ -57,7 +57,7 @@ pub const Button = struct {
         var option = self.style(state).text;
         const rect = self.rect.move(offset);
         if (option.alignment == null) option.alignment = .center;
-        text.drawString(self.label, rect.center(), option);
+        text.draw(self.label, rect.center(), option);
     }
 };
 
@@ -152,7 +152,7 @@ pub const Menu = struct {
         const title = self.title;
         if (title.text.len != 0) {
             const position = self.position.add(title.position);
-            text.drawString(title.text, position, title.option);
+            text.draw(title.text, position, title.option);
         }
 
         for (self.buttons, 0..) |button, index| {

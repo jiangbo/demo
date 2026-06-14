@@ -64,19 +64,19 @@ pub const Option = struct {
 pub fn drawNumber(number: anytype, pos: Vector2, option: Option) void {
     var textBuffer: [15]u8 = undefined;
     const string = format(&textBuffer, "{d}", .{number});
-    drawString(string, pos, option);
+    draw(string, pos, option);
 }
 
 // zig fmt: off
-pub fn drawFormat(comptime fmt: String, pos: Vector2, args: anytype,
+pub fn drawFmt(comptime fmt: String, args: anytype, pos: Vector2,
     option: Option) void {
 // zig fmt: on
     var buffer: [1024]u8 = undefined;
-    drawString(format(&buffer, fmt, args), pos, option);
+    draw(format(&buffer, fmt, args), pos, option);
 }
 
 const Utf8View = std.unicode.Utf8View;
-pub fn drawString(text: String, position: Vector2, option: Option) void {
+pub fn draw(text: String, position: Vector2, option: Option) void {
     if (text.len == 0) return;
     const scale = option.scale.scale(fontScale);
     const height = font.lineHeight * scale.y;

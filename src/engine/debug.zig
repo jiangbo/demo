@@ -63,9 +63,9 @@ pub fn draw() void {
     }, "{d:.2}, {d:.2}", .{ camera.scale.x, camera.scale.y });
     // 获取当前已加载的资源统计数据
     const assetStats = assets.queryStats();
-    writeFormatLine(&writer, "资源", "文件 {}", .{assetStats.file},
+    writeFormatLine(&writer, "资源", "文件 {}", .{assetStats.file}, //
         "图片 {}", .{assetStats.image});
-    writeFormatLine(&writer, "音频", "音乐 {}", .{assetStats.music},
+    writeFormatLine(&writer, "音频", "音乐 {}", .{assetStats.music}, //
         "音效 {}", .{assetStats.sound});
     writeFormatLine(&writer, "音量", "音乐 {d:.0}%", .{
         audio.musicVolume.load(.acquire) * 100,
@@ -90,7 +90,7 @@ pub fn draw() void {
     batch.drawRect(panel, .{ .color = .rgba(0.07, 0.09, 0.11, 0.74) });
 
     const contentPosition = position.add(padding);
-    text.drawString(debugText, contentPosition, textOption);
+    text.draw(debugText, contentPosition, textOption);
 }
 
 fn debugTextScale(debugText: text.String) Vector2 {
