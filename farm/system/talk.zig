@@ -93,8 +93,6 @@ fn targetCenter(world: *World, entity: Entity) Position {
 
 fn openChest(world: *World, target: Entity) void {
     const chest = world.getPtr(target, Chest).?;
-    if (chest.opened) return;
-
     // 宝箱奖励直接进入快捷栏，不额外引入事件和提示 UI。
     for (std.enums.values(ItemEnum)) |itemType| {
         const count = chest.items.get(itemType);
@@ -107,6 +105,7 @@ fn openChest(world: *World, target: Entity) void {
     const animation = world.getPtr(target, Animation).?;
     // anim_id 地图摆件已经是非循环动画，交互只负责重新播放。
     animation.reset();
+    world.remove(target, Shape);
 }
 
 // 开始对话时把行号重置到第一句，并记录当前对话实体。

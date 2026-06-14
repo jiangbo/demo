@@ -192,6 +192,7 @@ fn restoreThing(world: *World, index: usize, thing: Thing) void {
             // 已打开宝箱只需要固定打开帧，后续不再参与动画系统。
             sprite.image = animation.subImageAt(animation.clip.len - 1);
             world.remove(object.entity, actor.Animation);
+            world.remove(object.entity, motion.Shape);
         },
         .rock => {},
     }
