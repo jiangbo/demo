@@ -175,7 +175,11 @@ fn enterFarm() void {
     // 地图先生成静态对象和触发器，玩家随后由场景统一创建。
     const spawn = map.enter(&world, .exterior, initialTargetId);
     factory.spawnPlayer(&world, spawn);
-    inventory.enter();
+    inventory.reset();
+    if (loadSlot == null) {
+        inventory.add(.hoe, 1);
+        inventory.add(.water, 1);
+    }
 
     if (loadSlot) |slot| {
         // 存档恢复依赖已经存在的 world/map/player 基础结构。

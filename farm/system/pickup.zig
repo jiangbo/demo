@@ -29,8 +29,18 @@ pub fn update(world: *zhu.ecs.World) void {
 }
 
 test "pickup update 拾取物品会发出 pickup 音效" {
-    inventory.slots = @splat(.{ .type = .hoe, .count = 0 });
-    inventory.slotIndex = 0;
+    const oldSlots = inventory.slots;
+    const oldHotbar = inventory.hotbar;
+    const oldActiveHotbar = inventory.activeHotbar;
+    const oldActivePage = inventory.activePage;
+    defer {
+        inventory.slots = oldSlots;
+        inventory.hotbar = oldHotbar;
+        inventory.activeHotbar = oldActiveHotbar;
+        inventory.activePage = oldActivePage;
+    }
+
+    inventory.reset();
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();

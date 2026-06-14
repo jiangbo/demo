@@ -23,12 +23,15 @@ const Config = struct {
     selected: NineImage,
 };
 
-pub const Item = struct { type: ItemEnum, count: u32 = 0 };
+pub const Stack = struct { type: ItemEnum = .hoe, count: u32 = 0 };
+pub const Item = Stack;
 
 const zon: Config = @import("zon/preset.zon");
 
-pub var slots: [zon.slotCount]Item = @splat(.{ .type = .hoe });
-pub var slotIndex: usize = 0;
+pub var slots: [40]Stack = @splat(.{});
+pub var hotbar: [zon.slotCount]?usize = @splat(null);
+pub var activeHotbar: usize = 0;
+pub var activePage: usize = 0;
 
 var panelPosition: zhu.Vector2 = undefined; // 初始位置
 var click: zhu.widget.Click = .empty;
@@ -36,11 +39,11 @@ const slotWidth: f32 = zon.slotCount * (zon.slotSize + zon.spacing);
 const panelWidth: f32 = slotWidth - zon.spacing + zon.panelPadding * 2;
 const panelHeight: f32 = zon.panelPadding * 2 + zon.slotSize;
 
-pub fn enter() void {
-    slots = @splat(.{ .type = .hoe, .count = 0 });
-    slotIndex = 0;
-    add(.hoe, 1);
-    add(.water, 1);
+pub fn reset() void {
+    slots = @splat(.{});
+    hotbar = @splat(null);
+    activeHotbar = 0;
+    activePage = 0;
 
     panelPosition = zhu.Vector2{
         .x = (zhu.window.size.x - panelWidth) / 2,
@@ -53,7 +56,7 @@ pub fn add(itemType: ItemEnum, count: u32) void {
     const config = factory.itemConfig(itemType);
 
     var remaining: u32 = count;
-    for (&slots) |*slot| { // 先尝试叠加到已有的同类型物品上
+    for (&slots) |*slot| { // 先尝试叠加到已有的同类型物品上。
         if (slot.count == 0 or slot.type != itemType) continue;
 
         const space = config.limit - slot.count;
@@ -64,26 +67,30 @@ pub fn add(itemType: ItemEnum, count: u32) void {
         if (remaining == 0) break;
     }
 
-    for (&slots) |*slot| { // 再尝试放到空槽位
+    for (&slots) |*slot| { // 再尝试放到空槽位。
         if (slot.count > 0 or remaining == 0) continue;
 
         const minCount = @min(config.limit, remaining);
         slot.* = .{ .type = itemType, .count = minCount };
         remaining -= minCount;
     }
+
+    autoBind(itemType);
 }
 
-pub fn active() ?*Item {
-    return if (slots[slotIndex].count == 0) null else &slots[slotIndex];
+pub fn active() ?*Stack {
+    const index = hotbar[activeHotbar] orelse return null;
+    if (slots[index].count == 0) return null;
+    return &slots[index];
 }
 
 pub fn update() void {
     if (context.input.toolbarIndexPressed()) |index| {
-        if (index < slots.len) slotIndex = index;
+        activeHotbar = index;
     }
 
     if (click.update(hoveredSlot())) |index| {
-        slotIndex = index;
+        activeHotbar = index;
         zhu.audio.playSound("assets/audio/UI_button08.ogg");
     }
 
@@ -92,7 +99,7 @@ pub fn update() void {
 
 fn hoveredSlot() ?usize {
     const start = panelPosition.add(.square(zon.panelPadding));
-    for (0..slots.len) |i| {
+    for (0..hotbar.len) |i| {
         const position = slotPosition(@floatFromInt(i), start);
         const rect = zhu.Rect.init(position, .square(zon.slotSize));
         if (!rect.contains(zhu.window.mouse)) continue;
@@ -118,7 +125,7 @@ pub fn draw() void {
     }
 
     const start = panelPosition.add(.square(zon.panelPadding));
-    for (slots, 0..) |slot, i| {
+    for (hotbar, 0..) |slotIndex, i| {
         const position = slotPosition(@floatFromInt(i), start);
         { // 绘制槽位
             const image = panelImage.sub(zon.slot.rect);
@@ -126,7 +133,10 @@ pub fn draw() void {
             zhu.batch.drawNine(image, rect, zon.slot.nine);
         }
 
-        if (slot.count > 0) {
+        if (slotIndex) |index| {
+            const slot = slots[index];
+            if (slot.count == 0) continue;
+
             const iconSize = factory.itemConfig(slot.type).icon.size;
             const iconOffset = zon.slotSize - iconSize.x;
             const iconPosition = position.add(.square(@round(iconOffset / 2)));
@@ -136,7 +146,7 @@ pub fn draw() void {
             if (slot.count > 1) drawItemCount(slot.count, iconPosition, iconSize);
         }
 
-        if (i == slotIndex) {
+        if (i == activeHotbar) {
             const image = panelImage.sub(zon.selected.rect);
             const rect = zhu.Rect.init(position, .square(zon.slotSize));
             zhu.batch.drawNine(image, rect, zon.selected.nine);
@@ -152,4 +162,112 @@ fn drawItemIcon(itemType: ItemEnum, position: zhu.Vector2, size: zhu.Vector2) vo
 fn drawItemCount(count: u32, position: zhu.Vector2, size: zhu.Vector2) void {
     const pos = position.add(size).sub(.square(1));
     zhu.text.drawFormat("{d}", pos, .{count}, .{ .alignment = .one });
+}
+
+fn autoBind(itemType: ItemEnum) void {
+    if (itemOnHotbar(itemType)) return;
+
+    const inventoryIndex = firstInventorySlot(itemType) orelse return;
+    const hotbarIndex = firstEmptyHotbar() orelse return;
+    hotbar[hotbarIndex] = inventoryIndex;
+}
+
+fn itemOnHotbar(itemType: ItemEnum) bool {
+    for (hotbar) |slotIndex| {
+        const index = slotIndex orelse continue;
+        const slot = slots[index];
+        if (slot.count > 0 and slot.type == itemType) return true;
+    }
+    return false;
+}
+
+fn firstInventorySlot(itemType: ItemEnum) ?usize {
+    for (slots, 0..) |slot, index| {
+        if (slot.count > 0 and slot.type == itemType) return index;
+    }
+    return null;
+}
+
+fn firstEmptyHotbar() ?usize {
+    for (hotbar, 0..) |slotIndex, index| {
+        const inventoryIndex = slotIndex orelse return index;
+        if (slots[inventoryIndex].count == 0) return index;
+    }
+    return null;
+}
+
+test "添加物品会合并并自动绑定快捷栏" {
+    const oldSlots = slots;
+    const oldHotbar = hotbar;
+    const oldActiveHotbar = activeHotbar;
+    const oldActivePage = activePage;
+    defer {
+        slots = oldSlots;
+        hotbar = oldHotbar;
+        activeHotbar = oldActiveHotbar;
+        activePage = oldActivePage;
+    }
+
+    slots = @splat(.{});
+    hotbar = @splat(null);
+    activeHotbar = 0;
+    activePage = 0;
+
+    add(.strawberry, 7);
+    add(.strawberry, 3);
+
+    try std.testing.expectEqual(ItemEnum.strawberry, slots[0].type);
+    try std.testing.expectEqual(10, slots[0].count);
+    try std.testing.expectEqual(0, hotbar[0].?);
+}
+
+test "添加物品超过堆叠上限会填入下一个库存槽" {
+    const oldSlots = slots;
+    const oldHotbar = hotbar;
+    const oldActiveHotbar = activeHotbar;
+    const oldActivePage = activePage;
+    defer {
+        slots = oldSlots;
+        hotbar = oldHotbar;
+        activeHotbar = oldActiveHotbar;
+        activePage = oldActivePage;
+    }
+
+    slots = @splat(.{});
+    hotbar = @splat(null);
+    activeHotbar = 0;
+    activePage = 0;
+
+    add(.strawberry, 100);
+
+    try std.testing.expectEqual(99, slots[0].count);
+    try std.testing.expectEqual(1, slots[1].count);
+    try std.testing.expectEqual(0, hotbar[0].?);
+    try std.testing.expectEqual(null, hotbar[1]);
+}
+
+test "当前物品通过快捷栏引用读取库存槽" {
+    const oldSlots = slots;
+    const oldHotbar = hotbar;
+    const oldActiveHotbar = activeHotbar;
+    const oldActivePage = activePage;
+    defer {
+        slots = oldSlots;
+        hotbar = oldHotbar;
+        activeHotbar = oldActiveHotbar;
+        activePage = oldActivePage;
+    }
+
+    slots = @splat(.{});
+    hotbar = @splat(null);
+    activeHotbar = 1;
+    activePage = 0;
+    slots[5] = .{ .type = .potatoSeed, .count = 2 };
+    hotbar[1] = 5;
+
+    try std.testing.expectEqual(ItemEnum.potatoSeed, active().?.type);
+    try std.testing.expectEqual(2, active().?.count);
+
+    slots[5].count = 0;
+    try std.testing.expectEqual(null, active());
 }

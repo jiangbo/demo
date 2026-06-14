@@ -213,9 +213,8 @@ fn clickMouse(button: zhu.mouse.Button) void {
 }
 
 fn setActiveItem(item: ItemEnum, count: u32) void {
-    inventory.slots = @splat(.{ .type = .hoe, .count = 0 });
-    inventory.slotIndex = 0;
-    inventory.slots[0] = .{ .type = item, .count = count };
+    inventory.reset();
+    inventory.add(item, count);
 }
 
 fn addTestPlayer(world: *World, position: zhu.Vector2) Entity {

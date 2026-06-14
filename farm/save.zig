@@ -15,7 +15,6 @@ const Target = component.ui.Target;
 const Velocity = component.motion.Velocity;
 
 pub const slotCount: usize = 10;
-const schemaVersion = 1;
 const maxSaveSize = 128 * 1024;
 
 pub const SlotSummary = struct {
@@ -38,14 +37,16 @@ const PlayerSave = struct {
     facing: component.actor.Facing = .down,
 };
 
-const ToolbarSlotSave = struct {
+const InventorySlotSave = struct {
     type: component.item.ItemEnum = .hoe,
     count: u32 = 0,
 };
 
-const ToolbarSave = struct {
-    slotIndex: usize = 0,
-    slots: [inventory.slots.len]ToolbarSlotSave = @splat(.{}),
+const InventorySave = struct {
+    activeHotbar: usize = 0,
+    activePage: usize = 0,
+    slots: [inventory.slots.len]InventorySlotSave = @splat(.{}),
+    hotbar: [inventory.hotbar.len]?usize = @splat(null),
 };
 
 const TileSave = struct {
@@ -61,11 +62,10 @@ const MapSave = struct {
 };
 
 const SaveData = struct {
-    schemaVersion: u32 = schemaVersion,
     timestamp: i64 = 0,
     time: TimeSave = .{},
     player: PlayerSave = .{},
-    toolbar: ToolbarSave = .{},
+    inventory: InventorySave = .{},
     maps: []const MapSave = &.{},
 };
 
@@ -74,7 +74,6 @@ const SummaryTime = struct {
 };
 
 const SummaryData = struct {
-    schemaVersion: u32 = 0,
     timestamp: i64 = 0,
     time: SummaryTime = .{},
 };
@@ -164,9 +163,6 @@ pub fn parseSlotSummary(
     );
     defer std.zon.parse.free(allocator, data);
 
-    if (data.schemaVersion == 0) return error.MissingSaveVersion;
-    if (data.schemaVersion > schemaVersion) return error.UnsupportedSaveVersion;
-
     return .{
         .day = data.time.day,
         .timestamp = data.timestamp,
@@ -195,7 +191,7 @@ fn capture(world: *World) !SaveData {
             .position = position,
             .facing = actor.facing,
         },
-        .toolbar = captureToolbar(),
+        .inventory = captureInventory(),
         .maps = try captureMaps(),
     };
 }
@@ -205,8 +201,12 @@ fn freeCaptured(data: SaveData) void {
     zhu.assets.free(data.maps);
 }
 
-fn captureToolbar() ToolbarSave {
-    var result = ToolbarSave{ .slotIndex = inventory.slotIndex };
+fn captureInventory() InventorySave {
+    var result = InventorySave{
+        .activeHotbar = inventory.activeHotbar,
+        .activePage = inventory.activePage,
+        .hotbar = inventory.hotbar,
+    };
     for (inventory.slots, 0..) |slot, index| {
         result.slots[index] = .{
             .type = slot.type,
@@ -259,8 +259,6 @@ fn captureTiles(state: *const context.map.State) ![]const TileSave {
 }
 
 fn apply(world: *World, data: SaveData) !void {
-    if (data.schemaVersion > schemaVersion) return error.UnsupportedSaveVersion;
-
     context.clock.paused = data.time.paused;
     context.clock.speed = data.time.scale;
     context.clock.day = data.time.day;
@@ -274,7 +272,7 @@ fn apply(world: *World, data: SaveData) !void {
 
     _ = map.enter(world, data.player.map, -1);
     restorePlayer(world, data.player);
-    restoreToolbar(data.toolbar);
+    restoreInventory(data.inventory);
 }
 
 fn restoreMaps(data: SaveData) void {
@@ -317,17 +315,19 @@ fn restorePlayer(world: *World, data: PlayerSave) void {
     zhu.camera.directFollow(data.position);
 }
 
-fn restoreToolbar(data: ToolbarSave) void {
+fn restoreInventory(data: InventorySave) void {
     for (&inventory.slots, 0..) |*slot, index| {
         slot.* = if (index < data.slots.len) .{
             .type = data.slots[index].type,
             .count = data.slots[index].count,
         } else .{ .type = .hoe, .count = 0 };
     }
-    inventory.slotIndex = @min(data.slotIndex, inventory.slots.len - 1);
+    inventory.hotbar = data.hotbar;
+    inventory.activeHotbar = data.activeHotbar;
+    inventory.activePage = data.activePage;
 }
 
-test "slotPath builds save slot path" {
+test "slotPath 会生成存档槽路径" {
     var buffer: [32]u8 = undefined;
     const path = try slotPath(3, &buffer);
 
@@ -335,10 +335,9 @@ test "slotPath builds save slot path" {
     try std.testing.expectError(error.InvalidSaveSlot, slotPath(slotCount, &buffer));
 }
 
-test "parseSlotSummary reads day and timestamp" {
+test "parseSlotSummary 会读取天数和时间戳" {
     const content =
         \\.{
-        \\    .schemaVersion = 1,
         \\    .timestamp = 42,
         \\    .time = .{
         \\        .day = 7,
@@ -352,37 +351,32 @@ test "parseSlotSummary reads day and timestamp" {
     try std.testing.expectEqual(42, summary.timestamp);
 }
 
-test "parseSlotSummary rejects future save version" {
-    const content =
-        \\.{
-        \\    .schemaVersion = 2,
-        \\    .time = .{ .day = 1 },
-        \\}
-    ;
-
-    try std.testing.expectError(
-        error.UnsupportedSaveVersion,
-        parseSlotSummary(content, std.testing.allocator),
-    );
-}
-
-test "restoreToolbar restores slots and clamps index" {
+test "restoreInventory 会恢复库存槽和快捷栏" {
     const oldSlots = inventory.slots;
-    const oldIndex = inventory.slotIndex;
+    const oldHotbar = inventory.hotbar;
+    const oldActiveHotbar = inventory.activeHotbar;
+    const oldActivePage = inventory.activePage;
     defer {
         inventory.slots = oldSlots;
-        inventory.slotIndex = oldIndex;
+        inventory.hotbar = oldHotbar;
+        inventory.activeHotbar = oldActiveHotbar;
+        inventory.activePage = oldActivePage;
     }
 
-    inventory.slots = @splat(.{ .type = .hoe, .count = 0 });
-    inventory.slotIndex = 0;
+    inventory.reset();
 
-    var data = ToolbarSave{ .slotIndex = 999 };
+    var data = InventorySave{ .activeHotbar = 3, .activePage = 1 };
     data.slots[0] = .{ .type = .strawberrySeed, .count = 7 };
+    data.hotbar[3] = 0;
 
-    restoreToolbar(data);
+    restoreInventory(data);
 
-    try std.testing.expectEqual(component.item.ItemEnum.strawberrySeed, inventory.slots[0].type);
+    try std.testing.expectEqual(
+        component.item.ItemEnum.strawberrySeed,
+        inventory.slots[0].type,
+    );
     try std.testing.expectEqual(7, inventory.slots[0].count);
-    try std.testing.expectEqual(inventory.slots.len - 1, inventory.slotIndex);
+    try std.testing.expectEqual(0, inventory.hotbar[3].?);
+    try std.testing.expectEqual(3, inventory.activeHotbar);
+    try std.testing.expectEqual(1, inventory.activePage);
 }

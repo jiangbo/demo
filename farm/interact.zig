@@ -256,10 +256,14 @@ test "按 F 打开宝箱会重置打开动画" {
     zhu.input.reset();
 
     const oldSlots = inventory.slots;
-    const oldIndex = inventory.slotIndex;
+    const oldHotbar = inventory.hotbar;
+    const oldActiveHotbar = inventory.activeHotbar;
+    const oldActivePage = inventory.activePage;
     defer {
         inventory.slots = oldSlots;
-        inventory.slotIndex = oldIndex;
+        inventory.hotbar = oldHotbar;
+        inventory.activeHotbar = oldActiveHotbar;
+        inventory.activePage = oldActivePage;
         zhu.input.reset();
     }
 
