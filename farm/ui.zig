@@ -1,3 +1,4 @@
+const std = @import("std");
 const zhu = @import("zhu");
 
 pub const save_slot = @import("ui/save_slot.zig");
@@ -5,10 +6,41 @@ pub const toolbar = @import("ui/toolbar.zig");
 
 const component = @import("component.zig");
 const context = @import("context.zig");
-const control = @import("system/control.zig");
-const light = @import("system/light.zig");
-const time = @import("system/time.zig");
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
+
+var bubbleImage: zhu.Image = undefined;
+
+pub fn init() void {
+    // 与 C++ 的 dialogue_bubble preset 使用同一张九宫格图片。
+    bubbleImage = zhu.getImage("farm-rpg/UI/dialogue box.png").?
+        .sub(.init(.xy(0, 48), .xy(48, 48)));
+
+    title.init();
+    save_slot.init();
+}
+
+pub fn deinit() void {}
+
+pub fn draw(world: *zhu.ecs.World) void {
+    dialog.draw(world);
+    notice.draw(world);
+    toolbar.draw();
+}
+
+pub const notice = struct {
+    pub fn update(delta: f32) void {
+        if (context.notice.timer <= 0) return;
+        context.notice.timer -= delta;
+    }
+
+    pub fn draw(world: *zhu.ecs.World) void {
+        if (context.notice.timer <= 0) return;
+
+        const player = world.getIdentity(component.actor.Player).?;
+        const position = world.get(player, component.Position).?;
+        drawBubble(position, context.notice.text);
+    }
+};
 
 pub const pause = struct {
     const panelSize: zhu.Vector2 = .{ .x = 208, .y = 344 };
@@ -75,13 +107,6 @@ pub const pause = struct {
 };
 
 pub const dialog = struct {
-    var image: zhu.Image = undefined;
-
-    pub fn init() void {
-        image = zhu.getImage("farm-rpg/UI/dialogue box.png").?
-            .sub(.init(.xy(0, 48), .xy(48, 48)));
-    }
-
     // 对话气泡只读取 talk 系统维护的当前对话状态。
     pub fn draw(world: *zhu.ecs.World) void {
         const Dialog = component.actor.Dialog;
@@ -93,22 +118,25 @@ pub const dialog = struct {
         const text = state.lines[state.index];
 
         const pos = world.get(entity, component.Position).?;
-        const head = zhu.camera.toWindow(pos.addY(-30));
-        const option = zhu.text.Option{ .color = .black, .max = 144 };
-        const textSize = zhu.text.measure(text, option);
-        const size = textSize.add(.xy(16, 16)).max(.xy(160, 48));
-
-        const bubblePos = head.addXY(-size.x / 2, -4 - size.y);
-        const bubbleRect: zhu.Rect = .init(bubblePos, size);
-        zhu.batch.drawNine(image, bubbleRect, .{
-            .topLeft = .xy(3, 4),
-            .bottomRight = .xy(3, 3),
-        });
-
-        const textPos = bubbleRect.min.add(.xy(8, 8));
-        zhu.text.drawString(text, textPos, option);
+        drawBubble(pos, text);
     }
 };
+
+fn drawBubble(position: zhu.Vector2, text: []const u8) void {
+    const head = zhu.camera.toWindow(position.addY(-30));
+    const option = zhu.text.Option{ .color = .black, .max = 144 };
+    const textSize = zhu.text.measure(text, option);
+    const size = textSize.add(.xy(16, 16)).max(.xy(160, 48));
+
+    const bubblePos = head.addXY(-size.x / 2, -4 - size.y);
+    const bubbleRect: zhu.Rect = .init(bubblePos, size);
+    zhu.batch.drawNine(bubbleImage, bubbleRect, .{
+        .topLeft = .xy(3, 4),
+        .bottomRight = .xy(3, 3),
+    });
+
+    zhu.text.drawString(text, bubbleRect.min.add(.xy(8, 8)), option);
+}
 
 pub const title = struct {
     const MenuEvent = enum(u8) { start, load, exit };
@@ -170,23 +198,15 @@ pub const title = struct {
     }
 };
 
-pub fn init() void {
-    title.init();
-    save_slot.init();
-    dialog.init();
-}
+test "通知会在计时结束后关闭" {
+    context.notice.timer = 0;
 
-pub fn deinit() void {}
+    context.notice.show("{s}", .{"strawberry x3"});
+    try std.testing.expect(context.notice.timer > 0);
 
-pub fn draw(world: *zhu.ecs.World) void {
-    control.draw(world);
-    light.draw(world);
+    notice.update(1.0);
+    try std.testing.expect(context.notice.timer > 0);
 
-    const previousMode = zhu.camera.mode;
-    zhu.camera.mode = .window;
-    defer zhu.camera.mode = previousMode;
-
-    dialog.draw(world);
-    time.draw();
-    toolbar.draw();
+    notice.update(1.0);
+    try std.testing.expect(context.notice.timer <= 0);
 }

@@ -138,6 +138,17 @@ pub const input = struct {
     }
 };
 
+pub const notice = struct {
+    pub var timer: f32 = 0;
+    pub var text: []const u8 = &.{};
+    var buffer: [160]u8 = undefined;
+
+    pub fn show(comptime fmt: []const u8, args: anytype) void {
+        text = zhu.format(&buffer, fmt, args);
+        timer = 2.0;
+    }
+};
+
 pub const map = struct {
     pub const Id = component.map.Id;
 
@@ -195,6 +206,7 @@ pub fn init() void {
     _ = scene.takeLoadSlot();
     clock.reset();
     input.mouseCaptured = false;
+    notice.timer = 0;
     map.pending = null;
     std.log.info("context init scene={s}", .{@tagName(scene.current)});
 }

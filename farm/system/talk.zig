@@ -93,7 +93,9 @@ fn targetCenter(world: *World, entity: Entity) Position {
 
 fn openChest(world: *World, target: Entity) void {
     const chest = world.getPtr(target, Chest).?;
-    // 宝箱奖励直接进入快捷栏，不额外引入事件和提示 UI。
+    showChestNotice(chest);
+
+    // 宝箱奖励直接进入快捷栏。
     for (std.enums.values(ItemEnum)) |itemType| {
         const count = chest.items.get(itemType);
         if (count == 0) continue;
@@ -106,6 +108,24 @@ fn openChest(world: *World, target: Entity) void {
     // anim_id 地图摆件已经是非循环动画，交互只负责重新播放。
     animation.reset();
     world.remove(target, Shape);
+}
+
+fn showChestNotice(chest: *const Chest) void {
+    var buffer: [160]u8, var len: usize = .{ undefined, 0 };
+    for (std.enums.values(ItemEnum)) |itemType| {
+        const count = chest.items.get(itemType);
+        if (count == 0) continue;
+
+        const line = zhu.format(buffer[len..], "{s}{s} x{d}", .{
+            if (len == 0) "" else "\n",
+            @tagName(itemType),
+            count,
+        });
+        len += line.len;
+    }
+    if (len == 0) return;
+
+    context.notice.show("{s}", .{buffer[0..len]});
 }
 
 // 开始对话时把行号重置到第一句，并记录当前对话实体。

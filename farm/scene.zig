@@ -108,6 +108,7 @@ pub fn draw() void {
     switch (context.scene.current) {
         .title => {
             zhu.batch.useTarget(clearColor, .{});
+            zhu.camera.mode = .window;
             ui.title.draw();
             drawOverlay();
         },
@@ -125,10 +126,8 @@ pub fn draw() void {
 }
 
 fn drawOverlay() void {
-    zhu.camera.mode = .window;
     if (ui.pause.active) ui.pause.draw();
     if (ui.save_slot.active) ui.save_slot.draw();
-    zhu.camera.mode = .world;
 }
 
 fn updateFarm(delta: f32) void {
@@ -154,6 +153,7 @@ fn updateFarm(delta: f32) void {
     system.pickup.update(&world);
 
     // 对话距离、相机跟随、动画和排序都读取本帧已结算的位置。
+    ui.notice.update(delta);
     system.talk.update(&world);
     cameraFollowPlayer(delta);
     system.animation.update(&world, delta);
@@ -222,6 +222,8 @@ fn cameraFollowPlayer(delta: f32) void {
 }
 
 fn drawFarm() void {
+    zhu.camera.mode = .world;
+
     map.drawBack();
     system.render.draw(&world);
     map.drawFront();
@@ -230,6 +232,12 @@ fn drawFarm() void {
     drawSolids();
     drawShape();
 
+    system.control.draw(&world);
+    system.light.draw(&world);
+
+    zhu.camera.mode = .window;
+
+    system.time.draw();
     ui.draw(&world);
 }
 
