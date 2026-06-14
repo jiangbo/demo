@@ -47,6 +47,8 @@ pub const map = struct {
         targetMap: Id,
         startOffset: StartOffset,
     };
+
+    pub const Rest = struct {};
 };
 
 pub const actor = struct {

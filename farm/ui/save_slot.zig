@@ -25,7 +25,6 @@ pub var active: bool = false;
 var mode: Mode = .titleLoad;
 var slots: [save.slotCount]SlotState = @splat(.empty);
 var confirmSlot: ?usize = null;
-var closePauseAfterLoad: bool = false;
 var confirmTitleBuffer: [40]u8 = undefined;
 var disabledSlots: [save.slotCount]usize = undefined;
 var disabledCount: usize = 0;
@@ -41,7 +40,6 @@ pub fn enter(next: Mode) void {
     active = true;
     mode = next;
     confirmSlot = null;
-    closePauseAfterLoad = false;
     refresh();
     rebuildDisabled();
     slotMenu.title.text = switch (mode) {
@@ -53,16 +51,10 @@ pub fn enter(next: Mode) void {
     confirmMenu.click = .empty;
 }
 
-pub fn takeClosePauseAfterLoad() bool {
-    const result = closePauseAfterLoad;
-    closePauseAfterLoad = false;
-    return result;
-}
-
-pub fn update(world: *zhu.ecs.World) void {
-    if (zhu.key.anyPressed(&.{ .ESCAPE, .P })) {
+pub fn update(world: *zhu.ecs.World) bool {
+    if (context.input.pressed(.pause)) {
         if (confirmSlot != null) confirmSlot = null else active = false;
-        return;
+        return false;
     }
 
     if (confirmSlot) |slot| {
@@ -76,12 +68,13 @@ pub fn update(world: *zhu.ecs.World) void {
                 else => unreachable,
             }
         }
-        return;
+        return false;
     }
 
     if (slotMenu.update()) |e| {
-        if (e == backEvent) active = false else chooseSlot(world, e);
+        if (e == backEvent) active = false else return chooseSlot(world, e);
     }
+    return false;
 }
 
 pub fn draw() void {
@@ -111,20 +104,21 @@ fn refresh() void {
     }
 }
 
-fn chooseSlot(world: *zhu.ecs.World, slot: usize) void {
+fn chooseSlot(world: *zhu.ecs.World, slot: usize) bool {
     switch (mode) {
         .titleLoad => {
             active = false;
             context.scene.requestLoad(slot);
+            return false;
         },
         .pauseLoad => {
             save.loadSlot(world, slot) catch |err| {
                 std.log.err("load slot {} failed: {}", .{ slot, err });
                 active = false;
-                return;
+                return false;
             };
             active = false;
-            closePauseAfterLoad = true;
+            return true;
         },
         .pauseSave => {
             if (slotHasFile(slot)) {
@@ -136,9 +130,10 @@ fn chooseSlot(world: *zhu.ecs.World, slot: usize) void {
                 );
                 slotMenu.click = .empty;
                 confirmMenu.click = .empty;
-                return;
+                return false;
             }
             saveAndClose(world, slot);
+            return false;
         },
     }
 }

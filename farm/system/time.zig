@@ -24,23 +24,37 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
     world.clearEvent(event.DayChanged);
     world.clearEvent(event.PeriodChanged);
 
+    if (clock.takeRestHours()) |hours| {
+        clock.minute = 0;
+        for (0..hours) |_| advanceOneHour(world);
+        return;
+    }
+
     clock.minute += delta * clock.minutesPerRealSecond;
     while (clock.minute >= 60.0) {
         clock.minute -= 60.0;
-        clock.hour += 1;
+        advanceOneHour(world);
+    }
+}
 
-        if (clock.hour >= 24) {
-            clock.hour = 0;
-            clock.day += 1;
-            world.addEvent(event.DayChanged{ .day = clock.day });
-        }
+fn advanceOneHour(world: *zhu.ecs.World) void {
+    clock.hour += 1;
 
-        world.addEvent(event.HourChanged{
-            .day = clock.day,
-            .hour = clock.hour,
-        });
+    if (clock.hour >= 24) {
+        clock.hour = 0;
+        clock.day += 1;
+        world.addEvent(event.DayChanged{ .day = clock.day });
     }
 
+    world.addEvent(event.HourChanged{
+        .day = clock.day,
+        .hour = clock.hour,
+    });
+
+    updatePeriod(world);
+}
+
+fn updatePeriod(world: *zhu.ecs.World) void {
     const nextPeriod = currentPeriod(clock.hour);
     if (nextPeriod != clock.period) {
         clock.period = nextPeriod;
@@ -158,6 +172,34 @@ test "时间推进跨天会发出新一天事件" {
     try std.testing.expectEqual(1, hours.len);
     try std.testing.expectEqual(2, hours[0].day);
     try std.testing.expectEqual(0, hours[0].hour);
+}
+
+test "按小时推进会清零分钟并逐小时发事件" {
+    context.init();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    clock.hour = 22;
+    clock.minute = 37.0;
+    clock.period = .night;
+    clock.restHours = 3;
+    update(&world, 0);
+
+    try std.testing.expectEqual(2, clock.day);
+    try std.testing.expectEqual(1, clock.hour);
+    try std.testing.expectEqual(@as(f32, 0), clock.minute);
+    try std.testing.expectEqual(null, clock.restHours);
+
+    const days = world.getEvent(event.DayChanged).items;
+    try std.testing.expectEqual(1, days.len);
+    try std.testing.expectEqual(2, days[0].day);
+
+    const hours = world.getEvent(event.HourChanged).items;
+    try std.testing.expectEqual(3, hours.len);
+    try std.testing.expectEqual(23, hours[0].hour);
+    try std.testing.expectEqual(0, hours[1].hour);
+    try std.testing.expectEqual(1, hours[2].hour);
 }
 
 test "时段跨过边界会发出时段事件" {

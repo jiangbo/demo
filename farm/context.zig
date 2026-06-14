@@ -58,6 +58,7 @@ pub const clock = struct {
     pub var hour: u8 = 6;
     pub var minute: f32 = 0.0;
     pub var period: Period = .dawn;
+    pub var restHours: ?u8 = null;
 
     pub fn reset() void {
         paused = false;
@@ -66,10 +67,17 @@ pub const clock = struct {
         hour = 6;
         minute = 0.0;
         period = .dawn;
+        restHours = null;
     }
 
     pub fn isDark() bool {
         return hour >= 18 or hour < 6;
+    }
+
+    pub fn takeRestHours() ?u8 {
+        const result = restHours;
+        restHours = null;
+        return result;
     }
 };
 

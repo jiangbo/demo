@@ -17,6 +17,7 @@ pub fn init() void {
 
     title.init();
     save_slot.init();
+    rest.init();
 }
 
 pub fn deinit() void {}
@@ -26,6 +27,50 @@ pub fn draw(world: *zhu.ecs.World) void {
     notice.draw(world);
     toolbar.draw();
 }
+
+pub const overlay = struct {
+    const Layer = enum { save, rest, pause };
+
+    pub fn active() bool {
+        return topLayer() != null;
+    }
+
+    pub fn close() void {
+        save_slot.active = false;
+        rest.active = false;
+        pause.active = false;
+    }
+
+    pub fn update(world: *zhu.ecs.World) bool {
+        if (topLayer()) |layer| {
+            switch (layer) {
+                .save => {
+                    if (save_slot.update(world)) pause.active = false;
+                },
+                .rest => rest.update(),
+                .pause => pause.update(),
+            }
+            return true;
+        }
+
+        if (!context.input.pressed(.pause)) return false;
+        pause.enter(context.scene.current != .farm);
+        return true;
+    }
+
+    pub fn draw() void {
+        if (pause.active) pause.draw();
+        if (save_slot.active) save_slot.draw();
+        if (rest.active) rest.draw();
+    }
+
+    fn topLayer() ?Layer {
+        if (save_slot.active) return .save;
+        if (rest.active) return .rest;
+        if (pause.active) return .pause;
+        return null;
+    }
+};
 
 pub const notice = struct {
     pub fn update(delta: f32) void {
@@ -42,6 +87,52 @@ pub const notice = struct {
     }
 };
 
+pub const rest = struct {
+    const MenuEvent = enum(u8) { minus, plus, ok, cancel };
+
+    pub var active: bool = false;
+    var hours: u8 = 8;
+    var menu: zhu.widget.Menu = menus[5];
+
+    pub fn init() void {
+        menu.centerInWindow();
+    }
+
+    pub fn enter() void {
+        active = true;
+        hours = 8;
+        menu.click = .empty;
+    }
+
+    pub fn update() void {
+        if (context.input.pressed(.pause)) {
+            active = false;
+            return;
+        }
+
+        const event = menu.update() orelse return;
+        switch (@as(MenuEvent, @enumFromInt(event))) {
+            .minus => hours -= 1,
+            .plus => hours += 1,
+            .ok => {
+                active = false;
+                context.clock.restHours = hours;
+            },
+            .cancel => active = false,
+        }
+        hours = std.math.clamp(hours, 1, 24);
+    }
+
+    pub fn draw() void {
+        menu.draw();
+
+        const position = menu.position.add(.xy(140, 82));
+        zhu.text.drawFormat("{d}h", position, .{hours}, .{
+            .alignment = .center,
+        });
+    }
+};
+
 pub const pause = struct {
     const panelSize: zhu.Vector2 = .{ .x = 208, .y = 344 };
     pub var active: bool = false;
@@ -55,6 +146,11 @@ pub const pause = struct {
     }
 
     pub fn update() void {
+        if (context.input.pressed(.pause)) {
+            active = false;
+            return;
+        }
+
         if (menu.update()) |event| switch (event) {
             0 => active = false, // 继续游戏
             1 => save_slot.enter(.pauseSave), // 选择槽位后保存
@@ -72,8 +168,8 @@ pub const pause = struct {
 
     pub fn draw() void {
         // 全屏覆盖
-        const overlay = zhu.Rect.init(.zero, zhu.window.size);
-        zhu.batch.drawRect(overlay, .{ .color = .gray(0, 0.35) });
+        const overlayRect = zhu.Rect.init(.zero, zhu.window.size);
+        zhu.batch.drawRect(overlayRect, .{ .color = .gray(0, 0.35) });
 
         // 暂停面板背景
         const back = zhu.Rect.init(menu.position, panelSize);

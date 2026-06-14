@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const context = @import("context.zig");
 const factory = @import("factory.zig");
+const interact = @import("interact.zig");
 const map = @import("map.zig");
 const save = @import("save.zig");
 const ui = @import("ui.zig");
@@ -16,7 +17,6 @@ const system = struct {
     const pickup = @import("system/pickup.zig");
     const render = @import("system/render.zig");
     const sound = @import("system/sound.zig");
-    const talk = @import("system/talk.zig");
     const time = @import("system/time.zig");
     const transition = @import("system/transition.zig");
     const wander = @import("system/wander.zig");
@@ -62,30 +62,12 @@ pub fn deinit() void {
 pub fn update(delta: f32) void {
     context.input.mouseCaptured = false;
 
-    const pauseKey = zhu.key.anyPressed(&.{ .ESCAPE, .P });
-    if (ui.save_slot.active) {
-        // 槽位选择是顶层覆盖层，底下的标题或暂停菜单都不再吃输入。
+    if (ui.overlay.active()) {
         if (context.scene.current == .farm) system.sound.update(&world);
-        ui.save_slot.update(&world);
-        if (ui.save_slot.takeClosePauseAfterLoad()) ui.pause.active = false;
-        applyScene();
-        return;
     }
 
-    if (ui.pause.active) {
-        // 暂停时只更新覆盖菜单，保持底层农场画面静止。
-        system.sound.update(&world);
-        if (pauseKey) {
-            ui.pause.active = false;
-            return;
-        }
-        ui.pause.update();
+    if (ui.overlay.update(&world)) {
         applyScene();
-        return;
-    }
-
-    if (context.scene.current == .farm and pauseKey) {
-        ui.pause.enter(false);
         return;
     }
 
@@ -110,12 +92,12 @@ pub fn draw() void {
             zhu.batch.useTarget(clearColor, .{});
             zhu.camera.mode = .window;
             ui.title.draw();
-            drawOverlay();
+            ui.overlay.draw();
         },
         .farm => {
             zhu.batch.useTarget(clearColor, .{ .target = &canvas });
             drawFarm();
-            drawOverlay();
+            ui.overlay.draw();
 
             zhu.batch.useTarget(clearColor, .{});
             zhu.batch.drawImage(canvas.image, .zero, .{
@@ -123,11 +105,6 @@ pub fn draw() void {
             });
         },
     }
-}
-
-fn drawOverlay() void {
-    if (ui.pause.active) ui.pause.draw();
-    if (ui.save_slot.active) ui.save_slot.draw();
 }
 
 fn updateFarm(delta: f32) void {
@@ -152,9 +129,9 @@ fn updateFarm(delta: f32) void {
     // 控制系统可能生成拾取物，所以拾取放在控制之后。
     system.pickup.update(&world);
 
-    // 对话距离、相机跟随、动画和排序都读取本帧已结算的位置。
+    // 按 F 的处理、相机跟随、动画和排序都读取本帧已结算的位置。
     ui.notice.update(delta);
-    system.talk.update(&world);
+    interact.update(&world);
     cameraFollowPlayer(delta);
     system.animation.update(&world, delta);
     system.render.update(&world);
@@ -170,7 +147,7 @@ fn applyScene() void {
     const current = context.scene.current;
     if (previous == current) return;
 
-    ui.pause.active = false;
+    ui.overlay.close();
     switch (previous) {
         .title => ui.title.exit(),
         .farm => map.exit(&world),

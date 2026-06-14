@@ -315,7 +315,7 @@ fn loadObject(world: *World, object: tiled.Object) void {
     if (object.isType("map_trigger")) {
         return loadTrigger(world, object);
     }
-    if (object.isType("rest")) return loadRest();
+    if (object.isType("rest")) return loadRest(world, object);
     if (object.isType("light")) return loadLightObject(world, object);
     if (object.gid != 0) return loadProp(world, object);
 }
@@ -361,8 +361,14 @@ fn loadTrigger(world: *World, object: tiled.Object) void {
     _ = factory.spawnMapTrigger(world, trigger);
 }
 
-fn loadRest() void {
-    // rest 是后续休息区功能预留对象，本讲只明确识别，不生成实体。
+fn loadRest(world: *World, object: tiled.Object) void {
+    const entity = world.createEntity();
+    world.add(entity, object.position);
+    world.add(entity, component.map.Rest{});
+    world.add(entity, component.map.Scoped{});
+    world.add(entity, motion.Shape{
+        .rect = object.rect().move(object.position.neg()),
+    });
 }
 
 fn loadProp(world: *World, object: tiled.Object) void {
@@ -543,6 +549,38 @@ test "trigger 对象会创建 ECS 触发器实体" {
     try std.testing.expectEqual(StartOffset.bottom, trigger.startOffset);
     try std.testing.expectEqual(10, trigger.rect.min.x);
     try std.testing.expectEqual(20, trigger.rect.min.y);
+    try std.testing.expectEqual(null, query.next());
+}
+
+test "rest 对象会创建可交互实体" {
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    loadObject(&world, .{
+        .id = 1,
+        .gid = 0,
+        .name = "",
+        .type = "rest",
+        .position = .xy(10, 20),
+        .size = .xy(30, 40),
+        .point = false,
+        .properties = &.{},
+        .extend = .{},
+    });
+
+    var query = world.query(.{
+        Position,
+        component.map.Rest,
+        component.map.Scoped,
+        motion.Shape,
+    });
+    const entity = query.next().?;
+    const shape = query.get(entity, motion.Shape);
+
+    try std.testing.expectEqual(10, query.get(entity, Position).x);
+    try std.testing.expectEqual(20, query.get(entity, Position).y);
+    try std.testing.expectEqual(30, shape.rect.size.x);
+    try std.testing.expectEqual(40, shape.rect.size.y);
     try std.testing.expectEqual(null, query.next());
 }
 

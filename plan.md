@@ -50,7 +50,7 @@ zig build test
 - [x] 25-地图管理器.md
 - [x] 26-游戏场景初始化与系统编排.md
 - [x] 27-玩家控制与相机.md
-- [ ] 28-交互与对话.md
+- [x] 28-交互与对话.md
 - [ ] 29-物品栏与快捷栏.md
 - [ ] 30-物品使用与农场循环.md
 - [ ] 31-游戏时间与昼夜.md
@@ -77,6 +77,8 @@ zig build test
 9. 23-蓝图与实体工厂：不做 C++ 的 `BlueprintManager`、运行时 JSON 蓝图、
   hash key 查询和 Blueprint Inspector；Zig 使用编译期 `factory.zon`，
   由 `factory.zig` 直接作为复杂实体的唯一装配点。
+10. 不做 C++ 的交互目标固定优先级（`NPC > Chest > Rest`）；Zig 的
+  facing probe 命中多个交互目标时统一按距离选择最近目标。
 
 ## 待后续完成
 
@@ -84,8 +86,6 @@ zig build test
 
 - 19-空间索引：`ROCK` 还只是 `land.Object.kind` 能表达，地图加载没有把石头写入
   `tile.object`，工具系统也没有敲石头、销毁实体和清理格子的逻辑。
-- 19-空间索引：`REST` 休息区还没有明确的数据保存和交互逻辑。实现时优先用简单
-  rect/list 或现有地图对象数据，不引入 C++ 的静态 REST layer。
 - 19-空间索引：目前 crop 收获时能按已知 tile 清理 `tile.object`；资源节点销毁
   需要补一个按 entity 清理所在格的简单函数。
 - 25-地图管理器：Zig 已保存耕地/作物的地图状态，并按天做离线推进；当前地图由
@@ -96,7 +96,6 @@ zig build test
 - 30-物品使用与农场循环：农场工具结算前还需要补地图语义检查，例如 ARABLE、
   SOLID/半格阻挡、OCCUPIED、已有 crop/soil，必要时再检查动态 Blocking 实体。
 - UI：考虑做 ZON 文件监听，实时刷新 ZON 中的数据。
-- 28-交互：`REST` 休息区还没有交互逻辑，后续用于睡觉或时间推进。
 - 30-NPC 显示与简单漫游：NPC 一个都没有，需要实现。
 - 29-地图切换：C++ 切换时有 `UIScreenFade` 淡入淡出和 `ActionLockedTag`
   行动锁；Zig 本步先瞬时切换。

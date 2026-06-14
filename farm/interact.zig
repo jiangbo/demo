@@ -1,12 +1,13 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const component = @import("../component.zig");
-const context = @import("../context.zig");
-const factory = @import("../factory.zig");
-const map = @import("../map.zig");
+const component = @import("component.zig");
+const context = @import("context.zig");
+const factory = @import("factory.zig");
+const map = @import("map.zig");
 const spatial = map.spatial;
-const toolbar = @import("../ui/toolbar.zig");
+const ui = @import("ui.zig");
+const toolbar = @import("ui/toolbar.zig");
 
 const World = zhu.ecs.World;
 const Entity = zhu.ecs.Entity;
@@ -20,6 +21,7 @@ const ItemEnum = component.item.ItemEnum;
 const Chest = component.item.Chest;
 const Animation = component.actor.Animation;
 const Sprite = component.render.Sprite;
+const Rest = component.map.Rest;
 
 pub fn update(world: *World) void {
     // 当前对话目标走远或消失时，直接关闭对话。
@@ -48,7 +50,7 @@ fn checkDistance(world: *World, target: Entity) void {
     if (dist > Dialog.closeDist) closeDialog(world, target);
 }
 
-// 根据朝向构建探测矩形，用 markFacingHits 查找可交互 NPC
+// 根据朝向构建探测矩形，用 markFacingHits 查找可交互目标。
 fn tryInteract(world: *World) void {
     const player = world.getIdentity(Player).?;
     const playerPos = targetCenter(world, player);
@@ -63,6 +65,8 @@ fn tryInteract(world: *World) void {
     }
 
     if (world.has(target, Chest)) return openChest(world, target);
+
+    if (world.has(target, Rest)) return ui.rest.enter();
 }
 
 fn nearestTarget(world: *World, playerPos: Position) ?Entity {
@@ -73,7 +77,8 @@ fn nearestTarget(world: *World, playerPos: Position) ?Entity {
     while (query.next()) |entity| {
         const canTalk = world.has(entity, Npc) and world.has(entity, Dialog);
         const canOpen = world.has(entity, Chest);
-        if (!canTalk and !canOpen) continue;
+        const canRest = world.has(entity, Rest);
+        if (!canTalk and !canOpen and !canRest) continue;
 
         const pos = targetCenter(world, entity);
         const dist2 = playerPos.sub(pos).length2();
