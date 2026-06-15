@@ -101,7 +101,7 @@ pub fn draw() void {
 
             zhu.batch.useTarget(clearColor, .{});
             zhu.batch.drawImage(canvas.image, .zero, .{
-                .camera = zhu.camera.Camera.default,
+                .camera = .window,
             });
         },
     }
@@ -163,7 +163,7 @@ fn enterScene(next: context.scene.Scene) void {
 }
 
 fn enterFarm() void {
-    zhu.camera.top().scale = .square(2);
+    zhu.camera.main.scale = .square(2);
     const loadSlot = context.scene.takeLoadSlot();
     if (loadSlot == null) {
         // 新游戏重置世界级状态；读档会在基础地图创建后覆盖状态。
@@ -214,7 +214,7 @@ fn drawFarm() void {
     system.control.draw(&world);
     system.light.draw(&world);
 
-    zhu.camera.push(.zero, .one);
+    zhu.camera.push(.window);
     defer zhu.camera.pop();
     system.time.draw();
     ui.draw(&world);

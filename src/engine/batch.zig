@@ -44,10 +44,10 @@ pub const DrawCommand = struct {
     start: u32 = 0, // 起始顶点索引
     end: usize = 0, // 结束顶点索引
     view: graphics.View = .{}, // 纹理视图
-    camera: camera.Camera = .default, // 绘制命令相机
-    size: Vector2 = .zero, // 相机大小
-    pipeline: sk.gfx.Pipeline = .{}, // 渲染流水线
-    sampler: sk.gfx.Sampler = .{}, // 采样器
+    camera: camera.Camera, // 绘制命令相机
+    size: Vector2, // 视口大小
+    pipeline: sk.gfx.Pipeline, // 渲染流水线
+    sampler: sk.gfx.Sampler, // 采样器
 };
 
 pub var whiteImage: graphics.Image = undefined;
@@ -56,10 +56,10 @@ pub var circleImage: graphics.Image = undefined;
 pub var vertices: std.ArrayList(Vertex) = undefined;
 pub var commands: std.ArrayList(Command) = undefined;
 
-var vertexHandle: sk.gfx.Buffer = .{};
-var pipeline: sk.gfx.Pipeline = .{};
-var sampler: sk.gfx.Sampler = .{};
-var drawState: DrawCommand = .{};
+var vertexHandle: sk.gfx.Buffer = undefined;
+var pipeline: sk.gfx.Pipeline = undefined;
+var sampler: sk.gfx.Sampler = undefined;
+var drawState: DrawCommand = undefined;
 
 pub fn init(vertex: []Vertex, cmds: []Command) void {
     vertices = .initBuffer(vertex);
@@ -80,7 +80,7 @@ pub fn beginDraw() void {
     vertices.clearRetainingCapacity();
     commands.clearRetainingCapacity();
     drawState = .{
-        .camera = camera.top().*,
+        .camera = camera.main,
         .size = camera.size,
         .pipeline = pipeline,
         .sampler = sampler,

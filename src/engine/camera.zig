@@ -8,9 +8,9 @@ const Matrix = math.Matrix;
 
 pub const Camera = struct {
     position: Vector2,
-    scale: Vector2,
+    scale: Vector2 = .one,
 
-    pub const default: Camera = .{ .position = .zero, .scale = .one };
+    pub const window: Camera = .{ .position = .zero };
 
     pub fn toWindow(self: Camera, point: Vector2) Vector2 {
         return point.sub(self.position).mul(self.scale);
@@ -21,8 +21,9 @@ pub const Camera = struct {
     }
 
     pub fn combine(self: Camera, child: Camera) Camera {
+        const childPosition = child.position.div(self.scale);
         return .{
-            .position = self.position.add(child.position.div(self.scale)),
+            .position = self.position.add(childPosition),
             .scale = self.scale.mul(child.scale),
         };
     }
@@ -37,83 +38,77 @@ pub const Camera = struct {
 
 var buffer: [8]Camera = undefined;
 pub var stack: std.ArrayList(Camera) = .initBuffer(&buffer);
+pub var main: Camera = .window;
 pub var size: Vector2 = undefined;
 pub var bound: Vector2 = undefined;
 
 pub fn init(cameraSize: Vector2) void {
-    size, bound = .{ cameraSize, cameraSize };
+    main, size, bound = .{ .window, cameraSize, cameraSize };
     stack.clearRetainingCapacity();
-    stack.appendAssumeCapacity(Camera.default);
 }
 
-pub fn push(position: Vector2, scale: Vector2) void {
-    const camera = Camera{ .position = position, .scale = scale };
+pub fn push(camera: Camera) void {
     stack.appendAssumeCapacity(camera);
 }
 
 pub fn pop() void {
-    if (stack.items.len == 1) @panic("camera stack underflow");
-    _ = stack.pop() orelse @panic("camera stack underflow");
+    _ = stack.pop();
 }
 
 pub fn top() *Camera {
+    if (stack.items.len == 0) return &main;
     return &stack.items[stack.items.len - 1];
 }
 
 pub fn toWindow(point: Vector2) Vector2 {
-    return top().toWindow(point);
+    return main.toWindow(point);
 }
 
 pub fn toWorld(point: Vector2) Vector2 {
-    return top().toWorld(point);
+    return main.toWorld(point);
 }
 
 pub fn viewport() math.Rect {
-    const camera = top();
-    return .init(camera.position, size.div(camera.scale));
+    return .init(main.position, size.div(main.scale));
 }
 
 pub fn control(distance: f32) void {
-    const camera = top();
-    if (key.held(.UP)) camera.position.y -= distance;
-    if (key.held(.DOWN)) camera.position.y += distance;
-    if (key.held(.LEFT)) camera.position.x -= distance;
-    if (key.held(.RIGHT)) camera.position.x += distance;
+    if (key.held(.UP)) main.position.y -= distance;
+    if (key.held(.DOWN)) main.position.y += distance;
+    if (key.held(.LEFT)) main.position.x -= distance;
+    if (key.held(.RIGHT)) main.position.x += distance;
 }
 
 pub fn clampBound() void {
-    const camera = top();
-    const max = bound.sub(size.div(camera.scale)).max(.zero);
-    camera.position.clamp(.zero, max);
+    const max = bound.sub(size.div(main.scale)).max(.zero);
+    main.position.clamp(.zero, max);
 }
 
 pub fn directFollow(pos: Vector2) void {
-    const camera = top();
-    camera.position = pos.sub(size.div(camera.scale).scale(0.5));
+    main.position = pos.sub(size.div(main.scale).scale(0.5));
     clampBound();
 }
 
 pub fn roundPosition() void {
-    const camera = top();
-    camera.position = camera.position.mul(camera.scale).round().div(camera.scale);
+    const pixel = main.position.mul(main.scale).round();
+    main.position = pixel.div(main.scale);
 }
 
 pub fn smoothFollow(pos: Vector2, smooth: f32) void {
-    const camera = top();
-    const target = pos.sub(size.div(camera.scale).scale(0.5));
-    const distance = target.sub(camera.position);
+    const target = pos.sub(size.div(main.scale).scale(0.5));
+    const distance = target.sub(main.position);
 
     const clampedSmooth = std.math.clamp(smooth, 0, 1);
-    if (@abs(distance.x) < 1) camera.position.x = target.x else {
+    if (@abs(distance.x) < 1) main.position.x = target.x else {
         var moved = distance.x * clampedSmooth;
         if (@abs(moved) < 1) moved = math.ceilAway(moved);
-        camera.position.x += moved;
+        main.position.x += moved;
     }
 
-    if (@abs(distance.y) < 1) camera.position.y = target.y else {
+    if (@abs(distance.y) < 1) main.position.y = target.y else {
         var moved = distance.y * clampedSmooth;
         if (@abs(moved) < 1) moved = math.ceilAway(moved);
-        camera.position.y += moved;
+        main.position.y += moved;
     }
     clampBound();
 }

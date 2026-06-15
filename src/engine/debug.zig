@@ -57,11 +57,10 @@ pub fn draw() void {
         input.mouse.raw.x,
         input.mouse.raw.y,
     }, "{d:.1}, {d:.1}", .{ window.mouse.x, window.mouse.y });
-    const currentCamera = camera.top().*;
     writeFormatLine(&writer, "相机", "{d:.1}, {d:.1}", .{
-        currentCamera.position.x,
-        currentCamera.position.y,
-    }, "{d:.2}, {d:.2}", .{ currentCamera.scale.x, currentCamera.scale.y });
+        camera.main.position.x,
+        camera.main.position.y,
+    }, "{d:.2}, {d:.2}", .{ camera.main.scale.x, camera.main.scale.y });
     // 获取当前已加载的资源统计数据
     const assetStats = assets.queryStats();
     writeFormatLine(&writer, "资源", "文件 {}", .{assetStats.file}, //
@@ -74,7 +73,7 @@ pub fn draw() void {
     const debugText = buffer[0 .. writer.end - 1];
 
     // 调试面板固定在窗口坐标，绘制后还原当前相机。
-    camera.push(.zero, .one);
+    camera.push(.window);
     defer camera.pop();
 
     const scale = debugTextScale(debugText);
