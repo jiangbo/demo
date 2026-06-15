@@ -6,32 +6,33 @@ const context = @import("context.zig");
 const factory = @import("factory.zig");
 
 const ItemEnum = component.item.ItemEnum;
-const NineOption = zhu.batch.NineOption;
 const ImageId = zhu.graphics.ImageId;
 
-const NineImage = struct { rect: zhu.Rect, nine: NineOption };
+const NineSource = zhu.NineImage.Source;
 
 const HotbarZon = struct {
     imageId: ImageId,
-    rect: zhu.Rect,
+    position: zhu.Vector2,
+    size: zhu.Vector2,
     slotSize: zhu.Vector2,
     slots: [10]zhu.Vector2,
-    panel: NineImage,
-    slot: NineImage,
-    selected: NineImage,
+    panel: NineSource,
+    slot: NineSource,
+    selected: NineSource,
 };
 
 const InventoryZon = struct {
     imageId: ImageId,
-    rect: zhu.Rect,
+    position: zhu.Vector2,
+    size: zhu.Vector2,
     pageCount: usize,
     slotSize: zhu.Vector2,
     slots: [20]zhu.Vector2,
     prev: zhu.Rect,
     next: zhu.Rect,
     pageText: zhu.Vector2,
-    panel: NineImage,
-    slot: NineImage,
+    panel: NineSource,
+    slot: NineSource,
 };
 
 const Zon = struct { hotbar: HotbarZon, inventory: InventoryZon };
@@ -42,10 +43,6 @@ pub const Item = Stack;
 const zon: Zon = @import("zon/inventory.zon");
 const pageSize = zon.inventory.slots.len;
 const slotCount = pageSize * zon.inventory.pageCount;
-const hotbarRect = zon.hotbar.rect;
-const inventoryRect = zon.inventory.rect;
-const hotbarPosition = hotbarRect.min;
-const inventoryPosition = inventoryRect.min;
 
 const Hover = union(enum) { body, slot: usize, prev, next };
 
@@ -130,18 +127,19 @@ fn updateInventoryPanel() void {
 }
 
 fn hoveredHotbarSlot() ?usize {
+    const mouse = zhu.window.mouse.sub(zon.hotbar.position);
     const slotRect = zhu.Rect.init(.zero, zon.hotbar.slotSize);
     for (zon.hotbar.slots, 0..) |offset, i| {
-        const rect = slotRect.move(hotbarPosition.add(offset));
-        if (rect.contains(zhu.window.mouse)) return i;
+        if (slotRect.move(offset).contains(mouse)) return i;
     }
     return null;
 }
 
 fn hoveredInventory() ?Hover {
-    if (!inventoryRect.contains(zhu.window.mouse)) return null;
+    const mouse = zhu.window.mouse.sub(zon.inventory.position);
+    const inventoryRect = zhu.Rect.init(.zero, zon.inventory.size);
+    if (!inventoryRect.contains(mouse)) return null;
 
-    const mouse = zhu.window.mouse.sub(inventoryPosition);
     const slotRect = zhu.Rect.init(.zero, zon.inventory.slotSize);
     for (zon.inventory.slots, 0..) |offset, i| {
         const rect = slotRect.move(offset);
@@ -159,21 +157,25 @@ pub fn draw() void {
 }
 
 fn drawHotbar() void {
-    const panelImage = zhu.assets.getImage(zon.hotbar.imageId).?;
+    zhu.camera.push(.{ .position = zon.hotbar.position.neg() });
+    defer zhu.camera.pop();
+
+    const atlas = zhu.assets.getImage(zon.hotbar.imageId).?;
+    const panelImage = zhu.NineImage.from(atlas, zon.hotbar.panel);
+    const slotImage = zhu.NineImage.from(atlas, zon.hotbar.slot);
+    const selectedImage = zhu.NineImage.from(atlas, zon.hotbar.selected);
+
     // 绘制面板
-    var image = panelImage.sub(zon.hotbar.panel.rect);
-    zhu.batch.drawNine(image, hotbarRect, zon.hotbar.panel.nine);
+    const panelRect = zhu.Rect.init(.zero, zon.hotbar.size);
+    zhu.batch.drawNine2(panelImage, panelRect);
 
     for (hotbar, zon.hotbar.slots, 0..) |slotIndex, offset, i| {
-        const position = hotbarPosition.add(offset);
-        const rect = zhu.Rect.init(position, zon.hotbar.slotSize);
+        const rect = zhu.Rect.init(offset, zon.hotbar.slotSize);
         // 绘制槽位
-        image = panelImage.sub(zon.hotbar.slot.rect);
-        zhu.batch.drawNine(image, rect, zon.hotbar.slot.nine);
+        zhu.batch.drawNine2(slotImage, rect);
 
         if (i == activeHotbar) {
-            image = panelImage.sub(zon.hotbar.selected.rect);
-            zhu.batch.drawNine(image, rect, zon.hotbar.selected.nine);
+            zhu.batch.drawNine2(selectedImage, rect);
         }
 
         const slot = slots[slotIndex orelse continue];
@@ -186,17 +188,20 @@ fn drawHotbar() void {
 }
 
 fn drawInventoryPanel() void {
-    const inv = zon.inventory;
-    const inventoryImage = zhu.assets.getImage(inv.imageId).?;
-    var image = inventoryImage.sub(inv.panel.rect);
-    zhu.batch.drawNine(image, inventoryRect, inv.panel.nine);
+    zhu.camera.push(.{ .position = zon.inventory.position.neg() });
+    defer zhu.camera.pop();
+
+    const atlas = zhu.assets.getImage(zon.inventory.imageId).?;
+    const panelImage = zhu.NineImage.from(atlas, zon.inventory.panel);
+    const slotImage = zhu.NineImage.from(atlas, zon.inventory.slot);
+
+    const panelRect = zhu.Rect.init(.zero, zon.inventory.size);
+    zhu.batch.drawNine2(panelImage, panelRect);
 
     const first = activePage * pageSize;
-    for (inv.slots, 0..) |offset, i| {
-        const position = inventoryPosition.add(offset);
-        const slotRect = zhu.Rect.init(position, inv.slotSize);
-        image = inventoryImage.sub(inv.slot.rect);
-        zhu.batch.drawNine(image, slotRect, inv.slot.nine);
+    for (zon.inventory.slots, 0..) |offset, i| {
+        const slotRect = zhu.Rect.init(offset, zon.inventory.slotSize);
+        zhu.batch.drawNine2(slotImage, slotRect);
 
         const slot = slots[first + i];
         if (slot.count == 0) continue;
@@ -206,21 +211,17 @@ fn drawInventoryPanel() void {
         if (slot.count > 1) drawItemCount(slot.count, slotRect);
     }
 
-    drawPageButton(inv.prev, "<");
-    drawPageButton(inv.next, ">");
+    drawPageButton(slotImage, zon.inventory.prev, "<");
+    drawPageButton(slotImage, zon.inventory.next, ">");
 
-    const labelPos = inventoryPosition.add(inv.pageText);
-    const args = .{ activePage + 1, inv.pageCount };
-    zhu.text.drawFmt("{d}/{d}", args, labelPos, .{ .anchor = .center });
+    const args = .{ activePage + 1, zon.inventory.pageCount };
+    zhu.text.drawFmt("{d}/{d}", args, zon.inventory.pageText, .{
+        .anchor = .center,
+    });
 }
 
-fn drawPageButton(buttonRect: zhu.Rect, label: []const u8) void {
-    const inv = zon.inventory;
-    const rect = buttonRect.move(inventoryPosition);
-    const invImage = zhu.assets.getImage(inv.imageId).?;
-
-    const image = invImage.sub(inv.slot.rect);
-    zhu.batch.drawNine(image, rect, inv.slot.nine);
+fn drawPageButton(image: zhu.NineImage, rect: zhu.Rect, label: []const u8) void {
+    zhu.batch.drawNine2(image, rect);
     zhu.text.draw(label, rect.center(), .{ .anchor = .center });
 }
 

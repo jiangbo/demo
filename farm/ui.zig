@@ -227,8 +227,8 @@ fn drawBubble(position: zhu.Vector2, text: []const u8) void {
     const bubblePos = head.addXY(-size.x / 2, -4 - size.y);
     const bubbleRect: zhu.Rect = .init(bubblePos, size);
     zhu.batch.drawNine(bubbleImage, bubbleRect, .{
-        .topLeft = .xy(3, 4),
-        .bottomRight = .xy(3, 3),
+        .min = .xy(3, 4),
+        .max = .xy(3, 3),
     });
 
     zhu.text.draw(text, bubbleRect.min.add(.xy(8, 8)), option);

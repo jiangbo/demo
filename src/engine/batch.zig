@@ -225,12 +225,12 @@ pub fn drawAxisCapsule(rect: math.Rect, color: Color) void {
     drawImage(image, pos, .{ .size = size, .color = color });
 }
 
-pub const NineOption = struct { topLeft: Vector2, bottomRight: Vector2 };
+pub const NineOption = graphics.NineImage.Patch;
 pub fn drawNine(image: Image, rect: math.Rect, option: NineOption) void {
-    const left = option.topLeft.x;
-    const top = option.topLeft.y;
-    const right = option.bottomRight.x;
-    const bottom = option.bottomRight.y;
+    const left = option.min.x;
+    const top = option.min.y;
+    const right = option.max.x;
+    const bottom = option.max.y;
 
     const finalSize = rect.size.max(.xy(left + right, top + bottom));
     const centerW = finalSize.x - left - right;
@@ -257,6 +257,10 @@ pub fn drawNine(image: Image, rect: math.Rect, option: NineOption) void {
             });
         }
     }
+}
+
+pub fn drawNine2(image: graphics.NineImage, rect: math.Rect) void {
+    drawNine(image.image, rect, image.patch);
 }
 
 pub fn drawImage(image: Image, pos: Vector2, option: Option) void {

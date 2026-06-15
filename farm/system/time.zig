@@ -77,8 +77,8 @@ pub fn draw() void {
 
     var image = extras.sub(.init(.xy(66, 65), panelSourceSize));
     zhu.batch.drawNine(image, .init(pos.addX(20 * uiScale), panelSize), .{
-        .topLeft = .xy(1, 3),
-        .bottomRight = .xy(1, 1),
+        .min = .xy(1, 3),
+        .max = .xy(1, 1),
     });
 
     image = clockFace.sub(.init(.zero, clockSourceSize));
@@ -118,8 +118,8 @@ fn drawLabel(rect: zhu.Rect, text: []const u8) void {
     const labelSourceSize = zhu.Vector2.xy(33, 10);
     const labelImage = extras.sub(.init(.xy(71, 99), labelSourceSize));
     zhu.batch.drawNine(labelImage, rect, .{
-        .topLeft = .xy(1, 1),
-        .bottomRight = .xy(1, 1),
+        .min = .xy(1, 1),
+        .max = .xy(1, 1),
     });
 
     const width = zhu.text.measure(text, .{}).x;

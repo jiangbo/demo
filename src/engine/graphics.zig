@@ -185,6 +185,22 @@ pub const Image = struct {
     }
 };
 
+pub const NineImage = struct {
+    pub const Patch = struct { min: Vector2, max: Vector2 };
+    pub const Source = struct { rect: math.Rect, patch: Patch };
+
+    image: Image,
+    patch: Patch,
+
+    pub fn init(image: Image, patch: Patch) NineImage {
+        return .{ .image = image, .patch = patch };
+    }
+
+    pub fn from(image: Image, source: Source) NineImage {
+        return .init(image.sub(source.rect), source.patch);
+    }
+};
+
 pub const Atlas = struct {
     imagePath: [:0]const u8,
     size: math.Vector2,

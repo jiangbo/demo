@@ -1,10 +1,8 @@
 .{
     .hotbar = .{
         .imageId = 1103560250,
-        .rect = .{
-            .min = .{ .x = 134, .y = 307 },
-            .size = .{ .x = 372, .y = 48 },
-        },
+        .position = .{ .x = 134, .y = 307 },
+        .size = .{ .x = 372, .y = 48 },
         .slotSize = .{ .x = 32, .y = 32 },
         .slots = .{
             .{ .x = 8, .y = 8 },
@@ -23,9 +21,9 @@
                 .min = .{ .x = 6, .y = 105 },
                 .size = .{ .x = 164, .y = 28 },
             },
-            .nine = .{
-                .topLeft = .{ .x = 7, .y = 7 },
-                .bottomRight = .{ .x = 7, .y = 6 },
+            .patch = .{
+                .min = .{ .x = 7, .y = 7 },
+                .max = .{ .x = 7, .y = 6 },
             },
         },
         .slot = .{
@@ -33,9 +31,9 @@
                 .min = .{ .x = 151, .y = 38 },
                 .size = .{ .x = 18, .y = 18 },
             },
-            .nine = .{
-                .topLeft = .{ .x = 2, .y = 2 },
-                .bottomRight = .{ .x = 2, .y = 3 },
+            .patch = .{
+                .min = .{ .x = 2, .y = 2 },
+                .max = .{ .x = 2, .y = 3 },
             },
         },
         .selected = .{
@@ -43,18 +41,16 @@
                 .min = .{ .x = 119, .y = 6 },
                 .size = .{ .x = 18, .y = 18 },
             },
-            .nine = .{
-                .topLeft = .{ .x = 4, .y = 4 },
-                .bottomRight = .{ .x = 4, .y = 4 },
+            .patch = .{
+                .min = .{ .x = 4, .y = 4 },
+                .max = .{ .x = 4, .y = 4 },
             },
         },
     },
     .inventory = .{
         .imageId = 3735665499,
-        .rect = .{
-            .min = .{ .x = 424, .y = 88 },
-            .size = .{ .x = 196, .y = 184 },
-        },
+        .position = .{ .x = 424, .y = 88 },
+        .size = .{ .x = 196, .y = 184 },
         .pageCount = 2,
         .slotSize = .{ .x = 32, .y = 32 },
         .slots = .{
@@ -93,9 +89,9 @@
                 .min = .{ .x = 0, .y = 64 },
                 .size = .{ .x = 48, .y = 48 },
             },
-            .nine = .{
-                .topLeft = .{ .x = 10, .y = 10 },
-                .bottomRight = .{ .x = 10, .y = 10 },
+            .patch = .{
+                .min = .{ .x = 10, .y = 10 },
+                .max = .{ .x = 10, .y = 10 },
             },
         },
         .slot = .{
@@ -103,9 +99,9 @@
                 .min = .{ .x = 39, .y = 9 },
                 .size = .{ .x = 18, .y = 18 },
             },
-            .nine = .{
-                .topLeft = .{ .x = 2, .y = 2 },
-                .bottomRight = .{ .x = 2, .y = 2 },
+            .patch = .{
+                .min = .{ .x = 2, .y = 2 },
+                .max = .{ .x = 2, .y = 2 },
             },
         },
     },

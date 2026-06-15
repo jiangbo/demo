@@ -12,8 +12,8 @@
                     .size = .{ .x = 96, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -53,8 +53,8 @@
                     .size = .{ .x = 96, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -94,8 +94,8 @@
                     .size = .{ .x = 96, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -175,8 +175,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -214,8 +214,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -263,8 +263,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -312,8 +312,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -532,8 +532,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -581,8 +581,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -630,8 +630,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -679,8 +679,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -728,8 +728,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -777,8 +777,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -826,8 +826,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -875,8 +875,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -924,8 +924,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -973,8 +973,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -1023,8 +1023,8 @@
                     .size = .{ .x = 160, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -1087,8 +1087,8 @@
                     .size = .{ .x = 100, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -1127,8 +1127,8 @@
                     .size = .{ .x = 100, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -1183,8 +1183,8 @@
                     .size = .{ .x = 48, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -1223,8 +1223,8 @@
                     .size = .{ .x = 48, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -1263,8 +1263,8 @@
                     .size = .{ .x = 100, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
@@ -1303,8 +1303,8 @@
                     .size = .{ .x = 100, .y = 32 },
                 },
                 .nine = .{
-                    .topLeft = .{ .x = 3, .y = 5 },
-                    .bottomRight = .{ .x = 3, .y = 5 },
+                    .min = .{ .x = 3, .y = 5 },
+                    .max = .{ .x = 3, .y = 5 },
                 },
                 .normal = .{
                     .image = 2508770722,
