@@ -167,15 +167,15 @@ fn drawHotbar() void {
 
     // 绘制面板
     const panelRect = zhu.Rect.init(.zero, zon.hotbar.size);
-    zhu.batch.drawNine2(panelImage, panelRect);
+    zhu.batch.drawNine(panelImage, panelRect);
 
     for (hotbar, zon.hotbar.slots, 0..) |slotIndex, offset, i| {
         const rect = zhu.Rect.init(offset, zon.hotbar.slotSize);
         // 绘制槽位
-        zhu.batch.drawNine2(slotImage, rect);
+        zhu.batch.drawNine(slotImage, rect);
 
         if (i == activeHotbar) {
-            zhu.batch.drawNine2(selectedImage, rect);
+            zhu.batch.drawNine(selectedImage, rect);
         }
 
         const slot = slots[slotIndex orelse continue];
@@ -196,12 +196,12 @@ fn drawInventoryPanel() void {
     const slotImage = zhu.NineImage.from(atlas, zon.inventory.slot);
 
     const panelRect = zhu.Rect.init(.zero, zon.inventory.size);
-    zhu.batch.drawNine2(panelImage, panelRect);
+    zhu.batch.drawNine(panelImage, panelRect);
 
     const first = activePage * pageSize;
     for (zon.inventory.slots, 0..) |offset, i| {
         const slotRect = zhu.Rect.init(offset, zon.inventory.slotSize);
-        zhu.batch.drawNine2(slotImage, slotRect);
+        zhu.batch.drawNine(slotImage, slotRect);
 
         const slot = slots[first + i];
         if (slot.count == 0) continue;
@@ -221,7 +221,7 @@ fn drawInventoryPanel() void {
 }
 
 fn drawPageButton(image: zhu.NineImage, rect: zhu.Rect, label: []const u8) void {
-    zhu.batch.drawNine2(image, rect);
+    zhu.batch.drawNine(image, rect);
     zhu.text.draw(label, rect.center(), .{ .anchor = .center });
 }
 

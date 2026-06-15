@@ -8,12 +8,15 @@ const context = @import("context.zig");
 const inventory = @import("inventory.zig");
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
 
-var bubbleImage: zhu.Image = undefined;
+var bubbleImage: zhu.NineImage = undefined;
 
 pub fn init() void {
     // 与 C++ 的 dialogue_bubble preset 使用同一张九宫格图片。
-    bubbleImage = zhu.getImage("farm-rpg/UI/dialogue box.png").?
-        .sub(.init(.xy(0, 48), .xy(48, 48)));
+    const image = zhu.getImage("farm-rpg/UI/dialogue box.png").?;
+    bubbleImage = zhu.NineImage.from(image, .{
+        .rect = .init(.xy(0, 48), .xy(48, 48)),
+        .patch = .{ .min = .xy(3, 4), .max = .xy(3, 3) },
+    });
 
     title.init();
     save_slot.init();
@@ -226,10 +229,7 @@ fn drawBubble(position: zhu.Vector2, text: []const u8) void {
 
     const bubblePos = head.addXY(-size.x / 2, -4 - size.y);
     const bubbleRect: zhu.Rect = .init(bubblePos, size);
-    zhu.batch.drawNine(bubbleImage, bubbleRect, .{
-        .min = .xy(3, 4),
-        .max = .xy(3, 3),
-    });
+    zhu.batch.drawNine(bubbleImage, bubbleRect);
 
     zhu.text.draw(text, bubbleRect.min.add(.xy(8, 8)), option);
 }

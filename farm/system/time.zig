@@ -12,11 +12,25 @@ const uiScale: f32 = 2.0;
 var extras: zhu.Image = undefined;
 var clockFace: zhu.Image = undefined;
 var clockHand: zhu.Image = undefined;
+var panelImage: zhu.NineImage = undefined;
+var labelImage: zhu.NineImage = undefined;
 
 pub fn init() void {
     extras = zhu.getImage("farm-rpg/UI/Clock/Extras.png").?;
     clockFace = zhu.getImage("farm-rpg/UI/Clock/Clock.png").?;
     clockHand = zhu.getImage("farm-rpg/UI/Clock/clock hand.png").?;
+
+    var image = extras.sub(.init(.xy(66, 65), .xy(59, 28)));
+    panelImage = .{
+        .image = image,
+        .patch = .{ .min = .xy(1, 3), .max = .xy(1, 1) },
+    };
+
+    image = extras.sub(.init(.xy(71, 99), .xy(33, 10)));
+    labelImage = .{
+        .image = image,
+        .patch = .{ .min = .xy(1, 1), .max = .xy(1, 1) },
+    };
 }
 
 pub fn update(world: *zhu.ecs.World, delta: f32) void {
@@ -69,19 +83,13 @@ fn updatePeriod(world: *zhu.ecs.World) void {
 pub fn draw() void {
     const pos = zhu.Vector2.xy(10, 10);
     const clockSourceSize = zhu.Vector2.xy(32, 32);
-    const panelSourceSize = zhu.Vector2.xy(59, 28);
-    const labelSize = zhu.Vector2.xy(33, 10).scale(uiScale);
-
     const clockSize = clockSourceSize.scale(uiScale);
-    const panelSize = panelSourceSize.scale(uiScale);
+    const panelSize = panelImage.image.size.scale(uiScale);
+    const labelSize = labelImage.image.size.scale(uiScale);
 
-    var image = extras.sub(.init(.xy(66, 65), panelSourceSize));
-    zhu.batch.drawNine(image, .init(pos.addX(20 * uiScale), panelSize), .{
-        .min = .xy(1, 3),
-        .max = .xy(1, 1),
-    });
+    zhu.batch.drawNine(panelImage, .init(pos.addX(20 * uiScale), panelSize));
 
-    image = clockFace.sub(.init(.zero, clockSourceSize));
+    var image = clockFace.sub(.init(.zero, clockSourceSize));
     zhu.batch.drawImage(image, pos.addY(-2 * uiScale), .{
         .size = clockSize,
     });
@@ -115,12 +123,7 @@ fn currentPeriod(hour: u8) component.time.Period {
 }
 
 fn drawLabel(rect: zhu.Rect, text: []const u8) void {
-    const labelSourceSize = zhu.Vector2.xy(33, 10);
-    const labelImage = extras.sub(.init(.xy(71, 99), labelSourceSize));
-    zhu.batch.drawNine(labelImage, rect, .{
-        .min = .xy(1, 1),
-        .max = .xy(1, 1),
-    });
+    zhu.batch.drawNine(labelImage, rect);
 
     const width = zhu.text.measure(text, .{}).x;
     const textPos = rect.min.add(.xy(

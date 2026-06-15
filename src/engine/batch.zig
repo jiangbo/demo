@@ -225,21 +225,22 @@ pub fn drawAxisCapsule(rect: math.Rect, color: Color) void {
     drawImage(image, pos, .{ .size = size, .color = color });
 }
 
-pub const NineOption = graphics.NineImage.Patch;
-pub fn drawNine(image: Image, rect: math.Rect, option: NineOption) void {
-    const left = option.min.x;
-    const top = option.min.y;
-    const right = option.max.x;
-    const bottom = option.max.y;
+pub fn drawNine(nine: graphics.NineImage, rect: math.Rect) void {
+    const left = nine.patch.min.x;
+    const top = nine.patch.min.y;
+    const right = nine.patch.max.x;
+    const bottom = nine.patch.max.y;
 
-    const finalSize = rect.size.max(.xy(left + right, top + bottom));
-    const centerW = finalSize.x - left - right;
-    const centerH = finalSize.y - top - bottom;
+    std.debug.assert(rect.size.x >= left + right);
+    std.debug.assert(rect.size.y >= top + bottom);
 
-    const srcX = [_]f32{ 0, left, image.size.x - right };
-    const srcY = [_]f32{ 0, top, image.size.y - bottom };
-    const srcW = [_]f32{ left, image.size.x - left - right, right };
-    const srcH = [_]f32{ top, image.size.y - top - bottom, bottom };
+    const centerW = rect.size.x - left - right;
+    const centerH = rect.size.y - top - bottom;
+
+    const srcX = [_]f32{ 0, left, nine.image.size.x - right };
+    const srcY = [_]f32{ 0, top, nine.image.size.y - bottom };
+    const srcW = [_]f32{ left, nine.image.size.x - left - right, right };
+    const srcH = [_]f32{ top, nine.image.size.y - top - bottom, bottom };
 
     const min = rect.min;
     const dstX = [_]f32{ min.x, min.x + left, min.x + left + centerW };
@@ -252,15 +253,11 @@ pub fn drawNine(image: Image, rect: math.Rect, option: NineOption) void {
             const srcPos = Vector2.xy(srcX[col], srcY[row]);
             const srcSize = Vector2.xy(srcW[col], srcH[row]);
             const pos = Vector2.xy(dstX[col], dstY[row]);
-            drawImage(image.sub(.init(srcPos, srcSize)), pos, .{
+            drawImage(nine.image.sub(.init(srcPos, srcSize)), pos, .{
                 .size = .xy(dstW[col], dstH[row]),
             });
         }
     }
-}
-
-pub fn drawNine2(image: graphics.NineImage, rect: math.Rect) void {
-    drawNine(image.image, rect, image.patch);
 }
 
 pub fn drawImage(image: Image, pos: Vector2, option: Option) void {

@@ -22,7 +22,7 @@ pub const Button = struct {
     rect: math.Rect,
     event: u8,
     label: []const u8 = "",
-    nine: ?batch.NineOption = null,
+    patch: ?graphics.NineImage.Patch = null,
     normal: Style = .{},
     hover: Style = .{},
     pressed: Style = .{},
@@ -45,9 +45,10 @@ pub const Button = struct {
         if (visual.source) |source| image = image.sub(source);
 
         const rect = self.rect.move(offset);
-        if (self.nine) |nine| batch.drawNine(image, rect, nine) else {
-            batch.drawImage(image, rect.min, .{ .size = rect.size });
+        if (self.patch) |patch| {
+            return batch.drawNine(.init(image, patch), rect);
         }
+        batch.drawImage(image, rect.min, .{ .size = rect.size });
     }
 
     /// 绘制按钮文字
