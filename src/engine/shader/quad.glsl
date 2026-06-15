@@ -1,6 +1,7 @@
 @vs vs
 layout(binding=0) uniform vs_params {
-    mat4 viewMatrix;
+    vec4 transformX;
+    vec4 transformY;
     vec4 textureVec;
 };
 
@@ -27,10 +28,11 @@ void main() {
     float cosA = cos(vertex_radian);
     float sinA = sin(vertex_radian);
     vec2 rotated = mat2(cosA, sinA, -sinA, cosA) * scaled;
-    // 最后平移回原位
-    vec2 localPos = rotated + scaledPivot;
-    vec4 depthPosition = vec4(localPos + vertex_position.xy, 0, 1);
-    gl_Position = viewMatrix * depthPosition;
+    // 最后平移到世界坐标
+    vec3 point = vec3(rotated + scaledPivot + vertex_position.xy, 1);
+    float clipX = dot(transformX.xyz, point);
+    float clipY = dot(transformY.xyz, point);
+    gl_Position = vec4(clipX, clipY, 0, 1);
 
     // 纹理
     color = vertex_color;

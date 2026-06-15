@@ -11,7 +11,6 @@ const ImageId = graphics.ImageId;
 const Color = graphics.Color;
 const RenderPass = graphics.RenderPass;
 const Vector2 = math.Vector2;
-const Matrix = math.Matrix;
 
 pub const Vertex = extern struct {
     position: math.Vector2 = .zero, // 顶点坐标
@@ -315,17 +314,10 @@ fn doDraw(cmd: DrawCommand, flipY: bool) void {
     sk.gfx.applyPipeline(cmd.pipeline);
 
     // 处理 uniform 变量
-    const x, const y = .{ cmd.size.x, cmd.size.y };
-    var orth = math.Matrix.orthographic(x, y, 0, 1);
-    if (flipY) {
-        orth.mat[5] *= -1;
-        orth.mat[13] *= -1;
-    }
-    const viewMatrix = cmd.camera.matrix();
-
     const size = graphics.queryViewSize(cmd.view);
     const uniforms = shader.VsParams{
-        .viewMatrix = math.Matrix.mul(orth, viewMatrix).mat,
+        .transformX = cmd.camera.transformX(cmd.size),
+        .transformY = cmd.camera.transformY(cmd.size, flipY),
         .textureVec = [4]f32{ 1 / size.x, 1 / size.y, 1, 1 },
     };
     sk.gfx.applyUniforms(shader.UB_vs_params, sk.gfx.asRange(&uniforms));

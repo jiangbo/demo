@@ -4,7 +4,6 @@ const math = @import("math.zig");
 const key = @import("input.zig").key;
 
 const Vector2 = math.Vector2;
-const Matrix = math.Matrix;
 
 pub const Camera = struct {
     position: Vector2,
@@ -28,11 +27,16 @@ pub const Camera = struct {
         return point.div(self.scale).add(self.position);
     }
 
-    pub fn matrix(self: Camera) Matrix {
-        const position = self.position.scale(-1).toVector3(0);
-        const translate = Matrix.translateVec(position);
-        const scaleMatrix = Matrix.scaleVec(self.scale.toVector3(1));
-        return Matrix.mul(scaleMatrix, translate);
+    pub fn transformX(self: Camera, screen: Vector2) [4]f32 {
+        const sx = 2 / screen.x * self.scale.x;
+        return .{ sx, 0, -self.position.x * sx - 1, 0 };
+    }
+
+    pub fn transformY(self: Camera, screen: Vector2, flipY: bool) [4]f32 {
+        const sign: f32 = if (flipY) 2 else -2;
+        const offset: f32 = if (flipY) -1 else 1;
+        const sy = sign / screen.y * self.scale.y;
+        return .{ 0, sy, -self.position.y * sy + offset, 0 };
     }
 };
 
