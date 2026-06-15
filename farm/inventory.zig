@@ -157,7 +157,7 @@ pub fn draw() void {
 }
 
 fn drawHotbar() void {
-    zhu.camera.push(.{ .position = zon.hotbar.position.neg() });
+    zhu.camera.push(.windowAt(zon.hotbar.position));
     defer zhu.camera.pop();
 
     const atlas = zhu.assets.getImage(zon.hotbar.imageId).?;
@@ -188,7 +188,7 @@ fn drawHotbar() void {
 }
 
 fn drawInventoryPanel() void {
-    zhu.camera.push(.{ .position = zon.inventory.position.neg() });
+    zhu.camera.push(.windowAt(zon.inventory.position));
     defer zhu.camera.pop();
 
     const atlas = zhu.assets.getImage(zon.inventory.imageId).?;

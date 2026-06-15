@@ -12,6 +12,14 @@ pub const Camera = struct {
 
     pub const window: Camera = .{ .position = .zero };
 
+    pub fn windowAt(origin: Vector2) Camera {
+        return .{ .position = origin.neg() };
+    }
+
+    pub fn windowScale(origin: Vector2, scale: Vector2) Camera {
+        return .{ .position = origin.div(scale).neg(), .scale = scale };
+    }
+
     pub fn toWindow(self: Camera, point: Vector2) Vector2 {
         return point.sub(self.position).mul(self.scale);
     }

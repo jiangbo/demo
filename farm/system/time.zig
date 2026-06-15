@@ -8,6 +8,7 @@ const event = component.event;
 const clock = context.clock;
 
 const uiScale: f32 = 2.0;
+const clockSize = zhu.Vector2.xy(32, 32);
 
 var extras: zhu.Image = undefined;
 var clockFace: zhu.Image = undefined;
@@ -17,7 +18,8 @@ var labelImage: zhu.NineImage = undefined;
 
 pub fn init() void {
     extras = zhu.getImage("farm-rpg/UI/Clock/Extras.png").?;
-    clockFace = zhu.getImage("farm-rpg/UI/Clock/Clock.png").?;
+    clockFace = zhu.getImage("farm-rpg/UI/Clock/Clock.png").?
+        .sub(.init(.zero, clockSize));
     clockHand = zhu.getImage("farm-rpg/UI/Clock/clock hand.png").?;
 
     var image = extras.sub(.init(.xy(66, 65), .xy(59, 28)));
@@ -81,36 +83,24 @@ fn updatePeriod(world: *zhu.ecs.World) void {
 }
 
 pub fn draw() void {
-    const pos = zhu.Vector2.xy(10, 10);
-    const clockSourceSize = zhu.Vector2.xy(32, 32);
-    const clockSize = clockSourceSize.scale(uiScale);
-    const panelSize = panelImage.image.size.scale(uiScale);
-    const labelSize = labelImage.image.size.scale(uiScale);
+    zhu.camera.push(.windowScale(.xy(10, 10), .square(uiScale)));
+    defer zhu.camera.pop();
 
-    zhu.batch.drawNine(panelImage, .init(pos.addX(20 * uiScale), panelSize));
-
-    var image = clockFace.sub(.init(.zero, clockSourceSize));
-    zhu.batch.drawImage(image, pos.addY(-2 * uiScale), .{
-        .size = clockSize,
-    });
+    zhu.batch.drawNine(panelImage, panelImage.rectAt(.xy(20, 0)));
+    zhu.batch.drawImage(clockFace, .xy(0, -2), .{});
 
     const index: u8 = ((clock.hour + 13) % 24) / 3;
-    const handX = @as(f32, @floatFromInt(index)) * clockSourceSize.x;
-    image = clockHand.sub(.init(.xy(handX, 0), clockSourceSize));
-    zhu.batch.drawImage(image, pos.addY(-2 * uiScale), .{
-        .size = clockSize,
-    });
+    const handX = @as(f32, @floatFromInt(index)) * clockSize.x;
+    const image = clockHand.sub(.init(.xy(handX, 0), clockSize));
+    zhu.batch.drawImage(image, .xy(0, -2), .{});
 
-    var buffer: [16]u8 = undefined;
-    const day = zhu.format(&buffer, "Day {d}", .{clock.day});
-    var labelPos = pos.add(zhu.Vector2.xy(34, 3).scale(uiScale));
-    drawLabel(.init(labelPos, labelSize), day);
-    labelPos = labelPos.addY(labelSize.y + 2 * uiScale);
-    const clockText = zhu.format(&buffer, "{d:0>2}:{d:0>2}", .{
+    const size = labelImage.image.size;
+    const rect = zhu.Rect.init(.xy(34, 3), size);
+    drawLabel(rect, "Day {d}", .{clock.day});
+    drawLabel(rect.move(.xy(0, size.y + 2)), "{d:0>2}:{d:0>2}", .{
         clock.hour,
         @as(u8, @intFromFloat(clock.minute)),
     });
-    drawLabel(.init(labelPos, labelSize), clockText);
 }
 
 fn currentPeriod(hour: u8) component.time.Period {
@@ -122,15 +112,12 @@ fn currentPeriod(hour: u8) component.time.Period {
     };
 }
 
-fn drawLabel(rect: zhu.Rect, text: []const u8) void {
+fn drawLabel(rect: zhu.Rect, comptime fmt: []const u8, args: anytype) void {
     zhu.batch.drawNine(labelImage, rect);
-
-    const width = zhu.text.measure(text, .{}).x;
-    const textPos = rect.min.add(.xy(
-        @max(0.0, (rect.size.x - width) / 2),
-        2,
-    ));
-    zhu.text.draw(text, textPos, .{});
+    zhu.text.drawFmt(fmt, args, rect.center(), .{
+        .scale = .square(1.0 / uiScale),
+        .anchor = .center,
+    });
 }
 
 test "时间推进到整点会发出小时事件" {

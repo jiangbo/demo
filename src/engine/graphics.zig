@@ -196,6 +196,10 @@ pub const NineImage = struct {
         return .{ .image = image, .patch = patch };
     }
 
+    pub fn rectAt(self: NineImage, pos: Vector2) math.Rect {
+        return .init(pos, self.image.size);
+    }
+
     pub fn from(image: Image, source: Source) NineImage {
         return .init(image.sub(source.rect), source.patch);
     }
