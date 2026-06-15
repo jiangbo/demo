@@ -294,8 +294,7 @@ test "目标框只在工具或种子选中时显示" {
     context.init();
     defer context.init();
 
-    zhu.camera.position = .zero;
-    zhu.camera.scale = .one;
+    zhu.camera.init(.xy(640, 360));
     zhu.window.mouse = .xy(32, 48);
 
     var world = World.init(std.testing.allocator);
@@ -318,8 +317,7 @@ test "点击目标会进入忙碌状态并使用工具" {
     context.init();
     defer context.init();
 
-    zhu.camera.position = .zero;
-    zhu.camera.scale = .one;
+    zhu.camera.init(.xy(640, 360));
     zhu.window.mouse = testTarget;
     setActiveItem(.hoe, 1);
     clickMouse(.LEFT);

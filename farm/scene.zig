@@ -91,7 +91,6 @@ pub fn draw() void {
     switch (context.scene.current) {
         .title => {
             zhu.batch.useTarget(clearColor, .{});
-            zhu.camera.mode = .window;
             ui.title.draw();
             ui.overlay.draw();
         },
@@ -102,7 +101,7 @@ pub fn draw() void {
 
             zhu.batch.useTarget(clearColor, .{});
             zhu.batch.drawImage(canvas.image, .zero, .{
-                .mode = .window,
+                .camera = zhu.camera.Camera.default,
             });
         },
     }
@@ -164,7 +163,7 @@ fn enterScene(next: context.scene.Scene) void {
 }
 
 fn enterFarm() void {
-    zhu.camera.scale = .square(2);
+    zhu.camera.top().scale = .square(2);
     const loadSlot = context.scene.takeLoadSlot();
     if (loadSlot == null) {
         // 新游戏重置世界级状态；读档会在基础地图创建后覆盖状态。
@@ -204,8 +203,6 @@ fn cameraFollowPlayer(delta: f32) void {
 }
 
 fn drawFarm() void {
-    zhu.camera.mode = .world;
-
     map.drawBack();
     system.render.draw(&world);
     map.drawFront();
@@ -217,8 +214,8 @@ fn drawFarm() void {
     system.control.draw(&world);
     system.light.draw(&world);
 
-    zhu.camera.mode = .window;
-
+    zhu.camera.push(.zero, .one);
+    defer zhu.camera.pop();
     system.time.draw();
     ui.draw(&world);
 }

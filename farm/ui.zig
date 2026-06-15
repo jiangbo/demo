@@ -252,15 +252,14 @@ pub const title = struct {
     }
 
     pub fn enter() void {
-        zhu.camera.scale = .one;
-        zhu.camera.mode = .window;
+        zhu.camera.top().position = .zero;
+        zhu.camera.top().scale = .one;
         zhu.audio.playMusic("assets/audio/02_spring_fairy_tale.ogg");
         mainMenu.click = .empty;
         pauseMenu.click = .empty;
     }
 
     pub fn exit() void {
-        zhu.camera.mode = .world;
         zhu.audio.setMusicState(.stopped);
     }
 

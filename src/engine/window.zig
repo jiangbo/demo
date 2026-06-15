@@ -4,6 +4,7 @@ const builtin = @import("builtin");
 const sk = @import("sokol");
 const math = @import("math.zig");
 const assets = @import("assets.zig");
+const camera = @import("camera.zig");
 const input = @import("input.zig");
 const text = @import("text.zig");
 
@@ -108,6 +109,7 @@ const root = @import("root");
 pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
     sk.time.setup();
     size = info.logicSize orelse info.size;
+    camera.init(size);
     viewRect = .init(.zero, size);
     alignment = info.alignment;
     scaleEnum = info.scaleEnum;

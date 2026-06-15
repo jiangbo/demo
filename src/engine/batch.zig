@@ -31,7 +31,7 @@ pub const Option = struct {
     radian: f32 = 0, // 旋转弧度
     uvRect: ?math.Vector4 = null, // 纹理 UV 区域
     color: graphics.Color = .white, // 颜色
-    mode: ?@TypeOf(camera.mode) = null, // 相机模式
+    camera: ?camera.Camera = null, // 指定绘制使用的相机
 };
 
 pub const Command = union(enum) {
@@ -44,8 +44,7 @@ pub const DrawCommand = struct {
     start: u32 = 0, // 起始顶点索引
     end: usize = 0, // 结束顶点索引
     view: graphics.View = .{}, // 纹理视图
-    position: Vector2 = .zero, // 相机位置
-    scale: Vector2 = .one, // 相机缩放
+    camera: camera.Camera = .default, // 绘制命令相机
     size: Vector2 = .zero, // 相机大小
     pipeline: sk.gfx.Pipeline = .{}, // 渲染流水线
     sampler: sk.gfx.Sampler = .{}, // 采样器
@@ -74,8 +73,6 @@ pub fn init(vertex: []Vertex, cmds: []Command) void {
         .size = @sizeOf(Vertex) * vertex.len,
         .usage = .{ .stream_update = true },
     });
-
-    camera.init();
 }
 
 pub fn beginDraw() void {
@@ -83,8 +80,7 @@ pub fn beginDraw() void {
     vertices.clearRetainingCapacity();
     commands.clearRetainingCapacity();
     drawState = .{
-        .position = camera.position,
-        .scale = camera.scale,
+        .camera = camera.top().*,
         .size = camera.size,
         .pipeline = pipeline,
         .sampler = sampler,
@@ -268,19 +264,15 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     if (cmd.view.id != image.view.id) cmd = addCommand(image);
 
     const size = option.size orelse image.size;
-    var scaledSize = size.mul(option.scale);
-    const worldPos = switch (option.mode orelse camera.mode) {
-        .world => pos,
-        .window => blk: {
-            scaledSize = scaledSize.div(cmd.scale);
-            break :blk cmd.position.add(pos.div(cmd.scale));
-        },
-    };
+    const drawCamera = option.camera orelse camera.top().*;
+    const cameraScale = drawCamera.scale.div(cmd.camera.scale);
+    const drawSize = size.mul(option.scale).mul(cameraScale);
+    const drawPos = cmd.camera.toWorld(drawCamera.toWindow(pos));
 
     vertices.appendAssumeCapacity(Vertex{
-        .position = worldPos.sub(scaledSize.mul(option.anchor)),
+        .position = drawPos.sub(drawSize.mul(option.anchor)),
         .radian = option.radian,
-        .size = scaledSize,
+        .size = drawSize,
         .pivot = option.pivot,
         .uvRect = option.uvRect orelse image.uvRect(),
         .color = option.color,
@@ -327,15 +319,11 @@ fn doDraw(cmd: DrawCommand, flipY: bool) void {
         orth.mat[5] *= -1;
         orth.mat[13] *= -1;
     }
-    const position = cmd.position.scale(-1).toVector3(0);
-
-    const translate = math.Matrix.translateVec(position);
-    const scaleMatrix = math.Matrix.scaleVec(cmd.scale.toVector3(1));
-    const view = math.Matrix.mul(scaleMatrix, translate);
+    const viewMatrix = cmd.camera.matrix();
 
     const size = graphics.queryViewSize(cmd.view);
     const uniforms = shader.VsParams{
-        .viewMatrix = math.Matrix.mul(orth, view).mat,
+        .viewMatrix = math.Matrix.mul(orth, viewMatrix).mat,
         .textureVec = [4]f32{ 1 / size.x, 1 / size.y, 1, 1 },
     };
     sk.gfx.applyUniforms(shader.UB_vs_params, sk.gfx.asRange(&uniforms));

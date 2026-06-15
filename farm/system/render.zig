@@ -54,14 +54,8 @@ test "渲染排序先比较图层再比较深度" {
     try std.testing.expect(!lessThan(actorFront, actorBack));
 }
 
-fn setupCamera() void {
-    zhu.camera.position = .zero;
-    zhu.camera.size = .xy(640, 360);
-    zhu.camera.scale = .one;
-}
-
 test "视口内精灵会被绘制" {
-    setupCamera();
+    zhu.camera.init(.xy(640, 360));
     var vertices: [4]zhu.batch.Vertex = undefined;
     var commands: [16]zhu.batch.Command = undefined;
     zhu.batch.init(&vertices, &commands);
@@ -82,7 +76,7 @@ test "视口内精灵会被绘制" {
 }
 
 test "视口外精灵不会被绘制" {
-    setupCamera();
+    zhu.camera.init(.xy(640, 360));
     var vertices: [4]zhu.batch.Vertex = undefined;
     var commands: [16]zhu.batch.Command = undefined;
     zhu.batch.init(&vertices, &commands);
@@ -103,7 +97,7 @@ test "视口外精灵不会被绘制" {
 }
 
 test "混合场景只绘制视口内精灵" {
-    setupCamera();
+    zhu.camera.init(.xy(640, 360));
     var vertices: [4]zhu.batch.Vertex = undefined;
     var commands: [16]zhu.batch.Command = undefined;
     zhu.batch.init(&vertices, &commands);

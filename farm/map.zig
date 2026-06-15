@@ -449,6 +449,7 @@ test "地图绘制会把前景留到实体之后" {
     var vertices: [8]zhu.batch.Vertex = undefined;
     var commands: [4]zhu.batch.Command = undefined;
     zhu.batch.init(&vertices, &commands);
+    zhu.camera.init(.xy(640, 360));
     const vertexBuffer = &zhu.batch.vertices;
 
     drawBack();
