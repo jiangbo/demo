@@ -265,10 +265,11 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
     if (cmd.view.id != image.view.id) cmd = addCommand(image);
 
     const size = option.size orelse image.size;
-    const drawCamera = option.camera orelse camera.top().*;
-    const cameraScale = drawCamera.scale.div(cmd.camera.scale);
-    const drawSize = size.mul(option.scale).mul(cameraScale);
-    const drawPos = cmd.camera.toWorld(drawCamera.toWindow(pos));
+    var drawPos, var drawSize = .{ pos, size.mul(option.scale) };
+    if (option.camera orelse camera.stack.getLastOrNull()) |source| {
+        drawSize = drawSize.mul(source.scale.div(cmd.camera.scale));
+        drawPos = cmd.camera.toWorld(source.toWindow(pos));
+    }
 
     vertices.appendAssumeCapacity(Vertex{
         .position = drawPos.sub(drawSize.mul(option.anchor)),

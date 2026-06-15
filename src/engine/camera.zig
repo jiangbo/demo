@@ -28,14 +28,6 @@ pub const Camera = struct {
         return point.div(self.scale).add(self.position);
     }
 
-    pub fn combine(self: Camera, child: Camera) Camera {
-        const childPosition = child.position.div(self.scale);
-        return .{
-            .position = self.position.add(childPosition),
-            .scale = self.scale.mul(child.scale),
-        };
-    }
-
     pub fn matrix(self: Camera) Matrix {
         const position = self.position.scale(-1).toVector3(0);
         const translate = Matrix.translateVec(position);
@@ -61,11 +53,6 @@ pub fn push(camera: Camera) void {
 
 pub fn pop() void {
     _ = stack.pop();
-}
-
-pub fn top() *Camera {
-    if (stack.items.len == 0) return &main;
-    return &stack.items[stack.items.len - 1];
 }
 
 pub fn toWindow(point: Vector2) Vector2 {
