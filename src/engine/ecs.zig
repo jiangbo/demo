@@ -58,7 +58,7 @@ pub fn Store(T: type) type {
         dense: std.ArrayList(Entity) = .empty,
         identity: Entity = invalid,
         alignment: std.mem.Alignment = .of(T),
-        valuePtr: [*]T = undefined,
+        valuePtr: [*]T = std.ArrayList(T).empty.items.ptr,
         valueSize: u16 = @sizeOf(T),
 
         pub fn deinit(self: *Self, gpa: Allocator) void {
@@ -116,8 +116,6 @@ pub fn Store(T: type) type {
         }
 
         pub fn components(self: *const Self) []T {
-            if (self.dense.items.len == 0) return &.{};
-            std.debug.assert(self.valueSize != 0);
             return self.valuePtr[0..self.dense.items.len];
         }
 
