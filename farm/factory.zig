@@ -399,7 +399,7 @@ test "spawnPlayer 会创建玩家实体" {
     try expectEqual(1, world.raw(actor.Actor).len);
     try expectEqual(1, world.raw(render.Sprite).len);
     try expectEqual(1, world.raw(render.Render).len);
-    try expectEqual(1, world.assure(render.YSort).dense.items.len);
+    try expectEqual(1, world.count(render.YSort));
 }
 
 test "spawnPlayer 重复调用只保留一个玩家" {

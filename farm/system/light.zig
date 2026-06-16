@@ -32,7 +32,7 @@ pub fn init() void {
 
 pub fn update(world: *zhu.ecs.World) void {
     var nextDark: ?bool = null;
-    for (world.getEvent(event.HourChanged).items) |evt| {
+    for (world.getEvent(event.HourChanged)) |evt| {
         nextDark = switch (evt.hour) {
             18 => true,
             6 => false,

@@ -133,7 +133,7 @@ test "时间推进到整点会发出小时事件" {
     try std.testing.expectEqual(7, clock.hour);
     try std.testing.expectEqual(1.0, clock.minute);
 
-    const hours = world.getEvent(event.HourChanged).items;
+    const hours = world.getEvent(event.HourChanged);
     try std.testing.expectEqual(1, hours.len);
     try std.testing.expectEqual(1, hours[0].day);
     try std.testing.expectEqual(7, hours[0].hour);
@@ -154,11 +154,11 @@ test "时间推进跨天会发出新一天事件" {
     try std.testing.expectEqual(0, clock.hour);
     try std.testing.expectEqual(1.0, clock.minute);
 
-    const days = world.getEvent(event.DayChanged).items;
+    const days = world.getEvent(event.DayChanged);
     try std.testing.expectEqual(1, days.len);
     try std.testing.expectEqual(2, days[0].day);
 
-    const hours = world.getEvent(event.HourChanged).items;
+    const hours = world.getEvent(event.HourChanged);
     try std.testing.expectEqual(1, hours.len);
     try std.testing.expectEqual(2, hours[0].day);
     try std.testing.expectEqual(0, hours[0].hour);
@@ -181,11 +181,11 @@ test "按小时推进会清零分钟并逐小时发事件" {
     try std.testing.expectEqual(@as(f32, 0), clock.minute);
     try std.testing.expectEqual(null, clock.restHours);
 
-    const days = world.getEvent(event.DayChanged).items;
+    const days = world.getEvent(event.DayChanged);
     try std.testing.expectEqual(1, days.len);
     try std.testing.expectEqual(2, days[0].day);
 
-    const hours = world.getEvent(event.HourChanged).items;
+    const hours = world.getEvent(event.HourChanged);
     try std.testing.expectEqual(3, hours.len);
     try std.testing.expectEqual(23, hours[0].hour);
     try std.testing.expectEqual(0, hours[1].hour);
@@ -205,7 +205,7 @@ test "时段跨过边界会发出时段事件" {
 
     try std.testing.expectEqual(currentPeriod(8), clock.period);
 
-    const periods = world.getEvent(event.PeriodChanged).items;
+    const periods = world.getEvent(event.PeriodChanged);
     try std.testing.expectEqual(1, periods.len);
     try std.testing.expectEqual(currentPeriod(8), periods[0].period);
 }

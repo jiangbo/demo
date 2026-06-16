@@ -81,7 +81,7 @@ pub fn change(world: *World, id: Id, targetId: i32) zhu.Vector2 {
 }
 
 pub fn update(world: *World) void {
-    for (world.getEvent(component.event.DayChanged).items) |_| {
+    for (world.getEvent(component.event.DayChanged)) |_| {
         for (land.tiles) |*tile| {
             const watered = tile.ground == .wet;
             // 当前地图和离线地图一致：每天结束湿地变干。
@@ -482,7 +482,7 @@ test "actor 点对象会生成 NPC，player 点对象只保留标记" {
         .extend = .{},
     });
 
-    try std.testing.expectEqual(0, world.assure(actor.Npc).dense.items.len);
+    try std.testing.expectEqual(0, world.count(actor.Npc));
 
     loadObject(&world, .{
         .id = 2,

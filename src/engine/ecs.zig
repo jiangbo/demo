@@ -10,6 +10,10 @@ fn hasEntity(slice: []const Entity, entity: Entity) bool {
 pub const Version = u16;
 pub const VersionEntity = struct { entity: Entity, version: Version };
 
+fn Event(T: type) type {
+    return struct { event: T };
+}
+
 const Entities = struct {
     versions: std.ArrayList(Version) = .empty,
     deleted: std.ArrayList(Entity) = .empty,
@@ -96,7 +100,23 @@ pub fn Store(T: type) type {
             self.sparse.items[entity] = index;
         }
 
+        pub fn append(self: *Self, gpa: Allocator, v: T) !void {
+            const index: Entity = @intCast(self.dense.items.len);
+            const oldCapacity = self.dense.capacity;
+            try self.dense.append(gpa, index);
+            errdefer _ = self.dense.pop();
+            if (self.valueSize == 0) return;
+
+            if (oldCapacity != self.dense.capacity) {
+                const slice = self.valuePtr[0..oldCapacity];
+                const capacity = self.dense.capacity;
+                self.valuePtr = (try gpa.realloc(slice, capacity)).ptr;
+            }
+            self.valuePtr[index] = v;
+        }
+
         pub fn components(self: *const Self) []T {
+            if (self.dense.items.len == 0) return &.{};
             std.debug.assert(self.valueSize != 0);
             return self.valuePtr[0..self.dense.items.len];
         }
@@ -143,31 +163,12 @@ pub fn Store(T: type) type {
     };
 }
 
-pub const SparseMap = Store;
-
-fn EventList(T: type) type {
-    return struct {
-        list: std.ArrayList(T) = .empty,
-        alignment: std.mem.Alignment = .of(T),
-        valueSize: u32 = @sizeOf(T),
-
-        fn deinit(self: *@This(), gpa: Allocator) void {
-            if (self.list.capacity == 0) return;
-            const byteCount = self.list.capacity * self.valueSize;
-            const slice = self.list.items.ptr[0..byteCount];
-            gpa.rawFree(slice, self.alignment, @returnAddress());
-        }
-    };
-}
-
 pub const TypeId = u32;
 const Map = std.AutoHashMapUnmanaged;
 pub const World = struct {
     allocator: Allocator,
     entities: Entities = .{},
-    componentMap: Map(TypeId, SparseMap(u8)) = .empty,
-
-    eventMap: Map(TypeId, EventList(u8)) = .empty,
+    storeMap: Map(TypeId, Store(u8)) = .empty,
 
     pub fn init(allocator: std.mem.Allocator) World {
         return .{ .allocator = allocator };
@@ -176,13 +177,9 @@ pub const World = struct {
     pub fn deinit(self: *World) void {
         self.entities.deinit(self.allocator);
 
-        var events = self.eventMap.valueIterator();
-        while (events.next()) |list| list.deinit(self.allocator);
-        self.eventMap.deinit(self.allocator);
-
-        var iterator = self.componentMap.valueIterator();
+        var iterator = self.storeMap.valueIterator();
         while (iterator.next()) |map| map.deinit(self.allocator);
-        self.componentMap.deinit(self.allocator);
+        self.storeMap.deinit(self.allocator);
     }
 
     pub fn reset(self: *World) void {
@@ -210,7 +207,7 @@ pub const World = struct {
     }
 
     pub fn addIdentity(self: *World, entity: Entity, T: type) void {
-        self.assure(T).identity = entity;
+        self.assure(T, T).identity = entity;
     }
 
     pub fn createIdentity(self: *World, T: type) Entity {
@@ -220,7 +217,7 @@ pub const World = struct {
     }
 
     pub fn getIdentity(self: *World, T: type) ?Entity {
-        const entity = self.assure(T).identity;
+        const entity = self.assure(T, T).identity;
         return if (entity == invalid) null else entity;
     }
 
@@ -235,41 +232,37 @@ pub const World = struct {
     }
 
     pub fn removeIdentity(self: *World, T: type) void {
-        self.assure(T).identity = invalid;
+        self.assure(T, T).identity = invalid;
     }
 
     pub fn addEvent(self: *World, value: anytype) void {
-        var list = self.getEvent(@TypeOf(value));
-        list.append(self.allocator, value) catch oom();
+        var map = self.assure(Event(@TypeOf(value)), @TypeOf(value));
+        map.append(self.allocator, value) catch oom();
     }
 
-    pub fn getEvent(self: *World, T: type) *std.ArrayList(T) {
-        const v = self.eventMap.getOrPut(self.allocator, //
-            hashTypeId(T)) catch oom();
-        const list: *EventList(T) = @ptrCast(@alignCast(v.value_ptr));
-        if (!v.found_existing) list.* = .{};
-        return &list.list;
+    pub fn getEvent(self: *World, T: type) []T {
+        return self.assure(Event(T), T).components();
     }
 
     pub fn clearEvent(self: *World, T: type) void {
-        self.getEvent(T).clearRetainingCapacity();
+        self.assure(Event(T), T).clear();
     }
 
     pub fn removeEvent(self: *World, T: type) void {
-        const removed = self.eventMap.fetchRemove(hashTypeId(T));
+        const removed = self.storeMap.fetchRemove(hashTypeId(Event(T)));
         if (removed) |r| r.value.deinit(self.allocator);
     }
 
-    pub fn assure(self: *World, T: type) *SparseMap(T) {
-        const result = self.componentMap.getOrPut(self.allocator, //
-            hashTypeId(T)) catch oom();
-        const map: *SparseMap(T) = @ptrCast(@alignCast(result.value_ptr));
+    fn assure(self: *World, Key: type, T: type) *Store(T) {
+        const result = self.storeMap.getOrPut(self.allocator, //
+            hashTypeId(Key)) catch oom();
+        const map: *Store(T) = @ptrCast(@alignCast(result.value_ptr));
         if (!result.found_existing) map.* = .{};
         return map;
     }
 
     pub fn has(self: *World, entity: Entity, T: type) bool {
-        return hasEntity(self.assure(T).sparse.items, entity);
+        return hasEntity(self.assure(T, T).sparse.items, entity);
     }
 
     pub fn get(self: *World, entity: Entity, T: type) ?T {
@@ -277,37 +270,37 @@ pub const World = struct {
     }
 
     pub fn getPtr(self: *World, entity: Entity, T: type) ?*T {
-        const map = self.assure(T);
+        const map = self.assure(T, T);
         if (hasEntity(map.sparse.items, entity)) {
             return &map.valuePtr[map.sparse.items[entity]];
         } else return null;
     }
 
     pub fn add(self: *World, entity: Entity, value: anytype) void {
-        var map = self.assure(@TypeOf(value));
+        var map = self.assure(@TypeOf(value), @TypeOf(value));
         map.add(self.allocator, entity, value) catch oom();
     }
 
     pub fn raw(self: *World, T: type) []T {
-        return self.assure(T).components();
+        return self.assure(T, T).components();
     }
 
     pub fn count(self: *World, T: type) usize {
-        return self.assure(T).dense.items.len;
+        return self.assure(T, T).dense.items.len;
     }
 
     pub fn sort(self: *World, T: type, lessFn: fn (T, T) bool) void {
-        self.assure(T).sort(lessFn);
+        self.assure(T, T).sort(lessFn);
     }
 
     pub fn remove(self: *World, entity: Entity, T: type) void {
-        _ = self.assure(T).remove(entity);
+        _ = self.assure(T, T).remove(entity);
     }
 
     pub fn alignAdd(self: *World, entity: Entity, comps: anytype) void {
         var indexes: [comps.len]Entity = undefined;
         inline for (comps, &indexes) |value, *i| {
-            var map = self.assure(@TypeOf(value));
+            var map = self.assure(@TypeOf(value), @TypeOf(value));
             map.add(self.allocator, entity, value) catch oom();
             i.* = map.sparse.items[entity];
         }
@@ -317,14 +310,14 @@ pub const World = struct {
     pub fn alignRemove(self: *World, entity: Entity, types: anytype) void {
         var index: [types.len]Entity = undefined;
         inline for (types, &index) |T, *i| {
-            var map = self.assure(T);
+            var map = self.assure(T, T);
             i.* = map.remove(entity);
         }
         for (index[1..]) |i| std.debug.assert(index[0] == i);
     }
 
     pub fn removeAll(self: *World, entity: Entity) void {
-        var iterator = self.componentMap.valueIterator();
+        var iterator = self.storeMap.valueIterator();
         while (iterator.next()) |map| {
             _ = map.remove(entity);
             if (map.identity == entity) map.identity = invalid;
@@ -332,7 +325,7 @@ pub const World = struct {
     }
 
     pub fn clear(self: *World, T: type) void {
-        self.assure(T).clear();
+        self.assure(T, T).clear();
     }
 
     pub fn clearAll(self: *World, types: anytype) void {
@@ -352,7 +345,7 @@ pub const World = struct {
         var result: Query(All, None) = .{};
         var minCount: usize = invalid;
         inline for (All, &result.sparse, &result.values) |T, *s, *v| {
-            const map = self.assure(T);
+            const map = self.assure(T, T);
             s.*, v.* = .{ map.sparse.items, map.valuePtr };
             if (map.dense.items.len < minCount) {
                 minCount = map.dense.items.len;
@@ -360,7 +353,7 @@ pub const World = struct {
             }
         }
         inline for (None, &result.none) |T, *none| {
-            none.* = self.assure(T).sparse.items;
+            none.* = self.assure(T, T).sparse.items;
         }
 
         return result;
@@ -371,14 +364,14 @@ pub const World = struct {
         None: anytype) Query(.{By} ++ All, None) {
     // zig fmt: on
         var rs: Query(.{By} ++ All, None) = .{};
-        rs.dense = self.assure(By).dense.items;
+        rs.dense = self.assure(By, By).dense.items;
 
         inline for (.{By} ++ All, &rs.sparse, &rs.values) |T, *s, *v| {
-            const map = self.assure(T);
+            const map = self.assure(T, T);
             s.*, v.* = .{ map.sparse.items, map.valuePtr };
         }
         inline for (None, &rs.none) |T, *none| {
-            none.* = self.assure(T).sparse.items;
+            none.* = self.assure(T, T).sparse.items;
         }
         return rs;
     }

@@ -8,8 +8,8 @@ const sound = component.sound;
 
 pub fn update(world: *zhu.ecs.World) void {
     const sounds = world.getEvent(event.SoundPlay);
-    for (sounds.items) |evt| zhu.audio.playSound(path(evt.id));
-    sounds.clearRetainingCapacity();
+    for (sounds) |evt| zhu.audio.playSound(path(evt.id));
+    world.clearEvent(event.SoundPlay);
 }
 
 fn path(id: sound.Id) [:0]const u8 {
@@ -46,6 +46,6 @@ test "sound update 消费播放事件" {
 
     update(&world);
 
-    const sounds = world.getEvent(event.SoundPlay).items;
+    const sounds = world.getEvent(event.SoundPlay);
     try std.testing.expectEqual(0, sounds.len);
 }

@@ -54,7 +54,7 @@ test "pickup update 拾取物品会发出 pickup 音效" {
 
     update(&world);
 
-    const sounds = world.getEvent(event.SoundPlay).items;
+    const sounds = world.getEvent(event.SoundPlay);
     try std.testing.expectEqual(1, sounds.len);
     try std.testing.expectEqual(.pickup, sounds[0].id);
     try std.testing.expect(!world.has(pickup, Pickup));

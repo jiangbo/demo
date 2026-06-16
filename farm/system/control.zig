@@ -359,7 +359,7 @@ test "工具使用会浇水并标记作物" {
     const tile = map.land.getTile(testTarget).?;
     try std.testing.expectEqual(Ground.wet, tile.ground.?);
     try std.testing.expect(world.get(crop, Crop).?.watered);
-    const sounds = world.getEvent(event.SoundPlay).items;
+    const sounds = world.getEvent(event.SoundPlay);
     try std.testing.expectEqual(1, sounds.len);
     try std.testing.expectEqual(.water, sounds[0].id);
 }
@@ -379,7 +379,7 @@ test "工具使用会种植种子并减少数量" {
 
     applyTool(&world, testTarget, .strawberrySeed);
 
-    const sounds = world.getEvent(event.SoundPlay).items;
+    const sounds = world.getEvent(event.SoundPlay);
     try std.testing.expectEqual(1, sounds.len);
     try std.testing.expectEqual(.plant, sounds[0].id);
     try std.testing.expectEqual(1, inventory.slots[0].count);
@@ -407,7 +407,7 @@ test "工具使用会收获成熟作物" {
 
     applyTool(&world, testTarget, .hoe);
 
-    const sounds = world.getEvent(event.SoundPlay).items;
+    const sounds = world.getEvent(event.SoundPlay);
     try std.testing.expectEqual(1, sounds.len);
     try std.testing.expectEqual(.harvest, sounds[0].id);
     try std.testing.expectEqual(null, map.land.getTile(testTarget).?.crop());
