@@ -8,7 +8,7 @@ fn hasEntity(slice: []const Entity, entity: Entity) bool {
     return entity < slice.len and slice[entity] != invalid;
 }
 pub const Version = u16;
-pub const Identity = struct { entity: Entity, version: Version };
+pub const VersionEntity = struct { entity: Entity, version: Version };
 
 const Entities = struct {
     versions: std.ArrayList(Version) = .empty,
@@ -33,12 +33,12 @@ const Entities = struct {
         try self.deleted.append(gpa, entity);
     }
 
-    pub fn isAlive(self: *const Entities, identity: Identity) bool {
-        return identity.entity < self.versions.items.len and
-            self.versions.items[identity.entity] == identity.version;
+    pub fn isAlive(self: *const Entities, id: VersionEntity) bool {
+        return id.entity < self.versions.items.len and
+            self.versions.items[id.entity] == id.version;
     }
 
-    pub fn toIdentity(self: *const Entities, entity: Entity) ?Identity {
+    pub fn to(self: *const Entities, entity: Entity) ?VersionEntity {
         if (entity < self.versions.items.len) {
             const version = self.versions.items[entity];
             return .{ .entity = entity, .version = version };
@@ -46,12 +46,13 @@ const Entities = struct {
     }
 };
 
-pub fn SparseMap(T: type) type {
+pub fn Store(T: type) type {
     return struct {
         const Self = @This();
 
         sparse: std.ArrayList(Entity) = .empty,
         dense: std.ArrayList(Entity) = .empty,
+        identity: Entity = invalid,
         alignment: std.mem.Alignment = .of(T),
         valuePtr: [*]T = undefined,
         valueSize: u16 = @sizeOf(T),
@@ -142,6 +143,8 @@ pub fn SparseMap(T: type) type {
     };
 }
 
+pub const SparseMap = Store;
+
 fn EventList(T: type) type {
     return struct {
         list: std.ArrayList(T) = .empty,
@@ -164,7 +167,6 @@ pub const World = struct {
     entities: Entities = .{},
     componentMap: Map(TypeId, SparseMap(u8)) = .empty,
 
-    identityMap: Map(TypeId, Identity) = .empty,
     eventMap: Map(TypeId, EventList(u8)) = .empty,
 
     pub fn init(allocator: std.mem.Allocator) World {
@@ -173,7 +175,6 @@ pub const World = struct {
 
     pub fn deinit(self: *World) void {
         self.entities.deinit(self.allocator);
-        self.identityMap.deinit(self.allocator);
 
         var events = self.eventMap.valueIterator();
         while (events.next()) |list| list.deinit(self.allocator);
@@ -203,14 +204,13 @@ pub const World = struct {
         while (toDestroy.next()) |entity| self.destroyEntity(entity);
     }
 
-    pub fn toEntity(self: *const World, identity: ?Identity) ?Entity {
-        const id = identity orelse return null;
+    pub fn toEntity(self: *const World, ve: ?VersionEntity) ?Entity {
+        const id = ve orelse return null;
         return if (self.entities.isAlive(id)) id.entity else null;
     }
 
     pub fn addIdentity(self: *World, entity: Entity, T: type) void {
-        self.identityMap.put(self.allocator, hashTypeId(T), //
-            self.entities.toIdentity(entity).?) catch oom();
+        self.assure(T).identity = entity;
     }
 
     pub fn createIdentity(self: *World, T: type) Entity {
@@ -220,20 +220,22 @@ pub const World = struct {
     }
 
     pub fn getIdentity(self: *World, T: type) ?Entity {
-        return self.toEntity(self.identityMap.get(hashTypeId(T)));
+        const entity = self.assure(T).identity;
+        return if (entity == invalid) null else entity;
     }
 
     pub fn takeIdentity(self: *World, T: type) ?Entity {
-        const removed = self.identityMap.fetchRemove(hashTypeId(T));
-        return self.toEntity((removed orelse return null).value);
+        const entity = self.getIdentity(T);
+        self.removeIdentity(T);
+        return entity;
     }
 
     pub fn isIdentity(self: *World, entity: Entity, T: type) bool {
         return self.getIdentity(T) orelse return false == entity;
     }
 
-    pub fn removeIdentity(self: *World, T: type) bool {
-        return self.identityMap.remove(hashTypeId(T));
+    pub fn removeIdentity(self: *World, T: type) void {
+        self.assure(T).identity = invalid;
     }
 
     pub fn addEvent(self: *World, value: anytype) void {
@@ -323,7 +325,10 @@ pub const World = struct {
 
     pub fn removeAll(self: *World, entity: Entity) void {
         var iterator = self.componentMap.valueIterator();
-        while (iterator.next()) |map| _ = map.remove(entity);
+        while (iterator.next()) |map| {
+            _ = map.remove(entity);
+            if (map.identity == entity) map.identity = invalid;
+        }
     }
 
     pub fn clear(self: *World, T: type) void {

@@ -113,7 +113,7 @@ pub fn resolveImage(sprite: Sprite) zhu.graphics.Image {
 pub fn spawnPlayer(world: *World, spawn: zhu.Vector2) void {
     if (world.getIdentity(actor.Player)) |oldPlayer| {
         world.destroyEntity(oldPlayer);
-        _ = world.removeIdentity(actor.Player);
+        world.removeIdentity(actor.Player);
     }
 
     const config = zon.player;

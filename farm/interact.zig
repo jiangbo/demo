@@ -160,7 +160,7 @@ fn closeDialog(world: *World, target: Entity) void {
     if (active != target) return;
 
     if (world.getPtr(target, Dialog)) |dialog| dialog.index = 0;
-    _ = world.removeIdentity(Dialog);
+    world.removeIdentity(Dialog);
 }
 
 fn pressKey(keyCode: zhu.key.Code) void {
