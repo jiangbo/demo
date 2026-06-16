@@ -315,12 +315,16 @@ fn doDraw(cmd: DrawCommand, flipY: bool) void {
 
     // 处理 uniform 变量
     const size = graphics.queryViewSize(cmd.view);
-    const uniforms = shader.VsParams{
-        .transformX = cmd.camera.transformX(cmd.size),
-        .transformY = cmd.camera.transformY(cmd.size, flipY),
-        .textureVec = [4]f32{ 1 / size.x, 1 / size.y, 1, 1 },
-    };
-    sk.gfx.applyUniforms(shader.UB_vs_params, sk.gfx.asRange(&uniforms));
+    const scale = cmd.camera.scale.mul(.xy(2, -2)).div(cmd.size);
+    const offset = cmd.camera.position.mul(scale).neg();
+    var rowY = [_]f32{ 0, scale.y, offset.y + 1, 0 };
+    if (flipY) rowY[1], rowY[2] = .{ -rowY[1], -rowY[2] };
+    const uniforms = sk.gfx.asRange(&shader.VsParams{
+        .transformX = .{ scale.x, 0, offset.x - 1, 0 },
+        .transformY = rowY,
+        .textureVec = .{ 1 / size.x, 1 / size.y, 1, 1 },
+    });
+    sk.gfx.applyUniforms(shader.UB_vs_params, uniforms);
 
     // 绑定组
     var bindings = sk.gfx.Bindings{};

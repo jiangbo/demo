@@ -26,18 +26,6 @@ pub const Camera = struct {
     pub fn toWorld(self: Camera, point: Vector2) Vector2 {
         return point.div(self.scale).add(self.position);
     }
-
-    pub fn transformX(self: Camera, screen: Vector2) [4]f32 {
-        const sx = 2 / screen.x * self.scale.x;
-        return .{ sx, 0, -self.position.x * sx - 1, 0 };
-    }
-
-    pub fn transformY(self: Camera, screen: Vector2, flipY: bool) [4]f32 {
-        const sign: f32 = if (flipY) 2 else -2;
-        const offset: f32 = if (flipY) -1 else 1;
-        const sy = sign / screen.y * self.scale.y;
-        return .{ 0, sy, -self.position.y * sy + offset, 0 };
-    }
 };
 
 var buffer: [8]Camera = undefined;
