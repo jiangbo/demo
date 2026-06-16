@@ -284,8 +284,7 @@ pub fn flush() void {
     if (currentDraw()) |draw| draw.end = vertices.items.len;
 
     uploadVertices();
-    var activePass = false;
-    var flipY = false;
+    var activePass, var flipY = .{ false, false };
     for (commands.items) |cmd| {
         switch (cmd) {
             .target => |target| {
