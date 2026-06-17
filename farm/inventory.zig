@@ -98,6 +98,37 @@ pub fn active() ?*Stack {
     return &slots[index];
 }
 
+pub fn move(fromIndex: usize, toIndex: usize) void {
+    if (fromIndex == toIndex) return;
+
+    const from, const to = .{ &slots[fromIndex], &slots[toIndex] };
+    if (from.count == 0) return;
+
+    // 空槽或不同物品：交换两格，快捷栏引用同步交换。
+    if (to.count == 0 or from.type != to.type) {
+        std.mem.swap(Stack, from, to);
+        swapHotbarRefs(fromIndex, toIndex);
+        return;
+    }
+
+    // 同物品：尽量合并到目标格。
+    const limit = factory.itemConfig(from.type).limit;
+    const moved = @min(limit - to.count, from.count);
+    if (moved == 0) return;
+
+    to.count += moved;
+    from.count -= moved;
+    if (from.count > 0) return;
+
+    from.* = .{};
+    // 目标已有快捷栏时保留目标引用，否则把源引用转到目标。
+    if (hotbarReferences(toIndex)) {
+        clearHotbarRefs(fromIndex);
+    } else {
+        replaceHotbarRefs(fromIndex, toIndex);
+    }
+}
+
 pub fn update() void {
     if (context.input.pressed(.inventory)) open = !open;
 
@@ -243,12 +274,36 @@ fn autoBind(itemType: ItemEnum) void {
 }
 
 fn bindHotbar(hotbarIndex: usize, inventoryIndex: usize) void {
+    clearHotbarRefs(inventoryIndex);
+    hotbar[hotbarIndex] = inventoryIndex;
+}
+
+fn hotbarReferences(inventoryIndex: usize) bool {
+    for (hotbar) |slotIndex| {
+        if (slotIndex == inventoryIndex) return true;
+    }
+    return false;
+}
+
+fn clearHotbarRefs(inventoryIndex: usize) void {
     for (&hotbar) |*slotIndex| {
-        // 先清掉这个库存槽的所有旧绑定，保证一对一绑定。
+        // 一个库存槽只允许绑定到一个快捷栏位置。
         if (slotIndex.* == inventoryIndex) slotIndex.* = null;
     }
+}
 
-    hotbar[hotbarIndex] = inventoryIndex;
+fn replaceHotbarRefs(fromIndex: usize, toIndex: usize) void {
+    for (&hotbar) |*slotIndex| {
+        if (slotIndex.* == fromIndex) slotIndex.* = toIndex;
+    }
+}
+
+fn swapHotbarRefs(a: usize, b: usize) void {
+    for (&hotbar) |*slotIndex| {
+        const index = slotIndex.* orelse continue;
+        if (index == a) slotIndex.* = b;
+        if (index == b) slotIndex.* = a;
+    }
 }
 
 fn itemOnHotbar(itemType: ItemEnum) bool {
@@ -321,4 +376,64 @@ test "绑定同一个库存槽会清理旧快捷栏引用" {
 
     try std.testing.expectEqual(null, hotbar[0]);
     try std.testing.expectEqual(2, hotbar[3].?);
+}
+
+test "移动到空槽时快捷栏引用跟随物品" {
+    reset();
+
+    slots[0] = .{ .type = .strawberry, .count = 5 };
+    bindHotbar(2, 0);
+
+    move(0, 5);
+
+    try std.testing.expectEqual(0, slots[0].count);
+    try std.testing.expectEqual(ItemEnum.strawberry, slots[5].type);
+    try std.testing.expectEqual(5, slots[5].count);
+    try std.testing.expectEqual(5, hotbar[2].?);
+}
+
+test "交换不同物品时快捷栏引用跟随物品" {
+    reset();
+
+    slots[0] = .{ .type = .strawberry, .count = 5 };
+    slots[1] = .{ .type = .potato, .count = 3 };
+    bindHotbar(0, 0);
+    bindHotbar(1, 1);
+
+    move(0, 1);
+
+    try std.testing.expectEqual(ItemEnum.potato, slots[0].type);
+    try std.testing.expectEqual(ItemEnum.strawberry, slots[1].type);
+    try std.testing.expectEqual(1, hotbar[0].?);
+    try std.testing.expectEqual(0, hotbar[1].?);
+}
+
+test "合并后源槽清空且目标无快捷栏时转移引用" {
+    reset();
+
+    slots[0] = .{ .type = .strawberry, .count = 5 };
+    slots[1] = .{ .type = .strawberry, .count = 4 };
+    bindHotbar(0, 0);
+
+    move(0, 1);
+
+    try std.testing.expectEqual(0, slots[0].count);
+    try std.testing.expectEqual(9, slots[1].count);
+    try std.testing.expectEqual(1, hotbar[0].?);
+}
+
+test "合并后源槽和目标都有快捷栏时保留目标引用" {
+    reset();
+
+    slots[0] = .{ .type = .strawberry, .count = 5 };
+    slots[1] = .{ .type = .strawberry, .count = 4 };
+    bindHotbar(0, 0);
+    bindHotbar(1, 1);
+
+    move(0, 1);
+
+    try std.testing.expectEqual(0, slots[0].count);
+    try std.testing.expectEqual(9, slots[1].count);
+    try std.testing.expectEqual(null, hotbar[0]);
+    try std.testing.expectEqual(1, hotbar[1].?);
 }
