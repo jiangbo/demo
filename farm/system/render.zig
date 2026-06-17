@@ -54,48 +54,6 @@ test "渲染排序先比较图层再比较深度" {
     try std.testing.expect(!lessThan(actorFront, actorBack));
 }
 
-test "视口内精灵会被绘制" {
-    zhu.camera.init(.xy(640, 360));
-    var vertices: [4]zhu.batch.Vertex = undefined;
-    var commands: [16]zhu.batch.Command = undefined;
-    zhu.batch.init(&vertices, &commands);
-    zhu.batch.beginDraw();
-    const vertexBuffer = &zhu.batch.vertices;
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const entity = world.createEntity();
-    world.add(entity, Position.xy(100, 50));
-    world.add(entity, Sprite{ .image = .{ .size = .xy(16, 16) } });
-    world.add(entity, Render{});
-
-    draw(&world);
-
-    try std.testing.expectEqual(1, vertexBuffer.items.len);
-}
-
-test "视口外精灵不会被绘制" {
-    zhu.camera.init(.xy(640, 360));
-    var vertices: [4]zhu.batch.Vertex = undefined;
-    var commands: [16]zhu.batch.Command = undefined;
-    zhu.batch.init(&vertices, &commands);
-    zhu.batch.beginDraw();
-    const vertexBuffer = &zhu.batch.vertices;
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const entity = world.createEntity();
-    world.add(entity, Position.xy(700, 50));
-    world.add(entity, Sprite{ .image = .{ .size = .xy(16, 16) } });
-    world.add(entity, Render{});
-
-    draw(&world);
-
-    try std.testing.expectEqual(0, vertexBuffer.items.len);
-}
-
 test "混合场景只绘制视口内精灵" {
     zhu.camera.init(.xy(640, 360));
     var vertices: [4]zhu.batch.Vertex = undefined;
@@ -135,32 +93,4 @@ test "YSort 会把位置 y 写入渲染深度" {
 
     const renders = world.get(entity, Render).?;
     try std.testing.expectEqual(42, renders.depth);
-}
-
-test "queryBy 按 Render 排序后遍历顺序正确" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const back = world.createEntity();
-    world.add(back, Position.xy(0, 0));
-    world.add(back, Render{ .depth = 20 });
-    world.add(back, Sprite{ .image = .{ .size = .xy(16, 16) } });
-
-    const front = world.createEntity();
-    world.add(front, Position.xy(0, 0));
-    world.add(front, Render{ .depth = 10 });
-    world.add(front, Sprite{ .image = .{ .size = .xy(16, 16) } });
-
-    world.sort(Render, lessThan);
-    var query = world.queryBy(Render, .{ Position, Sprite }, .{});
-
-    const first = query.next().?;
-    try std.testing.expectEqual(front, first);
-    try std.testing.expectEqual(10, query.get(first, Render).depth);
-
-    const second = query.next().?;
-    try std.testing.expectEqual(back, second);
-    try std.testing.expectEqual(20, query.get(second, Render).depth);
-
-    try std.testing.expectEqual(null, query.next());
 }

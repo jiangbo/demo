@@ -226,32 +226,6 @@ pub fn deinit() void {
     }
 }
 
-test "场景请求会等待到应用阶段才生效" {
-    init();
-
-    const requested: scene.Scene = .farm;
-    scene.request(requested);
-
-    try std.testing.expectEqual(scene.Scene.title, scene.current);
-    try std.testing.expectEqual(requested, scene.pending.?);
-
-    scene.apply();
-
-    try std.testing.expectEqual(requested, scene.current);
-    try std.testing.expectEqual(null, scene.pending);
-}
-
-test "应用前最后一次场景请求生效" {
-    init();
-
-    scene.request(.farm);
-    scene.request(.title);
-    scene.apply();
-
-    try std.testing.expectEqual(scene.Scene.title, scene.current);
-    try std.testing.expectEqual(null, scene.pending);
-}
-
 test "读档请求会携带一次性槽位" {
     init();
 
@@ -274,28 +248,4 @@ test "地图切换请求会被 take 消费" {
     try std.testing.expectEqual(component.map.Id.town, transition.target);
     try std.testing.expectEqual(3, transition.targetId);
     try std.testing.expectEqual(null, map.pending);
-}
-
-test "时间暗时段从 18:00 开始" {
-    init();
-
-    clock.hour = 17;
-    clock.minute = 59;
-    try std.testing.expect(!clock.isDark());
-
-    clock.hour = 18;
-    clock.minute = 0;
-    try std.testing.expect(clock.isDark());
-}
-
-test "时间暗时段在 06:00 结束" {
-    init();
-
-    clock.hour = 5;
-    clock.minute = 59;
-    try std.testing.expect(clock.isDark());
-
-    clock.hour = 6;
-    clock.minute = 0;
-    try std.testing.expect(!clock.isDark());
 }

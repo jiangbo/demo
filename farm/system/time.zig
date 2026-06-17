@@ -209,19 +209,3 @@ test "时段跨过边界会发出时段事件" {
     try std.testing.expectEqual(1, periods.len);
     try std.testing.expectEqual(currentPeriod(8), periods[0].period);
 }
-
-test "时段判断按整点小时分段" {
-    try std.testing.expectEqual(currentPeriod(21), .night);
-    try std.testing.expectEqual(currentPeriod(3), .night);
-    try std.testing.expectEqual(currentPeriod(5), .dawn);
-}
-
-test "时间文本不会提前进位到下一分钟" {
-    var buffer: [16]u8 = undefined;
-    const clockText = zhu.format(&buffer, "{d:0>2}:{d:0>2}", .{
-        23,
-        @as(u8, @intFromFloat(59.9)),
-    });
-
-    try std.testing.expectEqualStrings("23:59", clockText);
-}

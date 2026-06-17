@@ -211,18 +211,17 @@ fn drawInventoryPanel() void {
         if (slot.count > 1) drawItemCount(slot.count, slotRect);
     }
 
-    drawPageButton(slotImage, zon.inventory.prev, "<");
-    drawPageButton(slotImage, zon.inventory.next, ">");
+    var rect = zon.inventory.prev;
+    zhu.batch.drawNine(slotImage, rect);
+    zhu.text.draw("<", rect.center(), .{ .anchor = .center });
+    rect = zon.inventory.next;
+    zhu.batch.drawNine(slotImage, rect);
+    zhu.text.draw(">", rect.center(), .{ .anchor = .center });
 
     const args = .{ activePage + 1, zon.inventory.pageCount };
     zhu.text.drawFmt("{d}/{d}", args, zon.inventory.pageText, .{
         .anchor = .center,
     });
-}
-
-fn drawPageButton(image: zhu.NineImage, rect: zhu.Rect, label: []const u8) void {
-    zhu.batch.drawNine(image, rect);
-    zhu.text.draw(label, rect.center(), .{ .anchor = .center });
 }
 
 fn drawItemIcon(itemType: ItemEnum, position: zhu.Vector2, size: zhu.Vector2) void {
@@ -240,6 +239,15 @@ fn autoBind(itemType: ItemEnum) void {
 
     const inventoryIndex = firstInventorySlot(itemType) orelse return;
     const hotbarIndex = firstEmptyHotbar() orelse return;
+    bindHotbar(hotbarIndex, inventoryIndex);
+}
+
+fn bindHotbar(hotbarIndex: usize, inventoryIndex: usize) void {
+    for (&hotbar) |*slotIndex| {
+        // 先清掉这个库存槽的所有旧绑定，保证一对一绑定。
+        if (slotIndex.* == inventoryIndex) slotIndex.* = null;
+    }
+
     hotbar[hotbarIndex] = inventoryIndex;
 }
 
@@ -268,21 +276,7 @@ fn firstEmptyHotbar() ?usize {
 }
 
 test "添加物品会合并并自动绑定快捷栏" {
-    const oldSlots = slots;
-    const oldHotbar = hotbar;
-    const oldActiveHotbar = activeHotbar;
-    const oldActivePage = activePage;
-    defer {
-        slots = oldSlots;
-        hotbar = oldHotbar;
-        activeHotbar = oldActiveHotbar;
-        activePage = oldActivePage;
-    }
-
-    slots = @splat(.{});
-    hotbar = @splat(null);
-    activeHotbar = 0;
-    activePage = 0;
+    reset();
 
     add(.strawberry, 7);
     add(.strawberry, 3);
@@ -293,21 +287,7 @@ test "添加物品会合并并自动绑定快捷栏" {
 }
 
 test "添加物品超过堆叠上限会填入下一个库存槽" {
-    const oldSlots = slots;
-    const oldHotbar = hotbar;
-    const oldActiveHotbar = activeHotbar;
-    const oldActivePage = activePage;
-    defer {
-        slots = oldSlots;
-        hotbar = oldHotbar;
-        activeHotbar = oldActiveHotbar;
-        activePage = oldActivePage;
-    }
-
-    slots = @splat(.{});
-    hotbar = @splat(null);
-    activeHotbar = 0;
-    activePage = 0;
+    reset();
 
     add(.strawberry, 100);
 
@@ -318,21 +298,9 @@ test "添加物品超过堆叠上限会填入下一个库存槽" {
 }
 
 test "当前物品通过快捷栏引用读取库存槽" {
-    const oldSlots = slots;
-    const oldHotbar = hotbar;
-    const oldActiveHotbar = activeHotbar;
-    const oldActivePage = activePage;
-    defer {
-        slots = oldSlots;
-        hotbar = oldHotbar;
-        activeHotbar = oldActiveHotbar;
-        activePage = oldActivePage;
-    }
+    reset();
 
-    slots = @splat(.{});
-    hotbar = @splat(null);
     activeHotbar = 1;
-    activePage = 0;
     slots[5] = .{ .type = .potatoSeed, .count = 2 };
     hotbar[1] = 5;
 
@@ -341,4 +309,16 @@ test "当前物品通过快捷栏引用读取库存槽" {
 
     slots[5].count = 0;
     try std.testing.expectEqual(null, active());
+}
+
+test "绑定同一个库存槽会清理旧快捷栏引用" {
+    reset();
+
+    slots[2] = .{ .type = .strawberrySeed, .count = 4 };
+
+    bindHotbar(0, 2);
+    bindHotbar(3, 2);
+
+    try std.testing.expectEqual(null, hotbar[0]);
+    try std.testing.expectEqual(2, hotbar[3].?);
 }

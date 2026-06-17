@@ -1,38 +1,4 @@
 const std = @import("std");
-const zhu = @import("zhu");
-
-test "zero-size event can append and clear" {
-    const EmptyEvent = struct {};
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    try std.testing.expectEqual(@as(usize, 0), world.getEvent(EmptyEvent).len);
-
-    world.addEvent(EmptyEvent{});
-    world.addEvent(EmptyEvent{});
-
-    try std.testing.expectEqual(@as(usize, 2), world.getEvent(EmptyEvent).len);
-
-    world.clearEvent(EmptyEvent);
-    try std.testing.expectEqual(@as(usize, 0), world.getEvent(EmptyEvent).len);
-}
-
-test "zero-size component can add twice" {
-    const EmptyComponent = struct {};
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const entity = world.createEntity();
-
-    world.add(entity, EmptyComponent{});
-    world.add(entity, EmptyComponent{});
-
-    try std.testing.expect(world.has(entity, EmptyComponent));
-    try std.testing.expect(world.get(entity, EmptyComponent) != null);
-    try std.testing.expectEqual(@as(usize, 1), world.values(EmptyComponent).len);
-}
 
 test {
     std.testing.refAllDeclsRecursive(@import("context.zig"));

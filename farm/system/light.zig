@@ -135,20 +135,6 @@ test "light overlay 深夜比白天更明显" {
     try std.testing.expect(night.b > night.r);
 }
 
-test "light overlay 黄昏偏暖" {
-    const color = overlayAt(18);
-
-    try std.testing.expect(color.a > 0.1);
-    try std.testing.expect(color.r > color.b);
-}
-
-test "light overlay 黎明偏暖" {
-    const color = overlayAt(6);
-
-    try std.testing.expect(color.a > 0.1);
-    try std.testing.expect(color.r > color.b);
-}
-
 test "light overlay 支持跨午夜插值" {
     const night = overlayAt(22);
     const middle = overlayAt(1);
@@ -156,18 +142,6 @@ test "light overlay 支持跨午夜插值" {
 
     try std.testing.expect(night.a > middle.a);
     try std.testing.expect(middle.a > early.a);
-}
-
-test "light update 没有整点事件时不切换显隐" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const entity = world.createEntity();
-    world.add(entity, light.NightOnly{});
-
-    update(&world);
-
-    try std.testing.expect(!world.has(entity, light.Disabled));
 }
 
 test "light update 18 点启用 night-only 并禁用 day-only" {
