@@ -3,12 +3,12 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 pub const Entity = u16;
-const invalid = std.math.maxInt(Entity);
-fn hasEntity(slice: []const Entity, entity: Entity) bool {
+const invalid = std.math.maxInt(u16);
+fn hasEntity(slice: []const u16, entity: u16) bool {
     return entity < slice.len and slice[entity] != invalid;
 }
 pub const Version = u16;
-pub const VersionEntity = struct { entity: Entity, version: Version };
+pub const Handle = struct { entity: u16, version: Version };
 
 fn Event(T: type) type {
     return struct { event: T };
@@ -16,51 +16,60 @@ fn Event(T: type) type {
 
 const Entities = struct {
     versions: std.ArrayList(Version) = .empty,
-    deleted: std.ArrayList(Entity) = .empty,
+    deleted: std.ArrayList(u16) = .empty,
 
     fn deinit(self: *Entities, gpa: Allocator) void {
         self.versions.deinit(gpa);
         self.deleted.deinit(gpa);
     }
 
-    fn create(self: *Entities, gpa: Allocator) !Entity {
-        if (self.deleted.pop()) |entity| return entity;
+    fn create(self: *Entities, gpa: Allocator) !u16 {
+        if (self.deleted.pop()) |entity| {
+            self.versions.items[entity] +%= 1;
+            return entity;
+        }
 
-        const entity: Entity = @intCast(self.versions.items.len);
+        const entity: u16 = @intCast(self.versions.items.len);
         if (entity == invalid) @panic("max entity count reached");
         try self.versions.append(gpa, 0);
         return entity;
     }
 
-    fn destroy(self: *Entities, gpa: Allocator, entity: Entity) !void {
+    fn destroy(self: *Entities, gpa: Allocator, entity: u16) !void {
+        std.debug.assert(self.versions.items[entity] % 2 == 0);
         self.versions.items[entity] +%= 1;
         try self.deleted.append(gpa, entity);
     }
 
-    pub fn isAlive(self: *const Entities, id: VersionEntity) bool {
+    pub fn isAlive(self: *const Entities, id: Handle) bool {
         return id.entity < self.versions.items.len and
             self.versions.items[id.entity] == id.version;
     }
 
-    pub fn to(self: *const Entities, entity: Entity) ?VersionEntity {
+    pub fn to(self: *const Entities, entity: u16) ?Handle {
         if (entity < self.versions.items.len) {
             const version = self.versions.items[entity];
             return .{ .entity = entity, .version = version };
         } else return null;
+    }
+
+    pub fn get(self: *const Entities, handle: ?Handle) ?u16 {
+        const id = handle orelse return null;
+        return if (self.isAlive(id)) id.entity else null;
     }
 };
 
 fn Store(K: type, V: type) type {
     return struct {
         const Self = @This();
-        const Dense = std.ArrayList(Entity);
+        const Dense = std.ArrayList(u16);
         const Value = std.ArrayList(V);
 
-        sparse: std.ArrayList(Entity) = .empty,
-        dense: []Entity = Dense.empty.items,
+        sparse: std.ArrayList(u16) = .empty,
+        dense: []u16 = Dense.empty.items,
         values: []V = Value.empty.items,
-        capacity: Entity = if (@sizeOf(V) == 0 and K != V) invalid else 0,
-        identity: Entity = invalid,
+        capacity: u16 = if (@sizeOf(V) == 0 and K != V) invalid else 0,
+        identity: u16 = invalid,
         alignment: std.mem.Alignment = .of(V),
         valueSize: u16 = @sizeOf(V),
 
@@ -76,7 +85,7 @@ fn Store(K: type, V: type) type {
             gpa.rawFree(bytes, self.alignment, @returnAddress());
         }
 
-        fn add(self: *Self, gpa: Allocator, entity: Entity, v: V) !void {
+        fn add(self: *Self, gpa: Allocator, entity: u16, v: V) !void {
             if (hasEntity(self.sparse.items, entity)) {
                 self.values[self.sparse.items[entity]] = v;
                 return;
@@ -120,7 +129,7 @@ fn Store(K: type, V: type) type {
             self.dense = dense.items;
         }
 
-        fn remove(self: *Self, entity: Entity) Entity {
+        fn remove(self: *Self, entity: u16) u16 {
             if (!hasEntity(self.sparse.items, entity)) return invalid;
 
             const index = self.sparse.items[entity];
@@ -151,8 +160,8 @@ fn Store(K: type, V: type) type {
                     std.mem.swap(V, &v[j], &v[j - 1]);
                     const lhs = &self.dense[j];
                     const rhs = &self.dense[j - 1];
-                    std.mem.swap(Entity, lhs, rhs);
-                    std.mem.swap(Entity, &sparse[lhs.*], &sparse[rhs.*]);
+                    std.mem.swap(u16, lhs, rhs);
+                    std.mem.swap(u16, &sparse[lhs.*], &sparse[rhs.*]);
                 }
             }
         }
@@ -187,11 +196,11 @@ pub const World = struct {
         self.* = .init(self.allocator);
     }
 
-    pub fn createEntity(self: *World) Entity {
+    pub fn createEntity(self: *World) u16 {
         return self.entities.create(self.allocator) catch oom();
     }
 
-    pub fn destroyEntity(self: *World, entity: Entity) void {
+    pub fn destroyEntity(self: *World, entity: u16) void {
         self.removeAll(entity);
         self.entities.destroy(self.allocator, entity) catch oom();
     }
@@ -201,33 +210,28 @@ pub const World = struct {
         while (toDestroy.next()) |entity| self.destroyEntity(entity);
     }
 
-    pub fn toEntity(self: *const World, ve: ?VersionEntity) ?Entity {
-        const id = ve orelse return null;
-        return if (self.entities.isAlive(id)) id.entity else null;
-    }
-
-    pub fn addIdentity(self: *World, entity: Entity, T: type) void {
+    pub fn addIdentity(self: *World, entity: u16, T: type) void {
         self.assure(T, T).identity = entity;
     }
 
-    pub fn createIdentity(self: *World, T: type) Entity {
+    pub fn createIdentity(self: *World, T: type) u16 {
         const entity = self.createEntity();
         self.addIdentity(entity, T);
         return entity;
     }
 
-    pub fn getIdentity(self: *World, T: type) ?Entity {
+    pub fn getIdentity(self: *World, T: type) ?u16 {
         const entity = self.assure(T, T).identity;
         return if (entity == invalid) null else entity;
     }
 
-    pub fn takeIdentity(self: *World, T: type) ?Entity {
+    pub fn takeIdentity(self: *World, T: type) ?u16 {
         const entity = self.getIdentity(T);
         self.removeIdentity(T);
         return entity;
     }
 
-    pub fn isIdentity(self: *World, entity: Entity, T: type) bool {
+    pub fn isIdentity(self: *World, entity: u16, T: type) bool {
         return self.getIdentity(T) orelse return false == entity;
     }
 
@@ -261,22 +265,22 @@ pub const World = struct {
         return map;
     }
 
-    pub fn has(self: *World, entity: Entity, T: type) bool {
+    pub fn has(self: *World, entity: u16, T: type) bool {
         return hasEntity(self.assure(T, T).sparse.items, entity);
     }
 
-    pub fn get(self: *World, entity: Entity, T: type) ?T {
+    pub fn get(self: *World, entity: u16, T: type) ?T {
         return if (self.getPtr(entity, T)) |ptr| ptr.* else null;
     }
 
-    pub fn getPtr(self: *World, entity: Entity, T: type) ?*T {
+    pub fn getPtr(self: *World, entity: u16, T: type) ?*T {
         const map = self.assure(T, T);
         if (hasEntity(map.sparse.items, entity)) {
             return &map.values[map.sparse.items[entity]];
         } else return null;
     }
 
-    pub fn add(self: *World, entity: Entity, value: anytype) void {
+    pub fn add(self: *World, entity: u16, value: anytype) void {
         var map = self.assure(@TypeOf(value), @TypeOf(value));
         map.add(self.allocator, entity, value) catch oom();
     }
@@ -289,12 +293,12 @@ pub const World = struct {
         self.assure(T, T).sort(lessFn);
     }
 
-    pub fn remove(self: *World, entity: Entity, T: type) void {
+    pub fn remove(self: *World, entity: u16, T: type) void {
         _ = self.assure(T, T).remove(entity);
     }
 
-    pub fn alignAdd(self: *World, entity: Entity, comps: anytype) void {
-        var indexes: [comps.len]Entity = undefined;
+    pub fn alignAdd(self: *World, entity: u16, comps: anytype) void {
+        var indexes: [comps.len]u16 = undefined;
         inline for (comps, &indexes) |value, *i| {
             var map = self.assure(@TypeOf(value), @TypeOf(value));
             map.add(self.allocator, entity, value) catch oom();
@@ -303,8 +307,8 @@ pub const World = struct {
         for (indexes[1..]) |i| std.debug.assert(indexes[0] == i);
     }
 
-    pub fn alignRemove(self: *World, entity: Entity, types: anytype) void {
-        var index: [types.len]Entity = undefined;
+    pub fn alignRemove(self: *World, entity: u16, types: anytype) void {
+        var index: [types.len]u16 = undefined;
         inline for (types, &index) |T, *i| {
             var map = self.assure(T, T);
             i.* = map.remove(entity);
@@ -312,7 +316,7 @@ pub const World = struct {
         for (index[1..]) |i| std.debug.assert(index[0] == i);
     }
 
-    pub fn removeAll(self: *World, entity: Entity) void {
+    pub fn removeAll(self: *World, entity: u16) void {
         var iterator = self.map.valueIterator();
         while (iterator.next()) |map| {
             _ = map.remove(entity);
@@ -375,11 +379,11 @@ pub const World = struct {
 
 pub fn Query(comptime All: anytype, comptime None: anytype) type {
     return struct {
-        dense: []Entity = &.{},
-        sparse: [All.len][]Entity = undefined,
+        dense: []u16 = &.{},
+        sparse: [All.len][]u16 = undefined,
         values: [All.len]*anyopaque = undefined,
-        none: [None.len][]Entity = undefined,
-        index: Entity = 0,
+        none: [None.len][]u16 = undefined,
+        index: u16 = 0,
         reversed: bool = false,
 
         pub fn reverse(self: @This()) @This() {
@@ -389,7 +393,7 @@ pub fn Query(comptime All: anytype, comptime None: anytype) type {
             return query;
         }
 
-        pub fn next(self: *@This()) ?Entity {
+        pub fn next(self: *@This()) ?u16 {
             blk: while (self.index < self.dense.len) {
                 const entity = self.dense[self.index];
                 if (self.reversed) self.index -%= 1 else self.index += 1;
@@ -403,11 +407,11 @@ pub fn Query(comptime All: anytype, comptime None: anytype) type {
             } else return null;
         }
 
-        pub fn get(self: *@This(), entity: Entity, T: type) T {
+        pub fn get(self: *@This(), entity: u16, T: type) T {
             return self.getPtr(entity, T).*;
         }
 
-        pub fn getPtr(self: *@This(), entity: Entity, T: type) *T {
+        pub fn getPtr(self: *@This(), entity: u16, T: type) *T {
             const i = blk: inline for (All, 0..) |Comp, i| {
                 if (Comp == T) break :blk i;
             } else @compileError(T ++ " is not in query type");
