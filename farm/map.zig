@@ -482,7 +482,7 @@ test "actor 点对象会生成 NPC，player 点对象只保留标记" {
         .extend = .{},
     });
 
-    try std.testing.expectEqual(0, world.count(actor.Npc));
+    try std.testing.expectEqual(0, world.values(actor.Npc).len);
 
     loadObject(&world, .{
         .id = 2,
