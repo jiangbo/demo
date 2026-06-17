@@ -333,11 +333,11 @@ pub const World = struct {
     }
 
     pub fn query(self: *World, All: anytype) Query(All, .{}) {
-        return self.queryNone(All, .{});
+        return self.queryWithout(All, .{});
     }
 
     // zig fmt: off
-    pub fn queryNone(self: *World, All: anytype, None: anytype)
+    pub fn queryWithout(self: *World, All: anytype, None: anytype)
         Query(All, None) {
     // zig fmt: on
         comptime std.debug.assert(All.len > 0);

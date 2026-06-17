@@ -822,7 +822,7 @@ test "夜晚加载 night-only 点光会启用" {
         .extend = .{},
     });
 
-    var query = world.queryNone(.{
+    var query = world.queryWithout(.{
         component.Position,
         light.Point,
         light.NightOnly,
@@ -871,7 +871,7 @@ test "day-only 点光白天启用夜晚禁用" {
         .extend = .{},
     });
 
-    var enabled = world.queryNone(.{
+    var enabled = world.queryWithout(.{
         component.Position,
         light.Point,
         light.DayOnly,
