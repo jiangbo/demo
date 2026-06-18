@@ -16,29 +16,34 @@ fn Event(T: type) type {
 
 const Entities = struct {
     versions: std.ArrayList(Version) = .empty,
-    deleted: std.ArrayList(u16) = .empty,
+    deleted: std.DynamicBitSetUnmanaged = .{},
+    deletedCount: u16 = 0,
 
     fn deinit(self: *Entities, gpa: Allocator) void {
         self.versions.deinit(gpa);
         self.deleted.deinit(gpa);
     }
 
-    fn create(self: *Entities, gpa: Allocator) !u16 {
-        if (self.deleted.pop()) |entity| {
-            self.versions.items[entity] +%= 1;
-            return entity;
+    pub fn create(self: *Entities, gpa: Allocator) !u16 {
+        if (self.deletedCount > 0) {
+            self.deletedCount -= 1;
+            return @intCast(self.deleted.toggleFirstSet().?);
         }
 
-        const entity: u16 = @intCast(self.versions.items.len);
-        if (entity == invalid) @panic("max entity count reached");
-        try self.versions.append(gpa, 0);
-        return entity;
+        if (self.versions.items.len == invalid) return error.MaxEntity;
+        try self.versions.ensureUnusedCapacity(gpa, 1);
+        if (self.versions.capacity > self.deleted.capacity())
+            try self.deleted.resize(gpa, self.versions.capacity, false);
+
+        self.versions.appendAssumeCapacity(0);
+        return @intCast(self.versions.items.len - 1);
     }
 
-    fn destroy(self: *Entities, gpa: Allocator, entity: u16) !void {
-        std.debug.assert(self.versions.items[entity] % 2 == 0);
+    fn destroy(self: *Entities, entity: u16) void {
+        std.debug.assert(!self.deleted.isSet(entity));
         self.versions.items[entity] +%= 1;
-        try self.deleted.append(gpa, entity);
+        self.deleted.set(entity);
+        self.deletedCount += 1;
     }
 
     pub fn isAlive(self: *const Entities, id: Handle) bool {
@@ -48,6 +53,7 @@ const Entities = struct {
 
     pub fn to(self: *const Entities, entity: u16) ?Handle {
         if (entity < self.versions.items.len) {
+            std.debug.assert(!self.deleted.isSet(entity));
             const version = self.versions.items[entity];
             return .{ .entity = entity, .version = version };
         } else return null;
@@ -202,7 +208,7 @@ pub const World = struct {
 
     pub fn destroyEntity(self: *World, entity: u16) void {
         self.removeAll(entity);
-        self.entities.destroy(self.allocator, entity) catch oom();
+        self.entities.destroy(entity);
     }
 
     pub fn destroyEntities(self: *World, T: type) void {
