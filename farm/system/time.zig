@@ -96,11 +96,22 @@ pub fn draw() void {
 
     const size = labelImage.image.size;
     const rect = zhu.Rect.init(.xy(34, 3), size);
-    drawLabel(rect, "Day {d}", .{clock.day});
-    drawLabel(rect.move(.xy(0, size.y + 2)), "{d:0>2}:{d:0>2}", .{
-        clock.hour,
-        @as(u8, @intFromFloat(clock.minute)),
-    });
+    const timeRect = rect.move(.xy(0, size.y + 2));
+    zhu.batch.drawNine(labelImage, rect);
+    zhu.batch.drawNine(labelImage, timeRect);
+
+    var buffer: [16]u8 = undefined;
+    var option: zhu.text.Option = .{
+        .scale = .square(1.0 / uiScale),
+        .anchor = .center,
+    };
+    const dayText = zhu.format(&buffer, "Day {d}", .{clock.day});
+    zhu.text.draw(dayText, rect.center(), option);
+
+    const args = .{ clock.hour, @as(u8, @intFromFloat(clock.minute)) };
+    const timeText = zhu.format(&buffer, "{d:0>2}:{d:0>2}", args);
+    option.offset = .xy(0, 1 / uiScale);
+    zhu.text.draw(timeText, timeRect.center(), option);
 }
 
 fn currentPeriod(hour: u8) component.time.Period {
@@ -110,14 +121,6 @@ fn currentPeriod(hour: u8) component.time.Period {
         16...19 => .dusk,
         else => .night,
     };
-}
-
-fn drawLabel(rect: zhu.Rect, comptime fmt: []const u8, args: anytype) void {
-    zhu.batch.drawNine(labelImage, rect);
-    zhu.text.drawFmt(fmt, args, rect.center(), .{
-        .scale = .square(1.0 / uiScale),
-        .anchor = .center,
-    });
 }
 
 test "时间推进到整点会发出小时事件" {

@@ -6,6 +6,7 @@
     .{ .type = .pause, .value = .{ .P, .ESCAPE } },
     .{ .type = .interact, .value = .{.F} },
     .{ .type = .inventory, .value = .{.I} },
+    .{ .type = .hotbar, .value = .{.TAB} },
     .{ .type = .hotbar1, .value = .{._1} },
     .{ .type = .hotbar2, .value = .{._2} },
     .{ .type = .hotbar3, .value = .{._3} },

@@ -95,7 +95,7 @@ fn updateTargetAction(world: *World, player: Entity) void {
     const target = world.getPtr(player, Target).?;
     target.active = false;
 
-    const item = inventory.active() orelse return;
+    const item = inventory.activeItem() orelse return;
     if (!isTargetItem(item.type)) return;
 
     const position = targetPosition(world, player) orelse return;
@@ -183,7 +183,7 @@ fn plant(world: *World, position: zhu.Vector2, kind: CropEnum) bool {
     const tile = map.land.getTile(position) orelse return false;
     if (tile.ground == null or tile.object != null) return false;
 
-    inventory.active().?.count -= 1;
+    inventory.activeItem().?.count -= 1;
     const entity = factory.spawnCrop(world, position, kind);
     tile.object = .{ .entity = entity };
     return true;
@@ -260,7 +260,8 @@ test "玩家控制会把方向键写入速度" {
     const velocity = world.get(player, Velocity).?;
     try std.testing.expect(velocity.value.x > 0);
     try std.testing.expect(velocity.value.y < 0);
-    try std.testing.expectApproxEqAbs(playerSpeed, velocity.value.length(), 0.01);
+    const speed = velocity.value.length();
+    try std.testing.expectApproxEqAbs(playerSpeed, speed, 0.01);
 
     const actor = world.get(player, Actor).?;
     try std.testing.expectEqual(Action.walk, actor.action);
@@ -284,7 +285,8 @@ test "忙碌状态会跳过输入并保持动作" {
 
     update(&world);
 
-    try std.testing.expect(world.get(player, Velocity).?.value.approxEqual(.zero));
+    const velocity = world.get(player, Velocity).?;
+    try std.testing.expect(velocity.value.approxEqual(.zero));
     try std.testing.expectEqual(Action.hoe, world.get(player, Actor).?.action);
 }
 
@@ -334,7 +336,8 @@ test "点击目标会进入忙碌状态并使用工具" {
 
     try std.testing.expect(world.has(player, Busy));
     try std.testing.expectEqual(Action.hoe, world.get(player, Actor).?.action);
-    try std.testing.expect(world.get(player, Velocity).?.value.approxEqual(.zero));
+    const velocity = world.get(player, Velocity).?;
+    try std.testing.expect(velocity.value.approxEqual(.zero));
     try std.testing.expectEqual(
         Ground.dry,
         map.land.getTile(testTarget).?.ground.?,
@@ -382,7 +385,7 @@ test "工具使用会种植种子并减少数量" {
     const sounds = world.getEvent(event.SoundPlay);
     try std.testing.expectEqual(1, sounds.len);
     try std.testing.expectEqual(.plant, sounds[0].id);
-    try std.testing.expectEqual(1, inventory.slots[0].count);
+    try std.testing.expectEqual(1, inventory.bag.slots[0].count);
 
     const cropEntity = map.land.getTile(testTarget).?.crop().?;
     try std.testing.expectEqual(

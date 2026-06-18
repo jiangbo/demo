@@ -90,6 +90,7 @@ pub const input = struct {
         pause,
         interact,
         inventory,
+        hotbar,
         hotbar1,
         hotbar2,
         hotbar3,
@@ -136,7 +137,7 @@ pub const input = struct {
         return zhu.mouse.released(button);
     }
 
-    pub fn hotbarIndexPressed() ?u8 {
+    pub fn hotbarPressed() ?u8 {
         const first: usize = @intFromEnum(Command.hotbar1);
         const last: usize = @intFromEnum(Command.hotbar10);
         for (first..last + 1) |value| {

@@ -5,7 +5,7 @@ const zhu = @import("zhu");
 const scene = @import("scene.zig");
 
 var vertexBuffer: []zhu.batch.Vertex = undefined;
-var commandBuffer: [16]zhu.batch.Command = undefined;
+var commandBuffer: [64]zhu.batch.Command = undefined;
 var soundBuffer: [20]zhu.audio.Sound = undefined;
 
 pub fn init() void {

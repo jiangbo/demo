@@ -45,8 +45,8 @@ const InventorySlotSave = struct {
 const InventorySave = struct {
     activeHotbar: usize = 0,
     activePage: usize = 0,
-    slots: [inventory.slots.len]InventorySlotSave = @splat(.{}),
-    hotbar: [inventory.hotbar.len]?usize = @splat(null),
+    slots: [inventory.bag.slots.len]InventorySlotSave = @splat(.{}),
+    hotbar: [inventory.bar.refs.len]?usize = @splat(null),
 };
 
 const TileSave = struct {
@@ -203,11 +203,11 @@ fn freeCaptured(data: SaveData) void {
 
 fn captureInventory() InventorySave {
     var result = InventorySave{
-        .activeHotbar = inventory.activeHotbar,
-        .activePage = inventory.activePage,
-        .hotbar = inventory.hotbar,
+        .activeHotbar = inventory.bar.active,
+        .activePage = inventory.bag.activePage,
+        .hotbar = inventory.bar.refs,
     };
-    for (inventory.slots, 0..) |slot, index| {
+    for (inventory.bag.slots, 0..) |slot, index| {
         result.slots[index] = .{
             .type = slot.type,
             .count = slot.count,
@@ -316,15 +316,15 @@ fn restorePlayer(world: *World, data: PlayerSave) void {
 }
 
 fn restoreInventory(data: InventorySave) void {
-    for (&inventory.slots, 0..) |*slot, index| {
+    for (&inventory.bag.slots, 0..) |*slot, index| {
         slot.* = if (index < data.slots.len) .{
             .type = data.slots[index].type,
             .count = data.slots[index].count,
         } else .{ .type = .hoe, .count = 0 };
     }
-    inventory.hotbar = data.hotbar;
-    inventory.activeHotbar = data.activeHotbar;
-    inventory.activePage = data.activePage;
+    inventory.bar.refs = data.hotbar;
+    inventory.bar.active = data.activeHotbar;
+    inventory.bag.activePage = data.activePage;
 }
 
 test "slotPath 会生成存档槽路径" {
@@ -332,7 +332,10 @@ test "slotPath 会生成存档槽路径" {
     const path = try slotPath(3, &buffer);
 
     try std.testing.expectEqualStrings("saves/slot3.zon", path);
-    try std.testing.expectError(error.InvalidSaveSlot, slotPath(slotCount, &buffer));
+    try std.testing.expectError(
+        error.InvalidSaveSlot,
+        slotPath(slotCount, &buffer),
+    );
 }
 
 test "parseSlotSummary 会读取天数和时间戳" {
@@ -352,18 +355,8 @@ test "parseSlotSummary 会读取天数和时间戳" {
 }
 
 test "restoreInventory 会恢复库存槽和快捷栏" {
-    const oldSlots = inventory.slots;
-    const oldHotbar = inventory.hotbar;
-    const oldActiveHotbar = inventory.activeHotbar;
-    const oldActivePage = inventory.activePage;
-    defer {
-        inventory.slots = oldSlots;
-        inventory.hotbar = oldHotbar;
-        inventory.activeHotbar = oldActiveHotbar;
-        inventory.activePage = oldActivePage;
-    }
-
     inventory.reset();
+    defer inventory.reset();
 
     var data = InventorySave{ .activeHotbar = 3, .activePage = 1 };
     data.slots[0] = .{ .type = .strawberrySeed, .count = 7 };
@@ -373,10 +366,10 @@ test "restoreInventory 会恢复库存槽和快捷栏" {
 
     try std.testing.expectEqual(
         component.item.ItemEnum.strawberrySeed,
-        inventory.slots[0].type,
+        inventory.bag.slots[0].type,
     );
-    try std.testing.expectEqual(7, inventory.slots[0].count);
-    try std.testing.expectEqual(0, inventory.hotbar[3].?);
-    try std.testing.expectEqual(3, inventory.activeHotbar);
-    try std.testing.expectEqual(1, inventory.activePage);
+    try std.testing.expectEqual(7, inventory.bag.slots[0].count);
+    try std.testing.expectEqual(0, inventory.bar.refs[3].?);
+    try std.testing.expectEqual(3, inventory.bar.active);
+    try std.testing.expectEqual(1, inventory.bag.activePage);
 }

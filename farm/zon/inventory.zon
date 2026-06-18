@@ -1,5 +1,5 @@
 .{
-    .hotbar = .{
+    .bar = .{
         .imageId = 1103560250,
         .position = .{ .x = 134, .y = 307 },
         .size = .{ .x = 372, .y = 48 },
@@ -47,7 +47,7 @@
             },
         },
     },
-    .inventory = .{
+    .bag = .{
         .imageId = 3735665499,
         .position = .{ .x = 424, .y = 88 },
         .size = .{ .x = 196, .y = 184 },
