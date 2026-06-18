@@ -180,8 +180,7 @@ pub const bag = struct {
             const slot = slots[first + i];
             if (slot.count == 0) continue;
 
-            const iconSize = factory.itemConfig(slot.type).icon.size;
-            drawItemIcon(slot.type, slotRect.center(), iconSize);
+            drawItemIcon(slot.type, slotRect.center());
         }
 
         var rect = zon.prev;
@@ -349,8 +348,7 @@ pub const bar = struct {
             const slot = bag.slots[slotIndex orelse continue];
             if (slot.count == 0) continue;
 
-            const iconSize = factory.itemConfig(slot.type).icon.size;
-            drawItemIcon(slot.type, rect.center(), iconSize);
+            drawItemIcon(slot.type, rect.center());
         }
 
         for (refs, zon.slots) |slotIndex, offset| {
@@ -463,8 +461,7 @@ const drag = struct {
         zhu.camera.push(.window);
         defer zhu.camera.pop();
 
-        const iconSize = factory.itemConfig(current.item.type).icon.size;
-        drawItemIcon(current.item.type, zhu.window.mouse, iconSize);
+        drawItemIcon(current.item.type, zhu.window.mouse);
 
         if (current.item.count <= 1) return;
 
@@ -510,13 +507,12 @@ pub fn draw() void {
     drag.draw();
 }
 
-fn drawItemIcon(
-    itemType: ItemEnum,
-    position: zhu.Vector2,
-    size: zhu.Vector2,
-) void {
-    const image = factory.resolveImage(factory.itemConfig(itemType).icon);
-    zhu.batch.drawImage(image, position, .{ .size = size, .anchor = .center });
+fn drawItemIcon(itemType: ItemEnum, position: zhu.Vector2) void {
+    const icon = factory.itemConfig(itemType).icon;
+    zhu.batch.drawImage(factory.resolveImage(icon), position, .{
+        .size = icon.size,
+        .anchor = .center,
+    });
 }
 
 fn drawItemCount(count: u32, rect: zhu.Rect) void {
