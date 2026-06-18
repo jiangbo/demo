@@ -36,7 +36,7 @@ pub fn EnumAnimation(comptime T: type) type {
 }
 pub const Animation = struct {
     pub const Clip = []const Frame;
-    pub const Step = enum { none, next, loop, end };
+    pub const Step = enum { next, loop, end };
     pub const Source = struct { imageId: ImageId, clip: Clip };
 
     elapsed: f32 = -math.epsilon,
@@ -92,13 +92,13 @@ pub const Animation = struct {
         self.reset();
     }
 
-    pub fn update(self: *Animation, delta: f32) Step {
-        if (self.index == self.clip.len) return .none; // 已经结束
+    pub fn update(self: *Animation, delta: f32) ?Step {
+        if (self.index == self.clip.len) return null; // 已经结束
         const firstUpdate = self.elapsed < 0;
         self.elapsed += delta;
         if (firstUpdate) return .next; //  第一次第一帧
         const current = self.clip[self.index];
-        if (self.elapsed < current.duration) return .none; // 还未到下一帧
+        if (self.elapsed < current.duration) return null; // 还未到下一帧
 
         self.elapsed -= current.duration;
         self.index += 1;

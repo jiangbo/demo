@@ -16,7 +16,7 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
         const animation = query.getPtr(entity, Animation);
         const sprite = query.getPtr(entity, Sprite);
 
-        switch (animation.update(delta)) {
+        switch (animation.update(delta) orelse continue) {
             .next, .loop => sprite.image = animation.subImage(),
             .end => {
                 if (!world.has(entity, Busy)) continue;
@@ -30,7 +30,6 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
                 animation.playRow(Action.idle, row, true);
                 sprite.image = animation.subImage();
             },
-            else => {},
         }
     }
 }
