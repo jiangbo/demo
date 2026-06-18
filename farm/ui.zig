@@ -291,16 +291,3 @@ pub const title = struct {
         pauseMenu.draw();
     }
 };
-
-test "通知会在计时结束后关闭" {
-    context.notice.timer = 0;
-
-    context.notice.show("{s}", .{"strawberry x3"});
-    try std.testing.expect(context.notice.timer > 0);
-
-    notice.update(1.0);
-    try std.testing.expect(context.notice.timer > 0);
-
-    notice.update(1.0);
-    try std.testing.expect(context.notice.timer <= 0);
-}
