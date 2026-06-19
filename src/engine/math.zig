@@ -76,11 +76,6 @@ pub fn ceilAway(value: f32) f32 {
     return if (value > 0) @ceil(value) else @floor(value);
 }
 
-pub fn isEnumRange(e: anytype, min: @TypeOf(e), max: @TypeOf(e)) bool {
-    const v = @intFromEnum(e);
-    return v >= @intFromEnum(min) and v <= @intFromEnum(max);
-}
-
 pub fn toIndex(T: type, value: anytype) T {
     return switch (@typeInfo(@TypeOf(value))) {
         .@"enum" => @intCast(@intFromEnum(value)),
@@ -88,6 +83,44 @@ pub fn toIndex(T: type, value: anytype) T {
         else => @compileError("index must be enum or int"),
     };
 }
+
+pub const enums = struct {
+    const Array = std.EnumArray;
+    pub fn inRange(e: anytype, min: @TypeOf(e), max: @TypeOf(e)) bool {
+        const v = @intFromEnum(e);
+        return v >= @intFromEnum(min) and v <= @intFromEnum(max);
+    }
+
+    pub fn next(value: anytype) @TypeOf(value) {
+        const values = std.enums.values(@TypeOf(value));
+        for (values, 0..) |item, i| {
+            if (item == value) return values[(i + 1) % values.len];
+        }
+        unreachable;
+    }
+
+    pub fn to(E: type, value: anytype) E {
+        const T = @TypeOf(value);
+        if (T == []const u8) return std.meta.stringToEnum(E, value).?;
+        return @enumFromInt(value);
+    }
+
+    pub fn array(E: type, V: type, values: []const V) Array(E, V) {
+        const keys = std.enums.values(E);
+        var result: Array(E, V) = .initUndefined();
+        for (keys, values) |key, value| result.set(key, value);
+        return result;
+    }
+
+    fn EntryArray(T: type) type {
+        return Array(@FieldType(T, "type"), @FieldType(T, "value"));
+    }
+    pub fn fromEntries(Entry: type, slice: anytype) EntryArray(Entry) {
+        var result: EntryArray(Entry) = .initUndefined();
+        for (slice) |value| result.set(value.type, value.value);
+        return result;
+    }
+};
 
 pub const Vector = Vector2;
 pub const Vector2 = extern struct {
@@ -232,12 +265,6 @@ pub const Vector4 = extern struct {
     w: f32 = 0,
     pub const zero = Vector4{ .x = 0, .y = 0, .z = 0, .w = 0 };
     pub const one = Vector4{ .x = 1, .y = 1, .z = 1, .w = 1 };
-    pub const black = Vector4{ .x = 0, .y = 0, .z = 0, .w = 1 };
-    pub const white = one;
-    pub const red = Vector4{ .x = 1, .w = 1 };
-    pub const green = Vector4{ .y = 1, .w = 1 };
-    pub const blue = Vector4{ .z = 1, .w = 1 };
-    pub const yellow = Vector4{ .x = 1, .y = 1, .w = 1 };
 
     pub fn init(x: f32, y: f32, z: f32, w: f32) Vector4 {
         return .{ .x = x, .y = y, .z = z, .w = w };
@@ -479,97 +506,42 @@ pub const Shape = union(enum) {
     }
 };
 
-pub const Matrix = struct {
-    mat: [16]f32,
+pub const random = struct {
+    var prng: std.Random.DefaultPrng = undefined;
 
-    pub const identity = Matrix{ .mat = [16]f32{
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1,
-    } };
-
-    pub fn orthographic(width: f32, height: f32, near: f32, far: f32) Matrix {
-        return .{ .mat = [16]f32{
-            2.0 / width, 0,             0,                   0,
-            0,           -2.0 / height, 0,                   0,
-            0,           0,             1.0 / (far - near),  0,
-            -1.0,        1.0,           near / (near - far), 1,
-        } };
+    pub fn init(seed: u64) void {
+        prng = .init(seed);
     }
 
-    pub fn mul(m1: Matrix, m2: Matrix) Matrix {
-        var result: [16]f32 = undefined;
-        for (0..4) |i| {
-            for (0..4) |j| {
-                var sum: f32 = 0;
-                for (0..4) |k| {
-                    sum += m1.mat[i + k * 4] * m2.mat[k + j * 4];
-                }
-                result[i + j * 4] = sum;
-            }
-        }
-        return .{ .mat = result };
+    fn get() std.Random {
+        return prng.random();
     }
 
-    pub fn translate(x: f32, y: f32, z: f32) Matrix {
-        return .{ .mat = [16]f32{
-            1, 0, 0, 0,
-            0, 1, 0, 0,
-            0, 0, 1, 0,
-            x, y, z, 1,
-        } };
+    pub fn float(min: f32, max: f32) f32 {
+        return get().float(f32) * (max - min) + min;
     }
 
-    pub fn translateVec(vec: Vector3) Matrix {
-        return translate(vec.x, vec.y, vec.z);
+    pub fn int(T: type, min: T, max: T) T {
+        return get().intRangeLessThan(T, min, max);
     }
 
-    pub fn scale(x: f32, y: f32, z: f32) Matrix {
-        return .{ .mat = [16]f32{
-            x, 0, 0, 0,
-            0, y, 0, 0,
-            0, 0, z, 0,
-            0, 0, 0, 1,
-        } };
+    pub fn intBiased(T: type, min: T, max: T) T {
+        return get().intRangeLessThanBiased(T, min, max);
     }
 
-    pub fn scaleVec(vec: Vector3) Matrix {
-        return scale(vec.x, vec.y, vec.z);
+    pub fn intMost(T: type, min: T, max: T) T {
+        return get().intRangeAtMost(T, min, max);
+    }
+
+    pub fn intMostBiased(T: type, min: T, max: T) T {
+        return get().intRangeAtMostBiased(T, min, max);
+    }
+
+    pub fn enumValue(comptime EnumType: type) EnumType {
+        return get().enumValue(EnumType);
+    }
+
+    pub fn boolean() bool {
+        return get().boolean();
     }
 };
-
-pub var rand: std.Random.DefaultPrng = undefined;
-
-pub fn setRandomSeed(seed: u64) void {
-    rand = .init(seed);
-}
-
-pub fn random() std.Random {
-    return rand.random();
-}
-
-pub fn randomF32(min: f32, max: f32) f32 {
-    return random().float(f32) * (max - min) + min;
-}
-
-pub fn randomInt(T: type, min: T, max: T) T {
-    return random().intRangeLessThanBiased(T, min, max);
-}
-
-pub fn randomIntMost(T: type, min: T, max: T) T {
-    return random().intRangeAtMostBiased(T, min, max);
-}
-
-pub fn randomEnum(comptime EnumType: type) EnumType {
-    return random().enumValue(EnumType);
-}
-
-pub fn randomBool() bool {
-    return random().boolean();
-}
-
-pub fn randomStep(T: type, step: T) T {
-    const round = std.math.maxInt(T) - step + 1;
-    return if (randomBool()) step else round;
-}
