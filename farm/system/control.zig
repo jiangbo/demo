@@ -106,7 +106,9 @@ fn updateTargetAction(world: *World, player: Entity) void {
     if (!context.input.mousePressed(.LEFT)) return;
     const actor = world.getPtr(player, Actor).?;
     const playerPos = world.get(player, Position).?;
-    const direction = position.sub(playerPos);
+    // 朝向按点击位置计算，目标格只负责工具结算。
+    const mouseWorld = zhu.camera.toWorld(zhu.window.mouse);
+    const direction = mouseWorld.sub(playerPos);
     if (!direction.approxEqual(.zero)) {
         actor.facing = facingFromDirection(direction);
     }
