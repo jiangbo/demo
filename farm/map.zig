@@ -47,7 +47,9 @@ pub fn deinit() void {
     vertexes.clearAndFree(zhu.assets.allocator);
 }
 
-pub fn enter(world: *World, id: Id, targetId: i32) zhu.Vector2 {
+pub fn enter(world: *World, id: Id, targetId: i32) void {
+    world.reset();
+
     current = id;
     data = &maps[@intFromEnum(id)];
     zhu.camera.bound = data.size();
@@ -69,15 +71,14 @@ pub fn enter(world: *World, id: Id, targetId: i32) zhu.Vector2 {
     }
 
     zhu.camera.bound = data.size();
-    const result = spawn orelse zhu.Vector2.xy(311, 168);
-    zhu.camera.directFollow(result);
-
-    return result;
+    const position = spawn orelse zhu.Vector2.xy(311, 168);
+    factory.spawnPlayer(world, position);
+    zhu.camera.directFollow(position);
 }
 
-pub fn change(world: *World, id: Id, targetId: i32) zhu.Vector2 {
+pub fn change(world: *World, request: context.map.Transition) void {
     exit(world);
-    return enter(world, id, targetId);
+    enter(world, request.target, request.targetId);
 }
 
 pub fn update(world: *World) void {
@@ -125,7 +126,6 @@ fn parseLayers(world: *World) void {
 pub fn exit(world: *World) void {
     saveState(world);
 
-    world.destroyEntities(component.map.Scoped);
     land.exit();
     spatial.exit();
     frontLayerStart = 0;
@@ -365,7 +365,6 @@ fn loadRest(world: *World, object: tiled.Object) void {
     const entity = world.createEntity();
     world.add(entity, object.position);
     world.add(entity, component.map.Rest{});
-    world.add(entity, component.map.Scoped{});
     world.add(entity, motion.Shape{
         .rect = object.rect().move(object.position.neg()),
     });
@@ -501,7 +500,6 @@ test "actor 点对象会生成 NPC，player 点对象只保留标记" {
         actor.Npc,
         actor.Wander,
         actor.Dialog,
-        component.map.Scoped,
     });
     const entity = query.next().?;
     const position = query.get(entity, Position);
@@ -539,7 +537,7 @@ test "trigger 对象会创建 ECS 触发器实体" {
         .extend = .{},
     });
 
-    var query = world.query(.{ component.map.Trigger, component.map.Scoped });
+    var query = world.query(.{component.map.Trigger});
     const entity = query.next().?;
     const trigger = query.get(entity, component.map.Trigger);
 
@@ -571,7 +569,6 @@ test "rest 对象会创建可交互实体" {
     var query = world.query(.{
         Position,
         component.map.Rest,
-        component.map.Scoped,
         motion.Shape,
     });
     const entity = query.next().?;

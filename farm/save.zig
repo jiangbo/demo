@@ -270,7 +270,7 @@ fn apply(world: *World, data: SaveData) !void {
     context.map.resetStates();
     restoreMaps(data);
 
-    _ = map.enter(world, data.player.map, -1);
+    map.enter(world, data.player.map, -1);
     restorePlayer(world, data.player);
     restoreInventory(data.inventory);
 }

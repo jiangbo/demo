@@ -171,9 +171,7 @@ fn enterFarm() void {
         context.map.resetStates();
     }
 
-    // 地图先生成静态对象和触发器，玩家随后由场景统一创建。
-    const spawn = map.enter(&world, .exterior, initialTargetId);
-    factory.spawnPlayer(&world, spawn);
+    map.enter(&world, .exterior, initialTargetId);
     inventory.reset();
     if (loadSlot == null) {
         inventory.add(.hoe, 1);
@@ -249,9 +247,5 @@ fn drawShape() void {
 }
 
 fn changeMap(request: context.map.Transition) void {
-    const spawn = map.change(&world, request.target, request.targetId);
-
-    const player = world.getIdentity(actor.Player).?;
-    world.getPtr(player, Position).?.* = spawn;
-    world.getPtr(player, motion.Velocity).?.value = .zero;
+    map.change(&world, request);
 }

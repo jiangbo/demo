@@ -184,7 +184,6 @@ fn spawnNpc(world: *World, config: Character, sources: Sources) Entity {
     world.add(entity, animation);
     world.add(entity, render.Render{ .layer = .actor });
     world.add(entity, render.YSort{});
-    world.add(entity, map.Scoped{});
     world.add(entity, actor.Npc{});
     world.add(entity, actor.Wander{
         .radius = config.wanderRadius,
@@ -230,7 +229,6 @@ pub fn spawnMapProp(world: *World, data: *const tiled.Map, object: Object) Entit
     });
     world.add(entity, render.Render{ .layer = .actor });
     world.add(entity, render.YSort{});
-    world.add(entity, map.Scoped{});
 
     // Tiled 转换数据沿用 obj_type，值为 chest 时挂宝箱组件。
     if (tile.getProperty("obj_type", []const u8)) |kind| {
@@ -274,7 +272,6 @@ fn mapPropSortY(object: Object, tile: *const tiled.Tile, size: zhu.Vector2) f32 
 pub fn spawnMapTrigger(world: *World, trigger: map.Trigger) Entity {
     const entity = world.createEntity();
     world.add(entity, trigger);
-    world.add(entity, map.Scoped{});
     return entity;
 }
 
@@ -284,7 +281,6 @@ pub fn spawnPointLight(world: *World, object: Object) Entity {
         .radius = object.getProperty("radius", f32) orelse 96,
     });
     world.add(entity, object.position);
-    world.add(entity, map.Scoped{});
     applyLight(world, entity, object);
     return entity;
 }
@@ -298,7 +294,6 @@ pub fn spawnSpotLight(world: *World, object: Object) Entity {
         .direction = spotDirection(spot),
     });
     world.add(entity, object.position);
-    world.add(entity, map.Scoped{});
     applyLight(world, entity, object);
     return entity;
 }
@@ -339,7 +334,6 @@ pub fn spawnCrop(world: *World, position: zhu.Vector2, kind: farm.CropEnum) Enti
     });
     world.add(entity, render.Render{ .layer = .crop });
     world.add(entity, render.YSort{});
-    world.add(entity, map.Scoped{});
     return entity;
 }
 
@@ -384,7 +378,6 @@ pub fn spawnPickup(world: *World, args: struct {
     });
     world.add(entity, render.Render{ .layer = .crop });
     world.add(entity, render.YSort{});
-    world.add(entity, map.Scoped{});
 }
 
 fn animationSources(comptime animations: []const Animation) //
@@ -720,7 +713,7 @@ test "带 anim_id 的地图摆件会创建停止的非循环动画" {
     try expectEqual(0, sprite.image.offset.y);
 }
 
-test "spawnPointLight 创建地图作用域点光" {
+test "spawnPointLight 创建点光" {
     context.clock.reset();
     defer context.clock.reset();
 
@@ -743,10 +736,9 @@ test "spawnPointLight 创建地图作用域点光" {
 
     try expectEqual(10, world.get(entity, component.Position).?.x);
     try expectEqual(64, world.get(entity, light.Point).?.radius);
-    try std.testing.expect(world.has(entity, map.Scoped));
 }
 
-test "spawnSpotLight 创建地图作用域聚光" {
+test "spawnSpotLight 创建聚光" {
     context.clock.reset();
     defer context.clock.reset();
 
@@ -775,7 +767,6 @@ test "spawnSpotLight 创建地图作用域聚光" {
 
     try expectEqual(20, world.get(entity, component.Position).?.y);
     try expectEqual(96, world.get(entity, light.Spot).?.radius);
-    try std.testing.expect(world.has(entity, map.Scoped));
 }
 
 test "白天加载 night-only 点光会禁用" {
