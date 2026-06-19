@@ -18,40 +18,41 @@ pub const Timer = struct {
         if (self.elapsed < self.duration) self.elapsed += delta;
     }
 
-    pub fn isFinishedLoopUpdate(self: *Timer, delta: f32) bool {
+    pub fn updateRunning(self: *Timer, delta: f32) bool {
+        self.update(delta);
+        return self.isRunning();
+    }
+
+    pub fn updateFinished(self: *Timer, delta: f32) bool {
+        self.update(delta);
+        return !self.isRunning();
+    }
+
+    pub fn updateLooped(self: *Timer, delta: f32) bool {
         self.elapsed += delta;
         if (self.elapsed < self.duration) return false;
         self.elapsed -= self.duration;
         return true;
     }
 
-    pub fn isRunningOnceUpdate(self: *Timer, delta: f32) bool {
-        self.update(delta);
-        return self.elapsed < self.duration;
-    }
-
-    pub fn isFinishedOnceUpdate(self: *Timer, delta: f32) bool {
-        return !self.isRunningOnceUpdate(delta);
-    }
-
     pub fn isRunning(self: *const Timer) bool {
         return self.elapsed < self.duration;
     }
 
-    pub fn stepIndex(self: *const Timer, interval: f32) usize {
-        return @intFromFloat(@trunc(self.elapsed / interval));
+    pub fn stepIndex(self: *const Timer, step: f32) usize {
+        return @intFromFloat(@trunc(self.elapsed / step));
     }
 
-    pub fn isEvenStep(self: *Timer, interval: f32) bool {
-        return self.stepIndex(interval) & 1 == 0;
+    pub fn isEvenStep(self: *const Timer, step: f32) bool {
+        return self.stepIndex(step) & 1 == 0;
     }
 
     pub fn progress(self: *const Timer) f32 {
-        return self.elapsed / self.duration;
+        return @min(self.elapsed / self.duration, 1);
     }
 
     pub fn restart(self: *Timer) void {
-        self.elapsed = self.elapsed - self.duration;
+        self.elapsed = 0;
     }
 
     pub fn stop(self: *Timer) void {
