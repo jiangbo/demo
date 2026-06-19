@@ -77,16 +77,22 @@ pub const overlay = struct {
 
 pub const notice = struct {
     pub fn update(delta: f32) void {
-        if (context.notice.timer <= 0) return;
-        context.notice.timer -= delta;
+        for (std.enums.values(context.notice.Channel)) |channel| {
+            const state = context.notice.state(channel);
+            if (state.timer <= 0) continue;
+            state.timer -= delta;
+        }
     }
 
     pub fn draw(world: *zhu.ecs.World) void {
-        if (context.notice.timer <= 0) return;
-
         const player = world.getIdentity(component.actor.Player).?;
         const position = world.get(player, component.Position).?;
-        drawBubble(position, context.notice.text);
+
+        const worldState = context.notice.state(.world);
+        if (worldState.timer > 0) drawBubble(position, worldState.text);
+
+        const itemState = context.notice.state(.item);
+        if (itemState.timer > 0) drawItemNotice(itemState.text);
     }
 };
 
@@ -222,7 +228,7 @@ pub const dialog = struct {
 };
 
 fn drawBubble(position: zhu.Vector2, text: []const u8) void {
-    const head = zhu.camera.toWindow(position.addY(-30));
+    const head = zhu.camera.toWindow(position.addY(-24));
     const option = zhu.text.Option{ .color = .black, .max = 144 };
     const textSize = zhu.text.measure(text, option);
     const size = textSize.add(.xy(16, 16)).max(.xy(160, 48));
@@ -232,6 +238,18 @@ fn drawBubble(position: zhu.Vector2, text: []const u8) void {
     zhu.batch.drawNine(bubbleImage, bubbleRect);
 
     zhu.text.draw(text, bubbleRect.min.add(.xy(8, 8)), option);
+}
+
+fn drawItemNotice(text: []const u8) void {
+    const option = zhu.text.Option{ .color = .black, .max = 168 };
+    const textSize = zhu.text.measure(text, option);
+    const size = textSize.add(.xy(18, 14)).max(.xy(176, 40));
+    const pos = zhu.window.size.sub(size).sub(.xy(12, 58));
+    const rect: zhu.Rect = .init(pos, size);
+
+    // 物品提示固定在快捷栏上方，和头顶世界提示区分开。
+    zhu.batch.drawNine(bubbleImage, rect);
+    zhu.text.draw(text, rect.min.add(.xy(9, 7)), option);
 }
 
 pub const title = struct {

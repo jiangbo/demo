@@ -32,7 +32,7 @@ pub fn update(world: *World, delta: f32) void {
         const remaining = inventory.add(pickup.item, pickup.count);
         pickup.count = remaining;
         if (remaining > 0) {
-            context.notice.show("Inventory full", .{});
+            context.notice.show(.item, "背包已满", .{});
             continue;
         }
 

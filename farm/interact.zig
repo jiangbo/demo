@@ -136,7 +136,7 @@ fn showChestNotice(chest: *const Chest, full: bool) void {
         const count = chest.items.get(itemType);
         if (count == 0) continue;
 
-        const line = zhu.format(buffer[len..], "{s}{s} x{d}", .{
+        const line = zhu.format(buffer[len..], "{s}获得 {s} x{d}", .{
             if (len == 0) "" else "\n",
             factory.itemConfig(itemType).name,
             count,
@@ -145,7 +145,7 @@ fn showChestNotice(chest: *const Chest, full: bool) void {
     }
 
     if (full) {
-        const line = zhu.format(buffer[len..], "{s}Inventory full", .{
+        const line = zhu.format(buffer[len..], "{s}背包已满", .{
             if (len == 0) "" else "\n",
         });
         len += line.len;
@@ -153,7 +153,7 @@ fn showChestNotice(chest: *const Chest, full: bool) void {
 
     if (len == 0) return;
 
-    context.notice.show("{s}", .{buffer[0..len]});
+    context.notice.show(.world, "{s}", .{buffer[0..len]});
 }
 
 // 开始对话时把行号重置到第一句，并记录当前对话实体。

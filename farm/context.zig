@@ -149,13 +149,24 @@ pub const input = struct {
 };
 
 pub const notice = struct {
-    pub var timer: f32 = 0;
-    pub var text: []const u8 = &.{};
-    var buffer: [160]u8 = undefined;
+    pub const Channel = enum { world, item };
 
-    pub fn show(comptime fmt: []const u8, args: anytype) void {
-        text = zhu.format(&buffer, fmt, args);
-        timer = 2.0;
+    pub const State = struct {
+        timer: f32 = 0,
+        text: []const u8 = &.{},
+        buffer: [192]u8 = undefined,
+    };
+
+    pub var states: std.EnumArray(Channel, State) = .initFill(.{});
+
+    pub fn show(channel: Channel, comptime fmt: []const u8, args: anytype) void {
+        const current = states.getPtr(channel);
+        current.text = zhu.format(&current.buffer, fmt, args);
+        current.timer = 2.0;
+    }
+
+    pub fn state(channel: Channel) *State {
+        return states.getPtr(channel);
     }
 };
 
@@ -216,7 +227,7 @@ pub fn init() void {
     _ = scene.takeLoadSlot();
     clock.reset();
     input.mouseCaptured = false;
-    notice.timer = 0;
+    notice.states = .initFill(.{});
     map.pending = null;
     std.log.info("context init scene={s}", .{@tagName(scene.current)});
 }
