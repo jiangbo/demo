@@ -67,16 +67,15 @@ const Entities = struct {
     }
 };
 
-fn Store(K: type, V: type) type {
+fn Store(V: type) type {
     return struct {
         const Self = @This();
-        const Dense = std.ArrayList(u16);
-        const Value = std.ArrayList(V);
 
         sparse: std.ArrayList(u16) = .empty,
-        dense: []u16 = Dense.empty.items,
-        values: []V = Value.empty.items,
-        capacity: u16 = if (@sizeOf(V) == 0 and K != V) invalid else 0,
+        dense: [*]u16 = std.ArrayList(u16).empty.items.ptr,
+        values: []V = std.ArrayList(V).empty.items,
+        denseCap: u16 = 0,
+        valueCap: u16 = if (@sizeOf(V) == 0) invalid else 0,
         identity: u16 = invalid,
         alignment: std.mem.Alignment = .of(V),
         valueSize: u16 = @sizeOf(V),
@@ -84,11 +83,10 @@ fn Store(K: type, V: type) type {
         fn deinit(self: *Self, gpa: Allocator) void {
             self.sparse.deinit(gpa);
 
-            const hasDense = self.dense.ptr != Dense.empty.items.ptr;
-            if (hasDense) gpa.free(self.dense.ptr[0..self.capacity]);
-            if (self.capacity == 0 or self.valueSize == 0) return;
+            if (self.denseCap != 0) gpa.free(self.dense[0..self.denseCap]);
+            if (self.valueCap == 0 or self.valueSize == 0) return;
 
-            const size = @as(usize, self.capacity) * self.valueSize;
+            const size = @as(usize, self.valueCap) * self.valueSize;
             const bytes = @as([*]u8, @ptrCast(self.values.ptr))[0..size];
             gpa.rawFree(bytes, self.alignment, @returnAddress());
         }
@@ -104,9 +102,9 @@ fn Store(K: type, V: type) type {
                 try self.sparse.appendNTimes(gpa, invalid, count);
             }
 
-            if (self.values.len >= self.capacity) try self.grow(gpa);
-            const index = self.dense.len;
-            self.dense.len += 1;
+            if (self.values.len >= self.valueCap) try self.growValue(gpa);
+            if (self.values.len >= self.denseCap) try self.growDense(gpa);
+            const index = self.values.len;
             self.values.len += 1;
             self.dense[index] = entity;
             self.values[index] = v;
@@ -114,30 +112,27 @@ fn Store(K: type, V: type) type {
         }
 
         fn append(self: *Self, gpa: Allocator, v: V) Oom!void {
-            if (self.values.len >= self.capacity) try self.grow(gpa);
+            if (self.values.len >= self.valueCap) try self.growValue(gpa);
             self.values.len += 1;
             self.values[self.values.len - 1] = v;
         }
 
-        fn grow(self: *Self, gpa: Allocator) Oom!void {
-            const c = self.capacity;
-            var values: Value = .{ .items = self.values, .capacity = c };
-            if (@sizeOf(V) != 0) {
-                try values.ensureUnusedCapacity(gpa, 1);
-                self.values = values.items;
-                self.capacity = @intCast(values.capacity);
-            }
-            if (K != V) return;
+        fn growValue(self: *Self, gpa: Allocator) Oom!void {
+            if (@sizeOf(V) == 0) return;
+            var values: std.ArrayList(V) = .{ .items = self.values, .capacity = self.valueCap };
+            try values.ensureUnusedCapacity(gpa, 1);
+            self.values = values.items;
+            self.valueCap = @intCast(values.capacity);
+        }
 
-            var dense: Dense = .{ .items = self.dense, .capacity = c };
-            if (@sizeOf(V) == 0) {
-                try dense.ensureUnusedCapacity(gpa, 1);
-                self.capacity = @intCast(dense.capacity);
-            } else {
-                dense.ensureTotalCapacityPrecise(gpa, values.capacity) catch
-                    @panic("oom");
-            }
-            self.dense = dense.items;
+        fn growDense(self: *Self, gpa: Allocator) Oom!void {
+            var dense: std.ArrayList(u16) = .{
+                .items = self.dense[0..self.values.len],
+                .capacity = self.denseCap,
+            };
+            try dense.ensureUnusedCapacity(gpa, 1);
+            self.dense = dense.items.ptr;
+            self.denseCap = @intCast(dense.capacity);
         }
 
         fn remove(self: *Self, entity: u16) u16 {
@@ -147,8 +142,7 @@ fn Store(K: type, V: type) type {
             self.sparse.items[entity] = invalid;
 
             self.values.len -= 1;
-            self.dense.len -= 1;
-            const moved = self.dense.ptr[self.values.len];
+            const moved = self.dense[self.values.len];
             if (self.values.len == index) return index;
             self.sparse.items[moved] = index;
             self.dense[index] = moved;
@@ -165,12 +159,13 @@ fn Store(K: type, V: type) type {
 
             const sparse = self.sparse.items;
             const v = self.values;
+            const dense = self.dense[0..self.values.len];
             for (1..v.len) |i| {
                 var j = i;
                 while (j > 0 and lessFn(v[j], v[j - 1])) : (j -= 1) {
                     std.mem.swap(V, &v[j], &v[j - 1]);
-                    const lhs = &self.dense[j];
-                    const rhs = &self.dense[j - 1];
+                    const lhs = &dense[j];
+                    const rhs = &dense[j - 1];
                     std.mem.swap(u16, lhs, rhs);
                     std.mem.swap(u16, &sparse[lhs.*], &sparse[rhs.*]);
                 }
@@ -179,7 +174,7 @@ fn Store(K: type, V: type) type {
 
         fn clear(self: *Self) void {
             @memset(self.sparse.items, invalid);
-            self.dense.len, self.values.len = .{ 0, 0 };
+            self.values.len = 0;
         }
     };
 }
@@ -188,7 +183,7 @@ pub const TypeId = u32;
 pub const World = struct {
     allocator: Allocator,
     entities: Entities = .{},
-    map: std.AutoHashMapUnmanaged(TypeId, Store(u8, u8)) = .empty,
+    map: std.AutoHashMapUnmanaged(TypeId, Store(u8)) = .empty,
 
     pub fn init(allocator: std.mem.Allocator) World {
         return .{ .allocator = allocator };
@@ -224,9 +219,9 @@ pub const World = struct {
         try map.add(self.allocator, entity, value);
     }
 
-    fn tryAssure(self: *World, K: type, V: type) Oom!*Store(K, V) {
+    fn tryAssure(self: *World, K: type, V: type) Oom!*Store(V) {
         const result = try self.map.getOrPut(self.allocator, typeId(K));
-        const map: *Store(K, V) = @ptrCast(@alignCast(result.value_ptr));
+        const map: *Store(V) = @ptrCast(@alignCast(result.value_ptr));
         if (!result.found_existing) map.* = .{};
         return map;
     }
@@ -294,7 +289,7 @@ pub const World = struct {
         if (removed) |r| r.value.deinit(self.allocator);
     }
 
-    fn getStore(self: *World, K: type, V: type) ?*Store(K, V) {
+    fn getStore(self: *World, K: type, V: type) ?*Store(V) {
         const map = self.map.getPtr(typeId(K)) orelse return null;
         return @ptrCast(@alignCast(map));
     }
@@ -363,7 +358,7 @@ pub const World = struct {
             s.*, v.* = .{ map.sparse.items, map.values.ptr };
             if (map.values.len < minCount) {
                 minCount = map.values.len;
-                result.dense = map.dense;
+                result.dense = map.dense[0..map.values.len];
             }
         }
         inline for (None, &result.none) |T, *none| {
@@ -378,7 +373,8 @@ pub const World = struct {
         None: anytype) Query(.{By} ++ All, None) {
     // zig fmt: on
         var rs: Query(.{By} ++ All, None) = .{};
-        rs.dense = (self.getStore(By, By) orelse return rs).dense;
+        const by = self.getStore(By, By) orelse return rs;
+        rs.dense = by.dense[0..by.values.len];
 
         inline for (.{By} ++ All, &rs.sparse, &rs.values) |T, *s, *v| {
             const map = self.getStore(T, T) orelse return .{};
