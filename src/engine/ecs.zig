@@ -69,29 +69,28 @@ const Entities = struct {
 
 fn Store(V: type) type {
     return struct {
-        const Self = @This();
-
         sparse: std.ArrayList(u16) = .empty,
         dense: [*]u16 = std.ArrayList(u16).empty.items.ptr,
-        values: []V = std.ArrayList(V).empty.items,
-        denseCap: u16 = 0,
-        valueCap: u16 = if (@sizeOf(V) == 0) invalid else 0,
+        values: [*]V = std.ArrayList(V).empty.items.ptr,
+        len: u16 = 0,
+        denseCap: u32 = 0,
+        valueCap: u32 = if (@sizeOf(V) == 0) invalid else 0,
         identity: u16 = invalid,
         alignment: std.mem.Alignment = .of(V),
         valueSize: u16 = @sizeOf(V),
 
-        fn deinit(self: *Self, gpa: Allocator) void {
+        fn deinit(self: *@This(), gpa: Allocator) void {
             self.sparse.deinit(gpa);
 
             if (self.denseCap != 0) gpa.free(self.dense[0..self.denseCap]);
             if (self.valueCap == 0 or self.valueSize == 0) return;
 
             const size = @as(usize, self.valueCap) * self.valueSize;
-            const bytes = @as([*]u8, @ptrCast(self.values.ptr))[0..size];
+            const bytes = @as([*]u8, @ptrCast(self.values))[0..size];
             gpa.rawFree(bytes, self.alignment, @returnAddress());
         }
 
-        fn add(self: *Self, gpa: Allocator, entity: u16, v: V) Oom!void {
+        fn add(self: *@This(), gpa: Allocator, entity: u16, v: V) Oom!void {
             if (hasEntity(self.sparse.items, entity)) {
                 self.values[self.sparse.items[entity]] = v;
                 return;
@@ -102,32 +101,34 @@ fn Store(V: type) type {
                 try self.sparse.appendNTimes(gpa, invalid, count);
             }
 
-            if (self.values.len >= self.valueCap) try self.growValue(gpa);
-            if (self.values.len >= self.denseCap) try self.growDense(gpa);
-            const index = self.values.len;
-            self.values.len += 1;
-            self.dense[index] = entity;
-            self.values[index] = v;
-            self.sparse.items[entity] = @intCast(index);
+            if (self.len >= self.valueCap) try self.growValue(gpa);
+            if (self.len >= self.denseCap) try self.growDense(gpa);
+            self.dense[self.len] = entity;
+            self.values[self.len] = v;
+            self.sparse.items[entity] = @intCast(self.len);
+            self.len += 1;
         }
 
-        fn append(self: *Self, gpa: Allocator, v: V) Oom!void {
-            if (self.values.len >= self.valueCap) try self.growValue(gpa);
-            self.values.len += 1;
-            self.values[self.values.len - 1] = v;
+        fn append(self: *@This(), gpa: Allocator, v: V) Oom!void {
+            if (self.len >= self.valueCap) try self.growValue(gpa);
+            self.values[self.len] = v;
+            self.len += 1;
         }
 
-        fn growValue(self: *Self, gpa: Allocator) Oom!void {
+        fn growValue(self: *@This(), gpa: Allocator) Oom!void {
             if (@sizeOf(V) == 0) return;
-            var values: std.ArrayList(V) = .{ .items = self.values, .capacity = self.valueCap };
+            var values: std.ArrayList(V) = .{
+                .items = self.values[0..self.len],
+                .capacity = self.valueCap,
+            };
             try values.ensureUnusedCapacity(gpa, 1);
-            self.values = values.items;
+            self.values = values.items.ptr;
             self.valueCap = @intCast(values.capacity);
         }
 
-        fn growDense(self: *Self, gpa: Allocator) Oom!void {
+        fn growDense(self: *@This(), gpa: Allocator) Oom!void {
             var dense: std.ArrayList(u16) = .{
-                .items = self.dense[0..self.values.len],
+                .items = self.dense[0..self.len],
                 .capacity = self.denseCap,
             };
             try dense.ensureUnusedCapacity(gpa, 1);
@@ -135,46 +136,45 @@ fn Store(V: type) type {
             self.denseCap = @intCast(dense.capacity);
         }
 
-        fn remove(self: *Self, entity: u16) u16 {
+        fn remove(self: *@This(), entity: u16) u16 {
             if (!hasEntity(self.sparse.items, entity)) return invalid;
 
             const index = self.sparse.items[entity];
             self.sparse.items[entity] = invalid;
 
-            self.values.len -= 1;
-            const moved = self.dense[self.values.len];
-            if (self.values.len == index) return index;
+            self.len -= 1;
+            const moved = self.dense[self.len];
+            if (self.len == index) return index;
             self.sparse.items[moved] = index;
             self.dense[index] = moved;
             if (self.valueSize == 0) return index;
 
             const sz = if (V == u8) self.valueSize else 1;
-            const src = self.values.ptr[sz * self.values.len ..];
-            @memcpy(self.values.ptr[sz * index ..][0..sz], src[0..sz]);
+            const src = self.values[sz * self.len ..];
+            @memcpy(self.values[sz * index ..][0..sz], src[0..sz]);
             return index;
         }
 
-        fn sort(self: *Self, lessFn: fn (V, V) bool) void {
-            if (self.values.len <= 1 or self.valueSize == 0) return;
+        fn sort(self: *@This(), lessFn: fn (V, V) bool) void {
+            if (self.len <= 1 or self.valueSize == 0) return;
 
             const sparse = self.sparse.items;
-            const v = self.values;
-            const dense = self.dense[0..self.values.len];
+            const v = self.values[0..self.len];
             for (1..v.len) |i| {
                 var j = i;
                 while (j > 0 and lessFn(v[j], v[j - 1])) : (j -= 1) {
                     std.mem.swap(V, &v[j], &v[j - 1]);
-                    const lhs = &dense[j];
-                    const rhs = &dense[j - 1];
+                    const lhs = &self.dense[0..self.len][j];
+                    const rhs = &self.dense[0..self.len][j - 1];
                     std.mem.swap(u16, lhs, rhs);
                     std.mem.swap(u16, &sparse[lhs.*], &sparse[rhs.*]);
                 }
             }
         }
 
-        fn clear(self: *Self) void {
+        fn clear(self: *@This()) void {
             @memset(self.sparse.items, invalid);
-            self.values.len = 0;
+            self.len = 0;
         }
     };
 }
@@ -277,7 +277,8 @@ pub const World = struct {
     }
 
     pub fn getEvent(self: *World, T: type) []T {
-        return if (self.getStore(Event(T), T)) |s| s.values else &.{};
+        const map = self.getStore(Event(T), T) orelse return &.{};
+        return map.values[0..map.len];
     }
 
     pub fn clearEvent(self: *World, T: type) void {
@@ -314,7 +315,8 @@ pub const World = struct {
     }
 
     pub fn values(self: *World, T: type) []T {
-        return if (self.getStore(T, T)) |s| s.values else &.{};
+        const map = self.getStore(T, T) orelse return &.{};
+        return map.values[0..map.len];
     }
 
     pub fn sort(self: *World, T: type, lessFn: fn (T, T) bool) void {
@@ -355,10 +357,10 @@ pub const World = struct {
         var minCount: usize = invalid;
         inline for (All, &result.sparse, &result.values) |T, *s, *v| {
             const map = self.getStore(T, T) orelse return .{};
-            s.*, v.* = .{ map.sparse.items, map.values.ptr };
-            if (map.values.len < minCount) {
-                minCount = map.values.len;
-                result.dense = map.dense[0..map.values.len];
+            s.*, v.* = .{ map.sparse.items, map.values };
+            if (map.len < minCount) {
+                minCount = map.len;
+                result.dense = map.dense[0..map.len];
             }
         }
         inline for (None, &result.none) |T, *none| {
@@ -374,11 +376,11 @@ pub const World = struct {
     // zig fmt: on
         var rs: Query(.{By} ++ All, None) = .{};
         const by = self.getStore(By, By) orelse return rs;
-        rs.dense = by.dense[0..by.values.len];
+        rs.dense = by.dense[0..by.len];
 
         inline for (.{By} ++ All, &rs.sparse, &rs.values) |T, *s, *v| {
             const map = self.getStore(T, T) orelse return .{};
-            s.*, v.* = .{ map.sparse.items, map.values.ptr };
+            s.*, v.* = .{ map.sparse.items, map.values };
         }
         inline for (None, &rs.none) |T, *none| {
             if (self.getStore(T, T)) |s| none.* = s.sparse.items;
