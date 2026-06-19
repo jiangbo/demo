@@ -45,15 +45,19 @@ pub const bag = struct {
     const slotCount = pageSize * zon.pageCount;
 
     pub var slots: [slotCount]Stack = @splat(.{});
+    pub var position: zhu.Vector2 = zon.position;
     pub var closed: bool = true;
     pub var activePage: usize = 0;
     var click: zhu.widget.ClickT(Hover) = .empty;
+    var drag: ?zhu.Vector2 = null;
 
     fn reset() void {
         slots = @splat(.{});
+        position = zon.position;
         closed = true;
         activePage = 0;
         click = .empty;
+        drag = null;
     }
 
     pub fn add(itemType: ItemEnum, count: u32) u32 {
@@ -128,24 +132,41 @@ pub const bag = struct {
     fn update() void {
         if (context.input.pressed(.inventory)) {
             closed = !closed;
-            if (closed) click = .empty;
+            if (closed) click, drag = .{ .empty, null };
         }
         if (closed) return;
+        if (updatePanelDrag()) return;
 
         const clicked = click.update(hovered()) orelse return;
         activePage = switch (clicked) {
             .prev => activePage -| 1,
             .next => @min(activePage + 1, zon.pageCount - 1),
             .close => {
-                closed, click = .{ true, .empty };
+                closed, click, drag = .{ true, .empty, null };
                 return;
             },
             .body, .slot => return,
         };
     }
 
+    fn updatePanelDrag() bool {
+        if (drag) |offset| {
+            if (zhu.mouse.released(.LEFT)) drag = null else {
+                position = zhu.window.mouse.sub(offset);
+            }
+            return true;
+        }
+
+        if (!zhu.mouse.pressed(.LEFT)) return false;
+        if (!std.meta.eql(hovered(), .body)) return false;
+
+        drag = zhu.window.mouse.sub(position);
+        click = .empty;
+        return true;
+    }
+
     fn hovered() ?Hover {
-        const mouse = zhu.window.mouse.sub(zon.position);
+        const mouse = zhu.window.mouse.sub(position);
         if (zon.close.rect.contains(mouse)) return .close;
 
         const bagRect = zhu.Rect.init(.zero, zon.size);
@@ -173,8 +194,7 @@ pub const bag = struct {
 
     fn draw() void {
         if (closed) return;
-
-        zhu.camera.push(.windowAt(zon.position));
+        zhu.camera.push(.windowAt(position));
         defer zhu.camera.pop();
 
         const atlas = zhu.assets.getImage(zon.imageId).?;
@@ -382,7 +402,7 @@ pub const bar = struct {
     }
 };
 
-const drag = struct {
+const itemDrag = struct {
     const Source = union(enum) { bag: usize, bar: usize };
     const Target = union(enum) { bag: usize, bar: usize };
     const State = struct {
@@ -497,7 +517,7 @@ const drag = struct {
 pub fn reset() void {
     bag.reset();
     bar.reset();
-    drag.state = null;
+    itemDrag.state = null;
 }
 
 pub fn add(itemType: ItemEnum, count: u32) u32 {
@@ -513,11 +533,20 @@ pub fn move(fromIndex: usize, toIndex: usize) void {
 }
 
 pub fn update() void {
-    bag.update();
-    bar.update();
-    drag.update();
+    const panelDragging = bag.drag != null;
 
-    if (drag.state != null or bag.click.captured or bar.click.captured) {
+    bag.update();
+    if (panelDragging or bag.drag != null) {
+        context.input.mouseCaptured = true;
+        return;
+    }
+
+    bar.update();
+    itemDrag.update();
+
+    if (itemDrag.state != null or bag.drag != null or
+        bag.click.captured or bar.click.captured)
+    {
         context.input.mouseCaptured = true;
     }
 }
@@ -525,7 +554,7 @@ pub fn update() void {
 pub fn draw() void {
     bag.draw();
     bar.draw();
-    drag.draw();
+    itemDrag.draw();
 }
 
 fn drawItemIcon(itemType: ItemEnum, position: zhu.Vector2) void {
