@@ -149,9 +149,7 @@ fn thingAt(world: *World, tile: land.Tile) ?context.map.Thing {
     const object = tile.object orelse return null;
     return switch (object.kind) {
         .crop => .{ .crop = world.get(object.entity, farm.Crop).? },
-        .chest => .{ .chest = .{
-            .opened = world.get(object.entity, item.Chest).?.opened,
-        } },
+        .chest => .{ .chest = world.get(object.entity, item.Chest).? },
         .rock => .{ .rock = .{} },
     };
 }
@@ -184,7 +182,7 @@ fn restoreThing(world: *World, index: usize, thing: Thing) void {
             const object = land.tiles[index].object.?;
             std.debug.assert(object.kind == .chest);
             const chest = world.getPtr(object.entity, item.Chest).?;
-            chest.opened = saved.opened;
+            chest.* = saved;
             if (!saved.opened) return;
 
             const animation = world.getPtr(object.entity, actor.Animation).?;

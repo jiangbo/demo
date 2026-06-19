@@ -557,9 +557,10 @@ test "当前物品通过快捷栏引用读取库存槽" {
     try std.testing.expectEqual(null, activeItem());
 }
 
-test "绑定同类物品会清理旧快捷栏引用" {
+test "同一种物品只能绑定到一个快捷栏槽位" {
     reset();
 
+    // Zig 版快捷栏按物品类型唯一绑定，避免同类物品占用多个快捷键。
     bag.slots[0] = .{ .type = .strawberrySeed, .count = 2 };
     bag.slots[2] = .{ .type = .strawberrySeed, .count = 4 };
 

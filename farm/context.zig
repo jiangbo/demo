@@ -164,7 +164,7 @@ pub const map = struct {
 
     pub const Thing = union(enum) {
         crop: component.farm.Crop,
-        chest: struct { opened: bool = false },
+        chest: component.item.Chest,
         rock: struct { hitCount: u8 = 0 },
     };
 

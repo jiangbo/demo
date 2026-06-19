@@ -99,15 +99,22 @@ fn targetCenter(world: *World, entity: Entity) Position {
 
 fn openChest(world: *World, target: Entity) void {
     const chest = world.getPtr(target, Chest).?;
-    showChestNotice(chest);
 
-    // 宝箱奖励直接进入当前库存模块。
+    // 宝箱奖励允许部分领取，背包满时剩余数量留在宝箱里。
+    var taken = Chest{ .items = .initFill(0) };
     for (std.enums.values(ItemEnum)) |itemType| {
         const count = chest.items.get(itemType);
         if (count == 0) continue;
 
-        _ = inventory.add(itemType, count);
+        const remaining = inventory.add(itemType, count);
+        chest.items.set(itemType, remaining);
+        taken.items.set(itemType, count - remaining);
     }
+
+    const full = hasItems(chest);
+    showChestNotice(&taken, full);
+    if (full) return;
+
     chest.opened = true;
 
     const animation = world.getPtr(target, Animation).?;
@@ -116,7 +123,14 @@ fn openChest(world: *World, target: Entity) void {
     world.remove(target, Shape);
 }
 
-fn showChestNotice(chest: *const Chest) void {
+fn hasItems(chest: *const Chest) bool {
+    for (std.enums.values(ItemEnum)) |itemType| {
+        if (chest.items.get(itemType) > 0) return true;
+    }
+    return false;
+}
+
+fn showChestNotice(chest: *const Chest, full: bool) void {
     var buffer: [160]u8, var len: usize = .{ undefined, 0 };
     for (std.enums.values(ItemEnum)) |itemType| {
         const count = chest.items.get(itemType);
@@ -129,6 +143,14 @@ fn showChestNotice(chest: *const Chest) void {
         });
         len += line.len;
     }
+
+    if (full) {
+        const line = zhu.format(buffer[len..], "{s}Inventory full", .{
+            if (len == 0) "" else "\n",
+        });
+        len += line.len;
+    }
+
     if (len == 0) return;
 
     context.notice.show("{s}", .{buffer[0..len]});
@@ -292,4 +314,51 @@ test "按 F 打开宝箱会重置打开动画" {
     try std.testing.expect(world.get(chest, Chest).?.opened);
     try std.testing.expect(world.get(chest, Animation).?.isRunning());
     try std.testing.expect(!world.get(chest, Animation).?.loop);
+}
+
+test "宝箱在背包满时保留剩余奖励" {
+    zhu.input.reset();
+    defer {
+        inventory.reset();
+        zhu.input.reset();
+    }
+    inventory.reset();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const player = world.createIdentity(Player);
+    world.add(player, Position.xy(0, 0));
+    world.add(player, Actor{});
+    world.add(player, Shape{ .rect = .init(.zero, .xy(8, 8)) });
+
+    // 背包只给草莓留 1 个堆叠空间，其它格子全部占满。
+    inventory.bag.slots = @splat(.{ .type = .potato, .count = 99 });
+    inventory.bag.slots[0] = .{ .type = .strawberry, .count = 98 };
+
+    const frames = [_]zhu.graphics.Frame{
+        .{ .offset = .xy(0, 0), .duration = 0.1 },
+    };
+    const image = zhu.graphics.Image{ .size = .xy(16, 16) };
+    var animation = zhu.Animation.init(image, .xy(16, 16), &frames);
+    animation.stop();
+
+    var items = component.item.Counts.initFill(0);
+    items.set(.strawberry, 3);
+
+    const chest = world.createEntity();
+    world.add(chest, Position.xy(0, 20));
+    world.add(chest, Shape{ .rect = .init(.zero, .xy(8, 8)) });
+    world.add(chest, Chest{ .items = items });
+    world.add(chest, animation);
+    world.add(chest, Sprite{ .image = image });
+
+    pressKey(.F);
+    update(&world);
+
+    const state = world.get(chest, Chest).?;
+    try std.testing.expect(!state.opened);
+    try std.testing.expect(world.has(chest, Shape));
+    try std.testing.expectEqual(99, inventory.bag.slots[0].count);
+    try std.testing.expectEqual(2, state.items.get(.strawberry));
 }
