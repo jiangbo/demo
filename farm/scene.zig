@@ -97,7 +97,6 @@ pub fn draw() void {
         .farm => {
             zhu.batch.useTarget(clearColor, .{ .target = &canvas });
             drawFarm();
-            ui.overlay.draw();
 
             zhu.batch.useTarget(clearColor, .{});
             zhu.batch.drawImage(canvas.image, .zero, .{
@@ -216,6 +215,7 @@ fn drawFarm() void {
     defer zhu.camera.pop();
     system.time.draw();
     ui.draw(&world);
+    ui.overlay.draw();
 }
 
 fn drawSolids() void {
