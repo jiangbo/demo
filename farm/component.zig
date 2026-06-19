@@ -136,6 +136,12 @@ pub const item = struct {
     };
 
     pub const Pickup = struct { item: ItemEnum, count: u32 = 1 };
+
+    pub const PickupMotion = struct {
+        start: zhu.Vector2 = .zero,
+        target: zhu.Vector2 = .zero,
+        timer: zhu.Timer = .init(0.22),
+    };
     pub const Counts = std.EnumArray(ItemEnum, u32);
 
     // 宝箱：items 记录从地图对象属性读取到的奖励数量。

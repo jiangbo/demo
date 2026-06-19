@@ -143,8 +143,10 @@ fn applyTool(world: *World, position: zhu.Vector2, item: ItemEnum) void {
             const pickupItem = factory.harvestItem(crop.kind);
             world.destroyEntity(entity);
             tile.object = null;
-            const pickupEntity = factory.spawnPickup(world, pickupItem);
-            world.add(pickupEntity, position);
+            factory.spawnPickup(world, .{
+                .item = pickupItem,
+                .origin = position.add(map.data.tileSize.scale(0.5)),
+            });
             world.addEvent(event.SoundPlay{ .id = .harvest });
             return;
         }
@@ -408,6 +410,7 @@ test "工具使用会收获成熟作物" {
     world.add(crop, Crop{ .stage = .mature, .kind = .potato });
     map.land.getTile(testTarget).?.object = .{ .entity = crop };
 
+    zhu.random.init(1);
     applyTool(&world, testTarget, .hoe);
 
     const sounds = world.getEvent(event.SoundPlay);

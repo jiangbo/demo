@@ -21,7 +21,7 @@ const Object = tiled.Object;
 
 pub const Animation = struct {
     type: actor.Action,
-    imageId: zhu.Id,
+    imageId: zhu.graphics.ImageId,
     frames: []const zhu.graphics.Frame,
 };
 
@@ -42,7 +42,7 @@ pub const Character = struct {
 };
 
 pub const Sprite = struct {
-    imageId: zhu.Id,
+    imageId: zhu.graphics.ImageId,
     rect: zhu.Rect,
     offset: zhu.Vector2 = .zero,
     size: zhu.Vector2,
@@ -345,7 +345,7 @@ pub fn spawnCrop(world: *World, position: zhu.Vector2, kind: farm.CropEnum) Enti
 
 pub fn advanceCrop(crop: *farm.Crop) render.Sprite {
     crop.timer = 0;
-    crop.stage = zhu.nextEnum(farm.GrowthEnum, crop.stage);
+    crop.stage = zhu.enums.next(crop.stage);
     // 用 crop.kind 查找该作物对应阶段的贴图
     const stage = cropStage(crop.kind, crop.stage);
     crop.next = stage.duration;
@@ -355,19 +355,36 @@ pub fn advanceCrop(crop: *farm.Crop) render.Sprite {
     };
 }
 
-pub fn spawnPickup(world: *World, itemType: item.ItemEnum) Entity {
-    const config = itemConfig(itemType);
+pub fn spawnPickup(world: *World, args: struct {
+    item: item.ItemEnum,
+    origin: zhu.Vector2,
+}) void {
+    const config = itemConfig(args.item);
+    const image = resolveImage(config.icon);
+    const size = config.icon.size;
+    const offset = size.scale(-0.5);
+
+    // 在图标大小范围内随机一个落点，作为出生飞散动画的终点。
+    const radius = @sqrt(zhu.random.float(0, 1)) * @max(size.x, size.y);
+    const angle = zhu.random.float(0, std.math.tau);
+    const scatter = zhu.Vector2.xy(@cos(angle), @sin(angle)).scale(radius);
 
     const entity = world.createEntity();
-    world.add(entity, item.Pickup{ .item = itemType, .count = 1 });
+    world.add(entity, args.origin);
+    world.add(entity, item.Pickup{ .item = args.item });
+    world.add(entity, item.PickupMotion{
+        .start = args.origin,
+        .target = args.origin.add(scatter),
+    });
+    world.add(entity, motion.Shape{ .rect = .init(offset, size) });
     world.add(entity, render.Sprite{
-        .image = resolveImage(config.icon),
-        .size = .xy(10, 10),
+        .image = image,
+        .offset = offset,
+        .size = size,
     });
     world.add(entity, render.Render{ .layer = .crop });
     world.add(entity, render.YSort{});
     world.add(entity, map.Scoped{});
-    return entity;
 }
 
 fn animationSources(comptime animations: []const Animation) //
