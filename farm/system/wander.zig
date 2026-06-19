@@ -44,7 +44,7 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
         // 距离足够近，视为已到达
         if (distance2 <= arriveDistance2) {
             stop(actor, velocity, wander);
-            wander.waitTimer = zhu.randomF32(wander.minWait, wander.maxWait);
+            wander.waitTimer = zhu.random.float(wander.minWait, wander.maxWait);
             continue;
         }
 
@@ -61,7 +61,7 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
             // 卡住时间超过阈值，放弃当前目标，重新等待
             if (wander.stuckTimer >= wander.stuckReset) {
                 stop(actor, velocity, wander);
-                wander.waitTimer = zhu.randomF32(
+                wander.waitTimer = zhu.random.float(
                     wander.minWait,
                     wander.maxWait,
                 );
@@ -76,8 +76,8 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
 
 // 在 home 为圆心、wander.radius 为半径的圆内随机选一个点
 fn chooseTarget(wander: *Wander, position: zhu.Vector2) void {
-    const angle = zhu.randomF32(0, std.math.pi * 2.0);
-    const radius = zhu.randomF32(0, wander.radius);
+    const angle = zhu.random.float(0, std.math.pi * 2.0);
+    const radius = zhu.random.float(0, wander.radius);
     const direction = zhu.Vector2.xy(@cos(angle), @sin(angle));
     // 目标 = 家 + 随机方向 * 随机距离
     wander.target = wander.home.add(direction.scale(radius));
@@ -103,7 +103,7 @@ fn facingFromDirection(direction: zhu.Vector2) Facing {
 }
 
 test "wander 会选择目标并写入速度" {
-    zhu.math.setRandomSeed(1);
+    zhu.random.init(1);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -130,7 +130,7 @@ test "wander 会选择目标并写入速度" {
 }
 
 test "wander 到达目标后进入等待" {
-    zhu.math.setRandomSeed(1);
+    zhu.random.init(1);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();

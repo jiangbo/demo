@@ -6,8 +6,8 @@ pub fn handle(ev: *const sk.app.Event) void {
     const keyCode: u16 = @intCast(@intFromEnum(ev.key_code));
     const buttonCode: u16 = @intCast(@intFromEnum(ev.mouse_button));
 
-    if (math.isEnumRange(ev.type, .KEY_DOWN, .KEY_UP)) key.changed = true;
-    if (math.isEnumRange(ev.type, .MOUSE_DOWN, .MOUSE_LEAVE)) {
+    if (math.enums.inRange(ev.type, .KEY_DOWN, .KEY_UP)) key.changed = true;
+    if (math.enums.inRange(ev.type, .MOUSE_DOWN, .MOUSE_LEAVE)) {
         mouse.changed = true;
     }
 

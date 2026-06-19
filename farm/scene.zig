@@ -127,7 +127,7 @@ fn updateFarm(delta: f32) void {
     system.transition.update(&world);
 
     // 控制系统可能生成拾取物，所以拾取放在控制之后。
-    system.pickup.update(&world);
+    system.pickup.update(&world, delta);
 
     // 按 F 的处理、相机跟随、动画和排序都读取本帧已结算的位置。
     ui.notice.update(delta);

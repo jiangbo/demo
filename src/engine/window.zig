@@ -140,7 +140,7 @@ export fn windowInit() void {
         .logger = .{ .func = sk.log.func },
         .allocator = assets.skAllocator,
     });
-    math.setRandomSeed(sk.time.now());
+    math.random.init(sk.time.now());
     call(root, "init", .{});
 }
 

@@ -231,7 +231,7 @@ pub fn advanceCropOneDay(crop: *farm.Crop, watered: bool) bool {
     crop.timer = 0;
     if (crop.next > 0) return false;
 
-    crop.stage = zhu.nextEnum(farm.GrowthEnum, crop.stage);
+    crop.stage = zhu.enums.next(crop.stage);
     crop.next = factory.cropStage(crop.kind, crop.stage).duration;
     return true;
 }
@@ -336,7 +336,7 @@ fn loadActor(world: *World, object: tiled.Object) void {
 
 fn loadAnimal(world: *World, object: tiled.Object) void {
     // animal 是没有 gid 的 Tiled 点对象，name 直接对应 AnimalEnum。
-    const kind = zhu.toEnum(actor.AnimalEnum, object.name);
+    const kind = zhu.enums.to(actor.AnimalEnum, object.name);
     const entity = factory.spawnAnimal(world, kind);
     // Tiled 点对象的位置就是动物脚底点，和玩家、YSort 使用同一套坐标。
     world.add(entity, object.position);
@@ -347,7 +347,7 @@ fn loadTrigger(world: *World, object: tiled.Object) void {
     std.debug.assert(object.size.x > 0 and object.size.y > 0);
 
     const target = object.getProperty("target_map", []const u8).?;
-    const targetMap = zhu.toEnum(Id, target);
+    const targetMap = zhu.enums.to(Id, target);
     const start = object.getProperty("start_offset", []const u8).?;
     const startOffset = std.meta.stringToEnum(StartOffset, start);
 

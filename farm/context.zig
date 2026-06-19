@@ -107,7 +107,7 @@ pub const input = struct {
 
     const Entry = struct { type: Command, value: []const zhu.key.Code };
     const zon: []const Entry = @import("zon/input.zon");
-    const keys = zhu.enumArrayByType(Entry, zon);
+    const keys = zhu.enums.arrayByType(Entry, zon);
     const Mouse = zhu.mouse.Button;
 
     pub fn held(command: Command) bool {

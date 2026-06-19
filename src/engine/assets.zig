@@ -110,6 +110,10 @@ pub fn getImage(imageId: Id) ?graphics.Image {
     return imageCache.get(imageId);
 }
 
+pub fn getImageByPath(comptime path: Path) ?graphics.Image {
+    return getImage(id(path));
+}
+
 pub fn putImage(imageId: Id, image: graphics.Image) void {
     imageCache.put(allocator, imageId, image) catch oom();
 }
