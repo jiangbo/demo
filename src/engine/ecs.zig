@@ -133,7 +133,10 @@ fn Store(K: type, V: type) type {
             if (@sizeOf(V) == 0) {
                 try dense.ensureUnusedCapacity(gpa, 1);
                 self.capacity = @intCast(dense.capacity);
-            } else try dense.ensureTotalCapacityPrecise(gpa, self.capacity);
+            } else {
+                dense.ensureTotalCapacityPrecise(gpa, values.capacity) catch
+                    @panic("oom");
+            }
             self.dense = dense.items;
         }
 
@@ -182,11 +185,10 @@ fn Store(K: type, V: type) type {
 }
 
 pub const TypeId = u32;
-const Map = std.AutoHashMapUnmanaged;
 pub const World = struct {
     allocator: Allocator,
     entities: Entities = .{},
-    map: Map(TypeId, Store(u8, u8)) = .empty,
+    map: std.AutoHashMapUnmanaged(TypeId, Store(u8, u8)) = .empty,
 
     pub fn init(allocator: std.mem.Allocator) World {
         return .{ .allocator = allocator };
