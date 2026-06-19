@@ -159,13 +159,14 @@ fn Store(V: type) type {
             if (self.len <= 1 or self.valueSize == 0) return;
 
             const sparse = self.sparse.items;
+            const dense = self.dense[0..self.len];
             const v = self.values[0..self.len];
             for (1..v.len) |i| {
                 var j = i;
                 while (j > 0 and lessFn(v[j], v[j - 1])) : (j -= 1) {
                     std.mem.swap(V, &v[j], &v[j - 1]);
-                    const lhs = &self.dense[0..self.len][j];
-                    const rhs = &self.dense[0..self.len][j - 1];
+                    const lhs = &dense[j];
+                    const rhs = &dense[j - 1];
                     std.mem.swap(u16, lhs, rhs);
                     std.mem.swap(u16, &sparse[lhs.*], &sparse[rhs.*]);
                 }
