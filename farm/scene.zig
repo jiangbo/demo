@@ -173,8 +173,8 @@ fn enterFarm() void {
     map.enter(&world, .exterior, initialTargetId);
     inventory.reset();
     if (loadSlot == null) {
-        inventory.add(.hoe, 1);
-        inventory.add(.water, 1);
+        _ = inventory.add(.hoe, 1);
+        _ = inventory.add(.water, 1);
     }
 
     if (loadSlot) |slot| {

@@ -2,6 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
+const context = @import("../context.zig");
 const inventory = @import("../inventory.zig");
 
 const Player = component.actor.Player;
@@ -28,7 +29,13 @@ pub fn update(world: *World, delta: f32) void {
         const pickupShape = worldShape(world, entity) orelse continue;
         if (!playerShape.intersect(pickupShape)) continue;
 
-        inventory.add(pickup.item, pickup.count);
+        const remaining = inventory.add(pickup.item, pickup.count);
+        pickup.count = remaining;
+        if (remaining > 0) {
+            context.notice.show("Inventory full", .{});
+            continue;
+        }
+
         world.destroyEntity(entity);
         world.addEvent(event.SoundPlay{ .id = .pickup });
     }

@@ -216,7 +216,7 @@ fn clickMouse(button: zhu.mouse.Button) void {
 
 fn setActiveItem(item: ItemEnum, count: u32) void {
     inventory.reset();
-    inventory.add(item, count);
+    _ = inventory.add(item, count);
 }
 
 fn addTestPlayer(world: *World, position: zhu.Vector2) Entity {

@@ -48,7 +48,7 @@ pub const bag = struct {
         click = .empty;
     }
 
-    pub fn add(itemType: ItemEnum, count: u32) void {
+    pub fn add(itemType: ItemEnum, count: u32) u32 {
         const item = factory.itemConfig(itemType);
 
         var remaining: u32 = count;
@@ -71,7 +71,8 @@ pub const bag = struct {
             remaining -= minCount;
         }
 
-        autoBind(itemType);
+        if (remaining < count) autoBind(itemType);
+        return remaining;
     }
 
     pub fn move(fromIndex: usize, toIndex: usize) void {
@@ -479,8 +480,8 @@ pub fn reset() void {
     drag.state = null;
 }
 
-pub fn add(itemType: ItemEnum, count: u32) void {
-    bag.add(itemType, count);
+pub fn add(itemType: ItemEnum, count: u32) u32 {
+    return bag.add(itemType, count);
 }
 
 pub fn activeItem() ?*Stack {
@@ -523,8 +524,8 @@ fn drawItemCount(count: u32, rect: zhu.Rect) void {
 test "添加物品会合并并自动绑定快捷栏" {
     reset();
 
-    add(.strawberry, 7);
-    add(.strawberry, 3);
+    _ = add(.strawberry, 7);
+    _ = add(.strawberry, 3);
 
     try std.testing.expectEqual(.strawberry, bag.slots[0].type);
     try std.testing.expectEqual(10, bag.slots[0].count);
@@ -534,7 +535,7 @@ test "添加物品会合并并自动绑定快捷栏" {
 test "添加物品超过堆叠上限会填入下一个库存槽" {
     reset();
 
-    add(.strawberry, 100);
+    _ = add(.strawberry, 100);
 
     try std.testing.expectEqual(99, bag.slots[0].count);
     try std.testing.expectEqual(1, bag.slots[1].count);

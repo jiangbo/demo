@@ -106,7 +106,7 @@ fn openChest(world: *World, target: Entity) void {
         const count = chest.items.get(itemType);
         if (count == 0) continue;
 
-        inventory.add(itemType, count);
+        _ = inventory.add(itemType, count);
     }
     chest.opened = true;
 
