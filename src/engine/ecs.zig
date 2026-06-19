@@ -227,8 +227,8 @@ pub const World = struct {
     }
 
     pub fn getIdentity(self: *World, T: type) ?u16 {
-        const entity = self.assure(T, T).identity;
-        return if (entity == invalid) null else entity;
+        const map = self.getStore(T, T) orelse return null;
+        return if (map.identity == invalid) null else map.identity;
     }
 
     pub fn takeIdentity(self: *World, T: type) ?u16 {
@@ -242,7 +242,7 @@ pub const World = struct {
     }
 
     pub fn removeIdentity(self: *World, T: type) void {
-        self.assure(T, T).identity = invalid;
+        if (self.getStore(T, T)) |map| map.identity = invalid;
     }
 
     pub fn addEvent(self: *World, value: anytype) void {
@@ -251,11 +251,11 @@ pub const World = struct {
     }
 
     pub fn getEvent(self: *World, T: type) []T {
-        return self.assure(Event(T), T).values;
+        return if (self.getStore(Event(T), T)) |s| s.values else &.{};
     }
 
     pub fn clearEvent(self: *World, T: type) void {
-        self.assure(Event(T), T).clear();
+        if (self.getStore(Event(T), T)) |map| map.clear();
     }
 
     pub fn removeEvent(self: *World, T: type) void {
@@ -271,8 +271,14 @@ pub const World = struct {
         return map;
     }
 
+    fn getStore(self: *World, K: type, V: type) ?*Store(K, V) {
+        const map = self.map.getPtr(typeId(K)) orelse return null;
+        return @ptrCast(@alignCast(map));
+    }
+
     pub fn has(self: *World, entity: u16, T: type) bool {
-        return hasEntity(self.assure(T, T).sparse.items, entity);
+        const map = self.getStore(T, T) orelse return false;
+        return hasEntity(map.sparse.items, entity);
     }
 
     pub fn get(self: *World, entity: u16, T: type) ?T {
@@ -280,10 +286,9 @@ pub const World = struct {
     }
 
     pub fn getPtr(self: *World, entity: u16, T: type) ?*T {
-        const map = self.assure(T, T);
-        if (hasEntity(map.sparse.items, entity)) {
-            return &map.values[map.sparse.items[entity]];
-        } else return null;
+        const map = self.getStore(T, T) orelse return null;
+        if (!hasEntity(map.sparse.items, entity)) return null;
+        return &map.values[map.sparse.items[entity]];
     }
 
     pub fn add(self: *World, entity: u16, value: anytype) void {
@@ -292,15 +297,15 @@ pub const World = struct {
     }
 
     pub fn values(self: *World, T: type) []T {
-        return self.assure(T, T).values;
+        return if (self.getStore(T, T)) |s| s.values else &.{};
     }
 
     pub fn sort(self: *World, T: type, lessFn: fn (T, T) bool) void {
-        self.assure(T, T).sort(lessFn);
+        if (self.getStore(T, T)) |map| map.sort(lessFn);
     }
 
     pub fn remove(self: *World, entity: u16, T: type) void {
-        _ = self.assure(T, T).remove(entity);
+        if (self.getStore(T, T)) |map| _ = map.remove(entity);
     }
 
     pub fn alignAdd(self: *World, entity: u16, comps: anytype) void {
@@ -316,7 +321,10 @@ pub const World = struct {
     pub fn alignRemove(self: *World, entity: u16, types: anytype) void {
         var index: [types.len]u16 = undefined;
         inline for (types, &index) |T, *i| {
-            var map = self.assure(T, T);
+            var map = self.getStore(T, T) orelse {
+                i.* = invalid;
+                continue;
+            };
             i.* = map.remove(entity);
         }
         for (index[1..]) |i| std.debug.assert(index[0] == i);
@@ -331,7 +339,7 @@ pub const World = struct {
     }
 
     pub fn clear(self: *World, T: type) void {
-        self.assure(T, T).clear();
+        if (self.getStore(T, T)) |map| map.clear();
     }
 
     pub fn clearAll(self: *World, types: anytype) void {
@@ -351,7 +359,7 @@ pub const World = struct {
         var result: Query(All, None) = .{};
         var minCount: usize = invalid;
         inline for (All, &result.sparse, &result.values) |T, *s, *v| {
-            const map = self.assure(T, T);
+            const map = self.getStore(T, T) orelse return .{};
             s.*, v.* = .{ map.sparse.items, map.values.ptr };
             if (map.values.len < minCount) {
                 minCount = map.values.len;
@@ -359,7 +367,7 @@ pub const World = struct {
             }
         }
         inline for (None, &result.none) |T, *none| {
-            none.* = self.assure(T, T).sparse.items;
+            if (self.getStore(T, T)) |s| none.* = s.sparse.items;
         }
 
         return result;
@@ -370,14 +378,14 @@ pub const World = struct {
         None: anytype) Query(.{By} ++ All, None) {
     // zig fmt: on
         var rs: Query(.{By} ++ All, None) = .{};
-        rs.dense = self.assure(By, By).dense;
+        rs.dense = (self.getStore(By, By) orelse return rs).dense;
 
         inline for (.{By} ++ All, &rs.sparse, &rs.values) |T, *s, *v| {
-            const map = self.assure(T, T);
+            const map = self.getStore(T, T) orelse return .{};
             s.*, v.* = .{ map.sparse.items, map.values.ptr };
         }
         inline for (None, &rs.none) |T, *none| {
-            none.* = self.assure(T, T).sparse.items;
+            if (self.getStore(T, T)) |s| none.* = s.sparse.items;
         }
         return rs;
     }
@@ -388,7 +396,7 @@ pub fn Query(comptime All: anytype, comptime None: anytype) type {
         dense: []u16 = &.{},
         sparse: [All.len][]u16 = undefined,
         values: [All.len]*anyopaque = undefined,
-        none: [None.len][]u16 = undefined,
+        none: [None.len][]u16 = @splat(&.{}),
         index: u16 = 0,
         reversed: bool = false,
 
