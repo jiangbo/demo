@@ -15,19 +15,27 @@ const config: Config = @import("zon/inventory.zon");
 pub const Stack = struct { type: ItemEnum = .hoe, count: u32 = 0 };
 pub const Item = Stack;
 
-const Hover = union(enum) { body, slot: usize, prev, next };
+const Hover = union(enum) { body, slot: usize, prev, next, close };
 
 pub const bag = struct {
     const Zon = struct {
+        const Button = struct {
+            rect: zhu.Rect,
+            normal: zhu.Rect,
+            pressed: zhu.Rect,
+        };
+
         imageId: ImageId,
+        buttonImageId: ImageId,
         position: zhu.Vector2,
         size: zhu.Vector2,
         pageCount: usize,
         slotSize: zhu.Vector2,
         slots: [20]zhu.Vector2,
-        prev: zhu.Rect,
-        next: zhu.Rect,
+        prev: Button,
+        next: Button,
         pageText: zhu.Vector2,
+        close: Button,
         panel: NineSource,
         slot: NineSource,
     };
@@ -128,12 +136,18 @@ pub const bag = struct {
         activePage = switch (clicked) {
             .prev => activePage -| 1,
             .next => @min(activePage + 1, zon.pageCount - 1),
+            .close => {
+                closed, click = .{ true, .empty };
+                return;
+            },
             .body, .slot => return,
         };
     }
 
     fn hovered() ?Hover {
         const mouse = zhu.window.mouse.sub(zon.position);
+        if (zon.close.rect.contains(mouse)) return .close;
+
         const bagRect = zhu.Rect.init(.zero, zon.size);
         if (!bagRect.contains(mouse)) return null;
 
@@ -143,8 +157,8 @@ pub const bag = struct {
             if (rect.contains(mouse)) return .{ .slot = i };
         }
 
-        if (zon.prev.contains(mouse)) return .prev;
-        if (zon.next.contains(mouse)) return .next;
+        if (zon.prev.rect.contains(mouse)) return .prev;
+        if (zon.next.rect.contains(mouse)) return .next;
         return .body;
     }
 
@@ -153,7 +167,7 @@ pub const bag = struct {
 
         return switch (hovered() orelse return null) {
             .slot => |index| activePage * pageSize + index,
-            .body, .prev, .next => null,
+            .body, .prev, .next, .close => null,
         };
     }
 
@@ -164,6 +178,7 @@ pub const bag = struct {
         defer zhu.camera.pop();
 
         const atlas = zhu.assets.getImage(zon.imageId).?;
+        const buttonImage = zhu.assets.getImage(zon.buttonImageId).?;
         const panelImage = zhu.NineImage.from(atlas, zon.panel);
         const slotImage = zhu.NineImage.from(atlas, zon.slot);
 
@@ -184,11 +199,6 @@ pub const bag = struct {
             drawItemIcon(slot.type, slotRect.center());
         }
 
-        var rect = zon.prev;
-        zhu.batch.drawNine(slotImage, rect);
-        rect = zon.next;
-        zhu.batch.drawNine(slotImage, rect);
-
         for (zon.slots, 0..) |offset, i| {
             const slotRect = zhu.Rect.init(offset, zon.slotSize);
             const slot = slots[first + i];
@@ -197,14 +207,24 @@ pub const bag = struct {
             drawItemCount(slot.count, slotRect);
         }
 
-        rect = zon.prev;
-        zhu.text.draw("<", rect.center(), .{ .anchor = .center });
-        rect = zon.next;
-        zhu.text.draw(">", rect.center(), .{ .anchor = .center });
+        drawButton(buttonImage, zon.prev, .prev);
+        drawButton(buttonImage, zon.next, .next);
+        drawButton(buttonImage, zon.close, .close);
 
         const args = .{ activePage + 1, zon.pageCount };
         zhu.text.drawFmt("{d}/{d}", args, zon.pageText, .{
             .anchor = .center,
+            .color = .black,
+        });
+    }
+
+    fn drawButton(image: zhu.Image, button: Zon.Button, hover: Hover) void {
+        var pressed = false;
+        if (click.pressed) |p| pressed = std.meta.eql(p, hover);
+
+        const source = if (pressed) button.pressed else button.normal;
+        zhu.batch.drawImage(image.sub(source), button.rect.min, .{
+            .size = button.rect.size,
         });
     }
 };
