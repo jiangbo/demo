@@ -2,6 +2,8 @@ const std = @import("std");
 
 const Allocator = std.mem.Allocator;
 
+pub const Oom = Allocator.Error;
+pub const Error = Oom || error{MaxEntity};
 pub const Entity = u16;
 const invalid = std.math.maxInt(u16);
 fn hasEntity(slice: []const u16, entity: u16) bool {
@@ -24,7 +26,7 @@ const Entities = struct {
         self.deleted.deinit(gpa);
     }
 
-    pub fn create(self: *Entities, gpa: Allocator) !u16 {
+    pub fn create(self: *Entities, gpa: Allocator) Error!u16 {
         if (self.deletedCount > 0) {
             self.deletedCount -= 1;
             return @intCast(self.deleted.toggleFirstSet().?);
@@ -91,7 +93,7 @@ fn Store(K: type, V: type) type {
             gpa.rawFree(bytes, self.alignment, @returnAddress());
         }
 
-        fn add(self: *Self, gpa: Allocator, entity: u16, v: V) !void {
+        fn add(self: *Self, gpa: Allocator, entity: u16, v: V) Oom!void {
             if (hasEntity(self.sparse.items, entity)) {
                 self.values[self.sparse.items[entity]] = v;
                 return;
@@ -111,13 +113,13 @@ fn Store(K: type, V: type) type {
             self.sparse.items[entity] = @intCast(index);
         }
 
-        fn append(self: *Self, gpa: Allocator, v: V) !void {
+        fn append(self: *Self, gpa: Allocator, v: V) Oom!void {
             if (self.values.len >= self.capacity) try self.grow(gpa);
             self.values.len += 1;
             self.values[self.values.len - 1] = v;
         }
 
-        fn grow(self: *Self, gpa: Allocator) !void {
+        fn grow(self: *Self, gpa: Allocator) Oom!void {
             const c = self.capacity;
             var values: Value = .{ .items = self.values, .capacity = c };
             if (@sizeOf(V) != 0) {
@@ -202,8 +204,36 @@ pub const World = struct {
         self.* = .init(self.allocator);
     }
 
-    pub fn createEntity(self: *World) u16 {
-        return self.entities.create(self.allocator) catch oom();
+    pub fn tryCreateEntity(self: *World) Error!Entity {
+        return self.entities.create(self.allocator);
+    }
+
+    pub fn tryAddIdentity(self: *World, entity: Entity, T: type) Oom!void {
+        (try self.tryAssure(T, T)).identity = entity;
+    }
+
+    pub fn tryAddEvent(self: *World, value: anytype) Oom!void {
+        var map = try self.tryAssure(Event(@TypeOf(value)), @TypeOf(value));
+        try map.append(self.allocator, value);
+    }
+
+    pub fn tryAdd(self: *World, entity: Entity, value: anytype) Oom!void {
+        var map = try self.tryAssure(@TypeOf(value), @TypeOf(value));
+        try map.add(self.allocator, entity, value);
+    }
+
+    fn tryAssure(self: *World, K: type, V: type) Oom!*Store(K, V) {
+        const result = try self.map.getOrPut(self.allocator, typeId(K));
+        const map: *Store(K, V) = @ptrCast(@alignCast(result.value_ptr));
+        if (!result.found_existing) map.* = .{};
+        return map;
+    }
+
+    pub fn createEntity(self: *World) Entity {
+        return self.tryCreateEntity() catch |err| switch (err) {
+            error.OutOfMemory => @panic("oom"),
+            error.MaxEntity => @panic("ecs max entity"),
+        };
     }
 
     pub fn destroyEntity(self: *World, entity: u16) void {
@@ -216,11 +246,11 @@ pub const World = struct {
         while (toDestroy.next()) |entity| self.destroyEntity(entity);
     }
 
-    pub fn addIdentity(self: *World, entity: u16, T: type) void {
-        self.assure(T, T).identity = entity;
+    pub fn addIdentity(self: *World, entity: Entity, T: type) void {
+        self.tryAddIdentity(entity, T) catch @panic("oom");
     }
 
-    pub fn createIdentity(self: *World, T: type) u16 {
+    pub fn createIdentity(self: *World, T: type) Entity {
         const entity = self.createEntity();
         self.addIdentity(entity, T);
         return entity;
@@ -246,8 +276,7 @@ pub const World = struct {
     }
 
     pub fn addEvent(self: *World, value: anytype) void {
-        var map = self.assure(Event(@TypeOf(value)), @TypeOf(value));
-        map.append(self.allocator, value) catch oom();
+        self.tryAddEvent(value) catch @panic("oom");
     }
 
     pub fn getEvent(self: *World, T: type) []T {
@@ -261,14 +290,6 @@ pub const World = struct {
     pub fn removeEvent(self: *World, T: type) void {
         const removed = self.map.fetchRemove(typeId(Event(T)));
         if (removed) |r| r.value.deinit(self.allocator);
-    }
-
-    fn assure(self: *World, K: type, V: type) *Store(K, V) {
-        const result = self.map.getOrPut(self.allocator, //
-            typeId(K)) catch oom();
-        const map: *Store(K, V) = @ptrCast(@alignCast(result.value_ptr));
-        if (!result.found_existing) map.* = .{};
-        return map;
     }
 
     fn getStore(self: *World, K: type, V: type) ?*Store(K, V) {
@@ -291,9 +312,8 @@ pub const World = struct {
         return &map.values[map.sparse.items[entity]];
     }
 
-    pub fn add(self: *World, entity: u16, value: anytype) void {
-        var map = self.assure(@TypeOf(value), @TypeOf(value));
-        map.add(self.allocator, entity, value) catch oom();
+    pub fn add(self: *World, entity: Entity, value: anytype) void {
+        self.tryAdd(entity, value) catch @panic("oom");
     }
 
     pub fn values(self: *World, T: type) []T {
@@ -306,28 +326,6 @@ pub const World = struct {
 
     pub fn remove(self: *World, entity: u16, T: type) void {
         if (self.getStore(T, T)) |map| _ = map.remove(entity);
-    }
-
-    pub fn alignAdd(self: *World, entity: u16, comps: anytype) void {
-        var indexes: [comps.len]u16 = undefined;
-        inline for (comps, &indexes) |value, *i| {
-            var map = self.assure(@TypeOf(value), @TypeOf(value));
-            map.add(self.allocator, entity, value) catch oom();
-            i.* = map.sparse.items[entity];
-        }
-        for (indexes[1..]) |i| std.debug.assert(indexes[0] == i);
-    }
-
-    pub fn alignRemove(self: *World, entity: u16, types: anytype) void {
-        var index: [types.len]u16 = undefined;
-        inline for (types, &index) |T, *i| {
-            var map = self.getStore(T, T) orelse {
-                i.* = invalid;
-                continue;
-            };
-            i.* = map.remove(entity);
-        }
-        for (index[1..]) |i| std.debug.assert(index[0] == i);
     }
 
     pub fn removeAll(self: *World, entity: u16) void {
@@ -435,9 +433,6 @@ pub fn Query(comptime All: anytype, comptime None: anytype) type {
     };
 }
 
-fn oom() noreturn {
-    @panic("oom");
-}
 pub fn typeId(T: type) TypeId {
     return comptime std.hash.Fnv1a_32.hash(@typeName(T));
 }
