@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const context = @import("../context.zig");
+const factory = @import("../factory.zig");
 const inventory = @import("../inventory.zig");
 
 const Player = component.actor.Player;
@@ -30,7 +31,15 @@ pub fn update(world: *World, delta: f32) void {
         if (!playerShape.intersect(pickupShape)) continue;
 
         const remaining = inventory.add(pickup.item, pickup.count);
+        const taken = pickup.count - remaining;
         pickup.count = remaining;
+
+        if (taken > 0) {
+            context.notice.show(.item, "获得 {s} x{d}", .{
+                factory.itemConfig(pickup.item).name,
+                taken,
+            });
+        }
         if (remaining > 0) {
             context.notice.show(.item, "背包已满", .{});
             continue;
