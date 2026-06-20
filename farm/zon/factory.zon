@@ -171,6 +171,7 @@
             .category = "作物",
             .description = "成熟后收获的水果。",
             .limit = 99,
+            .use = .{ .item = .strawberrySeed, .count = 3 },
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png"
                 .imageId = 2346538291,
@@ -183,6 +184,7 @@
             .category = "作物",
             .description = "成熟后收获的根茎作物。",
             .limit = 99,
+            .use = .{ .item = .potatoSeed, .count = 3 },
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png"
                 .imageId = 2346538291,

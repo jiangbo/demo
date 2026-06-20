@@ -48,12 +48,15 @@ pub const Sprite = struct {
     size: zhu.Vector2,
 };
 
+pub const ItemUse = struct { item: item.ItemEnum, count: u32 };
+
 pub const Item = struct {
     name: []const u8,
     category: []const u8,
     description: []const u8,
     limit: u32 = 99,
     icon: Sprite,
+    use: ?ItemUse = null,
 };
 
 pub const CropStage = struct { sprite: Sprite, duration: f32 };
