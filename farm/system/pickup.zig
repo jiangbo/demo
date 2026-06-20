@@ -34,16 +34,22 @@ pub fn update(world: *World, delta: f32) void {
         const taken = pickup.count - remaining;
         pickup.count = remaining;
 
+        var buffer: [96]u8, var len: usize = .{ undefined, 0 };
         if (taken > 0) {
-            context.notice.show(.item, "获得 {s} x{d}", .{
+            const line = zhu.format(buffer[len..], "获得 {s} x{d}", .{
                 factory.itemConfig(pickup.item).name,
                 taken,
             });
+            len += line.len;
         }
         if (remaining > 0) {
-            context.notice.show(.item, "背包已满", .{});
-            continue;
+            const line = zhu.format(buffer[len..], "{s}背包已满", .{
+                if (len == 0) "" else "\n",
+            });
+            len += line.len;
         }
+        if (len > 0) context.notice.show(.item, "{s}", .{buffer[0..len]});
+        if (remaining > 0) continue;
 
         world.destroyEntity(entity);
         world.addEvent(event.SoundPlay{ .id = .pickup });
