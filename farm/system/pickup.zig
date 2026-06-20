@@ -130,7 +130,7 @@ test "pickup 碰撞后进入背包并播放音效" {
     update(&world, 0.016);
 
     try std.testing.expectEqual(null, world.get(pickup, Pickup));
-    try std.testing.expectEqual(.potato, inventory.bag.slots[0].type);
+    try std.testing.expectEqual(.potato, inventory.bag.slots[0].item);
     try std.testing.expectEqual(2, inventory.bag.slots[0].count);
 
     const sounds = world.getEvent(event.SoundPlay);

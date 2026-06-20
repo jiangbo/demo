@@ -109,6 +109,206 @@ pub fn popupPosition(popup: Popup) Vector2 {
     return pos.clamp(.zero, bounds.sub(popup.size).max(.zero));
 }
 
+pub fn StackStore(comptime T: type) type {
+    return struct {
+        pub const Stack = struct { item: T = undefined, count: u32 = 0 };
+        pub const Add = struct {
+            item: T,
+            count: u32 = 1,
+            limit: u32 = 1,
+        };
+        pub const Put = struct {
+            removes: []const Remove = &.{},
+            adds: []const Add = &.{},
+        };
+        pub const Remove = struct { index: usize, count: u32 = 1 };
+        pub const Entry = struct {
+            index: usize,
+            item: T,
+            count: u32,
+
+            pub fn init(index: usize, item: T, count: u32) Entry {
+                return .{ .index = index, .item = item, .count = count };
+            }
+        };
+        pub const Change = union(enum) { add: Entry, remove: Entry };
+        pub const Move = enum { merge, clear, swap };
+        pub const Result = struct {
+            status: enum { done, fail },
+            // fail 时背包已回滚，changes 可由调用者选择性提交。
+            changes: []const Change,
+        };
+
+        stacks: []Stack,
+
+        pub fn init(stacks: []Stack) @This() {
+            return .{ .stacks = stacks };
+        }
+
+        pub fn add(self: *@This(), args: Add) u32 {
+            var addArgs = args;
+            while (addArgs.count > 0) {
+                if (self.addOne(addArgs)) |placed| {
+                    addArgs.count -= placed.count;
+                } else break;
+            }
+            return addArgs.count;
+        }
+
+        pub fn ptr(self: *@This(), index: usize) ?*Stack {
+            if (self.stacks[index].count == 0) return null;
+            return &self.stacks[index];
+        }
+
+        pub fn first(self: *const @This(), item: T) ?usize {
+            for (self.stacks, 0..) |slot, index| {
+                if (slot.count != 0 and slot.item == item) return index;
+            }
+            return null;
+        }
+
+        pub fn firstEmpty(self: *const @This()) ?usize {
+            for (self.stacks, 0..) |slot, index| {
+                if (slot.count == 0) return index;
+            }
+            return null;
+        }
+
+        pub fn clear(self: *@This(), index: usize) void {
+            self.stacks[index].count = 0;
+        }
+
+        pub fn move(self: *@This(), from: usize, to: usize, limit: u32) ?Move {
+            if (from == to) return null;
+
+            const source = &self.stacks[from];
+            const target = &self.stacks[to];
+            if (source.count == 0) return null;
+
+            if (target.count == 0 or source.item != target.item) {
+                std.mem.swap(Stack, source, target);
+                return .swap;
+            }
+
+            if (target.count >= limit) return null;
+
+            const moved = @min(limit - target.count, source.count);
+            if (moved == 0) return null;
+
+            target.count += moved;
+            source.count -= moved;
+            return if (source.count == 0) .clear else .merge;
+        }
+
+        pub fn tryPut(self: *@This(), buf: []Change, ops: Put) Result {
+            var list = std.ArrayList(Change).initBuffer(buf);
+            var done = blk: for (ops.removes) |entry| {
+                if (entry.count == 0) continue;
+                const taken = self.take(entry.index, entry.count) //
+                    orelse break :blk false;
+                list.appendAssumeCapacity(.{ .remove = taken });
+            } else true;
+
+            if (done) done = blk: for (ops.adds) |entry| {
+                var addArgs = entry;
+                while (addArgs.count > 0) {
+                    if (self.addOne(addArgs)) |placed| {
+                        addArgs.count -= placed.count;
+                        list.appendAssumeCapacity(.{ .add = placed });
+                    } else break :blk false;
+                }
+            } else true;
+
+            if (done) return .{ .status = .done, .changes = list.items };
+            self.back(list.items);
+            return .{ .status = .fail, .changes = list.items };
+        }
+
+        pub fn put(self: *@This(), changes: []const Change) void {
+            for (changes) |change| self.putOne(change);
+        }
+
+        pub fn back(self: *@This(), changes: []const Change) void {
+            var iterator = std.mem.reverseIterator(changes);
+            while (iterator.next()) |change| {
+                switch (change) {
+                    .add => |entry| self.putOne(.{ .remove = entry }),
+                    .remove => |entry| self.putOne(.{ .add = entry }),
+                }
+            }
+        }
+
+        fn addOne(self: *@This(), args: Add) ?Entry {
+            for (0..self.stacks.len) |index| {
+                if (self.merge(index, args)) |count| {
+                    return .init(index, args.item, count);
+                }
+            }
+
+            for (0..self.stacks.len) |index| {
+                if (self.fill(index, args)) |count| {
+                    return .init(index, args.item, count);
+                }
+            }
+
+            return null;
+        }
+
+        pub fn take(self: *@This(), index: usize, count: u32) ?Entry {
+            std.debug.assert(count > 0);
+            const slot = &self.stacks[index];
+            if (slot.count < count) return null;
+
+            const item = slot.item;
+            slot.count -= count;
+            return .init(index, item, count);
+        }
+
+        pub fn takeAdd(self: *@This(), index: usize, args: Add) bool {
+            var changes: [16]Change = undefined;
+            const result = self.tryPut(&changes, .{
+                .removes = &.{.{ .index = index }},
+                .adds = &.{args},
+            });
+            return result.status == .done;
+        }
+
+        fn merge(self: *@This(), index: usize, args: Add) ?u32 {
+            const slot = &self.stacks[index];
+            if (slot.count == 0 or slot.item != args.item) return null;
+            if (slot.count >= args.limit) return null;
+
+            const moved = @min(args.limit - slot.count, args.count);
+            slot.count += moved;
+            return moved;
+        }
+
+        fn fill(self: *@This(), index: usize, args: Add) ?u32 {
+            const slot = &self.stacks[index];
+            if (slot.count != 0) return null;
+
+            const moved = @min(args.limit, args.count);
+            slot.* = .{ .item = args.item, .count = moved };
+            return moved;
+        }
+
+        fn putOne(self: *@This(), change: Change) void {
+            switch (change) {
+                .add => |entry| {
+                    const stack = &self.stacks[entry.index];
+                    if (stack.count == 0) stack.item = entry.item;
+                    std.debug.assert(std.meta.eql(entry.item, stack.item));
+                    stack.count += entry.count;
+                },
+                .remove => |entry| {
+                    const taken = self.take(entry.index, entry.count).?;
+                    std.debug.assert(std.meta.eql(entry.item, taken.item));
+                },
+            }
+        }
+    };
+}
+
 pub const Menu = struct {
     position: math.Vector2 = .zero,
     overlay: ?graphics.Color = null,

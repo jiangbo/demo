@@ -209,7 +209,7 @@ fn captureInventory() InventorySave {
     };
     for (inventory.bag.slots, 0..) |slot, index| {
         result.slots[index] = .{
-            .type = slot.type,
+            .type = slot.item,
             .count = slot.count,
         };
     }
@@ -318,9 +318,9 @@ fn restorePlayer(world: *World, data: PlayerSave) void {
 fn restoreInventory(data: InventorySave) void {
     for (&inventory.bag.slots, 0..) |*slot, index| {
         slot.* = if (index < data.slots.len) .{
-            .type = data.slots[index].type,
+            .item = data.slots[index].type,
             .count = data.slots[index].count,
-        } else .{ .type = .hoe, .count = 0 };
+        } else .{ .item = .hoe, .count = 0 };
     }
     inventory.bar.refs = data.hotbar;
     inventory.bar.active = data.activeHotbar;
@@ -366,7 +366,7 @@ test "restoreInventory 会恢复库存槽和快捷栏" {
 
     try std.testing.expectEqual(
         component.item.ItemEnum.strawberrySeed,
-        inventory.bag.slots[0].type,
+        inventory.bag.slots[0].item,
     );
     try std.testing.expectEqual(7, inventory.bag.slots[0].count);
     try std.testing.expectEqual(0, inventory.bar.refs[3].?);

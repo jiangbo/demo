@@ -333,8 +333,8 @@ test "宝箱在背包满时保留剩余奖励" {
     world.add(player, Shape{ .rect = .init(.zero, .xy(8, 8)) });
 
     // 背包只给草莓留 1 个堆叠空间，其它格子全部占满。
-    inventory.bag.slots = @splat(.{ .type = .potato, .count = 99 });
-    inventory.bag.slots[0] = .{ .type = .strawberry, .count = 98 };
+    inventory.bag.slots = @splat(.{ .item = .potato, .count = 99 });
+    inventory.bag.slots[0] = .{ .item = .strawberry, .count = 98 };
 
     const frames = [_]zhu.graphics.Frame{
         .{ .offset = .xy(0, 0), .duration = 0.1 },

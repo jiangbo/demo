@@ -96,7 +96,7 @@ fn updateTargetAction(world: *World, player: Entity) void {
     target.active = false;
 
     const item = inventory.activeItem() orelse return;
-    if (!isTargetItem(item.type)) return;
+    if (!isTargetItem(item.item)) return;
 
     const position = targetPosition(world, player) orelse return;
 
@@ -113,10 +113,10 @@ fn updateTargetAction(world: *World, player: Entity) void {
         actor.facing = facingFromDirection(direction);
     }
 
-    actor.action = actionFromItem(item.type);
+    actor.action = actionFromItem(item.item);
     world.getPtr(player, Velocity).?.value = .zero;
     world.add(player, Busy{});
-    applyTool(world, position, item.type);
+    applyTool(world, position, item.item);
 }
 
 fn isTargetItem(item: ItemEnum) bool {
