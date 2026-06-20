@@ -95,12 +95,22 @@ pub fn draw(text: String, position: Vector2, option: Option) void {
 
 pub fn drawSize(text: String, position: Vector2, option: Option) Vector2 {
     if (text.len == 0) return .zero;
-    const scale = option.scale.scale(fontScale);
-    const height = font.lineHeight * scale.y;
-    var pos = position.add(option.offset);
+    var pos = position;
     if (option.anchor) |anchor| {
         pos = pos.sub(measure(text, option).mul(anchor));
     }
+    return layout(text, pos, option, true);
+}
+
+fn layout(
+    text: String,
+    position: Vector2,
+    option: Option,
+    comptime render: bool,
+) Vector2 {
+    const scale = option.scale.scale(fontScale);
+    const height = font.lineHeight * scale.y;
+    var pos = position.add(option.offset);
 
     var width: f32, var line: f32 = .{ 0, 1 };
     var maxWidth: f32, const startX = .{ 0, pos.x };
@@ -125,13 +135,15 @@ pub fn drawSize(text: String, position: Vector2, option: Option) Vector2 {
         width += advance;
         maxWidth = @max(maxWidth, width);
 
-        const char = searchChar(code);
-        const image = fontImage.sub(char.area);
-        batch.drawImage(image, pos.add(char.offset.mul(scale)), .{
-            .size = char.area.size.mul(scale),
-            .color = option.color,
-        });
-        graphics.stats.text += 1;
+        if (render) {
+            const char = searchChar(code);
+            const image = fontImage.sub(char.area);
+            batch.drawImage(image, pos.add(char.offset.mul(scale)), .{
+                .size = char.area.size.mul(scale),
+                .color = option.color,
+            });
+            graphics.stats.text += 1;
+        }
         pos = .xy(startX + width, pos.y);
     }
 
@@ -148,28 +160,7 @@ pub fn drawLines(lines: Lines, position: Vector2, spacing: f32) void {
 
 pub fn measure(text: String, option: Option) Vector2 {
     if (text.len == 0) return .zero;
-    const scale = option.scale.scale(fontScale);
-    const height = font.lineHeight * scale.y;
-
-    var max: f32, var line: f32, var width: f32 = .{ 0, 1, 0 };
-    var iterator = Utf8View.initUnchecked(text).iterator();
-    while (iterator.nextCodepoint()) |code| {
-        if (code == '\n') {
-            line, width = .{ line + 1, 0 };
-            continue;
-        }
-
-        const advance = charAdvance(code, scale.x);
-        if (width > 0) {
-            if (width + option.spacing + advance > option.max) {
-                line, width = .{ line + 1, 0 };
-            } else width += option.spacing;
-        }
-        width += advance;
-        max = @max(max, width);
-    }
-
-    return .xy(max, line * height);
+    return layout(text, .zero, option.with(.anchor, null), false);
 }
 
 pub fn measureLines(lines: Lines, spacing: f32) Vector2 {
