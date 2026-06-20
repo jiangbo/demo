@@ -88,6 +88,27 @@ pub fn ClickT(comptime T: type) type {
 
 pub const Click = ClickT(usize);
 
+pub const Popup = struct {
+    anchor: Vector2,
+    size: Vector2,
+    offset: Vector2 = .zero,
+    bounds: ?Vector2 = null,
+};
+
+pub fn popupPosition(popup: Popup) Vector2 {
+    const bounds = popup.bounds orelse window.size;
+    var pos = popup.anchor.add(popup.offset);
+
+    if (pos.x + popup.size.x > bounds.x) {
+        pos.x = popup.anchor.x - popup.offset.x - popup.size.x;
+    }
+    if (pos.y + popup.size.y > bounds.y) {
+        pos.y = popup.anchor.y - popup.offset.y - popup.size.y;
+    }
+
+    return pos.clamp(.zero, bounds.sub(popup.size).max(.zero));
+}
+
 pub const Menu = struct {
     position: math.Vector2 = .zero,
     overlay: ?graphics.Color = null,

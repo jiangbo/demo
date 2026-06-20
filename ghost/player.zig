@@ -68,7 +68,7 @@ pub fn update(delta: f32) void {
     if (window.isKeyPress(.S)) velocity.y = maxSpeed;
 
     move(delta);
-    position.clamp(.zero, zhu.camera.worldSize.sub(size));
+    position = position.clamp(.zero, zhu.camera.worldSize.sub(size));
     animation.loopUpdate(delta);
 }
 

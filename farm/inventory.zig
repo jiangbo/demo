@@ -25,6 +25,16 @@ pub const bag = struct {
             pressed: zhu.Rect,
         };
 
+        const Tooltip = struct {
+            imageId: ImageId,
+            minSize: zhu.Vector2,
+            offset: zhu.Vector2,
+            padding: zhu.Vector2,
+            spacing: f32,
+            text: zhu.text.Option,
+            panel: NineSource,
+        };
+
         imageId: ImageId,
         buttonImageId: ImageId,
         position: zhu.Vector2,
@@ -38,6 +48,7 @@ pub const bag = struct {
         close: Button,
         panel: NineSource,
         slot: NineSource,
+        tooltip: Tooltip,
     };
 
     const zon = config.bag;
@@ -215,6 +226,7 @@ pub const bag = struct {
             const slotRect = zhu.Rect.init(offset, zon.slotSize);
             const slot = slots[first + i];
             if (slot.count == 0) continue;
+            if (itemDrag.hideBag(first + i)) continue;
 
             drawItemIcon(slot.type, slotRect.center());
         }
@@ -223,6 +235,7 @@ pub const bag = struct {
             const slotRect = zhu.Rect.init(offset, zon.slotSize);
             const slot = slots[first + i];
             if (slot.count <= 1) continue;
+            if (itemDrag.hideBag(first + i)) continue;
 
             drawItemCount(slot.count, slotRect);
         }
@@ -361,7 +374,6 @@ pub const bar = struct {
 
     fn draw() void {
         if (!visible) return;
-
         zhu.camera.push(.windowAt(zon.position));
         defer zhu.camera.pop();
 
@@ -384,18 +396,19 @@ pub const bar = struct {
             }
         }
 
-        for (refs, zon.slots) |slotIndex, offset| {
+        for (refs, zon.slots, 0..) |slotIndex, offset, i| {
             const rect = zhu.Rect.init(offset, zon.slotSize);
             const slot = bag.slots[slotIndex orelse continue];
-            if (slot.count == 0) continue;
+            if (slot.count == 0 or itemDrag.hideBar(i)) continue;
 
             drawItemIcon(slot.type, rect.center());
         }
 
-        for (refs, zon.slots) |slotIndex, offset| {
+        for (refs, zon.slots, 0..) |slotIndex, offset, i| {
             const rect = zhu.Rect.init(offset, zon.slotSize);
             const slot = bag.slots[slotIndex orelse continue];
             if (slot.count <= 1) continue;
+            if (itemDrag.hideBar(i)) continue;
 
             drawItemCount(slot.count, rect);
         }
@@ -495,6 +508,24 @@ const itemDrag = struct {
         return null;
     }
 
+    fn hideBag(index: usize) bool {
+        const current = state orelse return false;
+        if (!current.moved) return false;
+        return switch (current.source) {
+            .bag => |source| source == index,
+            .bar => false,
+        };
+    }
+
+    fn hideBar(index: usize) bool {
+        const current = state orelse return false;
+        if (!current.moved) return false;
+        return switch (current.source) {
+            .bar => |source| source == index,
+            .bag => false,
+        };
+    }
+
     fn draw() void {
         const current = state orelse return;
         if (!current.moved) return;
@@ -555,6 +586,54 @@ pub fn draw() void {
     bag.draw();
     bar.draw();
     itemDrag.draw();
+    drawTooltip();
+}
+
+fn tooltipItem() ?ItemEnum {
+    if (itemDrag.state != null or bag.drag != null) return null;
+
+    if (bag.hoveredSlotIndex()) |index| {
+        const slot = bag.slots[index];
+        if (slot.count > 0) return slot.type;
+    }
+
+    const barIndex = bar.hoveredSlot() orelse return null;
+    const bagIndex = bar.refs[barIndex] orelse return null;
+    const slot = bag.slots[bagIndex];
+    return if (slot.count > 0) slot.type else null;
+}
+
+fn drawTooltip() void {
+    const itemType = tooltipItem() orelse return;
+    const item = factory.itemConfig(itemType);
+    const tooltip = bag.zon.tooltip;
+
+    const option = tooltip.text;
+    const categoryColor = zhu.Color.gray(0.2, 1).toSrgb();
+    const categoryOption = option.with(.color, categoryColor);
+    const lines = [_]zhu.text.Line{
+        .{ .text = item.name, .option = option },
+        .{ .text = item.category, .option = categoryOption },
+        .{ .text = item.description, .option = option },
+    };
+
+    const size = zhu.text.measureLines(&lines, tooltip.spacing)
+        .add(tooltip.padding.scale(2)).max(tooltip.minSize);
+    const position = zhu.widget.popupPosition(.{
+        .anchor = zhu.window.mouse,
+        .size = size,
+        .offset = tooltip.offset,
+    });
+
+    zhu.camera.push(.window);
+    defer zhu.camera.pop();
+
+    const image = zhu.assets.getImage(tooltip.imageId).?;
+    const panel = zhu.NineImage.from(image, tooltip.panel);
+    zhu.batch.drawNine(panel, .init(position, size));
+
+    const pos = position.add(tooltip.padding);
+    zhu.text.drawLines(&lines, pos, tooltip.spacing);
 }
 
 fn drawItemIcon(itemType: ItemEnum, position: zhu.Vector2) void {

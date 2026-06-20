@@ -319,6 +319,15 @@ pub const Color = extern struct {
         return .{ .r = v, .g = v, .b = v, .a = a };
     }
 
+    pub fn toSrgb(self: Color) Color {
+        return .{
+            .r = linearToSrgb(self.r),
+            .g = linearToSrgb(self.g),
+            .b = linearToSrgb(self.b),
+            .a = self.a,
+        };
+    }
+
     pub fn mix(self: Color, other: Color, t: f32) Color {
         return .{
             .r = std.math.lerp(self.r, other.r, t),
@@ -327,17 +336,9 @@ pub const Color = extern struct {
             .a = std.math.lerp(self.a, other.a, t),
         };
     }
+
+    fn linearToSrgb(v: f32) f32 {
+        if (v <= 0.0031308) return v * 12.92;
+        return 1.055 * std.math.pow(f32, v, 1.0 / 2.4) - 0.055;
+    }
 };
-
-// pub fn init(size: Vector2, buffer: []Vertex) void {
-//     batch.init(size, buffer);
-// }
-
-// pub fn scissor(area: math.Rect) void {
-//     const min = area.min.mul(window.ratio);
-//     const size = area.size.mul(window.ratio);
-//     batch.encodeCommand(.{ .scissor = .{ .min = min, .size = size } });
-// }
-// pub fn resetScissor() void {
-//     batch.encodeCommand(.{ .scissor = .fromMax(.zero, window.clientSize) });
-// }

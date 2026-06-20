@@ -218,9 +218,11 @@ pub const Vector2 = extern struct {
         return .{ .x = @floor(self.x), .y = @floor(self.y) };
     }
 
-    pub fn clamp(self: *Vector2, minV: Vector2, maxV: Vector2) void {
-        self.x = std.math.clamp(self.x, minV.x, maxV.x);
-        self.y = std.math.clamp(self.y, minV.y, maxV.y);
+    pub fn clamp(self: Vector2, minV: Vector2, maxV: Vector2) Vector2 {
+        return .{
+            .x = std.math.clamp(self.x, minV.x, maxV.x),
+            .y = std.math.clamp(self.y, minV.y, maxV.y),
+        };
     }
 
     pub fn max(self: Vector2, other: Vector2) Vector2 {

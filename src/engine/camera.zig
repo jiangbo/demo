@@ -68,7 +68,7 @@ pub fn control(distance: f32) void {
 
 pub fn clampBound() void {
     const max = bound.sub(size.div(main.scale)).max(.zero);
-    main.position.clamp(.zero, max);
+    main.position = main.position.clamp(.zero, max);
 }
 
 pub fn directFollow(pos: Vector2) void {
