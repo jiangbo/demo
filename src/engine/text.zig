@@ -59,7 +59,20 @@ pub const Option = struct {
     max: f32 = std.math.floatMax(f32), // 最大宽度，超过换行
     spacing: f32 = 0, // 文字间的间距
     anchor: ?Vector2 = null, // 锚点
+
+    pub fn with(
+        self: Option,
+        comptime field: std.meta.FieldEnum(Option),
+        value: @FieldType(Option, @tagName(field)),
+    ) Option {
+        var result = self;
+        @field(result, @tagName(field)) = value;
+        return result;
+    }
 };
+
+pub const Line = struct { text: String, option: Option = .{} };
+pub const Lines = []const Line;
 
 pub fn drawNumber(number: anytype, pos: Vector2, option: Option) void {
     var textBuffer: [15]u8 = undefined;
@@ -77,7 +90,11 @@ pub fn drawFmt(comptime fmt: String, args: anytype, pos: Vector2,
 
 const Utf8View = std.unicode.Utf8View;
 pub fn draw(text: String, position: Vector2, option: Option) void {
-    if (text.len == 0) return;
+    _ = drawSize(text, position, option);
+}
+
+pub fn drawSize(text: String, position: Vector2, option: Option) Vector2 {
+    if (text.len == 0) return .zero;
     const scale = option.scale.scale(fontScale);
     const height = font.lineHeight * scale.y;
     var pos = position.add(option.offset);
@@ -85,24 +102,28 @@ pub fn draw(text: String, position: Vector2, option: Option) void {
         pos = pos.sub(measure(text, option).mul(anchor));
     }
 
-    var width: f32, const startX = .{ 0, pos.x };
+    var width: f32, var line: f32 = .{ 0, 1 };
+    var maxWidth: f32, const startX = .{ 0, pos.x };
     var iterator = Utf8View.initUnchecked(text).iterator();
     while (iterator.nextCodepoint()) |code| {
         if (code == '\n') {
-            width, pos = .{ 0, .xy(startX, pos.y + height) };
+            width, line = .{ 0, line + 1 };
+            pos = .xy(startX, pos.y + height);
             continue;
         }
 
         const advance = charAdvance(code, scale.x);
         if (width > 0) {
             if (width + option.spacing + advance > option.max) {
-                width, pos = .{ 0, .xy(startX, pos.y + height) };
+                width, line = .{ 0, line + 1 };
+                pos = .xy(startX, pos.y + height);
             } else {
                 width += option.spacing;
                 pos = pos.addX(option.spacing);
             }
         }
         width += advance;
+        maxWidth = @max(maxWidth, width);
 
         const char = searchChar(code);
         const image = fontImage.sub(char.area);
@@ -112,6 +133,16 @@ pub fn draw(text: String, position: Vector2, option: Option) void {
         });
         graphics.stats.text += 1;
         pos = .xy(startX + width, pos.y);
+    }
+
+    return .xy(maxWidth, line * height);
+}
+
+pub fn drawLines(lines: Lines, position: Vector2, spacing: f32) void {
+    var y: f32 = 0;
+    for (lines) |line| {
+        const size = drawSize(line.text, position.addY(y), line.option);
+        y += size.y + spacing;
     }
 }
 
@@ -139,6 +170,17 @@ pub fn measure(text: String, option: Option) Vector2 {
     }
 
     return .xy(max, line * height);
+}
+
+pub fn measureLines(lines: Lines, spacing: f32) Vector2 {
+    var size: Vector2 = .zero;
+    for (lines, 0..) |line, i| {
+        const lineSize = measure(line.text, line.option);
+        size.x = @max(size.x, lineSize.x);
+        size.y += lineSize.y;
+        if (i + 1 < lines.len) size.y += spacing;
+    }
+    return size;
 }
 
 pub fn lineHeight(option: Option) f32 {

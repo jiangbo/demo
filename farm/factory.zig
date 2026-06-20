@@ -50,6 +50,8 @@ pub const Sprite = struct {
 
 pub const Item = struct {
     name: []const u8,
+    category: []const u8,
+    description: []const u8,
     limit: u32 = 99,
     icon: Sprite,
 };

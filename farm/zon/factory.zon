@@ -120,6 +120,8 @@
     .items = .{
         .{ // hoe (index 0)
             .name = "锄头",
+            .category = "工具",
+            .description = "翻开土地，准备播种。",
             .limit = 1,
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/RPG/5.png"
@@ -130,6 +132,8 @@
         },
         .{ // water (index 1)
             .name = "水壶",
+            .category = "工具",
+            .description = "给作物浇水。",
             .limit = 1,
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/RPG/5.png"
@@ -140,6 +144,8 @@
         },
         .{ // strawberrySeed (index 2)，对应 CropEnum.strawberry
             .name = "草莓种子",
+            .category = "种子",
+            .description = "种下后会长出草莓。",
             .limit = 99,
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png"
@@ -150,6 +156,8 @@
         },
         .{ // potatoSeed (index 3)，对应 CropEnum.potato
             .name = "土豆种子",
+            .category = "种子",
+            .description = "种下后会长出土豆。",
             .limit = 99,
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png"
@@ -160,6 +168,8 @@
         },
         .{ // strawberry (index 4)，收获产出
             .name = "草莓",
+            .category = "作物",
+            .description = "成熟后收获的水果。",
             .limit = 99,
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png"
@@ -170,6 +180,8 @@
         },
         .{ // potato (index 5)，收获产出
             .name = "土豆",
+            .category = "作物",
+            .description = "成熟后收获的根茎作物。",
             .limit = 99,
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png"
