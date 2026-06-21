@@ -37,15 +37,10 @@ const PlayerSave = struct {
     facing: component.actor.Facing = .down,
 };
 
-const InventorySlotSave = struct {
-    type: component.item.ItemEnum = .hoe,
-    count: u32 = 0,
-};
-
 const InventorySave = struct {
     activeHotbar: usize = 0,
     activePage: usize = 0,
-    slots: [inventory.bag.slots.len]InventorySlotSave = @splat(.{}),
+    slots: []const inventory.Stack = &.{},
     hotbar: [inventory.bar.refs.len]?usize = @splat(null),
 };
 
@@ -202,18 +197,12 @@ fn freeCaptured(data: SaveData) void {
 }
 
 fn captureInventory() InventorySave {
-    var result = InventorySave{
+    return .{
         .activeHotbar = inventory.bar.active,
         .activePage = inventory.bag.activePage,
+        .slots = inventory.store.stacks,
         .hotbar = inventory.bar.refs,
     };
-    for (inventory.bag.slots, 0..) |slot, index| {
-        result.slots[index] = .{
-            .type = if (slot.count == 0) .hoe else slot.item,
-            .count = slot.count,
-        };
-    }
-    return result;
 }
 
 fn captureMaps() ![]const MapSave {
@@ -316,11 +305,10 @@ fn restorePlayer(world: *World, data: PlayerSave) void {
 }
 
 fn restoreInventory(data: InventorySave) void {
-    for (&inventory.bag.slots, 0..) |*slot, index| {
-        slot.* = if (index < data.slots.len) .{
-            .item = data.slots[index].type,
-            .count = data.slots[index].count,
-        } else .{ .item = .hoe, .count = 0 };
+    @memset(inventory.store.stacks, .{ .item = .hoe });
+    for (data.slots, 0..) |slot, index| {
+        if (index >= inventory.store.stacks.len) break;
+        inventory.store.stacks[index] = slot;
     }
     inventory.bar.refs = data.hotbar;
     inventory.bar.active = data.activeHotbar;
@@ -358,17 +346,23 @@ test "restoreInventory 会恢复库存槽和快捷栏" {
     inventory.reset();
     defer inventory.reset();
 
-    var data = InventorySave{ .activeHotbar = 3, .activePage = 1 };
-    data.slots[0] = .{ .type = .strawberrySeed, .count = 7 };
+    const slots = [_]inventory.Stack{
+        .{ .item = .strawberrySeed, .count = 7 },
+    };
+    var data = InventorySave{
+        .activeHotbar = 3,
+        .activePage = 1,
+        .slots = &slots,
+    };
     data.hotbar[3] = 0;
 
     restoreInventory(data);
 
     try std.testing.expectEqual(
         component.item.ItemEnum.strawberrySeed,
-        inventory.bag.slots[0].item,
+        inventory.activeItem().?.item,
     );
-    try std.testing.expectEqual(7, inventory.bag.slots[0].count);
+    try std.testing.expectEqual(7, inventory.activeItem().?.count);
     try std.testing.expectEqual(0, inventory.bar.refs[3].?);
     try std.testing.expectEqual(3, inventory.bar.active);
     try std.testing.expectEqual(1, inventory.bag.activePage);

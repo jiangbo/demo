@@ -111,11 +111,11 @@ pub fn popupPosition(popup: Popup) Vector2 {
 
 pub fn StackStore(comptime T: type) type {
     return struct {
-        pub const Stack = struct { item: T = undefined, count: u32 = 0 };
+        pub const Stack = struct { item: T, count: u32 = 0 };
         pub const Add = struct {
             item: T,
             count: u32 = 1,
-            limit: u32 = 1,
+            limit: ?u32 = null,
         };
         pub const Put = struct {
             removes: []const Remove = &.{},
@@ -140,14 +140,13 @@ pub fn StackStore(comptime T: type) type {
         };
 
         stacks: []Stack,
+        limit: u32,
 
-        pub fn init(stacks: []Stack) @This() {
-            return .{ .stacks = stacks };
+        pub fn init(stacks: []Stack, limit: u32) @This() {
+            return .{ .stacks = stacks, .limit = limit };
         }
 
         pub fn add(self: *@This(), args: Add) u32 {
-            std.debug.assert(args.limit > 0);
-
             var addArgs = args;
             while (addArgs.count > 0) {
                 if (self.addOne(addArgs)) |placed| {
@@ -157,41 +156,50 @@ pub fn StackStore(comptime T: type) type {
             return addArgs.count;
         }
 
-        pub fn ptr(self: *@This(), index: usize) ?*Stack {
+        pub fn addUnstacked(self: *@This(), item: T) bool {
+            return self.fill(.{ .item = item }, 1) != null;
+        }
+
+        pub fn get(self: *@This(), index: usize) ?Stack {
+            return if (self.getPtr(index)) |ptr| ptr.* else null;
+        }
+
+        pub fn getPtr(self: *@This(), index: usize) ?*Stack {
             if (self.stacks[index].count == 0) return null;
             return &self.stacks[index];
         }
 
         pub fn first(self: *const @This(), item: T) ?usize {
-            for (self.stacks, 0..) |slot, index| {
-                const eq = std.meta.eql(slot.item, item);
-                if (slot.count != 0 and eq) return index;
+            for (self.stacks, 0..) |*stack, index| {
+                if (stack.count == 0) continue;
+                if (std.meta.eql(stack.item, item)) return index;
             }
             return null;
         }
 
         pub fn firstEmpty(self: *const @This()) ?usize {
-            for (self.stacks, 0..) |slot, index| {
-                if (slot.count == 0) return index;
+            for (self.stacks, 0..) |*stack, index| {
+                if (stack.count == 0) return index;
             }
             return null;
         }
 
-        pub fn clear(self: *@This(), index: usize) void {
+        pub fn clearAt(self: *@This(), index: usize) void {
             self.stacks[index].count = 0;
         }
 
-        pub fn move(self: *@This(), from: usize, to: usize, limit: u32) ?Move {
-            std.debug.assert(limit > 0);
+        pub fn clear(self: *@This()) void {
+            for (self.stacks) |*stack| stack.count = 0;
+        }
 
+        pub fn move(self: *@This(), from: usize, to: usize, limit: u32) ?Move {
             if (from == to) return null;
 
             const source = &self.stacks[from];
             const target = &self.stacks[to];
             if (source.count == 0) return null;
-
-            const eq = std.meta.eql(source.item, target.item);
-            if (target.count == 0 or !eq) {
+            const empty = target.count == 0;
+            if (empty or !std.meta.eql(source.item, target.item)) {
                 std.mem.swap(Stack, source, target);
                 return .swap;
             }
@@ -199,16 +207,12 @@ pub fn StackStore(comptime T: type) type {
             if (target.count >= limit) return null;
 
             const moved = @min(limit - target.count, source.count);
-            if (moved == 0) return null;
-
             target.count += moved;
             source.count -= moved;
-            return if (source.count == 0) .clear else .merge;
+            return if (source.count > 0) .merge else .clear;
         }
 
         pub fn tryPut(self: *@This(), buf: []Change, ops: Put) Result {
-            for (ops.adds) |entry| std.debug.assert(entry.limit > 0);
-
             var list = std.ArrayList(Change).initBuffer(buf);
             var done = blk: for (ops.removes) |entry| {
                 if (entry.count == 0) continue;
@@ -247,29 +251,21 @@ pub fn StackStore(comptime T: type) type {
         }
 
         fn addOne(self: *@This(), args: Add) ?Entry {
-            for (0..self.stacks.len) |index| {
-                if (self.merge(index, args)) |count| {
-                    return .init(index, args.item, count);
-                }
-            }
+            const limit = args.limit orelse self.limit;
+            std.debug.assert(limit > 0);
 
-            for (0..self.stacks.len) |index| {
-                if (self.fill(index, args)) |count| {
-                    return .init(index, args.item, count);
-                }
-            }
-
-            return null;
+            if (limit > 1) if (self.merge(args, limit)) |e| return e;
+            return self.fill(args, limit);
         }
 
         pub fn take(self: *@This(), index: usize, count: u32) ?Entry {
             std.debug.assert(count > 0);
-            const slot = &self.stacks[index];
-            if (slot.count < count) return null;
+            const stack = self.getPtr(index) orelse return null;
+            if (stack.count < count) return null;
 
-            const item = slot.item;
-            slot.count -= count;
-            return .init(index, item, count);
+            const entry = Entry.init(index, stack.item, count);
+            stack.count -= count;
+            return entry;
         }
 
         pub fn takeAdd(self: *@This(), index: usize, args: Add) bool {
@@ -281,24 +277,28 @@ pub fn StackStore(comptime T: type) type {
             return result.status == .done;
         }
 
-        fn merge(self: *@This(), index: usize, args: Add) ?u32 {
-            const slot = &self.stacks[index];
-            const eq = std.meta.eql(slot.item, args.item);
-            if (slot.count == 0 or !eq) return null;
-            if (slot.count >= args.limit) return null;
+        fn merge(self: *@This(), args: Add, limit: u32) ?Entry {
+            for (0..self.stacks.len) |index| {
+                const stack = self.getPtr(index) orelse continue;
+                if (!std.meta.eql(stack.item, args.item)) continue;
+                if (stack.count >= limit) continue;
 
-            const moved = @min(args.limit - slot.count, args.count);
-            slot.count += moved;
-            return moved;
+                const moved = @min(limit - stack.count, args.count);
+                stack.count += moved;
+                return .init(index, args.item, moved);
+            }
+            return null;
         }
 
-        fn fill(self: *@This(), index: usize, args: Add) ?u32 {
-            const slot = &self.stacks[index];
-            if (slot.count != 0) return null;
+        fn fill(self: *@This(), args: Add, limit: u32) ?Entry {
+            for (self.stacks, 0..) |*stack, index| {
+                if (stack.count != 0) continue;
 
-            const moved = @min(args.limit, args.count);
-            slot.* = .{ .item = args.item, .count = moved };
-            return moved;
+                const moved = @min(limit, args.count);
+                stack.* = .{ .item = args.item, .count = moved };
+                return .init(index, args.item, moved);
+            }
+            return null;
         }
 
         fn putOne(self: *@This(), change: Change) void {

@@ -389,7 +389,7 @@ test "工具使用会种植种子并减少数量" {
     const sounds = world.getEvent(event.SoundPlay);
     try std.testing.expectEqual(1, sounds.len);
     try std.testing.expectEqual(.plant, sounds[0].id);
-    try std.testing.expectEqual(1, inventory.bag.slots[0].count);
+    try std.testing.expectEqual(1, inventory.activeItem().?.count);
 
     const cropEntity = map.land.getTile(testTarget).?.crop().?;
     try std.testing.expectEqual(

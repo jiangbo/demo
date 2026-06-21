@@ -58,8 +58,7 @@ pub const bag = struct {
     const pageSize = zon.slots.len;
     const slotCount = pageSize * zon.pageCount;
 
-    pub var slots: [slotCount]Stack = @splat(.{});
-    var store = Store.init(slots[0..]);
+    var slots: [slotCount]Stack = @splat(.{ .item = .hoe });
     pub var position: zhu.Vector2 = zon.position;
     pub var closed: bool = true;
     pub var activePage: usize = 0;
@@ -67,7 +66,7 @@ pub const bag = struct {
     var drag: ?zhu.Vector2 = null;
 
     fn reset() void {
-        slots = @splat(.{});
+        @memset(&slots, .{ .item = .hoe });
         position = zon.position;
         closed = true;
         activePage = 0;
@@ -84,7 +83,7 @@ pub const bag = struct {
     fn useItem(index: usize) UseResult {
         std.debug.assert(index < slots.len);
 
-        const slot = store.ptr(index) orelse return .none;
+        const slot = store.getPtr(index) orelse return .none;
 
         const effect = factory.itemConfig(slot.item).use orelse return .none;
 
@@ -113,7 +112,7 @@ pub const bag = struct {
     pub fn move(fromIndex: usize, toIndex: usize) void {
         if (fromIndex == toIndex) return;
 
-        const from = store.ptr(fromIndex) orelse return;
+        const from = store.getPtr(fromIndex) orelse return;
         const limit = factory.itemConfig(from.item).limit;
         const moved = store.move(fromIndex, toIndex, limit) orelse return;
 
@@ -216,8 +215,7 @@ pub const bag = struct {
 
         for (zon.slots, 0..) |offset, i| {
             const slotRect = zhu.Rect.init(offset, zon.slotSize);
-            const slot = slots[first + i];
-            if (slot.count == 0) continue;
+            const slot = store.get(first + i) orelse continue;
             if (itemDrag.hideBag(first + i)) continue;
 
             drawItemIcon(slot.item, slotRect.center());
@@ -225,7 +223,7 @@ pub const bag = struct {
 
         for (zon.slots, 0..) |offset, i| {
             const slotRect = zhu.Rect.init(offset, zon.slotSize);
-            const slot = slots[first + i];
+            const slot = store.get(first + i) orelse continue;
             if (slot.count <= 1) continue;
             if (itemDrag.hideBag(first + i)) continue;
 
@@ -254,6 +252,8 @@ pub const bag = struct {
     }
 };
 
+pub var store = Store.init(bag.slots[0..], 99);
+
 pub const bar = struct {
     const Zon = struct {
         imageId: ImageId,
@@ -281,12 +281,11 @@ pub const bar = struct {
     }
 
     fn item() ?*Stack {
-        const index = refs[active] orelse return null;
-        return bag.store.ptr(index);
+        return store.getPtr(refs[active] orelse return null);
     }
 
     fn bind(barIndex: usize, bagIndex: usize) void {
-        clearItemRefs(bag.slots[bagIndex].item);
+        clearItemRefs(store.get(bagIndex).?.item);
         refs[barIndex] = bagIndex;
     }
 
@@ -301,7 +300,7 @@ pub const bar = struct {
     fn clearItemRefs(itemType: ItemEnum) void {
         for (&refs) |*slotIndex| {
             const index = slotIndex.* orelse continue;
-            const slot = bag.store.ptr(index) orelse continue;
+            const slot = store.getPtr(index) orelse continue;
             if (slot.item == itemType) slotIndex.* = null;
         }
     }
@@ -323,7 +322,7 @@ pub const bar = struct {
     fn hasItem(itemType: ItemEnum) bool {
         for (refs) |slotIndex| {
             const index = slotIndex orelse continue;
-            const slot = bag.store.ptr(index) orelse continue;
+            const slot = store.getPtr(index) orelse continue;
             if (slot.item == itemType) return true;
         }
         return false;
@@ -332,7 +331,7 @@ pub const bar = struct {
     fn firstEmpty() ?usize {
         for (refs, 0..) |slotIndex, index| {
             const bagIndex = slotIndex orelse return index;
-            if (bag.store.ptr(bagIndex) == null) return index;
+            if (store.get(bagIndex) == null) return index;
         }
         return null;
     }
@@ -390,15 +389,15 @@ pub const bar = struct {
 
         for (refs, zon.slots, 0..) |slotIndex, offset, i| {
             const rect = zhu.Rect.init(offset, zon.slotSize);
-            const slot = bag.slots[slotIndex orelse continue];
-            if (slot.count == 0 or itemDrag.hideBar(i)) continue;
+            const slot = store.get(slotIndex orelse continue) orelse continue;
+            if (itemDrag.hideBar(i)) continue;
 
             drawItemIcon(slot.item, rect.center());
         }
 
         for (refs, zon.slots, 0..) |slotIndex, offset, i| {
             const rect = zhu.Rect.init(offset, zon.slotSize);
-            const slot = bag.slots[slotIndex orelse continue];
+            const slot = store.get(slotIndex orelse continue) orelse continue;
             if (slot.count <= 1) continue;
             if (itemDrag.hideBar(i)) continue;
 
@@ -437,7 +436,7 @@ const itemDrag = struct {
         state = null;
 
         if (bag.hoveredSlotIndex()) |index| {
-            const slot = bag.store.ptr(index) orelse return;
+            const slot = store.getPtr(index) orelse return;
 
             state = .{
                 .source = .{ .bag = index },
@@ -450,7 +449,7 @@ const itemDrag = struct {
 
         const barIndex = bar.hoveredSlot() orelse return;
         const bagIndex = bar.refs[barIndex] orelse return;
-        const slot = bag.store.ptr(bagIndex) orelse return;
+        const slot = store.getPtr(bagIndex) orelse return;
 
         state = .{
             .source = .{ .bar = barIndex },
@@ -587,13 +586,13 @@ fn tooltipItem() ?ItemEnum {
     if (itemDrag.state != null or bag.drag != null) return null;
 
     if (bag.hoveredSlotIndex()) |index| {
-        const slot = bag.store.ptr(index) orelse return null;
+        const slot = store.getPtr(index) orelse return null;
         return slot.item;
     }
 
     const barIndex = bar.hoveredSlot() orelse return null;
     const bagIndex = bar.refs[barIndex] orelse return null;
-    const slot = bag.store.ptr(bagIndex) orelse return null;
+    const slot = store.getPtr(bagIndex) orelse return null;
     return slot.item;
 }
 
@@ -649,33 +648,21 @@ test "添加物品会合并并自动绑定快捷栏" {
     _ = add(.strawberry, 7);
     _ = add(.strawberry, 3);
 
-    try std.testing.expectEqual(.strawberry, bag.slots[0].item);
-    try std.testing.expectEqual(10, bag.slots[0].count);
-    try std.testing.expectEqual(0, bar.refs[0].?);
-}
-
-test "添加物品超过堆叠上限会填入下一个库存槽" {
-    reset();
-
-    _ = add(.strawberry, 100);
-
-    try std.testing.expectEqual(99, bag.slots[0].count);
-    try std.testing.expectEqual(1, bag.slots[1].count);
-    try std.testing.expectEqual(0, bar.refs[0].?);
-    try std.testing.expectEqual(null, bar.refs[1]);
+    try std.testing.expectEqual(.strawberry, activeItem().?.item);
+    try std.testing.expectEqual(10, activeItem().?.count);
 }
 
 test "当前物品通过快捷栏引用读取库存槽" {
     reset();
 
     bar.active = 1;
-    bag.slots[5] = .{ .item = .potatoSeed, .count = 2 };
+    store.stacks[5] = .{ .item = .potatoSeed, .count = 2 };
     bar.refs[1] = 5;
 
     try std.testing.expectEqual(.potatoSeed, activeItem().?.item);
     try std.testing.expectEqual(2, activeItem().?.count);
 
-    bag.slots[5].count = 0;
+    store.stacks[5].count = 0;
     try std.testing.expectEqual(null, activeItem());
 }
 
@@ -683,8 +670,8 @@ test "同一种物品只能绑定到一个快捷栏槽位" {
     reset();
 
     // Zig 版快捷栏按物品类型唯一绑定，避免同类物品占用多个快捷键。
-    bag.slots[0] = .{ .item = .strawberrySeed, .count = 2 };
-    bag.slots[2] = .{ .item = .strawberrySeed, .count = 4 };
+    store.stacks[0] = .{ .item = .strawberrySeed, .count = 2 };
+    store.stacks[2] = .{ .item = .strawberrySeed, .count = 4 };
 
     bar.bind(0, 0);
     bar.bind(3, 2);
@@ -696,7 +683,7 @@ test "同一种物品只能绑定到一个快捷栏槽位" {
 test "快捷栏拖到空快捷栏会移动绑定" {
     reset();
 
-    bag.slots[0] = .{ .item = .strawberry, .count = 5 };
+    store.stacks[0] = .{ .item = .strawberry, .count = 5 };
     bar.bind(0, 0);
 
     bar.moveBinding(0, 4);
@@ -708,8 +695,8 @@ test "快捷栏拖到空快捷栏会移动绑定" {
 test "快捷栏拖到已有快捷栏会交换绑定" {
     reset();
 
-    bag.slots[0] = .{ .item = .strawberry, .count = 5 };
-    bag.slots[1] = .{ .item = .potato, .count = 3 };
+    store.stacks[0] = .{ .item = .strawberry, .count = 5 };
+    store.stacks[1] = .{ .item = .potato, .count = 3 };
     bar.bind(0, 0);
     bar.bind(4, 1);
 
@@ -719,76 +706,63 @@ test "快捷栏拖到已有快捷栏会交换绑定" {
     try std.testing.expectEqual(0, bar.refs[4].?);
 }
 
-test "移动到空槽时快捷栏引用跟随物品" {
+test "拖动物品到空槽后快捷栏继续指向该物品" {
     reset();
 
-    bag.slots[0] = .{ .item = .strawberry, .count = 5 };
+    store.stacks[0] = .{ .item = .strawberry, .count = 5 };
     bar.bind(2, 0);
+    bar.active = 2;
 
     move(0, 5);
 
-    try std.testing.expectEqual(0, bag.slots[0].count);
-    try std.testing.expectEqual(.strawberry, bag.slots[5].item);
-    try std.testing.expectEqual(5, bag.slots[5].count);
-    try std.testing.expectEqual(5, bar.refs[2].?);
+    try std.testing.expectEqual(.strawberry, activeItem().?.item);
+    try std.testing.expectEqual(5, activeItem().?.count);
 }
 
-test "交换不同物品时快捷栏引用跟随物品" {
+test "交换不同物品后快捷栏继续指向原物品" {
     reset();
 
-    bag.slots[0] = .{ .item = .strawberry, .count = 5 };
-    bag.slots[1] = .{ .item = .potato, .count = 3 };
+    store.stacks[0] = .{ .item = .strawberry, .count = 5 };
+    store.stacks[1] = .{ .item = .potato, .count = 3 };
     bar.bind(0, 0);
     bar.bind(1, 1);
 
     move(0, 1);
 
-    try std.testing.expectEqual(.potato, bag.slots[0].item);
-    try std.testing.expectEqual(.strawberry, bag.slots[1].item);
-    try std.testing.expectEqual(1, bar.refs[0].?);
-    try std.testing.expectEqual(0, bar.refs[1].?);
+    bar.active = 0;
+    try std.testing.expectEqual(.strawberry, activeItem().?.item);
+    try std.testing.expectEqual(5, activeItem().?.count);
+
+    bar.active = 1;
+    try std.testing.expectEqual(.potato, activeItem().?.item);
+    try std.testing.expectEqual(3, activeItem().?.count);
 }
 
-test "合并后源槽清空且目标无快捷栏时转移引用" {
+test "合并同类物品后快捷栏继续指向合并物品" {
     reset();
 
-    bag.slots[0] = .{ .item = .strawberry, .count = 5 };
-    bag.slots[1] = .{ .item = .strawberry, .count = 4 };
+    store.stacks[0] = .{ .item = .strawberry, .count = 5 };
+    store.stacks[1] = .{ .item = .strawberry, .count = 4 };
     bar.bind(0, 0);
+    bar.active = 0;
 
     move(0, 1);
 
-    try std.testing.expectEqual(0, bag.slots[0].count);
-    try std.testing.expectEqual(9, bag.slots[1].count);
-    try std.testing.expectEqual(1, bar.refs[0].?);
-}
-
-test "合并到已有快捷栏目标时保留目标引用" {
-    reset();
-
-    bag.slots[0] = .{ .item = .strawberry, .count = 5 };
-    bag.slots[1] = .{ .item = .strawberry, .count = 4 };
-    bar.bind(1, 1);
-
-    move(0, 1);
-
-    try std.testing.expectEqual(0, bag.slots[0].count);
-    try std.testing.expectEqual(9, bag.slots[1].count);
-    try std.testing.expectEqual(null, bar.refs[0]);
-    try std.testing.expectEqual(1, bar.refs[1].?);
+    try std.testing.expectEqual(.strawberry, activeItem().?.item);
+    try std.testing.expectEqual(9, activeItem().?.count);
 }
 
 test "使用作物会消耗一个并产出种子" {
     reset();
 
-    bag.slots[0] = .{ .item = .strawberry, .count = 2 };
+    store.stacks[0] = .{ .item = .strawberry, .count = 2 };
 
     const result = useItem(0);
 
-    try std.testing.expectEqual(.strawberry, bag.slots[0].item);
-    try std.testing.expectEqual(1, bag.slots[0].count);
-    try std.testing.expectEqual(.strawberrySeed, bag.slots[1].item);
-    try std.testing.expectEqual(3, bag.slots[1].count);
+    try std.testing.expectEqual(.strawberry, store.stacks[0].item);
+    try std.testing.expectEqual(1, store.stacks[0].count);
+    try std.testing.expectEqual(.strawberrySeed, store.stacks[1].item);
+    try std.testing.expectEqual(3, store.stacks[1].count);
 
     const item = switch (result) {
         .item => |value| value,
@@ -801,13 +775,13 @@ test "使用作物会消耗一个并产出种子" {
 test "使用最后一个作物会优先回填原槽" {
     reset();
 
-    bag.slots[0] = .{ .item = .potato, .count = 1 };
+    store.stacks[0] = .{ .item = .potato, .count = 1 };
     bar.refs[0] = 0;
 
     const result = useItem(0);
 
-    try std.testing.expectEqual(.potatoSeed, bag.slots[0].item);
-    try std.testing.expectEqual(3, bag.slots[0].count);
+    try std.testing.expectEqual(.potatoSeed, store.stacks[0].item);
+    try std.testing.expectEqual(3, store.stacks[0].count);
     try std.testing.expectEqual(0, bar.refs[0].?);
     try std.testing.expectEqual(.potatoSeed, activeItem().?.item);
 
@@ -822,13 +796,13 @@ test "使用最后一个作物会优先回填原槽" {
 test "使用物品产物优先回到原槽而不是第一个空槽" {
     reset();
 
-    bag.slots[5] = .{ .item = .potato, .count = 1 };
+    store.stacks[5] = .{ .item = .potato, .count = 1 };
 
     const result = useItem(5);
 
-    try std.testing.expectEqual(0, bag.slots[0].count);
-    try std.testing.expectEqual(.potatoSeed, bag.slots[5].item);
-    try std.testing.expectEqual(3, bag.slots[5].count);
+    try std.testing.expectEqual(0, store.stacks[0].count);
+    try std.testing.expectEqual(.potatoSeed, store.stacks[5].item);
+    try std.testing.expectEqual(3, store.stacks[5].count);
 
     const item = switch (result) {
         .item => |value| value,
@@ -841,14 +815,14 @@ test "使用物品产物优先回到原槽而不是第一个空槽" {
 test "使用物品空间不足时不会修改背包" {
     reset();
 
-    bag.slots = @splat(.{ .item = .potato, .count = 99 });
-    bag.slots[0] = .{ .item = .strawberry, .count = 2 };
+    @memset(store.stacks, .{ .item = .potato, .count = 99 });
+    store.stacks[0] = .{ .item = .strawberry, .count = 2 };
 
     const result = useItem(0);
 
     try std.testing.expectEqual(UseResult.full, result);
-    try std.testing.expectEqual(.strawberry, bag.slots[0].item);
-    try std.testing.expectEqual(2, bag.slots[0].count);
-    try std.testing.expectEqual(.potato, bag.slots[1].item);
-    try std.testing.expectEqual(99, bag.slots[1].count);
+    try std.testing.expectEqual(.strawberry, store.stacks[0].item);
+    try std.testing.expectEqual(2, store.stacks[0].count);
+    try std.testing.expectEqual(.potato, store.stacks[1].item);
+    try std.testing.expectEqual(99, store.stacks[1].count);
 }

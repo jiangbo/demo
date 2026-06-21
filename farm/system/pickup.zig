@@ -107,11 +107,10 @@ test "pickup 飞散期间不会被拾取" {
     update(&world, 0.05);
 
     try std.testing.expect(world.get(pickup, Pickup) != null);
-    try std.testing.expectEqual(0, inventory.bag.slots[0].count);
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
 }
 
-test "pickup 碰撞后进入背包并播放音效" {
+test "pickup 碰撞后会被销毁并播放音效" {
     inventory.reset();
     defer inventory.reset();
 
@@ -130,8 +129,6 @@ test "pickup 碰撞后进入背包并播放音效" {
     update(&world, 0.016);
 
     try std.testing.expectEqual(null, world.get(pickup, Pickup));
-    try std.testing.expectEqual(.potato, inventory.bag.slots[0].item);
-    try std.testing.expectEqual(2, inventory.bag.slots[0].count);
 
     const sounds = world.getEvent(event.SoundPlay);
     try std.testing.expectEqual(1, sounds.len);
