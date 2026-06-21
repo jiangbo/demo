@@ -567,6 +567,11 @@ pub fn update() void {
         return;
     }
 
+    if (updateUseItem()) {
+        context.input.mouseCaptured = true;
+        return;
+    }
+
     bar.update();
     itemDrag.update();
 
@@ -575,6 +580,29 @@ pub fn update() void {
     {
         context.input.mouseCaptured = true;
     }
+}
+
+fn updateUseItem() bool {
+    if (itemDrag.state != null or bag.drag != null) return false;
+    if (!context.input.mousePressed(.RIGHT)) return false;
+
+    const index = hoveredBagIndex() orelse return false;
+    switch (bag.useItem(index)) {
+        .none => {},
+        .full => context.notice.show(.item, "背包已满", .{}),
+        .item => |value| context.notice.show(.item, "获得 {s} x{d}", .{
+            factory.itemConfig(value.item).name,
+            value.count,
+        }),
+    }
+    return true;
+}
+
+fn hoveredBagIndex() ?usize {
+    if (bag.hoveredSlotIndex()) |index| return index;
+
+    const barIndex = bar.hoveredSlot() orelse return null;
+    return bar.refs[barIndex];
 }
 
 pub fn draw() void {
@@ -644,6 +672,14 @@ fn drawItemCount(count: u32, rect: zhu.Rect) void {
     zhu.text.drawFmt("{d}", .{count}, pos, .{ .anchor = .one });
 }
 
+fn pressMouse(button: zhu.mouse.Button) void {
+    var ev = zhu.window.Event{
+        .type = .MOUSE_DOWN,
+        .mouse_button = button,
+    };
+    zhu.input.handle(&ev);
+}
+
 test "添加物品会合并并自动绑定快捷栏" {
     reset();
 
@@ -652,6 +688,48 @@ test "添加物品会合并并自动绑定快捷栏" {
 
     try std.testing.expectEqual(.strawberry, activeItem().?.item);
     try std.testing.expectEqual(10, activeItem().?.count);
+}
+
+test "右键背包槽会使用物品" {
+    zhu.input.reset();
+    defer zhu.input.reset();
+    reset();
+    defer reset();
+
+    context.input.mouseCaptured = false;
+    defer context.input.mouseCaptured = false;
+    bag.closed = false;
+    store.stacks[0] = .{ .item = .strawberry, .count = 2 };
+    zhu.window.mouse = bag.position.add(bag.zon.slots[0]).add(.xy(1, 1));
+    pressMouse(.RIGHT);
+
+    update();
+
+    try std.testing.expect(context.input.mouseCaptured);
+    try std.testing.expectEqual(.strawberry, store.stacks[0].item);
+    try std.testing.expectEqual(1, store.stacks[0].count);
+    try std.testing.expectEqual(.strawberrySeed, store.stacks[1].item);
+    try std.testing.expectEqual(3, store.stacks[1].count);
+}
+
+test "右键快捷栏会使用绑定的背包槽" {
+    zhu.input.reset();
+    defer zhu.input.reset();
+    reset();
+    defer reset();
+
+    context.input.mouseCaptured = false;
+    defer context.input.mouseCaptured = false;
+    store.stacks[5] = .{ .item = .potato, .count = 1 };
+    bar.refs[2] = 5;
+    zhu.window.mouse = bar.zon.position.add(bar.zon.slots[2]).add(.xy(1, 1));
+    pressMouse(.RIGHT);
+
+    update();
+
+    try std.testing.expect(context.input.mouseCaptured);
+    try std.testing.expectEqual(.potatoSeed, store.stacks[5].item);
+    try std.testing.expectEqual(3, store.stacks[5].count);
 }
 
 test "新增工具会占用独立槽位" {
