@@ -750,6 +750,51 @@ test "右键快捷栏会使用绑定的背包槽" {
     try std.testing.expectEqual(3, store.stacks[5].count);
 }
 
+test "右键使用物品成功后显示获得提示" {
+    zhu.input.reset();
+    defer zhu.input.reset();
+    context.init();
+    defer context.init();
+    reset();
+    defer reset();
+
+    context.input.mouseCaptured = false;
+    bag.closed = false;
+    store.stacks[0] = .{ .item = .potato, .count = 1 };
+    zhu.window.mouse = bag.position.add(bag.zon.slots[0]).add(.xy(1, 1));
+    pressMouse(.RIGHT);
+
+    update();
+
+    const notice = context.notice.state(.item);
+    try std.testing.expectEqualStrings("获得 土豆种子 x3", notice.text);
+    try std.testing.expect(notice.timer > 0);
+}
+
+test "右键使用物品空间不足时显示背包已满" {
+    zhu.input.reset();
+    defer zhu.input.reset();
+    context.init();
+    defer context.init();
+    reset();
+    defer reset();
+
+    context.input.mouseCaptured = false;
+    bag.closed = false;
+    @memset(store.stacks, .{ .item = .potato, .count = 99 });
+    store.stacks[0] = .{ .item = .strawberry, .count = 2 };
+    zhu.window.mouse = bag.position.add(bag.zon.slots[0]).add(.xy(1, 1));
+    pressMouse(.RIGHT);
+
+    update();
+
+    try std.testing.expectEqual(.strawberry, store.stacks[0].item);
+    try std.testing.expectEqual(2, store.stacks[0].count);
+    const notice = context.notice.state(.item);
+    try std.testing.expectEqualStrings("背包已满", notice.text);
+    try std.testing.expect(notice.timer > 0);
+}
+
 test "新增工具会占用独立槽位" {
     reset();
 
