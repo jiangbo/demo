@@ -100,13 +100,22 @@ pub fn marksAt(position: zhu.Vector2) Marks {
     return tiles[index orelse return .initEmpty()];
 }
 
-pub fn isSolid(marks: Marks) bool {
+fn isSolid(marks: Marks) bool {
     return marks.supersetOf(solid);
 }
 
 pub fn hasAnyBlock(marks: Marks) bool {
     return marks.contains(.north) or marks.contains(.south) or
         marks.contains(.west) or marks.contains(.east);
+}
+
+pub fn canHoeTile(position: zhu.Vector2) bool {
+    const marks = marksAt(position);
+    if (!marks.contains(.arable)) return false;
+    if (marks.contains(.water)) return false;
+    if (marks.contains(.occupied)) return false;
+    if (hasAnyBlock(marks)) return false;
+    return true;
 }
 
 pub fn addSolidRect(rect: zhu.Rect) void {
@@ -406,8 +415,34 @@ test "setTileFlag 支持 SOLID 与其它标记组合" {
     setTileFlag(index, "SOLID,ARABLE");
 
     const marks = marksAt(position);
-    try std.testing.expect(isSolid(marks));
+    try std.testing.expect(hasAnyBlock(marks));
     try std.testing.expect(marks.contains(.arable));
+}
+
+test "canHoeTile 要求可耕作且没有地图阻挡语义" {
+    zhu.assets.allocator = std.testing.allocator;
+    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
+    enter(&testMaps[0]);
+    defer deinit();
+
+    const position = zhu.Vector2.xy(24, 40);
+    const index = map.worldToTileIndex(position).?;
+
+    try std.testing.expect(!canHoeTile(position));
+
+    tiles[index].insert(.arable);
+    try std.testing.expect(canHoeTile(position));
+
+    tiles[index].insert(.water);
+    try std.testing.expect(!canHoeTile(position));
+    tiles[index].remove(.water);
+
+    tiles[index].insert(.occupied);
+    try std.testing.expect(!canHoeTile(position));
+    tiles[index].remove(.occupied);
+
+    tiles[index].insert(.north);
+    try std.testing.expect(!canHoeTile(position));
 }
 
 test "isBlocked 圆形碰撞体检测 solid 瓦片" {

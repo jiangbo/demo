@@ -184,8 +184,8 @@ fn waterTarget(world: *World, position: zhu.Vector2) bool {
 }
 
 fn plant(world: *World, position: zhu.Vector2, kind: CropEnum) bool {
-    const tile = map.land.getTile(position) orelse return false;
-    if (tile.ground == null or tile.object != null) return false;
+    if (!map.land.canPlant(position)) return false;
+    const tile = map.land.getTile(position).?;
 
     inventory.activeItem().?.count -= 1;
     const entity = factory.spawnCrop(world, position, kind);
@@ -328,8 +328,12 @@ test "点击目标会进入忙碌状态并使用工具" {
     setActiveItem(.hoe, 1);
     clickMouse(.LEFT);
     zhu.assets.allocator = std.testing.allocator;
+    map.spatial.enter(&map.maps[0]);
+    defer map.spatial.exit();
     map.land.enter(&map.maps[0]);
     defer map.land.exit();
+    map.spatial.tiles[map.maps[0].worldToTileIndex(testTarget).?]
+        .insert(.arable);
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -350,8 +354,12 @@ test "点击目标会进入忙碌状态并使用工具" {
 
 test "工具使用会浇水并标记作物" {
     zhu.assets.allocator = std.testing.allocator;
+    map.spatial.enter(&map.maps[0]);
+    defer map.spatial.exit();
     map.land.enter(&map.maps[0]);
     defer map.land.exit();
+    map.spatial.tiles[map.maps[0].worldToTileIndex(testTarget).?]
+        .insert(.arable);
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -375,8 +383,12 @@ test "工具使用会种植种子并减少数量" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
     putMockImages();
+    map.spatial.enter(&map.maps[0]);
+    defer map.spatial.exit();
     map.land.enter(&map.maps[0]);
     defer map.land.exit();
+    map.spatial.tiles[map.maps[0].worldToTileIndex(testTarget).?]
+        .insert(.arable);
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();

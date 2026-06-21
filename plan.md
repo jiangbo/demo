@@ -100,11 +100,10 @@ zig build test
   双触发离线推进。
 - 25-地图管理器：树/石头 destroyed/hit_count 后续随交互/工具系统加入；
   仍使用 tile 状态记录，不引入 C++ `RegistrySnapshot`。
-- 30-物品使用与农场循环：农场工具结算前还需要补地图语义检查，例如 ARABLE、
-  SOLID/半格阻挡、OCCUPIED、已有 crop/soil，必要时再检查动态 Blocking 实体。
+- 30-物品使用与农场循环：农场工具结算前还需要补地图语义检查。`spatial`
+  负责 ARABLE、SOLID/半格阻挡、WATER、OCCUPIED 等地图语义；`land.Tile`
+  负责已有 ground/object/crop 等农场状态；动态 Blocking 实体后续按真实需求接入。
 - UI：考虑做 ZON 文件监听，实时刷新 ZON 中的数据。
-- 30-物品使用与农场循环：右键 `UseItem` 路径尚未实现，后续随物品使用
-  和农场循环一起接入。
 - 30-NPC 显示与简单漫游：NPC 一个都没有，需要实现。
 - 29-地图切换：C++ 切换时有 `UIScreenFade` 淡入淡出和 `ActionLockedTag`
   行动锁；Zig 本步先瞬时切换。
