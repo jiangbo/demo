@@ -551,7 +551,7 @@ pub fn activeItem() ?ItemEnum {
 }
 
 pub fn use(itemType: ItemEnum, count: u32) bool {
-    if (count == 0) return true;
+    std.debug.assert(count > 0);
 
     var remaining = count;
     for (store.stacks) |*stack| {
