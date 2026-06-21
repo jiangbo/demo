@@ -360,9 +360,10 @@ test "restoreInventory 会恢复库存槽和快捷栏" {
 
     try std.testing.expectEqual(
         component.item.ItemEnum.strawberrySeed,
-        inventory.activeItem().?.item,
+        inventory.activeItem().?,
     );
-    try std.testing.expectEqual(7, inventory.activeItem().?.count);
+    const index = inventory.bar.refs[inventory.bar.active].?;
+    try std.testing.expectEqual(7, inventory.store.stacks[index].count);
     try std.testing.expectEqual(0, inventory.bar.refs[3].?);
     try std.testing.expectEqual(3, inventory.bar.active);
     try std.testing.expectEqual(1, inventory.bag.activePage);

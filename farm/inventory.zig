@@ -85,7 +85,7 @@ pub const bag = struct {
         return remaining;
     }
 
-    fn useItem(index: usize) UseResult {
+    fn useByIndex(index: usize) UseResult {
         std.debug.assert(index < slots.len);
 
         const slot = store.getPtr(index) orelse return .none;
@@ -476,7 +476,7 @@ const itemDrag = struct {
 
     fn finishBag(fromIndex: usize) void {
         switch (target() orelse return) {
-            .bag => |toIndex| move(fromIndex, toIndex),
+            .bag => |toIndex| bag.move(fromIndex, toIndex),
             .bar => |barIndex| bar.bind(barIndex, fromIndex),
         }
     }
@@ -486,7 +486,7 @@ const itemDrag = struct {
             bar.refs[fromBar] = null;
             return;
         }) {
-            .bag => |toIndex| move(fromBag, toIndex),
+            .bag => |toIndex| bag.move(fromBag, toIndex),
             .bar => |toBar| bar.moveBinding(fromBar, toBar),
         }
     }
@@ -546,16 +546,33 @@ pub fn add(itemType: ItemEnum, count: u32) u32 {
     return bag.add(itemType, count);
 }
 
-pub fn useItem(index: usize) UseResult {
-    return bag.useItem(index);
+pub fn activeItem() ?ItemEnum {
+    return if (bar.item()) |stack| stack.item else null;
 }
 
-pub fn activeItem() ?*Stack {
-    return bar.item();
-}
+pub fn use(itemType: ItemEnum, count: u32) bool {
+    if (count == 0) return true;
 
-pub fn move(fromIndex: usize, toIndex: usize) void {
-    bag.move(fromIndex, toIndex);
+    var remaining = count;
+    for (store.stacks) |*stack| {
+        if (stack.count == 0 or stack.item != itemType) continue;
+
+        const used = @min(stack.count, remaining);
+        remaining -= used;
+        if (remaining == 0) break;
+    }
+    if (remaining != 0) return false;
+
+    remaining = count;
+    for (store.stacks) |*stack| {
+        if (stack.count == 0 or stack.item != itemType) continue;
+
+        const used = @min(stack.count, remaining);
+        stack.count -= used;
+        remaining -= used;
+        if (remaining == 0) return true;
+    }
+    unreachable;
 }
 
 pub fn update() void {
@@ -587,7 +604,7 @@ fn updateUseItem() bool {
     if (!context.input.mousePressed(.RIGHT)) return false;
 
     const index = hoveredBagIndex() orelse return false;
-    switch (bag.useItem(index)) {
+    switch (bag.useByIndex(index)) {
         .none => {},
         .full => context.notice.show(.item, "背包已满", .{}),
         .item => |value| context.notice.show(.item, "获得 {s} x{d}", .{
@@ -686,8 +703,9 @@ test "添加物品会合并并自动绑定快捷栏" {
     _ = add(.strawberry, 7);
     _ = add(.strawberry, 3);
 
-    try std.testing.expectEqual(.strawberry, activeItem().?.item);
-    try std.testing.expectEqual(10, activeItem().?.count);
+    try std.testing.expectEqual(.strawberry, activeItem().?);
+    const index = bar.refs[bar.active].?;
+    try std.testing.expectEqual(10, store.stacks[index].count);
 }
 
 test "右键背包槽会使用物品" {
@@ -750,7 +768,7 @@ test "移动同类工具不会合并" {
     store.stacks[0] = .{ .item = .hoe, .count = 1 };
     store.stacks[1] = .{ .item = .hoe, .count = 1 };
 
-    move(0, 1);
+    bag.move(0, 1);
 
     try std.testing.expectEqual(1, store.stacks[0].count);
     try std.testing.expectEqual(1, store.stacks[1].count);
@@ -763,8 +781,8 @@ test "当前物品通过快捷栏引用读取库存槽" {
     store.stacks[5] = .{ .item = .potatoSeed, .count = 2 };
     bar.refs[1] = 5;
 
-    try std.testing.expectEqual(.potatoSeed, activeItem().?.item);
-    try std.testing.expectEqual(2, activeItem().?.count);
+    try std.testing.expectEqual(.potatoSeed, activeItem().?);
+    try std.testing.expectEqual(2, store.stacks[5].count);
 
     store.stacks[5].count = 0;
     try std.testing.expectEqual(null, activeItem());
@@ -817,10 +835,10 @@ test "拖动物品到空槽后快捷栏继续指向该物品" {
     bar.bind(2, 0);
     bar.active = 2;
 
-    move(0, 5);
+    bag.move(0, 5);
 
-    try std.testing.expectEqual(.strawberry, activeItem().?.item);
-    try std.testing.expectEqual(5, activeItem().?.count);
+    try std.testing.expectEqual(.strawberry, activeItem().?);
+    try std.testing.expectEqual(5, store.stacks[5].count);
 }
 
 test "交换不同物品后快捷栏继续指向原物品" {
@@ -831,15 +849,15 @@ test "交换不同物品后快捷栏继续指向原物品" {
     bar.bind(0, 0);
     bar.bind(1, 1);
 
-    move(0, 1);
+    bag.move(0, 1);
 
     bar.active = 0;
-    try std.testing.expectEqual(.strawberry, activeItem().?.item);
-    try std.testing.expectEqual(5, activeItem().?.count);
+    try std.testing.expectEqual(.strawberry, activeItem().?);
+    try std.testing.expectEqual(5, store.stacks[bar.refs[0].?].count);
 
     bar.active = 1;
-    try std.testing.expectEqual(.potato, activeItem().?.item);
-    try std.testing.expectEqual(3, activeItem().?.count);
+    try std.testing.expectEqual(.potato, activeItem().?);
+    try std.testing.expectEqual(3, store.stacks[bar.refs[1].?].count);
 }
 
 test "合并同类物品后快捷栏继续指向合并物品" {
@@ -850,10 +868,10 @@ test "合并同类物品后快捷栏继续指向合并物品" {
     bar.bind(0, 0);
     bar.active = 0;
 
-    move(0, 1);
+    bag.move(0, 1);
 
-    try std.testing.expectEqual(.strawberry, activeItem().?.item);
-    try std.testing.expectEqual(9, activeItem().?.count);
+    try std.testing.expectEqual(.strawberry, activeItem().?);
+    try std.testing.expectEqual(9, store.stacks[bar.refs[0].?].count);
 }
 
 test "使用作物会消耗一个并产出种子" {
@@ -861,7 +879,7 @@ test "使用作物会消耗一个并产出种子" {
 
     store.stacks[0] = .{ .item = .strawberry, .count = 2 };
 
-    const result = useItem(0);
+    const result = bag.useByIndex(0);
 
     try std.testing.expectEqual(.strawberry, store.stacks[0].item);
     try std.testing.expectEqual(1, store.stacks[0].count);
@@ -882,12 +900,12 @@ test "使用最后一个作物会优先回填原槽" {
     store.stacks[0] = .{ .item = .potato, .count = 1 };
     bar.refs[0] = 0;
 
-    const result = useItem(0);
+    const result = bag.useByIndex(0);
 
     try std.testing.expectEqual(.potatoSeed, store.stacks[0].item);
     try std.testing.expectEqual(3, store.stacks[0].count);
     try std.testing.expectEqual(0, bar.refs[0].?);
-    try std.testing.expectEqual(.potatoSeed, activeItem().?.item);
+    try std.testing.expectEqual(.potatoSeed, activeItem().?);
 
     const item = switch (result) {
         .item => |value| value,
@@ -897,12 +915,42 @@ test "使用最后一个作物会优先回填原槽" {
     try std.testing.expectEqual(3, item.count);
 }
 
+test "use 会在数量足够时扣除指定物品" {
+    reset();
+
+    store.stacks[0] = .{ .item = .strawberrySeed, .count = 2 };
+
+    try std.testing.expect(!use(.potatoSeed, 1));
+    try std.testing.expectEqual(@as(u32, 2), store.stacks[0].count);
+
+    try std.testing.expect(use(.strawberrySeed, 1));
+    try std.testing.expectEqual(@as(u32, 1), store.stacks[0].count);
+
+    try std.testing.expect(!use(.strawberrySeed, 2));
+    try std.testing.expectEqual(@as(u32, 1), store.stacks[0].count);
+}
+
+test "use 会先确认总数足够再跨槽扣除" {
+    reset();
+
+    store.stacks[0] = .{ .item = .strawberrySeed, .count = 1 };
+    store.stacks[2] = .{ .item = .strawberrySeed, .count = 2 };
+
+    try std.testing.expect(!use(.strawberrySeed, 4));
+    try std.testing.expectEqual(@as(u32, 1), store.stacks[0].count);
+    try std.testing.expectEqual(@as(u32, 2), store.stacks[2].count);
+
+    try std.testing.expect(use(.strawberrySeed, 3));
+    try std.testing.expectEqual(@as(u32, 0), store.stacks[0].count);
+    try std.testing.expectEqual(@as(u32, 0), store.stacks[2].count);
+}
+
 test "使用物品产物优先回到原槽而不是第一个空槽" {
     reset();
 
     store.stacks[5] = .{ .item = .potato, .count = 1 };
 
-    const result = useItem(5);
+    const result = bag.useByIndex(5);
 
     try std.testing.expectEqual(0, store.stacks[0].count);
     try std.testing.expectEqual(.potatoSeed, store.stacks[5].item);
@@ -922,7 +970,7 @@ test "使用物品空间不足时不会修改背包" {
     @memset(store.stacks, .{ .item = .potato, .count = 99 });
     store.stacks[0] = .{ .item = .strawberry, .count = 2 };
 
-    const result = useItem(0);
+    const result = bag.useByIndex(0);
 
     try std.testing.expectEqual(UseResult.full, result);
     try std.testing.expectEqual(.strawberry, store.stacks[0].item);

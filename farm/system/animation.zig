@@ -5,6 +5,7 @@ const component = @import("../component.zig");
 const Action = component.actor.Action;
 const Actor = component.actor.Actor;
 const Busy = component.actor.Busy;
+const UseFrame = component.actor.UseFrame;
 const Animation = component.actor.Animation;
 const Sprite = component.render.Sprite;
 
@@ -17,7 +18,13 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
         const sprite = query.getPtr(entity, Sprite);
 
         switch (animation.update(delta) orelse continue) {
-            .next, .loop => sprite.image = animation.subImage(),
+            .next, .loop => {
+                sprite.image = animation.subImage();
+                if (animation.frame().extend == 0) continue;
+
+                // extend 非零表示这一帧是动作生效点，具体效果由 farm 系统处理。
+                world.add(entity, UseFrame{});
+            },
             .end => {
                 if (!world.has(entity, Busy)) continue;
 
@@ -148,4 +155,41 @@ test "工具动画结束后解除忙碌状态" {
 
     try std.testing.expect(!world.has(entity, Busy));
     try std.testing.expectEqual(Action.idle, world.get(entity, Actor).?.action);
+}
+
+test "动画进入关键帧时挂上生效标记" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+
+    const frames = [_]zhu.graphics.Frame{
+        .{ .offset = .zero, .duration = 0.1 },
+        .{
+            .offset = .xy(32, 0),
+            .duration = 0.1,
+            .extend = 1,
+        },
+    };
+    const image = zhu.Image{ .size = .xy(64, 32) };
+    zhu.assets.putImage(1, image);
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = world.createEntity();
+    world.add(entity, Actor{ .action = .hoe });
+    const sources = [_]zhu.Animation.Source{
+        .{ .imageId = 1, .clip = &frames },
+        .{ .imageId = 1, .clip = &frames },
+        .{ .imageId = 1, .clip = &frames },
+    };
+    world.add(entity, Animation.initSource(&sources, .xy(32, 32)));
+    world.add(entity, Sprite{ .image = image });
+    world.add(entity, Busy{});
+
+    update(&world, 0.01);
+    try std.testing.expect(!world.has(entity, UseFrame));
+
+    update(&world, 0.11);
+
+    try std.testing.expect(world.has(entity, UseFrame));
 }

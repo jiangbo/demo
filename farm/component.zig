@@ -1,10 +1,11 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
+const Vector2 = zhu.Vector2;
 pub const Position = zhu.Vector2;
 
 pub const motion = struct {
-    pub const Velocity = struct { value: zhu.Vector2 = .zero };
+    pub const Velocity = struct { value: Vector2 = .zero };
 
     pub const Shape = zhu.math.Shape;
     pub const Blocking = struct {};
@@ -76,6 +77,12 @@ pub const actor = struct {
     };
     pub const Busy = struct {};
 
+    // 动画到达可结算帧时挂上，farm 系统消费后立即移除。
+    pub const UseFrame = struct {};
+
+    // 点击瞬间锁定的使用意图，避免关键帧时再读取变化后的快捷栏。
+    pub const WantUse = struct { item: item.ItemEnum, target: Vector2 };
+
     pub const Wander = struct {
         home: zhu.Vector2 = .zero,
         radius: f32 = 0,
@@ -127,6 +134,9 @@ pub const item = struct {
     pub const ItemEnum = enum {
         hoe,
         water,
+        pickaxe,
+        axe,
+        sickle,
         strawberrySeed,
         potatoSeed,
         strawberry,

@@ -63,7 +63,7 @@ pub fn getTile(position: zhu.Vector2) ?*Tile {
     return &tiles[@as(usize, @intCast(tile.y * width + tile.x))];
 }
 
-pub fn canHoe(position: zhu.Vector2) bool {
+fn canHoe(position: zhu.Vector2) bool {
     if (!spatial.canHoeTile(position)) return false;
 
     const tile = getTile(position) orelse return false;
@@ -79,7 +79,7 @@ pub fn canPlant(position: zhu.Vector2) bool {
     return true;
 }
 
-pub fn canWater(position: zhu.Vector2) bool {
+fn canWater(position: zhu.Vector2) bool {
     const tile = getTile(position) orelse return false;
     return tile.ground != null;
 }

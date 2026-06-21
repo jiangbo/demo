@@ -98,15 +98,6 @@ pub fn harvestItem(kind: farm.CropEnum) item.ItemEnum {
     };
 }
 
-// 判断某个 ItemEnum 是否是种子，是则返回对应的 CropEnum
-pub fn asSeed(it: item.ItemEnum) ?farm.CropEnum {
-    return switch (it) {
-        .strawberrySeed => .strawberry,
-        .potatoSeed => .potato,
-        else => null,
-    };
-}
-
 pub fn cropStage(kind: farm.CropEnum, stage: farm.GrowthEnum) CropStage {
     return zon.crops[@intFromEnum(kind)].stages[@intFromEnum(stage)];
 }

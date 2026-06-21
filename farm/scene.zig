@@ -13,6 +13,7 @@ const ui = @import("ui.zig");
 const system = struct {
     const animation = @import("system/animation.zig");
     const control = @import("system/control.zig");
+    const farm = @import("system/farm.zig");
     const light = @import("system/light.zig");
     const movement = @import("system/movement.zig");
     const pickup = @import("system/pickup.zig");
@@ -133,6 +134,7 @@ fn updateFarm(delta: f32) void {
     interact.update(&world);
     cameraFollowPlayer(delta);
     system.animation.update(&world, delta);
+    system.farm.update(&world);
     system.render.update(&world);
 
     // 音效最后播放，统一消费本帧前面系统发出的 SoundPlay 事件。
@@ -175,6 +177,9 @@ fn enterFarm() void {
     if (loadSlot == null) {
         _ = inventory.add(.hoe, 1);
         _ = inventory.add(.water, 1);
+        _ = inventory.add(.pickaxe, 1);
+        _ = inventory.add(.axe, 1);
+        _ = inventory.add(.sickle, 1);
     }
 
     if (loadSlot) |slot| {
