@@ -109,7 +109,7 @@ fn Store(V: type) type {
             self.len += 1;
         }
 
-        fn append(self: *@This(), gpa: Allocator, v: V) Oom!void {
+        fn appendValue(self: *@This(), gpa: Allocator, v: V) Oom!void {
             if (self.len >= self.valueCap) try self.growValue(gpa);
             self.values[self.len] = v;
             self.len += 1;
@@ -212,7 +212,7 @@ pub const World = struct {
 
     pub fn tryAddEvent(self: *World, value: anytype) Oom!void {
         var map = try self.tryAssure(Event(@TypeOf(value)), @TypeOf(value));
-        try map.append(self.allocator, value);
+        try map.appendValue(self.allocator, value);
     }
 
     pub fn tryAdd(self: *World, entity: Entity, value: anytype) Oom!void {

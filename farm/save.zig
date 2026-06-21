@@ -209,7 +209,7 @@ fn captureInventory() InventorySave {
     };
     for (inventory.bag.slots, 0..) |slot, index| {
         result.slots[index] = .{
-            .type = slot.item,
+            .type = if (slot.count == 0) .hoe else slot.item,
             .count = slot.count,
         };
     }
