@@ -12,13 +12,18 @@ const NineSource = zhu.NineImage.Source;
 const Config = struct { bar: bar.Zon, bag: bag.Zon };
 const config: Config = @import("zon/inventory.zon");
 
-const Store = zhu.widget.StackStore(ItemEnum);
+const Store = zhu.widget.StackStore(ItemEnum, stackLimit);
 
 pub const Stack = Store.Stack;
 pub const Item = Stack;
 pub const UseResult = union(enum) { none, full, item: Stack };
 
 const Hover = union(enum) { body, slot: usize, prev, next, close };
+
+fn stackLimit(itemType: ItemEnum) u32 {
+    // 叠加上限由物品配置决定，库存逻辑只执行规则。
+    return factory.itemConfig(itemType).limit;
+}
 
 pub const bag = struct {
     const Zon = struct {
@@ -66,7 +71,7 @@ pub const bag = struct {
     var drag: ?zhu.Vector2 = null;
 
     fn reset() void {
-        @memset(&slots, .{ .item = .hoe });
+        store.clear();
         position = zon.position;
         closed = true;
         activePage = 0;
@@ -75,7 +80,7 @@ pub const bag = struct {
     }
 
     pub fn add(itemType: ItemEnum, count: u32) u32 {
-        const remaining = store.add(addArgs(itemType, count));
+        const remaining = store.add(itemType, count);
         if (remaining < count) autoBind(itemType);
         return remaining;
     }
@@ -105,16 +110,13 @@ pub const bag = struct {
         return .{
             .item = itemType,
             .count = count,
-            .limit = factory.itemConfig(itemType).limit,
         };
     }
 
     pub fn move(fromIndex: usize, toIndex: usize) void {
         if (fromIndex == toIndex) return;
 
-        const from = store.getPtr(fromIndex) orelse return;
-        const limit = factory.itemConfig(from.item).limit;
-        const moved = store.move(fromIndex, toIndex, limit) orelse return;
+        const moved = store.move(fromIndex, toIndex) orelse return;
 
         switch (moved) {
             .swap => bar.swapRefs(fromIndex, toIndex),
@@ -252,7 +254,7 @@ pub const bag = struct {
     }
 };
 
-pub var store = Store.init(bag.slots[0..], 99);
+pub var store = Store{ .stacks = bag.slots[0..] };
 
 pub const bar = struct {
     const Zon = struct {
@@ -650,6 +652,30 @@ test "添加物品会合并并自动绑定快捷栏" {
 
     try std.testing.expectEqual(.strawberry, activeItem().?.item);
     try std.testing.expectEqual(10, activeItem().?.count);
+}
+
+test "新增工具会占用独立槽位" {
+    reset();
+
+    try std.testing.expectEqual(0, add(.hoe, 1));
+    try std.testing.expectEqual(0, add(.hoe, 1));
+
+    try std.testing.expectEqual(.hoe, store.stacks[0].item);
+    try std.testing.expectEqual(1, store.stacks[0].count);
+    try std.testing.expectEqual(.hoe, store.stacks[1].item);
+    try std.testing.expectEqual(1, store.stacks[1].count);
+}
+
+test "移动同类工具不会合并" {
+    reset();
+
+    store.stacks[0] = .{ .item = .hoe, .count = 1 };
+    store.stacks[1] = .{ .item = .hoe, .count = 1 };
+
+    move(0, 1);
+
+    try std.testing.expectEqual(1, store.stacks[0].count);
+    try std.testing.expectEqual(1, store.stacks[1].count);
 }
 
 test "当前物品通过快捷栏引用读取库存槽" {

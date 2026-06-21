@@ -109,19 +109,15 @@ pub fn popupPosition(popup: Popup) Vector2 {
     return pos.clamp(.zero, bounds.sub(popup.size).max(.zero));
 }
 
-pub fn StackStore(comptime T: type) type {
+pub fn StackStore(T: type, limitOf: fn (T) u32) type {
     return struct {
         pub const Stack = struct { item: T, count: u32 = 0 };
-        pub const Add = struct {
-            item: T,
-            count: u32 = 1,
-            limit: ?u32 = null,
-        };
+        pub const Add = struct { item: T, count: u32 = 1 };
+        pub const Sub = struct { index: usize, count: u32 = 1 };
         pub const Put = struct {
-            removes: []const Remove = &.{},
+            subs: []const Sub = &.{},
             adds: []const Add = &.{},
         };
-        pub const Remove = struct { index: usize, count: u32 = 1 };
         pub const Entry = struct {
             index: usize,
             item: T,
@@ -131,7 +127,7 @@ pub fn StackStore(comptime T: type) type {
                 return .{ .index = index, .item = item, .count = count };
             }
         };
-        pub const Change = union(enum) { add: Entry, remove: Entry };
+        pub const Change = union(enum) { add: Entry, sub: Entry };
         pub const Move = enum { merge, clear, swap };
         pub const Result = struct {
             status: enum { done, fail },
@@ -140,24 +136,15 @@ pub fn StackStore(comptime T: type) type {
         };
 
         stacks: []Stack,
-        limit: u32,
 
-        pub fn init(stacks: []Stack, limit: u32) @This() {
-            return .{ .stacks = stacks, .limit = limit };
-        }
-
-        pub fn add(self: *@This(), args: Add) u32 {
-            var addArgs = args;
-            while (addArgs.count > 0) {
-                if (self.addOne(addArgs)) |placed| {
-                    addArgs.count -= placed.count;
+        pub fn add(self: *@This(), item: T, count: u32) u32 {
+            var remaining = Add{ .item = item, .count = count };
+            while (remaining.count > 0) {
+                if (self.addOne(remaining)) |placed| {
+                    remaining.count -= placed.count;
                 } else break;
             }
-            return addArgs.count;
-        }
-
-        pub fn addUnstacked(self: *@This(), item: T) bool {
-            return self.fill(.{ .item = item }, 1) != null;
+            return remaining.count;
         }
 
         pub fn get(self: *@This(), index: usize) ?Stack {
@@ -192,7 +179,7 @@ pub fn StackStore(comptime T: type) type {
             for (self.stacks) |*stack| stack.count = 0;
         }
 
-        pub fn move(self: *@This(), from: usize, to: usize, limit: u32) ?Move {
+        pub fn move(self: *@This(), from: usize, to: usize) ?Move {
             if (from == to) return null;
 
             const source = &self.stacks[from];
@@ -204,6 +191,8 @@ pub fn StackStore(comptime T: type) type {
                 return .swap;
             }
 
+            const limit = limitOf(source.item);
+            std.debug.assert(limit > 0);
             if (target.count >= limit) return null;
 
             const moved = @min(limit - target.count, source.count);
@@ -214,18 +203,18 @@ pub fn StackStore(comptime T: type) type {
 
         pub fn tryPut(self: *@This(), buf: []Change, ops: Put) Result {
             var list = std.ArrayList(Change).initBuffer(buf);
-            var done = blk: for (ops.removes) |entry| {
+            var done = blk: for (ops.subs) |entry| {
                 if (entry.count == 0) continue;
                 const taken = self.take(entry.index, entry.count) //
                     orelse break :blk false;
-                list.appendAssumeCapacity(.{ .remove = taken });
+                list.appendAssumeCapacity(.{ .sub = taken });
             } else true;
 
             if (done) done = blk: for (ops.adds) |entry| {
-                var addArgs = entry;
-                while (addArgs.count > 0) {
-                    if (self.addOne(addArgs)) |placed| {
-                        addArgs.count -= placed.count;
+                var remaining = entry;
+                while (remaining.count > 0) {
+                    if (self.addOne(remaining)) |placed| {
+                        remaining.count -= placed.count;
                         list.appendAssumeCapacity(.{ .add = placed });
                     } else break :blk false;
                 }
@@ -244,14 +233,14 @@ pub fn StackStore(comptime T: type) type {
             var iterator = std.mem.reverseIterator(changes);
             while (iterator.next()) |change| {
                 switch (change) {
-                    .add => |entry| self.putOne(.{ .remove = entry }),
-                    .remove => |entry| self.putOne(.{ .add = entry }),
+                    .add => |entry| self.putOne(.{ .sub = entry }),
+                    .sub => |entry| self.putOne(.{ .add = entry }),
                 }
             }
         }
 
         fn addOne(self: *@This(), args: Add) ?Entry {
-            const limit = args.limit orelse self.limit;
+            const limit = limitOf(args.item);
             std.debug.assert(limit > 0);
 
             if (limit > 1) if (self.merge(args, limit)) |e| return e;
@@ -270,11 +259,10 @@ pub fn StackStore(comptime T: type) type {
 
         pub fn takeAdd(self: *@This(), index: usize, args: Add) bool {
             var changes: [16]Change = undefined;
-            const result = self.tryPut(&changes, .{
-                .removes = &.{.{ .index = index }},
+            return .done == self.tryPut(&changes, .{
+                .subs = &.{.{ .index = index }},
                 .adds = &.{args},
-            });
-            return result.status == .done;
+            }).status;
         }
 
         fn merge(self: *@This(), args: Add, limit: u32) ?Entry {
@@ -309,7 +297,7 @@ pub fn StackStore(comptime T: type) type {
                     std.debug.assert(std.meta.eql(entry.item, stack.item));
                     stack.count += entry.count;
                 },
-                .remove => |entry| {
+                .sub => |entry| {
                     const taken = self.take(entry.index, entry.count).?;
                     std.debug.assert(std.meta.eql(entry.item, taken.item));
                 },

@@ -305,7 +305,7 @@ fn restorePlayer(world: *World, data: PlayerSave) void {
 }
 
 fn restoreInventory(data: InventorySave) void {
-    @memset(inventory.store.stacks, .{ .item = .hoe });
+    inventory.store.clear();
     for (data.slots, 0..) |slot, index| {
         if (index >= inventory.store.stacks.len) break;
         inventory.store.stacks[index] = slot;
