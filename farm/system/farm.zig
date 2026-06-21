@@ -380,3 +380,61 @@ test "hoe 不会收获成熟作物" {
     try std.testing.expectEqual(0, world.values(Pickup).len);
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
 }
+
+test "water 不会收获成熟作物" {
+    zhu.assets.allocator = std.testing.allocator;
+    enterTestLand();
+    defer exitTestLand();
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    try std.testing.expect(map.land.hoe(testTarget));
+    const crop = world.createEntity();
+    world.add(crop, Crop{ .stage = .mature, .kind = .potato });
+    map.land.getTile(testTarget).?.object = .{ .entity = crop };
+
+    const player = world.createIdentity(Player);
+    world.add(player, WantUse{ .item = .water, .target = testTarget });
+    world.add(player, UseFrame{});
+
+    update(&world);
+
+    try std.testing.expectEqual(crop, map.land.getTile(testTarget).?.crop().?);
+    try std.testing.expectEqual(0, world.values(Pickup).len);
+    const sounds = world.getEvent(event.SoundPlay);
+    try std.testing.expectEqual(1, sounds.len);
+    try std.testing.expectEqual(.water, sounds[0].id);
+}
+
+test "seedPlant 不会收获成熟作物" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    putMockImages();
+    enterTestLand();
+    defer exitTestLand();
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    setActiveItem(.strawberrySeed, 2);
+    try std.testing.expect(map.land.hoe(testTarget));
+    const crop = world.createEntity();
+    world.add(crop, Crop{ .stage = .mature, .kind = .potato });
+    map.land.getTile(testTarget).?.object = .{ .entity = crop };
+
+    const player = world.createIdentity(Player);
+    world.add(player, WantUse{
+        .item = .strawberrySeed,
+        .target = testTarget,
+    });
+    world.add(player, UseFrame{});
+
+    update(&world);
+
+    const index = inventory.bar.refs[inventory.bar.active].?;
+    try std.testing.expectEqual(2, inventory.store.stacks[index].count);
+    try std.testing.expectEqual(crop, map.land.getTile(testTarget).?.crop().?);
+    try std.testing.expectEqual(0, world.values(Pickup).len);
+    try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
+}
