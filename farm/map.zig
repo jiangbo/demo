@@ -661,6 +661,109 @@ test "湿地离线跨天只加速一天" {
     try std.testing.expectEqual(component.farm.Ground.dry, state.tiles[0].ground);
 }
 
+test "成熟作物跨天不会继续推进" {
+    var crop = farm.Crop{
+        .kind = .potato,
+        .stage = .mature,
+        .timer = 3,
+        .next = 7,
+    };
+
+    try std.testing.expect(!advanceCropOneDay(&crop, true));
+    try std.testing.expectEqual(farm.GrowthEnum.mature, crop.stage);
+    try std.testing.expectEqual(@as(f32, 3), crop.timer);
+    try std.testing.expectEqual(@as(f32, 7), crop.next);
+}
+
+test "当前地图跨天推进作物后刷新贴图和渲染层" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    putMockCropImages();
+    land.enter(&maps[0]);
+    defer land.exit();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const target = zhu.Vector2.xy(32, 48);
+    const crop = world.createEntity();
+    world.add(crop, farm.Crop{
+        .kind = .strawberry,
+        .stage = .seed,
+        .next = 1,
+    });
+    world.add(crop, render.Sprite{ .image = .{} });
+    world.add(crop, render.Render{ .layer = .crop });
+    const tile = land.getTile(target).?;
+    tile.ground = .dry;
+    tile.object = .{ .entity = crop };
+    world.addEvent(component.event.DayChanged{ .day = 2 });
+
+    update(&world);
+
+    const result = world.get(crop, farm.Crop).?;
+    const stage = factory.cropStage(.strawberry, .sprout);
+    try std.testing.expectEqual(farm.GrowthEnum.sprout, result.stage);
+    try std.testing.expectEqual(stage.duration, result.next);
+    try std.testing.expectEqual(stage.sprite.offset, world.get(crop, render.Sprite).?.offset);
+    try std.testing.expectEqual(render.Layer.actor, world.get(crop, render.Render).?.layer);
+}
+
+test "当前地图和离线地图跨天推进规则一致" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    putMockCropImages();
+    context.clock.reset();
+    defer context.clock.reset();
+    land.enter(&maps[0]);
+    defer land.exit();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const target = zhu.Vector2.xy(32, 48);
+    const cropEntity = world.createEntity();
+    world.add(cropEntity, farm.Crop{
+        .kind = .strawberry,
+        .stage = .seed,
+        .next = 2,
+    });
+    world.add(cropEntity, render.Sprite{ .image = .{} });
+    world.add(cropEntity, render.Render{ .layer = .crop });
+    const tile = land.getTile(target).?;
+    tile.ground = .wet;
+    tile.object = .{ .entity = cropEntity };
+    world.addEvent(component.event.DayChanged{ .day = 2 });
+
+    var tiles = [_]context.map.Tile{.{
+        .ground = .wet,
+        .thing = .{ .crop = .{
+            .kind = .strawberry,
+            .stage = .seed,
+            .next = 2,
+        } },
+    }};
+    var state = context.map.State{
+        .initialized = true,
+        .day = 1,
+        .tiles = &tiles,
+    };
+    context.clock.day = 2;
+
+    update(&world);
+    advanceState(&state);
+
+    const currentCrop = world.get(cropEntity, farm.Crop).?;
+    const offlineCrop = switch (state.tiles[0].thing.?) {
+        .crop => |crop| crop,
+        else => unreachable,
+    };
+    try std.testing.expectEqual(offlineCrop.stage, currentCrop.stage);
+    try std.testing.expectEqual(offlineCrop.next, currentCrop.next);
+    try std.testing.expectEqual(offlineCrop.timer, currentCrop.timer);
+    try std.testing.expectEqual(state.tiles[0].ground, tile.ground);
+}
+
 test "恢复已打开宝箱会移除动画组件" {
     zhu.assets.allocator = std.testing.allocator;
     land.enter(&maps[0]);
@@ -720,5 +823,14 @@ fn putMockNpcImages() void {
     zhu.assets.putImage(factory.zon.friend.sprite.imageId, image);
     for (factory.zon.friend.animations) |animation| {
         zhu.assets.putImage(animation.imageId, image);
+    }
+}
+
+fn putMockCropImages() void {
+    const image = zhu.graphics.Image{ .size = .xy(256, 256) };
+    for (factory.zon.crops) |cropConfig| {
+        for (cropConfig.stages) |stage| {
+            zhu.assets.putImage(stage.sprite.imageId, image);
+        }
     }
 }
