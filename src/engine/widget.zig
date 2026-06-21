@@ -146,6 +146,8 @@ pub fn StackStore(comptime T: type) type {
         }
 
         pub fn add(self: *@This(), args: Add) u32 {
+            std.debug.assert(args.limit > 0);
+
             var addArgs = args;
             while (addArgs.count > 0) {
                 if (self.addOne(addArgs)) |placed| {
@@ -162,7 +164,8 @@ pub fn StackStore(comptime T: type) type {
 
         pub fn first(self: *const @This(), item: T) ?usize {
             for (self.stacks, 0..) |slot, index| {
-                if (slot.count != 0 and slot.item == item) return index;
+                const eq = std.meta.eql(slot.item, item);
+                if (slot.count != 0 and eq) return index;
             }
             return null;
         }
@@ -179,13 +182,16 @@ pub fn StackStore(comptime T: type) type {
         }
 
         pub fn move(self: *@This(), from: usize, to: usize, limit: u32) ?Move {
+            std.debug.assert(limit > 0);
+
             if (from == to) return null;
 
             const source = &self.stacks[from];
             const target = &self.stacks[to];
             if (source.count == 0) return null;
 
-            if (target.count == 0 or source.item != target.item) {
+            const eq = std.meta.eql(source.item, target.item);
+            if (target.count == 0 or !eq) {
                 std.mem.swap(Stack, source, target);
                 return .swap;
             }
@@ -201,6 +207,8 @@ pub fn StackStore(comptime T: type) type {
         }
 
         pub fn tryPut(self: *@This(), buf: []Change, ops: Put) Result {
+            for (ops.adds) |entry| std.debug.assert(entry.limit > 0);
+
             var list = std.ArrayList(Change).initBuffer(buf);
             var done = blk: for (ops.removes) |entry| {
                 if (entry.count == 0) continue;
@@ -275,7 +283,8 @@ pub fn StackStore(comptime T: type) type {
 
         fn merge(self: *@This(), index: usize, args: Add) ?u32 {
             const slot = &self.stacks[index];
-            if (slot.count == 0 or slot.item != args.item) return null;
+            const eq = std.meta.eql(slot.item, args.item);
+            if (slot.count == 0 or !eq) return null;
             if (slot.count >= args.limit) return null;
 
             const moved = @min(args.limit - slot.count, args.count);
