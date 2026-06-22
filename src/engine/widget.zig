@@ -112,11 +112,10 @@ pub fn popupPosition(popup: Popup) Vector2 {
 pub fn StackStore(T: type, limitOf: fn (T) u32) type {
     return struct {
         pub const Stack = struct { item: T, count: u32 = 0 };
-        pub const Add = struct { item: T, count: u32 = 1 };
-        pub const Sub = struct { index: usize, count: u32 = 1 };
+        pub const Count = struct { item: T, count: u32 = 1 };
         pub const Put = struct {
-            subs: []const Sub = &.{},
-            adds: []const Add = &.{},
+            subs: []const Count = &.{},
+            adds: []const Count = &.{},
         };
         pub const Entry = struct {
             index: usize,
@@ -127,24 +126,37 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
                 return .{ .index = index, .item = item, .count = count };
             }
         };
-        pub const Change = union(enum) { add: Entry, sub: Entry };
+        pub const Patch = union(enum) { add: Entry, sub: Entry };
         pub const Move = enum { merge, clear, swap };
-        pub const Result = struct {
-            status: enum { done, fail },
-            // fail 时背包已回滚，changes 可由调用者选择性提交。
-            changes: []const Change,
+        pub const Done = struct { ok: bool, patches: []const Patch };
+        const Try = struct {
+            buffer: *std.ArrayList(Patch),
+            items: []const Count,
         };
 
         stacks: []Stack,
 
         pub fn add(self: *@This(), item: T, count: u32) u32 {
-            var remaining = Add{ .item = item, .count = count };
+            var remaining = Count{ .item = item, .count = count };
             while (remaining.count > 0) {
                 if (self.addOne(remaining)) |placed| {
                     remaining.count -= placed.count;
                 } else break;
             }
             return remaining.count;
+        }
+
+        pub fn sub(self: *@This(), item: T, count: u32) bool {
+            var patches: [16]Patch = undefined;
+            var buffer = std.ArrayList(Patch).initBuffer(&patches);
+
+            if (self.trySub(.{
+                .buffer = &buffer,
+                .items = &.{.{ .item = item, .count = count }},
+            }) catch return false) return true;
+
+            self.rollback(buffer.items);
+            return false;
         }
 
         pub fn get(self: *@This(), index: usize) ?Stack {
@@ -201,45 +213,30 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
             return if (source.count > 0) .merge else .clear;
         }
 
-        pub fn tryPut(self: *@This(), buf: []Change, ops: Put) Result {
-            var list = std.ArrayList(Change).initBuffer(buf);
-            var done = blk: for (ops.subs) |entry| {
-                if (entry.count == 0) continue;
-                const taken = self.take(entry.index, entry.count) //
-                    orelse break :blk false;
-                list.appendAssumeCapacity(.{ .sub = taken });
-            } else true;
-
-            if (done) done = blk: for (ops.adds) |entry| {
-                var remaining = entry;
-                while (remaining.count > 0) {
-                    if (self.addOne(remaining)) |placed| {
-                        remaining.count -= placed.count;
-                        list.appendAssumeCapacity(.{ .add = placed });
-                    } else break :blk false;
-                }
-            } else true;
-
-            if (done) return .{ .status = .done, .changes = list.items };
-            self.back(list.items);
-            return .{ .status = .fail, .changes = list.items };
+        pub fn tryPut(self: *@This(), buf: []Patch, ops: Put) !Done {
+            var buffer = std.ArrayList(Patch).initBuffer(buf);
+            var args: Try = .{ .buffer = &buffer, .items = ops.subs };
+            const subOk = try self.trySub(args);
+            args = .{ .buffer = &buffer, .items = ops.adds };
+            const addOk = try self.tryAdd(args);
+            return .{ .ok = subOk and addOk, .patches = buffer.items };
         }
 
-        pub fn put(self: *@This(), changes: []const Change) void {
-            for (changes) |change| self.putOne(change);
+        pub fn put(self: *@This(), buf: []Patch, ops: Put) Done {
+            return self.tryPut(buf, ops) catch @panic("buffer to small");
         }
 
-        pub fn back(self: *@This(), changes: []const Change) void {
-            var iterator = std.mem.reverseIterator(changes);
-            while (iterator.next()) |change| {
-                switch (change) {
+        pub fn rollback(self: *@This(), patches: []const Patch) void {
+            var iterator = std.mem.reverseIterator(patches);
+            while (iterator.next()) |patch| {
+                switch (patch) {
                     .add => |entry| self.putOne(.{ .sub = entry }),
                     .sub => |entry| self.putOne(.{ .add = entry }),
                 }
             }
         }
 
-        fn addOne(self: *@This(), args: Add) ?Entry {
+        fn addOne(self: *@This(), args: Count) ?Entry {
             const limit = limitOf(args.item);
             std.debug.assert(limit > 0);
 
@@ -247,7 +244,46 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
             return self.fill(args, limit);
         }
 
-        pub fn take(self: *@This(), index: usize, count: u32) ?Entry {
+        fn trySub(self: *@This(), args: Try) !bool {
+            var ok = true;
+            for (args.items) |entry| {
+                if (entry.count == 0) continue;
+
+                var remaining = entry.count;
+                for (self.stacks, 0..) |*stack, index| {
+                    if (remaining == 0) break;
+                    if (stack.count == 0) continue;
+                    if (!std.meta.eql(stack.item, entry.item)) continue;
+
+                    const count = @min(stack.count, remaining);
+                    const patch = Entry.init(index, stack.item, count);
+                    stack.count -= count;
+                    remaining -= count;
+                    try args.buffer.append(.{ .sub = patch });
+                }
+                if (remaining > 0) ok = false;
+            }
+            return ok;
+        }
+
+        fn tryAdd(self: *@This(), args: Try) !bool {
+            var ok = true;
+            for (args.items) |entry| {
+                var remaining = entry;
+                while (remaining.count > 0) {
+                    if (self.addOne(remaining)) |placed| {
+                        remaining.count -= placed.count;
+                        try args.buffer.append(.{ .add = placed });
+                    } else {
+                        ok = false;
+                        break;
+                    }
+                }
+            }
+            return ok;
+        }
+
+        pub fn subAt(self: *@This(), index: usize, count: u32) ?Entry {
             std.debug.assert(count > 0);
             const stack = self.getPtr(index) orelse return null;
             if (stack.count < count) return null;
@@ -257,15 +293,22 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
             return entry;
         }
 
-        pub fn takeAdd(self: *@This(), index: usize, args: Add) bool {
-            var changes: [16]Change = undefined;
-            return .done == self.tryPut(&changes, .{
-                .subs = &.{.{ .index = index }},
-                .adds = &.{args},
-            }).status;
+        pub fn useAt(self: *@This(), index: usize, args: Count) bool {
+            var patches: [16]Patch = undefined;
+            var list = std.ArrayList(Patch).initBuffer(&patches);
+
+            const taken = self.subAt(index, 1) orelse return false;
+            list.appendAssumeCapacity(.{ .sub = taken });
+
+            const ok = self.tryAdd(.{ .buffer = &list, .items = &.{args} }) //
+                catch return false;
+            if (ok) return true;
+
+            self.rollback(list.items);
+            return false;
         }
 
-        fn merge(self: *@This(), args: Add, limit: u32) ?Entry {
+        fn merge(self: *@This(), args: Count, limit: u32) ?Entry {
             for (0..self.stacks.len) |index| {
                 const stack = self.getPtr(index) orelse continue;
                 if (!std.meta.eql(stack.item, args.item)) continue;
@@ -278,7 +321,7 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
             return null;
         }
 
-        fn fill(self: *@This(), args: Add, limit: u32) ?Entry {
+        fn fill(self: *@This(), args: Count, limit: u32) ?Entry {
             for (self.stacks, 0..) |*stack, index| {
                 if (stack.count != 0) continue;
 
@@ -289,8 +332,8 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
             return null;
         }
 
-        fn putOne(self: *@This(), change: Change) void {
-            switch (change) {
+        fn putOne(self: *@This(), patch: Patch) void {
+            switch (patch) {
                 .add => |entry| {
                     const stack = &self.stacks[entry.index];
                     if (stack.count == 0) stack.item = entry.item;
@@ -298,7 +341,7 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
                     stack.count += entry.count;
                 },
                 .sub => |entry| {
-                    const taken = self.take(entry.index, entry.count).?;
+                    const taken = self.subAt(entry.index, entry.count).?;
                     std.debug.assert(std.meta.eql(entry.item, taken.item));
                 },
             }
