@@ -130,32 +130,41 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
         pub const Move = enum { merge, clear, swap };
         pub const Done = struct { ok: bool, patches: []const Patch };
         const Try = struct {
-            buffer: *std.ArrayList(Patch),
+            buffer: ?*std.ArrayList(Patch) = null,
             items: []const Count,
         };
 
         stacks: []Stack,
 
         pub fn add(self: *@This(), item: T, count: u32) u32 {
-            var remaining = Count{ .item = item, .count = count };
-            while (remaining.count > 0) {
-                if (self.addOne(remaining)) |placed| {
-                    remaining.count -= placed.count;
-                } else break;
-            }
-            return remaining.count;
+            const args: Count = .{ .item = item, .count = count };
+            return self.tryAdd(.{ .items = &.{args} }) catch unreachable;
         }
 
-        pub fn sub(self: *@This(), item: T, count: u32) bool {
+        pub fn sub(self: *@This(), item: T, count: u32) u32 {
+            const args: Count = .{ .item = item, .count = count };
+            return self.trySub(.{ .items = &.{args} }) catch unreachable;
+        }
+
+        pub fn addAll(self: *@This(), item: T, count: u32) bool {
             var patches: [16]Patch = undefined;
-            var buffer = std.ArrayList(Patch).initBuffer(&patches);
 
-            if (self.trySub(.{
-                .buffer = &buffer,
-                .items = &.{.{ .item = item, .count = count }},
-            }) catch return false) return true;
+            const args: Count = .{ .item = item, .count = count };
+            const done = self.put(&patches, .{ .adds = &.{args} });
+            if (done.ok) return true;
 
-            self.rollback(buffer.items);
+            self.rollback(done.patches);
+            return false;
+        }
+
+        pub fn subAll(self: *@This(), item: T, count: u32) bool {
+            var patches: [16]Patch = undefined;
+
+            const args: Count = .{ .item = item, .count = count };
+            const done = self.put(&patches, .{ .subs = &.{args} });
+            if (done.ok) return true;
+
+            self.rollback(done.patches);
             return false;
         }
 
@@ -216,10 +225,11 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
         pub fn tryPut(self: *@This(), buf: []Patch, ops: Put) !Done {
             var buffer = std.ArrayList(Patch).initBuffer(buf);
             var args: Try = .{ .buffer = &buffer, .items = ops.subs };
-            const subOk = try self.trySub(args);
+            const subLeft = try self.trySub(args);
             args = .{ .buffer = &buffer, .items = ops.adds };
-            const addOk = try self.tryAdd(args);
-            return .{ .ok = subOk and addOk, .patches = buffer.items };
+            const addLeft = try self.tryAdd(args);
+            const ok = subLeft == 0 and addLeft == 0;
+            return .{ .ok = ok, .patches = buffer.items };
         }
 
         pub fn put(self: *@This(), buf: []Patch, ops: Put) Done {
@@ -244,8 +254,8 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
             return self.fill(args, limit);
         }
 
-        fn trySub(self: *@This(), args: Try) !bool {
-            var ok = true;
+        fn trySub(self: *@This(), args: Try) !u32 {
+            var left: u32 = 0;
             for (args.items) |entry| {
                 if (entry.count == 0) continue;
 
@@ -259,28 +269,25 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
                     const patch = Entry.init(index, stack.item, count);
                     stack.count -= count;
                     remaining -= count;
-                    try args.buffer.append(.{ .sub = patch });
+                    if (args.buffer) |b| try b.append(.{ .sub = patch });
                 }
-                if (remaining > 0) ok = false;
+                left += remaining;
             }
-            return ok;
+            return left;
         }
 
-        fn tryAdd(self: *@This(), args: Try) !bool {
-            var ok = true;
+        fn tryAdd(self: *@This(), args: Try) !u32 {
+            var left: u32 = 0;
             for (args.items) |entry| {
                 var remaining = entry;
                 while (remaining.count > 0) {
-                    if (self.addOne(remaining)) |placed| {
-                        remaining.count -= placed.count;
-                        try args.buffer.append(.{ .add = placed });
-                    } else {
-                        ok = false;
-                        break;
-                    }
+                    const one = self.addOne(remaining) orelse break;
+                    remaining.count -= one.count;
+                    if (args.buffer) |b| try b.append(.{ .add = one });
                 }
+                left += remaining.count;
             }
-            return ok;
+            return left;
         }
 
         pub fn subAt(self: *@This(), index: usize, count: u32) ?Entry {
@@ -293,18 +300,17 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
             return entry;
         }
 
-        pub fn useAt(self: *@This(), index: usize, args: Count) bool {
+        pub fn useAt(self: *@This(), index: usize, count: Count) bool {
             var patches: [16]Patch = undefined;
-            var list = std.ArrayList(Patch).initBuffer(&patches);
+            var buffer = std.ArrayList(Patch).initBuffer(&patches);
 
             const taken = self.subAt(index, 1) orelse return false;
-            list.appendAssumeCapacity(.{ .sub = taken });
+            buffer.appendAssumeCapacity(.{ .sub = taken });
+            const args: Try = .{ .buffer = &buffer, .items = count };
+            const left = self.tryAdd(args) catch @panic("buffer to small");
+            if (left == 0) return true;
 
-            const ok = self.tryAdd(.{ .buffer = &list, .items = &.{args} }) //
-                catch return false;
-            if (ok) return true;
-
-            self.rollback(list.items);
+            self.rollback(buffer.items);
             return false;
         }
 
