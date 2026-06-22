@@ -35,6 +35,14 @@ var vertexes: std.ArrayList(zhu.batch.Vertex) = .empty;
 var frontLayerStart: usize = 0;
 var mapImage: zhu.graphics.Image = undefined;
 
+pub fn isOutdoor(id: Id) bool {
+    // 硬编码室内外规则。如需扩展可改为从 ZON 配置读取。
+    return switch (id) {
+        .town, .exterior => true,
+        .school, .interior => false,
+    };
+}
+
 pub fn init() void {
     tiled.init(@import("zon/map/tile.zon"));
     mapImage = zhu.getImage("circle.png").?;

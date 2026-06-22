@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const context = @import("../context.zig");
+const map = @import("../map.zig");
 
 const event = component.event;
 const light = component.light;
@@ -31,6 +32,13 @@ pub fn init() void {
 }
 
 pub fn update(world: *zhu.ecs.World) void {
+    // 室内地图光源始终启用，不做时间切换
+    if (!map.isOutdoor(map.current)) {
+        world.clear(light.Disabled);
+        return;
+    }
+
+    // 室外地图的光源按时间切换
     var nextDark: ?bool = null;
     for (world.getEvent(event.HourChanged)) |evt| {
         nextDark = switch (evt.hour) {
@@ -58,6 +66,8 @@ pub fn draw(world: *zhu.ecs.World) void {
 }
 
 fn drawOverlay() void {
+    if (!map.isOutdoor(map.current)) return;
+
     const hour = @as(f32, @floatFromInt(context.clock.hour)) +
         context.clock.minute / 60;
     const overlay = overlayAt(hour);
@@ -145,6 +155,7 @@ test "light overlay 支持跨午夜插值" {
 }
 
 test "light update 18 点启用 night-only 并禁用 day-only" {
+    map.current = .exterior; // 设置为室外地图
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
@@ -164,6 +175,7 @@ test "light update 18 点启用 night-only 并禁用 day-only" {
 }
 
 test "light update 6 点禁用 night-only 并启用 day-only" {
+    map.current = .exterior; // 设置为室外地图
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
@@ -183,6 +195,7 @@ test "light update 6 点禁用 night-only 并启用 day-only" {
 }
 
 test "light update 非边界整点不切换显隐" {
+    map.current = .exterior; // 设置为室外地图
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 

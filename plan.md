@@ -53,7 +53,7 @@ zig build test
 - [x] 28-交互与对话.md
 - [x] 29-物品栏与快捷栏.md
 - [x] 30-物品使用与农场循环.md
-- [ ] 31-游戏时间与昼夜.md
+- [x] 31-游戏时间与昼夜.md
 - [ ] 32-存档与流程收尾.md
 - [ ] 33-收尾.md
 
@@ -145,7 +145,8 @@ zig build test
 - 32-游戏时间与时钟 UI：C++ `GameTime` 是 registry ctx 数据；
   Zig 本步不再新增平行 `game_time` 模块，`context.time` 作为唯一时间状态。
 - 32-游戏时间与时钟 UI：C++ 支持 `AdvanceTimeRequest` 快进；
-  Zig 本步只做自然时间推进。
+  Zig 使用 `context.clock.restHours` 做按小时推进，不新增
+  `AdvanceTimeRequest` 事件类型。
 - 32-游戏时间与时钟 UI：C++ `TimeClockUI` 使用完整 UI 框架；
   Zig 本步直接用 `zhu.batch` 和 `zhu.text` 画 HUD。
 - 32-游戏时间与时钟 UI：C++ 同一讲还实现昼夜光照和灯光显隐；
@@ -157,7 +158,9 @@ zig build test
   Zig 本步先使用编译期关键帧插值，保留 4/6/9/14/18/22 这些参考时点的色调；
   用 28 点表示次日 4 点处理跨午夜插值，后续需要调参时再挪到 ZON 配置。
 - 33-昼夜颜色变化：C++ 会区分室外地图和室内 `ambient_override`；
-  Zig 当前地图还没有室内外元数据，本步默认当前地图都受昼夜色调影响。
+  Zig 使用 `map.isOutdoor()` 写死室内外规则：`.town`、`.exterior`
+  为室外，`.school`、`.interior` 为室内；室内不绘制昼夜 overlay，
+  不实现 `ambient_override`。
 - 33-昼夜颜色变化：C++ 同节包含 `TimeOfDayLightSystem` 控制夜间灯光显隐；
   Zig 已拆到 34，本步不实现路灯、窗户光、点光源或光圈。
 - 34-夜间灯光占位效果：C++ 使用完整多 pass renderer，包括 LightingPass、
@@ -167,6 +170,9 @@ zig build test
   `Spot` 只保留默认数据，没有保留 Tiled class 嵌套属性。
 - 34-夜间灯光占位效果：C++ 的玩家灯有独立事件和配置；Zig 已取消玩家跟随灯，
   只保留地图光源。
+- 34-夜间灯光占位效果：Zig 室内地图光源始终启用，`system.light.update`
+  会清理 `light.Disabled`，不按 18/6 点切换；室外地图仍按
+  `HourChanged` 在 18 点启用 night-only、6 点启用 day-only。
 - 35-音效反馈：C++ 使用 `resource_mapping.json`、`AudioManager`、
   `AudioPlayer`、`PlaySoundEvent` 和 `AudioSystem` 形成完整音频链路；Zig
   已有 `zhu.audio`，本节只新增 `SoundPlay` 事件和 `system/sound.zig`
