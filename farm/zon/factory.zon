@@ -147,6 +147,7 @@
             .category = "工具",
             .description = "敲碎石块和矿物。",
             .limit = 1,
+            .hit = .{ .target = .stone },
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/RPG/5.png"
                 .imageId = 4096884281,
@@ -159,6 +160,7 @@
             .category = "工具",
             .description = "砍伐树木。",
             .limit = 1,
+            .hit = .{ .target = .timber },
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/RPG/5.png"
                 .imageId = 4096884281,
@@ -233,6 +235,7 @@
             .category = "材料",
             .description = "砍伐树木得到的基础材料。",
             .limit = 99,
+            .health = 5,
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/14.png"
                 .imageId = 563877801,
@@ -248,6 +251,7 @@
             .category = "材料",
             .description = "敲碎石块得到的基础材料。",
             .limit = 99,
+            .health = 3,
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/14.png"
                 .imageId = 563877801,

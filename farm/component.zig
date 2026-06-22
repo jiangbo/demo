@@ -145,6 +145,9 @@ pub const item = struct {
         stone,
     };
 
+    pub const Resource = struct { item: ItemEnum, health: u8 };
+    pub const Hit = struct { target: ItemEnum };
+
     pub const Pickup = struct { item: ItemEnum, count: u32 = 1 };
 
     pub const PickupMotion = struct {

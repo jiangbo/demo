@@ -158,7 +158,10 @@ fn thingAt(world: *World, tile: land.Tile) ?context.map.Thing {
     return switch (object.kind) {
         .crop => .{ .crop = world.get(object.entity, farm.Crop).? },
         .chest => .{ .chest = world.get(object.entity, item.Chest).? },
-        .rock => .{ .rock = .{} },
+        .rock => .{ .resource = .{
+            .item = .stone,
+            .health = factory.itemConfig(.stone).health.?,
+        } },
     };
 }
 
@@ -200,7 +203,7 @@ fn restoreThing(world: *World, index: usize, thing: Thing) void {
             world.remove(object.entity, actor.Animation);
             world.remove(object.entity, motion.Shape);
         },
-        .rock => {},
+        .resource => {},
     }
 }
 
@@ -225,7 +228,7 @@ fn advanceStateOneDay(state: *context.map.State) void {
                 _ = advanceCropOneDay(&crop, watered);
                 tile.thing = .{ .crop = crop };
             },
-            .chest, .rock => {},
+            .chest, .resource => {},
         }
     }
 }

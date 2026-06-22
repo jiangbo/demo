@@ -57,6 +57,8 @@ pub const Item = struct {
     limit: u32 = 99,
     icon: Sprite,
     use: ?ItemUse = null,
+    health: ?u8 = null,
+    hit: ?item.Hit = null,
 };
 
 pub const CropStage = struct { sprite: Sprite, duration: f32 };
@@ -893,6 +895,14 @@ test "day-only 点光白天启用夜晚禁用" {
     const second = disabled.next().?;
     try expectEqual(30, disabled.get(second, component.Position).x);
     try std.testing.expectEqual(null, disabled.next());
+}
+
+test "工具命中目标和资源耐久来自物品配置" {
+    try expectEqual(item.ItemEnum.stone, itemConfig(.pickaxe).hit.?.target);
+    try expectEqual(item.ItemEnum.timber, itemConfig(.axe).hit.?.target);
+
+    try expectEqual(3, itemConfig(.stone).health.?);
+    try expectEqual(5, itemConfig(.timber).health.?);
 }
 
 fn putMockFarmImages() void {
