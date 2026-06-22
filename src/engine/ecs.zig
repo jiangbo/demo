@@ -239,7 +239,7 @@ pub const World = struct {
         self.entities.destroy(entity);
     }
 
-    pub fn destroyEntities(self: *World, T: type) void {
+    pub fn destroyEntitiesWith(self: *World, T: type) void {
         var toDestroy = self.query(.{T}).reverse();
         while (toDestroy.next()) |entity| self.destroyEntity(entity);
     }
@@ -338,10 +338,6 @@ pub const World = struct {
 
     pub fn clear(self: *World, T: type) void {
         if (self.getStore(T, T)) |map| map.clear();
-    }
-
-    pub fn clearAll(self: *World, types: anytype) void {
-        inline for (types) |T| self.clear(T);
     }
 
     pub fn query(self: *World, All: anytype) Query(All, .{}) {
