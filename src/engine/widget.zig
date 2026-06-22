@@ -268,8 +268,10 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
                     const count = @min(stack.count, remaining);
                     const patch = Entry.init(index, stack.item, count);
                     stack.count -= count;
+                    errdefer stack.count += count;
+                    if (args.buffer) |buffer|
+                        try buffer.appendBounded(.{ .sub = patch });
                     remaining -= count;
-                    if (args.buffer) |b| try b.append(.{ .sub = patch });
                 }
                 left += remaining;
             }
@@ -282,8 +284,10 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
                 var remaining = entry;
                 while (remaining.count > 0) {
                     const one = self.addOne(remaining) orelse break;
+                    errdefer self.putOne(.{ .sub = one });
+                    if (args.buffer) |buffer|
+                        try buffer.appendBounded(.{ .add = one });
                     remaining.count -= one.count;
-                    if (args.buffer) |b| try b.append(.{ .add = one });
                 }
                 left += remaining.count;
             }
@@ -306,7 +310,7 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
 
             const taken = self.subAt(index, 1) orelse return false;
             buffer.appendAssumeCapacity(.{ .sub = taken });
-            const args: Try = .{ .buffer = &buffer, .items = count };
+            const args: Try = .{ .buffer = &buffer, .items = &.{count} };
             const left = self.tryAdd(args) catch @panic("buffer to small");
             if (left == 0) return true;
 
