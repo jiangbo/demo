@@ -90,19 +90,22 @@ pub const Click = ClickT(usize);
 
 pub const Popup = struct {
     anchor: Vector2,
-    size: Vector2,
+    size: Vector2, // 实际尺寸：贴边定位 + clamp
+    maxSize: ?Vector2 = null, // 翻转判断用的最大预期尺寸，缺省用 size
     offset: Vector2 = .zero,
     bounds: ?Vector2 = null,
 };
 
 pub fn popupPosition(popup: Popup) Vector2 {
     const bounds = popup.bounds orelse window.size;
+    const max = popup.maxSize orelse popup.size;
     var pos = popup.anchor.add(popup.offset);
 
-    if (pos.x + popup.size.x > bounds.x) {
+    // 方向判断用 max（缺省为 size），贴边位置用 size（实际）
+    if (pos.x + max.x > bounds.x) {
         pos.x = popup.anchor.x - popup.offset.x - popup.size.x;
     }
-    if (pos.y + popup.size.y > bounds.y) {
+    if (pos.y + max.y > bounds.y) {
         pos.y = popup.anchor.y - popup.offset.y - popup.size.y;
     }
 

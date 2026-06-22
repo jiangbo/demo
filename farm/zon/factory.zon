@@ -127,7 +127,7 @@
                 // .path = "farm-rpg/Icons/Weapons/RPG/5.png"
                 .imageId = 4096884281,
                 .rect = .{ .min = .{ .x = 96, .y = 0 }, .size = .{ .x = 16, .y = 16 } },
-                .size = .{ .x = 16, .y = 16 },
+                .size = .{ .x = 32, .y = 32 },
             },
         },
         .{ // water (index 1)
@@ -139,7 +139,7 @@
                 // .path = "farm-rpg/Icons/Weapons/RPG/5.png"
                 .imageId = 4096884281,
                 .rect = .{ .min = .{ .x = 0, .y = 0 }, .size = .{ .x = 16, .y = 16 } },
-                .size = .{ .x = 16, .y = 16 },
+                .size = .{ .x = 32, .y = 32 },
             },
         },
         .{ // pickaxe (index 2)
@@ -152,7 +152,7 @@
                 // .path = "farm-rpg/Icons/Weapons/RPG/5.png"
                 .imageId = 4096884281,
                 .rect = .{ .min = .{ .x = 16, .y = 0 }, .size = .{ .x = 16, .y = 16 } },
-                .size = .{ .x = 16, .y = 16 },
+                .size = .{ .x = 32, .y = 32 },
             },
         },
         .{ // axe (index 3)
@@ -165,7 +165,7 @@
                 // .path = "farm-rpg/Icons/Weapons/RPG/5.png"
                 .imageId = 4096884281,
                 .rect = .{ .min = .{ .x = 48, .y = 0 }, .size = .{ .x = 16, .y = 16 } },
-                .size = .{ .x = 16, .y = 16 },
+                .size = .{ .x = 32, .y = 32 },
             },
         },
         .{ // sickle (index 4)
@@ -177,7 +177,7 @@
                 // .path = "farm-rpg/Icons/Weapons/RPG/5.png"
                 .imageId = 4096884281,
                 .rect = .{ .min = .{ .x = 128, .y = 0 }, .size = .{ .x = 16, .y = 16 } },
-                .size = .{ .x = 16, .y = 16 },
+                .size = .{ .x = 32, .y = 32 },
             },
         },
         .{ // strawberrySeed (index 5)，对应 CropEnum.strawberry
@@ -189,7 +189,7 @@
                 // .path = "farm-rpg/Icons/Crops.png"
                 .imageId = 2346538291,
                 .rect = .{ .min = .{ .x = 0, .y = 32 }, .size = .{ .x = 16, .y = 16 } },
-                .size = .{ .x = 16, .y = 16 },
+                .size = .{ .x = 32, .y = 32 },
             },
         },
         .{ // potatoSeed (index 6)，对应 CropEnum.potato
@@ -201,7 +201,7 @@
                 // .path = "farm-rpg/Icons/Crops.png"
                 .imageId = 2346538291,
                 .rect = .{ .min = .{ .x = 16, .y = 32 }, .size = .{ .x = 16, .y = 16 } },
-                .size = .{ .x = 16, .y = 16 },
+                .size = .{ .x = 32, .y = 32 },
             },
         },
         .{ // strawberry (index 7)，收获产出
@@ -209,12 +209,12 @@
             .category = "作物",
             .description = "成熟后收获的水果。",
             .limit = 99,
-            .use = .{ .item = .strawberrySeed, .count = 3 },
+            .product = .{ .item = .strawberrySeed, .count = 3 },
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png"
                 .imageId = 2346538291,
                 .rect = .{ .min = .{ .x = 32, .y = 32 }, .size = .{ .x = 16, .y = 16 } },
-                .size = .{ .x = 16, .y = 16 },
+                .size = .{ .x = 32, .y = 32 },
             },
         },
         .{ // potato (index 8)，收获产出
@@ -222,12 +222,12 @@
             .category = "作物",
             .description = "成熟后收获的根茎作物。",
             .limit = 99,
-            .use = .{ .item = .potatoSeed, .count = 3 },
+            .product = .{ .item = .potatoSeed, .count = 3 },
             .icon = .{
                 // .path = "farm-rpg/Icons/Crops.png"
                 .imageId = 2346538291,
                 .rect = .{ .min = .{ .x = 48, .y = 32 }, .size = .{ .x = 16, .y = 16 } },
-                .size = .{ .x = 16, .y = 16 },
+                .size = .{ .x = 32, .y = 32 },
             },
         },
         .{ // timber (index 9)，资源产出
@@ -235,6 +235,7 @@
             .category = "材料",
             .description = "砍伐树木得到的基础材料。",
             .limit = 99,
+            .product = .{ .item = .timber },
             .health = 5,
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/14.png"
@@ -243,7 +244,7 @@
                     .min = .{ .x = 0, .y = 0 },
                     .size = .{ .x = 16, .y = 16 },
                 },
-                .size = .{ .x = 16, .y = 16 },
+                .size = .{ .x = 32, .y = 32 },
             },
         },
         .{ // stone (index 10)，资源产出
@@ -251,6 +252,7 @@
             .category = "材料",
             .description = "敲碎石块得到的基础材料。",
             .limit = 99,
+            .product = .{ .item = .stone },
             .health = 3,
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/14.png"
@@ -259,7 +261,7 @@
                     .min = .{ .x = 0, .y = 16 },
                     .size = .{ .x = 16, .y = 16 },
                 },
-                .size = .{ .x = 16, .y = 16 },
+                .size = .{ .x = 32, .y = 32 },
             },
         },
     },

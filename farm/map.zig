@@ -113,7 +113,7 @@ fn parseLayers(world: *World) void {
         switch (layer.type) {
             .tile => if (layer.isNamed("solid")) {
                 spatial.parseSolidLayer(layer);
-            } else parseTileLayer(layer),
+            } else parseTileLayer(world, layer),
             .image => parseImageLayer(layer),
             .object => {
                 if (!foundFrontLayer and layer.isNamed("main")) {
@@ -147,8 +147,13 @@ pub fn saveState(world: *World) void {
     for (land.tiles, 0..) |tile, index| {
         var saved = &state.tiles[index];
         saved.ground = tile.ground;
-
-        saved.thing = thingAt(world, tile);
+        if (thingAt(world, tile)) |thing| {
+            saved.thing = thing;
+        } else if (tile.defaultProduct) {
+            saved.thing = .gone;
+        } else {
+            saved.thing = null;
+        }
     }
     state.day = context.clock.day;
 }
@@ -158,9 +163,9 @@ fn thingAt(world: *World, tile: land.Tile) ?context.map.Thing {
     return switch (object.kind) {
         .crop => .{ .crop = world.get(object.entity, farm.Crop).? },
         .chest => .{ .chest = world.get(object.entity, item.Chest).? },
-        .rock => .{ .resource = .{
-            .item = .stone,
-            .health = factory.itemConfig(.stone).health.?,
+        .product => .{ .product = .{
+            .product = world.get(object.entity, item.Product).?,
+            .health = world.get(object.entity, item.Health).?,
         } },
     };
 }
@@ -182,6 +187,17 @@ fn restoreState(world: *World) void {
 
 fn restoreThing(world: *World, index: usize, thing: Thing) void {
     switch (thing) {
+        .gone => {
+            const object = land.tiles[index].object.?;
+            std.debug.assert(object.kind == .product);
+            if (world.get(object.entity, component.map.SolidRange)) |range| {
+                spatial.clearSolidRange(range);
+            } else {
+                spatial.clearTileBlock(index);
+            }
+            world.destroyEntity(object.entity);
+            land.tiles[index].object = null;
+        },
         .crop => |crop| {
             const position = data.tileIndexToWorld(index);
             const entity = factory.spawnCrop(world, position, crop.kind);
@@ -203,7 +219,12 @@ fn restoreThing(world: *World, index: usize, thing: Thing) void {
             world.remove(object.entity, actor.Animation);
             world.remove(object.entity, motion.Shape);
         },
-        .resource => {},
+        .product => |saved| {
+            const object = land.tiles[index].object.?;
+            std.debug.assert(object.kind == .product);
+            world.getPtr(object.entity, item.Product).?.* = saved.product;
+            world.getPtr(object.entity, item.Health).?.* = saved.health;
+        },
     }
 }
 
@@ -228,7 +249,7 @@ fn advanceStateOneDay(state: *context.map.State) void {
                 _ = advanceCropOneDay(&crop, watered);
                 tile.thing = .{ .crop = crop };
             },
-            .chest, .resource => {},
+            .gone, .chest, .product => {},
         }
     }
 }
@@ -282,9 +303,9 @@ pub fn markFacingHits(world: *World) void {
     const probeSize = ts + probePadding * 2;
     const half = probeSize / 2;
     const origin = pos.add(switch (facing) {
-        .down => zhu.Vector2.xy(-half, ts - probePadding),
+        .down => zhu.Vector2.xy(-half, ts - half),
         .up => zhu.Vector2.xy(-half, -ts - half),
-        .right => zhu.Vector2.xy(ts - probePadding, -half),
+        .right => zhu.Vector2.xy(ts - half, -half),
         .left => zhu.Vector2.xy(-ts - half, -half),
     });
     spatial.markHits(world, .init(origin, .square(probeSize)));
@@ -380,7 +401,7 @@ fn loadRest(world: *World, object: tiled.Object) void {
 }
 
 fn loadProp(world: *World, object: tiled.Object) void {
-    const entity = factory.spawnMapProp(world, data, object);
+    const entity = factory.spawnMapObject(world, data, object);
     if (world.has(entity, item.Chest)) {
         const rect = object.rect();
         const position = world.get(entity, Position).?;
@@ -391,7 +412,16 @@ fn loadProp(world: *World, object: tiled.Object) void {
         const tile = land.getTile(rect.center()).?;
         tile.object = .{ .kind = .chest, .entity = entity };
     }
-    spatial.addSolidObject(object);
+    if (world.has(entity, item.Product)) {
+        std.debug.assert(world.has(entity, item.Health));
+        const tile = land.getTile(object.rect().center()).?;
+        tile.defaultProduct = true;
+        tile.object = .{ .kind = .product, .entity = entity };
+    }
+    const solid = spatial.addSolidObject(object);
+    if (solid.count != 0) {
+        world.add(entity, solid);
+    }
 }
 
 fn loadLightObject(world: *World, object: tiled.Object) void {
@@ -408,13 +438,16 @@ fn loadLightObject(world: *World, object: tiled.Object) void {
 /// 将 tile 层的每个瓦片转为预构建顶点
 /// 流程：gid → 找到所属 tileSet → 算出 tileSet 内的局部 ID
 ///       → 用 columns 换算行列得到裁剪区域 → sub 裁出子图 → 写入顶点
-fn parseTileLayer(layer: *const tiled.Layer) void {
+fn parseTileLayer(world: *World, layer: *const tiled.Layer) void {
     for (layer.data, 0..) |globalId, index| {
         if (globalId == 0) continue; // 0 表示空瓦片，跳过
 
-        const image = data.getImageByGid(globalId);
-        const world = data.tileIndexToWorld(index);
-        appendVertex(world, image);
+        if (layer.isNamed("rock")) {
+            loadRockTile(world, globalId, index);
+        } else {
+            const image = data.getImageByGid(globalId);
+            appendVertex(data.tileIndexToWorld(index), image);
+        }
 
         // 带 tile_flag 标记的瓦片设置方向碰撞
         const tile = data.getTileByGid(globalId) orelse continue;
@@ -422,6 +455,15 @@ fn parseTileLayer(layer: *const tiled.Layer) void {
             spatial.setTileFlag(index, flag);
         }
     }
+}
+
+fn loadRockTile(world: *World, globalId: u32, index: usize) void {
+    const entity = factory.spawnMapTile(world, data, globalId, index);
+    if (!world.has(entity, item.Product)) return;
+    std.debug.assert(world.has(entity, item.Health));
+
+    land.tiles[index].defaultProduct = true;
+    land.tiles[index].object = .{ .kind = .product, .entity = entity };
 }
 
 /// 将整张图作为一层背景/前景直接写入顶点
@@ -802,6 +844,187 @@ test "恢复已打开宝箱会移除动画组件" {
     try std.testing.expectEqual(16, world.get(chest, render.Sprite).?.image.offset.x);
 }
 
+test "恢复地图资源会写回保存的产物和生命" {
+    zhu.assets.allocator = std.testing.allocator;
+    land.enter(&maps[0]);
+    defer land.exit();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = world.createEntity();
+    world.add(entity, item.Product{ .item = .stone });
+    world.add(entity, item.Health{ .value = 1 });
+    land.tiles[0].defaultProduct = true;
+    land.tiles[0].object = .{ .kind = .product, .entity = entity };
+
+    restoreThing(&world, 0, .{ .product = .{
+        .product = .{ .item = .timber, .count = 2 },
+        .health = .{ .value = 4 },
+    } });
+
+    const product = world.get(entity, item.Product).?;
+    const health = world.get(entity, item.Health).?;
+    try std.testing.expectEqual(.timber, product.item);
+    try std.testing.expectEqual(2, product.count);
+    try std.testing.expectEqual(4, health.value);
+}
+
+test "恢复 gone 会删除默认资源并清 tile 阻挡" {
+    zhu.assets.allocator = std.testing.allocator;
+    land.enter(&maps[0]);
+    defer land.exit();
+    spatial.enter(&maps[0]);
+    defer spatial.exit();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = world.createEntity();
+    world.add(entity, item.Product{ .item = .stone });
+    world.add(entity, item.Health{ .value = 1 });
+    land.tiles[0].defaultProduct = true;
+    land.tiles[0].object = .{ .kind = .product, .entity = entity };
+    spatial.setTileFlag(0, "SOLID");
+
+    restoreThing(&world, 0, .gone);
+
+    const position = maps[0].tileIndexToWorld(0).add(.xy(1, 1));
+    try std.testing.expectEqual(null, land.tiles[0].object);
+    try std.testing.expect(!world.has(entity, item.Product));
+    try std.testing.expect(!spatial.hasAnyBlock(spatial.marksAt(position)));
+}
+
+test "保存默认资源空格会写成 gone" {
+    zhu.assets.allocator = std.testing.allocator;
+    land.enter(&maps[0]);
+    defer land.exit();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const old = current;
+    current = .school;
+    defer current = old;
+
+    const state = context.map.ensureState(current, land.tiles.len);
+    defer {
+        zhu.assets.free(state.tiles);
+        state.* = .{};
+    }
+    land.tiles[0].defaultProduct = true;
+    saveState(&world);
+
+    switch (state.tiles[0].thing.?) {
+        .gone => {},
+        else => return error.TestExpectedEqual,
+    }
+}
+
+test "加载地图资源会按对象和 rock 图层写入目标格" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+
+    const imageId = 1234;
+    const tileSetId = 5678;
+    zhu.assets.putImage(imageId, .{ .size = .xy(48, 16) });
+
+    const treeProps = [_]tiled.Property{
+        .{ .name = "obj_type", .value = .{ .string = "tree" } },
+        .{ .name = "anim_id", .value = .{ .string = "axe" } },
+    };
+    const rockProps = [_]tiled.Property{
+        .{ .name = "anim_id", .value = .{ .string = "pickaxe" } },
+        .{ .name = "tile_flag", .value = .{ .string = "SOLID" } },
+    };
+    const tiles = [_]tiled.Tile{
+        .{
+            .id = 0,
+            .objectGroup = null,
+            .properties = &treeProps,
+            .animation = &.{},
+        },
+        .{
+            .id = 1,
+            .objectGroup = null,
+            .properties = &rockProps,
+            .animation = &.{},
+        },
+    };
+    const tileSets = [_]tiled.TileSet{.{
+        .id = tileSetId,
+        .columns = 3,
+        .tileCount = 3,
+        .image = imageId,
+        .tileSize = .xy(16, 16),
+        .tiles = &tiles,
+    }};
+    const refs = [_]tiled.TileSetRef{.{ .id = tileSetId }};
+    const testMap = tiled.Map{
+        .height = 1,
+        .width = 3,
+        .tileSize = .xy(16, 16),
+        .layers = &.{},
+        .tileSetRefs = &refs,
+    };
+    tiled.init(&tileSets);
+    defer tiled.init(@import("zon/map/tile.zon"));
+
+    data = &testMap;
+    defer data = &maps[@intFromEnum(current)];
+    land.enter(&testMap);
+    defer land.exit();
+    spatial.enter(&testMap);
+    defer spatial.exit();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    loadProp(&world, .{
+        .id = 1,
+        .gid = 0x01000000,
+        .name = "",
+        .type = "",
+        .position = .xy(0, 16),
+        .size = .xy(16, 16),
+        .point = false,
+        .properties = &.{},
+        .extend = .{},
+    });
+    const layerData = [_]u32{ 0, 0x01000001, 0x01000002 };
+    const rockLayer = tiled.Layer{
+        .id = 1,
+        .name = "rock",
+        .image = 0,
+        .type = .tile,
+        .width = 3,
+        .height = 1,
+        .offset = .zero,
+        .data = &layerData,
+        .objects = &.{},
+    };
+    parseTileLayer(&world, &rockLayer);
+
+    const tree = land.tiles[0].object.?;
+    const rock = land.tiles[1].object.?;
+    const treeProd = world.get(tree.entity, item.Product).?;
+    const treeHp = world.get(tree.entity, item.Health).?;
+    const rockProd = world.get(rock.entity, item.Product).?;
+    const rockHp = world.get(rock.entity, item.Health).?;
+    const treeCfg = factory.itemConfig(.timber);
+    const rockCfg = factory.itemConfig(.stone);
+
+    try std.testing.expectEqual(.product, tree.kind);
+    try std.testing.expect(land.tiles[0].defaultProduct);
+    try std.testing.expectEqual(.timber, treeProd.item);
+    try std.testing.expectEqual(treeCfg.health.?, treeHp.value);
+    try std.testing.expectEqual(.product, rock.kind);
+    try std.testing.expect(land.tiles[1].defaultProduct);
+    try std.testing.expectEqual(.stone, rockProd.item);
+    try std.testing.expectEqual(rockCfg.health.?, rockHp.value);
+    try std.testing.expectEqual(null, land.tiles[2].object);
+}
+
 test "当前地图跨天会推进作物并清干湿地" {
     zhu.assets.allocator = std.testing.allocator;
     land.enter(&maps[0]);
@@ -827,6 +1050,32 @@ test "当前地图跨天会推进作物并清干湿地" {
     const result = world.get(crop, farm.Crop).?;
     try std.testing.expectEqual(@as(f32, 2), result.next);
     try std.testing.expectEqual(component.farm.Ground.dry, tile.ground);
+}
+
+test "玩家紧贴 NPC 上方朝下时探测框能命中" {
+    // 复用 school 地图，markFacingHits 只读取瓦片大小。
+    const testMaps = [_]tiled.Map{@import("zon/map/school.zon")};
+    data = &testMaps[0];
+    defer data = &maps[@intFromEnum(current)];
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    // 玩家朝下站在 NPC 正上方，两圆相切：NPC 脚底恰在 pos.y+10。
+    const player = world.createIdentity(actor.Player);
+    world.add(player, Position.xy(0, 0));
+    world.add(player, actor.Actor{ .facing = .down });
+    world.add(player, motion.Shape{ .circle = .init(.xy(0, -5), 5) });
+
+    const npc = world.createEntity();
+    world.add(npc, Position.xy(0, 10));
+    world.add(npc, motion.Shape{ .circle = .init(.xy(0, -5), 5) });
+
+    markFacingHits(&world);
+    defer world.clear(spatial.Hit);
+
+    // 修复前 down 探测框近边在 pos.y+12，会漏掉相切的 NPC。
+    try std.testing.expect(world.has(npc, spatial.Hit));
 }
 
 fn putMockNpcImages() void {

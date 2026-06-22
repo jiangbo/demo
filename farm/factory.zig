@@ -48,15 +48,13 @@ pub const Sprite = struct {
     size: zhu.Vector2,
 };
 
-pub const ItemUse = struct { item: item.ItemEnum, count: u32 };
-
 pub const Item = struct {
     name: []const u8,
     category: []const u8,
     description: []const u8,
     limit: u32 = 99,
     icon: Sprite,
-    use: ?ItemUse = null,
+    product: ?item.Product = null,
     health: ?u8 = null,
     hit: ?item.Hit = null,
 };
@@ -194,7 +192,11 @@ fn spawnNpc(world: *World, config: Character, sources: Sources) Entity {
     return entity;
 }
 
-pub fn spawnMapProp(world: *World, data: *const tiled.Map, object: Object) Entity {
+pub fn spawnMapObject(
+    world: *World,
+    data: *const tiled.Map,
+    object: Object,
+) Entity {
     const entity = world.createEntity();
 
     var image: zhu.graphics.Image = undefined;
@@ -215,7 +217,7 @@ pub fn spawnMapProp(world: *World, data: *const tiled.Map, object: Object) Entit
     const hasSize = object.size.x > 0 and object.size.y > 0;
     const size = if (hasSize) object.size else image.size;
     const drawPosition = object.position.addY(-size.y);
-    const sortY = mapPropSortY(object, tile, size);
+    const sortY = mapObjectSortY(object, tile, size);
     const sortPosition = zhu.Vector2.xy(object.position.x, sortY);
 
     world.add(entity, sortPosition);
@@ -228,6 +230,8 @@ pub fn spawnMapProp(world: *World, data: *const tiled.Map, object: Object) Entit
     world.add(entity, render.Render{ .layer = .actor });
     world.add(entity, render.YSort{});
 
+    addMapItemProduct(world, entity, tile);
+
     // Tiled 转换数据沿用 obj_type，值为 chest 时挂宝箱组件。
     if (tile.getProperty("obj_type", []const u8)) |kind| {
         if (std.mem.eql(u8, kind, "chest")) {
@@ -236,6 +240,53 @@ pub fn spawnMapProp(world: *World, data: *const tiled.Map, object: Object) Entit
     }
 
     return entity;
+}
+
+pub fn spawnMapTile(
+    world: *World,
+    data: *const tiled.Map,
+    globalId: u32,
+    index: usize,
+) Entity {
+    const topLeft = data.tileIndexToWorld(index);
+    const size = data.tileSize;
+    const position = topLeft.addY(size.y);
+    var image = data.getImageByGid(globalId);
+    const entity = world.createEntity();
+
+    if (data.getAnimationByGid(globalId)) |baseAnimation| {
+        var animation = baseAnimation;
+        animation.loop = false;
+        animation.stop();
+        image = animation.subImage();
+        world.add(entity, animation);
+    }
+
+    // tile layer 没有 Tiled object，统一用瓦片底边作为排序点。
+    world.add(entity, position);
+    world.add(entity, render.Sprite{
+        .image = image,
+        .offset = topLeft.sub(position),
+        .size = size,
+    });
+    world.add(entity, render.Render{ .layer = .actor });
+    world.add(entity, render.YSort{});
+
+    if (data.getTileByGid(globalId)) |tile| {
+        addMapItemProduct(world, entity, tile);
+    }
+    return entity;
+}
+
+fn addMapItemProduct(world: *World, entity: Entity, tile: *const tiled.Tile) void {
+    const animation = tile.getProperty("anim_id", []const u8) orelse return;
+    const tool = std.meta.stringToEnum(item.ItemEnum, animation) orelse return;
+    const hit = itemConfig(tool).hit orelse return;
+    const config = itemConfig(hit.target);
+
+    // 产出和生命值来自 ZON，anim_id 只负责选中工具配置。
+    world.add(entity, config.product.?);
+    world.add(entity, item.Health{ .value = config.health.? });
 }
 
 fn chestItems(object: Object) item.Counts {
@@ -248,7 +299,7 @@ fn chestItems(object: Object) item.Counts {
     return result;
 }
 
-fn mapPropSortY(object: Object, tile: *const tiled.Tile, size: zhu.Vector2) f32 {
+fn mapObjectSortY(object: Object, tile: *const tiled.Tile, size: zhu.Vector2) f32 {
     const group = tile.objectGroup orelse return object.position.y;
     var result: f32 = 0;
     var found = false;
@@ -551,7 +602,7 @@ test "地图摆件按底边定位生成实体" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    const entity = spawnMapProp(&world, &testMap, .{
+    const entity = spawnMapObject(&world, &testMap, .{
         .id = 1,
         .gid = 0x01000000,
         .name = "",
@@ -621,7 +672,7 @@ test "地图摆件优先用碰撞底边作为排序点" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    const entity = spawnMapProp(&world, &testMap, .{
+    const entity = spawnMapObject(&world, &testMap, .{
         .id = 1,
         .gid = 0x01000000,
         .name = "",
@@ -690,7 +741,7 @@ test "带 anim_id 的地图摆件会创建停止的非循环动画" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    const entity = spawnMapProp(&world, &testMap, .{
+    const entity = spawnMapObject(&world, &testMap, .{
         .id = 1,
         .gid = 0x01000000,
         .name = "",

@@ -48,6 +48,7 @@ pub const map = struct {
     };
 
     pub const Rest = struct {};
+    pub const SolidRange = struct { start: usize, count: usize };
 };
 
 pub const actor = struct {
@@ -145,7 +146,9 @@ pub const item = struct {
         stone,
     };
 
-    pub const Resource = struct { item: ItemEnum, health: u8 };
+    // Product 只表示动作完成后产出的物品，生命值单独放在 Health。
+    pub const Product = struct { item: ItemEnum, count: u32 = 1 };
+    pub const Health = struct { value: u8 };
     pub const Hit = struct { target: ItemEnum };
 
     pub const Pickup = struct { item: ItemEnum, count: u32 = 1 };

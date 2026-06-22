@@ -9,6 +9,7 @@ const Shape = component.motion.Shape;
 const Blocking = component.motion.Blocking;
 const World = zhu.ecs.World;
 const Entity = zhu.ecs.Entity;
+const SolidRange = component.map.SolidRange;
 
 pub const Hit = struct {};
 
@@ -95,6 +96,14 @@ pub fn clearTileMark(index: usize, mark: Mark) void {
     tiles[index].remove(mark);
 }
 
+pub fn clearTileBlock(index: usize) void {
+    if (index >= tiles.len) return;
+    tiles[index].remove(.north);
+    tiles[index].remove(.south);
+    tiles[index].remove(.west);
+    tiles[index].remove(.east);
+}
+
 pub fn marksAt(position: zhu.Vector2) Marks {
     const index = map.worldToTileIndex(position);
     return tiles[index orelse return .initEmpty()];
@@ -123,14 +132,25 @@ pub fn addSolidRect(rect: zhu.Rect) void {
     areas.append(zhu.assets.allocator, rect) catch @panic("spatial oom");
 }
 
-pub fn addSolidObject(object: tiled.Object) void {
-    const tile = map.getTileByGid(object.gid) orelse return;
-    const group = tile.objectGroup orelse return;
+pub fn addSolidObject(object: tiled.Object) SolidRange {
+    const start = areas.items.len;
+    const tile = map.getTileByGid(object.gid) orelse
+        return .{ .start = start, .count = 0 };
+    const group = tile.objectGroup orelse
+        return .{ .start = start, .count = 0 };
     const topLeft = object.topLeft();
 
     for (group.objects) |local| {
         const position = topLeft.add(local.position);
         addSolidRect(zhu.Rect.init(position, local.size));
+    }
+    return .{ .start = start, .count = areas.items.len - start };
+}
+
+pub fn clearSolidRange(range: SolidRange) void {
+    std.debug.assert(range.start + range.count <= areas.items.len);
+    for (areas.items[range.start..][0..range.count]) |*area| {
+        area.* = .init(.zero, .zero);
     }
 }
 

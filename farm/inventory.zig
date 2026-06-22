@@ -89,7 +89,8 @@ pub const bag = struct {
         std.debug.assert(index < slots.len);
 
         const slot = store.getPtr(index) orelse return .none;
-        const effect = factory.itemConfig(slot.item).use orelse return .none;
+        const cfg = factory.itemConfig(slot.item);
+        const effect = cfg.product orelse return .none;
 
         if (slot.count == 1) {
             slot.* = .{ .item = effect.item, .count = effect.count };
@@ -523,7 +524,13 @@ const itemDrag = struct {
         zhu.camera.push(.window);
         defer zhu.camera.pop();
 
-        drawItemIcon(current.item.item, zhu.window.mouse);
+        // 拖拽预览半透明，对齐 CPP UIDragPreview 的 0.6 alpha
+        const icon = factory.itemConfig(current.item.item).icon;
+        zhu.batch.drawImage(factory.resolveImage(icon), zhu.window.mouse, .{
+            .size = icon.size,
+            .anchor = .center,
+            .color = .{ .a = 0.6 },
+        });
 
         if (current.item.count <= 1) return;
 
@@ -638,9 +645,12 @@ fn drawTooltip() void {
 
     const size = zhu.text.measureLines(&lines, tooltip.spacing)
         .add(tooltip.padding.scale(2)).max(tooltip.minSize);
+    // 判方向用最大宽度，避免描述长短变化导致 tooltip 左右跳
+    const maxWidth: f32 = 200;
     const position = zhu.widget.popupPosition(.{
         .anchor = zhu.window.mouse,
         .size = size,
+        .maxSize = .{ .x = maxWidth, .y = size.y },
         .offset = tooltip.offset,
     });
 

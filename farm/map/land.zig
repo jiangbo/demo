@@ -12,13 +12,14 @@ var dryImage: zhu.graphics.Image = undefined;
 var wetImage: zhu.graphics.Image = undefined;
 
 const Object = struct {
-    kind: enum { crop, rock, chest } = .crop,
+    kind: enum { crop, product, chest } = .crop,
     entity: zhu.ecs.Entity,
 };
 
 pub const Tile = struct {
     ground: ?component.farm.Ground = null,
     object: ?Object = null,
+    defaultProduct: bool = false,
 
     pub fn crop(self: Tile) ?zhu.ecs.Entity {
         const object = self.object orelse return null;

@@ -172,11 +172,16 @@ pub const notice = struct {
 
 pub const map = struct {
     pub const Id = component.map.Id;
+    pub const ProductState = struct {
+        product: component.item.Product,
+        health: component.item.Health,
+    };
 
     pub const Thing = union(enum) {
+        gone,
         crop: component.farm.Crop,
         chest: component.item.Chest,
-        resource: component.item.Resource,
+        product: ProductState,
     };
 
     pub const Tile = struct {
