@@ -239,7 +239,7 @@ pub const World = struct {
         self.entities.destroy(entity);
     }
 
-    pub fn destroyEntitiesWith(self: *World, T: type) void {
+    pub fn destroyEntities(self: *World, T: type) void {
         var toDestroy = self.query(.{T}).reverse();
         while (toDestroy.next()) |entity| self.destroyEntity(entity);
     }
@@ -266,7 +266,7 @@ pub const World = struct {
     }
 
     pub fn isIdentity(self: *World, entity: u16, T: type) bool {
-        return self.getIdentity(T) orelse return false == entity;
+        return if (self.getIdentity(T)) |e| e == entity else false;
     }
 
     pub fn removeIdentity(self: *World, T: type) void {
