@@ -40,7 +40,7 @@ fn useItem(world: *World, want: WantUse) void {
         .strawberrySeed => useSeed(world, want, .strawberry),
         .potatoSeed => useSeed(world, want, .potato),
         .pickaxe, .axe => unreachable,
-        .strawberry, .potato => unreachable,
+        .strawberry, .potato, .timber, .stone => unreachable,
     }
 }
 

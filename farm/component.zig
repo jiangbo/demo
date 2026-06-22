@@ -141,6 +141,8 @@ pub const item = struct {
         potatoSeed,
         strawberry,
         potato,
+        timber,
+        stone,
     };
 
     pub const Pickup = struct { item: ItemEnum, count: u32 = 1 };

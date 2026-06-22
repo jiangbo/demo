@@ -228,6 +228,36 @@
                 .size = .{ .x = 16, .y = 16 },
             },
         },
+        .{ // timber (index 9)，资源产出
+            .name = "木材",
+            .category = "材料",
+            .description = "砍伐树木得到的基础材料。",
+            .limit = 99,
+            .icon = .{
+                // .path = "farm-rpg/Icons/Weapons/14.png"
+                .imageId = 563877801,
+                .rect = .{
+                    .min = .{ .x = 0, .y = 0 },
+                    .size = .{ .x = 16, .y = 16 },
+                },
+                .size = .{ .x = 16, .y = 16 },
+            },
+        },
+        .{ // stone (index 10)，资源产出
+            .name = "石头",
+            .category = "材料",
+            .description = "敲碎石块得到的基础材料。",
+            .limit = 99,
+            .icon = .{
+                // .path = "farm-rpg/Icons/Weapons/14.png"
+                .imageId = 563877801,
+                .rect = .{
+                    .min = .{ .x = 0, .y = 16 },
+                    .size = .{ .x = 16, .y = 16 },
+                },
+                .size = .{ .x = 16, .y = 16 },
+            },
+        },
     },
     .animals = .{
         .{ // cow
