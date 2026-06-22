@@ -12,7 +12,7 @@ const NineSource = zhu.NineImage.Source;
 const Config = struct { bar: bar.Zon, bag: bag.Zon };
 const config: Config = @import("zon/inventory.zon");
 
-const Store = zhu.widget.StackStore(ItemEnum, stackLimit);
+const Store = zhu.widget.StackStore(ItemEnum, 16, stackLimit);
 
 pub const Stack = Store.Stack;
 pub const Item = Stack;
@@ -89,7 +89,6 @@ pub const bag = struct {
         std.debug.assert(index < slots.len);
 
         const slot = store.getPtr(index) orelse return .none;
-
         const effect = factory.itemConfig(slot.item).use orelse return .none;
 
         if (slot.count == 1) {
@@ -98,7 +97,7 @@ pub const bag = struct {
             return .{ .item = slot.* };
         }
 
-        if (!store.takeAdd(index, addArgs(effect.item, effect.count))) {
+        if (!store.useAt(index, addArgs(effect.item, effect.count))) {
             return .full;
         }
 
@@ -106,7 +105,7 @@ pub const bag = struct {
         return .{ .item = .{ .item = effect.item, .count = effect.count } };
     }
 
-    fn addArgs(itemType: ItemEnum, count: u32) Store.Add {
+    fn addArgs(itemType: ItemEnum, count: u32) Store.Count {
         return .{
             .item = itemType,
             .count = count,
@@ -552,27 +551,7 @@ pub fn activeItem() ?ItemEnum {
 
 pub fn use(itemType: ItemEnum, count: u32) bool {
     std.debug.assert(count > 0);
-
-    var remaining = count;
-    for (store.stacks) |*stack| {
-        if (stack.count == 0 or stack.item != itemType) continue;
-
-        const used = @min(stack.count, remaining);
-        remaining -= used;
-        if (remaining == 0) break;
-    }
-    if (remaining != 0) return false;
-
-    remaining = count;
-    for (store.stacks) |*stack| {
-        if (stack.count == 0 or stack.item != itemType) continue;
-
-        const used = @min(stack.count, remaining);
-        stack.count -= used;
-        remaining -= used;
-        if (remaining == 0) return true;
-    }
-    unreachable;
+    return store.subAll(itemType, count);
 }
 
 pub fn update() void {

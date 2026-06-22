@@ -109,7 +109,7 @@ pub fn popupPosition(popup: Popup) Vector2 {
     return pos.clamp(.zero, bounds.sub(popup.size).max(.zero));
 }
 
-pub fn StackStore(T: type, limitOf: fn (T) u32) type {
+pub fn StackStore(T: type, patchSize: usize, limitOf: fn (T) u32) type {
     return struct {
         pub const Stack = struct { item: T, count: u32 = 0 };
         pub const Count = struct { item: T, count: u32 = 1 };
@@ -147,7 +147,7 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
         }
 
         pub fn addAll(self: *@This(), item: T, count: u32) bool {
-            var patches: [16]Patch = undefined;
+            var patches: [patchSize]Patch = undefined;
 
             const args: Count = .{ .item = item, .count = count };
             const done = self.put(&patches, .{ .adds = &.{args} });
@@ -158,7 +158,7 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
         }
 
         pub fn subAll(self: *@This(), item: T, count: u32) bool {
-            var patches: [16]Patch = undefined;
+            var patches: [patchSize]Patch = undefined;
 
             const args: Count = .{ .item = item, .count = count };
             const done = self.put(&patches, .{ .subs = &.{args} });
@@ -224,6 +224,8 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
 
         pub fn tryPut(self: *@This(), buf: []Patch, ops: Put) !Done {
             var buffer = std.ArrayList(Patch).initBuffer(buf);
+            errdefer self.rollback(buffer.items);
+
             var args: Try = .{ .buffer = &buffer, .items = ops.subs };
             const subLeft = try self.trySub(args);
             args = .{ .buffer = &buffer, .items = ops.adds };
@@ -233,7 +235,7 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
         }
 
         pub fn put(self: *@This(), buf: []Patch, ops: Put) Done {
-            return self.tryPut(buf, ops) catch @panic("buffer to small");
+            return self.tryPut(buf, ops) catch @panic("buffer too small");
         }
 
         pub fn rollback(self: *@This(), patches: []const Patch) void {
@@ -305,13 +307,13 @@ pub fn StackStore(T: type, limitOf: fn (T) u32) type {
         }
 
         pub fn useAt(self: *@This(), index: usize, count: Count) bool {
-            var patches: [16]Patch = undefined;
+            var patches: [patchSize]Patch = undefined;
             var buffer = std.ArrayList(Patch).initBuffer(&patches);
 
             const taken = self.subAt(index, 1) orelse return false;
             buffer.appendAssumeCapacity(.{ .sub = taken });
             const args: Try = .{ .buffer = &buffer, .items = &.{count} };
-            const left = self.tryAdd(args) catch @panic("buffer to small");
+            const left = self.tryAdd(args) catch @panic("buffer too small");
             if (left == 0) return true;
 
             self.rollback(buffer.items);
