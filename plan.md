@@ -68,6 +68,9 @@ zig build test
 
 遇到未实现跳过的功能，记录到这里。
 
+- 架构/场景流转：后续让 title、pause、save slot 等 UI 只返回用户意图，
+  不直接请求切场景；由 `scene.zig` 统一把意图转换成场景切换、读档、
+  退出等流程，避免 UI 反向依赖场景管理。
 - 架构/状态管理：后续考虑把 `context.zig`、`inventory.zig`、
   `map.zig`/`land.zig`/`spatial.zig` 这类运行时可变的模块级
   `var` 收进显式 `State` 结构体，减少隐藏全局状态；但系统函数不默认
@@ -78,25 +81,9 @@ zig build test
   自己需要的 `registry`、`dispatcher`、`input`、`camera`、
   `spatial_index` 等依赖；Zig 后续参考这个依赖边界，不照搬
   C++ 的 manager/class 分层。
-- 25-地图管理器：树/石头 destroyed/hit_count 后续随交互/工具系统加入；
-  仍使用 tile 状态记录，不引入 C++ `RegistrySnapshot`。
-- 30-物品使用与农场循环：斧头、镐子已补物品和动画资源，但当前不接入
-  目标点击和 `farm` 结算；后续资源节点实现时再让 `.axe`、`.pickaxe`
-  进入工具使用链路。
-- 30-物品使用与农场循环：资源节点未实现 `ResourceNode` 状态，包括
-  tree/rock 类型、hit_count、hits_to_break、掉落物品和掉落数量。
-- 30-物品使用与农场循环：地图加载尚未把树/石头资源节点写入
-  `land.Tile.object` 或独立实体，也没有资源节点命中、销毁、清理格子、
-  生成 pickup、命中音效和命中动画逻辑。
-- 30-物品使用与农场循环：资源产物如木材、石头还没有加入 `ItemEnum`、
-  `factory.zon` 物品配置和对应图标。
-- UI：考虑做 ZON 文件监听，实时刷新 ZON 中的数据。
 - UI：种子图标目前在 32x32 背包/快捷栏格子里显得偏大，后续不改动
   原始图片，也不新增裁切后的图标资源；优先扩大背包格子和快捷栏格子，
   让工具、种子和数量文字在同一套整数像素缩放下显示得更协调。
-- 30-NPC 显示与简单漫游：NPC 一个都没有，需要实现。
-- 29-地图切换：C++ 切换时有 `UIScreenFade` 淡入淡出和 `ActionLockedTag`
-  行动锁；Zig 本步先瞬时切换。
 - 29-地图切换：C++ 有资源节点和宝箱恢复；Zig 已保存耕地/作物/宝箱打开状态，
   资源节点状态后续随对应玩法实现。
 - 30-NPC 显示与简单漫游：C++ `AnimalBehaviorSystem` 支持睡觉、进食和时间判断；

@@ -31,8 +31,16 @@ const Position = component.Position;
 const initialTargetId: i32 = -1;
 const followSpeed: f32 = 9;
 
+const MapFade = struct {
+    const Phase = enum { out, in };
+
+    phase: ?Phase = null,
+    timer: zhu.Timer = .init(0.15),
+};
+
 var world: World = undefined;
 var canvas: zhu.graphics.RenderTarget = .{};
+var mapFade: MapFade = .{};
 
 pub fn init() void {
     // 组合根只负责装配顺序，具体玩法仍放在各自模块里。
@@ -62,27 +70,28 @@ pub fn deinit() void {
 
 pub fn update(delta: f32) void {
     context.input.mouseCaptured = false;
+    applyScene();
 
-    if (ui.overlay.active()) {
-        if (context.scene.current == .farm) system.sound.update(&world);
-    }
+    if (mapFade.phase) |phase| {
+        if (mapFade.timer.updateRunning(delta)) return;
 
-    if (ui.overlay.update(&world)) {
-        applyScene();
+        switch (phase) {
+            .out => {
+                map.change(&world, context.map.takePending().?);
+                mapFade.phase = .in;
+                mapFade.timer.restart();
+            },
+            .in => mapFade = .{},
+        }
         return;
     }
 
-    if (context.scene.current == .farm and context.clock.paused) {
-        applyScene();
-        return;
-    }
+    if (ui.overlay.update(&world)) return;
 
     switch (context.scene.current) {
         .title => ui.title.update(delta),
         .farm => updateFarm(delta),
     }
-
-    applyScene();
 }
 
 pub fn draw() void {
@@ -101,14 +110,22 @@ pub fn draw() void {
             zhu.batch.drawImage(canvas.image, .zero, .{
                 .camera = .window,
             });
+            if (mapFade.phase) |phase| drawMapFade(phase);
         },
     }
 }
 
 fn updateFarm(delta: f32) void {
     // 农场主循环顺序在这里显式编排，新增系统需要在这里确定位置。
-    // 上一帧提交的切图请求先落地，避免旧地图实体继续参与本帧逻辑。
-    if (context.map.takePending()) |request| map.change(&world, request);
+    if (context.scene.pending != null) return;
+    if (context.clock.paused) return;
+
+    // 已提交的切图请求先进入过渡，不再瞬时换图。
+    if (context.map.pending != null) {
+        mapFade.phase = .out;
+        mapFade.timer.restart();
+        return;
+    }
 
     // 时间先推进，地图跨天逻辑和灯光都依赖本帧最新时间事件。
     system.time.update(&world, delta);
@@ -121,9 +138,6 @@ fn updateFarm(delta: f32) void {
     system.wander.update(&world, delta);
     system.movement.update(&world, delta);
 
-    // 触发器必须读取移动后的玩家位置；真正切图放到下一帧开头。
-    system.transition.update(&world);
-
     // 控制系统可能生成拾取物，所以拾取放在控制之后。
     system.pickup.update(&world, delta);
 
@@ -134,6 +148,9 @@ fn updateFarm(delta: f32) void {
     system.animation.update(&world, delta);
     system.farm.update(&world);
     system.render.update(&world);
+
+    // 本帧世界结算完后记录下一帧是否需要切图。
+    system.transition.update(&world);
 
     // 音效最后播放，统一消费本帧前面系统发出的 SoundPlay 事件。
     system.sound.update(&world);
@@ -149,7 +166,11 @@ fn applyScene() void {
     ui.overlay.close();
     switch (previous) {
         .title => ui.title.exit(),
-        .farm => map.exit(&world),
+        .farm => {
+            mapFade = .{};
+            context.map.pending = null;
+            map.exit(&world);
+        },
     }
     enterScene(current);
 }
@@ -188,6 +209,7 @@ fn enterFarm() void {
                 err,
             });
             context.scene.request(.title);
+            return;
         };
     }
     zhu.audio.playMusic("assets/audio/01_spring_journey.ogg");
@@ -215,4 +237,17 @@ fn drawFarm() void {
     system.time.draw();
     ui.draw(&world);
     ui.overlay.draw();
+}
+
+fn drawMapFade(phase: MapFade.Phase) void {
+    const alpha = switch (phase) {
+        .out => mapFade.timer.progress(),
+        .in => 1 - mapFade.timer.progress(),
+    };
+
+    zhu.camera.push(.window);
+    defer zhu.camera.pop();
+
+    const rect = zhu.Rect.init(.zero, zhu.window.size);
+    zhu.batch.drawRect(rect, .{ .color = .gray(0, alpha) });
 }
