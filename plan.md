@@ -59,6 +59,8 @@ zig build test
 13. 32-存档与流程收尾：不做 C++ 的 `schema_version` 或 Zig
   `schemaVersion` 存档版本字段；Zig 保持当前 ZON 存档结构，格式错误
   直接暴露解析错误或使用结构默认值，不做兼容迁移。
+14. 25-地图管理器：不做 C++ 的双触发离线推进；Zig 当前地图按
+  `DayChanged` 推进，非当前地图在重新进入时按 day 差额结算。
 
 ## 待后续完成
 
@@ -76,13 +78,6 @@ zig build test
   自己需要的 `registry`、`dispatcher`、`input`、`camera`、
   `spatial_index` 等依赖；Zig 后续参考这个依赖边界，不照搬
   C++ 的 manager/class 分层。
-- 19-空间索引：`ROCK` 还只是 `land.Object.kind` 能表达，地图加载没有把石头写入
-  `tile.object`，工具系统也没有敲石头、销毁实体和清理格子的逻辑。
-- 19-空间索引：目前 crop 收获时能按已知 tile 清理 `tile.object`；资源节点销毁
-  需要补一个按 entity 清理所在格的简单函数。
-- 25-地图管理器：Zig 已保存耕地/作物的地图状态，并按天做离线推进；当前地图由
-  `DayChanged` 立即推进，非当前地图只在重新进入时按 day 差额结算，不做 C++ 的
-  双触发离线推进。
 - 25-地图管理器：树/石头 destroyed/hit_count 后续随交互/工具系统加入；
   仍使用 tile 状态记录，不引入 C++ `RegistrySnapshot`。
 - 30-物品使用与农场循环：斧头、镐子已补物品和动画资源，但当前不接入
