@@ -149,7 +149,7 @@ pub fn saveState(world: *World) void {
         saved.ground = tile.ground;
         if (thingAt(world, tile)) |thing| {
             saved.thing = thing;
-        } else if (tile.defaultProduct) {
+        } else if (tile.gone == .product) {
             saved.thing = .gone;
         } else {
             saved.thing = null;
@@ -197,6 +197,7 @@ fn restoreThing(world: *World, index: usize, thing: Thing) void {
             }
             world.destroyEntity(object.entity);
             land.tiles[index].object = null;
+            land.tiles[index].gone = .product;
         },
         .crop => |crop| {
             const position = data.tileIndexToWorld(index);
@@ -415,7 +416,6 @@ fn loadProp(world: *World, object: tiled.Object) void {
     if (world.has(entity, item.Product)) {
         std.debug.assert(world.has(entity, item.Health));
         const tile = land.getTile(object.rect().center()).?;
-        tile.defaultProduct = true;
         tile.object = .{ .kind = .product, .entity = entity };
     }
     const solid = spatial.addSolidObject(object);
@@ -462,7 +462,6 @@ fn loadRockTile(world: *World, globalId: u32, index: usize) void {
     if (!world.has(entity, item.Product)) return;
     std.debug.assert(world.has(entity, item.Health));
 
-    land.tiles[index].defaultProduct = true;
     land.tiles[index].object = .{ .kind = .product, .entity = entity };
 }
 
@@ -855,7 +854,6 @@ test "恢复地图资源会写回保存的产物和生命" {
     const entity = world.createEntity();
     world.add(entity, item.Product{ .item = .stone });
     world.add(entity, item.Health{ .value = 1 });
-    land.tiles[0].defaultProduct = true;
     land.tiles[0].object = .{ .kind = .product, .entity = entity };
 
     restoreThing(&world, 0, .{ .product = .{
@@ -883,7 +881,6 @@ test "恢复 gone 会删除默认资源并清 tile 阻挡" {
     const entity = world.createEntity();
     world.add(entity, item.Product{ .item = .stone });
     world.add(entity, item.Health{ .value = 1 });
-    land.tiles[0].defaultProduct = true;
     land.tiles[0].object = .{ .kind = .product, .entity = entity };
     spatial.setTileFlag(0, "SOLID");
 
@@ -891,11 +888,12 @@ test "恢复 gone 会删除默认资源并清 tile 阻挡" {
 
     const position = maps[0].tileIndexToWorld(0).add(.xy(1, 1));
     try std.testing.expectEqual(null, land.tiles[0].object);
+    try std.testing.expectEqual(.product, land.tiles[0].gone);
     try std.testing.expect(!world.has(entity, item.Product));
     try std.testing.expect(!spatial.hasAnyBlock(spatial.marksAt(position)));
 }
 
-test "保存默认资源空格会写成 gone" {
+test "保存已消失资源会写成 gone" {
     zhu.assets.allocator = std.testing.allocator;
     land.enter(&maps[0]);
     defer land.exit();
@@ -912,7 +910,7 @@ test "保存默认资源空格会写成 gone" {
         zhu.assets.free(state.tiles);
         state.* = .{};
     }
-    land.tiles[0].defaultProduct = true;
+    land.tiles[0].gone = .product;
     saveState(&world);
 
     switch (state.tiles[0].thing.?) {
@@ -1015,11 +1013,11 @@ test "加载地图资源会按对象和 rock 图层写入目标格" {
     const rockCfg = factory.itemConfig(.stone);
 
     try std.testing.expectEqual(.product, tree.kind);
-    try std.testing.expect(land.tiles[0].defaultProduct);
+    try std.testing.expectEqual(.none, land.tiles[0].gone);
     try std.testing.expectEqual(.timber, treeProd.item);
     try std.testing.expectEqual(treeCfg.health.?, treeHp.value);
     try std.testing.expectEqual(.product, rock.kind);
-    try std.testing.expect(land.tiles[1].defaultProduct);
+    try std.testing.expectEqual(.none, land.tiles[1].gone);
     try std.testing.expectEqual(.stone, rockProd.item);
     try std.testing.expectEqual(rockCfg.health.?, rockHp.value);
     try std.testing.expectEqual(null, land.tiles[2].object);

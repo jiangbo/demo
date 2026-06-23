@@ -19,7 +19,7 @@ const Object = struct {
 pub const Tile = struct {
     ground: ?component.farm.Ground = null,
     object: ?Object = null,
-    defaultProduct: bool = false,
+    gone: enum { none, product } = .none,
 
     pub fn crop(self: Tile) ?zhu.ecs.Entity {
         const object = self.object orelse return null;
