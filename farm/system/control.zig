@@ -116,8 +116,9 @@ fn updateTargetAction(world: *World, player: Entity) void {
 
 fn isTargetItem(item: ItemEnum) bool {
     return switch (item) {
-        .hoe, .water, .sickle, .strawberrySeed, .potatoSeed => true,
-        .pickaxe, .axe, .strawberry, .potato, .timber, .stone => false,
+        .hoe, .water, .pickaxe, .axe, .sickle => true,
+        .strawberrySeed, .potatoSeed => true,
+        .strawberry, .potato, .timber, .stone => false,
     };
 }
 

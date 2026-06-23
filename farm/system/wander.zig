@@ -9,17 +9,25 @@ const Facing = component.actor.Facing;
 const Position = component.Position;
 const Velocity = component.motion.Velocity;
 const Wander = component.actor.Wander;
+const Dialog = component.actor.Dialog;
 
 // 到达目标的距离阈值（平方），对应实际距离约 2.0
 const arriveDistance2: f32 = 4.0;
 
 pub fn update(world: *zhu.ecs.World, delta: f32) void {
+    const talking = world.getIdentity(Dialog);
     var query = world.query(.{ Position, Velocity, Actor, Wander });
     while (query.next()) |entity| {
         const position = query.get(entity, Position);
         const velocity = query.getPtr(entity, Velocity);
         const actor = query.getPtr(entity, Actor);
         const wander = query.getPtr(entity, Wander);
+
+        // 只停止正在对话的 NPC，其他 NPC 继续正常漫游。
+        if (talking == entity) {
+            stop(actor, velocity, wander);
+            continue;
+        }
 
         // 无效参数，直接停止
         if (wander.radius <= 0 or wander.speed <= 0) {
@@ -157,4 +165,45 @@ test "wander 到达目标后进入等待" {
     try std.testing.expect(wander.waitTimer > 0);
     try std.testing.expect(velocity.value.approxEqual(.zero));
     try std.testing.expectEqual(Action.idle, actor.action);
+}
+
+test "对话中的 NPC 会停止漫游且不影响其它 NPC" {
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const talking = world.createEntity();
+    world.add(talking, Position.xy(10, 20));
+    world.add(talking, Velocity{ .value = .xy(3, 0) });
+    world.add(talking, Actor{ .action = .walk });
+    world.add(talking, Wander{
+        .home = .xy(10, 20),
+        .radius = 32,
+        .speed = 10,
+        .target = .xy(30, 20),
+        .moving = true,
+    });
+    world.addIdentity(talking, Dialog);
+
+    const other = world.createEntity();
+    world.add(other, Position.xy(0, 0));
+    world.add(other, Velocity{});
+    world.add(other, Actor{});
+    world.add(other, Wander{
+        .home = .zero,
+        .radius = 32,
+        .speed = 10,
+        .target = .xy(20, 0),
+        .moving = true,
+    });
+
+    update(&world, 0.1);
+
+    const talkingVelocity = world.get(talking, Velocity).?;
+    const talkingActor = world.get(talking, Actor).?;
+    const talkingWander = world.get(talking, Wander).?;
+    const otherVelocity = world.get(other, Velocity).?;
+    try std.testing.expect(talkingVelocity.value.approxEqual(.zero));
+    try std.testing.expectEqual(Action.idle, talkingActor.action);
+    try std.testing.expect(!talkingWander.moving);
+    try std.testing.expect(otherVelocity.value.length2() > 0);
 }

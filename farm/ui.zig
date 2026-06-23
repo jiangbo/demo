@@ -233,7 +233,8 @@ fn drawBubble(position: zhu.Vector2, text: []const u8) void {
     const textSize = zhu.text.measure(text, option);
     const size = textSize.add(.xy(16, 16)).max(.xy(160, 48));
 
-    const bubblePos = head.addXY(-size.x / 2, -4 - size.y);
+    // 对话气泡在窗口坐标取整，避免位图文字亚像素闪烁。
+    const bubblePos = head.addXY(-size.x / 2, -4 - size.y).round();
     const bubbleRect: zhu.Rect = .init(bubblePos, size);
     zhu.batch.drawNine(bubbleImage, bubbleRect);
 

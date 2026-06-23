@@ -187,18 +187,7 @@ fn restoreState(world: *World) void {
 
 fn restoreThing(world: *World, index: usize, thing: Thing) void {
     switch (thing) {
-        .gone => {
-            const object = land.tiles[index].object.?;
-            std.debug.assert(object.kind == .product);
-            if (world.get(object.entity, component.map.SolidRange)) |range| {
-                spatial.clearSolidRange(range);
-            } else {
-                spatial.clearTileBlock(index);
-            }
-            world.destroyEntity(object.entity);
-            land.tiles[index].object = null;
-            land.tiles[index].gone = .product;
-        },
+        .gone => clearProductAt(world, index),
         .crop => |crop| {
             const position = data.tileIndexToWorld(index);
             const entity = factory.spawnCrop(world, position, crop.kind);
@@ -227,6 +216,21 @@ fn restoreThing(world: *World, index: usize, thing: Thing) void {
             world.getPtr(object.entity, item.Health).?.* = saved.health;
         },
     }
+}
+
+// 清除地图上的默认产出对象，并记录为 gone，避免后续恢复时重新生成。
+pub fn clearProductAt(world: *World, index: usize) void {
+    const object = land.tiles[index].object.?;
+    std.debug.assert(object.kind == .product);
+    // 对象层产出会注册精确碰撞矩形；tile 层产出只写瓦片阻挡。
+    if (world.get(object.entity, component.map.SolidRange)) |range| {
+        spatial.clearSolidRange(range);
+    } else {
+        spatial.clearTileBlock(index);
+    }
+    world.destroyEntity(object.entity);
+    land.tiles[index].object = null;
+    land.tiles[index].gone = .product;
 }
 
 fn advanceState(state: *context.map.State) void {
@@ -416,7 +420,7 @@ fn loadProp(world: *World, object: tiled.Object) void {
     if (world.has(entity, item.Product)) {
         std.debug.assert(world.has(entity, item.Health));
         const tile = land.getTile(object.rect().center()).?;
-        tile.object = .{ .kind = .product, .entity = entity };
+        tile.setProduct(entity);
     }
     const solid = spatial.addSolidObject(object);
     if (solid.count != 0) {
@@ -462,7 +466,7 @@ fn loadRockTile(world: *World, globalId: u32, index: usize) void {
     if (!world.has(entity, item.Product)) return;
     std.debug.assert(world.has(entity, item.Health));
 
-    land.tiles[index].object = .{ .kind = .product, .entity = entity };
+    land.tiles[index].setProduct(entity);
 }
 
 /// 将整张图作为一层背景/前景直接写入顶点
@@ -843,7 +847,7 @@ test "恢复已打开宝箱会移除动画组件" {
     try std.testing.expectEqual(16, world.get(chest, render.Sprite).?.image.offset.x);
 }
 
-test "恢复地图资源会写回保存的产物和生命" {
+test "恢复地图产出对象会写回保存的产物和生命" {
     zhu.assets.allocator = std.testing.allocator;
     land.enter(&maps[0]);
     defer land.exit();
@@ -868,7 +872,7 @@ test "恢复地图资源会写回保存的产物和生命" {
     try std.testing.expectEqual(4, health.value);
 }
 
-test "恢复 gone 会删除默认资源并清 tile 阻挡" {
+test "恢复 gone 会删除默认产出对象并清 tile 阻挡" {
     zhu.assets.allocator = std.testing.allocator;
     land.enter(&maps[0]);
     defer land.exit();
@@ -893,7 +897,7 @@ test "恢复 gone 会删除默认资源并清 tile 阻挡" {
     try std.testing.expect(!spatial.hasAnyBlock(spatial.marksAt(position)));
 }
 
-test "保存已消失资源会写成 gone" {
+test "保存已消失产出对象会写成 gone" {
     zhu.assets.allocator = std.testing.allocator;
     land.enter(&maps[0]);
     defer land.exit();
@@ -919,7 +923,7 @@ test "保存已消失资源会写成 gone" {
     }
 }
 
-test "加载地图资源会按对象和 rock 图层写入目标格" {
+test "加载地图产出对象会按对象和 rock 图层写入目标格" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
 

@@ -400,6 +400,7 @@ pub fn advanceCrop(crop: *farm.Crop) render.Sprite {
 
 pub fn spawnPickup(world: *World, args: struct {
     item: item.ItemEnum,
+    count: u32 = 1,
     origin: zhu.Vector2,
 }) void {
     const config = itemConfig(args.item);
@@ -414,7 +415,10 @@ pub fn spawnPickup(world: *World, args: struct {
 
     const entity = world.createEntity();
     world.add(entity, args.origin);
-    world.add(entity, item.Pickup{ .item = args.item });
+    world.add(entity, item.Pickup{
+        .item = args.item,
+        .count = args.count,
+    });
     world.add(entity, item.PickupMotion{
         .start = args.origin,
         .target = args.origin.add(scatter),

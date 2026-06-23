@@ -14,6 +14,8 @@ const CropEnum = component.farm.CropEnum;
 const Ground = component.farm.Ground;
 const ItemEnum = component.item.ItemEnum;
 const Pickup = component.item.Pickup;
+const Product = component.item.Product;
+const Health = component.item.Health;
 const event = component.event;
 const World = zhu.ecs.World;
 
@@ -39,7 +41,7 @@ fn useItem(world: *World, want: WantUse) void {
         .sickle => harvestTarget(world, want.target),
         .strawberrySeed => useSeed(world, want, .strawberry),
         .potatoSeed => useSeed(world, want, .potato),
-        .pickaxe, .axe => unreachable,
+        .pickaxe, .axe => hitProductTarget(world, want.target, want.item),
         .strawberry, .potato, .timber, .stone => unreachable,
     }
 }
@@ -81,6 +83,41 @@ fn waterTarget(world: *World, position: zhu.Vector2) void {
     world.addEvent(event.SoundPlay{ .id = .water });
 }
 
+fn hitProductTarget(
+    world: *World,
+    position: zhu.Vector2,
+    tool: ItemEnum,
+) void {
+    const hit = factory.itemConfig(tool).hit.?;
+    const index = map.data.worldToTileIndex(position) orelse return;
+    const tile = &map.land.tiles[index];
+    const entity = tile.product() orelse return;
+    const product = world.get(entity, Product).?;
+    if (product.item != hit.target) return;
+
+    const health = world.getPtr(entity, Health).?;
+    std.debug.assert(health.value > 0);
+    health.value -= 1;
+    world.addEvent(event.SoundPlay{ .id = toolSound(tool) });
+    if (health.value != 0) return;
+
+    // 产出对象击碎后先生成掉落，再统一清理实体和地图阻挡。
+    factory.spawnPickup(world, .{
+        .item = product.item,
+        .count = product.count,
+        .origin = position.add(map.data.tileSize.scale(0.5)),
+    });
+    map.clearProductAt(world, index);
+}
+
+fn toolSound(tool: ItemEnum) component.sound.Id {
+    return switch (tool) {
+        .axe => .axe,
+        .pickaxe => .pickaxe,
+        else => unreachable,
+    };
+}
+
 const testTarget = zhu.Vector2.xy(32, 48);
 
 fn setActiveItem(item: ItemEnum, count: u32) void {
@@ -98,6 +135,14 @@ fn putMockImages() void {
     for (factory.zon.items) |item| {
         zhu.assets.putImage(item.icon.imageId, image);
     }
+}
+
+fn addProductEntity(world: *World, product: Product, health: u8) zhu.ecs.Entity {
+    const entity = world.createEntity();
+    world.add(entity, product);
+    world.add(entity, Health{ .value = health });
+    map.land.getTile(testTarget).?.setProduct(entity);
+    return entity;
 }
 
 fn enterTestLand() void {
@@ -322,6 +367,100 @@ test "toolHit 会浇水并标记作物" {
     const sounds = world.getEvent(event.SoundPlay);
     try std.testing.expectEqual(1, sounds.len);
     try std.testing.expectEqual(.water, sounds[0].id);
+}
+
+test "斧头命中木材产出对象会减少生命" {
+    zhu.assets.allocator = std.testing.allocator;
+    enterTestLand();
+    defer exitTestLand();
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = addProductEntity(
+        &world,
+        Product{ .item = .timber },
+        2,
+    );
+    const player = world.createIdentity(Player);
+    world.add(player, WantUse{ .item = .axe, .target = testTarget });
+    world.add(player, UseFrame{});
+
+    update(&world);
+
+    try std.testing.expectEqual(entity, map.land.getTile(testTarget).?.product().?);
+    try std.testing.expectEqual(1, world.get(entity, Health).?.value);
+    try std.testing.expectEqual(0, world.values(Pickup).len);
+
+    const sounds = world.getEvent(event.SoundPlay);
+    try std.testing.expectEqual(1, sounds.len);
+    try std.testing.expectEqual(.axe, sounds[0].id);
+}
+
+test "错误工具不会命中产出对象" {
+    zhu.assets.allocator = std.testing.allocator;
+    enterTestLand();
+    defer exitTestLand();
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = addProductEntity(
+        &world,
+        Product{ .item = .stone },
+        2,
+    );
+    const player = world.createIdentity(Player);
+    world.add(player, WantUse{ .item = .axe, .target = testTarget });
+    world.add(player, UseFrame{});
+
+    update(&world);
+
+    try std.testing.expectEqual(entity, map.land.getTile(testTarget).?.product().?);
+    try std.testing.expectEqual(2, world.get(entity, Health).?.value);
+    try std.testing.expectEqual(0, world.values(Pickup).len);
+    try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
+}
+
+test "镐子击碎石头会生成掉落并清理阻挡" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    putMockImages();
+    enterTestLand();
+    defer exitTestLand();
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const index = map.data.worldToTileIndex(testTarget).?;
+    map.spatial.setTileFlag(index, "SOLID");
+    const entity = addProductEntity(
+        &world,
+        Product{ .item = .stone, .count = 2 },
+        1,
+    );
+    const player = world.createIdentity(Player);
+    world.add(player, WantUse{ .item = .pickaxe, .target = testTarget });
+    world.add(player, UseFrame{});
+
+    update(&world);
+
+    const tile = map.land.getTile(testTarget).?;
+    try std.testing.expectEqual(null, tile.object);
+    try std.testing.expectEqual(.product, tile.gone);
+    try std.testing.expect(!world.has(entity, Product));
+    try std.testing.expect(!map.spatial.hasAnyBlock(
+        map.spatial.marksAt(testTarget.add(.xy(1, 1))),
+    ));
+
+    const pickups = world.values(Pickup);
+    try std.testing.expectEqual(1, pickups.len);
+    try std.testing.expectEqual(ItemEnum.stone, pickups[0].item);
+    try std.testing.expectEqual(2, pickups[0].count);
+
+    const sounds = world.getEvent(event.SoundPlay);
+    try std.testing.expectEqual(1, sounds.len);
+    try std.testing.expectEqual(.pickaxe, sounds[0].id);
 }
 
 test "sickle 会收获成熟作物并生成掉落物" {

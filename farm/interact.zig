@@ -17,6 +17,7 @@ const Npc = component.actor.Npc;
 const Actor = component.actor.Actor;
 const Dialog = component.actor.Dialog;
 const Shape = component.motion.Shape;
+const Velocity = component.motion.Velocity;
 const ItemEnum = component.item.ItemEnum;
 const Chest = component.item.Chest;
 const Animation = component.actor.Animation;
@@ -162,7 +163,34 @@ fn startDialog(world: *World, target: Entity) void {
     if (dialog.lines.len == 0) return;
 
     dialog.index = 0;
+    facePlayer(world, target);
     world.addIdentity(target, Dialog);
+}
+
+// 对话开始时让目标停下并面向玩家，调用方保证双方都有位置和 Actor。
+fn facePlayer(world: *World, target: Entity) void {
+    const player = world.getIdentity(Player).?;
+    const playerPos = world.get(player, Position).?;
+    const targetPos = world.get(target, Position).?;
+
+    // 对话开始时 NPC 停下，并面向玩家。
+    if (world.getPtr(target, Velocity)) |velocity| {
+        velocity.value = .zero;
+    }
+    const actor = world.getPtr(target, Actor).?;
+    actor.action = .idle;
+
+    const direction = playerPos.sub(targetPos);
+    if (!direction.approxEqual(.zero)) {
+        actor.facing = facingFromDirection(direction);
+    }
+}
+
+fn facingFromDirection(direction: zhu.Vector2) component.actor.Facing {
+    if (@abs(direction.x) > @abs(direction.y)) {
+        return if (direction.x < 0) .left else .right;
+    }
+    return if (direction.y < 0) .up else .down;
 }
 
 // 推进到下一句，超过最后一句就关闭。
@@ -215,6 +243,8 @@ test "按 F 会激活最近 NPC 的第一句对话" {
     // 近处 NPC，在玩家正下方探测框内
     const near = world.createEntity();
     world.add(near, Position.xy(0, 20));
+    world.add(near, Actor{ .action = .walk, .facing = .down });
+    world.add(near, Velocity{ .value = .xy(3, 0) });
     world.add(near, Npc{});
     world.add(near, Dialog{ .lines = &.{"近处 NPC"} });
     world.add(near, Shape{ .rect = .init(.zero, .xy(8, 8)) });
@@ -223,7 +253,12 @@ test "按 F 会激活最近 NPC 的第一句对话" {
     update(&world);
 
     try std.testing.expectEqual(near, world.getIdentity(Dialog).?);
+    const actor = world.get(near, Actor).?;
+    const velocity = world.get(near, Velocity).?;
     try std.testing.expectEqual(0, world.get(near, Dialog).?.index);
+    try std.testing.expectEqual(.idle, actor.action);
+    try std.testing.expectEqual(.up, actor.facing);
+    try std.testing.expect(velocity.value.approxEqual(.zero));
 }
 
 test "对话激活后按 F 会推进并在末尾关闭" {

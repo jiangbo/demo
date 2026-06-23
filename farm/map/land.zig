@@ -26,6 +26,16 @@ pub const Tile = struct {
         if (object.kind != .crop) return null;
         return object.entity;
     }
+
+    pub fn product(self: Tile) ?zhu.ecs.Entity {
+        const object = self.object orelse return null;
+        if (object.kind != .product) return null;
+        return object.entity;
+    }
+
+    pub fn setProduct(self: *Tile, entity: zhu.ecs.Entity) void {
+        self.object = .{ .kind = .product, .entity = entity };
+    }
 };
 
 pub fn init() void {

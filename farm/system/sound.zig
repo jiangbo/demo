@@ -19,6 +19,8 @@ fn path(id: sound.Id) [:0]const u8 {
         .harvest => "assets/audio/plant_harvest.ogg",
         .pickup => "assets/audio/pop.ogg",
         .plant => "assets/audio/planting-sounds.ogg",
+        .axe => "assets/audio/chop-wood.ogg",
+        .pickaxe => "assets/audio/pick-axe-striking.ogg",
     };
 }
 
@@ -34,6 +36,14 @@ test "sound id 映射到音频文件" {
     try std.testing.expectEqualStrings(
         "assets/audio/pop.ogg",
         path(.pickup),
+    );
+    try std.testing.expectEqualStrings(
+        "assets/audio/chop-wood.ogg",
+        path(.axe),
+    );
+    try std.testing.expectEqualStrings(
+        "assets/audio/pick-axe-striking.ogg",
+        path(.pickaxe),
     );
 }
 

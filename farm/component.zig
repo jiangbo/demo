@@ -192,7 +192,7 @@ pub const light = struct {
 };
 
 pub const sound = struct {
-    pub const Id = enum { hoe, water, harvest, pickup, plant };
+    pub const Id = enum { hoe, water, harvest, pickup, plant, axe, pickaxe };
 };
 
 // 事件类型：系统间通信的一次性消息
