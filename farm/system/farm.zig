@@ -9,6 +9,7 @@ const map = @import("../map.zig");
 const Player = component.actor.Player;
 const UseFrame = component.actor.UseFrame;
 const WantUse = component.actor.WantUse;
+const Animation = component.actor.Animation;
 const Crop = component.farm.Crop;
 const CropEnum = component.farm.CropEnum;
 const Ground = component.farm.Ground;
@@ -98,6 +99,9 @@ fn hitProductTarget(
     const health = world.getPtr(entity, Health).?;
     std.debug.assert(health.value > 0);
     health.value -= 1;
+    // reset 后动画系统会在下一次 update 立即处理第一帧。
+    if (world.getPtr(entity, Animation)) |a| a.reset();
+
     world.addEvent(event.SoundPlay{ .id = toolSound(tool) });
     if (health.value != 0) return;
 
@@ -399,6 +403,39 @@ test "斧头命中木材产出对象会减少生命" {
     const sounds = world.getEvent(event.SoundPlay);
     try std.testing.expectEqual(1, sounds.len);
     try std.testing.expectEqual(.axe, sounds[0].id);
+}
+
+test "斧头命中产出对象会播放地图资源动画" {
+    zhu.assets.allocator = std.testing.allocator;
+    enterTestLand();
+    defer exitTestLand();
+
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = addProductEntity(
+        &world,
+        Product{ .item = .timber },
+        2,
+    );
+    const image = zhu.Image{ .size = .xy(32, 16) };
+    const frames = [_]zhu.graphics.Frame{
+        .{ .offset = .xy(0, 0), .duration = 0.1 },
+        .{ .offset = .xy(16, 0), .duration = 0.1 },
+    };
+    var animation = Animation.init(image, .xy(16, 16), &frames);
+    animation.loop = false;
+    animation.stop();
+    world.add(entity, animation);
+
+    const player = world.createIdentity(Player);
+    world.add(player, WantUse{ .item = .axe, .target = testTarget });
+    world.add(player, UseFrame{});
+
+    update(&world);
+
+    const result = world.get(entity, Animation).?;
+    try std.testing.expect(result.isRunning());
 }
 
 test "错误工具不会命中产出对象" {
