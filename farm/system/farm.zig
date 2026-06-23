@@ -101,12 +101,16 @@ fn hitProductTarget(
     world.addEvent(event.SoundPlay{ .id = toolSound(tool) });
     if (health.value != 0) return;
 
-    // 产出对象击碎后先生成掉落，再统一清理实体和地图阻挡。
-    factory.spawnPickup(world, .{
-        .item = product.item,
-        .count = product.count,
-        .origin = position.add(map.data.tileSize.scale(0.5)),
-    });
+    // product.count 表示最大掉落数量，实际掉落 1 到 count 个。
+    std.debug.assert(product.count > 0);
+    const dropCount = zhu.random.intMost(u32, 1, product.count);
+    const origin = position.add(map.data.tileSize.scale(0.5));
+    for (0..dropCount) |_| {
+        factory.spawnPickup(world, .{
+            .item = product.item,
+            .origin = origin,
+        });
+    }
     map.clearProductAt(world, index);
 }
 
@@ -425,6 +429,7 @@ test "错误工具不会命中产出对象" {
 test "镐子击碎石头会生成掉落并清理阻挡" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
+    zhu.random.init(1);
     putMockImages();
     enterTestLand();
     defer exitTestLand();
@@ -454,9 +459,12 @@ test "镐子击碎石头会生成掉落并清理阻挡" {
     ));
 
     const pickups = world.values(Pickup);
-    try std.testing.expectEqual(1, pickups.len);
-    try std.testing.expectEqual(ItemEnum.stone, pickups[0].item);
-    try std.testing.expectEqual(2, pickups[0].count);
+    try std.testing.expect(pickups.len >= 1);
+    try std.testing.expect(pickups.len <= 2);
+    for (pickups) |pickup| {
+        try std.testing.expectEqual(ItemEnum.stone, pickup.item);
+        try std.testing.expectEqual(1, pickup.count);
+    }
 
     const sounds = world.getEvent(event.SoundPlay);
     try std.testing.expectEqual(1, sounds.len);

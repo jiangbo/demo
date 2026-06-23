@@ -235,7 +235,7 @@
             .category = "材料",
             .description = "砍伐树木得到的基础材料。",
             .limit = 99,
-            .product = .{ .item = .timber },
+            .product = .{ .item = .timber, .count = 3 },
             .health = 5,
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/14.png"
@@ -252,7 +252,7 @@
             .category = "材料",
             .description = "敲碎石块得到的基础材料。",
             .limit = 99,
-            .product = .{ .item = .stone },
+            .product = .{ .item = .stone, .count = 3 },
             .health = 3,
             .icon = .{
                 // .path = "farm-rpg/Icons/Weapons/14.png"
