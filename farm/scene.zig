@@ -26,7 +26,6 @@ const system = struct {
 
 const World = zhu.ecs.World;
 const actor = component.actor;
-const motion = component.motion;
 const Position = component.Position;
 
 const initialTargetId: i32 = -1;
@@ -110,7 +109,7 @@ pub fn draw() void {
 fn updateFarm(delta: f32) void {
     // 农场主循环顺序在这里显式编排，新增系统需要在这里确定位置。
     // 上一帧提交的切图请求先落地，避免旧地图实体继续参与本帧逻辑。
-    if (context.map.takePending()) |request| changeMap(request);
+    if (context.map.takePending()) |request| map.change(&world, request);
 
     // 时间先推进，地图跨天逻辑和灯光都依赖本帧最新时间事件。
     system.time.update(&world, delta);
@@ -209,10 +208,6 @@ fn drawFarm() void {
     system.render.draw(&world);
     map.drawFront();
 
-    // 调试绘制碰撞层
-    drawSolids();
-    drawShape();
-
     system.control.draw(&world);
     system.light.draw(&world);
 
@@ -221,36 +216,4 @@ fn drawFarm() void {
     system.time.draw();
     ui.draw(&world);
     ui.overlay.draw();
-}
-
-fn drawSolids() void {
-    const tileSize = map.data.tileSize;
-    for (map.spatial.tiles, 0..) |marks, index| {
-        if (!map.spatial.hasAnyBlock(marks)) continue;
-        const position = map.data.tileIndexToWorld(index);
-        zhu.batch.drawDebug(.init(position, tileSize));
-    }
-
-    for (map.spatial.areas.items) |rect| zhu.batch.drawDebug(rect);
-}
-
-fn drawShape() void {
-    const player = world.getIdentity(actor.Player).?;
-    const position = world.get(player, Position).?;
-    const body = world.get(player, motion.Shape).?;
-    const shape = body.move(position);
-    switch (shape) {
-        .rect => |r| zhu.batch.drawRect(r, .{
-            .color = .rgba(0, 1, 0, 0.4),
-        }),
-        .circle => |c| zhu.batch.drawCircle(c.center, .{
-            .size = .xy(c.radius * 2, c.radius * 2),
-            .anchor = zhu.Vector2.center,
-            .color = .rgba(0, 1, 0, 0.4),
-        }),
-    }
-}
-
-fn changeMap(request: context.map.Transition) void {
-    map.change(&world, request);
 }

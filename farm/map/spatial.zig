@@ -31,7 +31,7 @@ const solid = Marks.initMany(&.{ .north, .south, .west, .east });
 
 var map: *const tiled.Map = undefined;
 pub var tiles: []Marks = &.{};
-pub var areas: std.ArrayList(zhu.Rect) = .empty;
+var areas: std.ArrayList(zhu.Rect) = .empty;
 
 pub fn enter(data: *const tiled.Map) void {
     exit();
