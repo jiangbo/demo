@@ -48,7 +48,10 @@ pub const overlay = struct {
         if (topLayer()) |layer| {
             switch (layer) {
                 .save => {
-                    if (save_slot.update(world)) pause.active = false;
+                    if (save_slot.update(world)) |message| {
+                        pause.setMessage(message);
+                    }
+                    if (save_slot.takeClosePause()) pause.active = false;
                 },
                 .rest => rest.update(),
                 .pause => pause.update(),
@@ -146,12 +149,18 @@ pub const pause = struct {
     const panelSize: zhu.Vector2 = .{ .x = 208, .y = 344 };
     pub var active: bool = false;
     var menu: zhu.widget.Menu = menus[2];
+    var message: ?save_slot.Message = null;
 
     pub fn enter(disable: bool) void {
         active = true;
+        message = null;
         menu.disabled = if (disable) &.{ 1, 2 } else &.{};
         menu.position = zhu.window.size.sub(panelSize).scale(0.5);
         menu.click = .empty;
+    }
+
+    pub fn setMessage(next: save_slot.Message) void {
+        message = next;
     }
 
     pub fn update() void {
@@ -189,6 +198,7 @@ pub const pause = struct {
         zhu.batch.drawRect(back, .{ .color = .gray(0, 0.45) });
 
         menu.draw();
+        drawMessage();
 
         for (0..3) |index| {
             var buffer: [40]u8 = undefined;
@@ -212,6 +222,19 @@ pub const pause = struct {
                 .anchor = .center,
             });
         }
+    }
+
+    fn drawMessage() void {
+        const current = message orelse return;
+        const color = if (current.fail)
+            zhu.Color.rgb(1.0, 0.25, 0.25)
+        else
+            zhu.Color.rgb(0.25, 1.0, 0.25);
+        const position = menu.position.add(.xy(panelSize.x * 0.5, 24));
+        zhu.text.draw(current.text, position, .{
+            .anchor = .center,
+            .color = color,
+        });
     }
 };
 

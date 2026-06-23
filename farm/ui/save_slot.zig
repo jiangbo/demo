@@ -12,6 +12,8 @@ pub const Mode = enum {
     pauseLoad,
 };
 
+pub const Message = struct { text: []const u8, fail: bool };
+
 const SlotState = union(enum) {
     empty,
     invalid,
@@ -28,6 +30,7 @@ var confirmSlot: ?usize = null;
 var confirmTitleBuffer: [40]u8 = undefined;
 var disabledSlots: [save.slotCount]usize = undefined;
 var disabledCount: usize = 0;
+var closePause: bool = false;
 var slotMenu: zhu.widget.Menu = menus[3];
 var confirmMenu: zhu.widget.Menu = menus[4];
 
@@ -40,6 +43,7 @@ pub fn enter(next: Mode) void {
     active = true;
     mode = next;
     confirmSlot = null;
+    closePause = false;
     refresh();
     rebuildDisabled();
     slotMenu.title.text = switch (mode) {
@@ -51,10 +55,10 @@ pub fn enter(next: Mode) void {
     confirmMenu.click = .empty;
 }
 
-pub fn update(world: *zhu.ecs.World) bool {
+pub fn update(world: *zhu.ecs.World) ?Message {
     if (context.input.pressed(.pause)) {
         if (confirmSlot != null) confirmSlot = null else active = false;
-        return false;
+        return null;
     }
 
     if (confirmSlot) |slot| {
@@ -62,19 +66,25 @@ pub fn update(world: *zhu.ecs.World) bool {
             switch (event) {
                 0 => { // 确认覆盖
                     confirmSlot = null;
-                    saveAndClose(world, slot);
+                    return saveAndClose(world, slot);
                 },
                 1 => confirmSlot = null, // 取消覆盖
                 else => unreachable,
             }
         }
-        return false;
+        return null;
     }
 
     if (slotMenu.update()) |e| {
         if (e == backEvent) active = false else return chooseSlot(world, e);
     }
-    return false;
+    return null;
+}
+
+pub fn takeClosePause() bool {
+    const result = closePause;
+    closePause = false;
+    return result;
 }
 
 pub fn draw() void {
@@ -104,21 +114,22 @@ fn refresh() void {
     }
 }
 
-fn chooseSlot(world: *zhu.ecs.World, slot: usize) bool {
+fn chooseSlot(world: *zhu.ecs.World, slot: usize) ?Message {
     switch (mode) {
         .titleLoad => {
             active = false;
             context.scene.requestLoad(slot);
-            return false;
+            return null;
         },
         .pauseLoad => {
             save.loadSlot(world, slot) catch |err| {
                 std.log.err("load slot {} failed: {}", .{ slot, err });
                 active = false;
-                return false;
+                return .{ .text = "读取失败", .fail = true };
             };
             active = false;
-            return true;
+            closePause = true;
+            return null;
         },
         .pauseSave => {
             if (slotHasFile(slot)) {
@@ -130,21 +141,21 @@ fn chooseSlot(world: *zhu.ecs.World, slot: usize) bool {
                 );
                 slotMenu.click = .empty;
                 confirmMenu.click = .empty;
-                return false;
+                return null;
             }
-            saveAndClose(world, slot);
-            return false;
+            return saveAndClose(world, slot);
         },
     }
 }
 
-fn saveAndClose(world: *zhu.ecs.World, slot: usize) void {
+fn saveAndClose(world: *zhu.ecs.World, slot: usize) Message {
     save.saveSlot(world, slot) catch |err| {
         std.log.err("save slot {} failed: {}", .{ slot, err });
         active = false;
-        return;
+        return .{ .text = "保存失败", .fail = true };
     };
     active = false;
+    return .{ .text = "保存成功", .fail = false };
 }
 
 fn drawSlot(index: usize) void {

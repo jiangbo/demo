@@ -111,11 +111,14 @@ pub fn loadSlot(world: *World, slot: usize) !void {
     );
     defer zhu.assets.free(terminated);
 
+    var diagnostics: std.zon.parse.Diagnostics = .{};
+    defer diagnostics.deinit(zhu.assets.allocator);
+
     const data = try std.zon.parse.fromSlice(
         SaveData,
         zhu.assets.allocator,
         terminated,
-        null,
+        &diagnostics,
         .{},
     );
     defer std.zon.parse.free(zhu.assets.allocator, data);
@@ -149,12 +152,15 @@ pub fn parseSlotSummary(
     );
     defer allocator.free(terminated);
 
+    var diagnostics: std.zon.parse.Diagnostics = .{};
+    defer diagnostics.deinit(allocator);
+
     const data = try std.zon.parse.fromSlice(
         SummaryData,
         allocator,
         terminated,
-        null,
-        .{},
+        &diagnostics,
+        .{ .ignore_unknown_fields = true },
     );
     defer std.zon.parse.free(allocator, data);
 
@@ -333,6 +339,25 @@ test "parseSlotSummary 会读取天数和时间戳" {
         \\    .time = .{
         \\        .day = 7,
         \\    },
+        \\}
+    ;
+
+    const summary = try parseSlotSummary(content, std.testing.allocator);
+
+    try std.testing.expectEqual(7, summary.day);
+    try std.testing.expectEqual(42, summary.timestamp);
+}
+
+test "parseSlotSummary 会忽略完整存档的其它字段" {
+    const content =
+        \\.{
+        \\    .timestamp = 42,
+        \\    .time = .{
+        \\        .day = 7,
+        \\    },
+        \\    .player = .{},
+        \\    .inventory = .{},
+        \\    .maps = .{},
         \\}
     ;
 
