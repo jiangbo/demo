@@ -66,6 +66,16 @@ zig build test
 
 遇到未实现跳过的功能，记录到这里。
 
+- 架构/状态管理：后续考虑把 `context.zig`、`inventory.zig`、
+  `map.zig`/`land.zig`/`spatial.zig` 这类运行时可变的模块级
+  `var` 收进显式 `State` 结构体，减少隐藏全局状态；但系统函数不默认
+  传入一个大 `Game` 指针，而是按实际需要传 `world`、`clock`、
+  `inventory`、`land` 等具体依赖。若某个系统参数持续变多，优先拆分
+  系统边界或小模块，而不是用大对象掩盖依赖。C++ 项目也是由
+  `GameApp`/`Context`/`Scene` 做装配，具体系统通常在构造时接收
+  自己需要的 `registry`、`dispatcher`、`input`、`camera`、
+  `spatial_index` 等依赖；Zig 后续参考这个依赖边界，不照搬
+  C++ 的 manager/class 分层。
 - 19-空间索引：`ROCK` 还只是 `land.Object.kind` 能表达，地图加载没有把石头写入
   `tile.object`，工具系统也没有敲石头、销毁实体和清理格子的逻辑。
 - 19-空间索引：目前 crop 收获时能按已知 tile 清理 `tile.object`；资源节点销毁
