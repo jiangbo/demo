@@ -232,6 +232,10 @@ pub const Vector2 = extern struct {
         };
     }
 
+    pub fn maxAxis(self: Vector2) f32 {
+        return @max(self.x, self.y);
+    }
+
     pub fn min(self: Vector2, other: Vector2) Vector2 {
         return .{
             .x = @min(self.x, other.x),

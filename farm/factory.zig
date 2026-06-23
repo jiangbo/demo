@@ -405,11 +405,12 @@ pub fn spawnPickup(world: *World, args: struct {
 }) void {
     const config = itemConfig(args.item);
     const image = resolveImage(config.icon);
-    const size = config.icon.size;
+    // 地图掉落物使用原始像素尺寸，背包图标才使用配置中的 UI 尺寸。
+    const size = image.size;
     const offset = size.scale(-0.5);
 
     // 在图标大小范围内随机一个落点，作为出生飞散动画的终点。
-    const radius = @sqrt(zhu.random.float(0, 1)) * @max(size.x, size.y);
+    const radius = @sqrt(zhu.random.float(0, 1)) * size.maxAxis();
     const angle = zhu.random.float(0, std.math.tau);
     const scatter = zhu.Vector2.xy(@cos(angle), @sin(angle)).scale(radius);
 
