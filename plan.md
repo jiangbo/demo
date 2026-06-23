@@ -63,6 +63,8 @@ zig build test
   `DayChanged` 推进，非当前地图在重新进入时按 day 差额结算。
 15. 30-NPC 显示与简单漫游：不做 C++ 的 `animal_blueprint.json`
   运行时蓝图加载；Zig 使用 ZON 作为动物/NPC 蓝图配置。
+- 对话气泡：不做 C++ 的 JSON 运行时对话脚本加载；Zig 使用
+  ZON 配置对话文本。
 
 ## 待后续完成
 
@@ -90,83 +92,18 @@ zig build test
   Zig 本步先只做显示和随机漫游。
 - 30-NPC 显示与简单漫游：C++ 动物有叫声音效和动作音效；
   Zig 后续接入动物音效时再实现。
-- 31-对话气泡：C++ 使用 SpatialIndexManager 做朝向方向的空间探测；
-  Zig 本步遍历所有 NPC 用距离判断。
-- 31-对话气泡：C++ 有 3 个气泡频道（对话/通知/物品提示）；
-  Zig 本步只做对话频道。
-- 31-对话气泡：C++ 从 JSON 运行时加载对话脚本；
-  Zig 本步用代码内编译时常量。
-- 31-对话气泡：C++ DialogueBubble 使用九宫格图片背景；
-  Zig 本步用半透明矩形背景。
-- 31-对话气泡：C++ 支持说话者名称显示和打字机逐字效果；
-  Zig 本步不实现。
-- 31-对话气泡：C++ 对话结束后有冷却计时器防止连续误触；
-  Zig 不需要，因为 `pressed()` 只在按键按下帧触发一次，不会误触。
-- 32-游戏时间与时钟 UI：C++ 从 `game_time_config.json` 运行时加载配置；
-  Zig 本步先直接扩展已有 `context.time`，使用与配置相同的默认值。
-- 32-游戏时间与时钟 UI：C++ `GameTime` 是 registry ctx 数据；
-  Zig 本步不再新增平行 `game_time` 模块，`context.time` 作为唯一时间状态。
-- 32-游戏时间与时钟 UI：C++ 支持 `AdvanceTimeRequest` 快进；
-  Zig 使用 `context.clock.restHours` 做按小时推进，不新增
-  `AdvanceTimeRequest` 事件类型。
-- 32-游戏时间与时钟 UI：C++ `TimeClockUI` 使用完整 UI 框架；
-  Zig 本步直接用 `zhu.batch` 和 `zhu.text` 画 HUD。
-- 32-游戏时间与时钟 UI：C++ 同一讲还实现昼夜光照和灯光显隐；
-  Zig 已拆到 33、34，当前步骤不做。
-- 33-昼夜颜色变化：C++ `DayNightSystem` 会计算环境光、太阳方向光和月亮方向光，
-  再写入 `GlobalLightingState` 交给引擎 `LightSystem`；Zig 本步先在
-  `system/light.zig` 中按时间计算全屏 overlay，直接画出可见色调变化。
-- 33-昼夜颜色变化：C++ 从 `light_config.json` 运行时加载关键帧和太阳/月亮参数；
-  Zig 本步先使用编译期关键帧插值，保留 4/6/9/14/18/22 这些参考时点的色调；
-  用 28 点表示次日 4 点处理跨午夜插值，后续需要调参时再挪到 ZON 配置。
-- 33-昼夜颜色变化：C++ 会区分室外地图和室内 `ambient_override`；
-  Zig 使用 `map.isOutdoor()` 写死室内外规则：`.town`、`.exterior`
-  为室外，`.school`、`.interior` 为室内；室内不绘制昼夜 overlay，
-  不实现 `ambient_override`。
-- 33-昼夜颜色变化：C++ 同节包含 `TimeOfDayLightSystem` 控制夜间灯光显隐；
-  Zig 已拆到 34，本步不实现路灯、窗户光、点光源或光圈。
-- 34-夜间灯光占位效果：C++ 使用完整多 pass renderer，包括 LightingPass、
-  EmissivePass、BloomPass 和 CompositePass；Zig 本节只做 ECS 光源数据、
-  时间显隐规则和 `circle.png` 圆形光圈占位。
-- 34-夜间灯光占位效果：C++ 支持真实 `SpotLight` 参数解析；Zig 当前
-  `Spot` 只保留默认数据，没有保留 Tiled class 嵌套属性。
-- 34-夜间灯光占位效果：C++ 的玩家灯有独立事件和配置；Zig 已取消玩家跟随灯，
-  只保留地图光源。
-- 34-夜间灯光占位效果：Zig 室内地图光源始终启用，`system.light.update`
-  会清理 `light.Disabled`，不按 18/6 点切换；室外地图仍按
-  `HourChanged` 在 18 点启用 night-only、6 点启用 day-only。
 - 35-音效反馈：C++ 使用 `resource_mapping.json`、`AudioManager`、
   `AudioPlayer`、`PlaySoundEvent` 和 `AudioSystem` 形成完整音频链路；Zig
   已有 `zhu.audio`，本节只新增 `SoundPlay` 事件和 `system/sound.zig`
   收口播放，不新增资源管理层。
 - 35-音效反馈：C++ 支持 2D 空间声、实体 `AudioComponent` 映射、音量配置和
   Debug 面板；Zig 本节先全局播放 OGG 音效，不做空间声、配置文件或调试 UI。
-- 35-音效反馈：C++ `ActionSoundSystem` 监听动作状态变化并支持概率/冷却；
-  Zig 当前工具结算没有完整动画关键帧链，本节直接在锄地、浇水、种植、收获和
-  拾取的成功路径发出音效事件。
-- 渲染稳定性：Zig 已新增 `graphics.RenderTarget` / `graphics.RenderPass`；
-  当前已把 `farm` 对 render target 的直接使用收回，并在 `batch`
-  内部按窗口视口尺寸创建可选 render target，自动完成逻辑画面绘制和
-  swapchain 缩放绘制。
-- 36-暂停菜单：C++ 使用 Scene stack（push/pop）管理暂停菜单嵌套；
-  Zig 当前用 `active` 布尔标记，暂停菜单和游戏在同一场景内切换显示。
-  槽位选择界面需要场景栈时再扩展。
 - 36-暂停菜单：C++ 暂停面板显示存档/读档成功或失败的彩色提示文字；
   Zig 当前用 `std.log` 输出，待后续补 UI 提示。
-- 36-暂停菜单：C++ 游戏速度使用指数步进（0.01x~100x）；
-  Zig 使用线性 ±0.1，简单够用。
-- 37-存档与读档：C++ 保存所有地图数据；Zig 保存
-  `context.map.states` 中已初始化的地图状态，保存前先用
-  `map.saveState(world)` 写回当前地图，未访问地图继续由 ZON 重新生成。
 - 37-存档与读档：C++ 保存 HP/Gold、完整背包、宝箱、资源节点、
   作物 planted_day；Zig 当前保存时间、玩家地图/位置/朝向、完整背包、
   快捷栏、耕地/作物和宝箱状态，HP/Gold、资源节点和 planted_day 后续
   随对应系统一起加。
-- 38-标题存档选择：C++ `SaveSlotSelectScene` 是可 push/pop 的 Scene，
-  通过 callback 把选择结果交给 Title/Pause；Zig 当前用 `ui/save_slot.zig`
-  顶层覆盖层和 `Mode` 分支处理，不新增通用 Scene stack。
-- 38-标题存档选择：C++ 存档使用 JSON 的 `schema_version`/`timestamp`；
-  Zig 保留当前 ZON 存档和 timestamp，不做版本字段，摘要读取只解析最小字段。
 - 38-标题存档选择：C++ 会把 timestamp 格式化为本地时间；
   Zig 当前写入并读取 timestamp，但槽位 UI 先只显示 Slot/Day/Empty/Invalid。
 - 38-标题存档选择：C++ PauseMenu 显示保存/读取成功失败提示；
