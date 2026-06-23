@@ -53,7 +53,8 @@ fn updateActor(world: *zhu.ecs.World) void {
         const sameAction = animation.sourceIndex == index;
         if (sameAction and animation.row == row) continue;
 
-        const loop = actor.action == .idle or actor.action == .walk;
+        const loop = actor.action == .idle or
+            actor.action == .walk or actor.action == .sleep;
         animation.playRow(actor.action, row, loop);
     }
 }

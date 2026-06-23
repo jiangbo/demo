@@ -10,8 +10,11 @@ const Position = component.Position;
 const Velocity = component.motion.Velocity;
 const Wander = component.actor.Wander;
 const Dialog = component.actor.Dialog;
+const Animal = component.actor.Animal;
 const Emit = component.sound.Emit;
 const Voice = component.sound.Voice;
+
+const context = @import("../context.zig");
 
 // 到达目标的距离阈值（平方），对应实际距离约 2.0
 const arriveDistance2: f32 = 4.0;
@@ -32,6 +35,13 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
         // 只停止正在对话的 NPC，其他 NPC 继续正常漫游。
         if (talking == entity) {
             stop(actor, velocity, wander);
+            continue;
+        }
+
+        // 动物夜间休息：停止漫游、切换睡眠动作、不发声。
+        if (world.has(entity, Animal) and context.clock.isDark()) {
+            stop(actor, velocity, wander);
+            actor.action = .sleep;
             continue;
         }
 

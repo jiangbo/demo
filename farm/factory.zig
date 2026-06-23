@@ -439,10 +439,15 @@ pub fn spawnPickup(world: *World, args: struct {
     world.add(entity, render.YSort{});
 }
 
+// 动画源数组按 Action 枚举全长定长，未配置的动作留空 Source。
+// 角色只会切到已配置动画的动作，空槽不会被访问到。
+const actionCount = std.meta.fields(actor.Action).len;
+
 fn animationSources(comptime animations: []const Animation) //
-[animations.len]zhu.Animation.Source {
-    var sources: [animations.len]zhu.Animation.Source = undefined;
-    inline for (animations) |config| {
+[actionCount]zhu.Animation.Source {
+    var sources: [actionCount]zhu.Animation.Source =
+        std.mem.zeroes([actionCount]zhu.Animation.Source);
+    for (animations) |config| {
         sources[@intFromEnum(config.type)] = .{
             .imageId = config.imageId,
             .clip = config.frames,

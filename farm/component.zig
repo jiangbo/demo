@@ -57,6 +57,8 @@ pub const actor = struct {
     pub const Action = enum {
         idle, // 待机
         walk, // 行走
+        sleep, // 睡眠
+        eat, // 进食
         hoe, // 锄地
         watering, // 浇水
         planting, // 播种
