@@ -11,6 +11,7 @@ const light = component.light;
 const map = component.map;
 const motion = component.motion;
 const render = component.render;
+const sound = component.sound;
 const ui = component.ui;
 
 const World = zhu.ecs.World;
@@ -37,6 +38,8 @@ pub const Character = struct {
     animations: []const Animation,
     speed: f32,
     wanderRadius: f32,
+    soundId: ?sound.Id = null,
+    voice: ?sound.Voice = null,
     name: []const u8,
     dialog: []const []const u8 = &.{},
 };
@@ -152,6 +155,8 @@ pub fn spawnAnimal(world: *World, kind: actor.Animal) Entity {
 
     const entity = spawnNpc(world, config, sources);
     world.add(entity, kind);
+    if (config.soundId) |id| world.add(entity, id);
+    if (config.voice) |voice| world.add(entity, voice);
     return entity;
 }
 
@@ -497,6 +502,8 @@ test "spawnAnimal 会创建可漫游动物实体" {
     try expectEqual(actor.AnimalEnum.cow, world.get(entity, actor.Animal).?);
     try std.testing.expect(world.has(entity, actor.Npc));
     try std.testing.expect(world.has(entity, actor.Wander));
+    try expectEqual(sound.Id.cow, world.get(entity, sound.Id).?);
+    try expectEqual(0.4, world.get(entity, sound.Voice).?.probability);
     try expectEqual(null, world.get(entity, actor.Dialog));
 }
 

@@ -269,6 +269,11 @@
         .{ // cow
             .speed = 10.0,
             .wanderRadius = 32.0,
+            .soundId = .cow,
+            .voice = .{
+                .probability = 0.4,
+                .coolDown = 6.0,
+            },
             .name = "cow",
             .sprite = .{
                 // .path = "farm-rpg/Farm Animals/Cow/Common Cow/Female Cow Black.png",
@@ -304,6 +309,11 @@
         .{ // sheep
             .speed = 10.0,
             .wanderRadius = 32.0,
+            .soundId = .sheep,
+            .voice = .{
+                .probability = 0.35,
+                .coolDown = 7.0,
+            },
             .name = "sheep",
             .sprite = .{
                 // .path = "farm-rpg/Farm Animals/Sheep/Sheep Male 2.png",

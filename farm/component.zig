@@ -192,7 +192,26 @@ pub const light = struct {
 };
 
 pub const sound = struct {
-    pub const Id = enum { hoe, water, harvest, pickup, plant, axe, pickaxe };
+    pub const Id = enum {
+        hoe,
+        water,
+        harvest,
+        pickup,
+        plant,
+        axe,
+        pickaxe,
+        cow,
+        sheep,
+    };
+
+    // 发声请求标记：音效系统播放后立即移除。
+    pub const Emit = struct {};
+
+    pub const Voice = struct {
+        probability: f32,
+        coolDown: f32,
+        remaining: f32 = 0,
+    };
 };
 
 // 事件类型：系统间通信的一次性消息

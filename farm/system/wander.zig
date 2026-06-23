@@ -10,6 +10,8 @@ const Position = component.Position;
 const Velocity = component.motion.Velocity;
 const Wander = component.actor.Wander;
 const Dialog = component.actor.Dialog;
+const Emit = component.sound.Emit;
+const Voice = component.sound.Voice;
 
 // 到达目标的距离阈值（平方），对应实际距离约 2.0
 const arriveDistance2: f32 = 4.0;
@@ -22,6 +24,10 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
         const velocity = query.getPtr(entity, Velocity);
         const actor = query.getPtr(entity, Actor);
         const wander = query.getPtr(entity, Wander);
+
+        if (world.getPtr(entity, Voice)) |voice| {
+            voice.remaining = @max(0, voice.remaining - delta);
+        }
 
         // 只停止正在对话的 NPC，其他 NPC 继续正常漫游。
         if (talking == entity) {
@@ -52,6 +58,7 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
         // 距离足够近，视为已到达
         if (distance2 <= arriveDistance2) {
             stop(actor, velocity, wander);
+            tryEmitVoice(world, entity);
             wander.waitTimer = zhu.random.float(wander.minWait, wander.maxWait);
             continue;
         }
@@ -100,6 +107,15 @@ fn stop(actor: *Actor, velocity: *Velocity, wander: *Wander) void {
     velocity.value = .zero;
     actor.action = .idle;
     wander.moving = false;
+}
+
+fn tryEmitVoice(world: *zhu.ecs.World, entity: zhu.ecs.Entity) void {
+    const voice = world.getPtr(entity, Voice) orelse return;
+    if (voice.remaining > 0) return;
+    if (zhu.random.float(0, 1) > voice.probability) return;
+
+    world.add(entity, Emit{});
+    voice.remaining = voice.coolDown;
 }
 
 // 根据移动方向决定朝向：取 x/y 分量绝对值较大的那个轴
@@ -167,6 +183,64 @@ test "wander 到达目标后进入等待" {
     try std.testing.expectEqual(Action.idle, actor.action);
 }
 
+test "wander 到达目标时挂发声标记" {
+    zhu.random.init(1);
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = world.createEntity();
+    world.add(entity, Position.xy(10, 20));
+    world.add(entity, Velocity{ .value = .xy(3, 0) });
+    world.add(entity, Actor{ .action = .walk });
+    world.add(entity, Wander{
+        .home = .xy(10, 20),
+        .radius = 32,
+        .speed = 10,
+        .target = .xy(11, 20),
+        .moving = true,
+    });
+    world.add(entity, Voice{ .probability = 1, .coolDown = 6 });
+
+    update(&world, 0.1);
+
+    try std.testing.expect(world.has(entity, Emit));
+    try std.testing.expectEqual(6, world.get(entity, Voice).?.remaining);
+}
+
+test "wander 到达目标时遵守发声冷却" {
+    zhu.random.init(1);
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = world.createEntity();
+    world.add(entity, Position.xy(10, 20));
+    world.add(entity, Velocity{ .value = .xy(3, 0) });
+    world.add(entity, Actor{ .action = .walk });
+    world.add(entity, Wander{
+        .home = .xy(10, 20),
+        .radius = 32,
+        .speed = 10,
+        .target = .xy(11, 20),
+        .moving = true,
+    });
+    world.add(entity, Voice{
+        .probability = 1,
+        .coolDown = 6,
+        .remaining = 1,
+    });
+
+    update(&world, 0.1);
+
+    try std.testing.expect(!world.has(entity, Emit));
+    try std.testing.expectApproxEqAbs(
+        @as(f32, 0.9),
+        world.get(entity, Voice).?.remaining,
+        0.001,
+    );
+}
+
 test "对话中的 NPC 会停止漫游且不影响其它 NPC" {
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -206,4 +280,27 @@ test "对话中的 NPC 会停止漫游且不影响其它 NPC" {
     try std.testing.expectEqual(Action.idle, talkingActor.action);
     try std.testing.expect(!talkingWander.moving);
     try std.testing.expect(otherVelocity.value.length2() > 0);
+}
+
+test "wander 对话停止不会挂发声标记" {
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = world.createEntity();
+    world.add(entity, Position.xy(10, 20));
+    world.add(entity, Velocity{ .value = .xy(3, 0) });
+    world.add(entity, Actor{ .action = .walk });
+    world.add(entity, Wander{
+        .home = .xy(10, 20),
+        .radius = 32,
+        .speed = 10,
+        .target = .xy(30, 20),
+        .moving = true,
+    });
+    world.add(entity, Voice{ .probability = 1, .coolDown = 6 });
+    world.addIdentity(entity, Dialog);
+
+    update(&world, 0.1);
+
+    try std.testing.expect(!world.has(entity, Emit));
 }
