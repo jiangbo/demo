@@ -147,11 +147,13 @@ pub fn addSolidObject(object: tiled.Object) SolidRange {
     return .{ .start = start, .count = areas.items.len - start };
 }
 
+// SolidRange 只记录对象加入 areas 时的起点和数量。
+pub fn solidAreas(range: SolidRange) []zhu.Rect {
+    return areas.items[range.start..][0..range.count];
+}
+
 pub fn clearSolidRange(range: SolidRange) void {
-    std.debug.assert(range.start + range.count <= areas.items.len);
-    for (areas.items[range.start..][0..range.count]) |*area| {
-        area.* = .init(.zero, .zero);
-    }
+    for (solidAreas(range)) |*area| area.* = .init(.zero, .zero);
 }
 
 /// 检查碰撞体放在指定位置后是否被阻挡

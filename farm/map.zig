@@ -229,8 +229,23 @@ pub fn clearProductAt(world: *World, index: usize) void {
         spatial.clearTileBlock(index);
     }
     world.destroyEntity(object.entity);
-    land.tiles[index].object = null;
+    clearProductTiles(object.entity);
     land.tiles[index].gone = .product;
+}
+
+// 对象层产出按碰撞范围登记；没有碰撞范围时退回到传入矩形。
+fn setProductTiles(entity: zhu.ecs.Entity, rect: zhu.Rect) void {
+    var iter = data.tilesInRect(rect);
+    while (iter.next()) |index| {
+        land.tiles[index].setProduct(entity);
+    }
+}
+
+// 只清引用，不写 gone；gone 只记录在触发销毁的那一个格子上。
+fn clearProductTiles(entity: zhu.ecs.Entity) void {
+    for (land.tiles) |*tile| {
+        if (tile.product() == entity) tile.object = null;
+    }
 }
 
 fn advanceState(state: *context.map.State) void {
@@ -407,6 +422,7 @@ fn loadRest(world: *World, object: tiled.Object) void {
 
 fn loadProp(world: *World, object: tiled.Object) void {
     const entity = factory.spawnMapObject(world, data, object);
+    const solid = spatial.addSolidObject(object);
     if (world.has(entity, item.Chest)) {
         const rect = object.rect();
         const position = world.get(entity, Position).?;
@@ -419,10 +435,15 @@ fn loadProp(world: *World, object: tiled.Object) void {
     }
     if (world.has(entity, item.Product)) {
         std.debug.assert(world.has(entity, item.Health));
-        const tile = land.getTile(object.rect().center()).?;
-        tile.setProduct(entity);
+        if (solid.count != 0) {
+            // 树这类对象按碰撞范围登记，不按更大的显示范围登记。
+            for (spatial.solidAreas(solid)) |area| {
+                setProductTiles(entity, area);
+            }
+        } else {
+            setProductTiles(entity, object.rect());
+        }
     }
-    const solid = spatial.addSolidObject(object);
     if (solid.count != 0) {
         world.add(entity, solid);
     }
@@ -977,7 +998,7 @@ test "加载地图产出对象会按对象和 rock 图层写入目标格" {
     land.enter(&testMap);
     defer land.exit();
     spatial.enter(&testMap);
-    defer spatial.exit();
+    defer spatial.deinit();
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -1025,6 +1046,97 @@ test "加载地图产出对象会按对象和 rock 图层写入目标格" {
     try std.testing.expectEqual(.stone, rockProd.item);
     try std.testing.expectEqual(rockCfg.health.?, rockHp.value);
     try std.testing.expectEqual(null, land.tiles[2].object);
+}
+
+test "对象层产出对象按碰撞范围占用格子" {
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+
+    const imageId = 4321;
+    const tileSetId = 8765;
+    zhu.assets.putImage(imageId, .{ .size = .xy(16, 16) });
+
+    const treeProps = [_]tiled.Property{
+        .{ .name = "obj_type", .value = .{ .string = "tree" } },
+        .{ .name = "anim_id", .value = .{ .string = "axe" } },
+    };
+    const collisionObjects = [_]tiled.Object{.{
+        .id = 1,
+        .gid = 0,
+        .name = "",
+        .type = "",
+        .position = .xy(16, 0),
+        .size = .xy(16, 16),
+        .point = false,
+        .properties = &.{},
+        .extend = .{},
+    }};
+    const objectGroup = tiled.ObjectGroup{
+        .visible = true,
+        .objects = &collisionObjects,
+    };
+    const tiles = [_]tiled.Tile{.{
+        .id = 0,
+        .objectGroup = objectGroup,
+        .properties = &treeProps,
+        .animation = &.{},
+    }};
+    const tileSets = [_]tiled.TileSet{.{
+        .id = tileSetId,
+        .columns = 1,
+        .tileCount = 1,
+        .image = imageId,
+        .tileSize = .xy(16, 16),
+        .tiles = &tiles,
+    }};
+    const refs = [_]tiled.TileSetRef{.{ .id = tileSetId }};
+    const testMap = tiled.Map{
+        .height = 1,
+        .width = 3,
+        .tileSize = .xy(16, 16),
+        .layers = &.{},
+        .tileSetRefs = &refs,
+    };
+    tiled.init(&tileSets);
+    defer tiled.init(@import("zon/map/tile.zon"));
+
+    data = &testMap;
+    defer data = &maps[@intFromEnum(current)];
+    land.enter(&testMap);
+    defer land.exit();
+    spatial.enter(&testMap);
+    defer spatial.deinit();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    loadProp(&world, .{
+        .id = 1,
+        .gid = 0x01000000,
+        .name = "",
+        .type = "",
+        .position = .xy(0, 16),
+        .size = .xy(32, 16),
+        .point = false,
+        .properties = &.{},
+        .extend = .{},
+    });
+
+    spatial.tiles[0].insert(.arable);
+    spatial.tiles[1].insert(.arable);
+
+    const product = land.tiles[1].product().?;
+    try std.testing.expectEqual(null, land.tiles[0].object);
+    try std.testing.expect(land.hoe(.xy(8, 8)));
+    try std.testing.expect(!land.hoe(.xy(24, 8)));
+
+    clearProductAt(&world, 1);
+
+    try std.testing.expectEqual(null, land.tiles[0].object);
+    try std.testing.expectEqual(null, land.tiles[1].object);
+    try std.testing.expectEqual(.none, land.tiles[0].gone);
+    try std.testing.expectEqual(.product, land.tiles[1].gone);
+    try std.testing.expect(!world.has(product, item.Product));
 }
 
 test "当前地图跨天会推进作物并清干湿地" {
