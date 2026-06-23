@@ -165,7 +165,11 @@ pub const pause = struct {
             1 => save_slot.enter(.pauseSave), // 选择槽位后保存
             2 => save_slot.enter(.pauseLoad), // 选择槽位后读取
             3 => context.scene.request(.title), // 返回标题
-            4 => context.clock.speed -= 0.1, // 减速
+            4 => {
+                // 时钟倍率不能减到 0，否则游戏时间会停止推进。
+                const max = @max(0.1, context.clock.speed - 0.1);
+                context.clock.speed = max;
+            },
             5 => context.clock.speed += 0.1, // 加速
             6 => zhu.audio.changeMusicVolume(-0.1), // 减小音乐
             7 => zhu.audio.changeMusicVolume(0.1), // 增大音乐

@@ -46,7 +46,7 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
         return;
     }
 
-    clock.minute += delta * clock.minutesPerRealSecond;
+    clock.minute += delta * clock.speed * clock.minutesPerRealSecond;
     while (clock.minute >= 60.0) {
         clock.minute -= 60.0;
         advanceOneHour(world);

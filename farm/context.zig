@@ -51,7 +51,7 @@ pub const clock = struct {
     pub const minutesPerRealSecond: f32 = 10.0;
 
     pub var paused: bool = false;
-    // 时钟速度，影响农场里所有按 delta 推进的系统。
+    // 时钟倍率，只影响游戏内时间流逝。
     pub var speed: f32 = 1;
 
     pub var day: u32 = 1;

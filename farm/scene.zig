@@ -79,8 +79,7 @@ pub fn update(delta: f32) void {
 
     switch (context.scene.current) {
         .title => ui.title.update(delta),
-        // 速度倍率只影响可游玩的农场场景，不影响标题动画。
-        .farm => updateFarm(delta * context.clock.speed),
+        .farm => updateFarm(delta),
     }
 
     applyScene();
