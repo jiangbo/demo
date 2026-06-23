@@ -105,16 +105,16 @@ fn hitProductTarget(
     world.addEvent(event.SoundPlay{ .id = toolSound(tool) });
     if (health.value != 0) return;
 
-    // product.count 表示最大掉落数量，实际掉落 1 到 count 个。
+    // product.count 表示最大掉落数量，实际掉落 1 到 count 个，
+    // 合并为一个带数量的掉落物，拾取时一次性获得全部。
     std.debug.assert(product.count > 0);
     const dropCount = zhu.random.intMost(u32, 1, product.count);
     const origin = position.add(map.data.tileSize.scale(0.5));
-    for (0..dropCount) |_| {
-        factory.spawnPickup(world, .{
-            .item = product.item,
-            .origin = origin,
-        });
-    }
+    factory.spawnPickup(world, .{
+        .item = product.item,
+        .count = dropCount,
+        .origin = origin,
+    });
     map.clearProductAt(world, index);
 }
 
@@ -496,12 +496,10 @@ test "镐子击碎石头会生成掉落并清理阻挡" {
     ));
 
     const pickups = world.values(Pickup);
-    try std.testing.expect(pickups.len >= 1);
-    try std.testing.expect(pickups.len <= 2);
-    for (pickups) |pickup| {
-        try std.testing.expectEqual(ItemEnum.stone, pickup.item);
-        try std.testing.expectEqual(1, pickup.count);
-    }
+    try std.testing.expectEqual(1, pickups.len);
+    try std.testing.expectEqual(ItemEnum.stone, pickups[0].item);
+    try std.testing.expect(pickups[0].count >= 1);
+    try std.testing.expect(pickups[0].count <= 2);
 
     const sounds = world.getEvent(event.SoundPlay);
     try std.testing.expectEqual(1, sounds.len);
