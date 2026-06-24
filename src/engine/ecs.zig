@@ -187,6 +187,7 @@ pub const World = struct {
     map: std.AutoHashMapUnmanaged(TypeId, Store(u8)) = .empty,
 
     pub fn init(allocator: std.mem.Allocator) World {
+        comptime std.debug.assert(@sizeOf(Store(u8)) <= 64);
         return .{ .allocator = allocator };
     }
 
