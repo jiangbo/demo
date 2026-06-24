@@ -316,6 +316,10 @@ pub const World = struct {
         self.tryAdd(entity, value) catch @panic("oom");
     }
 
+    pub fn addAll(self: *World, entity: Entity, bundle: anytype) void {
+        inline for (bundle) |value| self.add(entity, value);
+    }
+
     pub fn values(self: *World, T: type) []T {
         const map = self.getStore(T, T) orelse return &.{};
         return map.values[0..map.len];
