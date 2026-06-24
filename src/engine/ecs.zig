@@ -189,7 +189,7 @@ pub const World = struct {
     allocator: Allocator,
     entities: Entities = .{},
     map: std.AutoHashMapUnmanaged(TypeId, Store(u8)) = .empty,
-    global: u16 = invalid,
+    entity: u16 = invalid,
 
     pub fn init(allocator: std.mem.Allocator) World {
         comptime std.debug.assert(@sizeOf(Store(u8)) <= 64);
@@ -208,13 +208,17 @@ pub const World = struct {
         self.* = .init(self.allocator);
     }
 
-    pub fn resetKeepGlobal(self: *World, Types: anytype) void {
-        std.debug.assert(self.global != invalid);
+    pub fn resetKeepOwn(self: *World, Types: anytype) void {
+        self.tryResetKeepOwn(Types) catch @panic("oom");
+    }
+
+    pub fn tryResetKeepOwn(self: *World, Types: anytype) Error!void {
+        std.debug.assert(self.entity != invalid);
 
         var new = World.init(self.allocator);
-        new.global = new.createEntity();
+        new.entity = new.tryCreateEntity();
         inline for (Types) |T| {
-            new.add(new.global, self.get(self.global, T).?);
+            try new.add(new.entity, self.get(self.entity, T).?);
         }
         self.deinit();
         self.* = new;
