@@ -304,19 +304,26 @@
                         .{ .offset = .{ .x = 96, .y = 0 }, .duration = 0.2 },
                     },
                 },
-                // sleep/eat 暂复用 idle 帧占位，躺下视觉待按图集补帧
                 .{
                     .type = .sleep,
                     .imageId = 1920799980,
                     .frames = .{
-                        .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 0, .y = 96 }, .duration = 1.0 },
+                        .{ .offset = .{ .x = 32, .y = 96 }, .duration = 1.0 },
+                        .{ .offset = .{ .x = 64, .y = 96 }, .duration = 1.0 },
+                        .{ .offset = .{ .x = 96, .y = 96 }, .duration = 1.0 },
                     },
                 },
                 .{
                     .type = .eat,
                     .imageId = 1920799980,
                     .frames = .{
-                        .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 0, .y = 160 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 32, .y = 160 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 64, .y = 160 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 64, .y = 160 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 64, .y = 160 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 96, .y = 160 }, .duration = 0.2 },
                     },
                 },
             },
@@ -359,19 +366,26 @@
                         .{ .offset = .{ .x = 96, .y = 0 }, .duration = 0.2 },
                     },
                 },
-                // sleep/eat 暂复用 idle 帧占位，躺下视觉待按图集补帧
                 .{
                     .type = .sleep,
                     .imageId = 3986680349,
                     .frames = .{
-                        .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 0, .y = 96 }, .duration = 1.0 },
+                        .{ .offset = .{ .x = 32, .y = 96 }, .duration = 1.0 },
+                        .{ .offset = .{ .x = 64, .y = 96 }, .duration = 1.0 },
+                        .{ .offset = .{ .x = 96, .y = 96 }, .duration = 1.0 },
                     },
                 },
                 .{
                     .type = .eat,
                     .imageId = 3986680349,
                     .frames = .{
-                        .{ .offset = .{ .x = 0, .y = 0 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 0, .y = 160 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 32, .y = 160 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 64, .y = 160 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 64, .y = 160 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 64, .y = 160 }, .duration = 0.2 },
+                        .{ .offset = .{ .x = 96, .y = 160 }, .duration = 0.2 },
                     },
                 },
             },

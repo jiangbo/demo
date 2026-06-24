@@ -26,6 +26,7 @@ fn updateSleep(world: *zhu.ecs.World) void {
         // 夜晚睡觉优先于进食，直接停住并跳过后续生活逻辑。
         life.state = .sleep;
         life.timer = 0;
+        faceFront(actor);
         actor.action = .sleep;
         stopMoving(world, entity);
     }
@@ -53,12 +54,14 @@ fn updateDay(world: *zhu.ecs.World, delta: f32) void {
                 life.state = .eat;
                 const duration = Life.eatDuration;
                 life.timer = zhu.random.float(duration * 0.5, duration);
+                faceFront(actor);
                 actor.action = .eat;
                 stopMoving(world, entity);
             },
             .eat => {
                 // 进食期间持续保持动作并停止移动。
                 life.timer -= delta;
+                faceFront(actor);
                 actor.action = .eat;
                 stopMoving(world, entity);
                 if (life.timer > 0) continue;
@@ -70,6 +73,11 @@ fn updateDay(world: *zhu.ecs.World, delta: f32) void {
             .sleep => unreachable,
         }
     }
+}
+
+fn faceFront(actor: *Actor) void {
+    // 动物睡觉和进食没有背面帧，朝上时使用正面帧替代。
+    if (actor.facing == .up) actor.facing = .down;
 }
 
 fn enterNormal(life: *Life) void {
@@ -213,4 +221,30 @@ test "睡觉优先于进食" {
     const life = world.get(entity, Life).?;
     try std.testing.expectEqual(.sleep, life.state);
     try std.testing.expectEqual(.sleep, actor.action);
+}
+
+test "睡觉和进食没有背面帧时改用正面方向" {
+    context.init();
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    context.clock.period = .night;
+    const sleepEntity = world.createEntity();
+    world.add(sleepEntity, Actor{ .facing = .up });
+    world.add(sleepEntity, Life{});
+
+    update(&world, 0.1);
+
+    try std.testing.expectEqual(.down, world.get(sleepEntity, Actor).?.facing);
+
+    context.clock.period = .day;
+    zhu.random.init(1);
+    const eatEntity = world.createEntity();
+    world.add(eatEntity, Actor{ .facing = .up });
+    world.add(eatEntity, Life{ .timer = 0 });
+
+    update(&world, 0.1);
+
+    try std.testing.expectEqual(.down, world.get(eatEntity, Actor).?.facing);
 }
