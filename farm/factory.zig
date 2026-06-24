@@ -155,6 +155,10 @@ pub fn spawnAnimal(world: *World, kind: actor.Animal) Entity {
 
     const entity = spawnNpc(world, config, sources);
     world.add(entity, kind);
+    const interval = actor.Life.eatInterval;
+    world.add(entity, actor.Life{
+        .timer = zhu.random.float(interval * 0.5, interval),
+    });
     if (config.soundId) |id| world.add(entity, id);
     if (config.voice) |voice| world.add(entity, voice);
     return entity;
@@ -283,7 +287,11 @@ pub fn spawnMapTile(
     return entity;
 }
 
-fn addMapItemProduct(world: *World, entity: Entity, tile: *const tiled.Tile) void {
+fn addMapItemProduct(
+    world: *World,
+    entity: Entity,
+    tile: *const tiled.Tile,
+) void {
     const animation = tile.getProperty("anim_id", []const u8) orelse return;
     const tool = std.meta.stringToEnum(item.ItemEnum, animation) orelse return;
     const hit = itemConfig(tool).hit orelse return;
@@ -304,7 +312,11 @@ fn chestItems(object: Object) item.Counts {
     return result;
 }
 
-fn mapObjectSortY(object: Object, tile: *const tiled.Tile, size: zhu.Vector2) f32 {
+fn mapObjectSortY(
+    object: Object,
+    tile: *const tiled.Tile,
+    size: zhu.Vector2,
+) f32 {
     const group = tile.objectGroup orelse return object.position.y;
     var result: f32 = 0;
     var found = false;
@@ -313,7 +325,8 @@ fn mapObjectSortY(object: Object, tile: *const tiled.Tile, size: zhu.Vector2) f3
         if (local.size.x <= 0 or local.size.y <= 0) continue;
 
         // Tiled 瓦片对象 position 是图片底边，碰撞框坐标从图片左上角开始。
-        const bottom = object.position.y - size.y + local.position.y + local.size.y;
+        const bottom = object.position.y - size.y +
+            local.position.y + local.size.y;
         if (!found or bottom > result) {
             result = bottom;
             found = true;
@@ -376,7 +389,11 @@ fn applyLight(world: *World, entity: Entity, object: Object) void {
     }
 }
 
-pub fn spawnCrop(world: *World, position: zhu.Vector2, kind: farm.CropEnum) Entity {
+pub fn spawnCrop(
+    world: *World,
+    position: zhu.Vector2,
+    kind: farm.CropEnum,
+) Entity {
     const stage = zon.crops[@intFromEnum(kind)].stages[0];
     const entity = world.createEntity();
     // kind 写入组件，后续 advanceCrop 依赖它查找正确的阶段贴图
@@ -507,8 +524,13 @@ test "spawnAnimal 会创建可漫游动物实体" {
     try expectEqual(actor.AnimalEnum.cow, world.get(entity, actor.Animal).?);
     try std.testing.expect(world.has(entity, actor.Npc));
     try std.testing.expect(world.has(entity, actor.Wander));
+    try std.testing.expect(world.has(entity, actor.Life));
     try expectEqual(sound.Id.cow, world.get(entity, sound.Id).?);
     try expectEqual(0.4, world.get(entity, sound.Voice).?.probability);
+    const life = world.get(entity, actor.Life).?;
+    try std.testing.expectEqual(.normal, life.state);
+    try std.testing.expect(life.timer >= 4);
+    try std.testing.expect(life.timer <= 8);
     try expectEqual(null, world.get(entity, actor.Dialog));
 }
 
@@ -552,7 +574,8 @@ test "spawnCrop 会按作物类型设置 kind 和 next" {
         try expectEqual(farm.GrowthEnum.seed, crop.stage);
         try expectEqual(case.kind, crop.kind);
         try expectEqual(config.stages[0].duration, crop.next);
-        try expectEqual(case.position.x, world.get(entity, component.Position).?.x);
+        const position = world.get(entity, component.Position).?;
+        try expectEqual(case.position.x, position.x);
     }
 }
 

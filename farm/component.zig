@@ -100,6 +100,19 @@ pub const actor = struct {
         stuckReset: f32 = 1.0,
     };
 
+    // 生活状态：挂上后会按时间在普通、睡觉、进食之间切换。
+    pub const Life = struct {
+        pub const State = enum { normal, sleep, eat };
+        // 进食间隔上限，实际等待在一半到该值之间随机。
+        pub const eatInterval: f32 = 8.0;
+        // 单次进食时长上限，实际时长在一半到该值之间随机。
+        pub const eatDuration: f32 = 2.0;
+
+        state: State = .normal,
+        // normal 时表示进食冷却，eat 时表示剩余进食时间。
+        timer: f32 = 0,
+    };
+
     // 对话组件：挂载到可交互的 NPC 上
     // 同时用作 Identity 标记当前正在对话的实体
     pub const Dialog = struct {

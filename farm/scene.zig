@@ -14,6 +14,7 @@ const system = struct {
     const animation = @import("system/animation.zig");
     const control = @import("system/control.zig");
     const farm = @import("system/farm.zig");
+    const life = @import("system/life.zig");
     const light = @import("system/light.zig");
     const movement = @import("system/movement.zig");
     const pickup = @import("system/pickup.zig");
@@ -135,6 +136,7 @@ fn updateFarm(delta: f32) void {
     // 输入先写入意图，移动系统统一结算位置和碰撞。
     inventory.update();
     system.control.update(&world);
+    system.life.update(&world, delta);
     system.wander.update(&world, delta);
     system.movement.update(&world, delta);
 

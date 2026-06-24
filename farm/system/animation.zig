@@ -54,7 +54,8 @@ fn updateActor(world: *zhu.ecs.World) void {
         if (sameAction and animation.row == row) continue;
 
         const loop = actor.action == .idle or
-            actor.action == .walk or actor.action == .sleep;
+            actor.action == .walk or actor.action == .sleep or
+            actor.action == .eat;
         animation.playRow(actor.action, row, loop);
     }
 }
@@ -146,6 +147,8 @@ test "工具动画结束后解除忙碌状态" {
         .{ .imageId = 1, .clip = &frames },
         .{ .imageId = 1, .clip = &frames },
         .{ .imageId = 1, .clip = &frames },
+        .{ .imageId = 1, .clip = &frames },
+        .{ .imageId = 1, .clip = &frames },
     };
     world.add(entity, Animation.initSource(&sources, image.size));
     world.add(entity, Sprite{ .image = image });
@@ -179,6 +182,8 @@ test "动画进入关键帧时挂上生效标记" {
     const entity = world.createEntity();
     world.add(entity, Actor{ .action = .hoe });
     const sources = [_]zhu.Animation.Source{
+        .{ .imageId = 1, .clip = &frames },
+        .{ .imageId = 1, .clip = &frames },
         .{ .imageId = 1, .clip = &frames },
         .{ .imageId = 1, .clip = &frames },
         .{ .imageId = 1, .clip = &frames },

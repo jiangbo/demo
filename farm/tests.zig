@@ -12,6 +12,7 @@ test {
     std.testing.refAllDeclsRecursive(@import("system/animation.zig"));
     std.testing.refAllDeclsRecursive(@import("system/control.zig"));
     std.testing.refAllDeclsRecursive(@import("system/farm.zig"));
+    std.testing.refAllDeclsRecursive(@import("system/life.zig"));
     std.testing.refAllDeclsRecursive(@import("system/light.zig"));
     std.testing.refAllDeclsRecursive(@import("system/movement.zig"));
     std.testing.refAllDeclsRecursive(@import("system/pickup.zig"));
