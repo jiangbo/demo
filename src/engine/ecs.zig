@@ -121,7 +121,9 @@ fn Store(V: type) type {
                 .items = self.values[0..self.len],
                 .capacity = self.valueCap,
             };
-            try values.ensureUnusedCapacity(gpa, 1);
+            if (self.valueCap == 0) {
+                try values.ensureTotalCapacityPrecise(gpa, 1);
+            } else try values.ensureUnusedCapacity(gpa, 1);
             self.values = values.items.ptr;
             self.valueCap = @intCast(values.capacity);
         }
@@ -131,7 +133,9 @@ fn Store(V: type) type {
                 .items = self.dense[0..self.len],
                 .capacity = self.denseCap,
             };
-            try dense.ensureUnusedCapacity(gpa, 1);
+            if (self.denseCap == 0) {
+                try dense.ensureTotalCapacityPrecise(gpa, 1);
+            } else try dense.ensureUnusedCapacity(gpa, 1);
             self.dense = dense.items.ptr;
             self.denseCap = @intCast(dense.capacity);
         }
@@ -185,6 +189,7 @@ pub const World = struct {
     allocator: Allocator,
     entities: Entities = .{},
     map: std.AutoHashMapUnmanaged(TypeId, Store(u8)) = .empty,
+    global: u16 = invalid,
 
     pub fn init(allocator: std.mem.Allocator) World {
         comptime std.debug.assert(@sizeOf(Store(u8)) <= 64);
@@ -203,11 +208,23 @@ pub const World = struct {
         self.* = .init(self.allocator);
     }
 
-    pub fn tryCreateEntity(self: *World) Error!Entity {
+    pub fn resetKeepGlobal(self: *World, Types: anytype) void {
+        std.debug.assert(self.global != invalid);
+
+        var new = World.init(self.allocator);
+        new.global = new.createEntity();
+        inline for (Types) |T| {
+            new.add(new.global, self.get(self.global, T).?);
+        }
+        self.deinit();
+        self.* = new;
+    }
+
+    pub fn tryCreateEntity(self: *World) Error!u16 {
         return self.entities.create(self.allocator);
     }
 
-    pub fn tryAddIdentity(self: *World, entity: Entity, T: type) Oom!void {
+    pub fn tryAddIdentity(self: *World, entity: u16, T: type) Oom!void {
         (try self.tryAssure(T, T)).identity = entity;
     }
 
@@ -216,7 +233,7 @@ pub const World = struct {
         try map.appendValue(self.allocator, value);
     }
 
-    pub fn tryAdd(self: *World, entity: Entity, value: anytype) Oom!void {
+    pub fn tryAdd(self: *World, entity: u16, value: anytype) Oom!void {
         var map = try self.tryAssure(@TypeOf(value), @TypeOf(value));
         try map.add(self.allocator, entity, value);
     }
@@ -228,7 +245,7 @@ pub const World = struct {
         return map;
     }
 
-    pub fn createEntity(self: *World) Entity {
+    pub fn createEntity(self: *World) u16 {
         return self.tryCreateEntity() catch |err| switch (err) {
             error.OutOfMemory => @panic("oom"),
             error.MaxEntity => @panic("ecs max entity"),
@@ -245,11 +262,11 @@ pub const World = struct {
         while (toDestroy.next()) |entity| self.destroyEntity(entity);
     }
 
-    pub fn addIdentity(self: *World, entity: Entity, T: type) void {
+    pub fn addIdentity(self: *World, entity: u16, T: type) void {
         self.tryAddIdentity(entity, T) catch @panic("oom");
     }
 
-    pub fn createIdentity(self: *World, T: type) Entity {
+    pub fn createIdentity(self: *World, T: type) u16 {
         const entity = self.createEntity();
         self.addIdentity(entity, T);
         return entity;
@@ -312,11 +329,11 @@ pub const World = struct {
         return &map.values[map.sparse.items[entity]];
     }
 
-    pub fn add(self: *World, entity: Entity, value: anytype) void {
+    pub fn add(self: *World, entity: u16, value: anytype) void {
         self.tryAdd(entity, value) catch @panic("oom");
     }
 
-    pub fn addAll(self: *World, entity: Entity, bundle: anytype) void {
+    pub fn addAll(self: *World, entity: u16, bundle: anytype) void {
         inline for (bundle) |value| self.add(entity, value);
     }
 
