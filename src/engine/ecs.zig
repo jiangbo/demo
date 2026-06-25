@@ -105,7 +105,7 @@ fn Store(V: type) type {
             if (self.len >= self.denseCap) try self.growDense(gpa);
             self.dense[self.len] = entity;
             self.values[self.len] = v;
-            self.sparse.items[entity] = @intCast(self.len);
+            self.sparse.items[entity] = self.len;
             self.len += 1;
         }
 
@@ -140,23 +140,22 @@ fn Store(V: type) type {
             self.denseCap = @intCast(dense.capacity);
         }
 
-        fn remove(self: *@This(), entity: u16) u16 {
-            if (!hasEntity(self.sparse.items, entity)) return invalid;
+        fn remove(self: *@This(), entity: u16) void {
+            if (!hasEntity(self.sparse.items, entity)) return;
 
             const index = self.sparse.items[entity];
             self.sparse.items[entity] = invalid;
 
             self.len -= 1;
             const moved = self.dense[self.len];
-            if (self.len == index) return index;
+            if (self.len == index) return;
             self.sparse.items[moved] = index;
             self.dense[index] = moved;
-            if (self.valueSize == 0) return index;
+            if (self.valueSize == 0) return;
 
             const sz = if (V == u8) self.valueSize else 1;
             const src = self.values[sz * self.len ..];
             @memcpy(self.values[sz * index ..][0..sz], src[0..sz]);
-            return index;
         }
 
         fn sort(self: *@This(), lessFn: fn (V, V) bool) void {
@@ -216,7 +215,7 @@ pub const World = struct {
         std.debug.assert(self.entity != invalid);
 
         var new = World.init(self.allocator);
-        new.entity = new.tryCreateEntity();
+        new.entity = try new.tryCreateEntity();
         inline for (Types) |T| {
             try new.add(new.entity, self.get(self.entity, T).?);
         }
@@ -351,13 +350,13 @@ pub const World = struct {
     }
 
     pub fn remove(self: *World, entity: u16, T: type) void {
-        if (self.getStore(T, T)) |map| _ = map.remove(entity);
+        if (self.getStore(T, T)) |map| map.remove(entity);
     }
 
     pub fn removeAll(self: *World, entity: u16) void {
         var iterator = self.map.valueIterator();
         while (iterator.next()) |map| {
-            _ = map.remove(entity);
+            map.remove(entity);
             if (map.identity == entity) map.identity = invalid;
         }
     }
@@ -389,7 +388,6 @@ pub const World = struct {
         inline for (None, &result.none) |T, *none| {
             if (self.getStore(T, T)) |s| none.* = s.sparse.items;
         }
-
         return result;
     }
 
