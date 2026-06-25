@@ -10,69 +10,6 @@ const text = @import("text.zig");
 
 pub const Event = sk.app.Event;
 
-const CountingAllocator = struct {
-    child: std.mem.Allocator,
-    used: usize,
-    count: usize,
-
-    pub fn init(child: std.mem.Allocator) CountingAllocator {
-        return .{ .child = child, .used = 0, .count = 0 };
-    }
-
-    pub fn allocator(self: *CountingAllocator) std.mem.Allocator {
-        return .{
-            .ptr = self,
-            .vtable = &.{
-                .alloc = allocs,
-                .resize = resize,
-                .remap = remap,
-                .free = frees,
-            },
-        };
-    }
-
-    const A = std.mem.Alignment;
-    fn allocs(c: *anyopaque, len: usize, a: A, r: usize) ?[*]u8 {
-        const self: *CountingAllocator = @ptrCast(@alignCast(c));
-        const p = self.child.rawAlloc(len, a, r) orelse return null;
-        self.count += 1;
-        self.used += len;
-        return p;
-    }
-
-    fn resize(c: *anyopaque, b: []u8, a: A, len: usize, r: usize) bool {
-        const self: *CountingAllocator = @ptrCast(@alignCast(c));
-        const stable = self.child.rawResize(b, a, len, r);
-        if (stable) {
-            self.count += 1;
-            self.used +%= len -% b.len;
-        }
-        return stable;
-    }
-
-    fn remap(c: *anyopaque, m: []u8, a: A, len: usize, r: usize) ?[*]u8 {
-        const self: *CountingAllocator = @ptrCast(@alignCast(c));
-        const n = self.child.rawRemap(m, a, len, r) orelse return null;
-        self.count += 1;
-        self.used +%= len -% m.len;
-        return n;
-    }
-
-    fn frees(c: *anyopaque, buf: []u8, a: A, r: usize) void {
-        const self: *CountingAllocator = @ptrCast(@alignCast(c));
-        self.used -= buf.len;
-        return self.child.rawFree(buf, a, r);
-    }
-};
-
-pub fn showCursor(show: bool) void {
-    sk.app.showMouse(show);
-}
-
-pub fn toggleFullScreen() void {
-    sk.app.toggleFullscreen();
-}
-
 /// 缩放模式枚举
 pub const ScaleEnum = enum {
     none, // 无缩放，使用原始尺寸
@@ -82,7 +19,7 @@ pub const ScaleEnum = enum {
     integer, // 整数缩放，整数倍数（无滤镜失真）
 };
 
-pub const WindowInfo = struct {
+pub const Info = struct {
     title: [:0]const u8, // 窗口标题
     size: math.Vector, // 窗口大小
     logicSize: ?math.Vector = null, // 逻辑大小，默认和窗口大小相同
@@ -92,29 +29,29 @@ pub const WindowInfo = struct {
     maxFileSize: usize = 1 * 1024 * 1024, // 最大加载文件大小
 };
 
+pub var size: math.Vector = .zero;
+pub var clientSize: math.Vector = .zero;
+pub var viewRect: math.Rect = undefined;
+pub var alignment: math.Vector2 = .center; // 默认居中
+var scaleEnum: ScaleEnum = .stretch; // 当前缩放模式
+var io: std.Io = undefined;
+
+pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
+
 pub fn call(object: anytype, comptime name: []const u8, args: anytype) void {
     if (@hasDecl(object, name)) @call(.auto, @field(object, name), args);
 }
 
-pub var size: math.Vector = .zero;
-pub var clientSize: math.Vector = .zero;
-pub var viewRect: math.Rect = undefined;
-pub var countingAllocator: CountingAllocator = undefined;
-pub var alignment: math.Vector2 = .center; // 默认居中
-var scaleEnum: ScaleEnum = .stretch; // 当前缩放模式
-
-pub extern "Imm32" fn ImmDisableIME(i32) std.os.windows.BOOL;
-
 const root = @import("root");
-pub fn run(allocs: std.mem.Allocator, info: WindowInfo) void {
+pub fn run(io_: std.Io, gpa: std.mem.Allocator, info: Info) void {
     sk.time.setup();
     size = info.logicSize orelse info.size;
     camera.init(size);
     viewRect = .init(.zero, size);
     alignment = info.alignment;
     scaleEnum = info.scaleEnum;
-    countingAllocator = CountingAllocator.init(allocs);
-    assets.init(countingAllocator.allocator(), info.maxFileSize);
+    io = io_;
+    assets.init(io, gpa, info.maxFileSize);
 
     if (info.disableIME and builtin.os.tag == .windows) {
         _ = ImmDisableIME(-1);
@@ -205,12 +142,20 @@ export fn windowDeinit() void {
     assets.deinit();
 }
 
-pub fn statFileTime(path: [:0]const u8) i64 {
-    const file = std.fs.cwd().openFile(path, .{}) catch return 0;
-    defer file.close();
+pub fn timestamp() std.Io.Timestamp {
+    return std.Io.Timestamp.now(io, .real);
+}
 
-    const stat = file.stat() catch return 0;
-    return @intCast(stat.mtime);
+pub const showCursor = sk.app.showMouse;
+pub const toggleFullScreen = sk.app.toggleFullscreen;
+
+const Dir = std.Io.Dir;
+pub fn statFileTime(path: [:0]const u8) i128 {
+    const file = Dir.cwd().openFile(io, path, .{}) catch return 0;
+    defer file.close(io);
+
+    const stat = file.stat(io) catch return 0;
+    return @intCast(stat.mtime.toNanoseconds());
 }
 
 pub fn readBuffer(path: [:0]const u8, buffer: []u8) ![:0]u8 {
@@ -222,7 +167,7 @@ pub fn readBuffer(path: [:0]const u8, buffer: []u8) ![:0]u8 {
         // 长度小于0，没有读完，太长了。
         return error.BufferTooSmall;
     }
-    const content = try std.fs.cwd().readFile(path, buf);
+    const content = try Dir.cwd().readFile(io, path, buf);
     return terminateBuffer(buffer, content.len);
 }
 
@@ -240,8 +185,37 @@ pub fn readAll(path: [:0]const u8) ![:0]u8 {
         return terminateBuffer(large, @intCast(fileLen));
     }
     const max = 1024 * 1024;
-    return try std.fs.cwd().readFileAllocOptions( //
-        assets.allocator, path, max, null, .of(u8), 0);
+    return try Dir.cwd().readFileAllocOptions( //
+        io, path, assets.allocator, .limited(max), .of(u8), 0);
+}
+
+pub fn Zon(comptime T: type) type {
+    return struct {
+        value: T,
+        arena: std.heap.ArenaAllocator,
+
+        pub fn deinit(self: *@This()) void {
+            self.arena.deinit();
+        }
+    };
+}
+
+// 读取 ZON 文件，返回带 arena 生命周期的包装对象。
+pub fn readZon(T: type, path: [:0]const u8, ignore: bool) !Zon(T) {
+    const source = try readAll(path);
+    defer assets.free(source);
+
+    var arena = std.heap.ArenaAllocator.init(assets.allocator);
+    errdefer arena.deinit();
+
+    const allocator = arena.allocator();
+    const option: std.zon.parse.Options = .{
+        .ignore_unknown_fields = ignore,
+        .free_on_error = false,
+    };
+    const value = try std.zon.parse.fromSliceAlloc(T, //
+        allocator, source, null, option);
+    return .{ .value = value, .arena = arena };
 }
 
 fn terminateBuffer(buffer: []u8, len: usize) [:0]u8 {
@@ -265,16 +239,15 @@ pub fn saveAll(path: [:0]const u8, content: []const u8) !void {
             content.ptr, @intCast(content.len));
     }
 
-    const cwd = std.fs.cwd();
-
+    const cwd = std.Io.Dir.cwd();
     if (std.fs.path.dirname(path)) |dir| {
-        try cwd.makePath(dir);
+        try cwd.createDirPath(io, dir);
     }
 
-    var file = try cwd.createFile(path, .{ .truncate = true });
-    defer file.close();
+    var file = try cwd.createFile(io, path, .{ .truncate = true });
+    defer file.close(io);
 
-    try file.writeAll(content);
+    try file.writeStreamingAll(io, content);
 }
 
 pub fn exit() void {

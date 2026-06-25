@@ -16,6 +16,76 @@ const Rect = @import("math.zig").Rect;
 
 const basePadding = Vector2.xy(10, 9);
 
+// 返回可热重载的 ZON 数据指针。首次调用会从文件读取。
+pub fn zon(comptime T: type, comptime path: [:0]const u8) *T {
+    const file = ZonFile(T, path);
+    if (file.parsed == null and !file.reload()) {
+        std.debug.panic("zon load failed: {s}", .{path});
+    }
+    const result = zonMap.getOrPut(assets.allocator, //
+        path) catch assets.oom();
+    if (!result.found_existing) {
+        result.value_ptr.* = .{
+            .path = path,
+            .mtime = window.statFileTime(path),
+            .reload = file.reload,
+            .deinit = file.deinit,
+        };
+    }
+
+    return &file.parsed.?.value;
+}
+
+// 重新加载有变化的 ZON 文件。
+pub fn reloadZon() void {
+    var iterator = zonMap.valueIterator();
+    while (iterator.next()) |entry| {
+        const mtime = window.statFileTime(entry.path);
+        if (mtime == 0 or mtime == entry.mtime) continue;
+
+        const loaded = entry.reload();
+        entry.mtime = mtime;
+        if (loaded) std.log.info("zon reloaded: {s}", .{entry.path});
+    }
+}
+
+// 释放调试热重载保存的 ZON 数据。
+pub fn deinit() void {
+    var iterator = zonMap.valueIterator();
+    while (iterator.next()) |entry| entry.deinit();
+    zonMap.deinit(assets.allocator);
+}
+
+const ZonEntry = struct {
+    path: [:0]const u8,
+    mtime: i128,
+    reload: *const fn () bool,
+    deinit: *const fn () void,
+};
+
+var zonMap: std.StringHashMapUnmanaged(ZonEntry) = .empty;
+
+fn ZonFile(comptime T: type, comptime path: [:0]const u8) type {
+    return struct {
+        var parsed: ?window.Zon(T) = null;
+
+        fn reload() bool {
+            const next = window.readZon(T, path, false) catch |err| {
+                std.log.err("zon reload failed: {s}: {}", .{ path, err });
+                return false;
+            };
+
+            if (parsed) |*old| old.deinit();
+            parsed = next;
+            return true;
+        }
+
+        fn deinit() void {
+            if (parsed) |*old| old.deinit();
+        }
+    };
+}
+
 var last: u64 = 0;
 var fps: u64 = 0;
 var fpsFrame: u64 = 0;
@@ -36,7 +106,7 @@ pub fn draw() void {
     last = frame;
 
     var buffer: [1000]u8 = undefined;
-    const frameStats = graphics.queryFrameStats();
+    const frameStats = sk.gfx.queryStats().cur_frame;
     var writer = std.Io.Writer.fixed(&buffer);
     writeFormatLine(&writer, "后端", "{s}", .{
         @tagName(graphics.queryBackend()),
@@ -45,7 +115,7 @@ pub fn draw() void {
         sk.app.frameDuration() * 1000,
     }, "用时 {d:.2}ms", .{usedTime});
     writeFormatLine(&writer, "内存", "{}", .{
-        window.countingAllocator.used,
+        assets.memory.used,
     }, "显存 {}", .{frameStats.size_update_buffer});
     writeFormatLine(&writer, "批次", "命令 {}", .{
         batch.commands.items.len,

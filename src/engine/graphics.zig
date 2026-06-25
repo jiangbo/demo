@@ -7,11 +7,6 @@ const window = @import("window.zig");
 
 pub const View = sk.gfx.View;
 
-pub fn frameStats(enable: bool) void {
-    if (enable) sk.gfx.enableFrameStats() else sk.gfx.disableFrameStats();
-}
-
-pub const queryFrameStats = sk.gfx.queryFrameStats;
 pub const queryBackend = sk.gfx.queryBackend;
 
 pub const Vector2 = math.Vector2;
@@ -247,7 +242,7 @@ pub fn createRenderTarget(size: math.Vector2) RenderTarget {
         .width = @intFromFloat(size.x),
         .height = @intFromFloat(size.y),
         .sample_count = 1,
-        .pixel_format = @enumFromInt(sk.app.depthFormat()),
+        .pixel_format = .DEPTH_STENCIL,
     });
     pass.attachments.depth_stencil = sk.gfx.makeView(.{
         .depth_stencil_attachment = .{ .image = depthImage },

@@ -1,5 +1,4 @@
 const std = @import("std");
-const builtin = @import("builtin");
 const zhu = @import("zhu");
 
 const scene = @import("scene.zig");
@@ -45,22 +44,8 @@ pub fn deinit() void {
     zhu.assets.free(vertexBuffer);
 }
 
-pub fn main() void {
-    var allocator: std.mem.Allocator = undefined;
-    var debugAllocator: std.heap.DebugAllocator(.{}) = undefined;
-
-    if (builtin.mode == .Debug) {
-        debugAllocator = std.heap.DebugAllocator(.{}).init;
-        allocator = debugAllocator.allocator();
-    } else {
-        allocator = std.heap.c_allocator;
-    }
-
-    defer if (builtin.mode == .Debug) {
-        _ = debugAllocator.deinit();
-    };
-
-    zhu.window.run(allocator, .{
+pub fn main(initInfo: std.process.Init) void {
+    zhu.window.run(initInfo.io, initInfo.gpa, .{
         .title = "迷你农场",
         .size = .xy(1280, 720),
         .logicSize = .xy(640, 360),

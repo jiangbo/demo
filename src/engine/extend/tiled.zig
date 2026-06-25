@@ -486,7 +486,7 @@ pub const ObjectGroup = struct {
     objects: []const Object, // 物体数组 (物体层用)
 };
 
-pub const ObjectExtend = packed struct(u8) {
+pub const ObjectExtend = struct {
     flipX: bool = false, // 水平翻转
     flipY: bool = false, // 垂直翻转
     rotation: bool = false, // 旋转90度

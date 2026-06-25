@@ -3,7 +3,7 @@ const sk = @import("sokol");
 const assets = @import("assets.zig");
 const stbAudio = @import("c.zig").stbAudio;
 
-var mutex: std.Thread.Mutex = .{};
+var mutex: std.Io.Mutex = .init;
 pub var paused: std.atomic.Value(bool) = .init(false);
 
 pub fn init(sampleRate: u32, soundBuffer: []Sound) void {
@@ -63,16 +63,16 @@ pub fn playMusicOption(path: [:0]const u8, loop: bool) void {
     const source = assets.loadMusic(path, loop);
     if (source == null) return;
 
-    mutex.lock();
-    defer mutex.unlock();
+    mutex.lockUncancelable(assets.io);
+    defer mutex.unlock(assets.io);
 
     stbAudio.reset(source.?);
     music = .{ .source = source.?, .loop = loop };
 }
 
 pub fn setMusicState(state: StateEnum) void {
-    mutex.lock();
-    defer mutex.unlock();
+    mutex.lockUncancelable(assets.io);
+    defer mutex.unlock(assets.io);
     music.state = state;
 }
 
@@ -106,8 +106,8 @@ pub fn playSoundOption(path: [:0]const u8, option: Sound.Option) ?usize {
     const sound = assets.loadSound(path, option.loop);
     if (sound == null) return null;
 
-    mutex.lock();
-    defer mutex.unlock();
+    mutex.lockUncancelable(assets.io);
+    defer mutex.unlock(assets.io);
 
     const index = allocSoundIndex();
     sounds[index] = .{
@@ -121,8 +121,8 @@ pub fn playSoundOption(path: [:0]const u8, option: Sound.Option) ?usize {
 }
 
 pub fn stopSounds() void {
-    mutex.lock();
-    defer mutex.unlock();
+    mutex.lockUncancelable(assets.io);
+    defer mutex.unlock(assets.io);
     for (sounds) |*s| s.state = .stopped;
 }
 
@@ -139,8 +139,8 @@ export fn audioCallback(b: [*c]f32, frames: i32, channels: i32) void {
     @memset(buffer, 0);
     if (paused.load(.acquire)) return;
 
-    mutex.lock();
-    defer mutex.unlock();
+    mutex.lockUncancelable(assets.io);
+    defer mutex.unlock(assets.io);
 
     if (music.state == .playing) fillMusic(buffer, channels);
     fillSound(buffer);

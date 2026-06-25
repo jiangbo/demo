@@ -100,30 +100,10 @@ pub fn loadSlot(world: *World, slot: usize) !void {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
-    const content = try zhu.window.readAll(path);
-    defer zhu.assets.free(content);
+    var save = try zhu.window.readZon(SaveData, path, false);
+    defer save.deinit();
 
-    const terminated = try std.fmt.allocPrintSentinel(
-        zhu.assets.allocator,
-        "{s}",
-        .{content},
-        0,
-    );
-    defer zhu.assets.free(terminated);
-
-    var diagnostics: std.zon.parse.Diagnostics = .{};
-    defer diagnostics.deinit(zhu.assets.allocator);
-
-    const data = try std.zon.parse.fromSlice(
-        SaveData,
-        zhu.assets.allocator,
-        terminated,
-        &diagnostics,
-        .{},
-    );
-    defer std.zon.parse.free(zhu.assets.allocator, data);
-
-    try apply(world, data);
+    try apply(world, save.value);
     std.log.info("game loaded: {s}", .{path});
 }
 
@@ -131,13 +111,17 @@ pub fn readSlotSummary(slot: usize) !?SlotSummary {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
-    const content = zhu.window.readAll(path) catch |err| switch (err) {
-        error.FileNotFound => return null,
-        else => return err,
-    };
-    defer zhu.assets.free(content);
+    var summary = zhu.window.readZon(SummaryData, path, true) catch |err|
+        switch (err) {
+            error.FileNotFound => return null,
+            else => return err,
+        };
+    defer summary.deinit();
 
-    return try parseSlotSummary(content, zhu.assets.allocator);
+    return .{
+        .day = summary.value.time.day,
+        .timestamp = summary.value.timestamp,
+    };
 }
 
 pub fn parseSlotSummary(
@@ -178,7 +162,7 @@ fn capture(world: *World) !SaveData {
     const actor = world.get(player, Actor) orelse Actor{};
 
     return .{
-        .timestamp = std.time.timestamp(),
+        .timestamp = zhu.window.timestamp().toSeconds(),
         .time = .{
             .paused = context.clock.paused,
             .scale = context.clock.speed,

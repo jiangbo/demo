@@ -8,12 +8,71 @@ const audio = @import("audio.zig");
 const Image = graphics.Image;
 const Path = [:0]const u8;
 
+pub const CountingAllocator = struct {
+    child: std.mem.Allocator,
+    used: usize,
+    count: usize,
+
+    pub fn init(child: std.mem.Allocator) CountingAllocator {
+        return .{ .child = child, .used = 0, .count = 0 };
+    }
+
+    pub fn allocator(self: *CountingAllocator) std.mem.Allocator {
+        return .{
+            .ptr = self,
+            .vtable = &.{
+                .alloc = allocs,
+                .resize = resize,
+                .remap = remap,
+                .free = frees,
+            },
+        };
+    }
+
+    const A = std.mem.Alignment;
+    fn allocs(ctx: *anyopaque, len: usize, a: A, r: usize) ?[*]u8 {
+        const self: *CountingAllocator = @ptrCast(@alignCast(ctx));
+        const p = self.child.rawAlloc(len, a, r) orelse return null;
+        self.count += 1;
+        self.used += len;
+        return p;
+    }
+
+    fn resize(ctx: *anyopaque, b: []u8, a: A, len: usize, r: usize) bool {
+        const self: *CountingAllocator = @ptrCast(@alignCast(ctx));
+        const stable = self.child.rawResize(b, a, len, r);
+        if (stable) {
+            self.count += 1;
+            self.used +%= len -% b.len;
+        }
+        return stable;
+    }
+
+    fn remap(ctx: *anyopaque, m: []u8, a: A, len: usize, r: usize) ?[*]u8 {
+        const self: *CountingAllocator = @ptrCast(@alignCast(ctx));
+        const n = self.child.rawRemap(m, a, len, r) orelse return null;
+        self.count += 1;
+        self.used +%= len -% m.len;
+        return n;
+    }
+
+    fn frees(ctx: *anyopaque, buf: []u8, a: A, r: usize) void {
+        const self: *CountingAllocator = @ptrCast(@alignCast(ctx));
+        self.used -= buf.len;
+        return self.child.rawFree(buf, a, r);
+    }
+};
+
 pub var allocator: std.mem.Allocator = undefined;
 pub var skAllocator: sk.gfx.Allocator = undefined;
+pub var io: std.Io = undefined;
+pub var memory: CountingAllocator = undefined; // 统计全局资源内存
 var imageCache: std.AutoHashMapUnmanaged(Id, graphics.Image) = .empty;
 
-pub fn init(allocator1: std.mem.Allocator, maxSize: usize) void {
-    allocator = allocator1;
+pub fn init(io_: std.Io, gpa: std.mem.Allocator, maxSize: usize) void {
+    io = io_;
+    memory = CountingAllocator.init(gpa);
+    allocator = memory.allocator();
     skAllocator = .{ .alloc_fn = sk_alloc, .free_fn = sk_free };
 
     sk.fetch.setup(.{
@@ -26,7 +85,6 @@ pub fn init(allocator1: std.mem.Allocator, maxSize: usize) void {
 
 pub fn initCaches(allocator1: std.mem.Allocator) void {
     allocator, imageCache = .{ allocator1, .empty };
-    Zon.map = .empty;
     View.cache, File.cache = .{ .empty, .empty };
     Sound.cache, Music.cache = .{ .empty, .empty };
 }
@@ -44,7 +102,6 @@ fn sk_free(ptr: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
 }
 
 pub fn deinit() void {
-    Zon.deinit();
     imageCache.deinit(allocator);
     View.cache.deinit(allocator);
     Sound.cache.deinit(allocator);
@@ -66,8 +123,8 @@ pub fn oomDupeZ(comptime T: type, m: []const T) [:0]T {
     return allocator.dupeZ(T, m) catch oom();
 }
 
-pub fn free(memory: anytype) void {
-    return allocator.free(memory);
+pub fn free(data: anytype) void {
+    return allocator.free(data);
 }
 
 pub fn oom() noreturn {
@@ -95,143 +152,6 @@ pub const Id = u32;
 pub fn id(name: []const u8) Id {
     return std.hash.Fnv1a_32.hash(name);
 }
-
-// 返回可重载 ZON 数据指针。首次调用会从文件读取。
-pub fn zon(comptime T: type, comptime path: Path) *T {
-    return Zon.load(T, path);
-}
-
-// 重新加载有变化的 ZON 文件。
-pub fn reloadZon() void {
-    Zon.reloadAll();
-}
-
-const Zon = struct {
-    const Entry = struct {
-        path: Path,
-        mtime: i128,
-        reload: *const fn () bool,
-        deinit: *const fn () void,
-    };
-
-    var map: std.AutoHashMapUnmanaged(Id, Entry) = .empty;
-
-    fn load(comptime T: type, comptime path: Path) *T {
-        const store = Store(T, path);
-        if (!store.loaded) {
-            if (!store.reload()) std.debug.panic("zon load failed: {s}", .{path});
-        }
-        if (!store.registered) {
-            register(path, store.reload, store.deinit);
-            store.registered = true;
-        }
-        return &store.data;
-    }
-
-    fn reloadAll() void {
-        var iterator = map.valueIterator();
-        while (iterator.next()) |entry| {
-            const mtime = fileMtime(entry.path);
-            if (mtime == 0 or mtime == entry.mtime) continue;
-
-            if (entry.reload()) {
-                entry.mtime = mtime;
-                std.log.info("zon reloaded: {s}", .{entry.path});
-            }
-        }
-    }
-
-    fn deinit() void {
-        var iterator = map.valueIterator();
-        while (iterator.next()) |entry| entry.deinit();
-        map.deinit(allocator);
-    }
-
-    fn register(
-        path: Path,
-        reload: *const fn () bool,
-        deinitFn: *const fn () void,
-    ) void {
-        const result = map.getOrPut(allocator, id(path)) catch oom();
-        if (result.found_existing) return;
-        result.value_ptr.* = .{
-            .path = path,
-            .mtime = fileMtime(path),
-            .reload = reload,
-            .deinit = deinitFn,
-        };
-    }
-
-    fn fileMtime(path: Path) i128 {
-        const stat = std.fs.cwd().statFile(path) catch return 0;
-        return stat.mtime;
-    }
-
-    fn Store(comptime T: type, comptime path: Path) type {
-        return struct {
-            var data: T = undefined;
-            var arena: ?std.heap.ArenaAllocator = null;
-            var loaded: bool = false;
-            var registered: bool = false;
-
-            fn reload() bool {
-                var nextArena = std.heap.ArenaAllocator.init(allocator);
-                const gpa = nextArena.allocator();
-
-                const source = std.fs.cwd().readFileAllocOptions(
-                    gpa,
-                    path,
-                    1024 * 1024,
-                    null,
-                    .of(u8),
-                    0,
-                ) catch |err| {
-                    std.log.err("zon read failed: {s}: {}", .{ path, err });
-                    nextArena.deinit();
-                    return false;
-                };
-
-                var diag: std.zon.parse.Diagnostics = .{};
-                const next = std.zon.parse.fromSlice(
-                    T,
-                    gpa,
-                    source,
-                    &diag,
-                    .{},
-                ) catch |err| {
-                    if (err == error.ParseZon) {
-                        std.log.err("zon parse failed: {s}\n{f}", .{
-                            path,
-                            &diag,
-                        });
-                    } else {
-                        std.log.err("zon parse failed: {s}: {}", .{
-                            path,
-                            err,
-                        });
-                    }
-                    diag.deinit(gpa);
-                    nextArena.deinit();
-                    return false;
-                };
-                diag.deinit(gpa);
-
-                data = next;
-                if (arena) |*old| old.deinit();
-                arena = nextArena;
-                loaded = true;
-                return true;
-            }
-
-            fn deinit() void {
-                if (arena) |*old| old.deinit();
-                arena = null;
-                loaded = false;
-                registered = false;
-            }
-        };
-    }
-};
 
 pub fn loadAtlas(atlas: graphics.Atlas) void {
     const size: u32 = @intCast(atlas.images.len + 1); // 多包含一张图集
