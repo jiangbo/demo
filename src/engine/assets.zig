@@ -4,6 +4,7 @@ const sk = @import("sokol");
 const c = @import("c.zig");
 const graphics = @import("graphics.zig");
 const audio = @import("audio.zig");
+const png = @import("extend/png.zig");
 
 const Image = graphics.Image;
 const Path = [:0]const u8;
@@ -215,13 +216,15 @@ pub fn putImage(imageId: Id, image: graphics.Image) void {
     imageCache.put(allocator, imageId, image) catch oom();
 }
 
-pub const Icon = c.stbImage.Image;
+pub const Icon = png.Image;
 const IconHandler = fn (u64, Icon) void;
 pub fn loadIcon(path: Path, handle: u64, handler: IconHandler) void {
     _ = File.load(path, handle, struct {
         fn callback(response: Response) []const u8 {
-            const icon = c.stbImage.loadFromMemory(response.data);
-            defer c.stbImage.unload(icon);
+            const icon = png.load(allocator, response.data) catch |err| {
+                std.debug.panic("{s}: {}", .{ response.path, err });
+            };
+            defer allocator.free(icon.data);
             handler(response.index, icon);
             return &.{};
         }
@@ -239,10 +242,10 @@ const View = struct {
     }
 
     fn handler(response: Response) []const u8 {
-        const data = response.data;
-
-        const img = c.stbImage.loadFromMemory(data);
-        defer c.stbImage.unload(img);
+        const img = png.load(allocator, response.data) catch |err| {
+            std.debug.panic("{s}: {}", .{ response.path, err });
+        };
+        defer allocator.free(img.data);
         const view: sk.gfx.View = .{ .id = @intCast(response.index) };
 
         sk.gfx.initView(view, .{ .texture = .{
