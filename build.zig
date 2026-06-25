@@ -3,7 +3,8 @@ const sk = @import("sokol");
 
 const Options = struct {
     mod: *std.Build.Module,
-    sokol: *std.Build.Dependency,
+    sokolModule: *std.Build.Module,
+    emsdk: *std.Build.Dependency,
     shader: *std.Build.Module,
 };
 
@@ -19,6 +20,7 @@ pub fn build(b: *std.Build) !void {
     const emsdkStep = sk.emSdkInstallStep(b, emsdk, .{});
     b.step("install-emsdk", "install emsdk").dependOn(emsdkStep);
 
+    const shader = try createShader(b, sokol, sokolModule);
     const exeModule = b.createModule(.{
         .root_source_file = b.path("farm/main.zig"),
         .target = target,
@@ -28,7 +30,25 @@ pub fn build(b: *std.Build) !void {
         },
     });
 
-    const shader = try sk.shdc.createModule(b, "shader", sokolModule, .{
+    const options = Options{
+        .mod = exeModule,
+        .sokolModule = sokolModule,
+        .emsdk = emsdk,
+        .shader = shader,
+    };
+    if (target.result.cpu.arch.isWasm()) {
+        try buildWeb(b, options);
+    } else {
+        try buildNative(b, options);
+    }
+}
+
+fn createShader(
+    b: *std.Build,
+    sokol: *std.Build.Dependency,
+    sokolModule: *std.Build.Module,
+) !*std.Build.Module {
+    return try sk.shdc.createModule(b, "shader", sokolModule, .{
         .shdc_dep = sokol.builder.dependency("shdc", .{}),
         .input = "src/engine/shader/quad.glsl",
         .output = "quad.glsl.zig",
@@ -41,17 +61,19 @@ pub fn build(b: *std.Build) !void {
         },
         .reflection = true,
     });
+}
 
-    const options = Options{
-        .mod = exeModule,
-        .sokol = sokol,
-        .shader = shader,
-    };
-    if (target.result.cpu.arch.isWasm()) {
-        try buildWeb(b, options);
-    } else {
-        try buildNative(b, options);
-    }
+fn createZhu(b: *std.Build, options: Options) *std.Build.Module {
+    const optimize = options.mod.optimize.?;
+    const target = options.mod.resolved_target.?;
+    const zhuModule = b.createModule(.{
+        .root_source_file = b.path("src/engine/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    zhuModule.addImport("sokol", options.sokolModule);
+    zhuModule.addImport("shader", options.shader);
+    return zhuModule;
 }
 
 fn buildNative(b: *std.Build, options: Options) !void {
@@ -64,29 +86,18 @@ fn buildNative(b: *std.Build, options: Options) !void {
     const target = options.mod.resolved_target.?;
     if (optimize != .Debug) exe.subsystem = .Windows;
 
-    const zhuModule = b.createModule(.{
-        .root_source_file = b.path("src/engine/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
+    const zhuModule = createZhu(b, options);
     exe.root_module.addImport("zhu", zhuModule);
 
-    if (optimize != .Debug) exe.subsystem = .Windows;
-
     b.installArtifact(exe);
-
-    const sokol = b.dependency("sokol", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    zhuModule.addImport("sokol", sokol.module("sokol"));
-    zhuModule.addImport("shader", options.shader);
 
     const writeFiles = b.addWriteFiles();
     exe.step.dependOn(&writeFiles.step);
 
-    const stb = b.dependency("stb", .{ .target = target, .optimize = optimize });
+    const stb = b.dependency("stb", .{
+        .target = target,
+        .optimize = optimize,
+    });
     zhuModule.addIncludePath(stb.path("."));
     const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
     zhuModule.addCSourceFile(.{ .file = stbImagePath, .flags = &.{"-O2"} });
@@ -124,42 +135,42 @@ fn buildWeb(b: *std.Build, options: Options) !void {
         .root_module = options.mod,
     });
 
-    const zhuModule = b.createModule(.{
-        .root_source_file = b.path("src/engine/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
+    const zhuModule = createZhu(b, options);
     exe.root_module.addImport("zhu", zhuModule);
 
-    const sokol = b.dependency("sokol", .{ .target = target, .optimize = optimize });
-    zhuModule.addImport("sokol", sokol.module("sokol"));
-    zhuModule.addImport("shader", options.shader);
-
-    const emsdk = options.sokol.builder.dependency("emsdk", .{});
-    const include = emsdk.path(b.pathJoin(&.{ "upstream", "emscripten", "cache", "sysroot", "include" }));
+    const include = options.emsdk.path(b.pathJoin(&.{
+        "upstream",
+        "emscripten",
+        "cache",
+        "sysroot",
+        "include",
+    }));
     zhuModule.addSystemIncludePath(include);
 
     const writeFiles = b.addWriteFiles();
     exe.step.dependOn(&writeFiles.step);
 
+    const cFlags = &.{ "-O2", "-fno-sanitize=undefined" };
     const stbAudioPath = writeFiles.add("stb_audio.c", stbAudioSource);
-    zhuModule.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{ "-O2", "-fno-sanitize=undefined" } });
+    zhuModule.addCSourceFile(.{ .file = stbAudioPath, .flags = cFlags });
 
     const emPath = writeFiles.add("em.c", emSource);
-    zhuModule.addCSourceFile(.{ .file = emPath, .flags = &.{ "-O2", "-fno-sanitize=undefined" } });
+    zhuModule.addCSourceFile(.{ .file = emPath, .flags = cFlags });
 
-    const stb = b.dependency("stb", .{ .target = target, .optimize = optimize });
+    const stb = b.dependency("stb", .{
+        .target = target,
+        .optimize = optimize,
+    });
     zhuModule.addIncludePath(stb.path("."));
     const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
-    zhuModule.addCSourceFile(.{ .file = stbImagePath, .flags = &.{ "-O2", "-fno-sanitize=undefined" } });
+    zhuModule.addCSourceFile(.{ .file = stbImagePath, .flags = cFlags });
 
     const link_step = try sk.emLinkStep(b, .{
         .lib_main = exe,
         .target = target,
         .optimize = optimize,
         .use_webgl2 = true,
-        .emsdk = emsdk,
+        .emsdk = options.emsdk,
         .use_emmalloc = true,
         // TODO Zig 0.17 重新验证，能关闭就改回 false。
         .use_filesystem = true,
