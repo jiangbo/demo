@@ -11,10 +11,11 @@ const Path = [:0]const u8;
 pub const CountingAllocator = struct {
     child: std.mem.Allocator,
     used: usize,
+    max: usize,
     count: usize,
 
     pub fn init(child: std.mem.Allocator) CountingAllocator {
-        return .{ .child = child, .used = 0, .count = 0 };
+        return .{ .child = child, .used = 0, .max = 0, .count = 0 };
     }
 
     pub fn allocator(self: *CountingAllocator) std.mem.Allocator {
@@ -35,6 +36,7 @@ pub const CountingAllocator = struct {
         const p = self.child.rawAlloc(len, a, r) orelse return null;
         self.count += 1;
         self.used += len;
+        self.max = @max(self.max, self.used);
         return p;
     }
 
@@ -44,6 +46,7 @@ pub const CountingAllocator = struct {
         if (stable) {
             self.count += 1;
             self.used +%= len -% b.len;
+            self.max = @max(self.max, self.used);
         }
         return stable;
     }
@@ -53,6 +56,7 @@ pub const CountingAllocator = struct {
         const n = self.child.rawRemap(m, a, len, r) orelse return null;
         self.count += 1;
         self.used +%= len -% m.len;
+        self.max = @max(self.max, self.used);
         return n;
     }
 
@@ -414,7 +418,7 @@ pub const Stats = struct {
 // 查询当前已加载并缓存的资源统计数据
 pub fn queryStats() Stats {
     return .{
-        .image = View.cache.count(),
+        .image = imageCache.count(),
         .file = File.cache.count(),
         .sound = Sound.cache.count(),
         .music = Music.cache.count(),

@@ -90,6 +90,7 @@ var last: u64 = 0;
 var fps: u64 = 0;
 var fpsFrame: u64 = 0;
 var start: u64 = 0;
+var frameTime: f64 = 0;
 var usedTime: f64 = 0;
 
 pub fn draw() void {
@@ -101,22 +102,28 @@ pub fn draw() void {
     } else if (sk.time.diff(time, start) >= std.time.ns_per_s) {
         fps = frame - fpsFrame;
         start, fpsFrame = .{ time, frame };
+        frameTime = sk.app.frameDuration() * 1000;
         usedTime = sk.time.ms(window.frameTicks);
     }
     last = frame;
 
     var buffer: [1000]u8 = undefined;
-    const frameStats = sk.gfx.queryStats().cur_frame;
+    const gfxStats = sk.gfx.queryStats();
+    const frameStats = gfxStats.prev_frame;
+    const totalStats = gfxStats.total;
     var writer = std.Io.Writer.fixed(&buffer);
     writeFormatLine(&writer, "后端", "{s}", .{
         @tagName(graphics.queryBackend()),
     }, "帧率 {}", .{fps});
-    writeFormatLine(&writer, "帧时", "{d:.2}ms", .{
-        sk.app.frameDuration() * 1000,
-    }, "用时 {d:.2}ms", .{usedTime});
-    writeFormatLine(&writer, "内存", "{}", .{
-        assets.memory.used,
-    }, "显存 {}", .{frameStats.size_update_buffer});
+    writeFormatLine(&writer, "帧时", "{d:.2} ms", .{
+        frameTime,
+    }, "用时 {d:.2} ms", .{usedTime});
+    writeFormatLine(&writer, "图形", "纹理 {}", .{
+        totalStats.images.alive,
+    }, "顶点 {} KB", .{frameStats.size_update_buffer / 1024});
+    writeFormatLine(&writer, "内存", "使用 {} KB", .{
+        assets.memory.used / 1024,
+    }, "峰值 {} KB", .{assets.memory.max / 1024});
     writeFormatLine(&writer, "批次", "命令 {}", .{
         batch.commands.items.len,
     }, "绘制 {}", .{frameStats.num_draw});
