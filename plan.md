@@ -90,3 +90,19 @@ zig build test
   让工具、种子和数量文字在同一套整数像素缩放下显示得更协调。
 - 30-NPC 显示与简单漫游：C++ `AnimalBehaviorSystem` 支持睡觉、进食和时间判断；
   Zig 本步先只做显示和随机漫游。
+- 引擎/batch：后续支持多个 vertex buffer，但暂不把 `order`/`layer`
+  概念混入本次设计。`batch` 只关心绘制状态，不内置图片、文字、UI
+  等业务概念。
+  - `commands` 保持全局一个，用来记录真实提交历史，继续支持
+    `target` 和 `draw` 命令。
+  - vertex buffer 可以有多个，由用户或上层模块显式选择当前 buffer。
+    每个 buffer 只保存自己的 CPU 顶点数组和 GPU `handle`。
+  - `DrawCommand` 记录 `buffer` 索引、`start`/`end`、`view`、
+    `camera`、`size`、`pipeline`、`sampler` 等绘制所需状态。
+  - 切换 buffer 必须结束当前 draw command，因为 `start`/`end`
+    只对所属 buffer 有意义。
+  - 保持当前风格：`drawImage` 只自动按纹理切换拆命令；buffer、
+    pipeline、target 等状态切换由明确的 `useBuffer`、`usePipeline`、
+    `useTarget` 完成。
+  - 第一版 `flush` 仍按全局 commands 提交顺序绘制；后续如需
+    绘制层级，再单独设计 order/layer，不和多 vertex buffer 混为一谈。
