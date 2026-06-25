@@ -90,15 +90,49 @@ pub fn initCaches(allocator1: std.mem.Allocator) void {
 }
 
 fn sk_alloc(len: usize, _: ?*anyopaque) callconv(.c) ?*anyopaque {
-    const slice = oomAlloc(u8, len + @sizeOf(usize));
-    std.mem.bytesAsValue(usize, slice[0..@sizeOf(usize)]).* = len;
-    return slice.ptr + @sizeOf(usize);
+    return stb_alloc(len) orelse oom();
 }
 
 fn sk_free(ptr: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
-    const lenPtr = @as([*]u8, @ptrCast(ptr.?)) - @sizeOf(usize);
-    const len = std.mem.bytesToValue(usize, lenPtr[0..@sizeOf(usize)]);
-    free(lenPtr[0 .. len + @sizeOf(usize)]);
+    stb_free(ptr);
+}
+
+// stb 的 C 接口 free 不传长度，所以在返回指针前面存一份长度。
+const stbAlign = std.mem.Alignment.of(std.c.max_align_t);
+const stbHeaderSize = std.mem.alignForward(usize, //
+    @sizeOf(usize), @alignOf(std.c.max_align_t));
+
+fn stbSlice(ptr: *anyopaque) []align(@alignOf(std.c.max_align_t)) u8 {
+    const base = @as([*]u8, @ptrCast(ptr)) - stbHeaderSize;
+    const header: *usize = @ptrCast(@alignCast(base));
+    return @alignCast(base[0 .. stbHeaderSize + header.*]);
+}
+
+export fn stb_alloc(len: usize) ?*anyopaque {
+    if (len == 0) return null;
+    const base = allocator.rawAlloc(stbHeaderSize + len, //
+        stbAlign, @returnAddress()) orelse return null;
+    @as(*usize, @ptrCast(@alignCast(base))).* = len;
+    return @ptrCast(base + stbHeaderSize);
+}
+
+export fn stb_realloc(ptr: ?*anyopaque, len: usize) ?*anyopaque {
+    const oldPtr = ptr orelse return stb_alloc(len);
+    if (len == 0) {
+        stb_free(oldPtr);
+        return null;
+    }
+
+    const old = stbSlice(oldPtr);
+    const newLen = stbHeaderSize + len;
+    const newSlice = allocator.realloc(old, newLen) catch return null;
+    @as(*usize, @ptrCast(@alignCast(newSlice.ptr))).* = len;
+    return @ptrCast(newSlice.ptr + stbHeaderSize);
+}
+
+export fn stb_free(ptr: ?*anyopaque) void {
+    const p = ptr orelse return;
+    allocator.rawFree(stbSlice(p), stbAlign, @returnAddress());
 }
 
 pub fn deinit() void {

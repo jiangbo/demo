@@ -186,6 +186,16 @@ fn buildWeb(b: *std.Build, options: Options) !void {
 
 const stbImageSource =
     \\
+    \\#include <stddef.h>
+    \\
+    \\extern void *stb_alloc(size_t len);
+    \\extern void *stb_realloc(void *ptr, size_t len);
+    \\extern void stb_free(void *ptr);
+    \\
+    \\#define STBI_MALLOC(sz) stb_alloc(sz)
+    \\#define STBI_REALLOC(ptr, len) stb_realloc(ptr, len)
+    \\#define STBI_FREE(ptr) stb_free(ptr)
+    \\
     \\#define STB_IMAGE_IMPLEMENTATION
     \\#define STBI_ONLY_PNG
     \\#define STBI_NO_STDIO
@@ -194,6 +204,17 @@ const stbImageSource =
 ;
 
 const stbAudioSource =
+    \\
+    \\#include <stddef.h>
+    \\#include <stdlib.h>
+    \\
+    \\extern void *stb_alloc(size_t len);
+    \\extern void *stb_realloc(void *ptr, size_t len);
+    \\extern void stb_free(void *ptr);
+    \\
+    \\#define malloc(len) stb_alloc(len)
+    \\#define realloc(ptr, len) stb_realloc(ptr, len)
+    \\#define free(ptr) stb_free(ptr)
     \\
     \\#define STB_VORBIS_NO_PUSHDATA_API
     \\#define STB_VORBIS_NO_INTEGER_CONVERSION
