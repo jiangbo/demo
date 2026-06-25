@@ -77,7 +77,15 @@ pub const stbVorbis = struct {
 };
 
 pub const em = struct {
-    pub extern fn my_add(c_int, c_int) c_int;
-    pub extern fn em_js_file_save(path: [*]const u8, data: [*]const u8, len: c_int) void;
-    pub extern fn em_js_file_load(c_path: [*]const u8, out_buf: [*]u8, buf_size: c_int) c_int;
+    pub extern fn em_js_keep() void;
+    pub extern fn em_js_file_save(
+        path: [*]const u8,
+        data: [*]const u8,
+        len: c_int,
+    ) c_int;
+    pub extern fn em_js_file_load(
+        c_path: [*]const u8,
+        out_buf: [*]u8,
+        buf_size: c_int,
+    ) c_int;
 };

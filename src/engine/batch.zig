@@ -2,7 +2,7 @@ const std = @import("std");
 
 const sk = @import("sokol");
 const math = @import("math.zig");
-const shader = @import("shader/quad.glsl.zig");
+const shader = @import("shader");
 const graphics = @import("graphics.zig");
 const camera = @import("camera.zig");
 

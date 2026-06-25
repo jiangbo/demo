@@ -224,9 +224,9 @@ fn terminateBuffer(buffer: []u8, len: usize) [:0]u8 {
 }
 
 fn readFromJs(path: [:0]const u8, content: []u8) !i32 {
-    const value = @import("c.zig").em.my_add(1, 1);
-    _ = value; // 强制 emscripten 链接器保留 em_js_file_load 所在的目标文件
-    const len = @import("c.zig").em.em_js_file_load(path.ptr, //
+    const em = @import("c.zig").em;
+    em.em_js_keep(); // 强制链接 em.c 中的 EM_JS 函数。
+    const len = em.em_js_file_load(path.ptr, //
         content.ptr, @intCast(content.len));
     // JS 端约定：0 表示不存在，正数/负数都表示文件总长度。
     if (len == 0) return error.FileNotFound;
@@ -235,8 +235,12 @@ fn readFromJs(path: [:0]const u8, content: []u8) !i32 {
 
 pub fn saveAll(path: [:0]const u8, content: []const u8) !void {
     if (@import("builtin").target.os.tag == .emscripten) {
-        return @import("c.zig").em.em_js_file_save(path.ptr, //
+        const em = @import("c.zig").em;
+        em.em_js_keep();
+        const err = em.em_js_file_save(path.ptr, //
             content.ptr, @intCast(content.len));
+        if (err != 0) return error.WriteFailed;
+        return;
     }
 
     const cwd = std.Io.Dir.cwd();

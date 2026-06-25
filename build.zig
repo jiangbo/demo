@@ -4,6 +4,7 @@ const sk = @import("sokol");
 const Options = struct {
     mod: *std.Build.Module,
     sokol: *std.Build.Dependency,
+    shader: *std.Build.Module,
 };
 
 pub fn build(b: *std.Build) !void {
@@ -13,17 +14,39 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+    const sokolModule = sokol.module("sokol");
+    const emsdk = sokol.builder.dependency("emsdk", .{});
+    const emsdkStep = sk.emSdkInstallStep(b, emsdk, .{});
+    b.step("install-emsdk", "install emsdk").dependOn(emsdkStep);
 
     const exeModule = b.createModule(.{
         .root_source_file = b.path("farm/main.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
-            .{ .name = "sokol", .module = sokol.module("sokol") },
+            .{ .name = "sokol", .module = sokolModule },
         },
     });
 
-    const options = Options{ .mod = exeModule, .sokol = sokol };
+    const shader = try sk.shdc.createModule(b, "shader", sokolModule, .{
+        .shdc_dep = sokol.builder.dependency("shdc", .{}),
+        .input = "src/engine/shader/quad.glsl",
+        .output = "quad.glsl.zig",
+        .slang = .{
+            .glsl410 = true,
+            .metal_macos = true,
+            .hlsl5 = true,
+            .glsl300es = true,
+            .wgsl = true,
+        },
+        .reflection = true,
+    });
+
+    const options = Options{
+        .mod = exeModule,
+        .sokol = sokol,
+        .shader = shader,
+    };
     if (target.result.cpu.arch.isWasm()) {
         try buildWeb(b, options);
     } else {
@@ -58,6 +81,7 @@ fn buildNative(b: *std.Build, options: Options) !void {
         .optimize = optimize,
     });
     zhuModule.addImport("sokol", sokol.module("sokol"));
+    zhuModule.addImport("shader", options.shader);
 
     const writeFiles = b.addWriteFiles();
     exe.step.dependOn(&writeFiles.step);
@@ -110,6 +134,7 @@ fn buildWeb(b: *std.Build, options: Options) !void {
 
     const sokol = b.dependency("sokol", .{ .target = target, .optimize = optimize });
     zhuModule.addImport("sokol", sokol.module("sokol"));
+    zhuModule.addImport("shader", options.shader);
 
     const emsdk = options.sokol.builder.dependency("emsdk", .{});
     const include = emsdk.path(b.pathJoin(&.{ "upstream", "emscripten", "cache", "sysroot", "include" }));
@@ -136,7 +161,11 @@ fn buildWeb(b: *std.Build, options: Options) !void {
         .use_webgl2 = true,
         .emsdk = emsdk,
         .use_emmalloc = true,
-        .use_filesystem = false,
+        // TODO Zig 0.17 重新验证，能关闭就改回 false。
+        .use_filesystem = true,
+        .extra_args = &.{
+            "-sINITIAL_MEMORY=64MB",
+        },
         .shell_file_path = b.path("index.html"),
     });
 
@@ -168,18 +197,34 @@ const emSource =
     \\
     \\#include <emscripten.h>
     \\
-    \\EM_JS(void, em_js_file_save, (const char *c_path, const char *c_data, int len), {
+    \\EM_JS(int, em_js_file_save, (
+    \\    const char *c_path,
+    \\    const char *c_data,
+    \\    int len
+    \\), {
     \\    const path = UTF8ToString(c_path);
-    \\    console.log("save file: ",path);
     \\    const bytes = HEAPU8.subarray(c_data, c_data + len);
-    \\    console.log("save file bytes len: ",len);
-    \\    const base64 = btoa(String.fromCharCode(...bytes));
-    \\    window.localStorage.setItem(path, base64);
+    \\    const chunkSize = 0x8000;
+    \\    let text = "";
+    \\    for (let i = 0; i < bytes.length; i += chunkSize) {
+    \\        const chunk = bytes.subarray(i, i + chunkSize);
+    \\        text += String.fromCharCode.apply(null, chunk);
+    \\    }
+    \\    try {
+    \\        window.localStorage.setItem(path, btoa(text));
+    \\        return 0;
+    \\    } catch (err) {
+    \\        console.error("save file failed:", path, err);
+    \\        return 1;
+    \\    }
     \\});
     \\
-    \\EM_JS(int, em_js_file_load, (const char *c_path, char *out_buf, int len), {
+    \\EM_JS(int, em_js_file_load, (
+    \\    const char *c_path,
+    \\    char *out_buf,
+    \\    int len
+    \\), {
     \\    const path = UTF8ToString(c_path);
-    \\    console.log("load file: ",path);
     \\    const base64 = window.localStorage.getItem(path);
     \\    if (!base64) return 0;
     \\
@@ -191,9 +236,8 @@ const emSource =
     \\    return binary.length;
     \\});
     \\
-    \\int my_add(int a, int b)
+    \\void em_js_keep(void)
     \\{
-    \\    return a + b;
     \\}
     \\
     \\#endif // defined(__EMSCRIPTEN__)
