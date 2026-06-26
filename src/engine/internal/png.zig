@@ -47,6 +47,14 @@ const ChunkData = struct {
     range: Range,
 };
 
+const Decode = struct {
+    flate: *Decompress,
+    data: []u8,
+    header: Header,
+    row: []u8,
+    prior: []u8,
+};
+
 const DataReader = struct {
     reader: Reader,
     bytes: []const u8,
@@ -133,49 +141,58 @@ pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     }
     if (ranges.items.len == 0) return error.MissingImageData;
 
-    const width: usize = @intCast(header.width);
-    const height: usize = @intCast(header.height);
-    const count = try std.math.mul(usize, width, height);
-    const dataLen = try std.math.mul(usize, count, 4);
-    const data = try allocator.alloc(u8, dataLen);
+    const len = header.width * header.height * 4;
+    const data = try allocator.alloc(u8, len);
     errdefer allocator.free(data);
 
     // TODO Zig 0.17：改用 std.heap.BufferFirstAllocator。
     // 0.16 还没有这个类型，先复用 stackFallback 的内部固定分配器。
     var tempState = std.heap.stackFallback(1, allocator);
-    const tempAllocator = tempState.get();
+    const backing = tempState.get();
     // 临时内存优先复用 file 预留空间，不够再走 allocator。
     tempState.fixed_buffer_allocator = .init(file.unusedCapacitySlice());
 
-    const idatBuffer = try tempAllocator.alloc(u8, idatBufferLen);
-    defer tempAllocator.free(idatBuffer);
+    var arena = std.heap.ArenaAllocator.init(backing);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    const idatBuffer = try gpa.alloc(u8, idatBufferLen);
     var idat = DataReader.init(bytes, ranges.items, idatBuffer);
 
-    const max = std.compress.flate.max_window_len;
-    const flateBuffer = try tempAllocator.alloc(u8, max);
-    defer tempAllocator.free(flateBuffer);
-    var flate = Decompress.init(&idat.reader, .zlib, flateBuffer);
+    const prior = try gpa.alloc(u8, header.width * 4);
+    @memset(prior, 0);
+
+    const buffer = try gpa.alloc(u8, std.compress.flate.max_window_len);
+    var flate = Decompress.init(&idat.reader, .zlib, buffer);
+    const decode: Decode = .{
+        .flate = &flate,
+        .data = data,
+        .header = header,
+        .row = try gpa.alloc(u8, header.width * 4),
+        .prior = prior,
+    };
 
     switch (header.color) {
-        .rgb => try parseRgb(tempAllocator, &flate, data, header),
-        .rgba => try parseRgba(&flate, data, header),
+        .rgb => try parseRgb(&decode),
+        .rgba => try parseRgba(&decode),
         .indexed => {
-            var buffer: [256 * 4]u8 = undefined; // 256 色，每色 4 字节。
+            var buf: [256 * 4]u8 = undefined; // 256 色，每色 4 字节。
             for (0..rgb.len / 3) |i| {
-                buffer[i * 4 + 0] = rgb[i * 3 + 0];
-                buffer[i * 4 + 1] = rgb[i * 3 + 1];
-                buffer[i * 4 + 2] = rgb[i * 3 + 2];
+                buf[i * 4 + 0] = rgb[i * 3 + 0];
+                buf[i * 4 + 1] = rgb[i * 3 + 1];
+                buf[i * 4 + 2] = rgb[i * 3 + 2];
                 const a = if (i < alpha.len) alpha[i] else 255;
-                buffer[i * 4 + 3] = a;
+                buf[i * 4 + 3] = a;
             }
-            const palette = buffer[0 .. rgb.len / 3 * 4];
-            try parseIndexed(tempAllocator, &flate, data, header, palette);
+            const palette = buf[0 .. rgb.len / 3 * 4];
+            try parseIndexed(&decode, palette);
         },
         .magic => {
-            try parseIndexed(tempAllocator, &flate, data, header, rgb);
+            try parseIndexed(&decode, rgb);
         },
         else => return error.UnsupportedColor,
     }
+    try finishFlate(&flate);
 
     return .{
         .width = @intCast(header.width),
@@ -229,27 +246,18 @@ fn readChunk(reader: *Reader) !ChunkData {
     };
 }
 
-fn parseIndexed(
-    allocator: Allocator,
-    flate: *Decompress,
-    data: []u8,
-    header: Header,
-    palette: []const u8,
-) !void {
-    const width: usize = @intCast(header.width);
-    const height: usize = @intCast(header.height);
-    const row = try allocator.alloc(u8, width);
-    defer allocator.free(row);
-    const prior = try allocator.alloc(u8, width);
-    defer allocator.free(prior);
-    @memset(prior, 0);
+fn parseIndexed(decode: *const Decode, palette: []const u8) !void {
+    const width: usize = @intCast(decode.header.width);
+    const height: usize = @intCast(decode.header.height);
+    const row = decode.row[0..width];
+    const prior = decode.prior[0..width];
 
     for (0..height) |y| {
-        const filter = try flate.reader.takeEnum(Filter, .big);
-        try flate.reader.readSliceAll(row);
+        const filter = try decode.flate.reader.takeEnum(Filter, .big);
+        try decode.flate.reader.readSliceAll(row);
         unfilter(row, row, prior, 1, filter);
 
-        const dest = data[y * width * 4 ..][0 .. width * 4];
+        const dest = decode.data[y * width * 4 ..][0 .. width * 4];
         for (row, 0..) |index, x| {
             const color = @as(usize, index) * 4;
             if (color + 4 > palette.len) return error.InvalidPaletteIndex;
@@ -258,31 +266,21 @@ fn parseIndexed(
 
         @memcpy(prior, row);
     }
-    try finishFlate(flate);
 }
 
-fn parseRgb(
-    allocator: Allocator,
-    flate: *Decompress,
-    data: []u8,
-    header: Header,
-) !void {
-    const width: usize = @intCast(header.width);
-    const height: usize = @intCast(header.height);
-    const lineLen = try std.math.mul(usize, width, 3);
-
-    const row = try allocator.alloc(u8, lineLen);
-    defer allocator.free(row);
-    const prior = try allocator.alloc(u8, lineLen);
-    defer allocator.free(prior);
-    @memset(prior, 0);
+fn parseRgb(decode: *const Decode) !void {
+    const width: usize = @intCast(decode.header.width);
+    const height: usize = @intCast(decode.header.height);
+    const lineLen = width * 3;
+    const row = decode.row[0..lineLen];
+    const prior = decode.prior[0..lineLen];
 
     for (0..height) |y| {
-        const filter = try flate.reader.takeEnum(Filter, .big);
-        try flate.reader.readSliceAll(row);
+        const filter = try decode.flate.reader.takeEnum(Filter, .big);
+        try decode.flate.reader.readSliceAll(row);
         unfilter(row, row, prior, 3, filter);
 
-        const dest = data[y * width * 4 ..][0 .. width * 4];
+        const dest = decode.data[y * width * 4 ..][0 .. width * 4];
         for (0..width) |x| {
             dest[x * 4 + 0] = row[x * 3 + 0];
             dest[x * 4 + 1] = row[x * 3 + 1];
@@ -292,29 +290,23 @@ fn parseRgb(
 
         @memcpy(prior, row);
     }
-    try finishFlate(flate);
 }
 
-fn parseRgba(
-    flate: *Decompress,
-    data: []u8,
-    header: Header,
-) !void {
-    const width: usize = @intCast(header.width);
-    const height: usize = @intCast(header.height);
+fn parseRgba(decode: *const Decode) !void {
+    const width: usize = @intCast(decode.header.width);
+    const height: usize = @intCast(decode.header.height);
     const lineLen = width * 4;
 
     for (0..height) |y| {
-        const filter = try flate.reader.takeEnum(Filter, .big);
-        const dest = data[y * lineLen ..][0..lineLen];
+        const filter = try decode.flate.reader.takeEnum(Filter, .big);
+        const dest = decode.data[y * lineLen ..][0..lineLen];
         const prior = if (y == 0)
             &.{}
         else
-            data[(y - 1) * lineLen ..][0..lineLen];
-        try flate.reader.readSliceAll(dest);
+            decode.data[(y - 1) * lineLen ..][0..lineLen];
+        try decode.flate.reader.readSliceAll(dest);
         unfilter(dest, dest, prior, 4, filter);
     }
-    try finishFlate(flate);
 }
 
 fn unfilter(
