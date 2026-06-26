@@ -115,8 +115,18 @@ pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     var reader = Reader.fixed(bytes);
     const header = try readHeader(&reader);
 
+    // TODO Zig 0.17：改用 std.heap.BufferFirstAllocator。
+    // 0.16 还没有这个类型，先复用 stackFallback 的内部固定分配器。
+    var tempState = std.heap.stackFallback(1, allocator);
+    const backing = tempState.get();
+    // 临时内存优先复用 file 预留空间，不够再走 allocator。
+    tempState.fixed_buffer_allocator = .init(file.unusedCapacitySlice());
+
+    var arena = std.heap.ArenaAllocator.init(backing);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
     var ranges: std.ArrayList(Range) = .empty;
-    defer ranges.deinit(allocator);
 
     var rgb: []const u8 = &.{};
     var alpha: []const u8 = &.{};
@@ -124,7 +134,7 @@ pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     while (true) {
         const chunk = try readChunk(&reader);
         switch (chunk.kind) {
-            .IDAT => try ranges.append(allocator, chunk.range),
+            .IDAT => try ranges.append(gpa, chunk.range),
             .PLTE => rgb = chunk.data,
             .tRNS => alpha = chunk.data,
             .IEND => break,
@@ -136,17 +146,6 @@ pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     const len = header.width * header.height * 4;
     const pixelData = try allocator.alloc(u8, len);
     errdefer allocator.free(pixelData);
-
-    // TODO Zig 0.17：改用 std.heap.BufferFirstAllocator。
-    // 0.16 还没有这个类型，先复用 stackFallback 的内部固定分配器。
-    var tempState = std.heap.stackFallback(1, allocator);
-    const backing = tempState.get();
-    // 临时内存优先复用 file 预留空间，不够再走 allocator。
-    tempState.fixed_buffer_allocator = .init(file.unusedCapacitySlice());
-
-    var arena = std.heap.ArenaAllocator.init(backing);
-    defer arena.deinit();
-    const gpa = arena.allocator();
 
     const idatBuffer = try gpa.alloc(u8, idatBufferLen);
     var source = DataReader.init(bytes, ranges.items, idatBuffer);
