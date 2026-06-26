@@ -1,4 +1,8 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
+const Reader = std.Io.Reader;
+const Writer = std.Io.Writer;
+const Limit = std.Io.Limit;
 
 const signature = [8]u8{ 137, 80, 78, 71, 13, 10, 26, 10 };
 
@@ -42,22 +46,17 @@ const ChunkData = struct {
     range: Range,
 };
 
-const IdatInput = struct {
-    bytes: []const u8,
-    ranges: []const Range,
-};
-
-const IdatReader = struct {
-    reader: std.Io.Reader,
+const DataReader = struct {
+    reader: Reader,
     bytes: []const u8,
     ranges: []const Range,
     rangeIndex: usize,
     pos: usize,
 
-    const vtable: std.Io.Reader.VTable = .{ .stream = stream };
+    const vtable: Reader.VTable = .{ .stream = stream };
 
     // zlib 看到连续数据，底层仍然直接读取原 PNG 的 IDAT 范围。
-    fn init(bytes: []const u8, ranges: []const Range, buffer: []u8) IdatReader {
+    fn init(bytes: []const u8, ranges: []const Range, buffer: []u8) DataReader {
         const pos = if (ranges.len == 0) 0 else ranges[0].start;
         return .{
             .reader = .{
@@ -73,12 +72,8 @@ const IdatReader = struct {
         };
     }
 
-    fn stream(
-        reader: *std.Io.Reader,
-        writer: *std.Io.Writer,
-        limit: std.Io.Limit,
-    ) std.Io.Reader.StreamError!usize {
-        const self: *IdatReader = @alignCast(@fieldParentPtr("reader", reader));
+    fn stream(reader: *Reader, writer: *Writer, limit: Limit) !usize {
+        const self: *DataReader = @alignCast(@fieldParentPtr("reader", reader));
         if (limit == .nothing) return 0;
 
         while (self.rangeIndex < self.ranges.len) {
@@ -108,15 +103,15 @@ pub const Image = struct {
     height: i32,
     data: []u8,
 
-    pub fn deinit(self: Image, allocator: std.mem.Allocator) void {
+    pub fn deinit(self: Image, allocator: Allocator) void {
         allocator.free(self.data);
     }
 };
 
-pub fn load(allocator: std.mem.Allocator, file: std.ArrayList(u8)) !Image {
+pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     const bytes = file.items;
 
-    var reader = std.Io.Reader.fixed(bytes);
+    var reader = Reader.fixed(bytes);
     const head = try reader.take(signature.len);
     if (!std.mem.eql(u8, head, &signature)) {
         return error.InvalidSignature;
@@ -161,11 +156,24 @@ pub fn load(allocator: std.mem.Allocator, file: std.ArrayList(u8)) !Image {
     // 临时内存优先复用 file 预留空间，不够再走 allocator。
     tempState.fixed_buffer_allocator = .init(file.unusedCapacitySlice());
 
-    const input: IdatInput = .{ .bytes = bytes, .ranges = ranges.items };
+    const idatBuffer = try tempAllocator.alloc(u8, idatBufferLen);
+    defer tempAllocator.free(idatBuffer);
+    var idat = DataReader.init(bytes, ranges.items, idatBuffer);
+
+    const flateBuffer = try tempAllocator.alloc(
+        u8,
+        std.compress.flate.max_window_len,
+    );
+    defer tempAllocator.free(flateBuffer);
+    var flate = std.compress.flate.Decompress.init(
+        &idat.reader,
+        .zlib,
+        flateBuffer,
+    );
 
     switch (header.color) {
-        .rgb => try parseRgb(tempAllocator, data, header, input),
-        .rgba => try parseRgba(tempAllocator, data, header, input),
+        .rgb => try parseRgb(tempAllocator, &flate, data, header),
+        .rgba => try parseRgba(&flate, data, header),
         .indexed => {
             var buffer: [256 * 4]u8 = undefined; // 256 色，每色 4 字节。
             for (0..rgb.len / 3) |i| {
@@ -176,10 +184,10 @@ pub fn load(allocator: std.mem.Allocator, file: std.ArrayList(u8)) !Image {
                 buffer[i * 4 + 3] = a;
             }
             const palette = buffer[0 .. rgb.len / 3 * 4];
-            try parseIndexed(tempAllocator, data, header, input, palette);
+            try parseIndexed(tempAllocator, &flate, data, header, palette);
         },
         .magic => {
-            try parseIndexed(tempAllocator, data, header, input, rgb);
+            try parseIndexed(tempAllocator, &flate, data, header, rgb);
         },
         else => return error.UnsupportedColor,
     }
@@ -205,7 +213,7 @@ fn checkHeader(header: Header) !void {
     if (header.interlace != 0) return error.UnsupportedInterlace;
 }
 
-fn readChunk(reader: *std.Io.Reader) !ChunkData {
+fn readChunk(reader: *Reader) !ChunkData {
     const dataLen = try reader.takeInt(u32, .big);
 
     const crcBytes = try reader.peek(dataLen + @sizeOf(Chunk));
@@ -224,27 +232,12 @@ fn readChunk(reader: *std.Io.Reader) !ChunkData {
 }
 
 fn parseIndexed(
-    allocator: std.mem.Allocator,
+    allocator: Allocator,
+    flate: *std.compress.flate.Decompress,
     data: []u8,
     header: Header,
-    input: IdatInput,
     palette: []const u8,
 ) !void {
-    const idatBuffer = try allocator.alloc(u8, idatBufferLen);
-    defer allocator.free(idatBuffer);
-    var idat = IdatReader.init(input.bytes, input.ranges, idatBuffer);
-
-    const flateBuffer = try allocator.alloc(
-        u8,
-        std.compress.flate.max_window_len,
-    );
-    defer allocator.free(flateBuffer);
-    var flate = std.compress.flate.Decompress.init(
-        &idat.reader,
-        .zlib,
-        flateBuffer,
-    );
-
     const width: usize = @intCast(header.width);
     const height: usize = @intCast(header.height);
     const row = try allocator.alloc(u8, width);
@@ -267,30 +260,15 @@ fn parseIndexed(
 
         @memcpy(prior, row);
     }
-    try finishFlate(&flate);
+    try finishFlate(flate);
 }
 
 fn parseRgb(
-    allocator: std.mem.Allocator,
+    allocator: Allocator,
+    flate: *std.compress.flate.Decompress,
     data: []u8,
     header: Header,
-    input: IdatInput,
 ) !void {
-    const idatBuffer = try allocator.alloc(u8, idatBufferLen);
-    defer allocator.free(idatBuffer);
-    var idat = IdatReader.init(input.bytes, input.ranges, idatBuffer);
-
-    const flateBuffer = try allocator.alloc(
-        u8,
-        std.compress.flate.max_window_len,
-    );
-    defer allocator.free(flateBuffer);
-    var flate = std.compress.flate.Decompress.init(
-        &idat.reader,
-        .zlib,
-        flateBuffer,
-    );
-
     const width: usize = @intCast(header.width);
     const height: usize = @intCast(header.height);
     const lineLen = try std.math.mul(usize, width, 3);
@@ -316,30 +294,14 @@ fn parseRgb(
 
         @memcpy(prior, row);
     }
-    try finishFlate(&flate);
+    try finishFlate(flate);
 }
 
 fn parseRgba(
-    allocator: std.mem.Allocator,
+    flate: *std.compress.flate.Decompress,
     data: []u8,
     header: Header,
-    input: IdatInput,
 ) !void {
-    const idatBuffer = try allocator.alloc(u8, idatBufferLen);
-    defer allocator.free(idatBuffer);
-    var idat = IdatReader.init(input.bytes, input.ranges, idatBuffer);
-
-    const flateBuffer = try allocator.alloc(
-        u8,
-        std.compress.flate.max_window_len,
-    );
-    defer allocator.free(flateBuffer);
-    var flate = std.compress.flate.Decompress.init(
-        &idat.reader,
-        .zlib,
-        flateBuffer,
-    );
-
     const width: usize = @intCast(header.width);
     const height: usize = @intCast(header.height);
     const lineLen = width * 4;
@@ -354,7 +316,7 @@ fn parseRgba(
         try flate.reader.readSliceAll(dest);
         unfilter(dest, dest, prior, 4, filter);
     }
-    try finishFlate(&flate);
+    try finishFlate(flate);
 }
 
 fn unfilter(
@@ -436,7 +398,7 @@ const TestPng = struct {
     splitIdat: bool = false,
 };
 
-fn makeTestPng(allocator: std.mem.Allocator, png: TestPng) ![]u8 {
+fn makeTestPng(allocator: Allocator, png: TestPng) ![]u8 {
     var result: std.ArrayList(u8) = .empty;
     errdefer result.deinit(allocator);
 
@@ -474,7 +436,7 @@ fn makeTestPng(allocator: std.mem.Allocator, png: TestPng) ![]u8 {
 }
 
 fn makeStoredZlib(
-    allocator: std.mem.Allocator,
+    allocator: Allocator,
     data: []const u8,
 ) ![]u8 {
     if (data.len > std.math.maxInt(u16)) return error.TestDataTooLarge;
@@ -502,7 +464,7 @@ fn makeStoredZlib(
 
 fn appendChunk(
     result: *std.ArrayList(u8),
-    allocator: std.mem.Allocator,
+    allocator: Allocator,
     kind: []const u8,
     data: []const u8,
 ) !void {
