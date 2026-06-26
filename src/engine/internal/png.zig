@@ -129,23 +129,23 @@ pub fn load(allocator: std.mem.Allocator, file: std.ArrayList(u8)) !Image {
     std.mem.byteSwapAllFields(Header, &header);
     try checkHeader(header);
 
-    var idatRanges: std.ArrayList(Range) = .empty;
-    defer idatRanges.deinit(allocator);
+    var ranges: std.ArrayList(Range) = .empty;
+    defer ranges.deinit(allocator);
 
-    var rgbPalette: []const u8 = &.{};
-    var alphaPalette: []const u8 = &.{};
+    var rgb: []const u8 = &.{};
+    var alpha: []const u8 = &.{};
 
     while (true) {
         const chunk = try readChunk(&reader);
         switch (chunk.kind) {
-            .IDAT => try idatRanges.append(allocator, chunk.range),
-            .PLTE => rgbPalette = chunk.data,
-            .tRNS => alphaPalette = chunk.data,
+            .IDAT => try ranges.append(allocator, chunk.range),
+            .PLTE => rgb = chunk.data,
+            .tRNS => alpha = chunk.data,
             .IEND => break,
             else => {},
         }
     }
-    if (idatRanges.items.len == 0) return error.MissingImageData;
+    if (ranges.items.len == 0) return error.MissingImageData;
 
     const width: usize = @intCast(header.width);
     const height: usize = @intCast(header.height);
@@ -161,27 +161,25 @@ pub fn load(allocator: std.mem.Allocator, file: std.ArrayList(u8)) !Image {
     // 临时内存优先复用 file 预留空间，不够再走 allocator。
     tempState.fixed_buffer_allocator = .init(file.unusedCapacitySlice());
 
-    const input: IdatInput = .{ .bytes = bytes, .ranges = idatRanges.items };
+    const input: IdatInput = .{ .bytes = bytes, .ranges = ranges.items };
+
     switch (header.color) {
         .rgb => try parseRgb(tempAllocator, data, header, input),
         .rgba => try parseRgba(tempAllocator, data, header, input),
         .indexed => {
-            const palette = try makePalette(allocator, .{
-                .data = rgbPalette,
-                .alpha = alphaPalette,
-                .rgba = false,
-            });
-            defer allocator.free(palette);
+            var buffer: [256 * 4]u8 = undefined; // 256 色，每色 4 字节。
+            for (0..rgb.len / 3) |i| {
+                buffer[i * 4 + 0] = rgb[i * 3 + 0];
+                buffer[i * 4 + 1] = rgb[i * 3 + 1];
+                buffer[i * 4 + 2] = rgb[i * 3 + 2];
+                const a = if (i < alpha.len) alpha[i] else 255;
+                buffer[i * 4 + 3] = a;
+            }
+            const palette = buffer[0 .. rgb.len / 3 * 4];
             try parseIndexed(tempAllocator, data, header, input, palette);
         },
         .magic => {
-            const palette = try makePalette(allocator, .{
-                .data = rgbPalette,
-                .alpha = alphaPalette,
-                .rgba = true,
-            });
-            defer allocator.free(palette);
-            try parseIndexed(tempAllocator, data, header, input, palette);
+            try parseIndexed(tempAllocator, data, header, input, rgb);
         },
         else => return error.UnsupportedColor,
     }
@@ -223,39 +221,6 @@ fn readChunk(reader: *std.Io.Reader) !ChunkData {
         .data = data,
         .range = .{ .start = start, .end = start + data.len },
     };
-}
-
-const PaletteSource = struct {
-    data: []const u8,
-    alpha: []const u8,
-    rgba: bool,
-};
-
-fn makePalette(allocator: std.mem.Allocator, source: PaletteSource) ![]u8 {
-    if (source.rgba) {
-        if (source.data.len == 0 or source.data.len % 4 != 0) {
-            return error.InvalidPalette;
-        }
-        if (source.data.len / 4 > 256) return error.InvalidPalette;
-        if (source.alpha.len != 0) return error.InvalidPalette;
-        return allocator.dupe(u8, source.data);
-    }
-
-    if (source.data.len == 0 or source.data.len % 3 != 0) {
-        return error.InvalidPalette;
-    }
-    const colorCount = source.data.len / 3;
-    if (colorCount > 256) return error.InvalidPalette;
-    if (source.alpha.len > colorCount) return error.InvalidPalette;
-
-    const result = try allocator.alloc(u8, colorCount * 4);
-    for (0..colorCount) |i| {
-        result[i * 4 + 0] = source.data[i * 3 + 0];
-        result[i * 4 + 1] = source.data[i * 3 + 1];
-        result[i * 4 + 2] = source.data[i * 3 + 2];
-        result[i * 4 + 3] = if (i < source.alpha.len) source.alpha[i] else 255;
-    }
-    return result;
 }
 
 fn parseIndexed(
