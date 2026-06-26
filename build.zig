@@ -164,11 +164,13 @@ fn buildWeb(b: *std.Build, options: Options) !void {
         .emsdk = options.emsdk,
         .use_emmalloc = true,
         // TODO Zig 0.17 重新验证，能关闭就改回 false。
+        // 当前先保持 Web 文件读写可用。
         .use_filesystem = true,
         .extra_args = &.{
             "-sINITIAL_MEMORY=64MB",
             "--js-library",
             b.pathFromRoot("src/engine/internal/em.js"),
+            // TODO sokol 修复文件依赖刷新后，删除 emJsCacheStamp。
             // sokol 的 extra_args 不追踪文件输入，用 hash stamp 触发重链。
             "--pre-js",
             try emJsCacheStamp(b),

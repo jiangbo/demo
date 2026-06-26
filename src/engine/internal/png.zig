@@ -17,7 +17,7 @@ const Color = enum(u8) {
     indexed = 3,
     grayAlpha = 4,
     rgba = 6,
-    indexedRgba = 44, // 私有扩展：PLTE 是 RGBA 调色板。
+    magic = 44, // 私有扩展：PLTE 是 RGBA 调色板。
 };
 
 const Filter = enum(u8) {
@@ -28,7 +28,7 @@ const Filter = enum(u8) {
     paeth = 4,
 };
 
-const Header = struct {
+const Header = extern struct {
     width: u32,
     height: u32,
     bitDepth: u8,
@@ -39,39 +39,8 @@ const Header = struct {
 };
 
 const Range = struct { start: usize, end: usize };
+const headerLen = 13;
 const idatBufferLen = 4096;
-
-const Scratch = struct {
-    allocator: std.mem.Allocator,
-    buffer: []u8,
-    used: usize = 0,
-    fallback: [4][]u8 = @splat(&.{}),
-    fallbackLen: usize = 0,
-
-    fn init(allocator: std.mem.Allocator, buffer: []u8) Scratch {
-        return .{ .allocator = allocator, .buffer = buffer };
-    }
-
-    fn deinit(self: *Scratch) void {
-        for (self.fallback[0..self.fallbackLen]) |buffer| {
-            self.allocator.free(buffer);
-        }
-    }
-
-    fn alloc(self: *Scratch, len: usize) ![]u8 {
-        if (len <= self.buffer.len - self.used) {
-            const start = self.used;
-            self.used += len;
-            return self.buffer[start..self.used];
-        }
-
-        if (self.fallbackLen == self.fallback.len) return error.OutOfMemory;
-        const buffer = try self.allocator.alloc(u8, len);
-        self.fallback[self.fallbackLen] = buffer;
-        self.fallbackLen += 1;
-        return buffer;
-    }
-};
 
 const ChunkData = struct {
     kind: Chunk,
@@ -152,8 +121,6 @@ pub const Image = struct {
 
 pub fn load(allocator: std.mem.Allocator, file: std.ArrayList(u8)) !Image {
     const bytes = file.items;
-    var scratch = Scratch.init(allocator, file.unusedCapacitySlice());
-    defer scratch.deinit();
 
     if (bytes.len < signature.len or
         !std.mem.eql(u8, bytes[0..signature.len], &signature))
@@ -164,7 +131,9 @@ pub fn load(allocator: std.mem.Allocator, file: std.ArrayList(u8)) !Image {
     var pos: usize = signature.len;
     const first = try readChunk(bytes, &pos);
     if (first.kind != .IHDR) return error.InvalidHeader;
-    const header = try readHeader(first.data);
+    if (first.data.len != headerLen) return error.InvalidHeader;
+    var header = std.mem.bytesToValue(Header, first.data);
+    std.mem.byteSwapAllFields(Header, &header);
     try checkHeader(header);
 
     var idatRanges: std.ArrayList(Range) = .empty;
@@ -196,10 +165,17 @@ pub fn load(allocator: std.mem.Allocator, file: std.ArrayList(u8)) !Image {
     const data = try allocator.alloc(u8, dataLen);
     errdefer allocator.free(data);
 
+    // TODO Zig 0.17：改用 std.heap.BufferFirstAllocator。
+    // 0.16 还没有这个类型，先复用 stackFallback 的内部固定分配器。
+    var tempState = std.heap.stackFallback(1, allocator);
+    const tempAllocator = tempState.get();
+    // 临时内存优先复用 file 预留空间，不够再走 allocator。
+    tempState.fixed_buffer_allocator = .init(file.unusedCapacitySlice());
+
     const input: IdatInput = .{ .bytes = bytes, .ranges = idatRanges.items };
     switch (header.color) {
-        .rgb => try parseRgb(&scratch, data, header, input),
-        .rgba => try parseRgba(&scratch, data, header, input),
+        .rgb => try parseRgb(tempAllocator, data, header, input),
+        .rgba => try parseRgba(tempAllocator, data, header, input),
         .indexed => {
             const palette = try makePalette(allocator, .{
                 .data = rgbPalette,
@@ -207,16 +183,16 @@ pub fn load(allocator: std.mem.Allocator, file: std.ArrayList(u8)) !Image {
                 .rgba = false,
             });
             defer allocator.free(palette);
-            try parseIndexed(&scratch, data, header, input, palette);
+            try parseIndexed(tempAllocator, data, header, input, palette);
         },
-        .indexedRgba => {
+        .magic => {
             const palette = try makePalette(allocator, .{
                 .data = rgbPalette,
                 .alpha = alphaPalette,
                 .rgba = true,
             });
             defer allocator.free(palette);
-            try parseIndexed(&scratch, data, header, input, palette);
+            try parseIndexed(tempAllocator, data, header, input, palette);
         },
         else => return error.UnsupportedColor,
     }
@@ -228,28 +204,13 @@ pub fn load(allocator: std.mem.Allocator, file: std.ArrayList(u8)) !Image {
     };
 }
 
-fn readHeader(data: []const u8) !Header {
-    if (data.len != 13) return error.InvalidHeader;
-    return .{
-        .width = std.mem.readInt(u32, data[0..4], .big),
-        .height = std.mem.readInt(u32, data[4..8], .big),
-        .bitDepth = data[8],
-        .color = std.enums.fromInt(Color, data[9]) orelse {
-            return error.UnsupportedColor;
-        },
-        .compression = data[10],
-        .filter = data[11],
-        .interlace = data[12],
-    };
-}
-
 fn checkHeader(header: Header) !void {
     if (header.width == 0 or header.height == 0) return error.InvalidHeader;
     if (header.width > std.math.maxInt(i32)) return error.ImageTooLarge;
     if (header.height > std.math.maxInt(i32)) return error.ImageTooLarge;
     if (header.bitDepth != 8) return error.UnsupportedBitDepth;
     switch (header.color) {
-        .rgb, .rgba, .indexed, .indexedRgba => {},
+        .rgb, .rgba, .indexed, .magic => {},
         else => return error.UnsupportedColor,
     }
     if (header.compression != 0) return error.UnsupportedCompression;
@@ -323,16 +284,21 @@ fn makePalette(allocator: std.mem.Allocator, source: PaletteSource) ![]u8 {
 }
 
 fn parseIndexed(
-    scratch: *Scratch,
+    allocator: std.mem.Allocator,
     data: []u8,
     header: Header,
     input: IdatInput,
     palette: []const u8,
 ) !void {
-    const idatBuffer = try scratch.alloc(idatBufferLen);
+    const idatBuffer = try allocator.alloc(u8, idatBufferLen);
+    defer allocator.free(idatBuffer);
     var idat = IdatReader.init(input.bytes, input.ranges, idatBuffer);
 
-    const flateBuffer = try scratch.alloc(std.compress.flate.max_window_len);
+    const flateBuffer = try allocator.alloc(
+        u8,
+        std.compress.flate.max_window_len,
+    );
+    defer allocator.free(flateBuffer);
     var flate = std.compress.flate.Decompress.init(
         &idat.reader,
         .zlib,
@@ -341,8 +307,10 @@ fn parseIndexed(
 
     const width: usize = @intCast(header.width);
     const height: usize = @intCast(header.height);
-    const row = try scratch.alloc(width);
-    const prior = try scratch.alloc(width);
+    const row = try allocator.alloc(u8, width);
+    defer allocator.free(row);
+    const prior = try allocator.alloc(u8, width);
+    defer allocator.free(prior);
     @memset(prior, 0);
 
     for (0..height) |y| {
@@ -363,15 +331,20 @@ fn parseIndexed(
 }
 
 fn parseRgb(
-    scratch: *Scratch,
+    allocator: std.mem.Allocator,
     data: []u8,
     header: Header,
     input: IdatInput,
 ) !void {
-    const idatBuffer = try scratch.alloc(idatBufferLen);
+    const idatBuffer = try allocator.alloc(u8, idatBufferLen);
+    defer allocator.free(idatBuffer);
     var idat = IdatReader.init(input.bytes, input.ranges, idatBuffer);
 
-    const flateBuffer = try scratch.alloc(std.compress.flate.max_window_len);
+    const flateBuffer = try allocator.alloc(
+        u8,
+        std.compress.flate.max_window_len,
+    );
+    defer allocator.free(flateBuffer);
     var flate = std.compress.flate.Decompress.init(
         &idat.reader,
         .zlib,
@@ -384,8 +357,10 @@ fn parseRgb(
         return error.ImageTooLarge;
     };
 
-    const row = try scratch.alloc(lineLen);
-    const prior = try scratch.alloc(lineLen);
+    const row = try allocator.alloc(u8, lineLen);
+    defer allocator.free(row);
+    const prior = try allocator.alloc(u8, lineLen);
+    defer allocator.free(prior);
     @memset(prior, 0);
 
     for (0..height) |y| {
@@ -407,15 +382,20 @@ fn parseRgb(
 }
 
 fn parseRgba(
-    scratch: *Scratch,
+    allocator: std.mem.Allocator,
     data: []u8,
     header: Header,
     input: IdatInput,
 ) !void {
-    const idatBuffer = try scratch.alloc(idatBufferLen);
+    const idatBuffer = try allocator.alloc(u8, idatBufferLen);
+    defer allocator.free(idatBuffer);
     var idat = IdatReader.init(input.bytes, input.ranges, idatBuffer);
 
-    const flateBuffer = try scratch.alloc(std.compress.flate.max_window_len);
+    const flateBuffer = try allocator.alloc(
+        u8,
+        std.compress.flate.max_window_len,
+    );
+    defer allocator.free(flateBuffer);
     var flate = std.compress.flate.Decompress.init(
         &idat.reader,
         .zlib,
@@ -669,7 +649,7 @@ test "load indexed png with trns" {
     }, image.data);
 }
 
-test "load private indexed png with rgba palette" {
+test "load magic png with rgba palette" {
     const allocator = std.testing.allocator;
     const png = try makeTestPng(allocator, .{
         .width = 2,
