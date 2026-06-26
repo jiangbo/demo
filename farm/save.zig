@@ -64,15 +64,6 @@ const SaveData = struct {
     maps: []const MapSave = &.{},
 };
 
-const SummaryTime = struct {
-    day: u32 = 0,
-};
-
-const SummaryData = struct {
-    timestamp: i64 = 0,
-    time: SummaryTime = .{},
-};
-
 pub fn slotPath(slot: usize, buffer: []u8) ![:0]const u8 {
     if (slot >= slotCount) return error.InvalidSaveSlot;
     return try std.fmt.bufPrintZ(buffer, "saves/slot{d}.zon", .{slot});
@@ -111,46 +102,54 @@ pub fn readSlotSummary(slot: usize) !?SlotSummary {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
-    var summary = zhu.window.readZon(SummaryData, path, true) catch |err|
+    const source = zhu.window.readAll(path) catch |err|
         switch (err) {
             error.FileNotFound => return null,
             else => return err,
         };
-    defer summary.deinit();
+    defer zhu.assets.free(source);
+
+    return try parseSlotSummary(source);
+}
+
+pub fn parseSlotSummary(content: []const u8) !SlotSummary {
+    // 槽位列表只需要两个字段，不为摘要解析完整大存档。
+    const timeIndex = std.mem.indexOf(u8, content, ".time") orelse {
+        return error.InvalidSaveSummary;
+    };
 
     return .{
-        .day = summary.value.time.day,
-        .timestamp = summary.value.timestamp,
+        .day = try parseFieldInt(u32, content[timeIndex..], ".day"),
+        .timestamp = try parseFieldInt(i64, content, ".timestamp"),
     };
 }
 
-pub fn parseSlotSummary(
-    content: []const u8,
-    allocator: std.mem.Allocator,
-) !SlotSummary {
-    const terminated = try std.fmt.allocPrintSentinel(
-        allocator,
-        "{s}",
-        .{content},
-        0,
-    );
-    defer allocator.free(terminated);
+fn parseFieldInt(T: type, content: []const u8, field: []const u8) !T {
+    const fieldIndex = std.mem.indexOf(u8, content, field) orelse {
+        return error.InvalidSaveSummary;
+    };
 
-    var diagnostics: std.zon.parse.Diagnostics = .{};
-    defer diagnostics.deinit(allocator);
+    var index = fieldIndex + field.len;
+    while (index < content.len and content[index] != '=') : (index += 1) {}
+    if (index == content.len) return error.InvalidSaveSummary;
 
-    const data = try std.zon.parse.fromSlice(
-        SummaryData,
-        allocator,
-        terminated,
-        &diagnostics,
-        .{ .ignore_unknown_fields = true },
-    );
-    defer std.zon.parse.free(allocator, data);
+    index += 1;
+    while (index < content.len and isSpace(content[index])) : (index += 1) {}
+    const start = index;
 
-    return .{
-        .day = data.time.day,
-        .timestamp = data.timestamp,
+    if (index < content.len and content[index] == '-') index += 1;
+    while (index < content.len and std.ascii.isDigit(content[index])) {
+        index += 1;
+    }
+    if (start == index) return error.InvalidSaveSummary;
+
+    return try std.fmt.parseInt(T, content[start..index], 10);
+}
+
+fn isSpace(char: u8) bool {
+    return switch (char) {
+        ' ', '\n', '\r', '\t' => true,
+        else => false,
     };
 }
 
@@ -326,7 +325,7 @@ test "parseSlotSummary 会读取天数和时间戳" {
         \\}
     ;
 
-    const summary = try parseSlotSummary(content, std.testing.allocator);
+    const summary = try parseSlotSummary(content);
 
     try std.testing.expectEqual(7, summary.day);
     try std.testing.expectEqual(42, summary.timestamp);
@@ -345,7 +344,7 @@ test "parseSlotSummary 会忽略完整存档的其它字段" {
         \\}
     ;
 
-    const summary = try parseSlotSummary(content, std.testing.allocator);
+    const summary = try parseSlotSummary(content);
 
     try std.testing.expectEqual(7, summary.day);
     try std.testing.expectEqual(42, summary.timestamp);

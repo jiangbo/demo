@@ -1,7 +1,7 @@
 const std = @import("std");
 const sk = @import("sokol");
 const assets = @import("assets.zig");
-const stbAudio = @import("c.zig").stbAudio;
+const stbAudio = @import("internal/c.zig").stbAudio;
 
 var mutex: std.Io.Mutex = .init;
 pub var paused: std.atomic.Value(bool) = .init(false);

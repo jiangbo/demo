@@ -91,19 +91,17 @@ fn buildNative(b: *std.Build, options: Options) !void {
 
     b.installArtifact(exe);
 
-    const writeFiles = b.addWriteFiles();
-    exe.step.dependOn(&writeFiles.step);
-
     const stb = b.dependency("stb", .{
         .target = target,
         .optimize = optimize,
     });
     zhuModule.addIncludePath(stb.path("."));
-    const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
-    zhuModule.addCSourceFile(.{ .file = stbImagePath, .flags = &.{"-O2"} });
 
-    const stbAudioPath = writeFiles.add("stb_audio.c", stbAudioSource);
-    zhuModule.addCSourceFile(.{ .file = stbAudioPath, .flags = &.{"-O2"} });
+    const cFlags = &.{"-O2"};
+    zhuModule.addCSourceFile(.{
+        .file = b.path("src/engine/internal/stb_audio.c"),
+        .flags = cFlags,
+    });
 
     const testModule = b.createModule(.{
         .root_source_file = b.path("farm/tests.zig"),
@@ -113,7 +111,6 @@ fn buildNative(b: *std.Build, options: Options) !void {
     testModule.addImport("zhu", zhuModule);
 
     const tests = b.addTest(.{ .name = "tests", .root_module = testModule });
-    tests.step.dependOn(&writeFiles.step);
 
     const run_tests = b.addRunArtifact(tests);
     b.step("test", "Run farm tests").dependOn(&run_tests.step);
@@ -147,23 +144,17 @@ fn buildWeb(b: *std.Build, options: Options) !void {
     }));
     zhuModule.addSystemIncludePath(include);
 
-    const writeFiles = b.addWriteFiles();
-    exe.step.dependOn(&writeFiles.step);
-
-    const cFlags = &.{ "-O2", "-fno-sanitize=undefined" };
-    const stbAudioPath = writeFiles.add("stb_audio.c", stbAudioSource);
-    zhuModule.addCSourceFile(.{ .file = stbAudioPath, .flags = cFlags });
-
-    const emPath = writeFiles.add("em.c", emSource);
-    zhuModule.addCSourceFile(.{ .file = emPath, .flags = cFlags });
-
     const stb = b.dependency("stb", .{
         .target = target,
         .optimize = optimize,
     });
     zhuModule.addIncludePath(stb.path("."));
-    const stbImagePath = writeFiles.add("stb_image.c", stbImageSource);
-    zhuModule.addCSourceFile(.{ .file = stbImagePath, .flags = cFlags });
+
+    const cFlags = &.{ "-O2", "-fno-sanitize=undefined" };
+    zhuModule.addCSourceFile(.{
+        .file = b.path("src/engine/internal/stb_audio.c"),
+        .flags = cFlags,
+    });
 
     const link_step = try sk.emLinkStep(b, .{
         .lib_main = exe,
@@ -176,102 +167,30 @@ fn buildWeb(b: *std.Build, options: Options) !void {
         .use_filesystem = true,
         .extra_args = &.{
             "-sINITIAL_MEMORY=64MB",
+            "--js-library",
+            b.pathFromRoot("src/engine/internal/em.js"),
+            // sokol 的 extra_args 不追踪文件输入，用 hash stamp 触发重链。
+            "--pre-js",
+            try emJsCacheStamp(b),
         },
         .shell_file_path = b.path("index.html"),
     });
 
-    // attach Emscripten linker output to default install step
+    // 将 Emscripten 链接输出接到默认安装步骤。
     b.getInstallStep().dependOn(&link_step.step);
 }
 
-const stbImageSource =
-    \\
-    \\#include <stddef.h>
-    \\
-    \\extern void *stb_alloc(size_t len);
-    \\extern void *stb_realloc(void *ptr, size_t len);
-    \\extern void stb_free(void *ptr);
-    \\
-    \\#define STBI_MALLOC(sz) stb_alloc(sz)
-    \\#define STBI_REALLOC(ptr, len) stb_realloc(ptr, len)
-    \\#define STBI_FREE(ptr) stb_free(ptr)
-    \\
-    \\#define STB_IMAGE_IMPLEMENTATION
-    \\#define STBI_ONLY_PNG
-    \\#define STBI_NO_STDIO
-    \\#include "stb_image.h"
-    \\
-;
+// 让 em.js 内容变化体现在 emcc 参数里，避免 Zig 缓存复用旧输出。
+fn emJsCacheStamp(b: *std.Build) ![]const u8 {
+    const bytes = @embedFile("src/engine/internal/em.js");
+    const hash = std.hash.Wyhash.hash(0, bytes);
+    const stamp = b.pathFromRoot(b.fmt(".zig-cache/em-js-{x}.js", .{hash}));
 
-const stbAudioSource =
-    \\
-    \\#include <stddef.h>
-    \\#include <stdlib.h>
-    \\
-    \\extern void *stb_alloc(size_t len);
-    \\extern void *stb_realloc(void *ptr, size_t len);
-    \\extern void stb_free(void *ptr);
-    \\
-    \\#define malloc(len) stb_alloc(len)
-    \\#define realloc(ptr, len) stb_realloc(ptr, len)
-    \\#define free(ptr) stb_free(ptr)
-    \\
-    \\#define STB_VORBIS_NO_PUSHDATA_API
-    \\#define STB_VORBIS_NO_INTEGER_CONVERSION
-    \\#define STB_VORBIS_NO_STDIO
-    \\
-    \\#include "stb_vorbis.c"
-    \\
-;
-
-const emSource =
-    \\#if defined(__EMSCRIPTEN__)
-    \\
-    \\#include <emscripten.h>
-    \\
-    \\EM_JS(int, em_js_file_save, (
-    \\    const char *c_path,
-    \\    const char *c_data,
-    \\    int len
-    \\), {
-    \\    const path = UTF8ToString(c_path);
-    \\    const bytes = HEAPU8.subarray(c_data, c_data + len);
-    \\    const chunkSize = 0x8000;
-    \\    let text = "";
-    \\    for (let i = 0; i < bytes.length; i += chunkSize) {
-    \\        const chunk = bytes.subarray(i, i + chunkSize);
-    \\        text += String.fromCharCode.apply(null, chunk);
-    \\    }
-    \\    try {
-    \\        window.localStorage.setItem(path, btoa(text));
-    \\        return 0;
-    \\    } catch (err) {
-    \\        console.error("save file failed:", path, err);
-    \\        return 1;
-    \\    }
-    \\});
-    \\
-    \\EM_JS(int, em_js_file_load, (
-    \\    const char *c_path,
-    \\    char *out_buf,
-    \\    int len
-    \\), {
-    \\    const path = UTF8ToString(c_path);
-    \\    const base64 = window.localStorage.getItem(path);
-    \\    if (!base64) return 0;
-    \\
-    \\    const binary = atob(base64);
-    \\    if (binary.length > len) return -binary.length;
-    \\    for (let i = 0; i < binary.length; i++) {
-    \\        HEAPU8[out_buf + i] = binary.charCodeAt(i);
-    \\    }
-    \\    return binary.length;
-    \\});
-    \\
-    \\void em_js_keep(void)
-    \\{
-    \\}
-    \\
-    \\#endif // defined(__EMSCRIPTEN__)
-    \\
-;
+    const cwd = std.Io.Dir.cwd();
+    try cwd.createDirPath(b.graph.io, b.pathFromRoot(".zig-cache"));
+    try cwd.writeFile(b.graph.io, .{
+        .sub_path = stamp,
+        .data = "// em.js cache stamp\n",
+    });
+    return stamp;
+}

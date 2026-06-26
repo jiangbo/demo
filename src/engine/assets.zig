@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const sk = @import("sokol");
-const c = @import("c.zig");
+const c = @import("internal/c.zig");
 const graphics = @import("graphics.zig");
 const audio = @import("audio.zig");
-const png = @import("extend/png.zig");
+const png = @import("internal/png.zig");
 
 const Image = graphics.Image;
 const Path = [:0]const u8;
@@ -23,7 +23,7 @@ pub const CountingAllocator = struct {
         return .{
             .ptr = self,
             .vtable = &.{
-                .alloc = allocs,
+                .alloc = alloc,
                 .resize = resize,
                 .remap = remap,
                 .free = frees,
@@ -32,7 +32,7 @@ pub const CountingAllocator = struct {
     }
 
     const A = std.mem.Alignment;
-    fn allocs(ctx: *anyopaque, len: usize, a: A, r: usize) ?[*]u8 {
+    fn alloc(ctx: *anyopaque, len: usize, a: A, r: usize) ?[*]u8 {
         const self: *CountingAllocator = @ptrCast(@alignCast(ctx));
         const p = self.child.rawAlloc(len, a, r) orelse return null;
         self.count += 1;
@@ -46,7 +46,7 @@ pub const CountingAllocator = struct {
         const stable = self.child.rawResize(b, a, len, r);
         if (stable) {
             self.count += 1;
-            self.used +%= len -% b.len;
+            self.used = self.used - b.len + len;
             self.max = @max(self.max, self.used);
         }
         return stable;
@@ -56,7 +56,7 @@ pub const CountingAllocator = struct {
         const self: *CountingAllocator = @ptrCast(@alignCast(ctx));
         const n = self.child.rawRemap(m, a, len, r) orelse return null;
         self.count += 1;
-        self.used +%= len -% m.len;
+        self.used = self.used - m.len + len;
         self.max = @max(self.max, self.used);
         return n;
     }
@@ -285,7 +285,7 @@ const Sound = struct {
     }
 
     fn handler(response: Response) []const u8 {
-        const data = response.data;
+        const data = response.data.items;
 
         const stbAudio = c.stbAudio.loadFromMemory(data);
         defer c.stbAudio.unload(stbAudio);
@@ -319,7 +319,7 @@ const Music = struct {
     }
 
     fn handler(response: Response) []const u8 {
-        const data = oomDupe(u8, response.data);
+        const data = oomDupe(u8, response.data.items);
         const stbAudio = c.stbAudio.loadFromMemory(data);
         cache.put(allocator, id(response.path), stbAudio) catch oom();
         audio.playMusicOption(response.path, response.index == 1);
@@ -337,7 +337,7 @@ const SkCallback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
 pub const Response = struct {
     index: u64 = undefined,
     path: [:0]const u8,
-    data: []const u8 = &.{},
+    data: std.ArrayList(u8) = .empty,
 };
 
 var fileBuffer: [4][]u8 = @splat(&.{});
@@ -392,13 +392,14 @@ pub const File = struct {
         std.log.info("loaded from: {s}", .{path});
 
         const value = cache.getPtr(id(path)) orelse return;
-        const data = @as([*]const u8, @ptrCast(res.data.ptr));
         const response: Response = .{
             .index = value.index,
             .path = path,
-            .data = data[0..res.data.size],
+            .data = .{
+                .items = fileBuffer[res.lane][0..res.data.size],
+                .capacity = fileBuffer[res.lane].len,
+            },
         };
-
         value.state = .loaded;
         value.managed = value.handler(response);
         value.state = .handled;

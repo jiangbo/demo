@@ -5,6 +5,7 @@ const sk = @import("sokol");
 const math = @import("math.zig");
 const assets = @import("assets.zig");
 const camera = @import("camera.zig");
+const em = @import("internal/c.zig").em;
 const input = @import("input.zig");
 const text = @import("text.zig");
 
@@ -161,11 +162,10 @@ pub fn statFileTime(path: [:0]const u8) i128 {
 pub fn readBuffer(path: [:0]const u8, buffer: []u8) ![:0]u8 {
     const buf = buffer[0 .. buffer.len - 1];
     if (@import("builtin").target.os.tag == .emscripten) {
-        const len = try readFromJs(path, buf);
-        // 长度大于0，读完了内容，末尾补 0，返回 C 字符串。
-        if (len > 0) return terminateBuffer(buffer, @intCast(len));
-        // 长度小于0，没有读完，太长了。
-        return error.BufferTooSmall;
+        return switch (try em.load(path, buf)) {
+            .loaded => |content| terminateBuffer(buffer, content.len),
+            .tooSmall => error.BufferTooSmall,
+        };
     }
     const content = try Dir.cwd().readFile(io, path, buf);
     return terminateBuffer(buffer, content.len);
@@ -174,15 +174,10 @@ pub fn readBuffer(path: [:0]const u8, buffer: []u8) ![:0]u8 {
 pub fn readAll(path: [:0]const u8) ![:0]u8 {
     if (@import("builtin").target.os.tag == .emscripten) {
         var buffer: [1024]u8 = undefined;
-        const len = try readFromJs(path, &buffer);
-        // 长度大于0，读完了内容，直接分配返回。
-        if (len > 0) return assets.oomDupeZ(u8, buffer[0..@intCast(len)]);
-
-        // 长度小于0，没有读完，太长了，分配更大的空间再读一次。
-        const fileLen: usize = @as(usize, @intCast(-len));
-        const large = assets.oomAlloc(u8, fileLen + 1);
-        _ = try readFromJs(path, large[0..fileLen]);
-        return terminateBuffer(large, @intCast(fileLen));
+        return switch (try em.load(path, &buffer)) {
+            .loaded => |content| assets.oomDupeZ(u8, content),
+            .tooSmall => |fileLen| readLargeFromJs(path, fileLen),
+        };
     }
     const max = 1024 * 1024;
     return try Dir.cwd().readFileAllocOptions( //
@@ -209,6 +204,7 @@ pub fn readZon(T: type, path: [:0]const u8, ignore: bool) !Zon(T) {
     errdefer arena.deinit();
 
     const allocator = arena.allocator();
+
     const option: std.zon.parse.Options = .{
         .ignore_unknown_fields = ignore,
         .free_on_error = false,
@@ -223,24 +219,18 @@ fn terminateBuffer(buffer: []u8, len: usize) [:0]u8 {
     return buffer[0..len :0];
 }
 
-fn readFromJs(path: [:0]const u8, content: []u8) !i32 {
-    const em = @import("c.zig").em;
-    em.em_js_keep(); // 强制链接 em.c 中的 EM_JS 函数。
-    const len = em.em_js_file_load(path.ptr, //
-        content.ptr, @intCast(content.len));
-    // JS 端约定：0 表示不存在，正数/负数都表示文件总长度。
-    if (len == 0) return error.FileNotFound;
-    return len;
+fn readLargeFromJs(path: [:0]const u8, fileLen: usize) ![:0]u8 {
+    const large = assets.oomAlloc(u8, fileLen + 1);
+    errdefer assets.free(large);
+    return switch (try em.load(path, large[0..fileLen])) {
+        .loaded => |content| terminateBuffer(large, content.len),
+        .tooSmall => error.BufferTooSmall,
+    };
 }
 
 pub fn saveAll(path: [:0]const u8, content: []const u8) !void {
     if (@import("builtin").target.os.tag == .emscripten) {
-        const em = @import("c.zig").em;
-        em.em_js_keep();
-        const err = em.em_js_file_save(path.ptr, //
-            content.ptr, @intCast(content.len));
-        if (err != 0) return error.WriteFailed;
-        return;
+        return em.save(path, content);
     }
 
     const cwd = std.Io.Dir.cwd();
