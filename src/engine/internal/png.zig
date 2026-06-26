@@ -107,15 +107,7 @@ const DataReader = struct {
     }
 };
 
-pub const Image = struct {
-    width: i32,
-    height: i32,
-    data: []u8,
-
-    pub fn deinit(self: Image, allocator: Allocator) void {
-        allocator.free(self.data);
-    }
-};
+pub const Image = struct { width: i32, height: i32, data: []u8 };
 
 pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     const bytes = file.items;
@@ -300,12 +292,10 @@ fn unFilter(cur: []u8, pre: []const u8, size: usize, f: Filter) void {
     switch (f) {
         .none => {},
         .sub => for (cur, 0..) |*value, i| {
-            const left = if (i >= size) cur[i - size] else 0;
-            value.* +%= left;
+            value.* +%= if (i >= size) cur[i - size] else 0;
         },
         .up => for (cur, 0..) |*value, i| {
-            const up = if (pre.len == 0) 0 else pre[i];
-            value.* +%= up;
+            value.* +%= if (pre.len == 0) 0 else pre[i];
         },
         .average => for (cur, 0..) |*value, i| {
             const left = if (i >= size) cur[i - size] else 0;
@@ -323,7 +313,7 @@ fn unFilter(cur: []u8, pre: []const u8, size: usize, f: Filter) void {
 }
 
 fn paeth(a: u8, b: u8, c: u8) u8 {
-    const p = a + b - c;
+    const p = @as(i16, a) + b - c;
     const pa = @abs(p - a);
     const pb = @abs(p - b);
     const pc = @abs(p - c);
@@ -442,7 +432,7 @@ test "load rgba png" {
     defer allocator.free(png);
 
     const image = try load(allocator, .{ .items = png, .capacity = png.len });
-    defer image.deinit(allocator);
+    defer allocator.free(image.data);
 
     try std.testing.expectEqual(@as(i32, 2), image.width);
     try std.testing.expectEqual(@as(i32, 1), image.height);
@@ -463,7 +453,7 @@ test "load rgb png" {
     defer allocator.free(png);
 
     const image = try load(allocator, .{ .items = png, .capacity = png.len });
-    defer image.deinit(allocator);
+    defer allocator.free(image.data);
 
     try std.testing.expectEqualSlices(u8, &.{
         1, 2, 3, 255,
@@ -484,7 +474,7 @@ test "load indexed png with trns" {
     defer allocator.free(png);
 
     const image = try load(allocator, .{ .items = png, .capacity = png.len });
-    defer image.deinit(allocator);
+    defer allocator.free(image.data);
 
     try std.testing.expectEqualSlices(u8, &.{
         10, 20, 30, 70,
@@ -505,7 +495,7 @@ test "load magic png with rgba palette" {
     defer allocator.free(png);
 
     const image = try load(allocator, .{ .items = png, .capacity = png.len });
-    defer image.deinit(allocator);
+    defer allocator.free(image.data);
 
     try std.testing.expectEqualSlices(u8, &.{
         10, 20, 30, 40,
