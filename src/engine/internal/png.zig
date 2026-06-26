@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const Reader = std.Io.Reader;
 const Writer = std.Io.Writer;
 const Limit = std.Io.Limit;
+const Decompress = std.compress.flate.Decompress;
 
 const signature = [8]u8{ 137, 80, 78, 71, 13, 10, 26, 10 };
 
@@ -112,17 +113,7 @@ pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     const bytes = file.items;
 
     var reader = Reader.fixed(bytes);
-    const head = try reader.take(signature.len);
-    if (!std.mem.eql(u8, head, &signature)) {
-        return error.InvalidSignature;
-    }
-
-    const first = try readChunk(&reader);
-    if (first.kind != .IHDR) return error.InvalidHeader;
-    if (first.data.len != headerLen) return error.InvalidHeader;
-    var header = std.mem.bytesToValue(Header, first.data);
-    std.mem.byteSwapAllFields(Header, &header);
-    try checkHeader(header);
+    const header = try readHeader(&reader);
 
     var ranges: std.ArrayList(Range) = .empty;
     defer ranges.deinit(allocator);
@@ -160,16 +151,10 @@ pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     defer tempAllocator.free(idatBuffer);
     var idat = DataReader.init(bytes, ranges.items, idatBuffer);
 
-    const flateBuffer = try tempAllocator.alloc(
-        u8,
-        std.compress.flate.max_window_len,
-    );
+    const max = std.compress.flate.max_window_len;
+    const flateBuffer = try tempAllocator.alloc(u8, max);
     defer tempAllocator.free(flateBuffer);
-    var flate = std.compress.flate.Decompress.init(
-        &idat.reader,
-        .zlib,
-        flateBuffer,
-    );
+    var flate = Decompress.init(&idat.reader, .zlib, flateBuffer);
 
     switch (header.color) {
         .rgb => try parseRgb(tempAllocator, &flate, data, header),
@@ -199,7 +184,19 @@ pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     };
 }
 
-fn checkHeader(header: Header) !void {
+fn readHeader(reader: *Reader) !Header {
+    const head = try reader.take(signature.len);
+    if (!std.mem.eql(u8, head, &signature)) {
+        return error.InvalidSignature;
+    }
+
+    const first = try readChunk(reader);
+    if (first.kind != .IHDR) return error.InvalidHeader;
+    if (first.data.len != headerLen) return error.InvalidHeader;
+
+    var header = std.mem.bytesToValue(Header, first.data);
+    std.mem.byteSwapAllFields(Header, &header);
+
     if (header.width == 0 or header.height == 0) return error.InvalidHeader;
     if (header.width > std.math.maxInt(i32)) return error.ImageTooLarge;
     if (header.height > std.math.maxInt(i32)) return error.ImageTooLarge;
@@ -211,11 +208,12 @@ fn checkHeader(header: Header) !void {
     if (header.compression != 0) return error.UnsupportedCompression;
     if (header.filter != 0) return error.UnsupportedFilter;
     if (header.interlace != 0) return error.UnsupportedInterlace;
+
+    return header;
 }
 
 fn readChunk(reader: *Reader) !ChunkData {
     const dataLen = try reader.takeInt(u32, .big);
-
     const crcBytes = try reader.peek(dataLen + @sizeOf(Chunk));
 
     const kind = try reader.takeEnum(Chunk, .big);
@@ -233,7 +231,7 @@ fn readChunk(reader: *Reader) !ChunkData {
 
 fn parseIndexed(
     allocator: Allocator,
-    flate: *std.compress.flate.Decompress,
+    flate: *Decompress,
     data: []u8,
     header: Header,
     palette: []const u8,
@@ -265,7 +263,7 @@ fn parseIndexed(
 
 fn parseRgb(
     allocator: Allocator,
-    flate: *std.compress.flate.Decompress,
+    flate: *Decompress,
     data: []u8,
     header: Header,
 ) !void {
@@ -298,7 +296,7 @@ fn parseRgb(
 }
 
 fn parseRgba(
-    flate: *std.compress.flate.Decompress,
+    flate: *Decompress,
     data: []u8,
     header: Header,
 ) !void {
@@ -363,7 +361,7 @@ fn unfilter(
     }
 }
 
-fn finishFlate(flate: *std.compress.flate.Decompress) !void {
+fn finishFlate(flate: *Decompress) !void {
     var extra: [1]u8 = undefined;
     const n = try flate.reader.readSliceShort(&extra);
     if (n != 0) return error.InvalidImageData;
