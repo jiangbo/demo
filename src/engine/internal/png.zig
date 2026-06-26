@@ -142,8 +142,8 @@ pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     if (ranges.items.len == 0) return error.MissingImageData;
 
     const len = header.width * header.height * 4;
-    const data = try allocator.alloc(u8, len);
-    errdefer allocator.free(data);
+    const pixelData = try allocator.alloc(u8, len);
+    errdefer allocator.free(pixelData);
 
     // TODO Zig 0.17：改用 std.heap.BufferFirstAllocator。
     // 0.16 还没有这个类型，先复用 stackFallback 的内部固定分配器。
@@ -157,18 +157,18 @@ pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     const gpa = arena.allocator();
 
     const idatBuffer = try gpa.alloc(u8, idatBufferLen);
-    var idat = DataReader.init(bytes, ranges.items, idatBuffer);
+    var source = DataReader.init(bytes, ranges.items, idatBuffer);
 
-    const prior = try gpa.alloc(u8, header.width * 4);
+    const prior = try gpa.alloc(u8, header.width * 3);
     @memset(prior, 0);
 
     const buffer = try gpa.alloc(u8, std.compress.flate.max_window_len);
-    var flate = Decompress.init(&idat.reader, .zlib, buffer);
+    var flate = Decompress.init(&source.reader, .zlib, buffer);
     const decode: Decode = .{
         .flate = &flate,
-        .data = data,
+        .data = pixelData,
         .header = header,
-        .row = try gpa.alloc(u8, header.width * 4),
+        .row = try gpa.alloc(u8, header.width * 3),
         .prior = prior,
     };
 
@@ -187,17 +187,13 @@ pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
             const palette = buf[0 .. rgb.len / 3 * 4];
             try parseIndexed(&decode, palette);
         },
-        .magic => {
-            try parseIndexed(&decode, rgb);
-        },
+        .magic => try parseIndexed(&decode, rgb),
         else => return error.UnsupportedColor,
     }
-    try finishFlate(&flate);
-
     return .{
         .width = @intCast(header.width),
         .height = @intCast(header.height),
-        .data = data,
+        .data = pixelData,
     };
 }
 
@@ -247,15 +243,14 @@ fn readChunk(reader: *Reader) !ChunkData {
 }
 
 fn parseIndexed(decode: *const Decode, palette: []const u8) !void {
-    const width: usize = @intCast(decode.header.width);
-    const height: usize = @intCast(decode.header.height);
+    const width = decode.header.width;
     const row = decode.row[0..width];
     const prior = decode.prior[0..width];
 
-    for (0..height) |y| {
+    for (0..decode.header.height) |y| {
         const filter = try decode.flate.reader.takeEnum(Filter, .big);
         try decode.flate.reader.readSliceAll(row);
-        unfilter(row, row, prior, 1, filter);
+        unFilter(row, row, prior, 1, filter);
 
         const dest = decode.data[y * width * 4 ..][0 .. width * 4];
         for (row, 0..) |index, x| {
@@ -269,35 +264,29 @@ fn parseIndexed(decode: *const Decode, palette: []const u8) !void {
 }
 
 fn parseRgb(decode: *const Decode) !void {
-    const width: usize = @intCast(decode.header.width);
-    const height: usize = @intCast(decode.header.height);
-    const lineLen = width * 3;
-    const row = decode.row[0..lineLen];
-    const prior = decode.prior[0..lineLen];
+    const width = decode.header.width;
 
-    for (0..height) |y| {
+    for (0..decode.header.height) |y| {
         const filter = try decode.flate.reader.takeEnum(Filter, .big);
-        try decode.flate.reader.readSliceAll(row);
-        unfilter(row, row, prior, 3, filter);
+        try decode.flate.reader.readSliceAll(decode.row);
+        unFilter(decode.row, decode.row, decode.prior, 3, filter);
 
         const dest = decode.data[y * width * 4 ..][0 .. width * 4];
         for (0..width) |x| {
-            dest[x * 4 + 0] = row[x * 3 + 0];
-            dest[x * 4 + 1] = row[x * 3 + 1];
-            dest[x * 4 + 2] = row[x * 3 + 2];
+            dest[x * 4 + 0] = decode.row[x * 3 + 0];
+            dest[x * 4 + 1] = decode.row[x * 3 + 1];
+            dest[x * 4 + 2] = decode.row[x * 3 + 2];
             dest[x * 4 + 3] = 255;
         }
 
-        @memcpy(prior, row);
+        @memcpy(decode.prior, decode.row);
     }
 }
 
 fn parseRgba(decode: *const Decode) !void {
-    const width: usize = @intCast(decode.header.width);
-    const height: usize = @intCast(decode.header.height);
-    const lineLen = width * 4;
+    const lineLen = decode.header.width * 4;
 
-    for (0..height) |y| {
+    for (0..decode.header.height) |y| {
         const filter = try decode.flate.reader.takeEnum(Filter, .big);
         const dest = decode.data[y * lineLen ..][0..lineLen];
         const prior = if (y == 0)
@@ -305,58 +294,42 @@ fn parseRgba(decode: *const Decode) !void {
         else
             decode.data[(y - 1) * lineLen ..][0..lineLen];
         try decode.flate.reader.readSliceAll(dest);
-        unfilter(dest, dest, prior, 4, filter);
+        unFilter(dest, dest, prior, 4, filter);
     }
 }
 
-fn unfilter(
+fn unFilter(
     dest: []u8,
-    current: []const u8,
-    prior: []const u8,
-    pixelSize: usize,
+    cur: []const u8,
+    pre: []const u8,
+    size: usize,
     filter: Filter,
 ) void {
     switch (filter) {
-        .none => {
-            if (dest.ptr != current.ptr) @memcpy(dest, current);
+        .none => if (dest.ptr != cur.ptr) @memcpy(dest, cur),
+        .sub => for (cur, 0..) |value, i| {
+            const left = if (i >= size) dest[i - size] else 0;
+            dest[i] = value +% left;
         },
-        .sub => {
-            for (current, 0..) |value, i| {
-                const left = if (i >= pixelSize) dest[i - pixelSize] else 0;
-                dest[i] = value +% left;
-            }
+        .up => for (cur, 0..) |value, i| {
+            const up = if (pre.len == 0) 0 else pre[i];
+            dest[i] = value +% up;
         },
-        .up => {
-            for (current, 0..) |value, i| {
-                const up = if (prior.len == 0) 0 else prior[i];
-                dest[i] = value +% up;
-            }
+        .average => for (cur, 0..) |value, i| {
+            const left = if (i >= size) dest[i - size] else 0;
+            const up = if (pre.len == 0) 0 else pre[i];
+            dest[i] = value +% average(left, up);
         },
-        .average => {
-            for (current, 0..) |value, i| {
-                const left = if (i >= pixelSize) dest[i - pixelSize] else 0;
-                const up = if (prior.len == 0) 0 else prior[i];
-                dest[i] = value +% average(left, up);
-            }
-        },
-        .paeth => {
-            for (current, 0..) |value, i| {
-                const left = if (i >= pixelSize) dest[i - pixelSize] else 0;
-                const up = if (prior.len == 0) 0 else prior[i];
-                const upLeft = if (prior.len != 0 and i >= pixelSize)
-                    prior[i - pixelSize]
-                else
-                    0;
-                dest[i] = value +% paeth(left, up, upLeft);
-            }
+        .paeth => for (cur, 0..) |value, i| {
+            const left = if (i >= size) dest[i - size] else 0;
+            const up = if (pre.len == 0) 0 else pre[i];
+            const upLeft = if (pre.len != 0 and i >= size)
+                pre[i - size]
+            else
+                0;
+            dest[i] = value +% paeth(left, up, upLeft);
         },
     }
-}
-
-fn finishFlate(flate: *Decompress) !void {
-    var extra: [1]u8 = undefined;
-    const n = try flate.reader.readSliceShort(&extra);
-    if (n != 0) return error.InvalidImageData;
 }
 
 fn average(left: u8, up: u8) u8 {
