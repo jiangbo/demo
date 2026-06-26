@@ -20,13 +20,7 @@ const Color = enum(u8) {
     magic = 44, // 私有扩展：PLTE 是 RGBA 调色板。
 };
 
-const Filter = enum(u8) {
-    none = 0,
-    sub = 1,
-    up = 2,
-    average = 3,
-    paeth = 4,
-};
+const Filter = enum(u8) { none, sub, up, average, paeth };
 
 const Header = extern struct {
     width: u32,
@@ -100,7 +94,7 @@ const IdatReader = struct {
             const left = range.end - self.pos;
             const size = limit.minInt(left);
             const data = self.bytes[self.pos..][0..size];
-            const n = writer.write(data) catch return error.WriteFailed;
+            const n = try writer.write(data);
             self.pos += n;
             return n;
         }
@@ -122,14 +116,13 @@ pub const Image = struct {
 pub fn load(allocator: std.mem.Allocator, file: std.ArrayList(u8)) !Image {
     const bytes = file.items;
 
-    if (bytes.len < signature.len or
-        !std.mem.eql(u8, bytes[0..signature.len], &signature))
-    {
+    var reader = std.Io.Reader.fixed(bytes);
+    const head = try reader.take(signature.len);
+    if (!std.mem.eql(u8, head, &signature)) {
         return error.InvalidSignature;
     }
 
-    var pos: usize = signature.len;
-    const first = try readChunk(bytes, &pos);
+    const first = try readChunk(&reader);
     if (first.kind != .IHDR) return error.InvalidHeader;
     if (first.data.len != headerLen) return error.InvalidHeader;
     var header = std.mem.bytesToValue(Header, first.data);
@@ -143,7 +136,7 @@ pub fn load(allocator: std.mem.Allocator, file: std.ArrayList(u8)) !Image {
     var alphaPalette: []const u8 = &.{};
 
     while (true) {
-        const chunk = try readChunk(bytes, &pos);
+        const chunk = try readChunk(&reader);
         switch (chunk.kind) {
             .IDAT => try idatRanges.append(allocator, chunk.range),
             .PLTE => rgbPalette = chunk.data,
@@ -156,12 +149,8 @@ pub fn load(allocator: std.mem.Allocator, file: std.ArrayList(u8)) !Image {
 
     const width: usize = @intCast(header.width);
     const height: usize = @intCast(header.height);
-    const count = std.math.mul(usize, width, height) catch {
-        return error.ImageTooLarge;
-    };
-    const dataLen = std.math.mul(usize, count, 4) catch {
-        return error.ImageTooLarge;
-    };
+    const count = try std.math.mul(usize, width, height);
+    const dataLen = try std.math.mul(usize, count, 4);
     const data = try allocator.alloc(u8, dataLen);
     errdefer allocator.free(data);
 
@@ -218,35 +207,21 @@ fn checkHeader(header: Header) !void {
     if (header.interlace != 0) return error.UnsupportedInterlace;
 }
 
-fn readChunk(bytes: []const u8, pos: *usize) !ChunkData {
-    if (pos.* > bytes.len or bytes.len - pos.* < 12) {
-        return error.InvalidChunk;
-    }
+fn readChunk(reader: *std.Io.Reader) !ChunkData {
+    const dataLen = try reader.takeInt(u32, .big);
 
-    const len = std.mem.readInt(u32, bytes[pos.*..][0..4], .big);
-    const dataLen: usize = @intCast(len);
-    const kindStart = pos.* + 4;
-    const dataStart = kindStart + 4;
-    const dataEnd = std.math.add(usize, dataStart, dataLen) catch {
-        return error.InvalidChunk;
-    };
-    const crcEnd = std.math.add(usize, dataEnd, 4) catch {
-        return error.InvalidChunk;
-    };
-    if (crcEnd > bytes.len) return error.InvalidChunk;
+    const crcBytes = try reader.peek(dataLen + @sizeOf(Chunk));
 
-    const kindInt = std.mem.readInt(u32, bytes[kindStart..][0..4], .big);
-    const kind: Chunk = @enumFromInt(kindInt);
-    const crc = std.mem.readInt(u32, bytes[dataEnd..][0..4], .big);
-    if (crc != std.hash.Crc32.hash(bytes[kindStart..dataEnd])) {
-        return error.InvalidCrc;
-    }
+    const kind = try reader.takeEnum(Chunk, .big);
+    const start = reader.seek;
+    const data = try reader.take(dataLen);
+    const crc = try reader.takeInt(u32, .big);
+    if (crc != std.hash.Crc32.hash(crcBytes)) return error.InvalidCrc;
 
-    pos.* = crcEnd;
     return .{
         .kind = kind,
-        .data = bytes[dataStart..dataEnd],
-        .range = .{ .start = dataStart, .end = dataEnd },
+        .data = data,
+        .range = .{ .start = start, .end = start + data.len },
     };
 }
 
@@ -353,9 +328,7 @@ fn parseRgb(
 
     const width: usize = @intCast(header.width);
     const height: usize = @intCast(header.height);
-    const lineLen = std.math.mul(usize, width, 3) catch {
-        return error.ImageTooLarge;
-    };
+    const lineLen = try std.math.mul(usize, width, 3);
 
     const row = try allocator.alloc(u8, lineLen);
     defer allocator.free(row);
@@ -465,10 +438,7 @@ fn unfilter(
 
 fn finishFlate(flate: *std.compress.flate.Decompress) !void {
     var extra: [1]u8 = undefined;
-    const n = flate.reader.readSliceShort(&extra) catch |err| {
-        if (flate.err) |inner| return inner;
-        return err;
-    };
+    const n = try flate.reader.readSliceShort(&extra);
     if (n != 0) return error.InvalidImageData;
 }
 
