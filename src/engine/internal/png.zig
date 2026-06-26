@@ -250,7 +250,7 @@ fn parseIndexed(decode: *const Decode, palette: []const u8) !void {
     for (0..decode.header.height) |y| {
         const filter = try decode.flate.reader.takeEnum(Filter, .big);
         try decode.flate.reader.readSliceAll(row);
-        unFilter(row, row, prior, 1, filter);
+        unFilter(row, prior, 1, filter);
 
         const dest = decode.data[y * width * 4 ..][0 .. width * 4];
         for (row, 0..) |index, x| {
@@ -269,7 +269,7 @@ fn parseRgb(decode: *const Decode) !void {
     for (0..decode.header.height) |y| {
         const filter = try decode.flate.reader.takeEnum(Filter, .big);
         try decode.flate.reader.readSliceAll(decode.row);
-        unFilter(decode.row, decode.row, decode.prior, 3, filter);
+        unFilter(decode.row, decode.prior, 3, filter);
 
         const dest = decode.data[y * width * 4 ..][0 .. width * 4];
         for (0..width) |x| {
@@ -284,69 +284,52 @@ fn parseRgb(decode: *const Decode) !void {
 }
 
 fn parseRgba(decode: *const Decode) !void {
-    const lineLen = decode.header.width * 4;
+    const len = decode.header.width * 4;
+    var pre: []const u8 = &.{};
 
     for (0..decode.header.height) |y| {
         const filter = try decode.flate.reader.takeEnum(Filter, .big);
-        const dest = decode.data[y * lineLen ..][0..lineLen];
-        const prior = if (y == 0)
-            &.{}
-        else
-            decode.data[(y - 1) * lineLen ..][0..lineLen];
+        const dest = decode.data[y * len ..][0..len];
         try decode.flate.reader.readSliceAll(dest);
-        unFilter(dest, dest, prior, 4, filter);
+        unFilter(dest, pre, 4, filter);
+        pre = dest;
     }
 }
 
-fn unFilter(
-    dest: []u8,
-    cur: []const u8,
-    pre: []const u8,
-    size: usize,
-    filter: Filter,
-) void {
-    switch (filter) {
-        .none => if (dest.ptr != cur.ptr) @memcpy(dest, cur),
-        .sub => for (cur, 0..) |value, i| {
-            const left = if (i >= size) dest[i - size] else 0;
-            dest[i] = value +% left;
+fn unFilter(cur: []u8, pre: []const u8, size: usize, f: Filter) void {
+    switch (f) {
+        .none => {},
+        .sub => for (cur, 0..) |*value, i| {
+            const left = if (i >= size) cur[i - size] else 0;
+            value.* +%= left;
         },
-        .up => for (cur, 0..) |value, i| {
+        .up => for (cur, 0..) |*value, i| {
             const up = if (pre.len == 0) 0 else pre[i];
-            dest[i] = value +% up;
+            value.* +%= up;
         },
-        .average => for (cur, 0..) |value, i| {
-            const left = if (i >= size) dest[i - size] else 0;
+        .average => for (cur, 0..) |*value, i| {
+            const left = if (i >= size) cur[i - size] else 0;
             const up = if (pre.len == 0) 0 else pre[i];
-            dest[i] = value +% average(left, up);
+            value.* +%= @intCast((@as(u16, left) + up) / 2);
         },
-        .paeth => for (cur, 0..) |value, i| {
-            const left = if (i >= size) dest[i - size] else 0;
+        .paeth => for (cur, 0..) |*value, i| {
+            const left = if (i >= size) cur[i - size] else 0;
             const up = if (pre.len == 0) 0 else pre[i];
-            const upLeft = if (pre.len != 0 and i >= size)
-                pre[i - size]
-            else
-                0;
-            dest[i] = value +% paeth(left, up, upLeft);
+            var upLeft: u8 = 0;
+            if (pre.len != 0 and i >= size) upLeft = pre[i - size];
+            value.* +%= paeth(left, up, upLeft);
         },
     }
 }
 
-fn average(left: u8, up: u8) u8 {
-    return @intCast((@as(u16, left) + up) / 2);
-}
-
-fn paeth(left: u8, up: u8, upLeft: u8) u8 {
-    const a: i16 = left;
-    const b: i16 = up;
-    const c: i16 = upLeft;
+fn paeth(a: u8, b: u8, c: u8) u8 {
     const p = a + b - c;
     const pa = @abs(p - a);
     const pb = @abs(p - b);
     const pc = @abs(p - c);
-    if (pa <= pb and pa <= pc) return left;
-    if (pb <= pc) return up;
-    return upLeft;
+    if (pa <= pb and pa <= pc) return a;
+    if (pb <= pc) return b;
+    return c;
 }
 
 const TestPng = struct {
