@@ -115,10 +115,11 @@ const DataReader = struct {
         return reader.seek - start;
     }
 
-    fn rebase(reader: *Reader, capacity: usize) Reader.RebaseError!void {
+    fn rebase(reader: *Reader, capacity: usize) !void {
         const self: *@This() = @alignCast(@fieldParentPtr("reader", reader));
-        self.useRange();
-        if (reader.buffer.len - reader.seek >= capacity) return;
+        if (reader.end - reader.seek >= capacity) return;
+        try self.useRange();
+        if (reader.end - reader.seek >= capacity) return;
 
         // 未消费的尾巴搬到 buf 头，再从后续 IDAT range 补满。
         const left = reader.buffer[reader.seek..reader.end];
@@ -169,45 +170,43 @@ const DataReader = struct {
     }
 
     // 在 buf 里消费越过 cut 后，把 buffer 切回原 PNG range，恢复零拷贝。
-    fn useRange(self: *DataReader) void {
+    fn useRange(self: *DataReader) !void {
         const reader = &self.reader;
         if (reader.buffer.ptr != self.buf[0..].ptr) return;
         if (self.cutRange >= self.ranges.len) return;
         if (reader.seek < self.cut) return;
 
-        const range = self.ranges[self.cutRange];
-        const rangeLen = range.end - range.start;
-        reader.buffer = @constCast(self.bytes[range.start..range.end]);
-        reader.seek = self.cutOffset + reader.seek - self.cut;
-        reader.end = rangeLen;
-        self.rangeIndex = self.cutRange + 1;
-        self.rangeOffset = 0;
+        self.rangeIndex = self.cutRange;
+        self.rangeOffset = self.cutOffset + reader.seek - self.cut;
+        try self.loadRange();
     }
 
     fn loadRange(self: *DataReader) !void {
         while (self.rangeIndex < self.ranges.len) {
-            const index = self.rangeIndex;
             const range = self.ranges[self.rangeIndex];
+            self.rangeIndex += 1;
             const rangeLen = range.end - range.start;
-            if (self.rangeOffset >= rangeLen) {
-                self.rangeIndex += 1;
+            if (rangeLen == 0) {
                 self.rangeOffset = 0;
                 continue;
             }
+            std.debug.assert(self.rangeOffset < rangeLen);
 
-            self.reader.buffer = @constCast(self.bytes[range.start..range.end]);
-            self.reader.seek = self.rangeOffset;
-            self.reader.end = rangeLen;
-            self.rangeIndex = index + 1;
+            const buffer: []const u8 = self.bytes[range.start..range.end];
+            self.setReader(@constCast(buffer), self.rangeOffset);
             self.rangeOffset = 0;
             self.cutRange = self.ranges.len;
             return;
         }
 
-        self.reader.buffer = &.{};
-        self.reader.seek = 0;
-        self.reader.end = 0;
+        self.setReader(&.{}, 0);
         return error.EndOfStream;
+    }
+
+    fn setReader(self: *DataReader, buffer: []u8, seek: usize) void {
+        self.reader.buffer = buffer;
+        self.reader.seek = seek;
+        self.reader.end = buffer.len;
     }
 };
 
