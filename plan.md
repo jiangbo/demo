@@ -85,11 +85,6 @@ zig build test
   自己需要的 `registry`、`dispatcher`、`input`、`camera`、
   `spatial_index` 等依赖；Zig 后续参考这个依赖边界，不照搬
   C++ 的 manager/class 分层。
-- UI：种子图标目前在 32x32 背包/快捷栏格子里显得偏大，后续不改动
-  原始图片，也不新增裁切后的图标资源；优先扩大背包格子和快捷栏格子，
-  让工具、种子和数量文字在同一套整数像素缩放下显示得更协调。
-- 30-NPC 显示与简单漫游：C++ `AnimalBehaviorSystem` 支持睡觉、进食和时间判断；
-  Zig 本步先只做显示和随机漫游。
 - 引擎/batch：后续支持多个 vertex buffer，但暂不把 `order`/`layer`
   概念混入本次设计。`batch` 只关心绘制状态，不内置图片、文字、UI
   等业务概念。
