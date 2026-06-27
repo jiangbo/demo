@@ -119,35 +119,23 @@ const DataReader = struct {
             const left = reader.end - reader.seek;
             std.debug.assert(self.rangeOffset >= left);
             self.rangeOffset -= left;
-            try self.loadRange();
-            return;
+            return try self.loadRange();
         }
 
         // 未消费的尾巴搬到 buf 头，再从后续 IDAT range 补满。
         const left = reader.buffer[reader.seek..reader.end];
         @memmove(self.buf[0..left.len], left);
+        const need = self.buf.len - left.len;
 
-        if (self.rangeIndex >= self.ranges.len) {
-            @panic("png idat split too small");
-        }
+        try self.loadRange();
+        const src = reader.buffer[reader.seek..reader.end];
+        if (src.len < need) @panic("png split too small");
+        @memcpy(self.buf[left.len..], src[0..need]);
+        self.rangeIndex -= 1;
+        self.rangeOffset = reader.seek + need;
 
-        const range = self.ranges[self.rangeIndex];
-        const rangeLen = range.end - range.start;
-        std.debug.assert(rangeLen > 0);
-        std.debug.assert(self.rangeOffset < rangeLen);
-
-        const src = self.bytes[range.start + self.rangeOffset .. range.end];
-        const copied = @min(self.buf.len - left.len, src.len);
-        @memcpy(self.buf[left.len..][0..copied], src[0..copied]);
-        self.rangeOffset += copied;
-
-        const len = left.len + copied;
-
-        reader.buffer = self.buf[0..len];
-        reader.seek = 0;
-        reader.end = len;
-        if (len >= capacity) return;
-        @panic("png idat split too small");
+        self.setReader(self.buf[0..], 0);
+        std.debug.assert(self.buf.len >= capacity);
     }
 
     fn loadRange(self: *DataReader) !void {
