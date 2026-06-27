@@ -23,7 +23,7 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
                 if (animation.frame().extend == 0) continue;
 
                 // extend 非零表示这一帧是动作生效点，具体效果由 farm 系统处理。
-                world.add(entity, UseFrame{});
+                query.add(world, entity, UseFrame{});
             },
             .end => {
                 if (!world.has(entity, Busy)) continue;

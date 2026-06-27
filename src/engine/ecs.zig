@@ -440,6 +440,14 @@ pub fn Query(comptime All: anytype, comptime None: anytype) type {
             } else return null;
         }
 
+        pub fn add(_: *@This(), world: *World, e: u16, v: anytype) void {
+            const inQuery = inline for (All ++ None) |C| {
+                if (C == @TypeOf(v)) break true;
+            } else false;
+            if (inQuery) std.debug.assert(world.has(e, @TypeOf(v)));
+            world.add(e, v);
+        }
+
         pub fn get(self: *@This(), entity: u16, T: type) T {
             return self.getPtr(entity, T).*;
         }

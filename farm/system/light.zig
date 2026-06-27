@@ -53,10 +53,10 @@ pub fn update(world: *zhu.ecs.World) void {
 
     if (dark) {
         var query = world.query(.{light.DayOnly});
-        while (query.next()) |e| world.add(e, light.Disabled{});
+        while (query.next()) |e| query.add(world, e, light.Disabled{});
     } else {
         var query = world.query(.{light.NightOnly});
-        while (query.next()) |e| world.add(e, light.Disabled{});
+        while (query.next()) |e| query.add(world, e, light.Disabled{});
     }
 }
 

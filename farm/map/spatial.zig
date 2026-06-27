@@ -230,7 +230,7 @@ pub fn markHits(world: *World, rect: zhu.Rect) void {
         const position = query.get(entity, Position);
         const body = query.get(entity, Shape);
         if (body.move(position).intersect(rect)) {
-            world.add(entity, Hit{});
+            query.add(world, entity, Hit{});
         }
     }
 }
