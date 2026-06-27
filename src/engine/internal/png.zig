@@ -58,15 +58,11 @@ const DataReader = struct {
     reader: Reader,
     bytes: []const u8,
     ranges: []const Range,
+    // 下一个原 IDAT 位置，buf 状态下先记预读位置。
     rangeIndex: usize = 0,
     rangeOffset: usize = 0,
     // flate 会 peek u32，跨 IDAT 时用小窗口拼连续字节。
     buf: [16]u8 = undefined,
-    // cut 是 buf 里新段起点。
-    // cutRange/cutOffset 是新段源位置，用来切回原 PNG。
-    cut: usize = 0,
-    cutRange: usize = 0,
-    cutOffset: usize = 0,
 
     const vtable: Reader.VTable = .{
         .stream = stream,
@@ -118,67 +114,40 @@ const DataReader = struct {
     fn rebase(reader: *Reader, capacity: usize) !void {
         const self: *@This() = @alignCast(@fieldParentPtr("reader", reader));
         if (reader.end - reader.seek >= capacity) return;
-        try self.useRange();
-        if (reader.end - reader.seek >= capacity) return;
+
+        if (reader.buffer.ptr == self.buf[0..].ptr) {
+            const left = reader.end - reader.seek;
+            std.debug.assert(self.rangeOffset >= left);
+            self.rangeOffset -= left;
+            try self.loadRange();
+            return;
+        }
 
         // 未消费的尾巴搬到 buf 头，再从后续 IDAT range 补满。
         const left = reader.buffer[reader.seek..reader.end];
         @memmove(self.buf[0..left.len], left);
-        self.cut = left.len;
-        self.cutRange = self.ranges.len;
-        self.cutOffset = 0;
 
-        const needed = self.buf.len - left.len;
-        const copied = self.copyRange(left.len, needed);
+        if (self.rangeIndex >= self.ranges.len) {
+            @panic("png idat split too small");
+        }
+
+        const range = self.ranges[self.rangeIndex];
+        const rangeLen = range.end - range.start;
+        std.debug.assert(rangeLen > 0);
+        std.debug.assert(self.rangeOffset < rangeLen);
+
+        const src = self.bytes[range.start + self.rangeOffset .. range.end];
+        const copied = @min(self.buf.len - left.len, src.len);
+        @memcpy(self.buf[left.len..][0..copied], src[0..copied]);
+        self.rangeOffset += copied;
+
         const len = left.len + copied;
 
         reader.buffer = self.buf[0..len];
         reader.seek = 0;
         reader.end = len;
         if (len >= capacity) return;
-        return error.EndOfStream;
-    }
-
-    // 从 (rangeIndex, rangeOffset) 起，拷贝到 buf 满足 needed。
-    // 书签记录最后一段源位置，供 useRange 切回原 range。
-    fn copyRange(self: *DataReader, start: usize, needed: usize) usize {
-        var pos = start;
-        while (pos < start + needed and self.rangeIndex < self.ranges.len) {
-            const range = self.ranges[self.rangeIndex];
-            const rangeLen = range.end - range.start;
-            if (self.rangeOffset >= rangeLen) {
-                self.rangeIndex += 1;
-                self.rangeOffset = 0;
-                continue;
-            }
-
-            self.cut = pos;
-            self.cutRange = self.rangeIndex;
-            self.cutOffset = self.rangeOffset;
-
-            const src = self.bytes[range.start + self.rangeOffset .. range.end];
-            const n = @min(start + needed - pos, src.len);
-            @memcpy(self.buf[pos..][0..n], src[0..n]);
-            pos += n;
-            self.rangeOffset += n;
-            if (self.rangeOffset >= rangeLen) {
-                self.rangeIndex += 1;
-                self.rangeOffset = 0;
-            }
-        }
-        return pos - start;
-    }
-
-    // 在 buf 里消费越过 cut 后，把 buffer 切回原 PNG range，恢复零拷贝。
-    fn useRange(self: *DataReader) !void {
-        const reader = &self.reader;
-        if (reader.buffer.ptr != self.buf[0..].ptr) return;
-        if (self.cutRange >= self.ranges.len) return;
-        if (reader.seek < self.cut) return;
-
-        self.rangeIndex = self.cutRange;
-        self.rangeOffset = self.cutOffset + reader.seek - self.cut;
-        try self.loadRange();
+        @panic("png idat split too small");
     }
 
     fn loadRange(self: *DataReader) !void {
@@ -195,7 +164,6 @@ const DataReader = struct {
             const buffer: []const u8 = self.bytes[range.start..range.end];
             self.setReader(@constCast(buffer), self.rangeOffset);
             self.rangeOffset = 0;
-            self.cutRange = self.ranges.len;
             return;
         }
 
