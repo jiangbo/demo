@@ -155,7 +155,7 @@ const DataReader = struct {
             const range = self.ranges[self.rangeIndex];
             self.rangeIndex += 1;
             const rangeLen = range.end - range.start;
-            if (rangeLen == 0) {
+            if (rangeLen == 0 or self.rangeOffset == rangeLen) {
                 self.rangeOffset = 0;
                 continue;
             }
