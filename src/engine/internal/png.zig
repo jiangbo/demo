@@ -62,7 +62,7 @@ const DataReader = struct {
     rangeIndex: usize = 0,
     rangeOffset: usize = 0,
     // flate 会 peek u32，跨 IDAT 时用小窗口拼连续字节。
-    buf: [16]u8 = undefined,
+    buf: [8]u8 = undefined,
 
     const vtable: Reader.VTable = .{
         .stream = stream,
