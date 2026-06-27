@@ -84,8 +84,6 @@ const DataReader = struct {
     fn stream(reader: *Reader, writer: *Writer, limit: Limit) !usize {
         const self: *@This() = @alignCast(@fieldParentPtr("reader", reader));
         if (limit == .nothing) return 0;
-
-        self.useRange();
         if (reader.seek >= reader.end) try self.loadRange();
 
         const data = limit.slice(reader.buffer[reader.seek..reader.end]);
@@ -97,7 +95,6 @@ const DataReader = struct {
     fn readVec(reader: *Reader, data: [][]u8) Reader.Error!usize {
         const self: *@This() = @alignCast(@fieldParentPtr("reader", reader));
         if (data[0].len == 0) {
-            self.useRange();
             if (reader.seek >= reader.end) try self.loadRange();
             return 0;
         }
@@ -107,7 +104,6 @@ const DataReader = struct {
         for (data) |full| {
             var dest = full;
             while (dest.len != 0) {
-                self.useRange();
                 if (reader.seek >= reader.end) {
                     self.loadRange() catch |err| {
                         if (count == 0) return err;
@@ -132,14 +128,14 @@ const DataReader = struct {
         self.useRange();
         if (reader.buffer.len - reader.seek >= capacity) return;
 
-        // 未消费的尾巴搬到 buf 头，再从后续 IDAT range 补到 capacity。
+        // 未消费的尾巴搬到 buf 头，再从后续 IDAT range 补满。
         const left = reader.buffer[reader.seek..reader.end];
         @memmove(self.buf[0..left.len], left);
         self.cut = left.len;
         self.cutRange = self.ranges.len;
         self.cutOffset = 0;
 
-        const needed = capacity - left.len;
+        const needed = self.buf.len - left.len;
         const copied = self.copyRange(left.len, needed);
         const len = left.len + copied;
 
