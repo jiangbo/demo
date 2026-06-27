@@ -260,8 +260,8 @@ fn readHeader(reader: *Reader) !Header {
     std.mem.byteSwapAllFields(Header, &header);
 
     if (header.width == 0 or header.height == 0) return error.InvalidHeader;
-    if (header.width > std.math.maxInt(i32)) return error.ImageTooLarge;
-    if (header.height > std.math.maxInt(i32)) return error.ImageTooLarge;
+    if (header.width > 16384) return error.ImageTooLarge;
+    if (header.height > 16384) return error.ImageTooLarge;
     if (header.bitDepth != 8) return error.UnsupportedBitDepth;
     switch (header.color) {
         .rgb, .rgba, .indexed, .magic => {},
