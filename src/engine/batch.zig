@@ -298,8 +298,6 @@ pub fn flush() void {
         }
     }
 
-    graphics.stats.sprite += vertices.items.len;
-    graphics.stats.command += commands.items.len;
 }
 
 pub fn endDraw() void {

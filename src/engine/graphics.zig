@@ -211,8 +211,6 @@ pub const Atlas = struct {
 };
 
 pub const Stats = struct {
-    sprite: usize = 0,
-    command: usize = 0,
     text: usize = 0,
 };
 

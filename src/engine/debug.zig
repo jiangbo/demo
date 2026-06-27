@@ -118,18 +118,29 @@ pub fn draw() void {
     writeFormatLine(&writer, "帧时", "{d:.2} ms", .{
         frameTime,
     }, "用时 {d:.2} ms", .{usedTime});
+    writeFormatLine(&writer, "窗口", "{d:.0}x{d:.0}", .{
+        window.clientSize.x,
+        window.clientSize.y,
+    }, "逻辑 {d:.0}x{d:.0}", .{ window.size.x, window.size.y });
+    writeFormatLine(&writer, "缩放", "屏幕 {d:.0}%", .{
+        sk.app.dpiScale() * 100,
+    }, "画面 {d:.0}%", .{
+        window.viewRect.size.x / window.size.x * 100,
+    });
     writeFormatLine(&writer, "图形", "纹理 {}", .{
         totalStats.images.alive,
     }, "顶点 {} KB", .{frameStats.size_update_buffer / 1024});
-    writeFormatLine(&writer, "内存", "使用 {} KB", .{
-        assets.memory.used / 1024,
-    }, "峰值 {} KB", .{assets.memory.max / 1024});
-    writeFormatLine(&writer, "批次", "命令 {}", .{
-        batch.commands.items.len,
-    }, "绘制 {}", .{frameStats.num_draw});
-    writeFormatLine(&writer, "绘制", "精灵 {}", .{
+    const batchUsed: f32 = @floatFromInt(batch.vertices.items.len);
+    const batchCap: f32 = @floatFromInt(batch.vertices.capacity);
+    writeFormatLine(&writer, "绘制", "批次 {}", .{
+        frameStats.num_draw,
+    }, "容量 {d:.0}%", .{batchUsed / batchCap * 100});
+    writeFormatLine(&writer, "对象", "精灵 {}", .{
         batch.vertices.items.len,
     }, "文字 {}", .{graphics.stats.text});
+    writeFormatLine(&writer, "内存", "使用 {} KB", .{
+        assets.memory.used / 1024,
+    }, "最高 {} KB", .{assets.memory.max / 1024});
     writeFormatLine(&writer, "鼠标", "{d:.1}, {d:.1}", .{
         input.mouse.raw.x,
         input.mouse.raw.y,
