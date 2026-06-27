@@ -92,35 +92,27 @@ const DataReader = struct {
         return n;
     }
 
-    fn readVec(reader: *Reader, data: [][]u8) Reader.Error!usize {
+    fn readVec(reader: *Reader, data: [][]u8) !usize {
         const self: *@This() = @alignCast(@fieldParentPtr("reader", reader));
         if (data[0].len == 0) {
-            if (reader.seek >= reader.end) try self.loadRange();
+            std.debug.assert(reader.seek == reader.end);
+            try self.loadRange();
             return 0;
         }
 
-        var count: usize = 0;
-
+        if (reader.seek >= reader.end) try self.loadRange();
+        const start = reader.seek;
         for (data) |full| {
-            var dest = full;
-            while (dest.len != 0) {
-                if (reader.seek >= reader.end) {
-                    self.loadRange() catch |err| {
-                        if (count == 0) return err;
-                        return count;
-                    };
-                }
+            if (full.len == 0) continue;
+            if (reader.seek >= reader.end) break;
 
-                const src = reader.buffer[reader.seek..reader.end];
-                const n = @min(dest.len, src.len);
-                @memcpy(dest[0..n], src[0..n]);
-                reader.seek += n;
-                dest = dest[n..];
-                count += n;
-            }
+            const src = reader.buffer[reader.seek..reader.end];
+            const min = @min(full.len, src.len);
+            @memcpy(full[0..min], src[0..min]);
+            reader.seek += min;
         }
 
-        return count;
+        return reader.seek - start;
     }
 
     fn rebase(reader: *Reader, capacity: usize) Reader.RebaseError!void {
