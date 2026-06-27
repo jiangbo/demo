@@ -106,9 +106,3 @@ zig build test
     `useTarget` 完成。
   - 第一版 `flush` 仍按全局 commands 提交顺序绘制；后续如需
     绘制层级，再单独设计 order/layer，不和多 vertex buffer 混为一谈。
-
-  2. Query 切片在迭代中可能悬垂(379-392、429)
-  Query 把 dense/sparse/values 切片捕获进结构体。Store 一旦 add 触发 growValue/growDense
-  重分配,这些切片就悬空;即便不重分配,len 变了切片也 stale。destroyEntities 靠 .reverse() +
-  只删尾元巧妙避开了,但这是隐含契约——用户若 query() 后在循环里 add(),会 UB。建议在 Query
-  上加一句文档注释写清「迭代期间不得 add」。
