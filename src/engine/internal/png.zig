@@ -224,6 +224,7 @@ pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     switch (header.color) {
         .rgb => try parseRgb(&decode),
         .rgba => try parseRgba(&decode),
+        .gray => try parseGray(&decode),
         .indexed => {
             var buf: [256 * 4]u8 = undefined; // 256 色，每色 4 字节。
             for (0..rgb.len / 3) |i| {
@@ -264,7 +265,7 @@ fn readHeader(reader: *Reader) !Header {
     if (header.height > 16384) return error.ImageTooLarge;
     if (header.bitDepth != 8) return error.UnsupportedBitDepth;
     switch (header.color) {
-        .rgb, .rgba, .indexed, .magic => {},
+        .gray, .rgb, .rgba, .indexed, .magic => {},
         else => return error.UnsupportedColor,
     }
     if (header.compression != 0) return error.UnsupportedCompression;
@@ -329,6 +330,28 @@ fn parseRgb(decode: *const Decode) !void {
         }
 
         @memcpy(decode.prior, decode.row);
+    }
+}
+
+fn parseGray(decode: *const Decode) !void {
+    const width = decode.header.width;
+    const row = decode.row[0..width];
+    const prior = decode.prior[0..width];
+
+    for (0..decode.header.height) |y| {
+        const filter = try decode.flate.reader.takeEnum(Filter, .big);
+        try decode.flate.reader.readSliceAll(row);
+        unFilter(row, prior, 1, filter);
+
+        const dest = decode.data[y * width * 4 ..][0 .. width * 4];
+        for (row, 0..) |value, x| {
+            dest[x * 4 + 0] = 255;
+            dest[x * 4 + 1] = 255;
+            dest[x * 4 + 2] = 255;
+            dest[x * 4 + 3] = value;
+        }
+
+        @memcpy(prior, row);
     }
 }
 
@@ -515,6 +538,25 @@ test "load rgb png" {
     try std.testing.expectEqualSlices(u8, &.{
         1, 2, 3, 255,
         4, 5, 6, 255,
+    }, image.data);
+}
+
+test "load gray png" {
+    const allocator = std.testing.allocator;
+    const png = try makeTestPng(allocator, .{
+        .width = 2,
+        .height = 1,
+        .color = 0,
+        .scanlines = &.{ 0, 10, 20 },
+    });
+    defer allocator.free(png);
+
+    const image = try load(allocator, .{ .items = png, .capacity = png.len });
+    defer allocator.free(image.data);
+
+    try std.testing.expectEqualSlices(u8, &.{
+        255, 255, 255, 10,
+        255, 255, 255, 20,
     }, image.data);
 }
 
