@@ -1,3 +1,17 @@
+const memory = @import("memory.zig");
+
+export fn c_alloc(len: usize) ?*anyopaque {
+    return memory.alloc(len);
+}
+
+export fn c_realloc(ptr: ?*anyopaque, len: usize) ?*anyopaque {
+    return memory.realloc(ptr, len);
+}
+
+export fn c_free(ptr: ?*anyopaque) void {
+    memory.free(ptr);
+}
+
 pub const stbAudio = stbVorbis;
 pub const stbVorbis = struct {
     const stb = @cImport({

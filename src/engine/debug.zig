@@ -139,8 +139,8 @@ pub fn draw() void {
         batch.vertices.items.len,
     }, "文字 {}", .{graphics.stats.text});
     writeFormatLine(&writer, "内存", "使用 {} KB", .{
-        assets.memory.used / 1024,
-    }, "最高 {} KB", .{assets.memory.max / 1024});
+        assets.memory.counter.used / 1024,
+    }, "最高 {} KB", .{assets.memory.counter.max / 1024});
     writeFormatLine(&writer, "鼠标", "{d:.1}, {d:.1}", .{
         input.mouse.raw.x,
         input.mouse.raw.y,

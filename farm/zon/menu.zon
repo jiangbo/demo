@@ -1,8 +1,8 @@
 .{
     // 0: 标题页中间主菜单
     .{
-        .hoverSound = "assets/audio/Fantasy_UI (1).ogg",
-        .clickSound = "assets/audio/Fantasy_UI (10).ogg",
+        .hoverSound = "audio/Fantasy_UI (1).ogg",
+        .clickSound = "audio/Fantasy_UI (10).ogg",
         .buttons = .{
             .{
                 .label = "Start",
@@ -164,8 +164,8 @@
     },
     // 2: 暂停面板菜单
     .{
-        .hoverSound = "assets/audio/Fantasy_UI (1).ogg",
-        .clickSound = "assets/audio/Fantasy_UI (10).ogg",
+        .hoverSound = "audio/Fantasy_UI (1).ogg",
+        .clickSound = "audio/Fantasy_UI (10).ogg",
         .buttons = .{
             .{
                 .label = "Resume",
@@ -523,7 +523,7 @@
         .title = .{
             .position = .{ .x = 180, .y = 22 },
         },
-        .hoverSound = "assets/audio/Fantasy_UI (1).ogg",
+        .hoverSound = "audio/Fantasy_UI (1).ogg",
         .buttons = .{
             .{
                 .event = 0,
@@ -1077,7 +1077,7 @@
         .title = .{
             .position = .{ .x = 140, .y = 34 },
         },
-        .hoverSound = "assets/audio/Fantasy_UI (1).ogg",
+        .hoverSound = "audio/Fantasy_UI (1).ogg",
         .buttons = .{
             .{
                 .label = "OK",
@@ -1172,8 +1172,8 @@
             .text = "Rest",
             .position = .{ .x = 140, .y = 34 },
         },
-        .hoverSound = "assets/audio/Fantasy_UI (1).ogg",
-        .clickSound = "assets/audio/Fantasy_UI (10).ogg",
+        .hoverSound = "audio/Fantasy_UI (1).ogg",
+        .clickSound = "audio/Fantasy_UI (10).ogg",
         .buttons = .{
             .{
                 .label = "-",

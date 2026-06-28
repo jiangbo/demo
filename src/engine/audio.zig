@@ -16,6 +16,7 @@ pub fn init(sampleRate: u32, soundBuffer: []Sound) void {
         .sample_rate = @intCast(sampleRate),
         .stream_cb = audioCallback,
         .logger = .{ .func = sk.log.func },
+        .allocator = @bitCast(assets.memory.skAllocator),
     });
 }
 

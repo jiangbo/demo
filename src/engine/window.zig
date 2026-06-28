@@ -66,7 +66,7 @@ pub fn run(io_: std.Io, gpa: std.mem.Allocator, info: Info) void {
         .event_cb = windowEvent,
         .frame_cb = windowFrame,
         .cleanup_cb = windowDeinit,
-        .allocator = @bitCast(assets.skAllocator),
+        .allocator = @bitCast(assets.memory.skAllocator),
         .high_dpi = true,
     });
 }
@@ -76,7 +76,7 @@ export fn windowInit() void {
     sk.gfx.setup(.{
         .environment = sk.glue.environment(),
         .logger = .{ .func = sk.log.func },
-        .allocator = assets.skAllocator,
+        .allocator = assets.memory.skAllocator,
     });
     math.random.init(sk.time.now());
     call(root, "init", .{});

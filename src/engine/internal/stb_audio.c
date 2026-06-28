@@ -1,13 +1,13 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-extern void* stb_alloc(size_t len);
-extern void* stb_realloc(void* ptr, size_t len);
-extern void stb_free(void* ptr);
+extern void* c_alloc(size_t len);
+extern void* c_realloc(void* ptr, size_t len);
+extern void c_free(void* ptr);
 
-#define malloc(len) stb_alloc(len)
-#define realloc(ptr, len) stb_realloc(ptr, len)
-#define free(ptr) stb_free(ptr)
+#define malloc(len) c_alloc(len)
+#define realloc(ptr, len) c_realloc(ptr, len)
+#define free(ptr) c_free(ptr)
 
 #define STB_VORBIS_NO_PUSHDATA_API
 #define STB_VORBIS_NO_INTEGER_CONVERSION
