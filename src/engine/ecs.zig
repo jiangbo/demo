@@ -217,7 +217,8 @@ pub const World = struct {
         var new = World.init(self.allocator);
         new.entity = try new.tryCreateEntity();
         inline for (Types) |T| {
-            try new.add(new.entity, self.get(self.entity, T).?);
+            const value = self.get(self.entity, T) orelse continue;
+            try new.add(new.entity, value);
         }
         self.deinit();
         self.* = new;

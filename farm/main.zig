@@ -14,15 +14,18 @@ pub fn init() void {
     zhu.audio.init(44100 / 2, &soundBuffer);
 
     zhu.assets.loadAtlas(@import("zon/atlas.zon"));
+    const bgPath = "textures/UI/farm-rpg-bg.png";
+    _ = zhu.assets.loadImage(bgPath, .xy(1280, 800));
+
     zhu.batch.circleImage = zhu.getImage("circle.png").?;
-    const area: zhu.Rect = .init(.xy(16, 16), .xy(32, 32));
+    const area: zhu.Rect = .init(.xy(32, 32), .xy(32, 32));
     zhu.batch.whiteImage = zhu.batch.circleImage.sub(area);
 
-    const fontImage = zhu.assets.loadImage("assets/font.png", .zero);
+    const fontImage = zhu.assets.loadImage("font.png", .zero);
     zhu.text.init(fontImage, @import("zon/font.zon"));
     zhu.text.font.lineHeight += 2;
 
-    zhu.window.useCursor("assets/farm-rpg/UI/cursor.png", .{});
+    zhu.window.useCursor("farm-rpg/UI/cursor.png", .{});
 
     scene.init();
 }

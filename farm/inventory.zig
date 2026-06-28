@@ -350,7 +350,7 @@ pub const bar = struct {
 
         if (click.update(hoveredSlot())) |index| {
             active = index;
-            zhu.audio.playSound("assets/audio/UI_button08.ogg");
+            zhu.audio.playSound("audio/UI_button08.ogg");
         }
     }
 

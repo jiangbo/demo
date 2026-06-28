@@ -272,6 +272,7 @@ pub fn drawImage(image: Image, pos: Vector2, option: Option) void {
 
     vertices.appendAssumeCapacity(Vertex{
         .position = drawPos.sub(drawSize.mul(option.anchor)),
+        .layer = image.layer,
         .radian = option.radian,
         .size = drawSize,
         .pivot = option.pivot,
@@ -297,7 +298,6 @@ pub fn flush() void {
             .draw => |draw| doDraw(draw, flipY),
         }
     }
-
 }
 
 pub fn endDraw() void {

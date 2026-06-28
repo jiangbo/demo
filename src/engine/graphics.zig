@@ -163,6 +163,7 @@ pub const Image = struct {
     pub fn sub(self: *const Image, subRect: math.Rect) Image {
         return Image{
             .view = self.view,
+            .layer = self.layer,
             .offset = self.offset.add(subRect.min),
             .size = subRect.size,
         };
@@ -205,9 +206,9 @@ pub const NineImage = struct {
 };
 
 pub const Atlas = struct {
-    imagePath: [:0]const u8,
+    imagePaths: []const [:0]const u8,
     size: math.Vector2,
-    images: []const struct { id: ImageId, rect: math.Rect },
+    images: []const Image,
 };
 
 pub const Stats = struct {

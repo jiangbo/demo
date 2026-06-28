@@ -42,45 +42,45 @@ fn playEntities(world: *zhu.ecs.World) void {
 
 fn path(id: Id) [:0]const u8 {
     return switch (id) {
-        .hoe => "assets/audio/shovel-stab.ogg",
-        .water => "assets/audio/water_splash.ogg",
-        .harvest => "assets/audio/plant_harvest.ogg",
-        .pickup => "assets/audio/pop.ogg",
-        .plant => "assets/audio/planting-sounds.ogg",
-        .axe => "assets/audio/chop-wood.ogg",
-        .pickaxe => "assets/audio/pick-axe-striking.ogg",
-        .cow => "assets/audio/calf-and-cow.ogg",
-        .sheep => "assets/audio/sheep-baaing-3.ogg",
+        .hoe => "audio/shovel-stab.ogg",
+        .water => "audio/water_splash.ogg",
+        .harvest => "audio/plant_harvest.ogg",
+        .pickup => "audio/pop.ogg",
+        .plant => "audio/planting-sounds.ogg",
+        .axe => "audio/chop-wood.ogg",
+        .pickaxe => "audio/pick-axe-striking.ogg",
+        .cow => "audio/calf-and-cow.ogg",
+        .sheep => "audio/sheep-baaing-3.ogg",
     };
 }
 
 test "sound id 映射到音频文件" {
     try std.testing.expectEqualStrings(
-        "assets/audio/shovel-stab.ogg",
+        "audio/shovel-stab.ogg",
         path(.hoe),
     );
     try std.testing.expectEqualStrings(
-        "assets/audio/water_splash.ogg",
+        "audio/water_splash.ogg",
         path(.water),
     );
     try std.testing.expectEqualStrings(
-        "assets/audio/pop.ogg",
+        "audio/pop.ogg",
         path(.pickup),
     );
     try std.testing.expectEqualStrings(
-        "assets/audio/chop-wood.ogg",
+        "audio/chop-wood.ogg",
         path(.axe),
     );
     try std.testing.expectEqualStrings(
-        "assets/audio/pick-axe-striking.ogg",
+        "audio/pick-axe-striking.ogg",
         path(.pickaxe),
     );
     try std.testing.expectEqualStrings(
-        "assets/audio/calf-and-cow.ogg",
+        "audio/calf-and-cow.ogg",
         path(.cow),
     );
     try std.testing.expectEqualStrings(
-        "assets/audio/sheep-baaing-3.ogg",
+        "audio/sheep-baaing-3.ogg",
         path(.sheep),
     );
 }

@@ -214,7 +214,7 @@ fn enterFarm() void {
             return;
         };
     }
-    zhu.audio.playMusic("assets/audio/01_spring_journey.ogg");
+    zhu.audio.playMusic("audio/01_spring_journey.ogg");
 }
 
 fn cameraFollowPlayer(delta: f32) void {

@@ -501,6 +501,7 @@ fn parseImageLayer(layer: *const tiled.Layer) void {
 fn appendVertex(position: zhu.Vector2, image: zhu.graphics.Image) void {
     vertexes.append(zhu.assets.allocator, .{
         .position = position,
+        .layer = image.layer,
         .size = image.size,
         .uvRect = image.uvRect(),
     }) catch @panic("map oom");

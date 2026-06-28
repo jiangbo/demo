@@ -121,6 +121,7 @@ pub fn draw() void {
 fn appendVertex(position: zhu.Vector2, image: zhu.Image) void {
     zhu.batch.vertices.appendAssumeCapacity(.{
         .position = position,
+        .layer = image.layer,
         .size = image.size,
         .uvRect = image.uvRect(),
     });
