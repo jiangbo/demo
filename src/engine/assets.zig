@@ -122,7 +122,7 @@ const atlas = struct {
         const entry = cache.getOrPut(allocator, atlasId) catch oom();
         if (entry.found_existing) return;
 
-        const len: u32 = @intCast(source.images.len);
+        const len: u32 = @intCast(source.imagePaths.len + source.images.len);
         imageCache.ensureUnusedCapacity(allocator, len) catch oom();
 
         const atlasView = sk.gfx.allocView();
@@ -140,6 +140,12 @@ const atlas = struct {
                 .layer = @intCast(i),
             };
             _ = file.load(path, @bitCast(pageIndex), handler);
+            imageCache.putAssumeCapacity(id(path), .{
+                .view = atlasView,
+                .layer = @floatFromInt(i),
+                .offset = .zero,
+                .size = source.size,
+            });
         }
 
         for (source.images) |image| {
