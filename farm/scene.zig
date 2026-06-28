@@ -42,6 +42,7 @@ const MapFade = struct {
 var world: World = undefined;
 var canvas: zhu.graphics.RenderTarget = .{};
 var mapFade: MapFade = .{};
+var debug = false;
 
 pub fn init() void {
     // 组合根只负责装配顺序，具体玩法仍放在各自模块里。
@@ -70,6 +71,8 @@ pub fn deinit() void {
 }
 
 pub fn update(delta: f32) void {
+    if (zhu.key.released(.X)) debug = !debug;
+
     context.input.mouseCaptured = false;
     applyScene();
 
@@ -102,10 +105,12 @@ pub fn draw() void {
             zhu.batch.useTarget(clearColor, .{});
             ui.title.draw();
             ui.overlay.draw();
+            if (debug) zhu.debug.draw();
         },
         .farm => {
             zhu.batch.useTarget(clearColor, .{ .target = &canvas });
             drawFarm();
+            if (debug) zhu.debug.draw();
 
             zhu.batch.useTarget(clearColor, .{});
             zhu.batch.drawImage(canvas.image, .zero, .{

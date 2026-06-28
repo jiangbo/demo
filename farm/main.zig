@@ -18,26 +18,24 @@ pub fn init() void {
     _ = zhu.assets.loadImage(bgPath, .xy(1280, 800));
 
     zhu.batch.circleImage = zhu.getImage("circle.png").?;
-    const area: zhu.Rect = .init(.xy(32, 32), .xy(32, 32));
-    zhu.batch.whiteImage = zhu.batch.circleImage.sub(area);
+    const size = zhu.batch.circleImage.size;
+    const rect = zhu.Rect.init(.zero, size).centerScale(0.25);
+    zhu.batch.whiteImage = zhu.batch.circleImage.sub(rect);
 
-    const fontImage = zhu.assets.loadImage("font.png", .zero);
-    zhu.text.init(fontImage, @import("zon/font.zon"));
-    zhu.text.font.lineHeight += 2;
+    var font: zhu.text.Font = @import("zon/font.zon");
+    font.lineHeight += 2;
+    zhu.text.init(font);
 
     zhu.window.useCursor("farm-rpg/UI/cursor.png", .{});
 
     scene.init();
 }
 
-var debug: bool = false;
 pub fn frame(delta: f32) void {
-    if (zhu.key.released(.X)) debug = !debug;
     scene.update(delta);
 
     zhu.batch.beginDraw();
     scene.draw();
-    if (debug) zhu.debug.draw();
     zhu.batch.endDraw();
 }
 

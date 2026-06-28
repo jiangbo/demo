@@ -38,12 +38,12 @@ var invalidGlyph: Glyph = undefined;
 var fontScale: f32 = undefined;
 var halfAdvance: f32 = undefined; // 英文只需要前进半个距离
 
-pub fn init(zon: Font, pack: bool) void {
+pub fn init(zon: Font) void {
     std.debug.assert(zon.images.len == zon.pages.len);
     std.debug.assert(zon.images.len <= images.len);
     font = zon;
 
-    if (pack) {
+    if (assets.getImage(assets.id(font.images[0])) == null) {
         assets.loadAtlas(.{
             .imagePaths = font.images,
             .size = font.imageSize,

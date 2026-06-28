@@ -28,7 +28,7 @@ const keyframes = [_]Keyframe{
 var glowImage: zhu.Image = undefined;
 
 pub fn init() void {
-    glowImage = zhu.assets.loadImage("light.png", .xy(128, 128));
+    glowImage = zhu.getImage("light.png").?;
 }
 
 pub fn update(world: *zhu.ecs.World) void {

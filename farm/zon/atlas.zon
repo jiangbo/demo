@@ -4,6 +4,8 @@
         "atlas-1.png",
         "atlas-2.png",
         "atlas-3.png",
+        "font/font-0.png",
+        "font/font-1.png",
     },
     .size = .{ .x = 1024, .y = 1024 },
     .images = .{

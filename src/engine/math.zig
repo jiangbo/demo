@@ -302,6 +302,10 @@ pub const Rect = struct {
         return Rect{ .min = position, .size = sizeV };
     }
 
+    pub fn rect(position: Vector2, sizeV: Vector2) Rect {
+        return Rect{ .min = position, .size = sizeV };
+    }
+
     pub fn fromMax(minV: Vector2, maxV: Vector2) Rect {
         return Rect{ .min = minV, .size = maxV.sub(minV) };
     }
@@ -316,6 +320,12 @@ pub const Rect = struct {
 
     pub fn center(self: Rect) Vector2 {
         return self.min.add(self.size.scale(0.5));
+    }
+
+    pub fn centerScale(self: Rect, scale: f32) Rect {
+        const size = self.size.scale(scale);
+        const min = self.min.add(self.size.sub(size).scale(0.5));
+        return .{ .min = min, .size = size };
     }
 
     pub fn contains(self: Rect, other: anytype) bool {
@@ -370,8 +380,8 @@ pub const Rect = struct {
     }
 
     fn intersectCapsule(self: Rect, capsule: AxisCapsule) bool {
-        const c1, const rect, const c2 = capsule.parts();
-        return self.intersect(rect) or self.intersect(c1) or
+        const c1, const r1, const c2 = capsule.parts();
+        return self.intersect(r1) or self.intersect(c1) or
             self.intersect(c2);
     }
 };
@@ -486,7 +496,7 @@ pub const Shape = union(enum) {
     pub fn move(self: Shape, offset: Vector2) Shape {
         return switch (self) {
             inline else => |s, tag| @unionInit(Shape, //
-            @tagName(tag), s.move(offset)),
+                @tagName(tag), s.move(offset)),
         };
     }
 
