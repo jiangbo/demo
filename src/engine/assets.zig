@@ -2,150 +2,46 @@ const std = @import("std");
 
 const sk = @import("sokol");
 const c = @import("internal/c.zig");
+pub const memory = @import("internal/memory.zig");
 const graphics = @import("graphics.zig");
 const audio = @import("audio.zig");
 const png = @import("internal/png.zig");
 
 const Image = graphics.Image;
 const Path = [:0]const u8;
-
-pub const CountingAllocator = struct {
-    child: std.mem.Allocator,
-    used: usize,
-    max: usize,
-    count: usize,
-
-    pub fn init(child: std.mem.Allocator) CountingAllocator {
-        return .{ .child = child, .used = 0, .max = 0, .count = 0 };
-    }
-
-    pub fn allocator(self: *CountingAllocator) std.mem.Allocator {
-        return .{
-            .ptr = self,
-            .vtable = &.{
-                .alloc = alloc,
-                .resize = resize,
-                .remap = remap,
-                .free = frees,
-            },
-        };
-    }
-
-    const A = std.mem.Alignment;
-    fn alloc(ctx: *anyopaque, len: usize, a: A, r: usize) ?[*]u8 {
-        const self: *CountingAllocator = @ptrCast(@alignCast(ctx));
-        const p = self.child.rawAlloc(len, a, r) orelse return null;
-        self.count += 1;
-        self.used += len;
-        self.max = @max(self.max, self.used);
-        return p;
-    }
-
-    fn resize(ctx: *anyopaque, b: []u8, a: A, len: usize, r: usize) bool {
-        const self: *CountingAllocator = @ptrCast(@alignCast(ctx));
-        const stable = self.child.rawResize(b, a, len, r);
-        if (stable) {
-            self.count += 1;
-            self.used = self.used - b.len + len;
-            self.max = @max(self.max, self.used);
-        }
-        return stable;
-    }
-
-    fn remap(ctx: *anyopaque, m: []u8, a: A, len: usize, r: usize) ?[*]u8 {
-        const self: *CountingAllocator = @ptrCast(@alignCast(ctx));
-        const n = self.child.rawRemap(m, a, len, r) orelse return null;
-        self.count += 1;
-        self.used = self.used - m.len + len;
-        self.max = @max(self.max, self.used);
-        return n;
-    }
-
-    fn frees(ctx: *anyopaque, buf: []u8, a: A, r: usize) void {
-        const self: *CountingAllocator = @ptrCast(@alignCast(ctx));
-        self.used -= buf.len;
-        return self.child.rawFree(buf, a, r);
-    }
-};
+const assetRoot = "assets/";
 
 pub var allocator: std.mem.Allocator = undefined;
-pub var skAllocator: sk.gfx.Allocator = undefined;
 pub var io: std.Io = undefined;
-pub var memory: CountingAllocator = undefined; // 统计全局资源内存
 var imageCache: std.AutoHashMapUnmanaged(Id, graphics.Image) = .empty;
 
 pub fn init(io_: std.Io, gpa: std.mem.Allocator, maxSize: usize) void {
     io = io_;
-    memory = CountingAllocator.init(gpa);
-    allocator = memory.allocator();
-    skAllocator = .{ .alloc_fn = sk_alloc, .free_fn = sk_free };
+    memory.init(gpa);
+    allocator = memory.allocator;
 
     sk.fetch.setup(.{
         .num_lanes = fileBuffer.len,
         .logger = .{ .func = sk.log.func },
-        .allocator = @bitCast(skAllocator),
+        .allocator = @bitCast(memory.skAllocator),
     });
     for (&fileBuffer) |*buffer| buffer.* = oomAlloc(u8, maxSize);
 }
 
 pub fn initCaches(allocator1: std.mem.Allocator) void {
     allocator, imageCache = .{ allocator1, .empty };
-    View.cache, File.cache = .{ .empty, .empty };
-    Sound.cache, Music.cache = .{ .empty, .empty };
-}
-
-fn sk_alloc(len: usize, _: ?*anyopaque) callconv(.c) ?*anyopaque {
-    return stb_alloc(len) orelse oom();
-}
-
-fn sk_free(ptr: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
-    stb_free(ptr);
-}
-
-// stb 的 C 接口 free 不传长度，所以在返回指针前面存一份长度。
-const stbAlign = std.mem.Alignment.of(std.c.max_align_t);
-const stbHeaderSize = std.mem.alignForward(usize, //
-    @sizeOf(usize), @alignOf(std.c.max_align_t));
-
-fn stbSlice(ptr: *anyopaque) []align(@alignOf(std.c.max_align_t)) u8 {
-    const base = @as([*]u8, @ptrCast(ptr)) - stbHeaderSize;
-    const header: *usize = @ptrCast(@alignCast(base));
-    return @alignCast(base[0 .. stbHeaderSize + header.*]);
-}
-
-export fn stb_alloc(len: usize) ?*anyopaque {
-    if (len == 0) return null;
-    const base = allocator.rawAlloc(stbHeaderSize + len, //
-        stbAlign, @returnAddress()) orelse return null;
-    @as(*usize, @ptrCast(@alignCast(base))).* = len;
-    return @ptrCast(base + stbHeaderSize);
-}
-
-export fn stb_realloc(ptr: ?*anyopaque, len: usize) ?*anyopaque {
-    const oldPtr = ptr orelse return stb_alloc(len);
-    if (len == 0) {
-        stb_free(oldPtr);
-        return null;
-    }
-
-    const old = stbSlice(oldPtr);
-    const newLen = stbHeaderSize + len;
-    const newSlice = allocator.realloc(old, newLen) catch return null;
-    @as(*usize, @ptrCast(@alignCast(newSlice.ptr))).* = len;
-    return @ptrCast(newSlice.ptr + stbHeaderSize);
-}
-
-export fn stb_free(ptr: ?*anyopaque) void {
-    const p = ptr orelse return;
-    allocator.rawFree(stbSlice(p), stbAlign, @returnAddress());
+    atlas.cache = .empty;
+    view.cache, file.cache = .{ .empty, .empty };
+    sound.cache, music.cache = .{ .empty, .empty };
 }
 
 pub fn deinit() void {
     imageCache.deinit(allocator);
-    View.cache.deinit(allocator);
-    Sound.cache.deinit(allocator);
-    Music.deinit();
-    File.deinit();
+    atlas.deinit();
+    view.cache.deinit(allocator);
+    sound.cache.deinit(allocator);
+    music.deinit();
+    file.deinit();
     if (sk.fetch.valid()) sk.fetch.shutdown();
     for (&fileBuffer) |buffer| free(buffer);
 }
@@ -173,18 +69,18 @@ pub fn oom() noreturn {
 pub fn loadImage(path: Path, size: graphics.Vector2) Image {
     const entry = imageCache.getOrPut(allocator, id(path)) catch oom();
     if (!entry.found_existing) {
-        const view = View.load(path);
-        entry.value_ptr.* = .{ .view = view, .size = size };
+        const imageView = view.load(path);
+        entry.value_ptr.* = .{ .view = imageView, .size = size };
     }
     return entry.value_ptr.*;
 }
 
 pub fn loadSound(path: Path, loop: bool) ?audio.Sound {
-    return Sound.load(path, loop);
+    return sound.load(path, loop);
 }
 
 pub fn loadMusic(path: Path, loop: bool) ?*c.stbAudio.Audio {
-    return Music.load(path, loop);
+    return music.load(path, loop);
 }
 
 pub const Id = u32;
@@ -192,16 +88,8 @@ pub fn id(name: []const u8) Id {
     return std.hash.Fnv1a_32.hash(name);
 }
 
-pub fn loadAtlas(atlas: graphics.Atlas) void {
-    const size: u32 = @intCast(atlas.images.len + 1); // 多包含一张图集
-    imageCache.ensureUnusedCapacity(allocator, size) catch oom();
-    var image = loadImage(atlas.imagePath, atlas.size);
-
-    for (atlas.images) |atlasImage| {
-        image.offset = atlasImage.rect.min;
-        image.size = atlasImage.rect.size;
-        imageCache.putAssumeCapacity(atlasImage.id, image);
-    }
+pub fn loadAtlas(source: graphics.Atlas) void {
+    atlas.load(source);
 }
 
 pub fn getImage(imageId: Id) ?graphics.Image {
@@ -216,10 +104,95 @@ pub fn putImage(imageId: Id, image: graphics.Image) void {
     imageCache.put(allocator, imageId, image) catch oom();
 }
 
+const atlas = struct {
+    var cache: std.AutoHashMapUnmanaged(Id, Load) = .empty;
+
+    const Load = struct {
+        view: sk.gfx.View,
+        size: graphics.Vector2,
+        layers: usize,
+        loaded: usize = 0,
+        data: []u8,
+    };
+
+    const PageIndex = extern struct { atlasId: Id, layer: u32 };
+
+    fn load(source: graphics.Atlas) void {
+        const atlasId = id(source.imagePaths[0]);
+        const entry = cache.getOrPut(allocator, atlasId) catch oom();
+        if (entry.found_existing) return;
+
+        const len: u32 = @intCast(source.images.len);
+        imageCache.ensureUnusedCapacity(allocator, len) catch oom();
+
+        const atlasView = sk.gfx.allocView();
+        const pageCount = source.imagePaths.len;
+        const pageSize: usize = @intFromFloat(source.size.x * source.size.y);
+        entry.value_ptr.* = .{
+            .view = atlasView,
+            .size = source.size,
+            .layers = pageCount,
+            .data = oomAlloc(u8, pageSize * 4 * pageCount),
+        };
+        for (source.imagePaths, 0..) |path, i| {
+            const pageIndex = PageIndex{
+                .atlasId = atlasId,
+                .layer = @intCast(i),
+            };
+            _ = file.load(path, @bitCast(pageIndex), handler);
+        }
+
+        for (source.images) |image| {
+            var img = image;
+            img.view = atlasView;
+            imageCache.putAssumeCapacity(image.view.id, img);
+        }
+    }
+
+    fn handler(response: Response) []const u8 {
+        const pageIndex: PageIndex = @bitCast(response.index);
+        const loadContext = cache.getPtr(pageIndex.atlasId).?;
+        const img = png.load(allocator, response.data) catch |err| {
+            std.debug.panic("{s}: {}", .{ response.path, err });
+        };
+        defer allocator.free(img.data);
+
+        const width: i32 = @intFromFloat(loadContext.size.x);
+        const height: i32 = @intFromFloat(loadContext.size.y);
+        std.debug.assert(img.width == width);
+        std.debug.assert(img.height == height);
+
+        const start = img.data.len * pageIndex.layer;
+        const end = start + img.data.len;
+        @memcpy(loadContext.data[start..end], img.data);
+        loadContext.loaded += 1;
+
+        if (loadContext.loaded == loadContext.layers) {
+            sk.gfx.initView(loadContext.view, .{ .texture = .{
+                .image = view.makeImage(
+                    @intFromFloat(loadContext.size.x),
+                    @intFromFloat(loadContext.size.y),
+                    @intCast(loadContext.layers),
+                    loadContext.data,
+                ),
+            } });
+            allocator.free(loadContext.data);
+            loadContext.data = &.{};
+        }
+        return &.{};
+    }
+
+    fn deinit() void {
+        var iterator = cache.valueIterator();
+        while (iterator.next()) |v| allocator.free(v.data);
+        cache.deinit(allocator);
+    }
+};
+
 pub const Icon = png.Image;
 const IconHandler = fn (u64, Icon) void;
 pub fn loadIcon(path: Path, handle: u64, handler: IconHandler) void {
-    _ = File.load(path, handle, struct {
+    _ = file.load(path, handle, struct {
         fn callback(response: Response) []const u8 {
             const icon = png.load(allocator, response.data) catch |err| {
                 std.debug.panic("{s}: {}", .{ response.path, err });
@@ -231,14 +204,14 @@ pub fn loadIcon(path: Path, handle: u64, handler: IconHandler) void {
     }.callback);
 }
 
-const View = struct {
+const view = struct {
     var cache: std.AutoHashMapUnmanaged(Id, sk.gfx.View) = .empty;
 
     fn load(path: Path) sk.gfx.View {
-        const view = sk.gfx.allocView();
-        cache.put(allocator, id(path), view) catch oom();
-        _ = File.load(path, view.id, handler);
-        return view;
+        const imageView = sk.gfx.allocView();
+        cache.put(allocator, id(path), imageView) catch oom();
+        _ = file.load(path, imageView.id, handler);
+        return imageView;
     }
 
     fn handler(response: Response) []const u8 {
@@ -246,10 +219,10 @@ const View = struct {
             std.debug.panic("{s}: {}", .{ response.path, err });
         };
         defer allocator.free(img.data);
-        const view: sk.gfx.View = .{ .id = @intCast(response.index) };
+        const imageView: sk.gfx.View = .{ .id = @intCast(response.index) };
 
-        sk.gfx.initView(view, .{ .texture = .{
-            .image = makeImage(img.width, img.height, img.data),
+        sk.gfx.initView(imageView, .{ .texture = .{
+            .image = makeImage(img.width, img.height, 1, img.data),
         } });
         if (imageCache.getPtr(id(response.path))) |image| {
             image.size = .{
@@ -260,11 +233,12 @@ const View = struct {
         return &.{};
     }
 
-    fn makeImage(w: i32, h: i32, data: anytype) sk.gfx.Image {
+    fn makeImage(w: i32, h: i32, layers: i32, data: anytype) sk.gfx.Image {
         return sk.gfx.makeImage(.{
             .width = w,
             .height = h,
             .type = .ARRAY,
+            .num_slices = layers,
             .data = init: {
                 var imageData = sk.gfx.ImageData{};
                 imageData.mip_levels[0] = sk.gfx.asRange(data);
@@ -274,13 +248,13 @@ const View = struct {
     }
 };
 
-const Sound = struct {
+const sound = struct {
     var cache: std.AutoHashMapUnmanaged(Id, audio.Sound) = .empty;
 
     fn load(path: Path, loop: bool) ?audio.Sound {
         if (cache.get(id(path))) |value| return value;
 
-        _ = File.load(path, if (loop) 1 else 0, handler);
+        _ = file.load(path, if (loop) 1 else 0, handler);
         return null;
     }
 
@@ -308,13 +282,13 @@ const Sound = struct {
     }
 };
 
-const Music = struct {
+const music = struct {
     var cache: std.AutoHashMapUnmanaged(Id, *c.stbAudio.Audio) = .empty;
 
     fn load(path: Path, loop: bool) ?*c.stbAudio.Audio {
         if (cache.get(id(path))) |value| return value;
 
-        _ = File.load(path, if (loop) 1 else 0, handler);
+        _ = file.load(path, if (loop) 1 else 0, handler);
         return null;
     }
 
@@ -333,7 +307,6 @@ const Music = struct {
     }
 };
 
-const SkCallback = *const fn ([*c]const sk.fetch.Response) callconv(.C) void;
 pub const Response = struct {
     index: u64 = undefined,
     path: [:0]const u8,
@@ -341,7 +314,7 @@ pub const Response = struct {
 };
 
 var fileBuffer: [4][]u8 = @splat(&.{});
-pub const File = struct {
+pub const file = struct {
     const FileState = enum { init, loading, loaded, handled };
     const Handler = *const fn (Response) []const u8;
 
@@ -366,11 +339,13 @@ pub const File = struct {
 
         entry.value_ptr.* = .{ .index = index, .handler = handler };
 
-        std.log.info("loading {s}", .{path});
-        _ = sk.fetch.send(.{
-            .path = path,
-            .callback = callback,
-        });
+        var buffer: [1024]u8 = undefined;
+        std.debug.assert(buffer.len == sk.fetch.maxPath());
+        const fmt = assetRoot ++ "{s}";
+        const filePath = std.fmt.bufPrintZ(&buffer, fmt, .{path}) catch
+            @panic("asset path too long");
+        std.log.info("loading {s}", .{filePath});
+        _ = sk.fetch.send(.{ .path = filePath, .callback = callback });
 
         entry.value_ptr.state = .loading;
         return entry.value_ptr;
@@ -388,8 +363,9 @@ pub const File = struct {
             return;
         }
 
-        const path = std.mem.span(res.path);
-        std.log.info("loaded from: {s}", .{path});
+        const filePath = std.mem.span(res.path);
+        std.log.info("loaded from: {s}", .{filePath});
+        const path = filePath[assetRoot.len..];
 
         const value = cache.getPtr(id(path)) orelse return;
         const response: Response = .{
@@ -423,8 +399,8 @@ pub const Stats = struct {
 pub fn queryStats() Stats {
     return .{
         .image = imageCache.count(),
-        .file = File.cache.count(),
-        .sound = Sound.cache.count(),
-        .music = Music.cache.count(),
+        .file = file.cache.count(),
+        .sound = sound.cache.count(),
+        .music = music.cache.count(),
     };
 }
