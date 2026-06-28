@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const assets = @import("assets.zig");
 const math = @import("math.zig");
 const graphics = @import("graphics.zig");
 const batch = @import("batch.zig");
@@ -12,26 +13,48 @@ pub const String = []const u8;
 pub const Font = struct {
     size: f32,
     lineHeight: f32,
+    imageSize: Vector2,
+    images: []const [:0]const u8,
+    pages: []const Page,
+};
+
+pub const Page = struct {
+    min: u32,
+    max: u32,
     chars: []const Char,
 };
 
 pub const Char = struct {
     id: u32,
-    area: math.Rect,
+    rect: math.Rect,
     offset: Vector2,
 };
 
-var invalidIndex: usize = 0;
+const Glyph = struct { page: usize, char: *const Char };
 
-pub var font: Font = undefined;
-var fontImage: graphics.Image = undefined;
+var font: Font = undefined;
+var images: [8]Image = undefined;
+var invalidGlyph: Glyph = undefined;
 var fontScale: f32 = undefined;
 var halfAdvance: f32 = undefined; // 英文只需要前进半个距离
 
-pub fn init(image: Image, zon: Font) void {
+pub fn init(zon: Font, pack: bool) void {
+    std.debug.assert(zon.images.len == zon.pages.len);
+    std.debug.assert(zon.images.len <= images.len);
     font = zon;
-    fontImage = image;
-    invalidIndex = binarySearch('?').?;
+
+    if (pack) {
+        assets.loadAtlas(.{
+            .imagePaths = font.images,
+            .size = font.imageSize,
+            .images = &.{},
+        });
+    }
+
+    for (font.images, 0..) |path, i| {
+        images[i] = assets.getImage(assets.id(path)).?;
+    }
+    invalidGlyph = searchGlyph('?').?;
     halfAdvance = font.size / 2;
     changeFontSize(font.size);
 }
@@ -40,22 +63,29 @@ pub fn changeFontSize(size: f32) void {
     fontScale = size / font.size;
 }
 
-fn binarySearch(unicode: u32) ?usize {
-    return std.sort.binarySearch(Char, font.chars, unicode, struct {
-        fn compare(a: u32, b: Char) std.math.Order {
-            return std.math.order(a, b.id);
-        }
-    }.compare);
+const search = std.sort.binarySearch;
+fn searchGlyph(code: u32) ?Glyph {
+    for (font.pages, 0..) |page, i| {
+        if (code < page.min or code > page.max) continue;
+        const index = search(Char, page.chars, code, struct {
+            fn compare(a: u32, b: Char) std.math.Order {
+                return std.math.order(a, b.id);
+            }
+        }.compare);
+        if (index) |c| return .{ .page = i, .char = &page.chars[c] };
+        break;
+    }
+    return null;
 }
 
-pub fn searchChar(code: u32) *const Char {
-    return &font.chars[binarySearch(code) orelse invalidIndex];
+fn findGlyph(code: u32) Glyph {
+    return searchGlyph(code) orelse invalidGlyph;
 }
 
 pub const Option = struct {
     offset: Vector2 = .zero, // 文字位置偏移
     scale: Vector2 = .one, // 基于默认字号的缩放
-    color: graphics.Color = .white, // 文字的颜色
+    color: Color = .white, // 文字的颜色
     max: f32 = std.math.floatMax(f32), // 最大宽度，超过换行
     spacing: f32 = 0, // 文字间的间距
     anchor: ?Vector2 = null, // 锚点
@@ -132,19 +162,23 @@ fn layout(
                 pos = pos.addX(option.spacing);
             }
         }
+        const drawPos = pos;
         width += advance;
         maxWidth = @max(maxWidth, width);
+        pos = .xy(startX + width, pos.y);
 
-        if (render) {
-            const char = searchChar(code);
-            const image = fontImage.sub(char.area);
-            batch.drawImage(image, pos.add(char.offset.mul(scale)), .{
-                .size = char.area.size.mul(scale),
+        if (!render) continue;
+
+        const glyph = findGlyph(code);
+        const rect = glyph.char.rect;
+        if (rect.size.x > 0 and rect.size.y > 0) {
+            const charPos = drawPos.add(glyph.char.offset.mul(scale));
+            batch.drawImage(images[glyph.page].sub(rect), charPos, .{
+                .size = rect.size.mul(scale),
                 .color = option.color,
             });
-            graphics.stats.text += 1;
         }
-        pos = .xy(startX + width, pos.y);
+        graphics.stats.text += 1;
     }
 
     return .xy(maxWidth, line * height);
