@@ -301,7 +301,12 @@ pub fn flush() void {
 }
 
 pub fn endDraw() void {
-    if (currentDraw().?.end == 0) flush();
+    std.debug.assert(commands.items.len != 0);
+
+    switch (commands.items[commands.items.len - 1]) {
+        .draw => |draw| if (draw.end == 0) flush(),
+        .target => flush(),
+    }
     graphics.endPass();
     graphics.commit();
 }
