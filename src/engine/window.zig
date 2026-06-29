@@ -149,6 +149,7 @@ pub fn timestamp() std.Io.Timestamp {
 
 pub const showCursor = sk.app.showMouse;
 pub const toggleFullScreen = sk.app.toggleFullscreen;
+pub const frameCount = sk.app.frameCount;
 
 const Dir = std.Io.Dir;
 pub fn statFileTime(path: [:0]const u8) i128 {

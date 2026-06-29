@@ -95,7 +95,7 @@ var usedTime: f64 = 0;
 
 pub fn draw() void {
     const time = sk.time.now();
-    const frame = sk.app.frameCount();
+    const frame = window.frameCount();
 
     if (frame != last + 1) {
         start, fpsFrame = .{ time, frame };

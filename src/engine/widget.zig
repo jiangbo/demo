@@ -67,10 +67,15 @@ pub fn ClickT(comptime T: type) type {
         hover: ?T = null,
         pressed: ?T = null,
         captured: bool = false,
+        frame: u64 = 0,
 
         pub const empty: @This() = .{};
 
         pub fn update(self: *@This(), hover: ?T) ?T {
+            const currentFrame = window.frameCount();
+            if (self.frame + 1 < currentFrame) self.* = .empty;
+            self.frame = currentFrame;
+
             self.hover = hover;
             self.captured = self.hover != null or self.pressed != null;
 
@@ -85,7 +90,6 @@ pub fn ClickT(comptime T: type) type {
         }
     };
 }
-
 pub const Click = ClickT(usize);
 
 pub const Popup = struct {
