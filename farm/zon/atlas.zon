@@ -1,9 +1,9 @@
 .{
     .imagePaths = .{
-        "atlas-0.png",
-        "atlas-1.png",
-        "atlas-2.png",
-        "atlas-3.png",
+        "atlas/atlas-0.png",
+        "atlas/atlas-1.png",
+        "atlas/atlas-2.png",
+        "atlas/atlas-3.png",
         "font/font-0.png",
         "font/font-1.png",
     },
