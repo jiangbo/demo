@@ -58,11 +58,10 @@ const DataReader = struct {
     reader: Reader,
     bytes: []const u8,
     ranges: []const Range,
-    // 下一个原 IDAT 位置，buf 状态下先记预读位置。
+    // 原 IDAT 读取位置，buf 状态下表示预读到哪里。
     rangeIndex: usize = 0,
     rangeOffset: usize = 0,
-    // flate 会 peek u32，跨 IDAT 时用小窗口拼连续字节。
-    buf: [8]u8 = undefined,
+    buf: [8]u8 = undefined, // flate 跨 IDAT 时拼少量连续字节。
 
     const vtable: Reader.VTable = .{
         .stream = stream,
@@ -113,6 +112,8 @@ const DataReader = struct {
 
     fn rebase(reader: *Reader, capacity: usize) !void {
         const self: *@This() = @alignCast(@fieldParentPtr("reader", reader));
+        // 这里只给 zlib/deflate 用，输入最多预读 4 字节。
+        std.debug.assert(capacity <= 4);
         if (reader.end - reader.seek >= capacity) return;
 
         if (reader.buffer.ptr == self.buf[0..].ptr) {
@@ -129,13 +130,16 @@ const DataReader = struct {
 
         try self.loadRange();
         const src = reader.buffer[reader.seek..reader.end];
-        if (src.len < need) @panic("png split too small");
-        @memcpy(self.buf[left.len..], src[0..need]);
+        // 假设小 IDAT 只在末尾，中间 IDAT 一定能补齐。
+        const copy = @min(need, src.len);
+        @memcpy(self.buf[left.len..][0..copy], src[0..copy]);
         self.rangeIndex -= 1;
-        self.rangeOffset = reader.seek + need;
+        self.rangeOffset = reader.seek + copy;
 
-        self.setReader(self.buf[0..], 0);
-        std.debug.assert(self.buf.len >= capacity);
+        const len = left.len + copy;
+        if (len < capacity) return error.ReadFailed;
+        self.setReader(self.buf[0..len], 0);
+        std.debug.assert(self.reader.end >= capacity);
     }
 
     fn loadRange(self: *DataReader) !void {
@@ -412,6 +416,7 @@ const TestPng = struct {
     plte: []const u8 = &.{},
     trns: []const u8 = &.{},
     splitIdat: bool = false,
+    splitTail: usize = 0,
 };
 
 fn makeTestPng(allocator: Allocator, png: TestPng) ![]u8 {
@@ -439,7 +444,11 @@ fn makeTestPng(allocator: Allocator, png: TestPng) ![]u8 {
 
     const zlib = try makeStoredZlib(allocator, png.scanlines);
     defer allocator.free(zlib);
-    if (png.splitIdat) {
+    if (png.splitTail != 0) {
+        const mid = zlib.len - png.splitTail;
+        try appendChunk(&result, allocator, "IDAT", zlib[0..mid]);
+        try appendChunk(&result, allocator, "IDAT", zlib[mid..]);
+    } else if (png.splitIdat) {
         const mid = zlib.len / 2;
         try appendChunk(&result, allocator, "IDAT", zlib[0..mid]);
         try appendChunk(&result, allocator, "IDAT", zlib[mid..]);
@@ -599,6 +608,26 @@ test "load magic png with rgba palette" {
     try std.testing.expectEqualSlices(u8, &.{
         10, 20, 30, 40,
         50, 60, 70, 80,
+    }, image.data);
+}
+
+test "load png with small tail idat" {
+    const allocator = std.testing.allocator;
+    const png = try makeTestPng(allocator, .{
+        .width = 2,
+        .height = 1,
+        .color = 6,
+        .scanlines = &.{ 0, 1, 2, 3, 4, 5, 6, 7, 8 },
+        .splitTail = 1,
+    });
+    defer allocator.free(png);
+
+    const image = try load(allocator, .{ .items = png, .capacity = png.len });
+    defer allocator.free(image.data);
+
+    try std.testing.expectEqualSlices(u8, &.{
+        1, 2, 3, 4,
+        5, 6, 7, 8,
     }, image.data);
 }
 
