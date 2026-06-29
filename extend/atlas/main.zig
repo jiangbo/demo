@@ -74,7 +74,9 @@ fn readPage(context: *Context, name: []const u8) !void {
 
     const metaJson = root.get("meta").?;
     const meta = (try parseFromValue(atlas.Meta, gpa, metaJson, .{})).value;
-    try context.pageNames.append(gpa, meta.image);
+    const print = std.fmt.allocPrint;
+    const imagePath = try print(gpa, "atlas/{s}", .{meta.image});
+    try context.pageNames.append(gpa, imagePath);
 
     const framesObject = root.get("frames").?.object;
     var iterator = framesObject.iterator();
