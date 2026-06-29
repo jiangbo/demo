@@ -365,6 +365,7 @@ pub const file = struct {
             std.debug.panic(msg, .{ res.path, res.error_code });
         }
         if (res.dispatched) {
+            std.debug.assert(fileBuffer[res.lane].len == 0);
             fileBuffer[res.lane] = oomAlloc(u8, maxFileSize);
             const buffer = sk.fetch.asRange(fileBuffer[res.lane]);
             sk.fetch.bindBuffer(res.handle, buffer);
@@ -375,7 +376,7 @@ pub const file = struct {
         std.log.info("loaded from: {s}", .{filePath});
         const path = filePath[assetRoot.len..];
 
-        const value = cache.getPtr(id(path)) orelse return;
+        const value = cache.getPtr(id(path)).?;
         const response: Response = .{
             .index = value.index,
             .path = path,
