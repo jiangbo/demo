@@ -284,7 +284,7 @@ pub fn useCursor(path: [:0]const u8, desc: CursorDesc) void {
 
 pub fn useWindowIcon(path: [:0]const u8) void {
     assets.loadIcon(path, 0, struct {
-        fn callback(icon: assets.Icon) void {
+        fn callback(_: u64, icon: assets.Icon) void {
             var desc: sk.app.IconDesc = .{};
             desc.images[0] = .{
                 .pixels = @bitCast(sk.gfx.asRange(icon.data)),
