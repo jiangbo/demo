@@ -11,14 +11,12 @@ pub fn main(init: std.process.Init) !void {
     _ = args.skip();
 
     const firstName = args.next() orelse return error.InvalidArgs;
-    const defaultName = try std.mem.replaceOwned(u8, //
-        gpa, firstName, ".json", ".zon");
-    const outputName = args.next() orelse defaultName;
     if (args.next() != null) return error.InvalidArgs;
 
     var context = Context{ .io = init.io, .gpa = gpa };
 
     const dir = std.fs.path.dirname(firstName) orelse ".";
+    const output = try std.fs.path.join(gpa, &.{ dir, "atlas.zon" });
     try readPage(&context, firstName);
 
     const content = try std.Io.Dir.cwd().readFileAlloc(init.io, //
@@ -46,7 +44,7 @@ pub fn main(init: std.process.Init) !void {
         .images = context.images.items,
     };
 
-    const file = try std.Io.Dir.cwd().createFile(init.io, outputName, .{});
+    const file = try std.Io.Dir.cwd().createFile(init.io, output, .{});
     defer file.close(init.io);
     var buffer: [4096]u8 = undefined;
     var writer = file.writer(init.io, &buffer);
