@@ -117,9 +117,7 @@ const DataReader = struct {
         if (reader.end - reader.seek >= capacity) return;
 
         if (reader.buffer.ptr == self.buf[0..].ptr) {
-            const left = reader.end - reader.seek;
-            std.debug.assert(self.rangeOffset >= left);
-            self.rangeOffset -= left;
+            self.rangeOffset -= reader.end - reader.seek;
             return try self.loadRange();
         }
 
@@ -139,23 +137,18 @@ const DataReader = struct {
         const len = left.len + copy;
         if (len < capacity) return error.ReadFailed;
         self.setReader(self.buf[0..len], 0);
-        std.debug.assert(self.reader.end >= capacity);
     }
 
     fn loadRange(self: *DataReader) !void {
         while (self.rangeIndex < self.ranges.len) {
             const range = self.ranges[self.rangeIndex];
             self.rangeIndex += 1;
-            const rangeLen = range.end - range.start;
-            if (rangeLen == 0 or self.rangeOffset == rangeLen) {
-                self.rangeOffset = 0;
-                continue;
-            }
-            std.debug.assert(self.rangeOffset < rangeLen);
-
-            const buffer: []const u8 = self.bytes[range.start..range.end];
-            self.setReader(@constCast(buffer), self.rangeOffset);
+            const seek = self.rangeOffset;
             self.rangeOffset = 0;
+            if (seek == range.end - range.start) continue;
+
+            const buffer = self.bytes[range.start..range.end];
+            self.setReader(@constCast(buffer), seek);
             return;
         }
 
