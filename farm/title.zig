@@ -66,6 +66,7 @@ fn updatePopup(active: Popup) ?Request {
         .pause => {
             if (ui.pause.update()) |req| switch (req) {
                 .close => popup = null,
+                .save, .load => unreachable,
                 .title => unreachable,
             };
         },

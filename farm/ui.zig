@@ -31,33 +31,38 @@ pub fn draw(world: *zhu.ecs.World) void {
 }
 
 pub const overlay = struct {
-    const Layer = enum { save, rest, pause };
-    const Popup = enum { pause, rest };
+    const Popup = enum { save, rest, pause };
     pub const Result = union(enum) { block, title, rest: u8 };
 
     var popup: ?Popup = null;
+    var message: ?save_slot.Message = null;
 
     pub fn active() bool {
-        return topLayer() != null;
+        return popup != null;
     }
 
     pub fn close() void {
-        save_slot.active = false;
         popup = null;
+        message = null;
     }
 
     pub fn openRest() void {
         rest.enter();
         popup = .rest;
+        message = null;
     }
 
     pub fn update(world: *zhu.ecs.World) ?Result {
-        if (topLayer()) |layer| {
-            switch (layer) {
+        if (popup) |activePopup| {
+            switch (activePopup) {
                 .save => {
                     if (save_slot.update(world)) |result| {
                         switch (result) {
-                            .message => |message| pause.setMessage(message),
+                            .close => popup = null,
+                            .message => |next| {
+                                message = next;
+                                popup = .pause;
+                            },
                             .farmLoad => unreachable,
                         }
                     }
@@ -72,6 +77,14 @@ pub const overlay = struct {
                 },
                 .pause => if (pause.update()) |req| switch (req) {
                     .close => popup = null,
+                    .save => {
+                        save_slot.enter(.pauseSave);
+                        popup = .save;
+                    },
+                    .load => {
+                        save_slot.enter(.pauseLoad);
+                        popup = .save;
+                    },
                     .title => return .title,
                 },
             }
@@ -81,20 +94,24 @@ pub const overlay = struct {
         if (!context.input.pressed(.pause)) return null;
         pause.enter(&.{});
         popup = .pause;
+        message = null;
         return .block;
     }
 
     pub fn draw() void {
-        if (popup == .pause) pause.draw();
-        if (save_slot.active) save_slot.draw();
-        if (popup == .rest) rest.draw();
-    }
+        switch (popup orelse return) {
+            .save => save_slot.draw(),
+            .rest => rest.draw(),
+            .pause => pause.draw(),
+        }
 
-    fn topLayer() ?Layer {
-        if (save_slot.active) return .save;
-        if (popup == .rest) return .rest;
-        if (popup == .pause) return .pause;
-        return null;
+        const current = message orelse return;
+        var color = zhu.Color.rgb(0.25, 1.0, 0.25);
+        if (current.fail) color = .rgb(1.0, 0.25, 0.25);
+        zhu.text.draw(current.text, .xy(zhu.window.size.x * 0.5, 32), .{
+            .anchor = .center,
+            .color = color,
+        });
     }
 };
 
@@ -162,19 +179,13 @@ pub const rest = struct {
 
 pub const pause = struct {
     const panelSize: zhu.Vector2 = .{ .x = 208, .y = 344 };
-    pub const Request = enum { close, title };
+    pub const Request = enum { close, save, load, title };
 
     var menu: zhu.widget.Menu = menus[2];
-    var message: ?save_slot.Message = null;
 
     pub fn enter(disabled: []const usize) void {
-        message = null;
         menu.disabled = disabled;
         menu.position = zhu.window.size.sub(panelSize).scale(0.5);
-    }
-
-    pub fn setMessage(next: save_slot.Message) void {
-        message = next;
     }
 
     pub fn update() ?Request {
@@ -182,8 +193,8 @@ pub const pause = struct {
 
         if (menu.update()) |event| switch (event) {
             0 => return .close,
-            1 => save_slot.enter(.pauseSave), // 选择槽位后保存
-            2 => save_slot.enter(.pauseLoad), // 选择槽位后读取
+            1 => return .save, // 选择槽位后保存
+            2 => return .load, // 选择槽位后读取
             3 => return .title,
             4 => {
                 // 时钟倍率不能减到 0，否则游戏时间会停止推进。
@@ -210,7 +221,6 @@ pub const pause = struct {
         zhu.batch.drawRect(back, .{ .color = .gray(0, 0.45) });
 
         menu.draw();
-        drawMessage();
 
         for (0..3) |index| {
             var buffer: [40]u8 = undefined;
@@ -234,17 +244,6 @@ pub const pause = struct {
                 .anchor = .center,
             });
         }
-    }
-
-    fn drawMessage() void {
-        const current = message orelse return;
-        var color = zhu.Color.rgb(0.25, 1.0, 0.25);
-        if (current.fail) color = .rgb(1.0, 0.25, 0.25);
-        const position = menu.position.add(.xy(panelSize.x * 0.5, 24));
-        zhu.text.draw(current.text, position, .{
-            .anchor = .center,
-            .color = color,
-        });
     }
 };
 

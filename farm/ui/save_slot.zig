@@ -14,9 +14,11 @@ pub const Mode = enum {
 
 pub const Message = struct { text: []const u8, fail: bool };
 pub const Result = union(enum) {
+    close,
     message: Message,
     farmLoad: usize,
 };
+pub const TitleRequest = union(enum) { close, load: usize };
 
 const SlotState = union(enum) {
     empty,
@@ -55,13 +57,20 @@ pub fn enter(next: Mode) void {
         .pauseSave => "Save Game",
     };
     confirmMenu.title.text = "";
-    slotMenu.click = .empty;
-    confirmMenu.click = .empty;
 }
 
 pub fn update(world: *zhu.ecs.World) ?Result {
     if (context.input.pressed(.pause)) {
-        if (confirmSlot != null) confirmSlot = null else active = false;
+        if (confirmSlot != null) {
+            confirmSlot = null;
+            return null;
+        }
+
+        active = false;
+        return .close;
+    }
+
+    if (!active) {
         return null;
     }
 
@@ -80,7 +89,29 @@ pub fn update(world: *zhu.ecs.World) ?Result {
     }
 
     if (slotMenu.update()) |e| {
-        if (e == backEvent) active = false else return chooseSlot(world, e);
+        if (e == backEvent) {
+            active = false;
+            return .close;
+        }
+        return chooseSlot(world, e);
+    }
+    return null;
+}
+
+pub fn updateTitle() ?TitleRequest {
+    if (context.input.pressed(.pause)) {
+        active = false;
+        return .close;
+    }
+
+    if (slotMenu.update()) |event| {
+        if (event == backEvent) {
+            active = false;
+            return .close;
+        }
+
+        active = false;
+        return .{ .load = event };
     }
     return null;
 }
@@ -132,7 +163,7 @@ fn chooseSlot(world: *zhu.ecs.World, slot: usize) ?Result {
             };
             active = false;
             closePause = true;
-            return null;
+            return .close;
         },
         .pauseSave => {
             if (slotHasFile(slot)) {
@@ -142,8 +173,6 @@ fn chooseSlot(world: *zhu.ecs.World, slot: usize) ?Result {
                     "Overwrite slot {d}?",
                     .{slot + 1},
                 );
-                slotMenu.click = .empty;
-                confirmMenu.click = .empty;
                 return null;
             }
             return .{ .message = saveAndClose(world, slot) };
