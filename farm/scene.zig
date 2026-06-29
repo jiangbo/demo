@@ -40,14 +40,17 @@ const MapFade = struct {
 };
 
 var world: World = undefined;
+var allocator: zhu.Allocator = undefined;
 var canvas: zhu.graphics.RenderTarget = .{};
 var mapFade: MapFade = .{};
 var debug = false;
 
-pub fn init() void {
+pub fn init(allocator_: zhu.Allocator) void {
+    allocator = allocator_;
+
     // 组合根只负责装配顺序，具体玩法仍放在各自模块里。
     context.init();
-    world = .init(zhu.assets.allocator);
+    world = .init(allocator.raw);
 
     // UI 和数据模块先就位，后面的入场流程会立即使用它们。
     ui.init();

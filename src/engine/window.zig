@@ -79,7 +79,7 @@ export fn windowInit() void {
         .allocator = assets.memory.skAllocator,
     });
     math.random.init(sk.time.now());
-    call(root, "init", .{});
+    call(root, "init", .{assets.memory.allocator});
 }
 
 pub var mouse: math.Vector = .zero;
@@ -138,7 +138,7 @@ export fn windowFrame() void {
 }
 
 export fn windowDeinit() void {
-    call(root, "deinit", .{});
+    call(root, "deinit", .{assets.memory.allocator});
     sk.gfx.shutdown();
     assets.deinit();
 }

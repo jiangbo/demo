@@ -19,7 +19,7 @@ var maxFileSize: usize = 0;
 pub fn init(io_: std.Io, gpa: std.mem.Allocator, maxSize: usize) void {
     io = io_;
     memory.init(gpa);
-    allocator = memory.allocator;
+    allocator = memory.allocator.raw;
     maxFileSize = maxSize;
 
     sk.fetch.setup(.{
@@ -29,8 +29,8 @@ pub fn init(io_: std.Io, gpa: std.mem.Allocator, maxSize: usize) void {
     });
 }
 
-pub fn initCaches(allocator1: std.mem.Allocator) void {
-    allocator, imageCache = .{ allocator1, .empty };
+pub fn initCaches(allocator_: std.mem.Allocator) void {
+    allocator, imageCache = .{ allocator_, .empty };
     atlas.cache = .empty;
     view.cache, file.cache = .{ .empty, .empty };
     sound.cache, music.cache = .{ .empty, .empty };
