@@ -84,7 +84,7 @@ pub fn update(delta: f32) void {
     if (updateMapFade(delta)) return;
 
     switch (context.scene.current) {
-        .title => if (title.update(&world, delta)) |request| {
+        .title => if (title.update(delta)) |request| {
             handleRequest(request);
         },
         .farm => {
