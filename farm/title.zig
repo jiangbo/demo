@@ -64,7 +64,7 @@ pub fn update(delta: f32) ?Request {
 fn updatePopup(active: Popup) ?Request {
     switch (active) {
         .pause => {
-            if (ui.pause.updateTitle()) |req| switch (req) {
+            if (ui.pause.update()) |req| switch (req) {
                 .close => popup = null,
                 .title => unreachable,
             };

@@ -88,7 +88,14 @@ pub fn update(delta: f32) void {
             handleRequest(request);
         },
         .farm => {
-            if (ui.overlay.update(&world)) return;
+            if (ui.overlay.update(&world)) |result| {
+                switch (result) {
+                    .block => {},
+                    .title => context.scene.request(.title),
+                    .rest => |hours| context.clock.restHours = hours,
+                }
+                return;
+            }
             updateFarm(delta);
         },
     }

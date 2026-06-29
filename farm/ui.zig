@@ -32,6 +32,10 @@ pub fn draw(world: *zhu.ecs.World) void {
 
 pub const overlay = struct {
     const Layer = enum { save, rest, pause };
+    const Popup = enum { pause, rest };
+    pub const Result = union(enum) { block, title, rest: u8 };
+
+    var popup: ?Popup = null;
 
     pub fn active() bool {
         return topLayer() != null;
@@ -39,11 +43,15 @@ pub const overlay = struct {
 
     pub fn close() void {
         save_slot.active = false;
-        rest.active = false;
-        pause.active = false;
+        popup = null;
     }
 
-    pub fn update(world: *zhu.ecs.World) bool {
+    pub fn openRest() void {
+        rest.enter();
+        popup = .rest;
+    }
+
+    pub fn update(world: *zhu.ecs.World) ?Result {
         if (topLayer()) |layer| {
             switch (layer) {
                 .save => {
@@ -53,29 +61,39 @@ pub const overlay = struct {
                             .farmLoad => unreachable,
                         }
                     }
-                    if (save_slot.takeClosePause()) pause.active = false;
+                    if (save_slot.takeClosePause()) popup = null;
                 },
-                .rest => rest.update(),
-                .pause => pause.update(),
+                .rest => if (rest.update()) |req| switch (req) {
+                    .close => popup = null,
+                    .rest => |hours| {
+                        popup = null;
+                        return .{ .rest = hours };
+                    },
+                },
+                .pause => if (pause.update()) |req| switch (req) {
+                    .close => popup = null,
+                    .title => return .title,
+                },
             }
-            return true;
+            return .block;
         }
 
-        if (!context.input.pressed(.pause)) return false;
-        pause.enter(context.scene.current != .farm);
-        return true;
+        if (!context.input.pressed(.pause)) return null;
+        pause.enter(&.{});
+        popup = .pause;
+        return .block;
     }
 
     pub fn draw() void {
-        if (pause.active) pause.draw();
+        if (popup == .pause) pause.draw();
         if (save_slot.active) save_slot.draw();
-        if (rest.active) rest.draw();
+        if (popup == .rest) rest.draw();
     }
 
     fn topLayer() ?Layer {
         if (save_slot.active) return .save;
-        if (rest.active) return .rest;
-        if (pause.active) return .pause;
+        if (popup == .rest) return .rest;
+        if (popup == .pause) return .pause;
         return null;
     }
 };
@@ -103,8 +121,8 @@ pub const notice = struct {
 
 pub const rest = struct {
     const MenuEvent = enum(u8) { minus, plus, ok, cancel };
+    pub const Request = union(enum) { close, rest: u8 };
 
-    pub var active: bool = false;
     var hours: u8 = 8;
     var menu: zhu.widget.Menu = menus[5];
 
@@ -113,28 +131,23 @@ pub const rest = struct {
     }
 
     pub fn enter() void {
-        active = true;
         hours = 8;
-        menu.click = .empty;
     }
 
-    pub fn update() void {
+    pub fn update() ?Request {
         if (context.input.pressed(.pause)) {
-            active = false;
-            return;
+            return .close;
         }
 
-        const event = menu.update() orelse return;
+        const event = menu.update() orelse return null;
         switch (@as(MenuEvent, @enumFromInt(event))) {
             .minus => hours -= 1,
             .plus => hours += 1,
-            .ok => {
-                active = false;
-                context.clock.restHours = hours;
-            },
-            .cancel => active = false,
+            .ok => return .{ .rest = hours },
+            .cancel => return .close,
         }
         hours = std.math.clamp(hours, 1, 24);
+        return null;
     }
 
     pub fn draw() void {
@@ -149,33 +162,29 @@ pub const rest = struct {
 
 pub const pause = struct {
     const panelSize: zhu.Vector2 = .{ .x = 208, .y = 344 };
-    pub var active: bool = false;
+    pub const Request = enum { close, title };
+
     var menu: zhu.widget.Menu = menus[2];
     var message: ?save_slot.Message = null;
 
-    pub fn enter(disable: bool) void {
-        active = true;
+    pub fn enter(disabled: []const usize) void {
         message = null;
-        menu.disabled = if (disable) &.{ 1, 2, 3 } else &.{};
+        menu.disabled = disabled;
         menu.position = zhu.window.size.sub(panelSize).scale(0.5);
-        menu.click = .empty;
     }
 
     pub fn setMessage(next: save_slot.Message) void {
         message = next;
     }
 
-    pub fn update() void {
-        if (context.input.pressed(.pause)) {
-            active = false;
-            return;
-        }
+    pub fn update() ?Request {
+        if (context.input.pressed(.pause)) return .close;
 
         if (menu.update()) |event| switch (event) {
-            0 => active = false, // 继续游戏
+            0 => return .close,
             1 => save_slot.enter(.pauseSave), // 选择槽位后保存
             2 => save_slot.enter(.pauseLoad), // 选择槽位后读取
-            3 => context.scene.request(.title), // 返回标题
+            3 => return .title,
             4 => {
                 // 时钟倍率不能减到 0，否则游戏时间会停止推进。
                 const max = @max(0.1, context.clock.speed - 0.1);
@@ -188,6 +197,7 @@ pub const pause = struct {
             9 => zhu.audio.changeSoundVolume(0.1), // 增加音效
             else => unreachable,
         };
+        return null;
     }
 
     pub fn draw() void {
@@ -228,10 +238,8 @@ pub const pause = struct {
 
     fn drawMessage() void {
         const current = message orelse return;
-        const color = if (current.fail)
-            zhu.Color.rgb(1.0, 0.25, 0.25)
-        else
-            zhu.Color.rgb(0.25, 1.0, 0.25);
+        var color = zhu.Color.rgb(0.25, 1.0, 0.25);
+        if (current.fail) color = .rgb(1.0, 0.25, 0.25);
         const position = menu.position.add(.xy(panelSize.x * 0.5, 24));
         zhu.text.draw(current.text, position, .{
             .anchor = .center,

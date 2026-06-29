@@ -67,7 +67,7 @@ fn tryInteract(world: *World) void {
 
     if (world.has(target, Chest)) return openChest(world, target);
 
-    if (world.has(target, Rest)) return ui.rest.enter();
+    if (world.has(target, Rest)) return ui.overlay.openRest();
 }
 
 fn nearestTarget(world: *World, playerPos: Position) ?Entity {
