@@ -14,18 +14,19 @@ const assetRoot = "assets/";
 pub var allocator: std.mem.Allocator = undefined;
 pub var io: std.Io = undefined;
 var imageCache: std.AutoHashMapUnmanaged(Id, graphics.Image) = .empty;
+var maxFileSize: usize = 0;
 
 pub fn init(io_: std.Io, gpa: std.mem.Allocator, maxSize: usize) void {
     io = io_;
     memory.init(gpa);
     allocator = memory.allocator;
+    maxFileSize = maxSize;
 
     sk.fetch.setup(.{
         .num_lanes = fileBuffer.len,
         .logger = .{ .func = sk.log.func },
         .allocator = @bitCast(memory.skAllocator),
     });
-    for (&fileBuffer) |*buffer| buffer.* = oomAlloc(u8, maxSize);
 }
 
 pub fn initCaches(allocator1: std.mem.Allocator) void {
@@ -43,7 +44,7 @@ pub fn deinit() void {
     music.deinit();
     file.deinit();
     if (sk.fetch.valid()) sk.fetch.shutdown();
-    for (&fileBuffer) |buffer| free(buffer);
+    for (&fileBuffer) |buffer| if (buffer.len != 0) free(buffer);
 }
 
 pub fn oomAlloc(comptime T: type, n: usize) []T {
@@ -364,6 +365,7 @@ pub const file = struct {
             std.debug.panic(msg, .{ res.path, res.error_code });
         }
         if (res.dispatched) {
+            fileBuffer[res.lane] = oomAlloc(u8, maxFileSize);
             const buffer = sk.fetch.asRange(fileBuffer[res.lane]);
             sk.fetch.bindBuffer(res.handle, buffer);
             return;
@@ -385,6 +387,8 @@ pub const file = struct {
         value.state = .loaded;
         value.managed = value.handler(response);
         value.state = .handled;
+        free(fileBuffer[res.lane]);
+        fileBuffer[res.lane] = &.{};
     }
 
     pub fn deinit() void {
