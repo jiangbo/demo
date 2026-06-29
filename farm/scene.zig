@@ -8,6 +8,7 @@ const inventory = @import("inventory.zig");
 const interact = @import("interact.zig");
 const map = @import("map.zig");
 const save = @import("save.zig");
+const title = @import("title.zig");
 const ui = @import("ui.zig");
 
 const system = struct {
@@ -50,10 +51,11 @@ pub fn init(allocator_: zhu.Allocator) void {
 
     // 组合根只负责装配顺序，具体玩法仍放在各自模块里。
     context.init();
-    world = .init(allocator.raw);
+    world = World.init(allocator.raw);
 
     // UI 和数据模块先就位，后面的入场流程会立即使用它们。
     ui.init();
+    title.init();
     map.init();
     factory.init();
 
@@ -79,25 +81,16 @@ pub fn update(delta: f32) void {
     context.input.mouseCaptured = false;
     applyScene();
 
-    if (mapFade.phase) |phase| {
-        if (mapFade.timer.updateRunning(delta)) return;
-
-        switch (phase) {
-            .out => {
-                map.change(&world, context.map.takePending().?);
-                mapFade.phase = .in;
-                mapFade.timer.restart();
-            },
-            .in => mapFade = .{},
-        }
-        return;
-    }
-
-    if (ui.overlay.update(&world)) return;
+    if (updateMapFade(delta)) return;
 
     switch (context.scene.current) {
-        .title => ui.title.update(delta),
-        .farm => updateFarm(delta),
+        .title => if (title.update(&world, delta)) |request| {
+            handleRequest(request);
+        },
+        .farm => {
+            if (ui.overlay.update(&world)) return;
+            updateFarm(delta);
+        },
     }
 }
 
@@ -106,8 +99,7 @@ pub fn draw() void {
     switch (context.scene.current) {
         .title => {
             zhu.batch.useTarget(clearColor, .{});
-            ui.title.draw();
-            ui.overlay.draw();
+            title.draw();
             if (debug) zhu.debug.draw();
         },
         .farm => {
@@ -166,6 +158,21 @@ fn updateFarm(delta: f32) void {
     system.sound.update(&world);
 }
 
+fn updateMapFade(delta: f32) bool {
+    const phase = mapFade.phase orelse return false;
+    if (mapFade.timer.updateRunning(delta)) return true;
+
+    switch (phase) {
+        .out => {
+            map.change(&world, context.map.takePending().?);
+            mapFade.phase = .in;
+            mapFade.timer.restart();
+        },
+        .in => mapFade = .{},
+    }
+    return true;
+}
+
 fn applyScene() void {
     const previous = context.scene.current;
     context.scene.apply();
@@ -175,7 +182,7 @@ fn applyScene() void {
 
     ui.overlay.close();
     switch (previous) {
-        .title => ui.title.exit(),
+        .title => title.exit(),
         .farm => {
             mapFade = .{};
             context.map.pending = null;
@@ -185,9 +192,16 @@ fn applyScene() void {
     enterScene(current);
 }
 
+fn handleRequest(request: title.Request) void {
+    switch (request) {
+        .start => context.scene.requestNewGame(),
+        .load => |slot| context.scene.requestLoad(slot),
+    }
+}
+
 fn enterScene(next: context.scene.Scene) void {
     switch (next) {
-        .title => ui.title.enter(),
+        .title => title.enter(),
         .farm => enterFarm(),
     }
 }

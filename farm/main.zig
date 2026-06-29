@@ -10,12 +10,8 @@ var soundBuffer: [20]zhu.audio.Sound = undefined;
 pub fn init(allocator: zhu.Allocator) void {
     vertexBuffer = allocator.alloc(zhu.batch.Vertex, 4096);
     zhu.batch.init(vertexBuffer, &commandBuffer);
-
     zhu.audio.init(44100 / 2, &soundBuffer);
-
     zhu.assets.loadAtlas(@import("zon/atlas.zon"));
-    const bgPath = "textures/UI/farm-rpg-bg.png";
-    _ = zhu.assets.loadImage(bgPath, .xy(1280, 800));
 
     zhu.batch.circleImage = zhu.getImage("circle.png").?;
     const size = zhu.batch.circleImage.size;

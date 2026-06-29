@@ -18,7 +18,6 @@ pub fn init() void {
         .patch = .{ .min = .xy(3, 4), .max = .xy(3, 3) },
     });
 
-    title.init();
     save_slot.init();
     rest.init();
 }
@@ -48,8 +47,11 @@ pub const overlay = struct {
         if (topLayer()) |layer| {
             switch (layer) {
                 .save => {
-                    if (save_slot.update(world)) |message| {
-                        pause.setMessage(message);
+                    if (save_slot.update(world)) |result| {
+                        switch (result) {
+                            .message => |message| pause.setMessage(message),
+                            .farmLoad => unreachable,
+                        }
                     }
                     if (save_slot.takeClosePause()) pause.active = false;
                 },
@@ -154,7 +156,7 @@ pub const pause = struct {
     pub fn enter(disable: bool) void {
         active = true;
         message = null;
-        menu.disabled = if (disable) &.{ 1, 2 } else &.{};
+        menu.disabled = if (disable) &.{ 1, 2, 3 } else &.{};
         menu.position = zhu.window.size.sub(panelSize).scale(0.5);
         menu.click = .empty;
     }
@@ -279,61 +281,3 @@ fn drawItemNotice(text: []const u8) void {
     zhu.batch.drawNine(bubbleImage, rect);
     zhu.text.draw(text, rect.min.add(.xy(9, 7)), option);
 }
-
-pub const title = struct {
-    const MenuEvent = enum(u8) { start, load, exit };
-
-    var mainMenu: zhu.widget.Menu = menus[0];
-    var pauseMenu: zhu.widget.Menu = menus[1];
-    var background: zhu.Image = undefined;
-    var logo: zhu.Image = undefined;
-    var elapsed: f32 = 0;
-
-    pub fn init() void {
-        background = zhu.getImage("textures/UI/farm-rpg-bg.png").?;
-        logo = zhu.getImage("textures/UI/farm-rpg-logo.png").?;
-        const size = pauseMenu.buttons[0].rect.size;
-        const x = zhu.window.size.x - 10 - size.x;
-        pauseMenu.position = .xy(x, 10);
-    }
-
-    pub fn enter() void {
-        zhu.camera.main = .window;
-        zhu.audio.playMusic("audio/02_spring_fairy_tale.ogg");
-        mainMenu.click = .empty;
-        pauseMenu.click = .empty;
-    }
-
-    pub fn exit() void {
-        zhu.audio.setMusicState(.stopped);
-    }
-
-    pub fn update(delta: f32) void {
-        elapsed += delta;
-
-        if (mainMenu.update()) |event| {
-            switch (@as(MenuEvent, @enumFromInt(event))) {
-                .start => context.scene.requestNewGame(),
-                .load => save_slot.enter(.titleLoad),
-                .exit => zhu.window.exit(),
-            }
-        }
-
-        if (pauseMenu.update() != null) pause.enter(true);
-    }
-
-    pub fn draw() void {
-        // 背景
-        zhu.batch.drawImage(background, .zero, .{
-            .size = zhu.window.size,
-        });
-        const y = 115 + @sin(elapsed * 2) * 5;
-        zhu.batch.drawImage(logo, .xy(320, y), .{
-            .size = .xy(293, 125),
-            .anchor = .center,
-        });
-
-        mainMenu.draw();
-        pauseMenu.draw();
-    }
-};

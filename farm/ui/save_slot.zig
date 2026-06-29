@@ -13,6 +13,10 @@ pub const Mode = enum {
 };
 
 pub const Message = struct { text: []const u8, fail: bool };
+pub const Result = union(enum) {
+    message: Message,
+    farmLoad: usize,
+};
 
 const SlotState = union(enum) {
     empty,
@@ -55,7 +59,7 @@ pub fn enter(next: Mode) void {
     confirmMenu.click = .empty;
 }
 
-pub fn update(world: *zhu.ecs.World) ?Message {
+pub fn update(world: *zhu.ecs.World) ?Result {
     if (context.input.pressed(.pause)) {
         if (confirmSlot != null) confirmSlot = null else active = false;
         return null;
@@ -66,7 +70,7 @@ pub fn update(world: *zhu.ecs.World) ?Message {
             switch (event) {
                 0 => { // 确认覆盖
                     confirmSlot = null;
-                    return saveAndClose(world, slot);
+                    return .{ .message = saveAndClose(world, slot) };
                 },
                 1 => confirmSlot = null, // 取消覆盖
                 else => unreachable,
@@ -114,18 +118,17 @@ fn refresh() void {
     }
 }
 
-fn chooseSlot(world: *zhu.ecs.World, slot: usize) ?Message {
+fn chooseSlot(world: *zhu.ecs.World, slot: usize) ?Result {
     switch (mode) {
         .titleLoad => {
             active = false;
-            context.scene.requestLoad(slot);
-            return null;
+            return .{ .farmLoad = slot };
         },
         .pauseLoad => {
             save.loadSlot(world, slot) catch |err| {
                 std.log.err("load slot {} failed: {}", .{ slot, err });
                 active = false;
-                return .{ .text = "读取失败", .fail = true };
+                return .{ .message = .{ .text = "读取失败", .fail = true } };
             };
             active = false;
             closePause = true;
@@ -143,7 +146,7 @@ fn chooseSlot(world: *zhu.ecs.World, slot: usize) ?Message {
                 confirmMenu.click = .empty;
                 return null;
             }
-            return saveAndClose(world, slot);
+            return .{ .message = saveAndClose(world, slot) };
         },
     }
 }
