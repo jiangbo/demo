@@ -164,6 +164,14 @@ const DataReader = struct {
 
 pub const Image = struct { width: i32, height: i32, data: []u8 };
 
+pub fn loadIcon(allocator: Allocator, file: std.ArrayList(u8)) !Image {
+    if (std.mem.startsWith(u8, file.items, &signature)) {
+        return load(allocator, file);
+    }
+
+    return loadIco(allocator, file.items);
+}
+
 pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     const bytes = file.items;
 
@@ -239,6 +247,110 @@ pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     return .{
         .width = @intCast(header.width),
         .height = @intCast(header.height),
+        .data = pixelData,
+    };
+}
+
+const IconEntry = struct { width: usize, height: usize, payload: []u8 };
+
+fn loadIco(allocator: Allocator, bytes: []u8) !Image {
+    var reader = Reader.fixed(bytes);
+    if (try reader.takeInt(u16, .little) != 0) return error.InvalidIcon;
+    if (try reader.takeInt(u16, .little) != 1) return error.InvalidIcon;
+
+    const count = try reader.takeInt(u16, .little);
+    if (count == 0) return error.InvalidIcon;
+
+    const dirStart: usize = 6;
+    const iconCount: usize = count;
+    const dirSize: usize = iconCount * 16;
+    if (bytes.len < dirStart + dirSize) return error.InvalidIcon;
+
+    var best: ?IconEntry = null;
+    var bestArea: usize = 0;
+    for (0..iconCount) |i| {
+        const entry = bytes[dirStart + i * 16 ..][0..16];
+        var entryReader = Reader.fixed(entry);
+
+        const widthByte = try entryReader.takeByte();
+        const heightByte = try entryReader.takeByte();
+        _ = try entryReader.takeByte(); // 调色板颜色数。
+        if (try entryReader.takeByte() != 0) return error.InvalidIcon;
+        _ = try entryReader.takeInt(u16, .little); // 颜色平面。
+        _ = try entryReader.takeInt(u16, .little); // 色深。
+
+        const width: usize = if (widthByte == 0) 256 else widthByte;
+        const height: usize = if (heightByte == 0) 256 else heightByte;
+        const size: usize = try entryReader.takeInt(u32, .little);
+        const offset: usize = try entryReader.takeInt(u32, .little);
+        if (size == 0) return error.InvalidIcon;
+        if (offset > bytes.len or size > bytes.len - offset) {
+            return error.InvalidIcon;
+        }
+
+        const payload = bytes[offset .. offset + size];
+        const area = width * height;
+        if (area > bestArea) {
+            best = .{ .width = width, .height = height, .payload = payload };
+            bestArea = area;
+        }
+    }
+
+    const entry = best orelse return error.UnsupportedIcon;
+    if (std.mem.startsWith(u8, entry.payload, &signature)) {
+        return load(allocator, .{
+            .items = entry.payload,
+            .capacity = entry.payload.len,
+        });
+    }
+    return loadDib(allocator, entry);
+}
+
+fn loadDib(allocator: Allocator, entry: IconEntry) !Image {
+    const payload = entry.payload;
+    var reader = Reader.fixed(payload);
+    if (try reader.takeInt(u32, .little) != 40) return error.UnsupportedIcon;
+
+    const width: usize = try reader.takeInt(u32, .little);
+    const fullHeight: usize = try reader.takeInt(u32, .little);
+    if (width == 0 or fullHeight == 0) return error.InvalidIcon;
+    if (fullHeight % 2 != 0) return error.InvalidIcon;
+
+    const height = fullHeight / 2;
+    if (width != entry.width or height != entry.height) {
+        return error.InvalidIcon;
+    }
+    if (try reader.takeInt(u16, .little) != 1) return error.InvalidIcon;
+    if (try reader.takeInt(u16, .little) != 32) return error.UnsupportedIcon;
+    if (try reader.takeInt(u32, .little) != 0) return error.UnsupportedIcon;
+    _ = try reader.takeInt(u32, .little); // 位图数据长度。
+    _ = try reader.takeInt(u32, .little); // 水平分辨率。
+    _ = try reader.takeInt(u32, .little); // 垂直分辨率。
+    _ = try reader.takeInt(u32, .little); // 调色板颜色数。
+    _ = try reader.takeInt(u32, .little); // 重要颜色数。
+
+    const srcLen = width * height * 4;
+    if (payload.len < 40 + srcLen) return error.InvalidIcon;
+
+    const pixelData = try allocator.alloc(u8, srcLen);
+    errdefer allocator.free(pixelData);
+
+    const pixels = payload[40 .. 40 + srcLen];
+    for (0..height) |y| {
+        const srcY = height - 1 - y;
+        const src = pixels[srcY * width * 4 ..][0 .. width * 4];
+        const dest = pixelData[y * width * 4 ..][0 .. width * 4];
+        for (0..width) |x| {
+            dest[x * 4 + 0] = src[x * 4 + 2];
+            dest[x * 4 + 1] = src[x * 4 + 1];
+            dest[x * 4 + 2] = src[x * 4 + 0];
+            dest[x * 4 + 3] = src[x * 4 + 3];
+        }
+    }
+
+    return .{
+        .width = @intCast(width),
+        .height = @intCast(height),
         .data = pixelData,
     };
 }
@@ -452,6 +564,76 @@ fn makeTestPng(allocator: Allocator, png: TestPng) ![]u8 {
     return result.toOwnedSlice(allocator);
 }
 
+fn makeTestIcon(allocator: Allocator, png: []const u8) ![]u8 {
+    var result: std.ArrayList(u8) = .empty;
+    errdefer result.deinit(allocator);
+
+    try result.appendSlice(allocator, &.{
+        0, 0, // 保留字段。
+        1, 0, // 普通图标。
+        1, 0, // 一个目录项。
+        2, 1, // 宽高。
+        0, 0, // 无调色板，保留字段。
+        1, 0, // 颜色平面。
+        32, 0, // 32 位颜色。
+    });
+
+    var size: [4]u8 = undefined;
+    std.mem.writeInt(u32, &size, @intCast(png.len), .little);
+    try result.appendSlice(allocator, &size);
+
+    var offset: [4]u8 = undefined;
+    std.mem.writeInt(u32, &offset, 6 + 16, .little);
+    try result.appendSlice(allocator, &offset);
+
+    try result.appendSlice(allocator, png);
+    return result.toOwnedSlice(allocator);
+}
+
+fn makeTestDibIcon(allocator: Allocator) ![]u8 {
+    const dib = [_]u8{
+        40, 0, 0, 0, // BITMAPINFOHEADER 长度。
+        2, 0, 0, 0, // 宽。
+        4, 0, 0, 0, // 高度包含 XOR 和 AND 两部分。
+        1, 0, // 颜色平面。
+        32, 0, // 32 位 BGRA。
+        0, 0, 0, 0, // BI_RGB，无压缩。
+        16, 0, 0, 0, // 像素数据长度。
+        0, 0, 0, 0, // 水平分辨率。
+        0, 0, 0, 0, // 垂直分辨率。
+        0, 0, 0, 0, // 调色板颜色数。
+        0, 0, 0, 0, // 重要颜色数。
+        11, 10, 9, 12, // 底行像素 1。
+        15, 14, 13, 16, // 底行像素 2。
+        3, 2, 1, 4, // 顶行像素 1。
+        7, 6, 5, 8, // 顶行像素 2。
+    };
+
+    var result: std.ArrayList(u8) = .empty;
+    errdefer result.deinit(allocator);
+
+    try result.appendSlice(allocator, &.{
+        0, 0, // 保留字段。
+        1, 0, // 普通图标。
+        1, 0, // 一个目录项。
+        2, 2, // 宽高。
+        0, 0, // 无调色板，保留字段。
+        1, 0, // 颜色平面。
+        32, 0, // 32 位颜色。
+    });
+
+    var size: [4]u8 = undefined;
+    std.mem.writeInt(u32, &size, dib.len, .little);
+    try result.appendSlice(allocator, &size);
+
+    var offset: [4]u8 = undefined;
+    std.mem.writeInt(u32, &offset, 6 + 16, .little);
+    try result.appendSlice(allocator, &offset);
+
+    try result.appendSlice(allocator, &dib);
+    return result.toOwnedSlice(allocator);
+}
+
 fn makeStoredZlib(
     allocator: Allocator,
     data: []const u8,
@@ -520,6 +702,75 @@ test "load rgba png" {
     try std.testing.expectEqualSlices(u8, &.{
         1, 2, 3, 4,
         5, 6, 7, 8,
+    }, image.data);
+}
+
+test "load icon from png" {
+    const allocator = std.testing.allocator;
+    const png = try makeTestPng(allocator, .{
+        .width = 1,
+        .height = 1,
+        .color = 6,
+        .scanlines = &.{ 0, 1, 2, 3, 4 },
+    });
+    defer allocator.free(png);
+
+    const image = try loadIcon(allocator, .{
+        .items = png,
+        .capacity = png.len,
+    });
+    defer allocator.free(image.data);
+
+    try std.testing.expectEqual(@as(i32, 1), image.width);
+    try std.testing.expectEqual(@as(i32, 1), image.height);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4 }, image.data);
+}
+
+test "load icon from ico png payload" {
+    const allocator = std.testing.allocator;
+    const png = try makeTestPng(allocator, .{
+        .width = 2,
+        .height = 1,
+        .color = 6,
+        .scanlines = &.{ 0, 1, 2, 3, 4, 5, 6, 7, 8 },
+    });
+    defer allocator.free(png);
+
+    const icon = try makeTestIcon(allocator, png);
+    defer allocator.free(icon);
+
+    const image = try loadIcon(allocator, .{
+        .items = icon,
+        .capacity = icon.len,
+    });
+    defer allocator.free(image.data);
+
+    try std.testing.expectEqual(@as(i32, 2), image.width);
+    try std.testing.expectEqual(@as(i32, 1), image.height);
+    try std.testing.expectEqualSlices(u8, &.{
+        1, 2, 3, 4,
+        5, 6, 7, 8,
+    }, image.data);
+}
+
+test "load icon from ico dib payload" {
+    const allocator = std.testing.allocator;
+    const icon = try makeTestDibIcon(allocator);
+    defer allocator.free(icon);
+
+    const image = try loadIcon(allocator, .{
+        .items = icon,
+        .capacity = icon.len,
+    });
+    defer allocator.free(image.data);
+
+    try std.testing.expectEqual(@as(i32, 2), image.width);
+    try std.testing.expectEqual(@as(i32, 2), image.height);
+    try std.testing.expectEqualSlices(u8, &.{
+        1,  2,  3,  4,
+        5,  6,  7,  8,
+        9,  10, 11, 12,
+        13, 14, 15, 16,
     }, image.data);
 }
 
