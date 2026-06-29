@@ -17,6 +17,12 @@ const Store = zhu.widget.StackStore(ItemEnum, 16, stackLimit);
 pub const Stack = Store.Stack;
 pub const Item = Stack;
 pub const UseResult = union(enum) { none, full, item: Stack };
+pub const Save = struct {
+    activeHotbar: usize = 0,
+    activePage: usize = 0,
+    slots: []const Stack = &.{},
+    hotbar: [bar.refs.len]?usize = @splat(null),
+};
 
 const Hover = union(enum) { body, slot: usize, prev, next, close };
 
@@ -546,6 +552,26 @@ pub fn reset() void {
     bag.reset();
     bar.reset();
     itemDrag.state = null;
+}
+
+pub fn capture() Save {
+    return .{
+        .activeHotbar = bar.active,
+        .activePage = bag.activePage,
+        .slots = store.stacks,
+        .hotbar = bar.refs,
+    };
+}
+
+pub fn restore(data: Save) void {
+    reset();
+    for (data.slots, 0..) |slot, index| {
+        if (index >= store.stacks.len) break;
+        store.stacks[index] = slot;
+    }
+    bar.refs = data.hotbar;
+    bar.active = data.activeHotbar;
+    bag.activePage = data.activePage;
 }
 
 pub fn add(itemType: ItemEnum, count: u32) u32 {
