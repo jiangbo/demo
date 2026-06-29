@@ -7,8 +7,8 @@ var vertexBuffer: []zhu.batch.Vertex = undefined;
 var commandBuffer: [64]zhu.batch.Command = undefined;
 var soundBuffer: [20]zhu.audio.Sound = undefined;
 
-pub fn init() void {
-    vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 4096);
+pub fn init(allocator: zhu.Allocator) void {
+    vertexBuffer = allocator.alloc(zhu.batch.Vertex, 4096);
     zhu.batch.init(vertexBuffer, &commandBuffer);
 
     zhu.audio.init(44100 / 2, &soundBuffer);
@@ -26,9 +26,10 @@ pub fn init() void {
     font.lineHeight += 2;
     zhu.text.init(font);
 
+    zhu.window.useWindowIcon("icon.ico");
     zhu.window.useCursor("farm-rpg/UI/cursor.png", .{});
 
-    scene.init();
+    scene.init(allocator);
 }
 
 pub fn frame(delta: f32) void {
@@ -39,10 +40,10 @@ pub fn frame(delta: f32) void {
     zhu.batch.endDraw();
 }
 
-pub fn deinit() void {
+pub fn deinit(allocator: zhu.Allocator) void {
     scene.deinit();
     zhu.audio.deinit();
-    zhu.assets.free(vertexBuffer);
+    allocator.free(vertexBuffer);
 }
 
 pub fn main(initInfo: std.process.Init) void {

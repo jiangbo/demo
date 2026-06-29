@@ -29,6 +29,7 @@ pub const Rect = math.Rect;
 pub const Color = graphics.Color;
 pub const Animation = graphics.Animation;
 pub const EnumAnimation = graphics.EnumAnimation;
+pub const Allocator = assets.memory.OomAllocator;
 
 pub const format = text.format;
 pub const getImage = assets.getImageByPath;

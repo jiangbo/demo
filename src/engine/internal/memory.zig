@@ -2,13 +2,45 @@ const std = @import("std");
 const sk = @import("sokol");
 
 pub var counter: Counter = undefined;
-pub var allocator: std.mem.Allocator = undefined;
+pub var allocator: OomAllocator = undefined;
 pub var skAllocator: sk.gfx.Allocator = undefined;
 
 pub fn init(gpa: std.mem.Allocator) void {
     counter = Counter.init(gpa);
-    allocator = counter.allocator();
+    allocator = .{ .raw = counter.allocator() };
     skAllocator = .{ .alloc_fn = sk_alloc, .free_fn = sk_free };
+}
+
+pub const OomAllocator = struct {
+    raw: std.mem.Allocator,
+
+    pub fn create(self: OomAllocator, comptime T: type) *T {
+        return self.raw.create(T) catch oom();
+    }
+
+    pub fn destroy(self: OomAllocator, ptr: anytype) void {
+        return self.raw.destroy(ptr);
+    }
+
+    pub fn alloc(self: OomAllocator, T: type, count: usize) []T {
+        return self.raw.alloc(T, count) catch oom();
+    }
+
+    pub fn dupe(self: OomAllocator, T: type, data: []const T) []T {
+        return self.raw.dupe(T, data) catch oom();
+    }
+
+    pub fn dupeZ(self: OomAllocator, T: type, data: []const T) [:0]T {
+        return self.raw.dupeZ(T, data) catch oom();
+    }
+
+    pub fn free(self: OomAllocator, data: anytype) void {
+        self.raw.free(data);
+    }
+};
+
+pub fn oom() noreturn {
+    @panic("out of memory");
 }
 
 pub const Counter = struct {
@@ -91,7 +123,7 @@ fn cSlice(ptr: *anyopaque) []align(@alignOf(std.c.max_align_t)) u8 {
 
 pub fn alloc(len: usize) ?*anyopaque {
     if (len == 0) return null;
-    const base = allocator.rawAlloc(cHeaderSize + len, //
+    const base = allocator.raw.rawAlloc(cHeaderSize + len, //
         cAlign, @returnAddress()) orelse return null;
     @as(*usize, @ptrCast(@alignCast(base))).* = len;
     return @ptrCast(base + cHeaderSize);
@@ -106,12 +138,12 @@ pub fn realloc(ptr: ?*anyopaque, len: usize) ?*anyopaque {
 
     const old = cSlice(oldPtr);
     const newLen = cHeaderSize + len;
-    const newSlice = allocator.realloc(old, newLen) catch return null;
+    const newSlice = allocator.raw.realloc(old, newLen) catch return null;
     @as(*usize, @ptrCast(@alignCast(newSlice.ptr))).* = len;
     return @ptrCast(newSlice.ptr + cHeaderSize);
 }
 
 pub fn free(ptr: ?*anyopaque) void {
     const p = ptr orelse return;
-    allocator.rawFree(cSlice(p), cAlign, @returnAddress());
+    allocator.raw.rawFree(cSlice(p), cAlign, @returnAddress());
 }

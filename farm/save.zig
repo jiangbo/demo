@@ -37,13 +37,6 @@ const PlayerSave = struct {
     facing: component.actor.Facing = .down,
 };
 
-const InventorySave = struct {
-    activeHotbar: usize = 0,
-    activePage: usize = 0,
-    slots: []const inventory.Stack = &.{},
-    hotbar: [inventory.bar.refs.len]?usize = @splat(null),
-};
-
 const TileSave = struct {
     index: u32 = 0,
     land: ?component.farm.Ground = null,
@@ -60,7 +53,7 @@ const SaveData = struct {
     timestamp: i64 = 0,
     time: TimeSave = .{},
     player: PlayerSave = .{},
-    inventory: InventorySave = .{},
+    inventory: inventory.Save = .{},
     maps: []const MapSave = &.{},
 };
 
@@ -175,7 +168,7 @@ fn capture(world: *World) !SaveData {
             .position = position,
             .facing = actor.facing,
         },
-        .inventory = captureInventory(),
+        .inventory = inventory.capture(),
         .maps = try captureMaps(),
     };
 }
@@ -183,15 +176,6 @@ fn capture(world: *World) !SaveData {
 fn freeCaptured(data: SaveData) void {
     for (data.maps) |saved| zhu.assets.free(saved.tiles);
     zhu.assets.free(data.maps);
-}
-
-fn captureInventory() InventorySave {
-    return .{
-        .activeHotbar = inventory.bar.active,
-        .activePage = inventory.bag.activePage,
-        .slots = inventory.store.stacks,
-        .hotbar = inventory.bar.refs,
-    };
 }
 
 fn captureMaps() ![]const MapSave {
@@ -250,7 +234,7 @@ fn apply(world: *World, data: SaveData) !void {
 
     map.enter(world, data.player.map, -1);
     restorePlayer(world, data.player);
-    restoreInventory(data.inventory);
+    inventory.restore(data.inventory);
 }
 
 fn restoreMaps(data: SaveData) void {
@@ -291,17 +275,6 @@ fn restorePlayer(world: *World, data: PlayerSave) void {
     }
     world.remove(player, Busy);
     zhu.camera.directFollow(data.position);
-}
-
-fn restoreInventory(data: InventorySave) void {
-    inventory.store.clear();
-    for (data.slots, 0..) |slot, index| {
-        if (index >= inventory.store.stacks.len) break;
-        inventory.store.stacks[index] = slot;
-    }
-    inventory.bar.refs = data.hotbar;
-    inventory.bar.active = data.activeHotbar;
-    inventory.bag.activePage = data.activePage;
 }
 
 test "slotPath 会生成存档槽路径" {
@@ -350,21 +323,21 @@ test "parseSlotSummary 会忽略完整存档的其它字段" {
     try std.testing.expectEqual(42, summary.timestamp);
 }
 
-test "restoreInventory 会恢复库存槽和快捷栏" {
+test "inventory.restore 会恢复库存槽和快捷栏" {
     inventory.reset();
     defer inventory.reset();
 
     const slots = [_]inventory.Stack{
         .{ .item = .strawberrySeed, .count = 7 },
     };
-    var data = InventorySave{
+    var data = inventory.Save{
         .activeHotbar = 3,
         .activePage = 1,
         .slots = &slots,
     };
     data.hotbar[3] = 0;
 
-    restoreInventory(data);
+    inventory.restore(data);
 
     try std.testing.expectEqual(
         component.item.ItemEnum.strawberrySeed,

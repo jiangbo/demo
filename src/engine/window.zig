@@ -79,7 +79,7 @@ export fn windowInit() void {
         .allocator = assets.memory.skAllocator,
     });
     math.random.init(sk.time.now());
-    call(root, "init", .{});
+    call(root, "init", .{assets.memory.allocator});
 }
 
 pub var mouse: math.Vector = .zero;
@@ -138,7 +138,7 @@ export fn windowFrame() void {
 }
 
 export fn windowDeinit() void {
-    call(root, "deinit", .{});
+    call(root, "deinit", .{assets.memory.allocator});
     sk.gfx.shutdown();
     assets.deinit();
 }
@@ -284,7 +284,7 @@ pub fn useCursor(path: [:0]const u8, desc: CursorDesc) void {
 
 pub fn useWindowIcon(path: [:0]const u8) void {
     assets.loadIcon(path, 0, struct {
-        fn callback(icon: assets.Icon) void {
+        fn callback(_: u64, icon: assets.Icon) void {
             var desc: sk.app.IconDesc = .{};
             desc.images[0] = .{
                 .pixels = @bitCast(sk.gfx.asRange(icon.data)),

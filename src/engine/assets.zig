@@ -2,10 +2,10 @@ const std = @import("std");
 
 const sk = @import("sokol");
 const c = @import("internal/c.zig");
-pub const memory = @import("internal/memory.zig");
 const graphics = @import("graphics.zig");
 const audio = @import("audio.zig");
 const png = @import("internal/png.zig");
+pub const memory = @import("internal/memory.zig");
 
 const Image = graphics.Image;
 const Path = [:0]const u8;
@@ -14,22 +14,23 @@ const assetRoot = "assets/";
 pub var allocator: std.mem.Allocator = undefined;
 pub var io: std.Io = undefined;
 var imageCache: std.AutoHashMapUnmanaged(Id, graphics.Image) = .empty;
+var maxFileSize: usize = 0;
 
 pub fn init(io_: std.Io, gpa: std.mem.Allocator, maxSize: usize) void {
     io = io_;
     memory.init(gpa);
-    allocator = memory.allocator;
+    allocator = memory.allocator.raw;
+    maxFileSize = maxSize;
 
     sk.fetch.setup(.{
         .num_lanes = fileBuffer.len,
         .logger = .{ .func = sk.log.func },
         .allocator = @bitCast(memory.skAllocator),
     });
-    for (&fileBuffer) |*buffer| buffer.* = oomAlloc(u8, maxSize);
 }
 
-pub fn initCaches(allocator1: std.mem.Allocator) void {
-    allocator, imageCache = .{ allocator1, .empty };
+pub fn initCaches(allocator_: std.mem.Allocator) void {
+    allocator, imageCache = .{ allocator_, .empty };
     atlas.cache = .empty;
     view.cache, file.cache = .{ .empty, .empty };
     sound.cache, music.cache = .{ .empty, .empty };
@@ -43,7 +44,7 @@ pub fn deinit() void {
     music.deinit();
     file.deinit();
     if (sk.fetch.valid()) sk.fetch.shutdown();
-    for (&fileBuffer) |buffer| free(buffer);
+    for (&fileBuffer) |buffer| if (buffer.len != 0) free(buffer);
 }
 
 pub fn oomAlloc(comptime T: type, n: usize) []T {
@@ -199,12 +200,12 @@ pub const Icon = png.Image;
 const IconHandler = fn (u64, Icon) void;
 pub fn loadIcon(path: Path, handle: u64, handler: IconHandler) void {
     _ = file.load(path, handle, struct {
-        fn callback(response: Response) []const u8 {
-            const icon = png.load(allocator, response.data) catch |err| {
-                std.debug.panic("{s}: {}", .{ response.path, err });
+        fn callback(resp: Response) []const u8 {
+            const icon = png.loadIcon(allocator, resp.data) catch |err| {
+                std.debug.panic("{s}: {}", .{ resp.path, err });
             };
             defer allocator.free(icon.data);
-            handler(response.index, icon);
+            handler(resp.index, icon);
             return &.{};
         }
     }.callback);
@@ -220,17 +221,17 @@ const view = struct {
         return imageView;
     }
 
-    fn handler(response: Response) []const u8 {
-        const img = png.load(allocator, response.data) catch |err| {
-            std.debug.panic("{s}: {}", .{ response.path, err });
+    fn handler(resp: Response) []const u8 {
+        const img = png.load(allocator, resp.data) catch |err| {
+            std.debug.panic("{s}: {}", .{ resp.path, err });
         };
         defer allocator.free(img.data);
-        const imageView: sk.gfx.View = .{ .id = @intCast(response.index) };
+        const imageView: sk.gfx.View = .{ .id = @intCast(resp.index) };
 
         sk.gfx.initView(imageView, .{ .texture = .{
             .image = makeImage(img.width, img.height, 1, img.data),
         } });
-        if (imageCache.getPtr(id(response.path))) |image| {
+        if (imageCache.getPtr(id(resp.path))) |image| {
             image.size = .{
                 .x = @floatFromInt(img.width),
                 .y = @floatFromInt(img.height),
@@ -264,8 +265,8 @@ const sound = struct {
         return null;
     }
 
-    fn handler(response: Response) []const u8 {
-        const data = response.data.items;
+    fn handler(resp: Response) []const u8 {
+        const data = resp.data.items;
 
         const stbAudio = c.stbAudio.loadFromMemory(data);
         defer c.stbAudio.unload(stbAudio);
@@ -276,13 +277,13 @@ const sound = struct {
         const samples = oomAlloc(f32, @intCast(size));
         _ = c.stbAudio.fillSamples(stbAudio, samples, channels);
 
-        cache.put(allocator, id(response.path), .{
+        cache.put(allocator, id(resp.path), .{
             .samples = samples,
             .channels = @intCast(channels),
         }) catch oom();
         // 冷加载首次补播只保留 loop，left/right 使用默认值。
-        _ = audio.playSoundOption(response.path, .{
-            .loop = response.index == 1,
+        _ = audio.playSoundOption(resp.path, .{
+            .loop = resp.index == 1,
         });
         return std.mem.sliceAsBytes(samples);
     }
@@ -298,11 +299,11 @@ const music = struct {
         return null;
     }
 
-    fn handler(response: Response) []const u8 {
-        const data = oomDupe(u8, response.data.items);
+    fn handler(resp: Response) []const u8 {
+        const data = oomDupe(u8, resp.data.items);
         const stbAudio = c.stbAudio.loadFromMemory(data);
-        cache.put(allocator, id(response.path), stbAudio) catch oom();
-        audio.playMusicOption(response.path, response.index == 1);
+        cache.put(allocator, id(resp.path), stbAudio) catch oom();
+        audio.playMusicOption(resp.path, resp.index == 1);
         return data;
     }
 
@@ -358,33 +359,37 @@ pub const file = struct {
     }
 
     fn callback(responses: [*c]const sk.fetch.Response) callconv(.c) void {
-        const res = responses[0];
-        if (res.failed) {
+        const resp = responses[0];
+        if (resp.failed) {
             const msg = "assets load failed, path: {s}, error code: {}";
-            std.debug.panic(msg, .{ res.path, res.error_code });
+            std.debug.panic(msg, .{ resp.path, resp.error_code });
         }
-        if (res.dispatched) {
-            const buffer = sk.fetch.asRange(fileBuffer[res.lane]);
-            sk.fetch.bindBuffer(res.handle, buffer);
+        if (resp.dispatched) {
+            std.debug.assert(fileBuffer[resp.lane].len == 0);
+            fileBuffer[resp.lane] = oomAlloc(u8, maxFileSize);
+            const buffer = sk.fetch.asRange(fileBuffer[resp.lane]);
+            sk.fetch.bindBuffer(resp.handle, buffer);
             return;
         }
 
-        const filePath = std.mem.span(res.path);
+        const filePath = std.mem.span(resp.path);
         std.log.info("loaded from: {s}", .{filePath});
         const path = filePath[assetRoot.len..];
 
-        const value = cache.getPtr(id(path)) orelse return;
+        const value = cache.getPtr(id(path)).?;
         const response: Response = .{
             .index = value.index,
             .path = path,
             .data = .{
-                .items = fileBuffer[res.lane][0..res.data.size],
-                .capacity = fileBuffer[res.lane].len,
+                .items = fileBuffer[resp.lane][0..resp.data.size],
+                .capacity = fileBuffer[resp.lane].len,
             },
         };
         value.state = .loaded;
         value.managed = value.handler(response);
         value.state = .handled;
+        free(fileBuffer[resp.lane]);
+        fileBuffer[resp.lane] = &.{};
     }
 
     pub fn deinit() void {
