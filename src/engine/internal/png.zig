@@ -28,8 +28,8 @@ const Color = enum(u8) {
 const Filter = enum(u8) { none, sub, up, average, paeth };
 
 const Header = extern struct {
-    width: u32,
-    height: u32,
+    width: u32 align(1),
+    height: u32 align(1),
     bitDepth: u8,
     color: Color,
     compression: u8,
@@ -38,7 +38,6 @@ const Header = extern struct {
 };
 
 const Range = struct { start: usize, end: usize };
-const headerLen = 13;
 
 const ChunkData = struct {
     kind: Chunk,
@@ -252,10 +251,10 @@ fn readHeader(reader: *Reader) !Header {
 
     const first = try readChunk(reader);
     if (first.kind != .IHDR) return error.InvalidHeader;
-    if (first.data.len != headerLen) return error.InvalidHeader;
+    if (first.data.len != 13) return error.InvalidHeader;
 
-    var header = std.mem.bytesToValue(Header, first.data);
-    std.mem.byteSwapAllFields(Header, &header);
+    var dataReader = Reader.fixed(first.data);
+    const header = try dataReader.takeStruct(Header, .big);
 
     if (header.width == 0 or header.height == 0) return error.InvalidHeader;
     if (header.width > 16384) return error.ImageTooLarge;
