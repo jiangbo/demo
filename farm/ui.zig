@@ -31,24 +31,24 @@ pub fn deinit() void {}
 
 pub fn openPause(mode: pause.Mode) void {
     pause.open(mode);
+    if (mode == .play) {
+        activePopup = .pause;
+    }
 }
 
 pub fn openRest() void {
     rest.hours = 8;
     activePopup = .rest;
-    popupMessage = null;
 }
 
 pub fn update(world: *zhu.ecs.World) ?UiRequest {
     if (activePopup) |active| {
-        if (updatePopup(active, world)) |request| return request;
+        if (updatePopup(active, world)) |req| return req;
         return .block;
     }
 
     if (!context.input.pressed(.pause)) return null;
     openPause(.play);
-    activePopup = .pause;
-    popupMessage = null;
     return .block;
 }
 
@@ -57,7 +57,7 @@ fn updatePopup(active: Popup, world: *zhu.ecs.World) ?UiRequest {
         .save => {
             if (save_slot.update(world)) |result| {
                 switch (result) {
-                    .close => activePopup = null,
+                    .close => close(),
                     .message => |next| {
                         popupMessage = next;
                         activePopup = .pause;
@@ -65,22 +65,24 @@ fn updatePopup(active: Popup, world: *zhu.ecs.World) ?UiRequest {
                     .farmLoad => unreachable,
                 }
             }
-            if (save_slot.takeClosePause()) activePopup = null;
+            if (save_slot.takeClosePause()) close();
         },
         .rest => if (rest.update()) |req| switch (req) {
-            .close => activePopup = null,
+            .close => close(),
             .rest => |hours| {
-                activePopup = null;
+                close();
                 return .{ .rest = hours };
             },
         },
         .pause => if (pause.update()) |req| switch (req) {
-            .close => activePopup = null,
+            .close => close(),
             .save => {
+                popupMessage = null;
                 save_slot.enter(.pauseSave);
                 activePopup = .save;
             },
             .load => {
+                popupMessage = null;
                 save_slot.enter(.pauseLoad);
                 activePopup = .save;
             },
