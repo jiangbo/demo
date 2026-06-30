@@ -8,7 +8,6 @@ pub const Command = enum {
     moveDown,
     pause,
     interact,
-    confirm,
     inventory,
     hotbar,
     hotbar1,
@@ -65,12 +64,4 @@ pub fn hotbarPressed(self: *const @This()) ?u8 {
         if (self.pressed(command)) return @intCast(value - first);
     }
     return null;
-}
-
-pub fn menuNav(self: *const @This()) zhu.widget.Menu.Nav {
-    return .{
-        .up = self.pressed(.moveUp),
-        .down = self.pressed(.moveDown),
-        .confirm = self.pressed(.confirm),
-    };
 }

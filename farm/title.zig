@@ -48,7 +48,7 @@ pub fn update(delta: f32) ?Request {
         return null;
     }
 
-    if (mainMenu.update(.{ .nav = state.input.menuNav() })) |value| {
+    if (mainMenu.update(.{})) |value| {
         switch (@as(Button, @enumFromInt(value))) {
             .start => return .start,
             .load => {

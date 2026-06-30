@@ -370,9 +370,17 @@ pub fn StackStore(T: type, patchSize: usize, limitOf: fn (T) u32) type {
 
 pub const Menu = struct {
     pub const Nav = struct {
+        pub const none: Nav = .{};
+
         up: bool = false,
         down: bool = false,
         confirm: bool = false,
+    };
+
+    pub const NavKeys = struct {
+        up: []const input.key.Code = &.{ .UP, .W },
+        down: []const input.key.Code = &.{ .DOWN, .S },
+        confirm: []const input.key.Code = &.{ .ENTER, .SPACE, .F },
     };
 
     pub const Option = struct {
@@ -394,6 +402,7 @@ pub const Menu = struct {
         option: text.Option = .{ .anchor = .center },
     } = .{},
     buttons: []const Button = &.{},
+    navKeys: NavKeys = .{},
     hoverSound: ?[:0]const u8 = null,
     clickSound: ?[:0]const u8 = null,
     disabled: []const usize = &.{},
@@ -421,14 +430,15 @@ pub const Menu = struct {
             if (touched) self.selected = hover;
         }
 
-        if (option.nav) |nav| {
-            self.selectByNav(nav, option.wrap);
+        const nav = option.nav orelse self.defaultNav();
+        self.selectByNav(nav, option.wrap);
 
-            if (nav.confirm) if (self.selected) |index| {
+        if (nav.confirm) if (self.selected) |index| {
+            if (!self.isDisabled(index)) {
                 if (self.clickSound) |sound| audio.playSound(sound);
                 return self.buttons[index].event;
-            };
-        }
+            }
+        };
 
         if (self.selected) |index| {
             if (index != previous) if (self.hoverSound) |sound| {
@@ -439,6 +449,15 @@ pub const Menu = struct {
         const index = self.click.update(hover) orelse return null;
         if (self.clickSound) |sound| audio.playSound(sound);
         return self.buttons[index].event;
+    }
+
+    fn defaultNav(self: Menu) Nav {
+        const keys = self.navKeys;
+        return .{
+            .up = input.key.anyPressed(keys.up),
+            .down = input.key.anyPressed(keys.down),
+            .confirm = input.key.anyPressed(keys.confirm),
+        };
     }
 
     fn mouseHover(self: Menu) ?usize {
