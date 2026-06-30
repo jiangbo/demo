@@ -7,6 +7,7 @@ test {
     std.testing.refAllDecls(@import("factory.zig"));
     std.testing.refAllDecls(@import("interact.zig"));
     std.testing.refAllDecls(@import("save.zig"));
+    std.testing.refAllDecls(@import("state.zig"));
     std.testing.refAllDecls(@import("ui.zig"));
     std.testing.refAllDecls(@import("system/animation.zig"));
     std.testing.refAllDecls(@import("system/control.zig"));

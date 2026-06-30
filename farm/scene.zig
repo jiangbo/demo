@@ -8,6 +8,7 @@ const inventory = @import("inventory.zig");
 const interact = @import("interact.zig");
 const map = @import("map.zig");
 const save = @import("save.zig");
+const state = @import("state.zig");
 const title = @import("title.zig");
 const ui = @import("ui.zig");
 
@@ -46,6 +47,7 @@ var mapFade: MapFade = .{};
 var debug = false;
 var current: Scene = .title;
 var pending: ?Scene = null;
+var session: state.Session = .{};
 
 pub fn init(allocator_: zhu.Allocator) void {
     allocator = allocator_;

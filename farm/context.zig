@@ -63,7 +63,7 @@ pub const input = struct {
     pub var mouseCaptured: bool = false;
 
     const Entry = struct { type: Command, value: []const zhu.key.Code };
-    const zon: []const Entry = @import("zon/input.zon");
+    const zon: []const Entry = @import("state/input.zon");
     const keys = zhu.enums.fromEntries(Entry, zon);
     const Mouse = zhu.mouse.Button;
 
