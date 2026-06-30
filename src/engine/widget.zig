@@ -375,12 +375,14 @@ pub const Menu = struct {
         up: bool = false,
         down: bool = false,
         confirm: bool = false,
+        cancel: bool = false,
     };
 
     pub const NavKeys = struct {
         up: []const input.key.Code = &.{ .UP, .W },
         down: []const input.key.Code = &.{ .DOWN, .S },
         confirm: []const input.key.Code = &.{ .ENTER, .SPACE, .F },
+        cancel: []const input.key.Code = &.{.ESCAPE},
     };
 
     pub const Option = struct {
@@ -403,6 +405,7 @@ pub const Menu = struct {
     } = .{},
     buttons: []const Button = &.{},
     navKeys: NavKeys = .{},
+    cancelEvent: ?usize = null,
     hoverSound: ?[:0]const u8 = null,
     clickSound: ?[:0]const u8 = null,
     disabled: []const usize = &.{},
@@ -433,6 +436,8 @@ pub const Menu = struct {
         const nav = option.nav orelse self.defaultNav();
         self.selectByNav(nav, option.wrap);
 
+        if (nav.cancel) if (self.cancelEvent) |event| return event;
+
         if (nav.confirm) if (self.selected) |index| {
             if (!self.isDisabled(index)) {
                 if (self.clickSound) |sound| audio.playSound(sound);
@@ -457,6 +462,7 @@ pub const Menu = struct {
             .up = input.key.anyPressed(keys.up),
             .down = input.key.anyPressed(keys.down),
             .confirm = input.key.anyPressed(keys.confirm),
+            .cancel = input.key.anyPressed(keys.cancel),
         };
     }
 

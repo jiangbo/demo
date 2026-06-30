@@ -159,10 +159,6 @@ pub const rest = struct {
     var menu: zhu.widget.Menu = menus[5];
 
     pub fn update() ?Request {
-        if (state.input.pressed(.pause)) {
-            return .close;
-        }
-
         const event = menu.update(.{}) orelse return null;
         switch (@as(MenuEvent, @enumFromInt(event))) {
             .minus => hours -= 1,
@@ -216,15 +212,6 @@ pub const save = struct {
     }
 
     pub fn update() ?Request {
-        if (state.input.pressed(.pause)) {
-            if (confirmSlot != null) {
-                confirmSlot = null;
-                return null;
-            }
-
-            return .close;
-        }
-
         if (confirmSlot) |slot| {
             if (confirmMenu.update(.{})) |event| {
                 switch (event) {
@@ -333,8 +320,6 @@ pub const pause = struct {
     }
 
     pub fn update() ?Request {
-        if (state.input.pressed(.pause)) return .close;
-
         if (menu.update(.{})) |event| switch (event) {
             0 => return .close,
             1 => return .save, // 选择槽位后保存
