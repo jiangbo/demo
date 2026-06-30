@@ -5,6 +5,7 @@
     .{ .type = .moveDown, .value = .{ .S, .DOWN } },
     .{ .type = .pause, .value = .{ .P, .ESCAPE } },
     .{ .type = .interact, .value = .{.F} },
+    .{ .type = .confirm, .value = .{ .ENTER, .SPACE } },
     .{ .type = .inventory, .value = .{.I} },
     .{ .type = .hotbar, .value = .{.TAB} },
     .{ .type = .hotbar1, .value = .{._1} },

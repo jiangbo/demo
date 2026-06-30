@@ -81,14 +81,14 @@ pub fn deinit() void {
 pub fn update(delta: f32) void {
     if (zhu.key.released(.X)) debug = !debug;
 
-    context.input.mouseCaptured = false;
+    state.input.mouseCaptured = false;
     applyScene();
 
     if (updateMapFade(delta)) return;
 
     switch (current) {
-        .title => if (title.update(delta)) |request| {
-            switch (request) {
+        .title => if (title.update(delta)) |req| {
+            switch (req) {
                 .start => pending = .{ .play = null },
                 .load => |slot| pending = .{ .play = slot },
             }

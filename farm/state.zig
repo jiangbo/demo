@@ -3,6 +3,6 @@ const zhu = @import("zhu");
 
 pub const Input = @import("state/Input.zig");
 
-pub const Session = struct {
-    input: Input = .{},
-};
+pub var input: Input = .{};
+
+pub const Session = struct {};

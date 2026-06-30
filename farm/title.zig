@@ -1,7 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const context = @import("context.zig");
+const state = @import("state.zig");
 const ui = @import("ui.zig");
 
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
@@ -41,14 +41,14 @@ pub fn update(delta: f32) ?Request {
 
     if (popup) |active| return updatePopup(active);
 
-    const pauseKey = context.input.pressed(.pause);
-    if (pauseKey or pauseButton.update() != null) {
+    const pauseKey = state.input.pressed(.pause);
+    if (pauseKey or pauseButton.update(.{}) != null) {
         ui.pause.open(.title);
         popup = .pause;
         return null;
     }
 
-    if (mainMenu.update()) |value| {
+    if (mainMenu.update(.{ .nav = state.input.menuNav() })) |value| {
         switch (@as(Button, @enumFromInt(value))) {
             .start => return .start,
             .load => {

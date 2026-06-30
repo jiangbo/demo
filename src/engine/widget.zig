@@ -20,7 +20,7 @@ pub const Button = struct {
     };
 
     rect: math.Rect,
-    event: u8,
+    event: usize,
     label: []const u8 = "",
     patch: ?graphics.NineImage.Patch = null,
     normal: Style = .{},
@@ -369,6 +369,17 @@ pub fn StackStore(T: type, patchSize: usize, limitOf: fn (T) u32) type {
 }
 
 pub const Menu = struct {
+    pub const Nav = struct {
+        up: bool = false,
+        down: bool = false,
+        confirm: bool = false,
+    };
+
+    pub const Option = struct {
+        nav: ?Nav = null,
+        wrap: bool = true,
+    };
+
     position: math.Vector2 = .zero,
     overlay: ?graphics.Color = null,
     panel: struct {
@@ -386,11 +397,13 @@ pub const Menu = struct {
     hoverSound: ?[:0]const u8 = null,
     clickSound: ?[:0]const u8 = null,
     disabled: []const usize = &.{},
+    selected: ?usize = null,
     click: Click = .empty,
 
     pub fn init(position: math.Vector2, menu: Menu) Menu {
         var result = menu;
         result.position = position;
+        result.selected = null;
         result.click = .empty;
         return result;
     }
@@ -399,16 +412,25 @@ pub const Menu = struct {
         self.position = window.size.sub(self.panel.size).scale(0.5);
     }
 
-    pub fn update(self: *Menu) ?u8 {
-        const previous = self.click.hover;
+    pub fn update(self: *Menu, option: Option) ?usize {
+        const previous = self.selected;
+        const hover = self.mouseHover();
 
-        const hover = blk: for (self.buttons, 0..) |button, index| {
-            if (self.isDisabled(index)) continue;
-            const rect = button.rect.move(self.position);
-            if (rect.contains(window.mouse)) break :blk index;
-        } else null;
+        if (input.mouse.changed) {
+            const touched = hover != null or self.click.hover != null;
+            if (touched) self.selected = hover;
+        }
 
-        if (hover) |index| {
+        if (option.nav) |nav| {
+            self.selectByNav(nav, option.wrap);
+
+            if (nav.confirm) if (self.selected) |index| {
+                if (self.clickSound) |sound| audio.playSound(sound);
+                return self.buttons[index].event;
+            };
+        }
+
+        if (self.selected) |index| {
             if (index != previous) if (self.hoverSound) |sound| {
                 audio.playSound(sound);
             };
@@ -417,6 +439,15 @@ pub const Menu = struct {
         const index = self.click.update(hover) orelse return null;
         if (self.clickSound) |sound| audio.playSound(sound);
         return self.buttons[index].event;
+    }
+
+    fn mouseHover(self: Menu) ?usize {
+        for (self.buttons, 0..) |button, index| {
+            if (self.isDisabled(index)) continue;
+            const rect = button.rect.move(self.position);
+            if (rect.contains(window.mouse)) return index;
+        }
+        return null;
     }
 
     pub fn draw(self: Menu) void {
@@ -461,7 +492,7 @@ pub const Menu = struct {
     pub fn buttonState(self: Menu, index: usize) Button.State {
         if (self.isDisabled(index)) return .disabled;
 
-        const hover = self.click.hover == index;
+        const hover = self.selected == index;
         if (self.click.pressed) |pressed| {
             if (pressed == index and hover) return .pressed;
         }
@@ -471,5 +502,55 @@ pub const Menu = struct {
     fn isDisabled(self: Menu, index: usize) bool {
         for (self.disabled) |d| if (d == index) return true;
         return false;
+    }
+
+    fn selectByNav(self: *Menu, nav: Nav, wrap: bool) void {
+        if (self.buttons.len == 0 or nav.up == nav.down) return;
+        if (wrap) {
+            if (nav.down) self.downWrap() else self.upWrap();
+            return;
+        }
+        if (nav.down) self.down() else self.up();
+    }
+
+    fn up(self: *Menu) void {
+        var index = self.selected orelse self.buttons.len;
+        while (index > 0) {
+            index -= 1;
+            if (self.isDisabled(index)) continue;
+            self.selected = index;
+            return;
+        }
+    }
+
+    fn down(self: *Menu) void {
+        const start = if (self.selected) |v| v + 1 else 0;
+        for (start..self.buttons.len) |index| {
+            if (self.isDisabled(index)) continue;
+            self.selected = index;
+            return;
+        }
+    }
+
+    fn upWrap(self: *Menu) void {
+        var index = self.selected orelse 0;
+        for (0..self.buttons.len) |_| {
+            if (index == 0) index = self.buttons.len;
+            index -= 1;
+            if (self.isDisabled(index)) continue;
+            self.selected = index;
+            return;
+        }
+    }
+
+    fn downWrap(self: *Menu) void {
+        var index = self.selected orelse self.buttons.len - 1;
+        for (0..self.buttons.len) |_| {
+            index += 1;
+            if (index == self.buttons.len) index = 0;
+            if (self.isDisabled(index)) continue;
+            self.selected = index;
+            return;
+        }
     }
 };

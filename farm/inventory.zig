@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const context = @import("context.zig");
 const factory = @import("factory.zig");
+const state = @import("state.zig");
 
 const ItemEnum = component.item.ItemEnum;
 const ImageId = zhu.graphics.ImageId;
@@ -140,7 +141,7 @@ pub const bag = struct {
     }
 
     fn update() void {
-        if (context.input.pressed(.inventory)) {
+        if (state.input.pressed(.inventory)) {
             closed = !closed;
             if (closed) click, drag = .{ .empty, null };
         }
@@ -345,12 +346,12 @@ pub const bar = struct {
     }
 
     fn update() void {
-        if (context.input.pressed(.hotbar)) {
+        if (state.input.pressed(.hotbar)) {
             visible = !visible;
             click = .empty;
         }
 
-        if (context.input.hotbarPressed()) |index| active = index;
+        if (state.input.hotbarPressed()) |index| active = index;
 
         if (!visible) return;
 
@@ -427,12 +428,12 @@ const itemDrag = struct {
 
     const threshold2: f32 = 9;
 
-    var state: ?State = null;
+    var dragState: ?State = null;
 
     fn update() void {
         if (zhu.mouse.pressed(.LEFT)) start();
 
-        if (state) |*current| {
+        if (dragState) |*current| {
             const offset = zhu.window.mouse.sub(current.start);
             if (offset.length2() >= threshold2) current.moved = true;
 
@@ -441,12 +442,12 @@ const itemDrag = struct {
     }
 
     fn start() void {
-        state = null;
+        dragState = null;
 
         if (bag.hoveredSlotIndex()) |index| {
             const slot = store.getPtr(index) orelse return;
 
-            state = .{
+            dragState = .{
                 .source = .{ .bag = index },
                 .bagIndex = index,
                 .item = slot.*,
@@ -459,7 +460,7 @@ const itemDrag = struct {
         const bagIndex = bar.refs[barIndex] orelse return;
         const slot = store.getPtr(bagIndex) orelse return;
 
-        state = .{
+        dragState = .{
             .source = .{ .bar = barIndex },
             .bagIndex = bagIndex,
             .item = slot.*,
@@ -468,8 +469,8 @@ const itemDrag = struct {
     }
 
     fn finish() void {
-        const current = state orelse return;
-        state = null;
+        const current = dragState orelse return;
+        dragState = null;
 
         if (!current.moved) return;
 
@@ -506,7 +507,7 @@ const itemDrag = struct {
     }
 
     fn hideBag(index: usize) bool {
-        const current = state orelse return false;
+        const current = dragState orelse return false;
         if (!current.moved) return false;
         return switch (current.source) {
             .bag => |source| source == index,
@@ -515,7 +516,7 @@ const itemDrag = struct {
     }
 
     fn hideBar(index: usize) bool {
-        const current = state orelse return false;
+        const current = dragState orelse return false;
         if (!current.moved) return false;
         return switch (current.source) {
             .bar => |source| source == index,
@@ -524,7 +525,7 @@ const itemDrag = struct {
     }
 
     fn draw() void {
-        const current = state orelse return;
+        const current = dragState orelse return;
         if (!current.moved) return;
 
         zhu.camera.push(.window);
@@ -551,7 +552,8 @@ const itemDrag = struct {
 pub fn reset() void {
     bag.reset();
     bar.reset();
-    itemDrag.state = null;
+    itemDrag.dragState = null;
+    state.input.mouseCaptured = false;
 }
 
 pub fn capture() Save {
@@ -592,28 +594,28 @@ pub fn update() void {
 
     bag.update();
     if (panelDragging or bag.drag != null) {
-        context.input.mouseCaptured = true;
+        state.input.mouseCaptured = true;
         return;
     }
 
     if (updateUseItem()) {
-        context.input.mouseCaptured = true;
+        state.input.mouseCaptured = true;
         return;
     }
 
     bar.update();
     itemDrag.update();
 
-    if (itemDrag.state != null or bag.drag != null or
+    if (itemDrag.dragState != null or bag.drag != null or
         bag.click.captured or bar.click.captured)
     {
-        context.input.mouseCaptured = true;
+        state.input.mouseCaptured = true;
     }
 }
 
 fn updateUseItem() bool {
-    if (itemDrag.state != null or bag.drag != null) return false;
-    if (!context.input.mousePressed(.RIGHT)) return false;
+    if (itemDrag.dragState != null or bag.drag != null) return false;
+    if (!state.input.mousePressed(.RIGHT)) return false;
 
     const index = hoveredBagIndex() orelse return false;
     switch (bag.useByIndex(index)) {
@@ -642,7 +644,7 @@ pub fn draw() void {
 }
 
 fn tooltipItem() ?ItemEnum {
-    if (itemDrag.state != null or bag.drag != null) return null;
+    if (itemDrag.dragState != null or bag.drag != null) return null;
 
     if (bag.hoveredSlotIndex()) |index| {
         const slot = store.getPtr(index) orelse return null;
@@ -729,8 +731,6 @@ test "右键背包槽会使用物品" {
     reset();
     defer reset();
 
-    context.input.mouseCaptured = false;
-    defer context.input.mouseCaptured = false;
     bag.closed = false;
     store.stacks[0] = .{ .item = .strawberry, .count = 2 };
     zhu.window.mouse = bag.position.add(bag.zon.slots[0]).add(.xy(1, 1));
@@ -738,7 +738,7 @@ test "右键背包槽会使用物品" {
 
     update();
 
-    try std.testing.expect(context.input.mouseCaptured);
+    try std.testing.expect(state.input.mouseCaptured);
     try std.testing.expectEqual(.strawberry, store.stacks[0].item);
     try std.testing.expectEqual(1, store.stacks[0].count);
     try std.testing.expectEqual(.strawberrySeed, store.stacks[1].item);
@@ -751,8 +751,6 @@ test "右键快捷栏会使用绑定的背包槽" {
     reset();
     defer reset();
 
-    context.input.mouseCaptured = false;
-    defer context.input.mouseCaptured = false;
     store.stacks[5] = .{ .item = .potato, .count = 1 };
     bar.refs[2] = 5;
     zhu.window.mouse = bar.zon.position.add(bar.zon.slots[2]).add(.xy(1, 1));
@@ -760,7 +758,7 @@ test "右键快捷栏会使用绑定的背包槽" {
 
     update();
 
-    try std.testing.expect(context.input.mouseCaptured);
+    try std.testing.expect(state.input.mouseCaptured);
     try std.testing.expectEqual(.potatoSeed, store.stacks[5].item);
     try std.testing.expectEqual(3, store.stacks[5].count);
 }
@@ -773,7 +771,6 @@ test "右键使用物品成功后显示获得提示" {
     reset();
     defer reset();
 
-    context.input.mouseCaptured = false;
     bag.closed = false;
     store.stacks[0] = .{ .item = .potato, .count = 1 };
     zhu.window.mouse = bag.position.add(bag.zon.slots[0]).add(.xy(1, 1));
@@ -794,7 +791,6 @@ test "右键使用物品空间不足时显示背包已满" {
     reset();
     defer reset();
 
-    context.input.mouseCaptured = false;
     bag.closed = false;
     @memset(store.stacks, .{ .item = .potato, .count = 99 });
     store.stacks[0] = .{ .item = .strawberry, .count = 2 };

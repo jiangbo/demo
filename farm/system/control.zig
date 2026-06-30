@@ -2,9 +2,9 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
-const context = @import("../context.zig");
 const inventory = @import("../inventory.zig");
 const map = @import("../map.zig");
+const state = @import("../state.zig");
 
 const Actor = component.actor.Actor;
 const Facing = component.actor.Facing;
@@ -60,17 +60,17 @@ fn updateMovement(world: *World, player: Entity) void {
 
 fn readDirection() zhu.Vector2 {
     var direction: zhu.Vector2 = .zero;
-    if (context.input.held(.moveLeft)) direction.x -= 1;
-    if (context.input.held(.moveRight)) direction.x += 1;
-    if (context.input.held(.moveUp)) direction.y -= 1;
-    if (context.input.held(.moveDown)) direction.y += 1;
+    if (state.input.held(.moveLeft)) direction.x -= 1;
+    if (state.input.held(.moveRight)) direction.x += 1;
+    if (state.input.held(.moveUp)) direction.y -= 1;
+    if (state.input.held(.moveDown)) direction.y += 1;
 
     if (direction.length2() > 1) return direction.normalize();
     return direction;
 }
 
 fn targetPosition(world: *World, player: Entity) ?zhu.Vector2 {
-    if (context.input.mouseCaptured) return null;
+    if (state.input.mouseCaptured) return null;
 
     const playerPos = world.get(player, Position).?;
     const playerTile = map.data.worldToTilePosition(playerPos);
@@ -98,7 +98,7 @@ fn updateTargetAction(world: *World, player: Entity) void {
     target.position = position;
     target.active = true;
 
-    if (!context.input.mousePressed(.LEFT)) return;
+    if (!state.input.mousePressed(.LEFT)) return;
     const actor = world.getPtr(player, Actor).?;
     const playerPos = world.get(player, Position).?;
     // 朝向按点击位置计算，目标格只负责工具结算。
@@ -176,8 +176,6 @@ const testTarget = zhu.Vector2.xy(32, 48);
 test "玩家控制会把方向键写入速度" {
     zhu.input.reset();
     defer zhu.input.reset();
-    context.init();
-    defer context.init();
 
     setKey(.D);
     setKey(.W);
@@ -204,8 +202,6 @@ test "玩家控制会把方向键写入速度" {
 test "忙碌状态会跳过输入并保持动作" {
     zhu.input.reset();
     defer zhu.input.reset();
-    context.init();
-    defer context.init();
 
     setKey(.D);
 
@@ -226,8 +222,6 @@ test "忙碌状态会跳过输入并保持动作" {
 test "目标框只在工具或种子选中时显示" {
     zhu.input.reset();
     defer zhu.input.reset();
-    context.init();
-    defer context.init();
 
     zhu.camera.init(.xy(640, 360));
     zhu.window.mouse = .xy(32, 48);
@@ -249,8 +243,6 @@ test "目标框只在工具或种子选中时显示" {
 test "点击目标只写入使用意图" {
     zhu.input.reset();
     defer zhu.input.reset();
-    context.init();
-    defer context.init();
 
     zhu.camera.init(.xy(640, 360));
     zhu.window.mouse = testTarget;

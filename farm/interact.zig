@@ -7,6 +7,7 @@ const factory = @import("factory.zig");
 const inventory = @import("inventory.zig");
 const map = @import("map.zig");
 const spatial = map.spatial;
+const state = @import("state.zig");
 const ui = @import("ui.zig");
 
 const World = zhu.ecs.World;
@@ -29,7 +30,7 @@ pub fn update(world: *World) void {
     if (world.getIdentity(Dialog)) |target| checkDistance(world, target);
 
     // 交互按键由 input.zon 统一配置。
-    if (!context.input.pressed(.interact)) return;
+    if (!state.input.pressed(.interact)) return;
 
     if (world.getIdentity(Dialog)) |target| {
         advanceDialog(world, target);
@@ -391,8 +392,8 @@ test "宝箱在背包满时保留剩余奖励" {
     pressKey(.F);
     update(&world);
 
-    const state = world.get(chest, Chest).?;
-    try std.testing.expect(!state.opened);
+    const chestState = world.get(chest, Chest).?;
+    try std.testing.expect(!chestState.opened);
     try std.testing.expect(world.has(chest, Shape));
-    try std.testing.expectEqual(2, state.items.get(.strawberry));
+    try std.testing.expectEqual(2, chestState.items.get(.strawberry));
 }

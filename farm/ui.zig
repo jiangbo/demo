@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const context = @import("context.zig");
 const inventory = @import("inventory.zig");
+const state = @import("state.zig");
 const store = @import("save.zig");
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
 
@@ -51,7 +52,7 @@ pub fn update() ?UiRequest {
         return .block;
     }
 
-    if (!context.input.pressed(.pause)) return null;
+    if (!state.input.pressed(.pause)) return null;
     openPause();
     return .block;
 }
@@ -132,9 +133,9 @@ pub fn draw(world: *zhu.ecs.World) void {
 pub const notice = struct {
     pub fn update(delta: f32) void {
         for (std.enums.values(context.notice.Channel)) |channel| {
-            const state = context.notice.state(channel);
-            if (state.timer <= 0) continue;
-            state.timer -= delta;
+            const noticeState = context.notice.state(channel);
+            if (noticeState.timer <= 0) continue;
+            noticeState.timer -= delta;
         }
     }
 
@@ -158,11 +159,11 @@ pub const rest = struct {
     var menu: zhu.widget.Menu = menus[5];
 
     pub fn update() ?Request {
-        if (context.input.pressed(.pause)) {
+        if (state.input.pressed(.pause)) {
             return .close;
         }
 
-        const event = menu.update() orelse return null;
+        const event = menu.update(.{}) orelse return null;
         switch (@as(MenuEvent, @enumFromInt(event))) {
             .minus => hours -= 1,
             .plus => hours += 1,
@@ -215,7 +216,7 @@ pub const save = struct {
     }
 
     pub fn update() ?Request {
-        if (context.input.pressed(.pause)) {
+        if (state.input.pressed(.pause)) {
             if (confirmSlot != null) {
                 confirmSlot = null;
                 return null;
@@ -225,7 +226,7 @@ pub const save = struct {
         }
 
         if (confirmSlot) |slot| {
-            if (confirmMenu.update()) |event| {
+            if (confirmMenu.update(.{})) |event| {
                 switch (event) {
                     0 => {
                         confirmSlot = null;
@@ -238,7 +239,7 @@ pub const save = struct {
             return null;
         }
 
-        if (slotMenu.update()) |event| {
+        if (slotMenu.update(.{})) |event| {
             const backEvent: u8 = @intCast(slots.len);
             if (event == backEvent) {
                 return .close;
@@ -332,9 +333,9 @@ pub const pause = struct {
     }
 
     pub fn update() ?Request {
-        if (context.input.pressed(.pause)) return .close;
+        if (state.input.pressed(.pause)) return .close;
 
-        if (menu.update()) |event| switch (event) {
+        if (menu.update(.{})) |event| switch (event) {
             0 => return .close,
             1 => return .save, // 选择槽位后保存
             2 => return .load, // 选择槽位后读取
@@ -396,10 +397,10 @@ pub const dialog = struct {
         const Dialog = component.actor.Dialog;
 
         const entity = world.getIdentity(Dialog) orelse return;
-        const state = world.get(entity, Dialog).?;
-        if (state.index >= state.lines.len) return;
+        const dialogState = world.get(entity, Dialog).?;
+        if (dialogState.index >= dialogState.lines.len) return;
 
-        const text = state.lines[state.index];
+        const text = dialogState.lines[dialogState.index];
 
         const pos = world.get(entity, component.Position).?;
         drawBubble(pos, text);
