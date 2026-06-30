@@ -8,7 +8,6 @@ test {
     std.testing.refAllDecls(@import("interact.zig"));
     std.testing.refAllDecls(@import("save.zig"));
     std.testing.refAllDecls(@import("ui.zig"));
-    std.testing.refAllDecls(@import("ui/save_slot.zig"));
     std.testing.refAllDecls(@import("system/animation.zig"));
     std.testing.refAllDecls(@import("system/control.zig"));
     std.testing.refAllDecls(@import("system/farm.zig"));

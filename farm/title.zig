@@ -2,12 +2,11 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const context = @import("context.zig");
-const save_slot = @import("ui/save_slot.zig");
 const ui = @import("ui.zig");
 
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
 
-pub const Request = union(enum) { start, load: usize };
+pub const Request = union(enum) { start, load: u8 };
 const Button = enum(u8) { start, load, exit };
 const Popup = enum { pause, save };
 
@@ -44,7 +43,7 @@ pub fn update(delta: f32) ?Request {
 
     const pauseKey = context.input.pressed(.pause);
     if (pauseKey or pauseButton.update() != null) {
-        ui.openPause(.title);
+        ui.pause.open(.title);
         popup = .pause;
         return null;
     }
@@ -53,7 +52,7 @@ pub fn update(delta: f32) ?Request {
         switch (@as(Button, @enumFromInt(value))) {
             .start => return .start,
             .load => {
-                save_slot.enter(.titleLoad);
+                ui.save.open(.load);
                 popup = .save;
             },
             .exit => zhu.window.exit(),
@@ -72,9 +71,10 @@ fn updatePopup(active: Popup) ?Request {
             };
         },
         .save => {
-            if (save_slot.updateTitle()) |req| switch (req) {
+            if (ui.save.update()) |req| switch (req) {
                 .close => popup = null,
                 .load => |slot| return .{ .load = slot },
+                .save => unreachable,
             };
         },
     }
@@ -95,6 +95,6 @@ pub fn draw() void {
     pauseButton.draw();
     switch (popup orelse return) {
         .pause => ui.pause.draw(),
-        .save => save_slot.draw(),
+        .save => ui.save.draw(),
     }
 }

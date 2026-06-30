@@ -57,8 +57,9 @@ pub fn init(allocator_: zhu.Allocator) void {
     context.init();
     world = World.init(allocator.raw);
 
-    // UI 和数据模块先就位，后面的入场流程会立即使用它们。
-    ui.init();
+    // 存档状态先就位，UI 只持有这份长期有效的槽位切片。
+    save.init();
+    ui.init(&save.slots);
     title.init();
     map.init();
     factory.init();
@@ -88,17 +89,48 @@ pub fn update(delta: f32) void {
 
     switch (current) {
         .title => if (title.update(delta)) |request| {
-            pending = switch (request) {
-                .start => .{ .play = null },
-                .load => |slot| .{ .play = @intCast(slot) },
-            };
+            switch (request) {
+                .start => pending = .{ .play = null },
+                .load => |slot| pending = .{ .play = slot },
+            }
         },
         .play => {
-            if (ui.update(&world)) |result| {
+            if (ui.update()) |result| {
                 switch (result) {
                     .block => {},
                     .title => pending = .title,
                     .rest => |hours| context.clock.restHours = hours,
+                    .save => |slot| {
+                        save.saveSlot(&world, slot) catch |err| {
+                            std.log.err("save slot {} failed: {}", .{
+                                slot,
+                                err,
+                            });
+                            ui.showMessage(.{
+                                .text = "保存失败",
+                                .fail = true,
+                            });
+                            return;
+                        };
+                        ui.showMessage(.{
+                            .text = "保存成功",
+                            .fail = false,
+                        });
+                    },
+                    .load => |slot| {
+                        save.loadSlot(&world, slot) catch |err| {
+                            std.log.err("load slot {} failed: {}", .{
+                                slot,
+                                err,
+                            });
+                            ui.showMessage(.{
+                                .text = "读取失败",
+                                .fail = true,
+                            });
+                            return;
+                        };
+                        ui.close();
+                    },
                 }
                 return;
             }

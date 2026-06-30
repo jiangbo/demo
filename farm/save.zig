@@ -22,6 +22,14 @@ pub const SlotSummary = struct {
     timestamp: i64 = 0,
 };
 
+pub const Slot = union(enum) {
+    empty,
+    invalid,
+    valid: SlotSummary,
+};
+
+pub var slots: [slotCount]Slot = @splat(.empty);
+
 const TimeSave = struct {
     paused: bool = false,
     scale: f32 = 1,
@@ -57,12 +65,24 @@ const SaveData = struct {
     maps: []const MapSave = &.{},
 };
 
-pub fn slotPath(slot: usize, buffer: []u8) ![:0]const u8 {
+pub fn slotPath(slot: u8, buffer: []u8) ![:0]const u8 {
     if (slot >= slotCount) return error.InvalidSaveSlot;
     return try std.fmt.bufPrintZ(buffer, "saves/slot{d}.zon", .{slot});
 }
 
-pub fn saveSlot(world: *World, slot: usize) !void {
+pub fn init() void {
+    for (&slots, 0..) |*state, index| {
+        const slot: u8 = @intCast(index);
+        const summary = readSlotSummary(slot) catch |err| {
+            std.log.warn("slot {} summary failed: {}", .{ index, err });
+            state.* = .invalid;
+            continue;
+        };
+        state.* = if (summary) |value| .{ .valid = value } else .empty;
+    }
+}
+
+pub fn saveSlot(world: *World, slot: u8) !void {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
@@ -77,10 +97,14 @@ pub fn saveSlot(world: *World, slot: usize) !void {
     try std.zon.stringify.serialize(data, .{}, &writer);
     try zhu.window.saveAll(path, buffer[0..writer.end]);
 
+    slots[slot] = .{ .valid = .{
+        .day = data.time.day,
+        .timestamp = data.timestamp,
+    } };
     std.log.info("game saved: {s}", .{path});
 }
 
-pub fn loadSlot(world: *World, slot: usize) !void {
+pub fn loadSlot(world: *World, slot: u8) !void {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
@@ -91,7 +115,7 @@ pub fn loadSlot(world: *World, slot: usize) !void {
     std.log.info("game loaded: {s}", .{path});
 }
 
-pub fn readSlotSummary(slot: usize) !?SlotSummary {
+pub fn readSlotSummary(slot: u8) !?SlotSummary {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
@@ -280,11 +304,12 @@ fn restorePlayer(world: *World, data: PlayerSave) void {
 test "slotPath 会生成存档槽路径" {
     var buffer: [32]u8 = undefined;
     const path = try slotPath(3, &buffer);
+    const invalidSlot: u8 = slotCount;
 
     try std.testing.expectEqualStrings("saves/slot3.zon", path);
     try std.testing.expectError(
         error.InvalidSaveSlot,
-        slotPath(slotCount, &buffer),
+        slotPath(invalidSlot, &buffer),
     );
 }
 
@@ -327,13 +352,13 @@ test "inventory.restore 会恢复库存槽和快捷栏" {
     inventory.reset();
     defer inventory.reset();
 
-    const slots = [_]inventory.Stack{
+    const stacks = [_]inventory.Stack{
         .{ .item = .strawberrySeed, .count = 7 },
     };
     var data = inventory.Save{
         .activeHotbar = 3,
         .activePage = 1,
-        .slots = &slots,
+        .slots = &stacks,
     };
     data.hotbar[3] = 0;
 
