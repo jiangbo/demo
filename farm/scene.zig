@@ -30,9 +30,6 @@ const World = zhu.ecs.World;
 const actor = component.actor;
 const Position = component.Position;
 
-const initialTargetId: i32 = -1;
-const followSpeed: f32 = 9;
-
 const MapFade = struct {
     const Phase = enum { out, in };
 
@@ -94,48 +91,9 @@ pub fn update(delta: f32) void {
                 .load => |slot| pending = .{ .play = slot },
             }
         },
-        .play => {
-            if (ui.update()) |result| {
-                switch (result) {
-                    .block => {},
-                    .title => pending = .title,
-                    .rest => |hours| context.clock.restHours = hours,
-                    .save => |slot| {
-                        save.saveSlot(&world, slot) catch |err| {
-                            std.log.err("save slot {} failed: {}", .{
-                                slot,
-                                err,
-                            });
-                            ui.showMessage(.{
-                                .text = "保存失败",
-                                .fail = true,
-                            });
-                            return;
-                        };
-                        ui.showMessage(.{
-                            .text = "保存成功",
-                            .fail = false,
-                        });
-                    },
-                    .load => |slot| {
-                        save.loadSlot(&world, slot) catch |err| {
-                            std.log.err("load slot {} failed: {}", .{
-                                slot,
-                                err,
-                            });
-                            ui.showMessage(.{
-                                .text = "读取失败",
-                                .fail = true,
-                            });
-                            return;
-                        };
-                        ui.close();
-                    },
-                }
-                return;
-            }
-            updatePlay(delta);
-        },
+        .play => if (ui.update()) |req| {
+            return updatePlayUi(req);
+        } else updatePlay(delta),
     }
 }
 
@@ -177,6 +135,28 @@ fn drawDebug() void {
         }),
     }};
     zhu.debug.draw(&rows);
+}
+
+fn updatePlayUi(req: ui.UiRequest) void {
+    switch (req) {
+        .block => {},
+        .title => pending = .title,
+        .rest => |hours| context.clock.restHours = hours,
+        .save => |slot| {
+            if (!save.saveSlot(&world, slot)) {
+                ui.showMessage(.{ .text = "保存失败", .fail = true });
+                return;
+            }
+            ui.showMessage(.{ .text = "保存成功", .fail = false });
+        },
+        .load => |slot| {
+            if (!save.loadSlot(&world, slot)) {
+                ui.showMessage(.{ .text = "读取失败", .fail = true });
+                return;
+            }
+            ui.close();
+        },
+    }
 }
 
 fn updatePlay(delta: f32) void {
@@ -238,17 +218,8 @@ fn updateMapFade(delta: f32) bool {
 
 fn applyScene() void {
     const next = pending orelse return;
-    pending = null;
-
-    const previous = current;
-    std.log.info("apply scene: {s} -> {s}", .{
-        @tagName(previous),
-        @tagName(next),
-    });
-    current = next;
-
     ui.close();
-    switch (previous) {
+    switch (current) {
         .title => title.exit(),
         .play => {
             mapFade = .{};
@@ -256,6 +227,7 @@ fn applyScene() void {
             map.exit(&world);
         },
     }
+    current, pending = .{ next, null };
     enterScene(current);
 }
 
@@ -274,7 +246,7 @@ fn enterPlay(loadSlot: ?u8) void {
         context.map.resetStates();
     }
 
-    map.enter(&world, .exterior, initialTargetId);
+    map.enter(&world, .exterior, -1);
     inventory.reset();
     if (loadSlot == null) {
         _ = inventory.add(.hoe, 1);
@@ -286,14 +258,10 @@ fn enterPlay(loadSlot: ?u8) void {
 
     if (loadSlot) |slot| {
         // 存档恢复依赖已经存在的 world/map/player 基础结构。
-        save.loadSlot(&world, slot) catch |err| {
-            std.log.err("load slot {} failed when entering farm: {}", .{
-                slot,
-                err,
-            });
+        if (!save.loadSlot(&world, slot)) {
             pending = .title;
             return;
-        };
+        }
     }
     zhu.audio.playMusic("audio/01_spring_journey.ogg");
 }
@@ -303,7 +271,8 @@ fn cameraFollowPlayer(delta: f32) void {
     const position = world.get(player, Position).?;
 
     // 平滑值交给引擎相机限制范围，这里只表达速度随 delta 缩放。
-    zhu.camera.smoothFollow(position, followSpeed * delta);
+    const speed: f32 = 9;
+    zhu.camera.smoothFollow(position, speed * delta);
     zhu.camera.roundPosition();
 }
 

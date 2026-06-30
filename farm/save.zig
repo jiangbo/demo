@@ -82,7 +82,23 @@ pub fn init() void {
     }
 }
 
-pub fn saveSlot(world: *World, slot: u8) !void {
+pub fn saveSlot(world: *World, slot: u8) bool {
+    saveSlotInner(world, slot) catch |err| {
+        std.log.err("save slot {} failed: {}", .{ slot, err });
+        return false;
+    };
+    return true;
+}
+
+pub fn loadSlot(world: *World, slot: u8) bool {
+    loadSlotInner(world, slot) catch |err| {
+        std.log.err("load slot {} failed: {}", .{ slot, err });
+        return false;
+    };
+    return true;
+}
+
+fn saveSlotInner(world: *World, slot: u8) !void {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
@@ -104,7 +120,7 @@ pub fn saveSlot(world: *World, slot: u8) !void {
     std.log.info("game saved: {s}", .{path});
 }
 
-pub fn loadSlot(world: *World, slot: u8) !void {
+fn loadSlotInner(world: *World, slot: u8) !void {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
