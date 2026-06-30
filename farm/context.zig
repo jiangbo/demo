@@ -3,49 +3,6 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 
-pub const scene = struct {
-    pub const Scene = enum { title, farm };
-
-    pub var current: Scene = .title;
-    pub var pending: ?Scene = null;
-    var pendingLoadSlot: ?usize = null;
-
-    pub fn request(next: Scene) void {
-        std.log.debug("request scene: {s} -> {s}", .{
-            @tagName(current),
-            @tagName(next),
-        });
-        pending = next;
-    }
-
-    pub fn requestNewGame() void {
-        pendingLoadSlot = null;
-        request(.farm);
-    }
-
-    pub fn requestLoad(slot: usize) void {
-        pendingLoadSlot = slot;
-        request(.farm);
-    }
-
-    pub fn takeLoadSlot() ?usize {
-        const slot = pendingLoadSlot;
-        pendingLoadSlot = null;
-        return slot;
-    }
-
-    pub fn apply() void {
-        if (pending) |next| {
-            std.log.info("apply scene: {s} -> {s}", .{
-                @tagName(current),
-                @tagName(next),
-            });
-            current = next;
-            pending = null;
-        }
-    }
-};
-
 pub const clock = struct {
     pub const Period = component.time.Period;
     pub const minutesPerRealSecond: f32 = 10.0;
@@ -227,30 +184,16 @@ pub const map = struct {
 };
 
 pub fn init() void {
-    scene.current = .title;
-    scene.pending = null;
-    _ = scene.takeLoadSlot();
     clock.reset();
     input.mouseCaptured = false;
     notice.states = .initFill(.{});
     map.pending = null;
-    std.log.info("context init scene={s}", .{@tagName(scene.current)});
 }
 
 pub fn deinit() void {
     for (std.enums.values(map.Id)) |id| {
         zhu.assets.free(map.states.getPtr(id).tiles);
     }
-}
-
-test "读档请求会携带一次性槽位" {
-    init();
-
-    scene.requestLoad(4);
-
-    try std.testing.expectEqual(scene.Scene.farm, scene.pending.?);
-    try std.testing.expectEqual(4, scene.takeLoadSlot().?);
-    try std.testing.expectEqual(null, scene.takeLoadSlot());
 }
 
 test "地图切换请求会被 take 消费" {

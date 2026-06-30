@@ -30,6 +30,10 @@ pub fn draw(world: *zhu.ecs.World) void {
     inventory.draw();
 }
 
+pub fn openPause(mode: pause.Mode) void {
+    pause.open(mode);
+}
+
 pub const overlay = struct {
     const Popup = enum { save, rest, pause };
     pub const Result = union(enum) { block, title, rest: u8 };
@@ -92,7 +96,7 @@ pub const overlay = struct {
         }
 
         if (!context.input.pressed(.pause)) return null;
-        pause.enter(&.{});
+        openPause(.play);
         popup = .pause;
         message = null;
         return .block;
@@ -179,12 +183,16 @@ pub const rest = struct {
 
 pub const pause = struct {
     const panelSize: zhu.Vector2 = .{ .x = 208, .y = 344 };
+    const Mode = enum { title, play };
     pub const Request = enum { close, save, load, title };
 
     var menu: zhu.widget.Menu = menus[2];
 
-    pub fn enter(disabled: []const usize) void {
-        menu.disabled = disabled;
+    fn open(mode: Mode) void {
+        menu.disabled = switch (mode) {
+            .title => &.{ 1, 2, 3 },
+            .play => &.{},
+        };
         menu.position = zhu.window.size.sub(panelSize).scale(0.5);
     }
 

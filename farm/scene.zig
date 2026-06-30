@@ -40,11 +40,15 @@ const MapFade = struct {
     timer: zhu.Timer = .init(0.15),
 };
 
+const Scene = union(enum) { title, play: ?u8 };
+
 var world: World = undefined;
 var allocator: zhu.Allocator = undefined;
 var canvas: zhu.graphics.RenderTarget = .{};
 var mapFade: MapFade = .{};
 var debug = false;
+var current: Scene = .title;
+var pending: ?Scene = null;
 
 pub fn init(allocator_: zhu.Allocator) void {
     allocator = allocator_;
@@ -60,12 +64,11 @@ pub fn init(allocator_: zhu.Allocator) void {
     factory.init();
 
     canvas = zhu.graphics.createRenderTarget(zhu.window.size);
-    std.log.info("scene init current={s}", .{@tagName(context.scene.current)});
 
     // 有独立资源或初始状态的系统在进入首个场景前完成初始化。
     system.time.init();
     system.light.init();
-    enterScene(context.scene.current);
+    enterScene(current);
 }
 
 pub fn deinit() void {
@@ -83,35 +86,38 @@ pub fn update(delta: f32) void {
 
     if (updateMapFade(delta)) return;
 
-    switch (context.scene.current) {
+    switch (current) {
         .title => if (title.update(delta)) |request| {
-            handleRequest(request);
+            pending = switch (request) {
+                .start => .{ .play = null },
+                .load => |slot| .{ .play = @intCast(slot) },
+            };
         },
-        .farm => {
+        .play => {
             if (ui.overlay.update(&world)) |result| {
                 switch (result) {
                     .block => {},
-                    .title => context.scene.request(.title),
+                    .title => pending = .title,
                     .rest => |hours| context.clock.restHours = hours,
                 }
                 return;
             }
-            updateFarm(delta);
+            updatePlay(delta);
         },
     }
 }
 
 pub fn draw() void {
     const clearColor: zhu.Color = .rgb(0.23, 0.31, 0.27);
-    switch (context.scene.current) {
+    switch (current) {
         .title => {
             zhu.batch.useTarget(clearColor, .{});
             title.draw();
             if (debug) zhu.debug.draw();
         },
-        .farm => {
+        .play => {
             zhu.batch.useTarget(clearColor, .{ .target = &canvas });
-            drawFarm();
+            drawPlay();
             if (debug) zhu.debug.draw();
 
             zhu.batch.useTarget(clearColor, .{});
@@ -123,9 +129,9 @@ pub fn draw() void {
     }
 }
 
-fn updateFarm(delta: f32) void {
+fn updatePlay(delta: f32) void {
     // 农场主循环顺序在这里显式编排，新增系统需要在这里确定位置。
-    if (context.scene.pending != null) return;
+    if (pending != null) return;
     if (context.clock.paused) return;
 
     // 已提交的切图请求先进入过渡，不再瞬时换图。
@@ -181,16 +187,20 @@ fn updateMapFade(delta: f32) bool {
 }
 
 fn applyScene() void {
-    const previous = context.scene.current;
-    context.scene.apply();
+    const next = pending orelse return;
+    pending = null;
 
-    const current = context.scene.current;
-    if (previous == current) return;
+    const previous = current;
+    std.log.info("apply scene: {s} -> {s}", .{
+        @tagName(previous),
+        @tagName(next),
+    });
+    current = next;
 
     ui.overlay.close();
     switch (previous) {
         .title => title.exit(),
-        .farm => {
+        .play => {
             mapFade = .{};
             context.map.pending = null;
             map.exit(&world);
@@ -199,23 +209,15 @@ fn applyScene() void {
     enterScene(current);
 }
 
-fn handleRequest(request: title.Request) void {
-    switch (request) {
-        .start => context.scene.requestNewGame(),
-        .load => |slot| context.scene.requestLoad(slot),
-    }
-}
-
-fn enterScene(next: context.scene.Scene) void {
+fn enterScene(next: Scene) void {
     switch (next) {
         .title => title.enter(),
-        .farm => enterFarm(),
+        .play => |slot| enterPlay(slot),
     }
 }
 
-fn enterFarm() void {
+fn enterPlay(loadSlot: ?u8) void {
     zhu.camera.main.scale = .square(2);
-    const loadSlot = context.scene.takeLoadSlot();
     if (loadSlot == null) {
         // 新游戏重置世界级状态；读档会在基础地图创建后覆盖状态。
         context.clock.reset();
@@ -239,7 +241,7 @@ fn enterFarm() void {
                 slot,
                 err,
             });
-            context.scene.request(.title);
+            pending = .title;
             return;
         };
     }
@@ -255,7 +257,7 @@ fn cameraFollowPlayer(delta: f32) void {
     zhu.camera.roundPosition();
 }
 
-fn drawFarm() void {
+fn drawPlay() void {
     map.drawBack();
     system.render.draw(&world);
     map.drawFront();

@@ -1,3 +1,4 @@
+const std = @import("std");
 const zhu = @import("zhu");
 
 const context = @import("context.zig");
@@ -43,7 +44,7 @@ pub fn update(delta: f32) ?Request {
 
     const pauseKey = context.input.pressed(.pause);
     if (pauseKey or pauseButton.update() != null) {
-        ui.pause.enter(&.{ 1, 2, 3 });
+        ui.openPause(.title);
         popup = .pause;
         return null;
     }
