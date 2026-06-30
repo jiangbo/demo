@@ -113,12 +113,12 @@ pub fn draw() void {
         .title => {
             zhu.batch.useTarget(clearColor, .{});
             title.draw();
-            if (debug) zhu.debug.draw();
+            if (debug) drawDebug();
         },
         .play => {
             zhu.batch.useTarget(clearColor, .{ .target = &canvas });
             drawPlay();
-            if (debug) zhu.debug.draw();
+            if (debug) drawDebug();
 
             zhu.batch.useTarget(clearColor, .{});
             zhu.batch.drawImage(canvas.image, .zero, .{
@@ -127,6 +127,24 @@ pub fn draw() void {
             if (mapFade.phase) |phase| drawMapFade(phase);
         },
     }
+}
+
+fn drawDebug() void {
+    const total = world.entities.versions.items.len;
+
+    var entityBuffer: [32]u8 = undefined;
+    var componentBuffer: [32]u8 = undefined;
+    const rows = [_]zhu.debug.Row{.{
+        .label = "世界",
+        .left = zhu.format(&entityBuffer, "实体 {}/{}", .{
+            total - world.entities.deletedCount,
+            total,
+        }),
+        .right = zhu.format(&componentBuffer, "组件 {}", .{
+            world.map.count(),
+        }),
+    }};
+    zhu.debug.draw(&rows);
 }
 
 fn updatePlay(delta: f32) void {

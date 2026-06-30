@@ -16,6 +16,12 @@ const Rect = @import("math.zig").Rect;
 
 const basePadding = Vector2.xy(10, 9);
 
+pub const Row = struct {
+    label: []const u8,
+    left: []const u8,
+    right: []const u8 = "",
+};
+
 // 返回可热重载的 ZON 数据指针。首次调用会从文件读取。
 pub fn zon(comptime T: type, comptime path: [:0]const u8) *T {
     const file = ZonFile(T, path);
@@ -93,7 +99,7 @@ var start: u64 = 0;
 var frameTime: f64 = 0;
 var usedTime: f64 = 0;
 
-pub fn draw() void {
+pub fn draw(rows: []const Row) void {
     const time = sk.time.now();
     const frame = window.frameCount();
 
@@ -158,6 +164,7 @@ pub fn draw() void {
     writeFormatLine(&writer, "音量", "音乐 {d:.0}%", .{
         audio.musicVolume.load(.acquire) * 100,
     }, "音效 {d:.0}%", .{audio.soundVolume.load(.acquire) * 100});
+    for (rows) |row| writeRow(&writer, row);
     const debugText = buffer[0 .. writer.end - 1];
 
     // 调试面板固定在窗口坐标，绘制后还原当前相机。
@@ -178,6 +185,14 @@ pub fn draw() void {
 
     const contentPosition = position.add(padding);
     text.draw(debugText, contentPosition, textOption);
+}
+
+fn writeRow(writer: *std.Io.Writer, row: Row) void {
+    appendCell(writer, row.label, 6);
+    appendCell(writer, row.left, 14);
+    writeAll(writer, "  ");
+    appendCell(writer, row.right, 18);
+    writeAll(writer, "\n");
 }
 
 fn debugTextScale(debugText: text.String) Vector2 {
