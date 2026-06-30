@@ -10,8 +10,13 @@ const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
 
 var bubbleImage: zhu.NineImage = undefined;
 
+pub const UiRequest = union(enum) { block, title, rest: u8 };
+const Popup = enum { save, rest, pause };
+
+var activePopup: ?Popup = null;
+var popupMessage: ?save_slot.Message = null;
+
 pub fn init() void {
-    // 与 C++ 的 dialogue_bubble preset 使用同一张九宫格图片。
     const image = zhu.getImage("farm-rpg/UI/dialogue box.png").?;
     bubbleImage = zhu.NineImage.from(image, .{
         .rect = .init(.xy(0, 48), .xy(48, 48)),
@@ -19,105 +24,98 @@ pub fn init() void {
     });
 
     save_slot.init();
-    rest.init();
+    rest.menu.centerInWindow();
 }
 
 pub fn deinit() void {}
-
-pub fn draw(world: *zhu.ecs.World) void {
-    dialog.draw(world);
-    notice.draw(world);
-    inventory.draw();
-}
 
 pub fn openPause(mode: pause.Mode) void {
     pause.open(mode);
 }
 
-pub const overlay = struct {
-    const Popup = enum { save, rest, pause };
-    pub const Result = union(enum) { block, title, rest: u8 };
+pub fn openRest() void {
+    rest.hours = 8;
+    activePopup = .rest;
+    popupMessage = null;
+}
 
-    var popup: ?Popup = null;
-    var message: ?save_slot.Message = null;
-
-    pub fn active() bool {
-        return popup != null;
-    }
-
-    pub fn close() void {
-        popup = null;
-        message = null;
-    }
-
-    pub fn openRest() void {
-        rest.enter();
-        popup = .rest;
-        message = null;
-    }
-
-    pub fn update(world: *zhu.ecs.World) ?Result {
-        if (popup) |activePopup| {
-            switch (activePopup) {
-                .save => {
-                    if (save_slot.update(world)) |result| {
-                        switch (result) {
-                            .close => popup = null,
-                            .message => |next| {
-                                message = next;
-                                popup = .pause;
-                            },
-                            .farmLoad => unreachable,
-                        }
-                    }
-                    if (save_slot.takeClosePause()) popup = null;
-                },
-                .rest => if (rest.update()) |req| switch (req) {
-                    .close => popup = null,
-                    .rest => |hours| {
-                        popup = null;
-                        return .{ .rest = hours };
-                    },
-                },
-                .pause => if (pause.update()) |req| switch (req) {
-                    .close => popup = null,
-                    .save => {
-                        save_slot.enter(.pauseSave);
-                        popup = .save;
-                    },
-                    .load => {
-                        save_slot.enter(.pauseLoad);
-                        popup = .save;
-                    },
-                    .title => return .title,
-                },
-            }
-            return .block;
-        }
-
-        if (!context.input.pressed(.pause)) return null;
-        openPause(.play);
-        popup = .pause;
-        message = null;
+pub fn update(world: *zhu.ecs.World) ?UiRequest {
+    if (activePopup) |active| {
+        if (updatePopup(active, world)) |request| return request;
         return .block;
     }
 
-    pub fn draw() void {
-        switch (popup orelse return) {
+    if (!context.input.pressed(.pause)) return null;
+    openPause(.play);
+    activePopup = .pause;
+    popupMessage = null;
+    return .block;
+}
+
+fn updatePopup(active: Popup, world: *zhu.ecs.World) ?UiRequest {
+    switch (active) {
+        .save => {
+            if (save_slot.update(world)) |result| {
+                switch (result) {
+                    .close => activePopup = null,
+                    .message => |next| {
+                        popupMessage = next;
+                        activePopup = .pause;
+                    },
+                    .farmLoad => unreachable,
+                }
+            }
+            if (save_slot.takeClosePause()) activePopup = null;
+        },
+        .rest => if (rest.update()) |req| switch (req) {
+            .close => activePopup = null,
+            .rest => |hours| {
+                activePopup = null;
+                return .{ .rest = hours };
+            },
+        },
+        .pause => if (pause.update()) |req| switch (req) {
+            .close => activePopup = null,
+            .save => {
+                save_slot.enter(.pauseSave);
+                activePopup = .save;
+            },
+            .load => {
+                save_slot.enter(.pauseLoad);
+                activePopup = .save;
+            },
+            .title => return .title,
+        },
+    }
+    return null;
+}
+
+pub fn close() void {
+    activePopup = null;
+    popupMessage = null;
+}
+
+pub fn draw(world: *zhu.ecs.World) void {
+    dialog.draw(world);
+    notice.draw(world);
+    inventory.draw();
+
+    if (activePopup) |active| {
+        switch (active) {
             .save => save_slot.draw(),
             .rest => rest.draw(),
             .pause => pause.draw(),
         }
-
-        const current = message orelse return;
-        var color = zhu.Color.rgb(0.25, 1.0, 0.25);
-        if (current.fail) color = .rgb(1.0, 0.25, 0.25);
-        zhu.text.draw(current.text, .xy(zhu.window.size.x * 0.5, 32), .{
-            .anchor = .center,
-            .color = color,
-        });
     }
-};
+
+    const current = popupMessage orelse return;
+    var color = zhu.Color.rgb(0.25, 1.0, 0.25);
+    if (current.fail) color = .rgb(1.0, 0.25, 0.25);
+    zhu.text.draw(current.text, .xy(zhu.window.size.x * 0.5, 32), .{
+        .anchor = .center,
+        .color = color,
+    });
+}
 
 pub const notice = struct {
     pub fn update(delta: f32) void {
@@ -146,14 +144,6 @@ pub const rest = struct {
 
     var hours: u8 = 8;
     var menu: zhu.widget.Menu = menus[5];
-
-    pub fn init() void {
-        menu.centerInWindow();
-    }
-
-    pub fn enter() void {
-        hours = 8;
-    }
 
     pub fn update() ?Request {
         if (context.input.pressed(.pause)) {

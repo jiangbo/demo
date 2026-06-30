@@ -94,7 +94,7 @@ pub fn update(delta: f32) void {
             };
         },
         .play => {
-            if (ui.overlay.update(&world)) |result| {
+            if (ui.update(&world)) |result| {
                 switch (result) {
                     .block => {},
                     .title => pending = .title,
@@ -215,7 +215,7 @@ fn applyScene() void {
     });
     current = next;
 
-    ui.overlay.close();
+    ui.close();
     switch (previous) {
         .title => title.exit(),
         .play => {
@@ -287,7 +287,6 @@ fn drawPlay() void {
     defer zhu.camera.pop();
     system.time.draw();
     ui.draw(&world);
-    ui.overlay.draw();
 }
 
 fn drawMapFade(phase: MapFade.Phase) void {
