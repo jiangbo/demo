@@ -49,8 +49,8 @@ pub fn update(delta: f32) ?Request {
         return null;
     }
 
-    if (mainMenu.update()) |event| {
-        switch (@as(Button, @enumFromInt(event))) {
+    if (mainMenu.update()) |value| {
+        switch (@as(Button, @enumFromInt(value))) {
             .start => return .start,
             .load => {
                 save_slot.enter(.titleLoad);
