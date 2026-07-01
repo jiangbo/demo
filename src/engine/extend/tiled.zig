@@ -34,6 +34,10 @@ pub const Grid = struct {
         return .square(@floatFromInt(self.cell));
     }
 
+    pub fn halfCell(self: Grid) Vector2 {
+        return self.cellSize().scale(0.5);
+    }
+
     pub fn cellToIndex(self: Grid, cell: Cell) ?usize {
         if (cell.x < 0 or cell.y < 0) return null;
         if (cell.x >= self.width or cell.y >= self.height) return null;
@@ -92,31 +96,25 @@ pub const Map = struct {
     grid: Grid,
 
     backgroundColor: ?graphics.Color = null,
-    layers: []const Layer,
-    tileSetRefs: []const TileSetRef,
+    layers: []const Layer = &.{},
+    tileSets: []const TileSet = &.{},
 
-    pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {
+    pub fn getTileSet(self: Map, gid: u32) TileSet {
         std.debug.assert(gid != 0);
-        return self.tileSetRefs[(gid >> 24) - 1];
+        return self.tileSets[(gid >> 24) - 1];
     }
 
-    pub fn getTileSetByGid(self: Map, gid: u32) TileSet {
-        return getTileSetByRef(self.getTileSetRefByGid(gid));
+    pub fn getTile(self: Map, gid: u32) ?*const Tile {
+        const tileSet = self.getTileSet(gid);
+        return tileSet.getTileByLocalId(gid & 0x00FFFFFF);
     }
 
-    pub fn getTileByGid(self: Map, gid: u32) ?*const Tile {
-        const ref = self.getTileSetRefByGid(gid);
-        const tileSet = getTileSetByRef(ref);
-        return tileSet.tileByLocalId(gid & 0x00FFFFFF);
-    }
-
-    pub fn getImageByGid(self: Map, gid: u32) ?graphics.Image {
-        const ref = self.getTileSetRefByGid(gid);
-        const tileSet = getTileSetByRef(ref);
+    pub fn getImage(self: Map, gid: u32) ?graphics.Image {
+        const tileSet = self.getTileSet(gid);
         const localId = gid & 0x00FFFFFF;
 
         if (tileSet.columns == 0) {
-            const tile = tileSet.tileByLocalId(localId).?;
+            const tile = tileSet.getTileByLocalId(localId).?;
             return assets.getImage(tile.id);
         }
 
@@ -128,11 +126,10 @@ pub const Map = struct {
         return image.sub(area);
     }
 
-    pub fn getAnimationByGid(self: Map, gid: u32) ?graphics.Animation {
-        const ref = self.getTileSetRefByGid(gid);
-        const tileSet = getTileSetByRef(ref);
+    pub fn getAnimation(self: Map, gid: u32) ?graphics.Animation {
+        const tileSet = self.getTileSet(gid);
         const localId = gid & 0x00FFFFFF;
-        if (tileSet.tileByLocalId(localId)) |tile| {
+        if (tileSet.getTileByLocalId(localId)) |tile| {
             if (tile.animation.len == 0) return null;
             return graphics.Animation.init(
                 assets.getImage(tileSet.image).?,
@@ -142,6 +139,19 @@ pub const Map = struct {
         } else return null;
     }
 };
+
+const Maps = []const Map;
+pub fn bind(comptime ts: []const TileSet, comptime list: Maps) Maps {
+    const result = comptime blk: {
+        var result: [list.len]Map = undefined;
+        for (list, 0..) |map, index| {
+            result[index] = map;
+            result[index].tileSets = ts;
+        }
+        break :blk result;
+    };
+    return &result;
+}
 
 pub fn Scan(comptime T: type) type {
     return struct {
@@ -360,8 +370,6 @@ fn tileCoord(value: f32, size: f32) i32 {
     return @intFromFloat(@floor(value / size));
 }
 
-pub const TileSetRef = struct { id: u32 };
-
 pub const LayerEnum = enum { image, tile, object };
 
 pub const Layer = struct {
@@ -452,10 +460,10 @@ pub const TileSet = struct {
     tileSize: graphics.Vector2,
     tiles: []const Tile,
 
-    pub fn tileByLocalId(self: TileSet, id: u32) ?*const Tile {
-        if (self.columns == 0) return &self.tiles[id];
+    pub fn getTileByLocalId(self: TileSet, localId: u32) ?*const Tile {
+        if (self.columns == 0) return &self.tiles[localId];
         for (self.tiles) |*tile| {
-            if (id == tile.id) return tile;
+            if (localId == tile.id) return tile;
         } else return null;
     }
 };
@@ -541,23 +549,3 @@ pub const Object = struct {
 };
 
 pub var backgroundColor: ?graphics.Color = null;
-var tileSets: []const TileSet = &.{};
-
-pub fn init(ts: []const TileSet) void {
-    tileSets = ts;
-}
-
-pub fn getTileSetById(id: assets.Id) TileSet {
-    for (tileSets) |ts| if (ts.id == id) return ts;
-    unreachable;
-}
-
-pub fn getTileSetByRef(ref: TileSetRef) TileSet {
-    return getTileSetById(ref.id);
-}
-
-pub fn getTileByImageId(id: graphics.ImageId) Tile {
-    for (tileSets) |ts| {
-        for (ts.tiles) |tile| if (tile.id == id) return tile;
-    } else unreachable;
-}

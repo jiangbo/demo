@@ -51,7 +51,6 @@ test "移动系统会按速度更新位置" {
 const testMap = zhu.extend.tiled.Map{
     .grid = .{ .width = 30, .height = 17, .cell = 16 },
     .layers = &.{},
-    .tileSetRefs = &.{},
 };
 
 fn addMover(world: *World, position: zhu.Vector2, velocity: zhu.Vector2) Entity {

@@ -99,3 +99,9 @@ zig build test
     `useTarget` 完成。
   - 第一版 `flush` 仍按全局 commands 提交顺序绘制；后续如需
     绘制层级，再单独设计 order/layer，不和多 vertex buffer 混为一谈。
+- 农场/farm 系统依赖优化：后续把地图对象的增删改、资源生命扣减、
+  `gone` 状态和 `spatial` 清理由 `map.zig` 统一维护；
+  `system/farm.zig` 只负责读取玩家工具意图、处理背包扣除和声音事件，
+  不直接依赖 `Land`、`Spatial`、`map.land`、`map.spatial` 或 tile index。
+  种植保持先判断地图能否种植，再扣种子，最后写入地图和 world，避免
+  先改地图后还要回滚。

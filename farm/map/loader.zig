@@ -86,13 +86,13 @@ fn parseTileLayer(ctx: *Context, layer: *const tiled.Layer) void {
         if (layer.isNamed("rock")) {
             loadRockTile(ctx, globalId, index);
         } else {
-            if (ctx.map.getImageByGid(globalId)) |image| {
+            if (ctx.map.getImage(globalId)) |image| {
                 appendVertex(ctx, ctx.map.grid.indexToWorld(index), image);
             }
         }
 
         // 带 tile_flag 标记的瓦片设置方向碰撞
-        const tile = ctx.map.getTileByGid(globalId) orelse continue;
+        const tile = ctx.map.getTile(globalId) orelse continue;
         if (tile.getProperty("tile_flag", []const u8)) |flag| {
             ctx.loaded.spatial.setTileFlag(index, flag);
         }
@@ -223,7 +223,7 @@ fn loadProp(ctx: *Context, object: tiled.Object) void {
 
 fn addSolidObject(ctx: *Context, object: tiled.Object) SolidRange {
     const start = ctx.loaded.spatial.areas.items.len;
-    const tile = ctx.map.getTileByGid(object.gid) orelse
+    const tile = ctx.map.getTile(object.gid) orelse
         return .{ .start = start, .count = 0 };
     const group = tile.objectGroup orelse
         return .{ .start = start, .count = 0 };
@@ -378,7 +378,7 @@ test "加载地图产出对象会按对象和 rock 图层写入目标格" {
             .animation = &.{},
         },
     };
-    const tileSets = [_]tiled.TileSet{.{
+    const testTileSets = [_]tiled.TileSet{.{
         .id = tileSetId,
         .columns = 3,
         .tileCount = 3,
@@ -386,13 +386,12 @@ test "加载地图产出对象会按对象和 rock 图层写入目标格" {
         .tileSize = .xy(16, 16),
         .tiles = &tiles,
     }};
-    tiled.init(&tileSets);
-    defer tiled.init(@import("../zon/map/tile.zon"));
-
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    var loaded = load(zhu.testing.allocator, &world, mock[3]);
+    var testMap = mock[3];
+    testMap.tileSets = &testTileSets;
+    var loaded = load(zhu.testing.allocator, &world, testMap);
     defer loaded.land.deinit(zhu.testing.allocator);
     defer loaded.spatial.deinit(zhu.testing.allocator);
     defer loaded.vertexes.clearAndFree(std.testing.allocator);
