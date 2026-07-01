@@ -6,7 +6,6 @@ const context = @import("context.zig");
 const factory = @import("factory.zig");
 const inventory = @import("inventory.zig");
 const map = @import("map.zig");
-const spatial = map.spatial;
 const state = @import("state.zig");
 const ui = @import("ui.zig");
 
@@ -24,6 +23,7 @@ const Chest = component.item.Chest;
 const Animation = component.actor.Animation;
 const Sprite = component.render.Sprite;
 const Rest = component.map.Rest;
+const Hit = component.map.Hit;
 
 pub fn update(world: *World) void {
     // 当前对话目标走远或消失时，直接关闭对话。
@@ -58,7 +58,7 @@ fn tryInteract(world: *World) void {
     const playerPos = targetCenter(world, player);
 
     map.markFacingHits(world);
-    defer world.clear(spatial.Hit);
+    defer world.clear(Hit);
 
     const target = nearestTarget(world, playerPos) orelse return;
 
@@ -75,7 +75,7 @@ fn nearestTarget(world: *World, playerPos: Position) ?Entity {
     var bestEntity: ?Entity = null;
     var bestDist2: f32 = std.math.inf(f32);
 
-    var query = world.query(.{ spatial.Hit, Position });
+    var query = world.query(.{ Hit, Position });
     while (query.next()) |entity| {
         const canTalk = world.has(entity, Npc) and world.has(entity, Dialog);
         const canOpen = world.has(entity, Chest);
@@ -214,14 +214,6 @@ fn closeDialog(world: *World, target: Entity) void {
     world.removeIdentity(Dialog);
 }
 
-fn pressKey(keyCode: zhu.key.Code) void {
-    var ev = zhu.window.Event{
-        .type = .KEY_DOWN,
-        .key_code = keyCode,
-    };
-    zhu.input.handle(&ev);
-}
-
 test "按 F 会激活最近 NPC 的第一句对话" {
     zhu.input.reset();
 
@@ -250,7 +242,7 @@ test "按 F 会激活最近 NPC 的第一句对话" {
     world.add(near, Dialog{ .lines = &.{"近处 NPC"} });
     world.add(near, Shape{ .rect = .init(.zero, .xy(8, 8)) });
 
-    pressKey(.F);
+    zhu.key.set(.F, true);
     update(&world);
 
     try std.testing.expectEqual(near, world.getIdentity(Dialog).?);
@@ -276,14 +268,14 @@ test "对话激活后按 F 会推进并在末尾关闭" {
     world.add(npc, Dialog{ .lines = &.{ "你好", "明天见" } });
     world.addIdentity(npc, Dialog);
 
-    pressKey(.F);
+    zhu.key.set(.F, true);
     update(&world);
 
     try std.testing.expectEqual(npc, world.getIdentity(Dialog).?);
     try std.testing.expectEqual(1, world.get(npc, Dialog).?.index);
 
     zhu.input.reset();
-    pressKey(.F);
+    zhu.key.set(.F, true);
     update(&world);
 
     try std.testing.expectEqual(null, world.getIdentity(Dialog));
@@ -344,7 +336,7 @@ test "按 F 打开宝箱会重置打开动画" {
         .image = image.sub(.init(.xy(16, 0), .xy(16, 16))),
     });
 
-    pressKey(.F);
+    zhu.key.set(.F, true);
     update(&world);
 
     try std.testing.expect(world.get(chest, Chest).?.opened);
@@ -389,7 +381,7 @@ test "宝箱在背包满时保留剩余奖励" {
     world.add(chest, animation);
     world.add(chest, Sprite{ .image = image });
 
-    pressKey(.F);
+    zhu.key.set(.F, true);
     update(&world);
 
     const chestState = world.get(chest, Chest).?;

@@ -1,3 +1,5 @@
+const std = @import("std");
+
 pub const sokol = @import("sokol");
 pub const window = @import("window.zig");
 pub const assets = @import("assets.zig");
@@ -33,3 +35,8 @@ pub const Allocator = assets.memory.OomAllocator;
 
 pub const format = text.format;
 pub const getImage = assets.getImageByPath;
+pub const oom = assets.memory.oom;
+
+pub const testing = struct {
+    pub const allocator: Allocator = .{ .raw = std.testing.allocator };
+};

@@ -11,7 +11,7 @@ const Image = graphics.Image;
 const Path = [:0]const u8;
 const assetRoot = "assets/";
 
-pub var allocator: std.mem.Allocator = undefined;
+var allocator: std.mem.Allocator = undefined;
 pub var io: std.Io = undefined;
 var imageCache: std.AutoHashMapUnmanaged(Id, graphics.Image) = .empty;
 var maxFileSize: usize = 0;

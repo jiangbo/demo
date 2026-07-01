@@ -706,14 +706,6 @@ fn drawItemCount(count: u32, rect: zhu.Rect) void {
     zhu.text.drawFmt("{d}", .{count}, pos, .{ .anchor = .one });
 }
 
-fn pressMouse(button: zhu.mouse.Button) void {
-    var ev = zhu.window.Event{
-        .type = .MOUSE_DOWN,
-        .mouse_button = button,
-    };
-    zhu.input.handle(&ev);
-}
-
 test "添加物品会合并并自动绑定快捷栏" {
     reset();
 
@@ -734,7 +726,7 @@ test "右键背包槽会使用物品" {
     bag.closed = false;
     store.stacks[0] = .{ .item = .strawberry, .count = 2 };
     zhu.window.mouse = bag.position.add(bag.zon.slots[0]).add(.xy(1, 1));
-    pressMouse(.RIGHT);
+    zhu.mouse.set(.RIGHT, true);
 
     update();
 
@@ -754,7 +746,7 @@ test "右键快捷栏会使用绑定的背包槽" {
     store.stacks[5] = .{ .item = .potato, .count = 1 };
     bar.refs[2] = 5;
     zhu.window.mouse = bar.zon.position.add(bar.zon.slots[2]).add(.xy(1, 1));
-    pressMouse(.RIGHT);
+    zhu.mouse.set(.RIGHT, true);
 
     update();
 
@@ -774,7 +766,7 @@ test "右键使用物品成功后显示获得提示" {
     bag.closed = false;
     store.stacks[0] = .{ .item = .potato, .count = 1 };
     zhu.window.mouse = bag.position.add(bag.zon.slots[0]).add(.xy(1, 1));
-    pressMouse(.RIGHT);
+    zhu.mouse.set(.RIGHT, true);
 
     update();
 
@@ -795,7 +787,7 @@ test "右键使用物品空间不足时显示背包已满" {
     @memset(store.stacks, .{ .item = .potato, .count = 99 });
     store.stacks[0] = .{ .item = .strawberry, .count = 2 };
     zhu.window.mouse = bag.position.add(bag.zon.slots[0]).add(.xy(1, 1));
-    pressMouse(.RIGHT);
+    zhu.mouse.set(.RIGHT, true);
 
     update();
 

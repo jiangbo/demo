@@ -341,7 +341,7 @@ pub fn load(index: u8) !void {
     var buffer: [100]u8 = undefined;
     var buf: [20]u8 = undefined;
     const path = zhu.formatZ(&buf, "save/{d}.save", .{index - 2});
-    const slice = try window.readAll(path, &buffer);
+    const slice = try window.readBuffer(path, &buffer);
     var stream = std.io.fixedBufferStream(slice);
     var reader = stream.reader();
 

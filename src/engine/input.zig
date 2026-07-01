@@ -6,8 +6,8 @@ pub fn handle(ev: *const sk.app.Event) void {
     const keyCode: u16 = @intCast(@intFromEnum(ev.key_code));
     const buttonCode: u16 = @intCast(@intFromEnum(ev.mouse_button));
 
-    if (math.enums.inRange(ev.type, .KEY_DOWN, .KEY_UP)) key.changed = true;
-    if (math.enums.inRange(ev.type, .MOUSE_MOVE, .MOUSE_LEAVE)) {
+    if (ev.type == .KEY_DOWN or ev.type == .KEY_UP) key.changed = true;
+    if (math.enums.inRange(ev.type, .MOUSE_DOWN, .MOUSE_LEAVE)) {
         mouse.changed = true;
     }
 
@@ -48,6 +48,13 @@ pub const key = struct {
     var lastState: std.StaticBitSet(512) = .initEmpty();
     var state: std.StaticBitSet(512) = .initEmpty();
 
+    pub fn set(keyCode: Code, down: bool) void {
+        handle(&sk.app.Event{
+            .type = if (down) .KEY_DOWN else .KEY_UP,
+            .key_code = keyCode,
+        });
+    }
+
     pub fn held(keyCode: Code) bool {
         return state.isSet(@intCast(@intFromEnum(keyCode)));
     }
@@ -85,6 +92,13 @@ pub const mouse = struct {
     pub var scrollY: f32 = 0;
     var lastState: std.StaticBitSet(3) = .initEmpty();
     var state: std.StaticBitSet(3) = .initEmpty();
+
+    pub fn set(button: Button, down: bool) void {
+        handle(&sk.app.Event{
+            .type = if (down) .MOUSE_DOWN else .MOUSE_UP,
+            .mouse_button = button,
+        });
+    }
 
     pub fn held(button: Button) bool {
         return state.isSet(@intCast(@intFromEnum(button)));

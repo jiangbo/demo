@@ -42,7 +42,6 @@ pub const OomAllocator = struct {
 pub fn oom() noreturn {
     @panic("out of memory");
 }
-
 pub const Counter = struct {
     child: std.mem.Allocator,
     used: usize,

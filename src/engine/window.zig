@@ -172,17 +172,17 @@ pub fn readBuffer(path: [:0]const u8, buffer: []u8) ![:0]u8 {
     return terminateBuffer(buffer, content.len);
 }
 
-pub fn readAll(path: [:0]const u8) ![:0]u8 {
+const Allocator = std.mem.Allocator;
+pub fn readAll(gpa: Allocator, path: [:0]const u8) ![:0]u8 {
     if (@import("builtin").target.os.tag == .emscripten) {
         var buffer: [1024]u8 = undefined;
         return switch (try em.load(path, &buffer)) {
-            .loaded => |content| assets.oomDupeZ(u8, content),
-            .tooSmall => |fileLen| readLargeFromJs(path, fileLen),
+            .loaded => |content| try gpa.dupeZ(u8, content),
+            .tooSmall => |len| readFromJs(gpa, path, len),
         };
     }
-    const max = 1024 * 1024;
     return try Dir.cwd().readFileAllocOptions( //
-        io, path, assets.allocator, .limited(max), .of(u8), 0);
+        io, path, gpa, .unlimited, .of(u8), 0);
 }
 
 pub fn Zon(comptime T: type) type {
@@ -196,22 +196,23 @@ pub fn Zon(comptime T: type) type {
     };
 }
 
+pub const ZonOption = struct { ignore: bool = false };
 // 读取 ZON 文件，返回带 arena 生命周期的包装对象。
-pub fn readZon(T: type, path: [:0]const u8, ignore: bool) !Zon(T) {
-    const source = try readAll(path);
-    defer assets.free(source);
+pub fn readZon(T: type, path: [:0]const u8, ops: ZonOption) !Zon(T) {
+    const gpa = assets.memory.allocator.raw;
+    const source = try readAll(gpa, path);
+    defer gpa.free(source);
 
-    var arena = std.heap.ArenaAllocator.init(assets.allocator);
+    var arena = std.heap.ArenaAllocator.init(gpa);
     errdefer arena.deinit();
 
-    const allocator = arena.allocator();
-
+    const arenaAllocator = arena.allocator();
     const option: std.zon.parse.Options = .{
-        .ignore_unknown_fields = ignore,
+        .ignore_unknown_fields = ops.ignore,
         .free_on_error = false,
     };
     const value = try std.zon.parse.fromSliceAlloc(T, //
-        allocator, source, null, option);
+        arenaAllocator, source, null, option);
     return .{ .value = value, .arena = arena };
 }
 
@@ -220,10 +221,10 @@ fn terminateBuffer(buffer: []u8, len: usize) [:0]u8 {
     return buffer[0..len :0];
 }
 
-fn readLargeFromJs(path: [:0]const u8, fileLen: usize) ![:0]u8 {
-    const large = assets.oomAlloc(u8, fileLen + 1);
-    errdefer assets.free(large);
-    return switch (try em.load(path, large[0..fileLen])) {
+fn readFromJs(gpa: Allocator, path: [:0]const u8, len: usize) ![:0]u8 {
+    const large = try gpa.alloc(u8, len + 1);
+    errdefer gpa.free(large);
+    return switch (try em.load(path, large[0..len])) {
         .loaded => |content| terminateBuffer(large, content.len),
         .tooSmall => error.BufferTooSmall,
     };

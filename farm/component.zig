@@ -49,6 +49,7 @@ pub const map = struct {
 
     pub const Rest = struct {};
     pub const SolidRange = struct { start: usize, count: usize };
+    pub const Hit = struct {};
 };
 
 pub const actor = struct {
