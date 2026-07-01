@@ -7,12 +7,16 @@ const Vector2 = struct { x: f32, y: f32 };
 
 var allocator: std.mem.Allocator = undefined;
 
-const TiledMap = struct {
-    height: i32,
+const Grid = struct {
     width: i32,
+    height: i32,
+    cell: u32,
+};
+
+const TiledMap = struct {
+    grid: Grid,
     backgroundColor: ?Color = null,
 
-    tileSize: Vector2,
     layers: []Layer,
     tileSetRefs: []const TileSetRef,
 };
@@ -105,14 +109,14 @@ pub fn main() !void {
     var color: ?Color = null;
     if (tiledMap.backgroundcolor) |c| color = parseColor(c);
 
+    std.debug.assert(tiledMap.tilewidth == tiledMap.tileheight);
     const map = TiledMap{
-        .height = tiledMap.height,
-        .width = tiledMap.width,
-        .layers = try parseLayers(tiledMap.layers, tileSetRanges),
-        .tileSize = .{
-            .x = @floatFromInt(tiledMap.tilewidth),
-            .y = @floatFromInt(tiledMap.tileheight),
+        .grid = .{
+            .width = tiledMap.width,
+            .height = tiledMap.height,
+            .cell = @intCast(tiledMap.tilewidth),
         },
+        .layers = try parseLayers(tiledMap.layers, tileSetRanges),
         .tileSetRefs = tileSetRefs,
         .backgroundColor = color,
     };

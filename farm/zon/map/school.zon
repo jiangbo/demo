@@ -1,8 +1,6 @@
 .{
-    .height = 17,
-    .width = 30,
+    .grid = .{ .width = 30, .height = 17, .cell = 16 },
     .backgroundColor = null,
-    .tileSize = .{ .x = 16, .y = 16 },
     .layers = .{
         .{
             .id = 6,
@@ -821,3 +819,4 @@
     },
     .tileSetRefs = .{ .{ .id = 3790407532 }, .{ .id = 112365652 } },
 }
+

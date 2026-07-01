@@ -4,96 +4,96 @@ const assets = @import("../assets.zig");
 const graphics = @import("../graphics.zig");
 const math = @import("../math.zig");
 
-pub const Position = struct {
+pub const Cell = struct {
     x: i32,
     y: i32,
 
-    pub fn xy(x: i32, y: i32) Position {
+    pub fn xy(x: i32, y: i32) Cell {
         return .{ .x = x, .y = y };
     }
 };
 const Vector2 = math.Vector2;
 const Rect = math.Rect;
 
-pub const Map = struct {
-    height: u32,
-    width: u32,
+pub const Grid = struct {
+    width: i32,
+    height: i32,
+    cell: u32,
 
-    backgroundColor: ?graphics.Color = null,
-    tileSize: graphics.Vector2,
-    layers: []const Layer,
-    tileSetRefs: []const TileSetRef,
-
-    pub fn size(self: Map) Vector2 {
-        const width: i32 = @intCast(self.width);
-        const height: i32 = @intCast(self.height);
-        return self.tilePositionToWorld(.xy(width, height));
+    pub fn size(self: Grid) Vector2 {
+        const w: f32 = @floatFromInt(self.width);
+        const h: f32 = @floatFromInt(self.height);
+        return Vector2.xy(w, h).scale(@floatFromInt(self.cell));
     }
 
-    pub fn tilePositionToIndex(self: Map, pos: Position) ?usize {
-        if (pos.x < 0 or pos.y < 0) return null;
-        if (pos.x >= self.width or pos.y >= self.height) return null;
-        return @intCast(pos.y * @as(i32, @intCast(self.width)) + pos.x);
+    pub fn count(self: Grid) usize {
+        return @intCast(self.width * self.height);
     }
 
-    pub fn tilePositionToWorld(self: Map, pos: Position) Vector2 {
-        const floatX: f32 = @floatFromInt(pos.x);
-        return self.tileSize.mul(.xy(floatX, @floatFromInt(pos.y)));
+    pub fn cellSize(self: Grid) Vector2 {
+        return .square(@floatFromInt(self.cell));
     }
 
-    pub fn tileIndexToWorld(self: Map, index: usize) Vector2 {
-        const x: f32 = @floatFromInt(index % self.width);
-        const y: f32 = @floatFromInt(index / self.width);
-        return self.tileSize.mul(.xy(x, y));
+    pub fn cellToIndex(self: Grid, cell: Cell) ?usize {
+        if (cell.x < 0 or cell.y < 0) return null;
+        if (cell.x >= self.width or cell.y >= self.height) return null;
+        return @intCast(cell.y * self.width + cell.x);
     }
 
-    pub fn tileRect(self: Map, index: usize) Rect {
-        return .init(self.tileIndexToWorld(index), self.tileSize);
+    pub fn worldToIndex(self: Grid, world: Vector2) ?usize {
+        return self.cellToIndex(self.worldToCell(world));
     }
 
-    pub fn worldToTileStart(self: Map, pos: Vector2) Vector2 {
-        const tilePos = self.worldToTilePosition(pos);
-        return self.tilePositionToWorld(tilePos);
+    pub fn worldToCell(self: Grid, world: Vector2) Cell {
+        const grid = world.div(self.cellSize()).floor();
+        return .xy(@intFromFloat(grid.x), @intFromFloat(grid.y));
     }
 
-    pub fn worldToTilePosition(self: Map, pos: Vector2) Position {
-        const tilePos = pos.div(self.tileSize).floor();
-        const x: i32 = @intFromFloat(tilePos.x);
-        return .{ .x = x, .y = @intFromFloat(tilePos.y) };
+    pub fn cellToWorld(self: Grid, cell: Cell) Vector2 {
+        const x: f32 = @floatFromInt(cell.x);
+        const y: f32 = @floatFromInt(cell.y);
+        return Vector2.xy(x, y).scale(@floatFromInt(self.cell));
     }
 
-    pub fn worldToTileIndex(self: Map, pos: Vector2) ?usize {
-        const tilePos = self.worldToTilePosition(pos);
-        return self.tilePositionToIndex(tilePos);
+    pub fn indexToWorld(self: Grid, index: usize) Vector2 {
+        const width: usize = @intCast(self.width);
+        const x: f32 = @floatFromInt(index % width);
+        const y: f32 = @floatFromInt(index / width);
+        return Vector2.xy(x, y).scale(@floatFromInt(self.cell));
     }
 
-    /// 返回矩形覆盖到的地图内瓦片，范围会按地图边界裁剪
-    pub fn tilesInRect(self: Map, rect: Rect) TileRectIter {
+    pub fn indexToRect(self: Grid, index: usize) Rect {
+        return .init(self.indexToWorld(index), self.cellSize());
+    }
+
+    /// 返回矩形覆盖到的地图内格子，范围会按地图边界裁剪。
+    pub fn cellsInRect(self: Grid, rect: Rect) CellRectIter {
         std.debug.assert(rect.size.y > 0 and rect.size.x > 0);
 
-        const rawMin = self.worldToTilePosition(rect.min);
+        const rawMin = self.worldToCell(rect.min);
         const max = rect.max().sub(.square(math.epsilon));
-        const rawMax = self.worldToTilePosition(max);
+        const rawMax = self.worldToCell(max);
 
-        const width: i32 = @intCast(self.width);
-        const height: i32 = @intCast(self.height);
-
-        const min = Position.xy(@max(rawMin.x, 0), @max(rawMin.y, 0));
-        const maxX = @min(rawMax.x, width - 1);
-        const maxY = @min(rawMax.y, height - 1);
+        const min = Cell.xy(@max(rawMin.x, 0), @max(rawMin.y, 0));
+        const maxX = @min(rawMax.x, self.width - 1);
+        const maxY = @min(rawMax.y, self.height - 1);
         if (min.x > maxX or min.y > maxY) return .{};
 
         return .{
-            .width = width,
+            .width = self.width,
             .min = min,
             .max = .xy(maxX, maxY),
             .current = min,
         };
     }
+};
 
-    pub fn grid(self: *const Map, comptime T: type, data: []const T) Grid(T) {
-        return .{ .map = self, .data = data };
-    }
+pub const Map = struct {
+    grid: Grid,
+
+    backgroundColor: ?graphics.Color = null,
+    layers: []const Layer,
+    tileSetRefs: []const TileSetRef,
 
     pub fn getTileSetRefByGid(self: Map, gid: u32) TileSetRef {
         std.debug.assert(gid != 0);
@@ -181,7 +181,7 @@ pub fn Scan(comptime T: type) type {
     };
 }
 
-pub fn Grid(comptime T: type) type {
+pub fn Field(comptime T: type) type {
     return struct {
         map: *const Map,
         data: []const T = &.{},
@@ -194,9 +194,9 @@ pub fn Grid(comptime T: type) type {
             touch: f32,
         };
 
-        pub fn tileAt(self: *const Self, pos: Position) ?T {
+        pub fn tileAt(self: *const Self, cell: Cell) ?T {
             self.assertValid();
-            const index = self.map.tilePositionToIndex(pos) orelse return null;
+            const index = self.map.grid.cellToIndex(cell) orelse return null;
             return self.data[index];
         }
 
@@ -208,34 +208,35 @@ pub fn Grid(comptime T: type) type {
             const dest = rect.min.x + dx;
             if (dx == 0) return .{ .dest = dest };
 
-            const r0 = tileCoord(rect.min.y, self.map.tileSize.y);
+            const size: f32 = @floatFromInt(self.map.grid.cell);
+            const r0 = tileCoord(rect.min.y, size);
             const bottom = rect.min.y + rect.size.y - math.epsilon;
-            const r1 = tileCoord(bottom, self.map.tileSize.y);
-            const rows = clipRange(r0, r1, self.map.height);
+            const r1 = tileCoord(bottom, size);
+            const rows = clipRange(r0, r1, self.map.grid.height);
 
             const edge: Edge = if (dx > 0) right_edge: {
                 // 向右时固定目标右边缘所在列。
                 const right = dest + rect.size.x - math.epsilon;
-                const col = tileCoord(right, self.map.tileSize.x);
-                const left = @as(f32, @floatFromInt(col)) *
-                    self.map.tileSize.x;
+                const col = tileCoord(right, size);
+                const colf: f32 = @floatFromInt(col);
+                const left = colf * size;
                 break :right_edge .{
                     .fixed = col,
                     .touch = left - rect.size.x,
                 };
             } else left_edge: {
                 // 向左时固定目标左边缘所在列。
-                const col = tileCoord(dest, self.map.tileSize.x);
-                const right = (@as(f32, @floatFromInt(col)) + 1) *
-                    self.map.tileSize.x;
+                const col = tileCoord(dest, size);
+                const colf: f32 = @floatFromInt(col);
+                const right = (colf + 1) * size;
                 break :left_edge .{ .fixed = col, .touch = right };
             };
 
-            const remaining = if (inRange(edge.fixed, self.map.width))
+            const remaining = if (inRange(edge.fixed, self.map.grid.width))
                 rows.count
             else
                 0;
-            const width: i32 = @intCast(self.map.width);
+            const width = self.map.grid.width;
             const index = if (remaining > 0)
                 rows.first * width + edge.fixed
             else
@@ -260,33 +261,35 @@ pub fn Grid(comptime T: type) type {
             const dest = rect.min.y + dy;
             if (dy == 0) return .{ .dest = dest };
 
-            const c0 = tileCoord(rect.min.x, self.map.tileSize.x);
+            const size: f32 = @floatFromInt(self.map.grid.cell);
+            const c0 = tileCoord(rect.min.x, size);
             const right = rect.min.x + rect.size.x - math.epsilon;
-            const c1 = tileCoord(right, self.map.tileSize.x);
-            const cols = clipRange(c0, c1, self.map.width);
+            const c1 = tileCoord(right, size);
+            const cols = clipRange(c0, c1, self.map.grid.width);
 
             const edge: Edge = if (dy > 0) bottom_edge: {
                 // 向下时固定目标下边缘所在行。
                 const targetBottom = dest + rect.size.y - math.epsilon;
-                const row = tileCoord(targetBottom, self.map.tileSize.y);
-                const top = @as(f32, @floatFromInt(row)) * self.map.tileSize.y;
+                const row = tileCoord(targetBottom, size);
+                const rowf: f32 = @floatFromInt(row);
+                const top = rowf * size;
                 break :bottom_edge .{
                     .fixed = row,
                     .touch = top - rect.size.y,
                 };
             } else top_edge: {
                 // 向上时固定目标上边缘所在行。
-                const row = tileCoord(dest, self.map.tileSize.y);
-                const bottom = (@as(f32, @floatFromInt(row)) + 1) *
-                    self.map.tileSize.y;
+                const row = tileCoord(dest, size);
+                const rowf: f32 = @floatFromInt(row);
+                const bottom = (rowf + 1) * size;
                 break :top_edge .{ .fixed = row, .touch = bottom };
             };
 
-            const remaining = if (inRange(edge.fixed, self.map.height))
+            const remaining = if (inRange(edge.fixed, self.map.grid.height))
                 cols.count
             else
                 0;
-            const width: i32 = @intCast(self.map.width);
+            const width = self.map.grid.width;
             const index = if (remaining > 0)
                 edge.fixed * width + cols.first
             else
@@ -303,22 +306,19 @@ pub fn Grid(comptime T: type) type {
         }
 
         fn assertValid(self: *const Self) void {
-            std.debug.assert(self.map.tileSize.x > 0);
-            std.debug.assert(self.map.tileSize.y > 0);
-            const total = @as(usize, self.map.width) *
-                @as(usize, self.map.height);
-            std.debug.assert(self.data.len >= total);
+            std.debug.assert(self.map.grid.cell > 0);
+            std.debug.assert(self.data.len >= self.map.grid.count());
         }
     };
 }
 
-pub const TileRectIter = struct {
+pub const CellRectIter = struct {
     width: i32 = 0,
-    min: Position = .xy(0, 0),
-    max: Position = .xy(-1, -1),
-    current: Position = .xy(0, 0),
+    min: Cell = .xy(0, 0),
+    max: Cell = .xy(-1, -1),
+    current: Cell = .xy(0, 0),
 
-    pub fn next(self: *TileRectIter) ?usize {
+    pub fn next(self: *CellRectIter) ?usize {
         if (self.current.y > self.max.y) return null;
 
         const i = self.current.y * self.width + self.current.x;
@@ -336,24 +336,23 @@ const Range = struct {
     count: u32 = 0,
 };
 
-fn clipRange(first: i32, last: i32, limit: u32) Range {
+fn clipRange(first: i32, last: i32, limit: i32) Range {
     if (last < first or limit == 0) return .{};
     if (last < 0) return .{};
 
-    const limitI: i32 = @intCast(limit);
-    if (first >= limitI) return .{};
+    if (first >= limit) return .{};
 
     const clippedFirst = @max(first, 0);
-    const clippedLast = @min(last, limitI - 1);
+    const clippedLast = @min(last, limit - 1);
     return .{
         .first = clippedFirst,
         .count = @intCast(clippedLast - clippedFirst + 1),
     };
 }
 
-fn inRange(index: i32, limit: u32) bool {
+fn inRange(index: i32, limit: i32) bool {
     if (index < 0) return false;
-    return @as(u32, @intCast(index)) < limit;
+    return index < limit;
 }
 
 fn tileCoord(value: f32, size: f32) i32 {

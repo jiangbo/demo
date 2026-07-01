@@ -257,8 +257,8 @@ pub fn spawnMapTile(
     globalId: u32,
     index: usize,
 ) Entity {
-    const topLeft = data.tileIndexToWorld(index);
-    const size = data.tileSize;
+    const topLeft = data.grid.indexToWorld(index);
+    const size = data.grid.cellSize();
     const position = topLeft.addY(size.y);
     var image = data.getImageByGid(globalId) orelse
         zhu.graphics.Image{ .size = size };
@@ -631,9 +631,7 @@ test "地图摆件按底边定位生成实体" {
     };
     const refs = [_]tiled.TileSetRef{.{ .id = tileSetId }};
     const testMap = tiled.Map{
-        .height = 1,
-        .width = 1,
-        .tileSize = .xy(16, 16),
+        .grid = .{ .width = 1, .height = 1, .cell = 16 },
         .layers = &.{},
         .tileSetRefs = &refs,
     };
@@ -701,9 +699,7 @@ test "地图摆件优先用碰撞底边作为排序点" {
     }};
     const refs = [_]tiled.TileSetRef{.{ .id = tileSetId }};
     const testMap = tiled.Map{
-        .height = 1,
-        .width = 1,
-        .tileSize = .xy(16, 16),
+        .grid = .{ .width = 1, .height = 1, .cell = 16 },
         .layers = &.{},
         .tileSetRefs = &refs,
     };
@@ -770,9 +766,7 @@ test "带 anim_id 的地图摆件会创建停止的非循环动画" {
     };
     const refs = [_]tiled.TileSetRef{.{ .id = tileSetId }};
     const testMap = tiled.Map{
-        .height = 1,
-        .width = 1,
-        .tileSize = .xy(16, 16),
+        .grid = .{ .width = 1, .height = 1, .cell = 16 },
         .layers = &.{},
         .tileSetRefs = &refs,
     };
