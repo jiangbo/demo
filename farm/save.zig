@@ -29,6 +29,7 @@ pub const Slot = union(enum) {
 };
 
 pub var slots: [slotCount]Slot = @splat(.empty);
+var allocator: std.mem.Allocator = undefined;
 
 const TimeSave = struct {
     paused: bool = false,
@@ -70,7 +71,8 @@ pub fn slotPath(slot: u8, buffer: []u8) ![:0]const u8 {
     return try std.fmt.bufPrintZ(buffer, "saves/slot{d}.zon", .{slot});
 }
 
-pub fn init() void {
+pub fn init(allocator_: zhu.Allocator) void {
+    allocator = allocator_.raw;
     for (&slots, 0..) |*state, index| {
         const slot: u8 = @intCast(index);
         const summary = readSlotSummary(slot) catch |err| {
@@ -124,7 +126,7 @@ fn loadSlotInner(world: *World, slot: u8) !void {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
-    var save = try zhu.window.readZon(SaveData, path, false);
+    var save = try zhu.window.readZon(SaveData, path, .{});
     defer save.deinit();
 
     try apply(world, save.value);
@@ -135,12 +137,12 @@ pub fn readSlotSummary(slot: u8) !?SlotSummary {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
-    const source = zhu.window.readAll(path) catch |err|
+    const source = zhu.window.readAll(allocator, path) catch |err|
         switch (err) {
             error.FileNotFound => return null,
             else => return err,
         };
-    defer zhu.assets.free(source);
+    defer allocator.free(source);
 
     return try parseSlotSummary(source);
 }
@@ -214,50 +216,50 @@ fn capture(world: *World) !SaveData {
 }
 
 fn freeCaptured(data: SaveData) void {
-    for (data.maps) |saved| zhu.assets.free(saved.tiles);
-    zhu.assets.free(data.maps);
+    for (data.maps) |saved| allocator.free(saved.tiles);
+    allocator.free(data.maps);
 }
 
 fn captureMaps() ![]const MapSave {
     const ids = std.enums.values(component.map.Id);
     var result = try std.ArrayList(MapSave).initCapacity(
-        zhu.assets.allocator,
+        allocator,
         ids.len,
     );
     errdefer {
-        for (result.items) |saved| zhu.assets.free(saved.tiles);
-        result.deinit(zhu.assets.allocator);
+        for (result.items) |saved| allocator.free(saved.tiles);
+        result.deinit(allocator);
     }
 
     for (ids) |id| {
         const state = context.map.states.getPtr(id);
-        try result.append(zhu.assets.allocator, .{
+        try result.append(allocator, .{
             .id = id,
             .day = state.day,
             .tiles = try captureTiles(state),
         });
     }
 
-    return try result.toOwnedSlice(zhu.assets.allocator);
+    return try result.toOwnedSlice(allocator);
 }
 
 fn captureTiles(state: *const context.map.State) ![]const TileSave {
     var list: std.ArrayList(TileSave) = .empty;
-    errdefer list.deinit(zhu.assets.allocator);
+    errdefer list.deinit(allocator);
 
-    if (!state.initialized) return try list.toOwnedSlice(zhu.assets.allocator);
+    if (!state.initialized) return try list.toOwnedSlice(allocator);
 
     for (state.tiles, 0..) |tile, index| {
         if (tile.ground == null and tile.thing == null) continue;
 
-        try list.append(zhu.assets.allocator, .{
+        try list.append(allocator, .{
             .index = @intCast(index),
             .land = tile.ground,
             .thing = tile.thing,
         });
     }
 
-    return try list.toOwnedSlice(zhu.assets.allocator);
+    return try list.toOwnedSlice(allocator);
 }
 
 fn apply(world: *World, data: SaveData) !void {
@@ -283,7 +285,7 @@ fn restoreMaps(data: SaveData) void {
 
 fn restoreMap(data: MapSave) void {
     const mapData = &map.maps[@intFromEnum(data.id)];
-    const tileCount = mapData.width * mapData.height;
+    const tileCount = mapData.grid.count();
     const state = context.map.ensureState(data.id, tileCount);
 
     for (data.tiles) |tileSave| {

@@ -37,7 +37,8 @@ pub fn draw(world: *World) void {
     const target = world.get(player, Target).?;
     if (!target.active) return;
 
-    const rect = zhu.Rect.init(target.position, map.data.tileSize);
+    const tileSize = map.data.grid.cellSize();
+    const rect = zhu.Rect.init(target.position, tileSize);
     zhu.batch.drawRect(rect, .{ .color = target.color });
 }
 
@@ -73,17 +74,17 @@ fn targetPosition(world: *World, player: Entity) ?zhu.Vector2 {
     if (state.input.mouseCaptured) return null;
 
     const playerPos = world.get(player, Position).?;
-    const playerTile = map.data.worldToTilePosition(playerPos);
+    const playerTile = map.data.grid.worldToCell(playerPos);
     const mouseWorld = zhu.camera.toWorld(zhu.window.mouse);
-    const mouseTile = map.data.worldToTilePosition(mouseWorld);
+    const mouseTile = map.data.grid.worldToCell(mouseWorld);
 
-    if (map.data.tilePositionToIndex(mouseTile) == null) return null;
+    if (map.data.grid.cellToIndex(mouseTile) == null) return null;
 
     const outOfRangeX = @abs(mouseTile.x - playerTile.x) > tileRange;
     const outOfRangeY = @abs(mouseTile.y - playerTile.y) > tileRange;
     if (outOfRangeX or outOfRangeY) return null;
 
-    return map.data.tilePositionToWorld(mouseTile);
+    return map.data.grid.cellToWorld(mouseTile);
 }
 
 fn updateTargetAction(world: *World, player: Entity) void {

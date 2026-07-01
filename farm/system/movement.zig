@@ -3,7 +3,6 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const map = @import("../map.zig");
-const spatial = map.spatial;
 
 const Position = component.Position;
 const Velocity = component.motion.Velocity;
@@ -24,20 +23,19 @@ pub fn update(world: *World, delta: f32) void {
         // 轴分离碰撞解析：先尝试 X 轴移动，再尝试 Y 轴移动。
         // 碰撞时只回退受阻轴，这样可以沿墙滑动而不会卡死。
         const posX = pos.addX(offset.x);
-        if (spatial.canMove(world, entity, posX)) pos.* = posX;
+        if (map.canMove(world, entity, posX)) pos.* = posX;
 
         // Y 轴基于 X 轴已接受的位置继续检测，保持斜向移动和滑动。
         const posY = pos.addY(offset.y);
-        if (spatial.canMove(world, entity, posY)) pos.* = posY;
+        if (map.canMove(world, entity, posY)) pos.* = posY;
     }
 }
 
 test "移动系统会按速度更新位置" {
-    enterTestMap();
-    defer spatial.exit();
-
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     const entity = world.createEntity();
     world.add(entity, Position.xy(10, 20));
@@ -50,12 +48,11 @@ test "移动系统会按速度更新位置" {
     try std.testing.expect(position.approxEqual(.xy(11.5, 18)));
 }
 
-const testMaps = [_]zhu.extend.tiled.Map{@import("../zon/map/school.zon")};
-
-fn enterTestMap() void {
-    zhu.assets.allocator = std.testing.allocator;
-    spatial.enter(&testMaps[0]);
-}
+const testMap = zhu.extend.tiled.Map{
+    .grid = .{ .width = 30, .height = 17, .cell = 16 },
+    .layers = &.{},
+    .tileSetRefs = &.{},
+};
 
 fn addMover(world: *World, position: zhu.Vector2, velocity: zhu.Vector2) Entity {
     const entity = world.createEntity();
@@ -75,11 +72,10 @@ fn addBlocker(world: *World, position: zhu.Vector2, blocking: bool) Entity {
 }
 
 test "动态阻挡会忽略自己" {
-    enterTestMap();
-    defer spatial.exit();
-
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     const entity = addMover(&world, .xy(0, 0), .xy(10, 0));
 
@@ -89,11 +85,10 @@ test "动态阻挡会忽略自己" {
 }
 
 test "带 Blocking 的 Shape 会挡住移动" {
-    enterTestMap();
-    defer spatial.exit();
-
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     const mover = addMover(&world, .xy(0, 0), .xy(10, 0));
     _ = addBlocker(&world, .xy(10, 0), true);
@@ -104,11 +99,10 @@ test "带 Blocking 的 Shape 会挡住移动" {
 }
 
 test "没有 Blocking 的 Shape 不会挡住移动" {
-    enterTestMap();
-    defer spatial.exit();
-
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     const mover = addMover(&world, .xy(0, 0), .xy(10, 0));
     _ = addBlocker(&world, .xy(10, 0), false);
@@ -119,11 +113,10 @@ test "没有 Blocking 的 Shape 不会挡住移动" {
 }
 
 test "动态阻挡只回退受阻轴" {
-    enterTestMap();
-    defer spatial.exit();
-
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     const mover = addMover(&world, .xy(0, 0), .xy(10, 5));
     _ = addBlocker(&world, .xy(10, 0), true);

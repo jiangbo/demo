@@ -57,10 +57,10 @@ pub fn init(allocator_: zhu.Allocator) void {
     world = World.init(allocator.raw);
 
     // 存档状态先就位，UI 只持有这份长期有效的槽位切片。
-    save.init();
+    save.init(allocator);
     ui.init(&save.slots);
     title.init();
-    map.init();
+    map.init(allocator);
     factory.init();
 
     canvas = zhu.graphics.createRenderTarget(zhu.window.size);
@@ -72,6 +72,10 @@ pub fn init(allocator_: zhu.Allocator) void {
 }
 
 pub fn deinit() void {
+    switch (current) {
+        .title => {},
+        .play => map.exit(&world),
+    }
     map.deinit();
     context.deinit();
     ui.deinit();

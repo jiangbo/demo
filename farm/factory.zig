@@ -203,7 +203,7 @@ fn spawnNpc(world: *World, config: Character, sources: Sources) Entity {
 
 pub fn spawnMapObject(
     world: *World,
-    data: *const tiled.Map,
+    data: tiled.Map,
     object: Object,
 ) Entity {
     const entity = world.createEntity();
@@ -253,7 +253,7 @@ pub fn spawnMapObject(
 
 pub fn spawnMapTile(
     world: *World,
-    data: *const tiled.Map,
+    data: tiled.Map,
     globalId: u32,
     index: usize,
 ) Entity {
@@ -641,7 +641,7 @@ test "地图摆件按底边定位生成实体" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    const entity = spawnMapObject(&world, &testMap, .{
+    const entity = spawnMapObject(&world, testMap, .{
         .id = 1,
         .gid = 0x01000000,
         .name = "",
@@ -709,7 +709,7 @@ test "地图摆件优先用碰撞底边作为排序点" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    const entity = spawnMapObject(&world, &testMap, .{
+    const entity = spawnMapObject(&world, testMap, .{
         .id = 1,
         .gid = 0x01000000,
         .name = "",
@@ -776,7 +776,7 @@ test "带 anim_id 的地图摆件会创建停止的非循环动画" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    const entity = spawnMapObject(&world, &testMap, .{
+    const entity = spawnMapObject(&world, testMap, .{
         .id = 1,
         .gid = 0x01000000,
         .name = "",

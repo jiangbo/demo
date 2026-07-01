@@ -4,8 +4,9 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const context = @import("context.zig");
 const factory = @import("factory.zig");
-pub const spatial = @import("map/spatial.zig");
-pub const land = @import("map/land.zig");
+const loader = @import("map/loader.zig");
+const Spatial = @import("map/Spatial.zig");
+const Land = @import("map/Land.zig");
 
 const tiled = zhu.extend.tiled;
 const World = zhu.ecs.World;
@@ -17,6 +18,7 @@ const motion = component.motion;
 const Position = component.Position;
 pub const Id = component.map.Id;
 pub const StartOffset = component.map.StartOffset;
+pub const Hit = component.map.Hit;
 const Trigger = component.map.Trigger;
 const Thing = context.map.Thing;
 
@@ -30,10 +32,16 @@ pub const maps = [_]tiled.Map{
 const triggerOffset = 8;
 
 pub var current: Id = .school;
-pub var data: *const tiled.Map = &maps[0];
+pub var data: tiled.Map = maps[0];
 var vertexes: std.ArrayList(zhu.batch.Vertex) = .empty;
 var frontLayerStart: usize = 0;
-var mapImage: zhu.graphics.Image = undefined;
+var mapImage: zhu.Image = undefined;
+var dryLandImage: zhu.Image = undefined;
+var wetLandImage: zhu.Image = undefined;
+var gpa: zhu.Allocator = undefined;
+var rawGpa: std.mem.Allocator = undefined;
+pub var land: Land = .{};
+pub var spatial: Spatial = .{};
 
 pub fn isOutdoor(id: Id) bool {
     // 硬编码室内外规则。如需扩展可改为从 ZON 配置读取。
@@ -43,29 +51,27 @@ pub fn isOutdoor(id: Id) bool {
     };
 }
 
-pub fn init() void {
+pub fn init(gpa_: zhu.Allocator) void {
+    gpa = gpa_;
+    rawGpa = gpa_.raw;
     tiled.init(@import("zon/map/tile.zon"));
     mapImage = zhu.getImage("circle.png").?;
-    land.init();
+    const landImage = zhu.getImage(
+        "farm-rpg/Farm/Tileset/Modular/Tilled Soil and wet soil.png",
+    ).?;
+    dryLandImage = landImage.sub(.init(.xy(0, 48), .xy(16, 16)));
+    wetLandImage = landImage.sub(.init(.xy(192, 48), .xy(16, 16)));
 }
 
 pub fn deinit() void {
-    spatial.deinit();
-    land.deinit();
-    vertexes.clearAndFree(zhu.assets.allocator);
+    vertexes.clearAndFree(rawGpa);
 }
 
 pub fn enter(world: *World, id: Id, targetId: i32) void {
     world.reset();
 
     current = id;
-    data = &maps[@intFromEnum(id)];
-    zhu.camera.bound = data.size();
-
-    land.enter(data);
-    spatial.enter(data);
-
-    parseLayers(world);
+    load(gpa, world, maps[@intFromEnum(id)]);
     restoreState(world);
 
     var spawn: ?zhu.Vector2 = null;
@@ -78,7 +84,7 @@ pub fn enter(world: *World, id: Id, targetId: i32) void {
         }
     }
 
-    zhu.camera.bound = data.size();
+    zhu.camera.bound = data.grid.size();
     const position = spawn orelse zhu.Vector2.xy(311, 168);
     factory.spawnPlayer(world, position);
     zhu.camera.directFollow(position);
@@ -106,38 +112,29 @@ pub fn update(world: *World) void {
     }
 }
 
-fn parseLayers(world: *World) void {
-    var foundFrontLayer = false;
-    for (data.layers) |*layer| {
-        std.log.info("parsing layer: {s}", .{layer.name});
-        switch (layer.type) {
-            .tile => if (layer.isNamed("solid")) {
-                spatial.parseSolidLayer(layer);
-            } else parseTileLayer(world, layer),
-            .image => parseImageLayer(layer),
-            .object => {
-                if (!foundFrontLayer and layer.isNamed("main")) {
-                    frontLayerStart = vertexes.items.len;
-                    foundFrontLayer = true;
-                }
-                loadObjects(world, layer);
-            },
-        }
-    }
-
-    if (!foundFrontLayer) frontLayerStart = vertexes.items.len;
-
-    std.log.info("map loaded: {}x{}, tiles: {}", //
-        .{ data.width, data.height, vertexes.items.len });
-}
-
 pub fn exit(world: *World) void {
     saveState(world);
+    unload();
+}
 
-    land.exit();
-    spatial.exit();
+pub fn load(gpa_: zhu.Allocator, world: *World, mapData: tiled.Map) void {
+    gpa = gpa_;
+    rawGpa = gpa.raw;
+    data = mapData;
+    zhu.camera.bound = data.grid.size();
+
+    const loaded = loader.load(gpa, world, data);
+    land = loaded.land;
+    spatial = loaded.spatial;
+    vertexes = loaded.vertexes;
+    frontLayerStart = loaded.frontLayerStart;
+}
+
+pub fn unload() void {
+    land.deinit(gpa);
+    spatial.deinit(gpa);
     frontLayerStart = 0;
-    vertexes.clearRetainingCapacity();
+    vertexes.clearAndFree(rawGpa);
 }
 
 pub fn saveState(world: *World) void {
@@ -158,7 +155,58 @@ pub fn saveState(world: *World) void {
     state.day = context.clock.day;
 }
 
-fn thingAt(world: *World, tile: land.Tile) ?context.map.Thing {
+pub fn canHoe(position: zhu.Vector2) bool {
+    if (!spatial.canHoeTile(position)) return false;
+    return land.canHoe(position);
+}
+
+pub fn hoe(position: zhu.Vector2) bool {
+    if (!spatial.canHoeTile(position)) return false;
+    return land.hoe(position);
+}
+
+pub fn canPlant(position: zhu.Vector2) bool {
+    return land.canPlant(position);
+}
+
+pub fn water(position: zhu.Vector2) bool {
+    return land.water(position);
+}
+
+pub fn cropAt(position: zhu.Vector2) ?zhu.ecs.Entity {
+    const tile = land.getTile(position) orelse return null;
+    return tile.crop();
+}
+
+pub fn productAt(index: usize) ?zhu.ecs.Entity {
+    if (index >= land.tiles.len) return null;
+    return land.tiles[index].product();
+}
+
+pub fn setCropAt(position: zhu.Vector2, entity: zhu.ecs.Entity) void {
+    const tile = land.getTile(position).?;
+    tile.object = .{ .entity = entity };
+}
+
+pub fn setProductAt(position: zhu.Vector2, entity: zhu.ecs.Entity) void {
+    const tile = land.getTile(position).?;
+    tile.setProduct(entity);
+}
+
+pub fn clearObjectAt(position: zhu.Vector2) void {
+    const tile = land.getTile(position).?;
+    tile.object = null;
+}
+
+pub fn hasAnyBlockAt(position: zhu.Vector2) bool {
+    return Spatial.hasAnyBlock(spatial.marksAt(position));
+}
+
+pub fn canMove(world: *World, entity: zhu.ecs.Entity, to: zhu.Vector2) bool {
+    return spatial.canMove(world, entity, to);
+}
+
+fn thingAt(world: *World, tile: Land.Tile) ?context.map.Thing {
     const object = tile.object orelse return null;
     return switch (object.kind) {
         .crop => .{ .crop = world.get(object.entity, farm.Crop).? },
@@ -189,7 +237,7 @@ fn restoreThing(world: *World, index: usize, thing: Thing) void {
     switch (thing) {
         .gone => clearProductAt(world, index),
         .crop => |crop| {
-            const position = data.tileIndexToWorld(index);
+            const position = data.grid.indexToWorld(index);
             const entity = factory.spawnCrop(world, position, crop.kind);
             world.getPtr(entity, farm.Crop).?.* = crop;
             refreshCropSprite(world, entity, crop);
@@ -235,7 +283,7 @@ pub fn clearProductAt(world: *World, index: usize) void {
 
 // 对象层产出按碰撞范围登记；没有碰撞范围时退回到传入矩形。
 fn setProductTiles(entity: zhu.ecs.Entity, rect: zhu.Rect) void {
-    var iter = data.tilesInRect(rect);
+    var iter = data.grid.cellsInRect(rect);
     while (iter.next()) |index| {
         land.tiles[index].setProduct(entity);
     }
@@ -301,7 +349,7 @@ pub fn drawBack() void {
         zhu.batch.drawVertices(back, mapImage);
     }
 
-    land.draw();
+    land.draw(dryLandImage, wetLandImage);
 }
 
 pub fn drawFront() void {
@@ -319,7 +367,7 @@ pub fn markFacingHits(world: *World) void {
     const pos = world.get(player, Position).?;
     const facing = world.get(player, actor.Actor).?.facing;
 
-    const ts = data.tileSize.x; // 当前地图瓦片大小
+    const ts = data.grid.cellSize().x; // 当前地图格子大小
     const probeSize = ts + probePadding * 2;
     const half = probeSize / 2;
     const origin = pos.add(switch (facing) {
@@ -328,20 +376,7 @@ pub fn markFacingHits(world: *World) void {
         .right => zhu.Vector2.xy(ts - half, -half),
         .left => zhu.Vector2.xy(-ts - half, -half),
     });
-    spatial.markHits(world, .init(origin, .square(probeSize)));
-}
-
-pub fn loadObjects(world: *World, layer: *const tiled.Layer) void {
-    if (layer.isNamed("collider")) {
-        for (layer.objects) |object| {
-            spatial.addSolidRect(object.rect());
-        }
-        return;
-    }
-
-    for (layer.objects) |object| {
-        loadObject(world, object);
-    }
+    Spatial.markHits(world, .init(origin, .square(probeSize)));
 }
 
 fn triggerSpawnPosition(trigger: Trigger) zhu.Vector2 {
@@ -355,159 +390,8 @@ fn triggerSpawnPosition(trigger: Trigger) zhu.Vector2 {
     };
 }
 
-fn loadObject(world: *World, object: tiled.Object) void {
-    if (object.point and object.isType("actor")) {
-        return loadActor(world, object);
-    }
-    if (object.point and object.isType("animal")) {
-        return loadAnimal(world, object);
-    }
-    if (object.isType("map_trigger")) {
-        return loadTrigger(world, object);
-    }
-    if (object.isType("rest")) return loadRest(world, object);
-    if (object.isType("light")) return loadLightObject(world, object);
-    if (object.gid != 0) return loadProp(world, object);
-}
-
-fn loadActor(world: *World, object: tiled.Object) void {
-    // player 由 scene 统一创建，地图中的点只作为 Tiled 标记保留。
-    if (object.isNamed("player")) return;
-
-    if (object.isNamed("friend")) {
-        const entity = factory.spawnFriend(world);
-        // Tiled 点对象的位置就是 NPC 脚底点，和 YSort 使用同一套坐标。
-        world.add(entity, object.position);
-        world.getPtr(entity, actor.Wander).?.home = object.position;
-        return;
-    }
-    std.debug.panic("unknown actor object: {s}", .{object.name});
-}
-
-fn loadAnimal(world: *World, object: tiled.Object) void {
-    // animal 是没有 gid 的 Tiled 点对象，name 直接对应 AnimalEnum。
-    const kind = zhu.enums.to(actor.AnimalEnum, object.name);
-    const entity = factory.spawnAnimal(world, kind);
-    // Tiled 点对象的位置就是动物脚底点，和玩家、YSort 使用同一套坐标。
-    world.add(entity, object.position);
-    world.getPtr(entity, actor.Wander).?.home = object.position;
-}
-
-fn loadTrigger(world: *World, object: tiled.Object) void {
-    std.debug.assert(object.size.x > 0 and object.size.y > 0);
-
-    const target = object.getProperty("target_map", []const u8).?;
-    const targetMap = zhu.enums.to(Id, target);
-    const start = object.getProperty("start_offset", []const u8).?;
-    const startOffset = std.meta.stringToEnum(StartOffset, start);
-
-    const trigger: Trigger = .{
-        .rect = object.rect(),
-        .selfId = object.getProperty("self_id", i32).?,
-        .targetId = object.getProperty("target_id", i32).?,
-        .targetMap = targetMap,
-        .startOffset = startOffset orelse .none,
-    };
-    _ = factory.spawnMapTrigger(world, trigger);
-}
-
-fn loadRest(world: *World, object: tiled.Object) void {
-    const entity = world.createEntity();
-    world.add(entity, object.position);
-    world.add(entity, component.map.Rest{});
-    world.add(entity, motion.Shape{
-        .rect = object.rect().move(object.position.neg()),
-    });
-}
-
-fn loadProp(world: *World, object: tiled.Object) void {
-    const entity = factory.spawnMapObject(world, data, object);
-    const solid = spatial.addSolidObject(object);
-    if (world.has(entity, item.Chest)) {
-        const rect = object.rect();
-        const position = world.get(entity, Position).?;
-        world.add(entity, motion.Shape{
-            .rect = rect.move(position.neg()),
-        });
-
-        const tile = land.getTile(rect.center()).?;
-        tile.object = .{ .kind = .chest, .entity = entity };
-    }
-    if (world.has(entity, item.Product)) {
-        std.debug.assert(world.has(entity, item.Health));
-        if (solid.count != 0) {
-            // 树这类对象按碰撞范围登记，不按更大的显示范围登记。
-            for (spatial.solidAreas(solid)) |area| {
-                setProductTiles(entity, area);
-            }
-        } else {
-            setProductTiles(entity, object.rect());
-        }
-    }
-    if (solid.count != 0) {
-        world.add(entity, solid);
-    }
-}
-
-fn loadLightObject(world: *World, object: tiled.Object) void {
-    if (object.isNamed("point")) {
-        _ = factory.spawnPointLight(world, object);
-        return;
-    }
-
-    if (object.isNamed("spot")) {
-        _ = factory.spawnSpotLight(world, object);
-    }
-}
-
-/// 将 tile 层的每个瓦片转为预构建顶点
-/// 流程：gid → 找到所属 tileSet → 算出 tileSet 内的局部 ID
-///       → 用 columns 换算行列得到裁剪区域 → sub 裁出子图 → 写入顶点
-fn parseTileLayer(world: *World, layer: *const tiled.Layer) void {
-    for (layer.data, 0..) |globalId, index| {
-        if (globalId == 0) continue; // 0 表示空瓦片，跳过
-
-        if (layer.isNamed("rock")) {
-            loadRockTile(world, globalId, index);
-        } else {
-            const image = data.getImageByGid(globalId);
-            appendVertex(data.tileIndexToWorld(index), image);
-        }
-
-        // 带 tile_flag 标记的瓦片设置方向碰撞
-        const tile = data.getTileByGid(globalId) orelse continue;
-        if (tile.getProperty("tile_flag", []const u8)) |flag| {
-            spatial.setTileFlag(index, flag);
-        }
-    }
-}
-
-fn loadRockTile(world: *World, globalId: u32, index: usize) void {
-    const entity = factory.spawnMapTile(world, data, globalId, index);
-    if (!world.has(entity, item.Product)) return;
-    std.debug.assert(world.has(entity, item.Health));
-
-    land.tiles[index].setProduct(entity);
-}
-
-/// 将整张图作为一层背景/前景直接写入顶点
-/// image 层没有瓦片网格，就是一张大图放在 offset 位置
-fn parseImageLayer(layer: *const tiled.Layer) void {
-    const image = zhu.assets.getImage(layer.image).?
-        .sub(.init(.zero, .xy(layer.width, layer.height)));
-    appendVertex(layer.offset, image);
-}
-
-fn appendVertex(position: zhu.Vector2, image: zhu.graphics.Image) void {
-    vertexes.append(zhu.assets.allocator, .{
-        .position = position,
-        .layer = image.layer,
-        .size = image.size,
-        .uvRect = image.uvRect(),
-    }) catch @panic("map oom");
-}
-
 test "地图绘制会把前景留到实体之后" {
+    rawGpa = std.testing.allocator;
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
     defer vertexes.clearAndFree(std.testing.allocator);
@@ -517,9 +401,19 @@ test "地图绘制会把前景留到实体之后" {
 
     const image = zhu.Image{ .view = .{ .id = 1 } };
     mapImage = image;
-    appendVertex(.xy(1, 0), image); // back
+    try vertexes.append(std.testing.allocator, .{
+        .position = .xy(1, 0),
+        .layer = image.layer,
+        .size = image.size,
+        .uvRect = image.uvRect(),
+    });
     frontLayerStart = vertexes.items.len;
-    appendVertex(.xy(2, 0), image); // front
+    try vertexes.append(std.testing.allocator, .{
+        .position = .xy(2, 0),
+        .layer = image.layer,
+        .size = image.size,
+        .uvRect = image.uvRect(),
+    });
 
     var vertices: [8]zhu.batch.Vertex = undefined;
     var commands: [4]zhu.batch.Command = undefined;
@@ -535,126 +429,6 @@ test "地图绘制会把前景留到实体之后" {
 
     try std.testing.expectEqual(2, vertexBuffer.items.len);
     try std.testing.expectEqual(2, vertexBuffer.items[1].position.x);
-}
-
-test "actor 点对象会生成 NPC，player 点对象只保留标记" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    putMockNpcImages();
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    loadObject(&world, .{
-        .id = 1,
-        .gid = 0,
-        .name = "player",
-        .type = "actor",
-        .position = .xy(10, 20),
-        .size = .zero,
-        .point = true,
-        .properties = &.{},
-        .extend = .{},
-    });
-
-    try std.testing.expectEqual(0, world.values(actor.Npc).len);
-
-    loadObject(&world, .{
-        .id = 2,
-        .gid = 0,
-        .name = "friend",
-        .type = "actor",
-        .position = .xy(95, 274),
-        .size = .zero,
-        .point = true,
-        .properties = &.{},
-        .extend = .{},
-    });
-
-    var query = world.query(.{
-        Position,
-        actor.Npc,
-        actor.Wander,
-        actor.Dialog,
-    });
-    const entity = query.next().?;
-    const position = query.get(entity, Position);
-    const wander = query.get(entity, actor.Wander);
-    const dialog = query.get(entity, actor.Dialog);
-
-    try std.testing.expectEqual(95, position.x);
-    try std.testing.expectEqual(274, position.y);
-    try std.testing.expectEqual(95, wander.home.x);
-    try std.testing.expectEqual(274, wander.home.y);
-    try std.testing.expect(dialog.lines.len != 0);
-    try std.testing.expectEqual(null, query.next());
-}
-
-test "trigger 对象会创建 ECS 触发器实体" {
-    const properties = [_]tiled.Property{
-        .{ .name = "self_id", .value = .{ .int = 2 } },
-        .{ .name = "start_offset", .value = .{ .string = "bottom" } },
-        .{ .name = "target_id", .value = .{ .int = 3 } },
-        .{ .name = "target_map", .value = .{ .string = "school" } },
-    };
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    loadObject(&world, .{
-        .id = 1,
-        .gid = 0,
-        .name = "",
-        .type = "map_trigger",
-        .position = .xy(10, 20),
-        .size = .xy(30, 40),
-        .point = false,
-        .properties = &properties,
-        .extend = .{},
-    });
-
-    var query = world.query(.{component.map.Trigger});
-    const entity = query.next().?;
-    const trigger = query.get(entity, component.map.Trigger);
-
-    try std.testing.expectEqual(2, trigger.selfId);
-    try std.testing.expectEqual(3, trigger.targetId);
-    try std.testing.expectEqual(Id.school, trigger.targetMap);
-    try std.testing.expectEqual(StartOffset.bottom, trigger.startOffset);
-    try std.testing.expectEqual(10, trigger.rect.min.x);
-    try std.testing.expectEqual(20, trigger.rect.min.y);
-    try std.testing.expectEqual(null, query.next());
-}
-
-test "rest 对象会创建可交互实体" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    loadObject(&world, .{
-        .id = 1,
-        .gid = 0,
-        .name = "",
-        .type = "rest",
-        .position = .xy(10, 20),
-        .size = .xy(30, 40),
-        .point = false,
-        .properties = &.{},
-        .extend = .{},
-    });
-
-    var query = world.query(.{
-        Position,
-        component.map.Rest,
-        motion.Shape,
-    });
-    const entity = query.next().?;
-    const shape = query.get(entity, motion.Shape);
-
-    try std.testing.expectEqual(10, query.get(entity, Position).x);
-    try std.testing.expectEqual(20, query.get(entity, Position).y);
-    try std.testing.expectEqual(30, shape.rect.size.x);
-    try std.testing.expectEqual(40, shape.rect.size.y);
-    try std.testing.expectEqual(null, query.next());
 }
 
 test "触发器落点会按 start_offset 放到区域外侧" {
@@ -757,8 +531,8 @@ test "当前地图跨天推进作物后刷新贴图和渲染层" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
     putMockCropImages();
-    land.enter(&maps[0]);
-    defer land.exit();
+    land = Land.init(zhu.testing.allocator, maps[0].grid);
+    defer land.deinit(zhu.testing.allocator);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -793,8 +567,8 @@ test "当前地图和离线地图跨天推进规则一致" {
     putMockCropImages();
     context.clock.reset();
     defer context.clock.reset();
-    land.enter(&maps[0]);
-    defer land.exit();
+    land = Land.init(zhu.testing.allocator, maps[0].grid);
+    defer land.deinit(zhu.testing.allocator);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -843,9 +617,10 @@ test "当前地图和离线地图跨天推进规则一致" {
 }
 
 test "恢复已打开宝箱会移除动画组件" {
-    zhu.assets.allocator = std.testing.allocator;
-    land.enter(&maps[0]);
-    defer land.exit();
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    land = Land.init(zhu.testing.allocator, maps[0].grid);
+    defer land.deinit(zhu.testing.allocator);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -854,7 +629,7 @@ test "恢复已打开宝箱会移除动画组件" {
         .{ .offset = .xy(0, 0), .duration = 0.1 },
         .{ .offset = .xy(16, 0), .duration = 0.1 },
     };
-    const image = zhu.graphics.Image{ .size = .xy(32, 16) };
+    const image = zhu.Image{ .size = .xy(32, 16) };
 
     const chest = world.createEntity();
     world.add(chest, item.Chest{});
@@ -870,9 +645,10 @@ test "恢复已打开宝箱会移除动画组件" {
 }
 
 test "恢复地图产出对象会写回保存的产物和生命" {
-    zhu.assets.allocator = std.testing.allocator;
-    land.enter(&maps[0]);
-    defer land.exit();
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    land = Land.init(zhu.testing.allocator, maps[0].grid);
+    defer land.deinit(zhu.testing.allocator);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -895,11 +671,12 @@ test "恢复地图产出对象会写回保存的产物和生命" {
 }
 
 test "恢复 gone 会删除默认产出对象并清 tile 阻挡" {
-    zhu.assets.allocator = std.testing.allocator;
-    land.enter(&maps[0]);
-    defer land.exit();
-    spatial.enter(&maps[0]);
-    defer spatial.exit();
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    land = Land.init(zhu.testing.allocator, maps[0].grid);
+    defer land.deinit(zhu.testing.allocator);
+    spatial = Spatial.init(zhu.testing.allocator, maps[0].grid);
+    defer spatial.deinit(zhu.testing.allocator);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -912,17 +689,18 @@ test "恢复 gone 会删除默认产出对象并清 tile 阻挡" {
 
     restoreThing(&world, 0, .gone);
 
-    const position = maps[0].tileIndexToWorld(0).add(.xy(1, 1));
+    const position = maps[0].grid.indexToWorld(0).add(.xy(1, 1));
     try std.testing.expectEqual(null, land.tiles[0].object);
     try std.testing.expectEqual(.product, land.tiles[0].gone);
     try std.testing.expect(!world.has(entity, item.Product));
-    try std.testing.expect(!spatial.hasAnyBlock(spatial.marksAt(position)));
+    try std.testing.expect(!Spatial.hasAnyBlock(spatial.marksAt(position)));
 }
 
 test "保存已消失产出对象会写成 gone" {
-    zhu.assets.allocator = std.testing.allocator;
-    land.enter(&maps[0]);
-    defer land.exit();
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    land = Land.init(zhu.testing.allocator, maps[0].grid);
+    defer land.deinit(zhu.testing.allocator);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -943,110 +721,6 @@ test "保存已消失产出对象会写成 gone" {
         .gone => {},
         else => return error.TestExpectedEqual,
     }
-}
-
-test "加载地图产出对象会按对象和 rock 图层写入目标格" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-
-    const imageId = 1234;
-    const tileSetId = 5678;
-    zhu.assets.putImage(imageId, .{ .size = .xy(48, 16) });
-
-    const treeProps = [_]tiled.Property{
-        .{ .name = "obj_type", .value = .{ .string = "tree" } },
-        .{ .name = "anim_id", .value = .{ .string = "axe" } },
-    };
-    const rockProps = [_]tiled.Property{
-        .{ .name = "anim_id", .value = .{ .string = "pickaxe" } },
-        .{ .name = "tile_flag", .value = .{ .string = "SOLID" } },
-    };
-    const tiles = [_]tiled.Tile{
-        .{
-            .id = 0,
-            .objectGroup = null,
-            .properties = &treeProps,
-            .animation = &.{},
-        },
-        .{
-            .id = 1,
-            .objectGroup = null,
-            .properties = &rockProps,
-            .animation = &.{},
-        },
-    };
-    const tileSets = [_]tiled.TileSet{.{
-        .id = tileSetId,
-        .columns = 3,
-        .tileCount = 3,
-        .image = imageId,
-        .tileSize = .xy(16, 16),
-        .tiles = &tiles,
-    }};
-    const refs = [_]tiled.TileSetRef{.{ .id = tileSetId }};
-    const testMap = tiled.Map{
-        .height = 1,
-        .width = 3,
-        .tileSize = .xy(16, 16),
-        .layers = &.{},
-        .tileSetRefs = &refs,
-    };
-    tiled.init(&tileSets);
-    defer tiled.init(@import("zon/map/tile.zon"));
-
-    data = &testMap;
-    defer data = &maps[@intFromEnum(current)];
-    land.enter(&testMap);
-    defer land.exit();
-    spatial.enter(&testMap);
-    defer spatial.deinit();
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    loadProp(&world, .{
-        .id = 1,
-        .gid = 0x01000000,
-        .name = "",
-        .type = "",
-        .position = .xy(0, 16),
-        .size = .xy(16, 16),
-        .point = false,
-        .properties = &.{},
-        .extend = .{},
-    });
-    const layerData = [_]u32{ 0, 0x01000001, 0x01000002 };
-    const rockLayer = tiled.Layer{
-        .id = 1,
-        .name = "rock",
-        .image = 0,
-        .type = .tile,
-        .width = 3,
-        .height = 1,
-        .offset = .zero,
-        .data = &layerData,
-        .objects = &.{},
-    };
-    parseTileLayer(&world, &rockLayer);
-
-    const tree = land.tiles[0].object.?;
-    const rock = land.tiles[1].object.?;
-    const treeProd = world.get(tree.entity, item.Product).?;
-    const treeHp = world.get(tree.entity, item.Health).?;
-    const rockProd = world.get(rock.entity, item.Product).?;
-    const rockHp = world.get(rock.entity, item.Health).?;
-    const treeCfg = factory.itemConfig(.timber);
-    const rockCfg = factory.itemConfig(.stone);
-
-    try std.testing.expectEqual(.product, tree.kind);
-    try std.testing.expectEqual(.none, land.tiles[0].gone);
-    try std.testing.expectEqual(.timber, treeProd.item);
-    try std.testing.expectEqual(treeCfg.health.?, treeHp.value);
-    try std.testing.expectEqual(.product, rock.kind);
-    try std.testing.expectEqual(.none, land.tiles[1].gone);
-    try std.testing.expectEqual(.stone, rockProd.item);
-    try std.testing.expectEqual(rockCfg.health.?, rockHp.value);
-    try std.testing.expectEqual(null, land.tiles[2].object);
 }
 
 test "对象层产出对象按碰撞范围占用格子" {
@@ -1091,27 +765,7 @@ test "对象层产出对象按碰撞范围占用格子" {
         .tiles = &tiles,
     }};
     const refs = [_]tiled.TileSetRef{.{ .id = tileSetId }};
-    const testMap = tiled.Map{
-        .height = 1,
-        .width = 3,
-        .tileSize = .xy(16, 16),
-        .layers = &.{},
-        .tileSetRefs = &refs,
-    };
-    tiled.init(&tileSets);
-    defer tiled.init(@import("zon/map/tile.zon"));
-
-    data = &testMap;
-    defer data = &maps[@intFromEnum(current)];
-    land.enter(&testMap);
-    defer land.exit();
-    spatial.enter(&testMap);
-    defer spatial.deinit();
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    loadProp(&world, .{
+    const objects = [_]tiled.Object{.{
         .id = 1,
         .gid = 0x01000000,
         .name = "",
@@ -1121,7 +775,38 @@ test "对象层产出对象按碰撞范围占用格子" {
         .point = false,
         .properties = &.{},
         .extend = .{},
-    });
+    }};
+    const layers = [_]tiled.Layer{.{
+        .id = 1,
+        .name = "main",
+        .image = 0,
+        .type = .object,
+        .width = 0,
+        .height = 0,
+        .offset = .zero,
+        .data = &.{},
+        .objects = &objects,
+    }};
+    const testMap = tiled.Map{
+        .grid = .{ .width = 3, .height = 1, .cell = 16 },
+        .layers = &layers,
+        .tileSetRefs = &refs,
+    };
+    tiled.init(&tileSets);
+    defer tiled.init(@import("zon/map/tile.zon"));
+
+    data = testMap;
+    defer data = maps[@intFromEnum(current)];
+
+    var world = zhu.ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    var loaded = loader.load(zhu.testing.allocator, &world, testMap);
+    land = loaded.land;
+    spatial = loaded.spatial;
+    defer land.deinit(zhu.testing.allocator);
+    defer spatial.deinit(zhu.testing.allocator);
+    defer loaded.vertexes.clearAndFree(std.testing.allocator);
 
     spatial.tiles[0].insert(.arable);
     spatial.tiles[1].insert(.arable);
@@ -1141,9 +826,10 @@ test "对象层产出对象按碰撞范围占用格子" {
 }
 
 test "当前地图跨天会推进作物并清干湿地" {
-    zhu.assets.allocator = std.testing.allocator;
-    land.enter(&maps[0]);
-    defer land.exit();
+    zhu.assets.initCaches(std.testing.allocator);
+    defer zhu.assets.deinit();
+    land = Land.init(zhu.testing.allocator, maps[0].grid);
+    defer land.deinit(zhu.testing.allocator);
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
@@ -1168,10 +854,13 @@ test "当前地图跨天会推进作物并清干湿地" {
 }
 
 test "玩家紧贴 NPC 上方朝下时探测框能命中" {
-    // 复用 school 地图，markFacingHits 只读取瓦片大小。
-    const testMaps = [_]tiled.Map{@import("zon/map/school.zon")};
-    data = &testMaps[0];
-    defer data = &maps[@intFromEnum(current)];
+    const testMap = tiled.Map{
+        .grid = .{ .width = 3, .height = 3, .cell = 16 },
+        .layers = &.{},
+        .tileSetRefs = &.{},
+    };
+    data = testMap;
+    defer data = maps[@intFromEnum(current)];
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -1187,22 +876,14 @@ test "玩家紧贴 NPC 上方朝下时探测框能命中" {
     world.add(npc, motion.Shape{ .circle = .init(.xy(0, -5), 5) });
 
     markFacingHits(&world);
-    defer world.clear(spatial.Hit);
+    defer world.clear(Hit);
 
     // 修复前 down 探测框近边在 pos.y+12，会漏掉相切的 NPC。
-    try std.testing.expect(world.has(npc, spatial.Hit));
-}
-
-fn putMockNpcImages() void {
-    const image = zhu.graphics.Image{ .size = .xy(192, 96) };
-    zhu.assets.putImage(factory.zon.friend.sprite.imageId, image);
-    for (factory.zon.friend.animations) |animation| {
-        zhu.assets.putImage(animation.imageId, image);
-    }
+    try std.testing.expect(world.has(npc, Hit));
 }
 
 fn putMockCropImages() void {
-    const image = zhu.graphics.Image{ .size = .xy(256, 256) };
+    const image = zhu.Image{ .size = .xy(256, 256) };
     for (factory.zon.crops) |cropConfig| {
         for (cropConfig.stages) |stage| {
             zhu.assets.putImage(stage.sprite.imageId, image);

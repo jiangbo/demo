@@ -6,7 +6,7 @@ const tiled = zhu.extend.tiled;
 
 const Land = @This();
 
-map: *const tiled.Map = undefined,
+grid: tiled.Grid = undefined,
 tiles: []Tile = &.{},
 
 const Object = struct {
@@ -36,12 +36,10 @@ pub const Tile = struct {
     }
 };
 
-pub fn init(gpa: zhu.Allocator, mapData: *const tiled.Map) Land {
-    var self = Land{ .map = mapData };
-
-    self.tiles = gpa.alloc(Tile, self.map.width * self.map.height);
+pub fn init(gpa: zhu.Allocator, grid: tiled.Grid) Land {
+    var self = Land{ .grid = grid };
+    self.tiles = gpa.alloc(Tile, grid.count());
     @memset(self.tiles, .{});
-
     return self;
 }
 
@@ -49,16 +47,9 @@ pub fn deinit(self: *Land, gpa: zhu.Allocator) void {
     gpa.free(self.tiles);
 }
 
-pub fn getTile(self: Land, position: zhu.Vector2) ?*Tile {
-    std.debug.assert(self.tiles.len != 0);
-    const tile = self.map.worldToTilePosition(position);
-    if (tile.x < 0 or tile.y < 0) return null;
-
-    const width: i32 = @intCast(self.map.width);
-    const height: i32 = @intCast(self.map.height);
-    if (tile.x >= width or tile.y >= height) return null;
-
-    return &self.tiles[@as(usize, @intCast(tile.y * width + tile.x))];
+pub fn getTile(self: Land, pos: zhu.Vector2) ?*Tile {
+    const index = self.grid.worldToIndex(pos) orelse return null;
+    return &self.tiles[index];
 }
 
 pub fn canHoe(self: Land, position: zhu.Vector2) bool {
@@ -92,7 +83,7 @@ pub fn water(self: *Land, position: zhu.Vector2) bool {
 pub fn draw(self: Land, dry: zhu.Image, wet: zhu.Image) void {
     for (self.tiles, 0..) |tile, index| {
         const ground = tile.ground orelse continue;
-        const position = self.map.tileIndexToWorld(index);
+        const position = self.grid.indexToWorld(index);
         appendVertex(position, dry);
         if (ground == .wet) appendVertex(position, wet);
     }
@@ -108,8 +99,8 @@ fn appendVertex(position: zhu.Vector2, image: zhu.Image) void {
 }
 
 test "锄地会记录目标格" {
-    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
-    var land = Land.init(zhu.testing.allocator, &testMaps[0]);
+    const grid = tiled.Grid{ .width = 3, .height = 4, .cell = 16 };
+    var land = Land.init(zhu.testing.allocator, grid);
     defer land.deinit(zhu.testing.allocator);
 
     try std.testing.expect(land.hoe(.xy(32, 48)));
@@ -118,8 +109,8 @@ test "锄地会记录目标格" {
 }
 
 test "浇水只会影响已有耕地" {
-    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
-    var land = Land.init(zhu.testing.allocator, &testMaps[0]);
+    const grid = tiled.Grid{ .width = 3, .height = 4, .cell = 16 };
+    var land = Land.init(zhu.testing.allocator, grid);
     defer land.deinit(zhu.testing.allocator);
 
     try std.testing.expect(!land.water(.xy(32, 48)));
@@ -131,8 +122,8 @@ test "浇水只会影响已有耕地" {
 }
 
 test "目标格有作物时不会锄地" {
-    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
-    var land = Land.init(zhu.testing.allocator, &testMaps[0]);
+    const grid = tiled.Grid{ .width = 3, .height = 4, .cell = 16 };
+    var land = Land.init(zhu.testing.allocator, grid);
     defer land.deinit(zhu.testing.allocator);
 
     land.getTile(.xy(32, 48)).?.object = .{ .entity = 1 };
@@ -142,8 +133,8 @@ test "目标格有作物时不会锄地" {
 }
 
 test "锄地要求地块为空" {
-    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
-    var land = Land.init(zhu.testing.allocator, &testMaps[0]);
+    const grid = tiled.Grid{ .width = 3, .height = 4, .cell = 16 };
+    var land = Land.init(zhu.testing.allocator, grid);
     defer land.deinit(zhu.testing.allocator);
 
     const position = zhu.Vector2.xy(32, 48);
@@ -159,8 +150,8 @@ test "锄地要求地块为空" {
 }
 
 test "种植只要求已有耕地且没有对象" {
-    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
-    var land = Land.init(zhu.testing.allocator, &testMaps[0]);
+    const grid = tiled.Grid{ .width = 3, .height = 4, .cell = 16 };
+    var land = Land.init(zhu.testing.allocator, grid);
     defer land.deinit(zhu.testing.allocator);
 
     const position = zhu.Vector2.xy(32, 48);
@@ -176,8 +167,8 @@ test "种植只要求已有耕地且没有对象" {
 }
 
 test "浇水要求已有耕地" {
-    const testMaps = [_]tiled.Map{@import("../zon/map/school.zon")};
-    var land = Land.init(zhu.testing.allocator, &testMaps[0]);
+    const grid = tiled.Grid{ .width = 3, .height = 4, .cell = 16 };
+    var land = Land.init(zhu.testing.allocator, grid);
     defer land.deinit(zhu.testing.allocator);
 
     const position = zhu.Vector2.xy(32, 48);
