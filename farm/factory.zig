@@ -208,10 +208,10 @@ pub fn spawnMapObject(
 ) Entity {
     const entity = world.createEntity();
 
-    var image: zhu.graphics.Image = undefined;
+    var image: zhu.graphics.Image = .empty;
     const tile = data.getTileByGid(object.gid).?;
-    if (tile.animation.len > 0) {
-        var animation = data.getAnimationByGid(object.gid).?;
+    if (data.getAnimationByGid(object.gid)) |a| {
+        var animation = a;
         image = animation.subImage();
         // anim_id 表示由玩法触发的动画，地图加载时只挂组件不自动播放。
         if (tile.hasProperty("anim_id")) {
@@ -220,7 +220,7 @@ pub fn spawnMapObject(
         }
         world.add(entity, animation);
     } else {
-        image = data.getImageByGid(object.gid);
+        image = data.getImageByGid(object.gid) orelse .empty;
     }
 
     const hasSize = object.size.x > 0 and object.size.y > 0;
@@ -260,7 +260,8 @@ pub fn spawnMapTile(
     const topLeft = data.tileIndexToWorld(index);
     const size = data.tileSize;
     const position = topLeft.addY(size.y);
-    var image = data.getImageByGid(globalId);
+    var image = data.getImageByGid(globalId) orelse
+        zhu.graphics.Image{ .size = size };
     const entity = world.createEntity();
 
     if (data.getAnimationByGid(globalId)) |baseAnimation| {

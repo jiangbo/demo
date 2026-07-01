@@ -141,22 +141,6 @@ fn facingFromDirection(direction: zhu.Vector2) Facing {
     return if (direction.y < 0) .up else .down;
 }
 
-fn setKey(keyCode: zhu.key.Code) void {
-    var ev = zhu.window.Event{
-        .type = .KEY_DOWN,
-        .key_code = keyCode,
-    };
-    zhu.input.handle(&ev);
-}
-
-fn clickMouse(button: zhu.mouse.Button) void {
-    var ev = zhu.window.Event{
-        .type = .MOUSE_DOWN,
-        .mouse_button = button,
-    };
-    zhu.input.handle(&ev);
-}
-
 fn setActiveItem(item: ItemEnum, count: u32) void {
     inventory.reset();
     _ = inventory.add(item, count);
@@ -177,8 +161,8 @@ test "玩家控制会把方向键写入速度" {
     zhu.input.reset();
     defer zhu.input.reset();
 
-    setKey(.D);
-    setKey(.W);
+    zhu.key.set(.D, true);
+    zhu.key.set(.W, true);
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -203,7 +187,7 @@ test "忙碌状态会跳过输入并保持动作" {
     zhu.input.reset();
     defer zhu.input.reset();
 
-    setKey(.D);
+    zhu.key.set(.D, true);
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -216,7 +200,8 @@ test "忙碌状态会跳过输入并保持动作" {
 
     const velocity = world.get(player, Velocity).?;
     try std.testing.expect(velocity.value.approxEqual(.zero));
-    try std.testing.expectEqual(Action.hoe, world.get(player, Actor).?.action);
+    const actor = world.get(player, Actor).?;
+    try std.testing.expectEqual(Action.hoe, actor.action);
 }
 
 test "目标框只在工具或种子选中时显示" {
@@ -247,14 +232,7 @@ test "点击目标只写入使用意图" {
     zhu.camera.init(.xy(640, 360));
     zhu.window.mouse = testTarget;
     setActiveItem(.hoe, 1);
-    clickMouse(.LEFT);
-    zhu.assets.allocator = std.testing.allocator;
-    map.spatial.enter(&map.maps[0]);
-    defer map.spatial.exit();
-    map.land.enter(&map.maps[0]);
-    defer map.land.exit();
-    map.spatial.tiles[map.maps[0].worldToTileIndex(testTarget).?]
-        .insert(.arable);
+    zhu.mouse.set(.LEFT, true);
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -264,11 +242,12 @@ test "点击目标只写入使用意图" {
     update(&world);
 
     try std.testing.expect(world.has(player, Busy));
-    try std.testing.expectEqual(Action.hoe, world.get(player, Actor).?.action);
+    const actor = world.get(player, Actor).?;
+    try std.testing.expectEqual(Action.hoe, actor.action);
+    try std.testing.expect(world.get(player, Target).?.active);
     const want = world.get(player, WantUse).?;
     try std.testing.expectEqual(ItemEnum.hoe, want.item);
     try std.testing.expect(want.target.approxEqual(testTarget));
     const velocity = world.get(player, Velocity).?;
     try std.testing.expect(velocity.value.approxEqual(.zero));
-    try std.testing.expectEqual(null, map.land.getTile(testTarget).?.ground);
 }

@@ -160,6 +160,8 @@ pub const Image = struct {
     offset: math.Vector2 = .zero,
     size: math.Vector2 = .zero,
 
+    pub const empty: Image = .{};
+
     pub fn sub(self: *const Image, subRect: math.Rect) Image {
         return Image{
             .view = self.view,

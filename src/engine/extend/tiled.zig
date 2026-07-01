@@ -110,21 +110,22 @@ pub const Map = struct {
         return tileSet.tileByLocalId(gid & 0x00FFFFFF);
     }
 
-    pub fn getImageByGid(self: Map, gid: u32) graphics.Image {
+    pub fn getImageByGid(self: Map, gid: u32) ?graphics.Image {
         const ref = self.getTileSetRefByGid(gid);
         const tileSet = getTileSetByRef(ref);
         const localId = gid & 0x00FFFFFF;
 
         if (tileSet.columns == 0) {
             const tile = tileSet.tileByLocalId(localId).?;
-            return assets.getImage(tile.id).?;
+            return assets.getImage(tile.id);
         }
 
         const x: f32 = @floatFromInt(localId % tileSet.columns);
         const y: f32 = @floatFromInt(localId / tileSet.columns);
         const position = tileSet.tileSize.mul(.xy(x, y));
         const area = Rect.init(position, tileSet.tileSize);
-        return assets.getImage(tileSet.image).?.sub(area);
+        const image = assets.getImage(tileSet.image) orelse return null;
+        return image.sub(area);
     }
 
     pub fn getAnimationByGid(self: Map, gid: u32) ?graphics.Animation {
