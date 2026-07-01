@@ -430,7 +430,10 @@ test "地图二进制 round-trip：三类层 + 各类属性" {
                                 .value = .{ .class = .{
                                     .type = "Spotlight",
                                     .properties = &.{
-                                        .{ .name = "radius", .value = .{ .int = 4 } },
+                                        .{
+                                            .name = "radius",
+                                            .value = .{ .int = 4 },
+                                        },
                                     },
                                 } },
                             },
@@ -462,10 +465,13 @@ test "地图二进制 round-trip：三类层 + 各类属性" {
     try testing.expectEqual(original.height, round.height);
     try testing.expectEqual(original.tileSize.x, round.tileSize.x);
     try testing.expectEqual(original.tileSize.y, round.tileSize.y);
-    try testing.expectEqualDeep(original.backgroundColor, round.backgroundColor);
-    try testing.expectEqual(original.tileSetRefs.len, round.tileSetRefs.len);
-    try testing.expectEqual(original.tileSetRefs[0].id, round.tileSetRefs[0].id);
-    try testing.expectEqual(original.tileSetRefs[1].id, round.tileSetRefs[1].id);
+    const expectDeep = testing.expectEqualDeep;
+    const refs = original.tileSetRefs;
+    const roundRefs = round.tileSetRefs;
+    try expectDeep(original.backgroundColor, round.backgroundColor);
+    try testing.expectEqual(refs.len, roundRefs.len);
+    try testing.expectEqual(refs[0].id, roundRefs[0].id);
+    try testing.expectEqual(refs[1].id, roundRefs[1].id);
 
     try testing.expectEqual(original.layers.len, round.layers.len);
     try expectLayersEqual(original.layers, round.layers);
@@ -539,10 +545,7 @@ fn expectPropsEqual(
     try testing.expectEqual(e.len, a.len);
     for (e, a) |ep, ap| {
         try testing.expectEqualStrings(ep.name, ap.name);
-        try testing.expectEqual(
-            @intFromEnum(ep.value),
-            @intFromEnum(ap.value),
-        );
+        try testing.expectEqual(@intFromEnum(ep.value), @intFromEnum(ap.value));
         switch (ep.value) {
             .string => |s| try testing.expectEqualStrings(s, ap.value.string),
             .int => |v| try testing.expectEqual(v, ap.value.int),

@@ -33,7 +33,7 @@
                 },
             },
         }},
-        .tileSetRefs = .{},
+        .tileSets = .{},
     },
 
     .{
@@ -62,7 +62,7 @@
                 .extend = .{},
             }},
         }},
-        .tileSetRefs = .{},
+        .tileSets = .{},
     },
 
     .{
@@ -86,7 +86,7 @@
                 .extend = .{},
             }},
         }},
-        .tileSetRefs = .{},
+        .tileSets = .{},
     },
 
     .{
@@ -123,6 +123,6 @@
                 .objects = .{},
             },
         },
-        .tileSetRefs = .{.{ .id = 5678 }},
+        .tileSets = .{},
     },
 }

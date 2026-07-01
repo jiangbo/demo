@@ -60,7 +60,7 @@ fn harvestTarget(world: *World, position: zhu.Vector2) void {
     map.clearObjectAt(position);
     factory.spawnPickup(world, .{
         .item = item,
-        .origin = position.add(map.data.grid.cellSize().scale(0.5)),
+        .origin = position.add(map.grid.halfCell()),
     });
     world.addEvent(event.SoundPlay{ .id = .harvest });
 }
@@ -89,7 +89,7 @@ fn hitProductTarget(
     tool: ItemEnum,
 ) void {
     const hit = factory.itemConfig(tool).hit.?;
-    const index = map.data.grid.worldToIndex(position) orelse return;
+    const index = map.grid.worldToIndex(position) orelse return;
     const entity = map.productAt(index) orelse return;
     const product = world.get(entity, Product).?;
     if (product.item != hit.target) return;
@@ -107,7 +107,7 @@ fn hitProductTarget(
     // 合并为一个带数量的掉落物，拾取时一次性获得全部。
     std.debug.assert(product.count > 0);
     const dropCount = zhu.random.intMost(u32, 1, product.count);
-    const origin = position.add(map.data.grid.cellSize().scale(0.5));
+    const origin = position.add(map.grid.halfCell());
     factory.spawnPickup(world, .{
         .item = product.item,
         .count = dropCount,
@@ -482,7 +482,7 @@ test "镐子击碎石头会生成掉落并清理阻挡" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
 
-    const index = map.data.grid.worldToIndex(testTarget).?;
+    const index = map.grid.worldToIndex(testTarget).?;
     map.spatial.setTileFlag(index, "SOLID");
     const entity = addProductEntity(
         &world,

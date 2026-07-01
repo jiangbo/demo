@@ -6,6 +6,8 @@ const parseJson = std.json.parseFromSliceLeaky;
 const Vector2 = struct { x: f32, y: f32 };
 
 var allocator: std.mem.Allocator = undefined;
+var io: std.Io = undefined;
+var tileSetZon: []const u8 = undefined;
 
 const Grid = struct {
     width: i32,
@@ -18,7 +20,6 @@ const TiledMap = struct {
     backgroundColor: ?Color = null,
 
     layers: []Layer,
-    tileSetRefs: []const TileSetRef,
 };
 
 const LayerEnum = enum { image, tile, object };
@@ -65,43 +66,75 @@ pub const Object = struct {
     extend: ObjectExtend, // 扩展信息
 };
 
-const TileSetRef = struct { id: u32 };
-const TileSetRange = struct { id: u32, firstGid: u32, max: u32 };
+const TileSetRange = struct {
+    globalIndex: u8,
+    firstGid: u32,
+    max: u32,
+};
 
-pub fn main() !void {
-    var debugAllocator: std.heap.DebugAllocator(.{}) = .init;
-    defer _ = debugAllocator.deinit();
-    var arena = std.heap.ArenaAllocator.init(debugAllocator.allocator());
-    defer arena.deinit();
-    allocator = arena.allocator();
+const GlobalTileSet = struct {
+    id: u32,
+    columns: u32,
+    tileCount: u32,
+    image: u32,
+    tileSize: Vector2,
+    tiles: []const GlobalTile = &.{},
+};
 
-    const args = try std.process.argsAlloc(allocator);
-    if (args.len != 2) return error.invalidArgs;
-    const name = args[1];
+const GlobalTile = struct {
+    id: u32,
+    objectGroup: ?GlobalObjectGroup = null,
+    properties: []const parsed.Property,
+    animation: []const GlobalFrame = &.{},
+};
+
+const GlobalObjectGroup = struct {
+    visible: bool,
+    objects: []const Object,
+};
+
+const GlobalFrame = struct {
+    offset: Vector2,
+    duration: f32,
+};
+
+pub fn main(init: std.process.Init) !void {
+    allocator = init.arena.allocator();
+    io = init.io;
+
+    const Args = std.process.Args.Iterator;
+    var args = try Args.initAllocator(init.minimal.args, allocator);
+    defer args.deinit();
+    _ = args.skip();
+
+    const name = args.next() orelse return error.InvalidArgs;
+    if (args.next() != null) return error.InvalidArgs;
     std.log.info("file name: {s}", .{name});
 
-    const max = std.math.maxInt(usize);
-    const content = try std.fs.cwd().readFileAlloc(allocator, name, max);
+    // 地图同级目录下的 tileSet.zon 是全局 tileSet 顺序来源。
+    const mapDir = std.fs.path.dirname(name) orelse ".";
+    tileSetZon = try std.fs.path.join(allocator, &.{ mapDir, "tileSet.zon" });
+
+    const cwd = std.Io.Dir.cwd();
+    const content = try cwd.readFileAlloc(io, name, allocator, .unlimited);
     const tiledMap = try parseJson(tiled.Map, allocator, content, .{});
 
-    const tileSetRanges = try allocator.alloc(TileSetRange, tiledMap.tilesets.len);
-    const tileSetRefs = try allocator.alloc(TileSetRef, tiledMap.tilesets.len);
-    for (tileSetRanges, tileSetRefs, tiledMap.tilesets, 0..) |*range, *ref, old, index| {
+    // 全局顺序来自 tileSet.zon，gid 高 8 位写这个顺序。
+    const globalIds = try loadGlobalTileSetIds();
+    const ranges = try allocator.alloc(TileSetRange, tiledMap.tilesets.len);
+    for (ranges, tiledMap.tilesets, 0..) |*range, old, index| {
         var maxGid: u32 = std.math.maxInt(u32);
-        if (index < tileSetRanges.len - 1) {
+        if (index < ranges.len - 1) {
             maxGid = tiledMap.tilesets[index + 1].firstgid;
         }
 
-        var tileSetName = old.source.?;
-        if (std.mem.startsWith(u8, tileSetName, "tileset/")) {
-            tileSetName = tileSetName[8..];
-        }
+        const tileSetName = std.fs.path.basename(old.source.?);
         const id = std.hash.Fnv1a_32.hash(tileSetName);
+        const globalIndex = findGlobalIndex(globalIds, id);
 
-        std.log.info("{s} ----> {}", .{ tileSetName, id });
-        ref.* = .{ .id = id };
+        std.log.info("{s} ----> {} [{}]", .{ tileSetName, id, globalIndex });
         range.* = TileSetRange{
-            .id = id,
+            .globalIndex = globalIndex,
             .firstGid = old.firstgid,
             .max = maxGid,
         };
@@ -116,33 +149,56 @@ pub fn main() !void {
             .height = tiledMap.height,
             .cell = @intCast(tiledMap.tilewidth),
         },
-        .layers = try parseLayers(tiledMap.layers, tileSetRanges),
-        .tileSetRefs = tileSetRefs,
+        .layers = try parseLayers(tiledMap.layers, ranges),
         .backgroundColor = color,
     };
 
-    // 写入 font.zon 文件
-    const replace = std.mem.replaceOwned;
-    const outputName = try replace(u8, allocator, name, ".tmj", ".zon");
-    const file = try std.fs.cwd().createFile(outputName, .{});
-    defer file.close();
+    const extension = std.fs.path.extension(name);
+    if (!std.mem.eql(u8, extension, ".tmj")) return error.InvalidArgs;
+    const outputBase = name[0 .. name.len - extension.len];
+    const concat = std.mem.concat;
+    const outputName = try concat(allocator, u8, &.{ outputBase, ".zon" });
+    const file = try cwd.createFile(io, outputName, .{});
+    defer file.close(io);
     var buffer: [4096]u8 = undefined;
-    var writer = file.writer(&buffer);
+    var writer = file.writer(io, &buffer);
     try std.zon.stringify.serialize(map, .{}, &writer.interface);
     try writer.interface.flush();
 }
 
 const TileSetMatch = struct { index: u8, localId: u32 };
 
+fn loadGlobalTileSetIds() ![]u32 {
+    const cwd = std.Io.Dir.cwd();
+    const bytes = try cwd.readFileAlloc(io, tileSetZon, allocator, .unlimited);
+    const source = try allocator.dupeZ(u8, bytes);
+    const parseZon = std.zon.parse.fromSliceAlloc;
+    const TileSets = []const GlobalTileSet;
+    const tileSets = try parseZon(TileSets, allocator, source, null, .{});
+
+    const ids = try allocator.alloc(u32, tileSets.len);
+    for (tileSets, ids) |tileSet, *id| id.* = tileSet.id;
+    return ids;
+}
+
+fn findGlobalIndex(globalIds: []const u32, id: u32) u8 {
+    for (globalIds, 0..) |globalId, index| {
+        if (globalId != id) continue;
+        std.debug.assert(index < 255);
+        return @intCast(index);
+    }
+    std.debug.panic("tileSet id {} is missing from {s}", .{ id, tileSetZon });
+}
+
 fn findTileSet(gid: u32, tileSetRanges: []const TileSetRange) ?TileSetMatch {
     if (gid == 0) return null;
     const cleanGid = gid & 0x1FFFFFFF;
     if (cleanGid == 0) return null;
 
-    for (tileSetRanges, 0..) |ts, i| {
+    for (tileSetRanges) |ts| {
         if (cleanGid >= ts.firstGid and cleanGid < ts.max) {
             return .{
-                .index = @intCast(i),
+                .index = ts.globalIndex,
                 .localId = cleanGid - ts.firstGid,
             };
         }
@@ -160,7 +216,7 @@ fn encodeGid(gid: u32, tileSetRanges: []const TileSetRange) u32 {
     std.debug.panic("tiled compiler: GID {} has no matching tileSet", .{gid});
 }
 
-fn parseLayers(layers: []tiled.Layer, tileSetRanges: []const TileSetRange) ![]Layer {
+fn parseLayers(layers: []tiled.Layer, ranges: []const TileSetRange) ![]Layer {
     const result: []Layer = try allocator.alloc(Layer, layers.len);
 
     var layerCount: usize = 0;
@@ -184,7 +240,7 @@ fn parseLayers(layers: []tiled.Layer, tileSetRanges: []const TileSetRange) ![]La
             // 编码 Tile Layer 的 GID，高 8 位为 TileSet 序号，低 24 位为 localId
             const encoded = try allocator.alloc(u32, old.data.len);
             for (old.data, 0..) |rawGid, idx| {
-                encoded[idx] = encodeGid(rawGid, tileSetRanges);
+                encoded[idx] = encodeGid(rawGid, ranges);
             }
             layerData = encoded;
         } else if (std.mem.eql(u8, "objectgroup", old.type)) {
@@ -194,7 +250,7 @@ fn parseLayers(layers: []tiled.Layer, tileSetRanges: []const TileSetRange) ![]La
                 const gid = obj.gid orelse 0;
                 new.* = Object{
                     .id = obj.id,
-                    .gid = encodeGid(gid, tileSetRanges),
+                    .gid = encodeGid(gid, ranges),
                     .name = obj.name,
                     .type = obj.type,
                     .position = .{ .x = obj.x, .y = obj.y },

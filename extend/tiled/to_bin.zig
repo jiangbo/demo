@@ -19,7 +19,8 @@ pub fn main(init: std.process.Init) !void {
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    var argIt = try std.process.Args.Iterator.initAllocator(init.minimal.args, alloc);
+    const Args = std.process.Args.Iterator;
+    var argIt = try Args.initAllocator(init.minimal.args, alloc);
     defer argIt.deinit();
     _ = argIt.next(); // 跳过程序名
     const name = argIt.next() orelse return error.invalidArgs;
@@ -30,13 +31,8 @@ pub fn main(init: std.process.Init) !void {
     // std.zon.parse 要求 sentinel 结尾的源串
     const source = try alloc.dupeZ(u8, raw);
 
-    const map = try std.zon.parse.fromSliceAlloc(
-        engine.Map,
-        alloc,
-        source,
-        null,
-        .{},
-    );
+    const parseZon = std.zon.parse.fromSliceAlloc;
+    const map = try parseZon(engine.Map, alloc, source, null, .{});
     const bytes = try map_file.encode(alloc, map);
 
     // 自检：立即解码刚产出的字节，确保读写格式闭环
@@ -44,7 +40,8 @@ pub fn main(init: std.process.Init) !void {
     std.debug.assert(check.width == map.width and check.height == map.height);
     std.debug.assert(check.layers.len == map.layers.len);
 
-    const outputName = try std.mem.replaceOwned(u8, alloc, name, ".zon", ".bin");
+    const replace = std.mem.replaceOwned;
+    const outputName = try replace(u8, alloc, name, ".zon", ".bin");
     try dir.writeFile(init.io, .{ .sub_path = outputName, .data = bytes });
     std.log.info("wrote {d} bytes -> {s}", .{ bytes.len, outputName });
 }

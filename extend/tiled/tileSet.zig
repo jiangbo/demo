@@ -50,34 +50,37 @@ pub const Object = struct {
 };
 
 var allocator: std.mem.Allocator = undefined;
-pub fn main() !void {
-    var debug: std.heap.DebugAllocator(.{}) = .init;
-    defer _ = debug.deinit();
-    var arena = std.heap.ArenaAllocator.init(debug.allocator());
-    defer arena.deinit();
-    allocator = arena.allocator();
+var io: std.Io = undefined;
+
+pub fn main(init: std.process.Init) !void {
+    allocator = init.arena.allocator();
+    io = init.io;
 
     // 必须要指定一个目录
-    const args = try std.process.argsAlloc(allocator);
-    if (args.len != 2) return error.invalidArgs;
-    const path = args[1];
+    const Args = std.process.Args.Iterator;
+    var args = try Args.initAllocator(init.minimal.args, allocator);
+    defer args.deinit();
+    _ = args.skip();
 
-    var dir = try std.fs.cwd().openDir(path, .{ .iterate = true });
-    defer dir.close();
+    const path = args.next() orelse return error.InvalidArgs;
+    if (args.next() != null) return error.InvalidArgs;
+
+    var dir = try std.Io.Dir.cwd().openDir(io, path, .{ .iterate = true });
+    defer dir.close(io);
 
     var tileSets: std.ArrayListUnmanaged(TileSet) = .empty;
 
     var it = dir.iterate();
-    const max = std.math.maxInt(usize);
-    while (try it.next()) |entry| {
+    while (try it.next(io)) |entry| {
         if (entry.kind != .file) continue;
         const name = entry.name;
         if (!std.mem.endsWith(u8, name, ".tsj")) continue;
         const id = std.hash.Fnv1a_32.hash(name);
-        std.log.info("====================================================", .{});
+        const sep = "====================================================";
+        std.log.info(sep, .{});
         std.log.info("name: {s}, id: {}", .{ name, id });
 
-        const content = try dir.readFileAlloc(allocator, name, max);
+        const content = try dir.readFileAlloc(io, name, allocator, .unlimited);
         const parse = std.json.parseFromSliceLeaky;
         source = try parse(tiled.Tileset, allocator, content, .{});
         try tileSets.append(allocator, try parseTileSet(id, source));
@@ -89,10 +92,11 @@ pub fn main() !void {
         }
     }.lessThan);
 
-    const outFile = try dir.createFile("tile.zon", .{ .truncate = true });
-    defer outFile.close();
+    const opts: std.Io.Dir.CreateFileOptions = .{ .truncate = true };
+    const outFile = try dir.createFile(io, "tileSet.zon", opts);
+    defer outFile.close(io);
     var buffer: [4096]u8 = undefined;
-    var writer = outFile.writer(&buffer);
+    var writer = outFile.writer(io, &buffer);
     try std.zon.stringify.serialize(tileSets.items, .{}, &writer.interface);
     try writer.interface.flush();
 }
