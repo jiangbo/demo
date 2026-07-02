@@ -1,8 +1,8 @@
 .{
-    .{ .type = .moveLeft, .value = .{ .A, .LEFT } },
-    .{ .type = .moveRight, .value = .{ .D, .RIGHT } },
-    .{ .type = .moveUp, .value = .{ .W, .UP } },
-    .{ .type = .moveDown, .value = .{ .S, .DOWN } },
+    .{ .type = .left, .value = .{ .A, .LEFT } },
+    .{ .type = .right, .value = .{ .D, .RIGHT } },
+    .{ .type = .up, .value = .{ .W, .UP } },
+    .{ .type = .down, .value = .{ .S, .DOWN } },
     .{ .type = .pause, .value = .{ .P, .ESCAPE } },
     .{ .type = .interact, .value = .{.F} },
     .{ .type = .inventory, .value = .{.I} },

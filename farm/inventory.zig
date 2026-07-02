@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 const factory = @import("factory.zig");
+const input = @import("input.zig");
 const state = @import("state.zig");
 
 const ItemEnum = component.item.ItemEnum;
@@ -141,7 +142,7 @@ pub const bag = struct {
     }
 
     fn update() void {
-        if (state.input.pressed(.inventory)) {
+        if (input.pressed(.inventory)) {
             closed = !closed;
             if (closed) click, drag = .{ .empty, null };
         }
@@ -346,12 +347,12 @@ pub const bar = struct {
     }
 
     fn update() void {
-        if (state.input.pressed(.hotbar)) {
+        if (input.pressed(.hotbar)) {
             visible = !visible;
             click = .empty;
         }
 
-        if (state.input.hotbarPressed()) |index| active = index;
+        if (input.hotbarPressed()) |index| active = index;
 
         if (!visible) return;
 
@@ -553,7 +554,7 @@ pub fn reset() void {
     bag.reset();
     bar.reset();
     itemDrag.dragState = null;
-    state.input.mouseCaptured = false;
+    input.mouseCaptured = false;
 }
 
 pub fn capture() Save {
@@ -594,12 +595,12 @@ pub fn update(notice: *Notice) void {
 
     bag.update();
     if (panelDragging or bag.drag != null) {
-        state.input.mouseCaptured = true;
+        input.mouseCaptured = true;
         return;
     }
 
     if (updateUseItem(notice)) {
-        state.input.mouseCaptured = true;
+        input.mouseCaptured = true;
         return;
     }
 
@@ -609,13 +610,13 @@ pub fn update(notice: *Notice) void {
     if (itemDrag.dragState != null or bag.drag != null or
         bag.click.captured or bar.click.captured)
     {
-        state.input.mouseCaptured = true;
+        input.mouseCaptured = true;
     }
 }
 
 fn updateUseItem(notice: *Notice) bool {
     if (itemDrag.dragState != null or bag.drag != null) return false;
-    if (!state.input.mousePressed(.RIGHT)) return false;
+    if (!input.mousePressed(.RIGHT)) return false;
 
     const index = hoveredBagIndex() orelse return false;
     switch (bag.useByIndex(index)) {
@@ -731,7 +732,7 @@ test "右键背包槽会使用物品" {
 
     update(&notice);
 
-    try std.testing.expect(state.input.mouseCaptured);
+    try std.testing.expect(input.mouseCaptured);
     try std.testing.expectEqual(.strawberry, store.stacks[0].item);
     try std.testing.expectEqual(1, store.stacks[0].count);
     try std.testing.expectEqual(.strawberrySeed, store.stacks[1].item);
@@ -752,7 +753,7 @@ test "右键快捷栏会使用绑定的背包槽" {
 
     update(&notice);
 
-    try std.testing.expect(state.input.mouseCaptured);
+    try std.testing.expect(input.mouseCaptured);
     try std.testing.expectEqual(.potatoSeed, store.stacks[5].item);
     try std.testing.expectEqual(3, store.stacks[5].count);
 }

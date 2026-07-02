@@ -1,7 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const state = @import("state.zig");
+const input = @import("input.zig");
 const ui = @import("ui.zig");
 
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
@@ -41,7 +41,7 @@ pub fn update(delta: f32) ?Request {
 
     if (popup) |active| return updatePopup(active);
 
-    const pauseKey = state.input.pressed(.pause);
+    const pauseKey = input.pressed(.pause);
     if (pauseKey or pauseButton.update(.{}) != null) {
         ui.pause.open(.title);
         popup = .pause;

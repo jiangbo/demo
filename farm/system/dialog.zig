@@ -2,7 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
-const state = @import("../state.zig");
+const input = @import("../input.zig");
 
 const World = zhu.ecs.World;
 const Entity = zhu.ecs.Entity;
@@ -16,7 +16,7 @@ const Velocity = component.motion.Velocity;
 pub fn update(world: *World) void {
     if (world.getIdentity(Dialog)) |target| {
         checkDistance(world, target);
-        if (state.input.pressed(.interact)) advanceDialog(world, target);
+        if (input.pressed(.interact)) advanceDialog(world, target);
         return;
     }
 

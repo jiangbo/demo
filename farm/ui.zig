@@ -2,8 +2,8 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("component.zig");
+const input = @import("input.zig");
 const inventory = @import("inventory.zig");
-const state = @import("state.zig");
 const store = @import("save.zig");
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
 
@@ -57,7 +57,7 @@ pub fn update() ?UiRequest {
         return .block;
     }
 
-    if (!state.input.pressed(.pause)) return null;
+    if (!input.pressed(.pause)) return null;
     openPause();
     return .block;
 }

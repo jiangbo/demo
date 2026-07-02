@@ -2,9 +2,9 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
+const input = @import("../input.zig");
 const inventory = @import("../inventory.zig");
 const map = @import("../map.zig");
-const state = @import("../state.zig");
 
 const Actor = component.actor.Actor;
 const Facing = component.actor.Facing;
@@ -61,17 +61,17 @@ fn updateMovement(world: *World, player: Entity) void {
 
 fn readDirection() zhu.Vector2 {
     var direction: zhu.Vector2 = .zero;
-    if (state.input.held(.moveLeft)) direction.x -= 1;
-    if (state.input.held(.moveRight)) direction.x += 1;
-    if (state.input.held(.moveUp)) direction.y -= 1;
-    if (state.input.held(.moveDown)) direction.y += 1;
+    if (input.held(.left)) direction.x -= 1;
+    if (input.held(.right)) direction.x += 1;
+    if (input.held(.up)) direction.y -= 1;
+    if (input.held(.down)) direction.y += 1;
 
     if (direction.length2() > 1) return direction.normalize();
     return direction;
 }
 
 fn targetPosition(world: *World, player: Entity) ?zhu.Vector2 {
-    if (state.input.mouseCaptured) return null;
+    if (input.mouseCaptured) return null;
 
     const playerPos = world.get(player, Position).?;
     const playerTile = map.grid.worldToCell(playerPos);
@@ -99,7 +99,7 @@ fn updateTargetAction(world: *World, player: Entity) void {
     target.position = position;
     target.active = true;
 
-    if (!state.input.mousePressed(.LEFT)) return;
+    if (!input.mousePressed(.LEFT)) return;
     const actor = world.getPtr(player, Actor).?;
     const playerPos = world.get(player, Position).?;
     // 朝向按点击位置计算，目标格只负责工具结算。

@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 const factory = @import("factory.zig");
+const input = @import("input.zig");
 const inventory = @import("inventory.zig");
 const map = @import("map.zig");
 const save = @import("save.zig");
@@ -90,7 +91,7 @@ pub fn deinit() void {
 pub fn update(delta: f32) void {
     if (zhu.key.released(.X)) debug = !debug;
 
-    state.input.mouseCaptured = false;
+    input.mouseCaptured = false;
     applyScene();
 
     if (updateMapFade(delta)) return;
