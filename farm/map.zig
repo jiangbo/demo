@@ -205,7 +205,7 @@ fn restoreState(world: *World) void {
 
 fn restoreThing(world: *World, index: usize, thing: Thing) void {
     switch (thing) {
-        .gone => clearProductAt(world, index),
+        .gone => clearProductIndex(world, index),
         .crop => |crop| {
             const position = grid.indexToWorld(index);
             const entity = factory.spawnCrop(world, position, crop.kind);
@@ -237,7 +237,11 @@ fn restoreThing(world: *World, index: usize, thing: Thing) void {
 }
 
 // 清除地图上的默认产出对象，并记录为 gone，避免后续恢复时重新生成。
-pub fn clearProductAt(world: *World, index: usize) void {
+pub fn clearProduct(world: *World, position: zhu.Vector2) void {
+    clearProductIndex(world, grid.worldToIndex(position).?);
+}
+
+fn clearProductIndex(world: *World, index: usize) void {
     const object = land.tiles[index].object.?;
     std.debug.assert(object.kind == .product);
     // 对象层产出会注册精确碰撞矩形；tile 层产出只写瓦片阻挡。
@@ -774,7 +778,7 @@ test "对象层产出对象按碰撞范围占用格子" {
     try std.testing.expect(land.hoe(.xy(8, 8)));
     try std.testing.expect(!land.hoe(.xy(24, 8)));
 
-    clearProductAt(&world, 1);
+    clearProduct(&world, testMap.grid.indexToWorld(1));
 
     try std.testing.expectEqual(null, land.tiles[0].object);
     try std.testing.expectEqual(null, land.tiles[1].object);

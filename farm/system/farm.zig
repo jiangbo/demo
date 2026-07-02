@@ -76,14 +76,13 @@ fn water(world: *World, position: zhu.Vector2) void {
 
     const tile = map.getTile(position).?;
     if (tile.get(.crop)) |entity| {
-        if (world.getPtr(entity, Crop)) |crop| crop.watered = true;
+        world.getPtr(entity, Crop).?.watered = true;
     }
     world.addEvent(event.SoundPlay{ .id = .water });
 }
 
 fn hitProduct(world: *World, want: WantUse) void {
     const hit = factory.itemConfig(want.item).hit.?;
-    const index = map.grid.worldToIndex(want.target) orelse return;
     const tile = map.getTile(want.target) orelse return;
     const entity = tile.get(.product) orelse return;
     const product = world.get(entity, Product).?;
@@ -108,7 +107,7 @@ fn hitProduct(world: *World, want: WantUse) void {
         .count = dropCount,
         .origin = origin,
     });
-    map.clearProductAt(world, index);
+    map.clearProduct(world, want.target);
 }
 
 fn toolSound(tool: ItemEnum) component.sound.Id {
