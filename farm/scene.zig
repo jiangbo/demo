@@ -2,7 +2,6 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("component.zig");
-const context = @import("context.zig");
 const factory = @import("factory.zig");
 const inventory = @import("inventory.zig");
 const interact = @import("interact.zig");
@@ -53,7 +52,6 @@ var session: state.Session = .{};
 pub fn init(allocator_: zhu.Allocator) void {
     allocator = allocator_;
 
-    context.init();
     world = World.init(allocator.raw);
 
     // 存档状态先就位，UI 只持有这份长期有效的槽位切片。
@@ -78,10 +76,10 @@ pub fn init(allocator_: zhu.Allocator) void {
 pub fn deinit() void {
     switch (current) {
         .title => {},
-        .play => map.exit(&world, session.clock.day),
+        .play => map.exit(&world, &session.maps, session.clock.day),
     }
     map.deinit();
-    context.deinit();
+    session.maps.deinit();
     ui.deinit();
     world.deinit();
 }
@@ -153,14 +151,14 @@ fn updatePlayUi(req: ui.UiRequest) void {
         .title => pending = .title,
         .rest => |hours| session.clock.restHours = hours,
         .save => |slot| {
-            if (!save.saveSlot(&world, &session.clock, slot)) {
+            if (!save.saveSlot(&world, &session.clock, &session.maps, slot)) {
                 ui.showMessage(.{ .text = "保存失败", .fail = true });
                 return;
             }
             ui.showMessage(.{ .text = "保存成功", .fail = false });
         },
         .load => |slot| {
-            if (!save.loadSlot(&world, &session.clock, slot)) {
+            if (!save.loadSlot(&world, &session.clock, &session.maps, slot)) {
                 ui.showMessage(.{ .text = "读取失败", .fail = true });
                 return;
             }
@@ -221,6 +219,7 @@ fn updateMapFade(delta: f32) bool {
             const request = world.get(player, Transition).?;
             map.change(
                 &world,
+                &session.maps,
                 request,
                 session.clock.day,
             );
@@ -239,7 +238,7 @@ fn applyScene() void {
         .title => title.exit(),
         .play => {
             mapFade = .{};
-            map.exit(&world, session.clock.day);
+            map.exit(&world, &session.maps, session.clock.day);
         },
     }
     current, pending = .{ next, null };
@@ -259,10 +258,10 @@ fn enterPlay(loadSlot: ?u8) void {
         // 新游戏重置世界级状态；读档会在基础地图创建后覆盖状态。
         session.clock.reset();
         session.notice.reset();
-        context.map.resetStates();
+        session.maps.reset();
     }
 
-    map.enter(&world, .exterior, -1, session.clock.day);
+    map.enter(&world, &session.maps, .exterior, -1, session.clock.day);
     inventory.reset();
     if (loadSlot == null) {
         _ = inventory.add(.hoe, 1);
@@ -274,7 +273,7 @@ fn enterPlay(loadSlot: ?u8) void {
 
     if (loadSlot) |slot| {
         // 存档恢复依赖已经存在的 world/map/player 基础结构。
-        if (!save.loadSlot(&world, &session.clock, slot)) {
+        if (!save.loadSlot(&world, &session.clock, &session.maps, slot)) {
             pending = .title;
             return;
         }

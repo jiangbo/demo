@@ -2,7 +2,6 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("component.zig");
-const context = @import("context.zig");
 const inventory = @import("inventory.zig");
 const state = @import("state.zig");
 const store = @import("save.zig");

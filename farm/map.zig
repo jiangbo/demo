@@ -2,11 +2,11 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("component.zig");
-const context = @import("context.zig");
 const factory = @import("factory.zig");
 const loader = @import("map/loader.zig");
 const Spatial = @import("map/Spatial.zig");
 const Land = @import("map/Land.zig");
+const Maps = @import("state.zig").Maps;
 
 const tiled = zhu.extend.tiled;
 const World = zhu.ecs.World;
@@ -22,7 +22,7 @@ pub const StartOffset = component.map.StartOffset;
 pub const Hit = component.map.Hit;
 const Trigger = component.map.Trigger;
 const Transition = component.map.Transition;
-const Thing = context.map.Thing;
+const Thing = Maps.Thing;
 
 pub const maps = tiled.bind(@import("zon/map/tileSet.zon"), &.{
     @import("zon/map/school.zon"),
@@ -66,12 +66,18 @@ pub fn deinit() void {
     vertexes.clearAndFree(gpa.raw);
 }
 
-pub fn enter(world: *World, id: Id, targetId: i32, day: u32) void {
+pub fn enter(
+    world: *World,
+    savedMaps: *Maps,
+    id: Id,
+    targetId: i32,
+    day: u32,
+) void {
     world.reset();
 
     current = id;
     load(gpa, world, maps[@intFromEnum(id)]);
-    restoreState(world, day);
+    restoreState(world, savedMaps, day);
 
     var spawn: ?zhu.Vector2 = null;
     var query = world.query(.{Trigger});
@@ -89,9 +95,14 @@ pub fn enter(world: *World, id: Id, targetId: i32, day: u32) void {
     zhu.camera.directFollow(position);
 }
 
-pub fn change(world: *World, request: Transition, day: u32) void {
-    exit(world, day);
-    enter(world, request.target, request.targetId, day);
+pub fn change(
+    world: *World,
+    savedMaps: *Maps,
+    request: Transition,
+    day: u32,
+) void {
+    exit(world, savedMaps, day);
+    enter(world, savedMaps, request.target, request.targetId, day);
 }
 
 pub fn update(world: *World) void {
@@ -111,8 +122,8 @@ pub fn update(world: *World) void {
     }
 }
 
-pub fn exit(world: *World, day: u32) void {
-    saveState(world, day);
+pub fn exit(world: *World, savedMaps: *Maps, day: u32) void {
+    saveState(world, savedMaps, day);
     unload();
 }
 
@@ -135,10 +146,10 @@ pub fn unload() void {
     vertexes.clearAndFree(gpa.raw);
 }
 
-pub fn saveState(world: *World, day: u32) void {
+pub fn saveState(world: *World, savedMaps: *Maps, day: u32) void {
     if (land.tiles.len == 0) return;
 
-    const state = context.map.ensureState(current, land.tiles.len, day);
+    const state = savedMaps.ensure(current, land.tiles.len, day);
     for (land.tiles, 0..) |tile, index| {
         var saved = &state.tiles[index];
         saved.ground = tile.ground;
@@ -178,7 +189,7 @@ pub fn canMove(world: *World, entity: zhu.ecs.Entity, to: zhu.Vector2) bool {
     return spatial.canMove(world, entity, to);
 }
 
-fn thingAt(world: *World, tile: Land.Tile) ?context.map.Thing {
+fn thingAt(world: *World, tile: Land.Tile) ?Maps.Thing {
     const object = tile.object orelse return null;
     return switch (object.kind) {
         .crop => .{ .crop = world.get(object.entity, farm.Crop).? },
@@ -190,8 +201,8 @@ fn thingAt(world: *World, tile: Land.Tile) ?context.map.Thing {
     };
 }
 
-fn restoreState(world: *World, day: u32) void {
-    const state = context.map.ensureState(current, land.tiles.len, day);
+fn restoreState(world: *World, savedMaps: *Maps, day: u32) void {
+    const state = savedMaps.ensure(current, land.tiles.len, day);
     advanceState(state, day);
 
     for (state.tiles, 0..) |saved, index| {
@@ -264,7 +275,7 @@ fn clearProductTiles(entity: zhu.ecs.Entity) void {
     }
 }
 
-fn advanceState(state: *context.map.State, day: u32) void {
+fn advanceState(state: *Maps.Entry, day: u32) void {
     if (day <= state.day) return;
 
     const days = day - state.day;
@@ -272,7 +283,7 @@ fn advanceState(state: *context.map.State, day: u32) void {
     state.day = day;
 }
 
-fn advanceStateOneDay(state: *context.map.State) void {
+fn advanceStateOneDay(state: *Maps.Entry) void {
     for (state.tiles) |*tile| {
         const watered = tile.ground == .wet;
         // 浇水只影响当天，跨天后湿地统一变回干地。
@@ -415,7 +426,7 @@ test "触发器落点会按 start_offset 放到区域外侧" {
 }
 
 test "地图状态作物会按离线天数推进" {
-    var tiles = [_]context.map.Tile{.{
+    var tiles = [_]Maps.Tile{.{
         .ground = .wet,
         .thing = .{ .crop = .{
             .kind = .strawberry,
@@ -424,8 +435,7 @@ test "地图状态作物会按离线天数推进" {
             .next = 2,
         } },
     }};
-    var state = context.map.State{
-        .initialized = true,
+    var state = Maps.Entry{
         .day = 1,
         .tiles = &tiles,
     };
@@ -446,7 +456,7 @@ test "地图状态作物会按离线天数推进" {
 }
 
 test "湿地离线跨天只加速一天" {
-    var tiles = [_]context.map.Tile{.{
+    var tiles = [_]Maps.Tile{.{
         .ground = .wet,
         .thing = .{ .crop = .{
             .kind = .strawberry,
@@ -455,8 +465,7 @@ test "湿地离线跨天只加速一天" {
             .next = 4,
         } },
     }};
-    var state = context.map.State{
-        .initialized = true,
+    var state = Maps.Entry{
         .day = 1,
         .tiles = &tiles,
     };
@@ -543,7 +552,7 @@ test "当前地图和离线地图跨天推进规则一致" {
     tile.set(.crop, cropEntity);
     world.addEvent(component.event.DayChanged{ .day = 2 });
 
-    var tiles = [_]context.map.Tile{.{
+    var tiles = [_]Maps.Tile{.{
         .ground = .wet,
         .thing = .{ .crop = .{
             .kind = .strawberry,
@@ -551,8 +560,7 @@ test "当前地图和离线地图跨天推进规则一致" {
             .next = 2,
         } },
     }};
-    var state = context.map.State{
-        .initialized = true,
+    var state = Maps.Entry{
         .day = 1,
         .tiles = &tiles,
     };
@@ -663,13 +671,14 @@ test "保存已消失产出对象会写成 gone" {
     current = .school;
     defer current = old;
 
-    const state = context.map.ensureState(current, land.tiles.len, 1);
+    var mapsData: Maps = .{};
+    const state = mapsData.ensure(current, land.tiles.len, 1);
     defer {
         zhu.assets.free(state.tiles);
         state.* = .{};
     }
     land.tiles[0].gone = .product;
-    saveState(&world, 1);
+    saveState(&world, &mapsData, 1);
 
     switch (state.tiles[0].thing.?) {
         .gone => {},

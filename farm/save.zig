@@ -2,10 +2,10 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("component.zig");
-const context = @import("context.zig");
 const inventory = @import("inventory.zig");
 const map = @import("map.zig");
 const Clock = @import("state.zig").Clock;
+const Maps = @import("state.zig").Maps;
 
 const World = zhu.ecs.World;
 const Actor = component.actor.Actor;
@@ -50,7 +50,7 @@ const PlayerSave = struct {
 const TileSave = struct {
     index: u32 = 0,
     land: ?component.farm.Ground = null,
-    thing: ?context.map.Thing = null,
+    thing: ?Maps.Thing = null,
 };
 
 const MapSave = struct {
@@ -85,28 +85,28 @@ pub fn init(allocator_: zhu.Allocator) void {
     }
 }
 
-pub fn saveSlot(world: *World, clock: *Clock, slot: u8) bool {
-    saveSlotInner(world, clock, slot) catch |err| {
+pub fn saveSlot(world: *World, clock: *Clock, maps: *Maps, slot: u8) bool {
+    saveSlotInner(world, clock, maps, slot) catch |err| {
         std.log.err("save slot {} failed: {}", .{ slot, err });
         return false;
     };
     return true;
 }
 
-pub fn loadSlot(world: *World, clock: *Clock, slot: u8) bool {
-    loadSlotInner(world, clock, slot) catch |err| {
+pub fn loadSlot(world: *World, clock: *Clock, maps: *Maps, slot: u8) bool {
+    loadSlotInner(world, clock, maps, slot) catch |err| {
         std.log.err("load slot {} failed: {}", .{ slot, err });
         return false;
     };
     return true;
 }
 
-fn saveSlotInner(world: *World, clock: *Clock, slot: u8) !void {
+fn saveSlotInner(world: *World, clock: *Clock, maps: *Maps, slot: u8) !void {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
-    map.saveState(world, clock.day);
-    const data = try capture(world, clock);
+    map.saveState(world, maps, clock.day);
+    const data = try capture(world, clock, maps);
     defer freeCaptured(data);
 
     const buffer = zhu.assets.oomAlloc(u8, maxSaveSize);
@@ -123,14 +123,14 @@ fn saveSlotInner(world: *World, clock: *Clock, slot: u8) !void {
     std.log.info("game saved: {s}", .{path});
 }
 
-fn loadSlotInner(world: *World, clock: *Clock, slot: u8) !void {
+fn loadSlotInner(world: *World, clock: *Clock, maps: *Maps, slot: u8) !void {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
     var save = try zhu.window.readZon(SaveData, path, .{});
     defer save.deinit();
 
-    try apply(world, clock, save.value);
+    try apply(world, clock, maps, save.value);
     std.log.info("game loaded: {s}", .{path});
 }
 
@@ -189,7 +189,7 @@ fn isSpace(char: u8) bool {
     };
 }
 
-fn capture(world: *World, clock: *const Clock) !SaveData {
+fn capture(world: *World, clock: *const Clock, maps: *const Maps) !SaveData {
     const player = world.getIdentity(Player) orelse return error.MissingPlayer;
     const position = world.get(player, Position) orelse {
         return error.MissingPlayerPosition;
@@ -212,7 +212,7 @@ fn capture(world: *World, clock: *const Clock) !SaveData {
             .facing = actor.facing,
         },
         .inventory = inventory.capture(),
-        .maps = try captureMaps(),
+        .maps = try captureMaps(maps),
     };
 }
 
@@ -221,7 +221,7 @@ fn freeCaptured(data: SaveData) void {
     allocator.free(data.maps);
 }
 
-fn captureMaps() ![]const MapSave {
+fn captureMaps(maps: *const Maps) ![]const MapSave {
     const ids = std.enums.values(component.map.Id);
     var result = try std.ArrayList(MapSave).initCapacity(
         allocator,
@@ -233,7 +233,7 @@ fn captureMaps() ![]const MapSave {
     }
 
     for (ids) |id| {
-        const state = context.map.states.getPtr(id);
+        const state = maps.items.getPtrConst(id);
         try result.append(allocator, .{
             .id = id,
             .day = state.day,
@@ -244,11 +244,11 @@ fn captureMaps() ![]const MapSave {
     return try result.toOwnedSlice(allocator);
 }
 
-fn captureTiles(state: *const context.map.State) ![]const TileSave {
+fn captureTiles(state: *const Maps.Entry) ![]const TileSave {
     var list: std.ArrayList(TileSave) = .empty;
     errdefer list.deinit(allocator);
 
-    if (!state.initialized) return try list.toOwnedSlice(allocator);
+    if (state.tiles.len == 0) return try list.toOwnedSlice(allocator);
 
     for (state.tiles, 0..) |tile, index| {
         if (tile.ground == null and tile.thing == null) continue;
@@ -263,7 +263,7 @@ fn captureTiles(state: *const context.map.State) ![]const TileSave {
     return try list.toOwnedSlice(allocator);
 }
 
-fn apply(world: *World, clock: *Clock, data: SaveData) !void {
+fn apply(world: *World, clock: *Clock, maps: *Maps, data: SaveData) !void {
     clock.paused = data.time.paused;
     clock.speed = data.time.scale;
     clock.day = data.time.day;
@@ -271,23 +271,23 @@ fn apply(world: *World, clock: *Clock, data: SaveData) !void {
     clock.minute = data.time.minute;
     clock.period = data.time.period;
 
-    map.exit(world, clock.day);
-    context.map.resetStates();
-    restoreMaps(data, clock.day);
+    map.exit(world, maps, clock.day);
+    maps.reset();
+    restoreMaps(data, maps, clock.day);
 
-    map.enter(world, data.player.map, -1, clock.day);
+    map.enter(world, maps, data.player.map, -1, clock.day);
     restorePlayer(world, data.player);
     inventory.restore(data.inventory);
 }
 
-fn restoreMaps(data: SaveData, day: u32) void {
-    for (data.maps) |saved| restoreMap(saved, day);
+fn restoreMaps(data: SaveData, maps: *Maps, day: u32) void {
+    for (data.maps) |saved| restoreMap(saved, maps, day);
 }
 
-fn restoreMap(data: MapSave, day: u32) void {
+fn restoreMap(data: MapSave, maps: *Maps, day: u32) void {
     const mapData = &map.maps[@intFromEnum(data.id)];
     const tileCount = mapData.grid.count();
-    const state = context.map.ensureState(data.id, tileCount, day);
+    const state = maps.ensure(data.id, tileCount, day);
 
     for (data.tiles) |tileSave| {
         if (tileSave.index >= state.tiles.len) continue;

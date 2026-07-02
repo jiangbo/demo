@@ -1,7 +1,6 @@
 const std = @import("std");
 
 test {
-    std.testing.refAllDecls(@import("context.zig"));
     std.testing.refAllDecls(@import("inventory.zig"));
     std.testing.refAllDecls(@import("map.zig"));
     std.testing.refAllDecls(@import("factory.zig"));
