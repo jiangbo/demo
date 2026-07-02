@@ -23,14 +23,20 @@ const Popup = enum { save, rest, pause };
 var activePopup: ?Popup = null;
 var popupMessage: ?Message = null;
 
-pub fn init(slotStates: []const save.Slot) void {
+pub const Init = struct {
+    slots: []const save.Slot,
+    speed: *f32,
+};
+
+pub fn init(args: Init) void {
     const image = zhu.getImage("farm-rpg/UI/dialogue box.png").?;
     bubbleImage = zhu.NineImage.from(image, .{
         .rect = .init(.xy(0, 48), .xy(48, 48)),
         .patch = .{ .min = .xy(3, 4), .max = .xy(3, 3) },
     });
 
-    save.init(slotStates);
+    save.init(args.slots);
+    pause.speed = args.speed;
     rest.menu.centerInWindow();
 }
 
@@ -309,6 +315,7 @@ pub const pause = struct {
     const Mode = enum { title, play };
     pub const Request = enum { close, save, load, title };
 
+    var speed: *f32 = undefined;
     var menu: zhu.widget.Menu = menus[2];
 
     pub fn open(mode: Mode) void {
@@ -327,10 +334,9 @@ pub const pause = struct {
             3 => return .title,
             4 => {
                 // 时钟倍率不能减到 0，否则游戏时间会停止推进。
-                const max = @max(0.1, context.clock.speed - 0.1);
-                context.clock.speed = max;
+                speed.* = @max(0.1, speed.* - 0.1);
             },
-            5 => context.clock.speed += 0.1, // 加速
+            5 => speed.* += 0.1, // 加速
             6 => zhu.audio.changeMusicVolume(-0.1), // 减小音乐
             7 => zhu.audio.changeMusicVolume(0.1), // 增大音乐
             8 => zhu.audio.changeSoundVolume(-0.1), // 减小音效
@@ -354,9 +360,7 @@ pub const pause = struct {
         for (0..3) |index| {
             var buffer: [40]u8 = undefined;
             const string: []const u8 = switch (index) {
-                0 => zhu.format(&buffer, "Speed {d:.2}x", .{
-                    context.clock.speed,
-                }),
+                0 => zhu.format(&buffer, "Speed {d:.2}x", .{speed.*}),
                 1 => zhu.format(&buffer, "Music {d:.0}%", .{
                     zhu.audio.musicVolume.load(.acquire) * 100,
                 }),

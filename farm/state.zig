@@ -2,7 +2,10 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 pub const Input = @import("state/Input.zig");
+pub const Clock = @import("state/Clock.zig");
 
 pub var input: Input = .{};
 
-pub const Session = struct {};
+pub const Session = struct {
+    clock: Clock = .{},
+};

@@ -58,7 +58,10 @@ pub fn init(allocator_: zhu.Allocator) void {
 
     // 存档状态先就位，UI 只持有这份长期有效的槽位切片。
     save.init(allocator);
-    ui.init(&save.slots);
+    ui.init(.{
+        .slots = &save.slots,
+        .speed = &session.clock.speed,
+    });
     title.init();
     map.init(allocator);
     factory.init();
@@ -74,7 +77,7 @@ pub fn init(allocator_: zhu.Allocator) void {
 pub fn deinit() void {
     switch (current) {
         .title => {},
-        .play => map.exit(&world),
+        .play => map.exit(&world, session.clock.day),
     }
     map.deinit();
     context.deinit();
@@ -147,16 +150,16 @@ fn updatePlayUi(req: ui.UiRequest) void {
     switch (req) {
         .block => {},
         .title => pending = .title,
-        .rest => |hours| context.clock.restHours = hours,
+        .rest => |hours| session.clock.restHours = hours,
         .save => |slot| {
-            if (!save.saveSlot(&world, slot)) {
+            if (!save.saveSlot(&world, &session.clock, slot)) {
                 ui.showMessage(.{ .text = "保存失败", .fail = true });
                 return;
             }
             ui.showMessage(.{ .text = "保存成功", .fail = false });
         },
         .load => |slot| {
-            if (!save.loadSlot(&world, slot)) {
+            if (!save.loadSlot(&world, &session.clock, slot)) {
                 ui.showMessage(.{ .text = "读取失败", .fail = true });
                 return;
             }
@@ -168,7 +171,7 @@ fn updatePlayUi(req: ui.UiRequest) void {
 fn updatePlay(delta: f32) void {
     // 农场主循环顺序在这里显式编排，新增系统需要在这里确定位置。
     if (pending != null) return;
-    if (context.clock.paused) return;
+    if (session.clock.paused) return;
 
     // 已提交的切图请求先进入过渡，不再瞬时换图。
     if (context.map.pending != null) {
@@ -178,14 +181,14 @@ fn updatePlay(delta: f32) void {
     }
 
     // 时间先推进，地图跨天逻辑和灯光都依赖本帧最新时间事件。
-    system.time.update(&world, delta);
+    system.time.update(&world, &session.clock, delta);
     map.update(&world);
-    system.light.update(&world);
+    system.light.update(&world, session.clock.isDark());
 
     // 输入先写入意图，移动系统统一结算位置和碰撞。
     inventory.update();
     system.control.update(&world);
-    system.life.update(&world, delta);
+    system.life.update(&world, session.clock.period, delta);
     system.wander.update(&world, delta);
     system.movement.update(&world, delta);
 
@@ -213,7 +216,11 @@ fn updateMapFade(delta: f32) bool {
 
     switch (phase) {
         .out => {
-            map.change(&world, context.map.takePending().?);
+            map.change(
+                &world,
+                context.map.takePending().?,
+                session.clock.day,
+            );
             mapFade.phase = .in;
             mapFade.timer.restart();
         },
@@ -230,7 +237,7 @@ fn applyScene() void {
         .play => {
             mapFade = .{};
             context.map.pending = null;
-            map.exit(&world);
+            map.exit(&world, session.clock.day);
         },
     }
     current, pending = .{ next, null };
@@ -248,11 +255,11 @@ fn enterPlay(loadSlot: ?u8) void {
     zhu.camera.main.scale = .square(2);
     if (loadSlot == null) {
         // 新游戏重置世界级状态；读档会在基础地图创建后覆盖状态。
-        context.clock.reset();
+        session.clock.reset();
         context.map.resetStates();
     }
 
-    map.enter(&world, .exterior, -1);
+    map.enter(&world, .exterior, -1, session.clock.day);
     inventory.reset();
     if (loadSlot == null) {
         _ = inventory.add(.hoe, 1);
@@ -264,7 +271,7 @@ fn enterPlay(loadSlot: ?u8) void {
 
     if (loadSlot) |slot| {
         // 存档恢复依赖已经存在的 world/map/player 基础结构。
-        if (!save.loadSlot(&world, slot)) {
+        if (!save.loadSlot(&world, &session.clock, slot)) {
             pending = .title;
             return;
         }
@@ -288,11 +295,11 @@ fn drawPlay() void {
     map.drawFront();
 
     system.control.draw(&world);
-    system.light.draw(&world);
+    system.light.draw(&world, session.clock.hour, session.clock.minute);
 
     zhu.camera.push(.window);
     defer zhu.camera.pop();
-    system.time.draw();
+    system.time.draw(&session.clock);
     ui.draw(&world);
 }
 

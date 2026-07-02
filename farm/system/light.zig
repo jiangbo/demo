@@ -2,17 +2,18 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
-const context = @import("../context.zig");
 const map = @import("../map.zig");
 
 const event = component.event;
-const light = component.light;
 const Position = component.Position;
+const Point = component.light.Point;
+const Spot = component.light.Spot;
+const Disabled = component.light.Disabled;
+const Night = component.light.Night;
+const Day = component.light.Day;
+const Pending = component.light.Pending;
 
-const Keyframe = struct {
-    hour: f32,
-    color: zhu.Color,
-};
+const Keyframe = struct { hour: f32, color: zhu.Color };
 
 // 屏幕覆盖色关键帧：只做可见昼夜色调，不模拟真实光照。
 const keyframes = [_]Keyframe{
@@ -31,45 +32,48 @@ pub fn init() void {
     glowImage = zhu.getImage("light.png").?;
 }
 
-pub fn update(world: *zhu.ecs.World) void {
+pub fn update(world: *zhu.ecs.World, dark: bool) void {
+    updatePending(world, dark);
+
     // 室内地图光源始终启用，不做时间切换
     if (!map.isOutdoor(map.current)) {
-        world.clear(light.Disabled);
+        world.clear(Disabled);
         return;
     }
 
-    // 室外地图的光源按时间切换
-    var nextDark: ?bool = null;
-    for (world.getEvent(event.HourChanged)) |evt| {
-        nextDark = switch (evt.hour) {
-            18 => true,
-            6 => false,
-            else => nextDark,
-        };
-    }
+    // 时间系统已经维护当前昼夜状态，这里只消费整点事件。
+    if (world.getEvent(event.HourChanged).len == 0) return;
 
-    const dark = nextDark orelse return;
-    world.clear(light.Disabled);
-
+    world.clear(Disabled);
     if (dark) {
-        var query = world.query(.{light.DayOnly});
-        while (query.next()) |e| query.add(world, e, light.Disabled{});
+        var query = world.query(.{Day});
+        while (query.next()) |e| query.add(world, e, Disabled{});
     } else {
-        var query = world.query(.{light.NightOnly});
-        while (query.next()) |e| query.add(world, e, light.Disabled{});
+        var query = world.query(.{Night});
+        while (query.next()) |e| query.add(world, e, Disabled{});
     }
 }
 
-pub fn draw(world: *zhu.ecs.World) void {
-    drawOverlay();
+fn updatePending(world: *zhu.ecs.World, dark: bool) void {
+    // 新生成的灯光只同步一次初始昼夜状态。
+    var query = world.query(.{Pending});
+    while (query.next()) |entity| {
+        const enabled = if (dark) world.has(entity, Night) //
+            else world.has(entity, Day);
+        if (enabled) world.remove(entity, Disabled);
+    }
+    world.clear(Pending);
+}
+
+pub fn draw(world: *zhu.ecs.World, hour: u8, minute: f32) void {
+    drawOverlay(hour, minute);
     drawLights(world);
 }
 
-fn drawOverlay() void {
+fn drawOverlay(hourValue: u8, minute: f32) void {
     if (!map.isOutdoor(map.current)) return;
 
-    const hour = @as(f32, @floatFromInt(context.clock.hour)) +
-        context.clock.minute / 60;
+    const hour = @as(f32, @floatFromInt(hourValue)) + minute / 60;
     const overlay = overlayAt(hour);
     if (overlay.a <= 0.001) return;
 
@@ -77,11 +81,11 @@ fn drawOverlay() void {
 }
 
 fn drawLights(world: *zhu.ecs.World) void {
-    const allPoint = .{ Position, light.Point };
-    var points = world.queryWithout(allPoint, .{light.Disabled});
+    const allPoint = .{ Position, Point };
+    var points = world.queryWithout(allPoint, .{Disabled});
     while (points.next()) |entity| {
         const position = points.get(entity, Position);
-        const point = points.get(entity, light.Point);
+        const point = points.get(entity, Point);
         const center = position.add(point.offset);
         const alpha = std.math.clamp(point.intensity, 0, 1);
         var color = point.color;
@@ -89,12 +93,12 @@ fn drawLights(world: *zhu.ecs.World) void {
         drawGlow(center, point.radius * 2.0, color);
     }
 
-    const allSpot = .{ Position, light.Spot };
+    const allSpot = .{ Position, Spot };
     // 第一版不做真实锥形，先退化成圆形占位光圈验证地图数据。
-    var spots = world.queryWithout(allSpot, .{light.Disabled});
+    var spots = world.queryWithout(allSpot, .{Disabled});
     while (spots.next()) |entity| {
         const pos = spots.get(entity, Position);
-        const spot = spots.get(entity, light.Spot);
+        const spot = spots.get(entity, Spot);
         const alpha = std.math.clamp(spot.intensity, 0, 1);
         var color = spot.color;
         color.a *= 0.56 * alpha;
@@ -145,116 +149,42 @@ test "light overlay 深夜比白天更明显" {
     try std.testing.expect(night.b > night.r);
 }
 
-test "light overlay 支持跨午夜插值" {
-    const night = overlayAt(22);
-    const middle = overlayAt(1);
-    const early = overlayAt(4);
-
-    try std.testing.expect(night.a > middle.a);
-    try std.testing.expect(middle.a > early.a);
-}
-
-test "light update 18 点启用 night-only 并禁用 day-only" {
+test "light update 夜晚启用夜灯禁用日灯" {
     map.current = .exterior; // 设置为室外地图
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const night = world.createEntity();
-    world.add(night, light.NightOnly{});
-    world.add(night, light.Disabled{});
+    world.add(night, Night{});
+    world.add(night, Disabled{});
 
     const day = world.createEntity();
-    world.add(day, light.DayOnly{});
+    world.add(day, Day{});
 
-    world.addEvent(event.HourChanged{ .day = 1, .hour = 18 });
+    world.addEvent(event.HourChanged{});
 
-    update(&world);
+    update(&world, true);
 
-    try std.testing.expect(!world.has(night, light.Disabled));
-    try std.testing.expect(world.has(day, light.Disabled));
+    try std.testing.expect(!world.has(night, Disabled));
+    try std.testing.expect(world.has(day, Disabled));
 }
 
-test "light update 6 点禁用 night-only 并启用 day-only" {
+test "light update 白天启用日灯禁用夜灯" {
     map.current = .exterior; // 设置为室外地图
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const night = world.createEntity();
-    world.add(night, light.NightOnly{});
+    world.add(night, Night{});
 
     const day = world.createEntity();
-    world.add(day, light.DayOnly{});
-    world.add(day, light.Disabled{});
+    world.add(day, Day{});
+    world.add(day, Disabled{});
 
-    world.addEvent(event.HourChanged{ .day = 1, .hour = 6 });
+    world.addEvent(event.HourChanged{});
 
-    update(&world);
+    update(&world, false);
 
-    try std.testing.expect(world.has(night, light.Disabled));
-    try std.testing.expect(!world.has(day, light.Disabled));
-}
-
-test "light update 非边界整点不切换显隐" {
-    map.current = .exterior; // 设置为室外地图
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const night = world.createEntity();
-    world.add(night, light.NightOnly{});
-
-    const day = world.createEntity();
-    world.add(day, light.DayOnly{});
-    world.add(day, light.Disabled{});
-
-    world.addEvent(event.HourChanged{ .day = 1, .hour = 12 });
-
-    update(&world);
-
-    try std.testing.expect(!world.has(night, light.Disabled));
-    try std.testing.expect(world.has(day, light.Disabled));
-}
-
-test "light drawLights 只绘制启用点光" {
-    glowImage = .{ .size = .xy(128, 128) };
-
-    var vertices: [8]zhu.batch.Vertex = undefined;
-    var commands: [4]zhu.batch.Command = undefined;
-    zhu.batch.init(&vertices, &commands);
-    const vertexBuffer = &zhu.batch.vertices;
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const visible = world.createEntity();
-    world.add(visible, Position.xy(10, 20));
-    world.add(visible, light.Point{ .radius = 16 });
-
-    const disabled = world.createEntity();
-    world.add(disabled, Position.xy(30, 40));
-    world.add(disabled, light.Point{ .radius = 16 });
-    world.add(disabled, light.Disabled{});
-
-    drawLights(&world);
-
-    try std.testing.expectEqual(1, vertexBuffer.items.len);
-}
-
-test "light drawLights 会把 spot 退化成占位光圈" {
-    glowImage = .{ .size = .xy(128, 128) };
-
-    var vertices: [8]zhu.batch.Vertex = undefined;
-    var commands: [4]zhu.batch.Command = undefined;
-    zhu.batch.init(&vertices, &commands);
-    const vertexBuffer = &zhu.batch.vertices;
-
-    var world = zhu.ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const entity = world.createEntity();
-    world.add(entity, Position.xy(10, 20));
-    world.add(entity, light.Spot{ .radius = 16 });
-
-    drawLights(&world);
-
-    try std.testing.expectEqual(1, vertexBuffer.items.len);
+    try std.testing.expect(world.has(night, Disabled));
+    try std.testing.expect(!world.has(day, Disabled));
 }

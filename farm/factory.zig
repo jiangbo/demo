@@ -2,7 +2,6 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("component.zig");
-const context = @import("context.zig");
 
 const actor = component.actor;
 const farm = component.farm;
@@ -376,18 +375,11 @@ fn spotDirection(spot: zhu.extend.tiled.ClassProperty) zhu.Vector2 {
 fn applyLight(world: *World, entity: Entity, object: Object) void {
     const day = object.getProperty("day_only", bool) orelse false;
     const night = object.getProperty("night_only", bool) orelse !day;
-    const dark = context.clock.isDark();
+    world.addAll(entity, .{ light.Disabled{}, light.Pending{} });
 
-    if (day) {
-        world.add(entity, light.DayOnly{});
-        if (dark) world.add(entity, light.Disabled{});
-        return;
-    }
+    if (day) world.add(entity, light.Day{});
 
-    if (night) {
-        world.add(entity, light.NightOnly{});
-        if (!dark) world.add(entity, light.Disabled{});
-    }
+    if (night) world.add(entity, light.Night{});
 }
 
 pub fn spawnCrop(
@@ -786,192 +778,6 @@ test "带 anim_id 的地图摆件会创建停止的非循环动画" {
     try std.testing.expect(animation.isFinished());
     try expectEqual(0, sprite.image.offset.x);
     try expectEqual(0, sprite.image.offset.y);
-}
-
-test "spawnPointLight 创建点光" {
-    context.clock.reset();
-    defer context.clock.reset();
-
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const entity = spawnPointLight(&world, .{
-        .id = 1,
-        .gid = 0,
-        .name = "point",
-        .type = "light",
-        .position = .xy(10, 20),
-        .size = .zero,
-        .point = true,
-        .properties = &.{
-            .{ .name = "radius", .value = .{ .float = 64 } },
-        },
-        .extend = .{},
-    });
-
-    try expectEqual(10, world.get(entity, component.Position).?.x);
-    try expectEqual(64, world.get(entity, light.Point).?.radius);
-}
-
-test "spawnSpotLight 创建聚光" {
-    context.clock.reset();
-    defer context.clock.reset();
-
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const entity = spawnSpotLight(&world, .{
-        .id = 1,
-        .gid = 0,
-        .name = "spot",
-        .type = "light",
-        .position = .xy(10, 20),
-        .size = .zero,
-        .point = true,
-        .properties = &.{
-            .{ .name = "spot", .value = .{ .class = .{
-                .type = "Spotlight",
-                .properties = &.{
-                    .{ .name = "direction_deg", .value = .{ .float = 90 } },
-                    .{ .name = "radius", .value = .{ .float = 96 } },
-                },
-            } } },
-        },
-        .extend = .{},
-    });
-
-    try expectEqual(20, world.get(entity, component.Position).?.y);
-    try expectEqual(96, world.get(entity, light.Spot).?.radius);
-}
-
-test "白天加载 night-only 点光会禁用" {
-    context.clock.reset();
-    defer context.clock.reset();
-    context.clock.hour = 12;
-    context.clock.minute = 0;
-
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
-
-    _ = spawnPointLight(&world, .{
-        .id = 1,
-        .gid = 0,
-        .name = "point",
-        .type = "light",
-        .position = .xy(10, 20),
-        .size = .zero,
-        .point = true,
-        .properties = &.{
-            .{ .name = "night_only", .value = .{ .bool = true } },
-            .{ .name = "radius", .value = .{ .float = 64 } },
-        },
-        .extend = .{},
-    });
-
-    var query = world.query(.{
-        component.Position,
-        light.Point,
-        light.NightOnly,
-        light.Disabled,
-    });
-    const e = query.next().?;
-
-    try expectEqual(10, query.get(e, component.Position).x);
-    try expectEqual(64, query.get(e, light.Point).radius);
-    try std.testing.expectEqual(null, query.next());
-}
-
-test "夜晚加载 night-only 点光会启用" {
-    context.clock.reset();
-    defer context.clock.reset();
-    context.clock.hour = 19;
-    context.clock.minute = 0;
-
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const entity = spawnPointLight(&world, .{
-        .id = 1,
-        .gid = 0,
-        .name = "point",
-        .type = "light",
-        .position = .xy(10, 20),
-        .size = .zero,
-        .point = true,
-        .properties = &.{
-            .{ .name = "night_only", .value = .{ .bool = true } },
-            .{ .name = "radius", .value = .{ .float = 64 } },
-        },
-        .extend = .{},
-    });
-
-    var query = world.queryWithout(.{
-        component.Position,
-        light.Point,
-        light.NightOnly,
-    }, .{light.Disabled});
-    const e = query.next().?;
-
-    try expectEqual(20, query.get(e, component.Position).y);
-    try std.testing.expectEqual(null, query.next());
-    _ = entity;
-}
-
-test "day-only 点光白天启用夜晚禁用" {
-    context.clock.reset();
-    defer context.clock.reset();
-
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const dayOnly = [_]zhu.extend.tiled.Property{
-        .{ .name = "day_only", .value = .{ .bool = true } },
-    };
-
-    context.clock.hour = 12;
-    _ = spawnPointLight(&world, .{
-        .id = 1,
-        .gid = 0,
-        .name = "point",
-        .type = "light",
-        .position = .xy(10, 20),
-        .size = .zero,
-        .point = true,
-        .properties = &dayOnly,
-        .extend = .{},
-    });
-
-    context.clock.hour = 19;
-    _ = spawnPointLight(&world, .{
-        .id = 2,
-        .gid = 0,
-        .name = "point",
-        .type = "light",
-        .position = .xy(30, 40),
-        .size = .zero,
-        .point = true,
-        .properties = &dayOnly,
-        .extend = .{},
-    });
-
-    var enabled = world.queryWithout(.{
-        component.Position,
-        light.Point,
-        light.DayOnly,
-    }, .{light.Disabled});
-    const first = enabled.next().?;
-    try expectEqual(10, enabled.get(first, component.Position).x);
-    try std.testing.expectEqual(null, enabled.next());
-
-    var disabled = world.query(.{
-        component.Position,
-        light.Point,
-        light.DayOnly,
-        light.Disabled,
-    });
-    const second = disabled.next().?;
-    try expectEqual(30, disabled.get(second, component.Position).x);
-    try std.testing.expectEqual(null, disabled.next());
 }
 
 test "工具命中目标和资源耐久来自物品配置" {

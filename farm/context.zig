@@ -3,41 +3,6 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 
-pub const clock = struct {
-    pub const Period = component.time.Period;
-    pub const minutesPerRealSecond: f32 = 10.0;
-
-    pub var paused: bool = false;
-    // 时钟倍率，只影响游戏内时间流逝。
-    pub var speed: f32 = 1;
-
-    pub var day: u32 = 1;
-    pub var hour: u8 = 6;
-    pub var minute: f32 = 0.0;
-    pub var period: Period = .dawn;
-    pub var restHours: ?u8 = null;
-
-    pub fn reset() void {
-        paused = false;
-        speed = 1;
-        day = 1;
-        hour = 6;
-        minute = 0.0;
-        period = .dawn;
-        restHours = null;
-    }
-
-    pub fn isDark() bool {
-        return hour >= 18 or hour < 6;
-    }
-
-    pub fn takeRestHours() ?u8 {
-        const result = restHours;
-        restHours = null;
-        return result;
-    }
-};
-
 pub const notice = struct {
     pub const Channel = enum { world, item };
 
@@ -96,7 +61,7 @@ pub const map = struct {
         return request;
     }
 
-    pub fn ensureState(id: Id, tileCount: usize) *State {
+    pub fn ensureState(id: Id, tileCount: usize, day: u32) *State {
         const result = states.getPtr(id);
         if (result.initialized) return result;
 
@@ -105,7 +70,7 @@ pub const map = struct {
         }
         @memset(result.tiles, .{});
         result.initialized = true;
-        result.day = clock.day;
+        result.day = day;
         return result;
     }
 
@@ -117,7 +82,6 @@ pub const map = struct {
 };
 
 pub fn init() void {
-    clock.reset();
     notice.states = .initFill(.{});
     map.pending = null;
 }

@@ -5,6 +5,7 @@ const component = @import("component.zig");
 const context = @import("context.zig");
 const inventory = @import("inventory.zig");
 const map = @import("map.zig");
+const Clock = @import("state.zig").Clock;
 
 const World = zhu.ecs.World;
 const Actor = component.actor.Actor;
@@ -37,7 +38,7 @@ const TimeSave = struct {
     day: u32 = 1,
     hour: u8 = 6,
     minute: f32 = 0,
-    period: context.clock.Period = .dawn,
+    period: component.time.Period = .dawn,
 };
 
 const PlayerSave = struct {
@@ -84,28 +85,28 @@ pub fn init(allocator_: zhu.Allocator) void {
     }
 }
 
-pub fn saveSlot(world: *World, slot: u8) bool {
-    saveSlotInner(world, slot) catch |err| {
+pub fn saveSlot(world: *World, clock: *Clock, slot: u8) bool {
+    saveSlotInner(world, clock, slot) catch |err| {
         std.log.err("save slot {} failed: {}", .{ slot, err });
         return false;
     };
     return true;
 }
 
-pub fn loadSlot(world: *World, slot: u8) bool {
-    loadSlotInner(world, slot) catch |err| {
+pub fn loadSlot(world: *World, clock: *Clock, slot: u8) bool {
+    loadSlotInner(world, clock, slot) catch |err| {
         std.log.err("load slot {} failed: {}", .{ slot, err });
         return false;
     };
     return true;
 }
 
-fn saveSlotInner(world: *World, slot: u8) !void {
+fn saveSlotInner(world: *World, clock: *Clock, slot: u8) !void {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
-    map.saveState(world);
-    const data = try capture(world);
+    map.saveState(world, clock.day);
+    const data = try capture(world, clock);
     defer freeCaptured(data);
 
     const buffer = zhu.assets.oomAlloc(u8, maxSaveSize);
@@ -122,14 +123,14 @@ fn saveSlotInner(world: *World, slot: u8) !void {
     std.log.info("game saved: {s}", .{path});
 }
 
-fn loadSlotInner(world: *World, slot: u8) !void {
+fn loadSlotInner(world: *World, clock: *Clock, slot: u8) !void {
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
     var save = try zhu.window.readZon(SaveData, path, .{});
     defer save.deinit();
 
-    try apply(world, save.value);
+    try apply(world, clock, save.value);
     std.log.info("game loaded: {s}", .{path});
 }
 
@@ -188,7 +189,7 @@ fn isSpace(char: u8) bool {
     };
 }
 
-fn capture(world: *World) !SaveData {
+fn capture(world: *World, clock: *const Clock) !SaveData {
     const player = world.getIdentity(Player) orelse return error.MissingPlayer;
     const position = world.get(player, Position) orelse {
         return error.MissingPlayerPosition;
@@ -198,12 +199,12 @@ fn capture(world: *World) !SaveData {
     return .{
         .timestamp = zhu.window.timestamp().toSeconds(),
         .time = .{
-            .paused = context.clock.paused,
-            .scale = context.clock.speed,
-            .day = context.clock.day,
-            .hour = context.clock.hour,
-            .minute = context.clock.minute,
-            .period = context.clock.period,
+            .paused = clock.paused,
+            .scale = clock.speed,
+            .day = clock.day,
+            .hour = clock.hour,
+            .minute = clock.minute,
+            .period = clock.period,
         },
         .player = .{
             .map = map.current,
@@ -262,31 +263,31 @@ fn captureTiles(state: *const context.map.State) ![]const TileSave {
     return try list.toOwnedSlice(allocator);
 }
 
-fn apply(world: *World, data: SaveData) !void {
-    context.clock.paused = data.time.paused;
-    context.clock.speed = data.time.scale;
-    context.clock.day = data.time.day;
-    context.clock.hour = data.time.hour;
-    context.clock.minute = data.time.minute;
-    context.clock.period = data.time.period;
+fn apply(world: *World, clock: *Clock, data: SaveData) !void {
+    clock.paused = data.time.paused;
+    clock.speed = data.time.scale;
+    clock.day = data.time.day;
+    clock.hour = data.time.hour;
+    clock.minute = data.time.minute;
+    clock.period = data.time.period;
 
-    map.exit(world);
+    map.exit(world, clock.day);
     context.map.resetStates();
-    restoreMaps(data);
+    restoreMaps(data, clock.day);
 
-    map.enter(world, data.player.map, -1);
+    map.enter(world, data.player.map, -1, clock.day);
     restorePlayer(world, data.player);
     inventory.restore(data.inventory);
 }
 
-fn restoreMaps(data: SaveData) void {
-    for (data.maps) |saved| restoreMap(saved);
+fn restoreMaps(data: SaveData, day: u32) void {
+    for (data.maps) |saved| restoreMap(saved, day);
 }
 
-fn restoreMap(data: MapSave) void {
+fn restoreMap(data: MapSave, day: u32) void {
     const mapData = &map.maps[@intFromEnum(data.id)];
     const tileCount = mapData.grid.count();
-    const state = context.map.ensureState(data.id, tileCount);
+    const state = context.map.ensureState(data.id, tileCount, day);
 
     for (data.tiles) |tileSave| {
         if (tileSave.index >= state.tiles.len) continue;

@@ -10,6 +10,7 @@ const Land = @import("map/Land.zig");
 
 const tiled = zhu.extend.tiled;
 const World = zhu.ecs.World;
+const Entity = zhu.ecs.Entity;
 const actor = component.actor;
 const render = component.render;
 const farm = component.farm;
@@ -64,12 +65,12 @@ pub fn deinit() void {
     vertexes.clearAndFree(gpa.raw);
 }
 
-pub fn enter(world: *World, id: Id, targetId: i32) void {
+pub fn enter(world: *World, id: Id, targetId: i32, day: u32) void {
     world.reset();
 
     current = id;
     load(gpa, world, maps[@intFromEnum(id)]);
-    restoreState(world);
+    restoreState(world, day);
 
     var spawn: ?zhu.Vector2 = null;
     var query = world.query(.{Trigger});
@@ -87,9 +88,9 @@ pub fn enter(world: *World, id: Id, targetId: i32) void {
     zhu.camera.directFollow(position);
 }
 
-pub fn change(world: *World, request: context.map.Transition) void {
-    exit(world);
-    enter(world, request.target, request.targetId);
+pub fn change(world: *World, request: context.map.Transition, day: u32) void {
+    exit(world, day);
+    enter(world, request.target, request.targetId, day);
 }
 
 pub fn update(world: *World) void {
@@ -109,8 +110,8 @@ pub fn update(world: *World) void {
     }
 }
 
-pub fn exit(world: *World) void {
-    saveState(world);
+pub fn exit(world: *World, day: u32) void {
+    saveState(world, day);
     unload();
 }
 
@@ -133,10 +134,10 @@ pub fn unload() void {
     vertexes.clearAndFree(gpa.raw);
 }
 
-pub fn saveState(world: *World) void {
+pub fn saveState(world: *World, day: u32) void {
     if (land.tiles.len == 0) return;
 
-    const state = context.map.ensureState(current, land.tiles.len);
+    const state = context.map.ensureState(current, land.tiles.len, day);
     for (land.tiles, 0..) |tile, index| {
         var saved = &state.tiles[index];
         saved.ground = tile.ground;
@@ -148,7 +149,7 @@ pub fn saveState(world: *World) void {
             saved.thing = null;
         }
     }
-    state.day = context.clock.day;
+    state.day = day;
 }
 
 pub fn hoe(position: zhu.Vector2) bool {
@@ -188,9 +189,9 @@ fn thingAt(world: *World, tile: Land.Tile) ?context.map.Thing {
     };
 }
 
-fn restoreState(world: *World) void {
-    const state = context.map.ensureState(current, land.tiles.len);
-    advanceState(state);
+fn restoreState(world: *World, day: u32) void {
+    const state = context.map.ensureState(current, land.tiles.len, day);
+    advanceState(state, day);
 
     for (state.tiles, 0..) |saved, index| {
         const tile = &land.tiles[index];
@@ -200,7 +201,7 @@ fn restoreState(world: *World) void {
         restoreThing(world, index, thing);
     }
 
-    state.day = context.clock.day;
+    state.day = day;
 }
 
 fn restoreThing(world: *World, index: usize, thing: Thing) void {
@@ -262,12 +263,12 @@ fn clearProductTiles(entity: zhu.ecs.Entity) void {
     }
 }
 
-fn advanceState(state: *context.map.State) void {
-    if (context.clock.day <= state.day) return;
+fn advanceState(state: *context.map.State, day: u32) void {
+    if (day <= state.day) return;
 
-    const days = context.clock.day - state.day;
+    const days = day - state.day;
     for (0..days) |_| advanceStateOneDay(state);
-    state.day = context.clock.day;
+    state.day = day;
 }
 
 fn advanceStateOneDay(state: *context.map.State) void {
@@ -300,13 +301,14 @@ pub fn advanceCropOneDay(crop: *farm.Crop, watered: bool) bool {
     return true;
 }
 
-fn refreshCropSprite(world: *World, entity: zhu.ecs.Entity, crop: farm.Crop) void {
+fn refreshCropSprite(world: *World, entity: Entity, crop: farm.Crop) void {
     const cfg = factory.cropStage(crop.kind, crop.stage);
     world.getPtr(entity, render.Sprite).?.* = .{
         .image = factory.resolveImage(cfg.sprite),
         .offset = cfg.sprite.offset,
     };
-    if (crop.stage != .seed) world.getPtr(entity, render.Render).?.layer = .actor;
+    if (crop.stage == .seed) return;
+    world.getPtr(entity, render.Render).?.layer = .actor;
 }
 
 pub fn drawBack() void {
@@ -412,9 +414,6 @@ test "触发器落点会按 start_offset 放到区域外侧" {
 }
 
 test "地图状态作物会按离线天数推进" {
-    context.clock.reset();
-    defer context.clock.reset();
-
     var tiles = [_]context.map.Tile{.{
         .ground = .wet,
         .thing = .{ .crop = .{
@@ -429,9 +428,7 @@ test "地图状态作物会按离线天数推进" {
         .day = 1,
         .tiles = &tiles,
     };
-    context.clock.day = 2;
-
-    advanceState(&state);
+    advanceState(&state, 2);
 
     const crop = switch (state.tiles[0].thing.?) {
         .crop => |crop| crop,
@@ -448,9 +445,6 @@ test "地图状态作物会按离线天数推进" {
 }
 
 test "湿地离线跨天只加速一天" {
-    context.clock.reset();
-    defer context.clock.reset();
-
     var tiles = [_]context.map.Tile{.{
         .ground = .wet,
         .thing = .{ .crop = .{
@@ -465,9 +459,7 @@ test "湿地离线跨天只加速一天" {
         .day = 1,
         .tiles = &tiles,
     };
-    context.clock.day = 3;
-
-    advanceState(&state);
+    advanceState(&state, 3);
 
     const crop = switch (state.tiles[0].thing.?) {
         .crop => |crop| crop,
@@ -530,8 +522,6 @@ test "当前地图和离线地图跨天推进规则一致" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
     putMockCropImages();
-    context.clock.reset();
-    defer context.clock.reset();
     land = Land.init(zhu.testing.allocator, maps[0].grid);
     defer land.deinit(zhu.testing.allocator);
 
@@ -565,10 +555,8 @@ test "当前地图和离线地图跨天推进规则一致" {
         .day = 1,
         .tiles = &tiles,
     };
-    context.clock.day = 2;
-
     update(&world);
-    advanceState(&state);
+    advanceState(&state, 2);
 
     const currentCrop = world.get(cropEntity, farm.Crop).?;
     const offlineCrop = switch (state.tiles[0].thing.?) {
@@ -674,13 +662,13 @@ test "保存已消失产出对象会写成 gone" {
     current = .school;
     defer current = old;
 
-    const state = context.map.ensureState(current, land.tiles.len);
+    const state = context.map.ensureState(current, land.tiles.len, 1);
     defer {
         zhu.assets.free(state.tiles);
         state.* = .{};
     }
     land.tiles[0].gone = .product;
-    saveState(&world);
+    saveState(&world, 1);
 
     switch (state.tiles[0].thing.?) {
         .gone => {},
