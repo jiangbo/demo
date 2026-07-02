@@ -2,9 +2,9 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
-const context = @import("../context.zig");
 const factory = @import("../factory.zig");
 const inventory = @import("../inventory.zig");
+const Notice = @import("../state.zig").Notice;
 
 const Player = component.actor.Player;
 const Position = component.Position;
@@ -16,7 +16,7 @@ const World = zhu.ecs.World;
 
 const arcHeight: f32 = 6;
 
-pub fn update(world: *World, delta: f32) void {
+pub fn update(world: *World, notice: *Notice, delta: f32) void {
     updateMotion(world, delta);
 
     const player = world.getIdentity(Player).?;
@@ -48,7 +48,7 @@ pub fn update(world: *World, delta: f32) void {
             });
             len += line.len;
         }
-        if (len > 0) context.notice.show(.item, "{s}", .{buffer[0..len]});
+        if (len > 0) notice.show("{s}", .{buffer[0..len]});
         if (remaining > 0) continue;
 
         world.destroyEntity(entity);
@@ -86,6 +86,7 @@ fn worldShape(world: *World, entity: zhu.ecs.Entity) ?Shape {
 test "pickup 飞散期间不会被拾取" {
     inventory.reset();
     defer inventory.reset();
+    var notice: Notice = .{};
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -104,7 +105,7 @@ test "pickup 飞散期间不会被拾取" {
     });
     world.add(pickup, Shape{ .rect = .init(.xy(-5, -5), .xy(10, 10)) });
 
-    update(&world, 0.05);
+    update(&world, &notice, 0.05);
 
     try std.testing.expect(world.get(pickup, Pickup) != null);
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
@@ -113,6 +114,7 @@ test "pickup 飞散期间不会被拾取" {
 test "pickup 碰撞后会被销毁并播放音效" {
     inventory.reset();
     defer inventory.reset();
+    var notice: Notice = .{};
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -126,7 +128,7 @@ test "pickup 碰撞后会被销毁并播放音效" {
     world.add(pickup, Pickup{ .item = .potato, .count = 2 });
     world.add(pickup, Shape{ .rect = .init(.xy(-5, -5), .xy(10, 10)) });
 
-    update(&world, 0.016);
+    update(&world, &notice, 0.016);
 
     try std.testing.expectEqual(null, world.get(pickup, Pickup));
 
@@ -138,6 +140,7 @@ test "pickup 碰撞后会被销毁并播放音效" {
 test "背包满时 pickup 不会消失" {
     inventory.reset();
     defer inventory.reset();
+    var notice: Notice = .{};
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -155,7 +158,7 @@ test "背包满时 pickup 不会消失" {
     world.add(pickup, Pickup{ .item = .potato, .count = 2 });
     world.add(pickup, Shape{ .rect = .init(.xy(-5, -5), .xy(10, 10)) });
 
-    update(&world, 0.016);
+    update(&world, &notice, 0.016);
 
     try std.testing.expectEqual(@as(u32, 2), world.get(pickup, Pickup).?.count);
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
@@ -164,6 +167,7 @@ test "背包满时 pickup 不会消失" {
 test "背包只有部分空间时 pickup 只减少已拾取数量" {
     inventory.reset();
     defer inventory.reset();
+    var notice: Notice = .{};
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
@@ -182,7 +186,7 @@ test "背包只有部分空间时 pickup 只减少已拾取数量" {
     world.add(pickup, Pickup{ .item = .potato, .count = 3 });
     world.add(pickup, Shape{ .rect = .init(.xy(-5, -5), .xy(10, 10)) });
 
-    update(&world, 0.016);
+    update(&world, &notice, 0.016);
 
     try std.testing.expectEqual(@as(u32, 99), inventory.store.stacks[0].count);
     try std.testing.expectEqual(@as(u32, 2), world.get(pickup, Pickup).?.count);

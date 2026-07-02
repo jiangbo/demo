@@ -2,7 +2,6 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("component.zig");
-const context = @import("context.zig");
 const factory = @import("factory.zig");
 const inventory = @import("inventory.zig");
 const map = @import("map.zig");
@@ -24,8 +23,9 @@ const Animation = component.actor.Animation;
 const Sprite = component.render.Sprite;
 const Rest = component.map.Rest;
 const Hit = component.map.Hit;
+const Notice = state.Notice;
 
-pub fn update(world: *World) void {
+pub fn update(world: *World, notice: *Notice) void {
     // 当前对话目标走远或消失时，直接关闭对话。
     if (world.getIdentity(Dialog)) |target| checkDistance(world, target);
 
@@ -35,7 +35,7 @@ pub fn update(world: *World) void {
     if (world.getIdentity(Dialog)) |target| {
         advanceDialog(world, target);
     } else {
-        tryInteract(world);
+        tryInteract(world, notice);
     }
 }
 
@@ -53,7 +53,7 @@ fn checkDistance(world: *World, target: Entity) void {
 }
 
 // 根据朝向构建探测矩形，用 markFacingHits 查找可交互目标。
-fn tryInteract(world: *World) void {
+fn tryInteract(world: *World, notice: *Notice) void {
     const player = world.getIdentity(Player).?;
     const playerPos = targetCenter(world, player);
 
@@ -66,7 +66,7 @@ fn tryInteract(world: *World) void {
         return startDialog(world, target);
     }
 
-    if (world.has(target, Chest)) return openChest(world, target);
+    if (world.has(target, Chest)) return openChest(world, target, notice);
 
     if (world.has(target, Rest)) return ui.openRest();
 }
@@ -99,7 +99,7 @@ fn targetCenter(world: *World, entity: Entity) Position {
     return shape.move(position).toRect().center();
 }
 
-fn openChest(world: *World, target: Entity) void {
+fn openChest(world: *World, target: Entity, notice: *Notice) void {
     const chest = world.getPtr(target, Chest).?;
 
     // 宝箱奖励允许部分领取，背包满时剩余数量留在宝箱里。
@@ -114,7 +114,7 @@ fn openChest(world: *World, target: Entity) void {
     }
 
     const full = hasItems(chest);
-    showChestNotice(&taken, full);
+    showChestNotice(&taken, full, notice);
     if (full) return;
 
     chest.opened = true;
@@ -132,7 +132,7 @@ fn hasItems(chest: *const Chest) bool {
     return false;
 }
 
-fn showChestNotice(chest: *const Chest, full: bool) void {
+fn showChestNotice(chest: *const Chest, full: bool, notice: *Notice) void {
     var buffer: [160]u8, var len: usize = .{ undefined, 0 };
     for (std.enums.values(ItemEnum)) |itemType| {
         const count = chest.items.get(itemType);
@@ -155,7 +155,7 @@ fn showChestNotice(chest: *const Chest, full: bool) void {
 
     if (len == 0) return;
 
-    context.notice.show(.world, "{s}", .{buffer[0..len]});
+    notice.show("{s}", .{buffer[0..len]});
 }
 
 // 开始对话时把行号重置到第一句，并记录当前对话实体。
@@ -219,6 +219,7 @@ test "按 F 会激活最近 NPC 的第一句对话" {
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
+    var notice: Notice = .{};
 
     // 玩家朝下
     const player = world.createIdentity(Player);
@@ -243,7 +244,7 @@ test "按 F 会激活最近 NPC 的第一句对话" {
     world.add(near, Shape{ .rect = .init(.zero, .xy(8, 8)) });
 
     zhu.key.set(.F, true);
-    update(&world);
+    update(&world, &notice);
 
     try std.testing.expectEqual(near, world.getIdentity(Dialog).?);
     const actor = world.get(near, Actor).?;
@@ -259,6 +260,7 @@ test "对话激活后按 F 会推进并在末尾关闭" {
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
+    var notice: Notice = .{};
 
     const player = world.createIdentity(Player);
     world.add(player, Position.xy(0, 0));
@@ -269,14 +271,14 @@ test "对话激活后按 F 会推进并在末尾关闭" {
     world.addIdentity(npc, Dialog);
 
     zhu.key.set(.F, true);
-    update(&world);
+    update(&world, &notice);
 
     try std.testing.expectEqual(npc, world.getIdentity(Dialog).?);
     try std.testing.expectEqual(1, world.get(npc, Dialog).?.index);
 
     zhu.input.reset();
     zhu.key.set(.F, true);
-    update(&world);
+    update(&world, &notice);
 
     try std.testing.expectEqual(null, world.getIdentity(Dialog));
     try std.testing.expectEqual(0, world.get(npc, Dialog).?.index);
@@ -287,6 +289,7 @@ test "当前对话目标太远时会直接关闭" {
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
+    var notice: Notice = .{};
 
     const player = world.createIdentity(Player);
     world.add(player, Position.xy(0, 0));
@@ -296,7 +299,7 @@ test "当前对话目标太远时会直接关闭" {
     world.add(npc, Dialog{ .lines = &.{"你好"}, .index = 1 });
     world.addIdentity(npc, Dialog);
 
-    update(&world);
+    update(&world, &notice);
 
     try std.testing.expectEqual(null, world.getIdentity(Dialog));
     try std.testing.expectEqual(0, world.get(npc, Dialog).?.index);
@@ -312,6 +315,7 @@ test "按 F 打开宝箱会重置打开动画" {
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
+    var notice: Notice = .{};
 
     const player = world.createIdentity(Player);
     world.add(player, Position.xy(0, 0));
@@ -337,7 +341,7 @@ test "按 F 打开宝箱会重置打开动画" {
     });
 
     zhu.key.set(.F, true);
-    update(&world);
+    update(&world, &notice);
 
     try std.testing.expect(world.get(chest, Chest).?.opened);
     try std.testing.expect(world.get(chest, Animation).?.isRunning());
@@ -354,6 +358,7 @@ test "宝箱在背包满时保留剩余奖励" {
 
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
+    var notice: Notice = .{};
 
     const player = world.createIdentity(Player);
     world.add(player, Position.xy(0, 0));
@@ -382,7 +387,7 @@ test "宝箱在背包满时保留剩余奖励" {
     world.add(chest, Sprite{ .image = image });
 
     zhu.key.set(.F, true);
-    update(&world);
+    update(&world, &notice);
 
     const chestState = world.get(chest, Chest).?;
     try std.testing.expect(!chestState.opened);

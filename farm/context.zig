@@ -3,28 +3,6 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 
-pub const notice = struct {
-    pub const Channel = enum { world, item };
-
-    pub const State = struct {
-        timer: f32 = 0,
-        text: []const u8 = &.{},
-        buffer: [192]u8 = undefined,
-    };
-
-    pub var states: std.EnumArray(Channel, State) = .initFill(.{});
-
-    pub fn show(channel: Channel, comptime fmt: []const u8, args: anytype) void {
-        const current = states.getPtr(channel);
-        current.text = zhu.format(&current.buffer, fmt, args);
-        current.timer = 2.0;
-    }
-
-    pub fn state(channel: Channel) *State {
-        return states.getPtr(channel);
-    }
-};
-
 pub const map = struct {
     pub const Id = component.map.Id;
     pub const ProductState = struct {
@@ -82,7 +60,6 @@ pub const map = struct {
 };
 
 pub fn init() void {
-    notice.states = .initFill(.{});
     map.pending = null;
 }
 

@@ -58,6 +58,7 @@ pub fn init(allocator_: zhu.Allocator) void {
 
     // 存档状态先就位，UI 只持有这份长期有效的槽位切片。
     save.init(allocator);
+    session.notice.init();
     ui.init(.{
         .slots = &save.slots,
         .speed = &session.clock.speed,
@@ -186,18 +187,18 @@ fn updatePlay(delta: f32) void {
     system.light.update(&world, session.clock.isDark());
 
     // 输入先写入意图，移动系统统一结算位置和碰撞。
-    inventory.update();
+    inventory.update(&session.notice);
     system.control.update(&world);
     system.life.update(&world, session.clock.period, delta);
     system.wander.update(&world, delta);
     system.movement.update(&world, delta);
 
     // 控制系统可能生成拾取物，所以拾取放在控制之后。
-    system.pickup.update(&world, delta);
+    system.pickup.update(&world, &session.notice, delta);
 
     // 按 F 的处理、相机跟随、动画和排序都读取本帧已结算的位置。
-    ui.notice.update(delta);
-    interact.update(&world);
+    session.notice.update(delta);
+    interact.update(&world, &session.notice);
     cameraFollowPlayer(delta);
     system.animation.update(&world, delta);
     system.farm.update(&world);
@@ -256,6 +257,7 @@ fn enterPlay(loadSlot: ?u8) void {
     if (loadSlot == null) {
         // 新游戏重置世界级状态；读档会在基础地图创建后覆盖状态。
         session.clock.reset();
+        session.notice.reset();
         context.map.resetStates();
     }
 
@@ -301,6 +303,7 @@ fn drawPlay() void {
     defer zhu.camera.pop();
     system.time.draw(&session.clock);
     ui.draw(&world);
+    session.notice.draw();
 }
 
 fn drawMapFade(phase: MapFade.Phase) void {

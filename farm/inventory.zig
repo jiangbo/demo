@@ -14,6 +14,7 @@ const Config = struct { bar: bar.Zon, bag: bag.Zon };
 const config: Config = @import("zon/inventory.zon");
 
 const Store = zhu.widget.StackStore(ItemEnum, 16, stackLimit);
+const Notice = state.Notice;
 
 pub const Stack = Store.Stack;
 pub const Item = Stack;
@@ -589,7 +590,7 @@ pub fn use(itemType: ItemEnum, count: u32) bool {
     return store.subAll(itemType, count);
 }
 
-pub fn update() void {
+pub fn update(notice: *Notice) void {
     const panelDragging = bag.drag != null;
 
     bag.update();
@@ -598,7 +599,7 @@ pub fn update() void {
         return;
     }
 
-    if (updateUseItem()) {
+    if (updateUseItem(notice)) {
         state.input.mouseCaptured = true;
         return;
     }
@@ -613,15 +614,15 @@ pub fn update() void {
     }
 }
 
-fn updateUseItem() bool {
+fn updateUseItem(notice: *Notice) bool {
     if (itemDrag.dragState != null or bag.drag != null) return false;
     if (!state.input.mousePressed(.RIGHT)) return false;
 
     const index = hoveredBagIndex() orelse return false;
     switch (bag.useByIndex(index)) {
         .none => {},
-        .full => context.notice.show(.item, "背包已满", .{}),
-        .item => |value| context.notice.show(.item, "获得 {s} x{d}", .{
+        .full => notice.show("背包已满", .{}),
+        .item => |value| notice.show("获得 {s} x{d}", .{
             factory.itemConfig(value.item).name,
             value.count,
         }),
@@ -720,6 +721,7 @@ test "添加物品会合并并自动绑定快捷栏" {
 test "右键背包槽会使用物品" {
     zhu.input.reset();
     defer zhu.input.reset();
+    var notice: Notice = .{};
     reset();
     defer reset();
 
@@ -728,7 +730,7 @@ test "右键背包槽会使用物品" {
     zhu.window.mouse = bag.position.add(bag.zon.slots[0]).add(.xy(1, 1));
     zhu.mouse.set(.RIGHT, true);
 
-    update();
+    update(&notice);
 
     try std.testing.expect(state.input.mouseCaptured);
     try std.testing.expectEqual(.strawberry, store.stacks[0].item);
@@ -740,6 +742,7 @@ test "右键背包槽会使用物品" {
 test "右键快捷栏会使用绑定的背包槽" {
     zhu.input.reset();
     defer zhu.input.reset();
+    var notice: Notice = .{};
     reset();
     defer reset();
 
@@ -748,7 +751,7 @@ test "右键快捷栏会使用绑定的背包槽" {
     zhu.window.mouse = bar.zon.position.add(bar.zon.slots[2]).add(.xy(1, 1));
     zhu.mouse.set(.RIGHT, true);
 
-    update();
+    update(&notice);
 
     try std.testing.expect(state.input.mouseCaptured);
     try std.testing.expectEqual(.potatoSeed, store.stacks[5].item);
@@ -758,8 +761,7 @@ test "右键快捷栏会使用绑定的背包槽" {
 test "右键使用物品成功后显示获得提示" {
     zhu.input.reset();
     defer zhu.input.reset();
-    context.init();
-    defer context.init();
+    var notice: Notice = .{};
     reset();
     defer reset();
 
@@ -768,18 +770,17 @@ test "右键使用物品成功后显示获得提示" {
     zhu.window.mouse = bag.position.add(bag.zon.slots[0]).add(.xy(1, 1));
     zhu.mouse.set(.RIGHT, true);
 
-    update();
+    update(&notice);
 
-    const notice = context.notice.state(.item);
-    try std.testing.expectEqualStrings("获得 土豆种子 x3", notice.text);
-    try std.testing.expect(notice.timer > 0);
+    const entry = notice.state();
+    try std.testing.expectEqualStrings("获得 土豆种子 x3", entry.text);
+    try std.testing.expect(entry.timer > 0);
 }
 
 test "右键使用物品空间不足时显示背包已满" {
     zhu.input.reset();
     defer zhu.input.reset();
-    context.init();
-    defer context.init();
+    var notice: Notice = .{};
     reset();
     defer reset();
 
@@ -789,13 +790,13 @@ test "右键使用物品空间不足时显示背包已满" {
     zhu.window.mouse = bag.position.add(bag.zon.slots[0]).add(.xy(1, 1));
     zhu.mouse.set(.RIGHT, true);
 
-    update();
+    update(&notice);
 
     try std.testing.expectEqual(.strawberry, store.stacks[0].item);
     try std.testing.expectEqual(2, store.stacks[0].count);
-    const notice = context.notice.state(.item);
-    try std.testing.expectEqualStrings("背包已满", notice.text);
-    try std.testing.expect(notice.timer > 0);
+    const entry = notice.state();
+    try std.testing.expectEqualStrings("背包已满", entry.text);
+    try std.testing.expect(entry.timer > 0);
 }
 
 test "新增工具会占用独立槽位" {

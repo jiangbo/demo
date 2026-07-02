@@ -116,7 +116,6 @@ pub fn close() void {
 
 pub fn draw(world: *zhu.ecs.World) void {
     dialog.draw(world);
-    notice.draw(world);
     inventory.draw();
 
     if (activePopup) |active| {
@@ -135,27 +134,6 @@ pub fn draw(world: *zhu.ecs.World) void {
         .color = color,
     });
 }
-
-pub const notice = struct {
-    pub fn update(delta: f32) void {
-        for (std.enums.values(context.notice.Channel)) |channel| {
-            const noticeState = context.notice.state(channel);
-            if (noticeState.timer <= 0) continue;
-            noticeState.timer -= delta;
-        }
-    }
-
-    pub fn draw(world: *zhu.ecs.World) void {
-        const player = world.getIdentity(component.actor.Player).?;
-        const position = world.get(player, component.Position).?;
-
-        const worldState = context.notice.state(.world);
-        if (worldState.timer > 0) drawBubble(position, worldState.text);
-
-        const itemState = context.notice.state(.item);
-        if (itemState.timer > 0) drawItemNotice(itemState.text);
-    }
-};
 
 pub const rest = struct {
     const MenuEvent = enum(u8) { minus, plus, ok, cancel };
@@ -408,16 +386,4 @@ fn drawBubble(position: zhu.Vector2, text: []const u8) void {
     zhu.batch.drawNine(bubbleImage, bubbleRect);
 
     zhu.text.draw(text, bubbleRect.min.add(.xy(8, 8)), option);
-}
-
-fn drawItemNotice(text: []const u8) void {
-    const option = zhu.text.Option{ .color = .black, .max = 168 };
-    const textSize = zhu.text.measure(text, option);
-    const size = textSize.add(.xy(18, 14)).max(.xy(176, 40));
-    const pos = zhu.window.size.sub(size).sub(.xy(12, 58));
-    const rect: zhu.Rect = .init(pos, size);
-
-    // 物品提示固定在快捷栏上方，和头顶世界提示区分开。
-    zhu.batch.drawNine(bubbleImage, rect);
-    zhu.text.draw(text, rect.min.add(.xy(9, 7)), option);
 }
