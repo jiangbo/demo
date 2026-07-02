@@ -47,6 +47,8 @@ pub const map = struct {
         startOffset: StartOffset,
     };
 
+    pub const Transition = struct { target: Id, targetId: i32 };
+
     pub const Rest = struct {};
     pub const SolidRange = struct { start: usize, count: usize };
     pub const Hit = struct {};

@@ -291,6 +291,11 @@ pub const World = struct {
         return if (self.getIdentity(T)) |e| e == entity else false;
     }
 
+    pub fn hasIdentity(self: *World, I: type, T: type) bool {
+        const entity = self.getIdentity(I) orelse return false;
+        return self.has(entity, T);
+    }
+
     pub fn removeIdentity(self: *World, T: type) void {
         if (self.getStore(T, T)) |map| map.identity = invalid;
     }

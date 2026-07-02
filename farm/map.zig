@@ -21,6 +21,7 @@ pub const Id = component.map.Id;
 pub const StartOffset = component.map.StartOffset;
 pub const Hit = component.map.Hit;
 const Trigger = component.map.Trigger;
+const Transition = component.map.Transition;
 const Thing = context.map.Thing;
 
 pub const maps = tiled.bind(@import("zon/map/tileSet.zon"), &.{
@@ -88,7 +89,7 @@ pub fn enter(world: *World, id: Id, targetId: i32, day: u32) void {
     zhu.camera.directFollow(position);
 }
 
-pub fn change(world: *World, request: context.map.Transition, day: u32) void {
+pub fn change(world: *World, request: Transition, day: u32) void {
     exit(world, day);
     enter(world, request.target, request.targetId, day);
 }

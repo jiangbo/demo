@@ -28,16 +28,7 @@ pub const map = struct {
         tiles: []Tile = &.{},
     };
 
-    pub const Transition = struct { target: Id, targetId: i32 };
-
-    pub var pending: ?Transition = null;
     pub var states: std.EnumArray(Id, State) = .initFill(.{});
-
-    pub fn takePending() ?Transition {
-        const request = pending;
-        pending = null;
-        return request;
-    }
 
     pub fn ensureState(id: Id, tileCount: usize, day: u32) *State {
         const result = states.getPtr(id);
@@ -59,26 +50,10 @@ pub const map = struct {
     }
 };
 
-pub fn init() void {
-    map.pending = null;
-}
+pub fn init() void {}
 
 pub fn deinit() void {
     for (std.enums.values(map.Id)) |id| {
         zhu.assets.free(map.states.getPtr(id).tiles);
     }
-}
-
-test "地图切换请求会被 take 消费" {
-    init();
-
-    map.pending = .{
-        .target = component.map.Id.town,
-        .targetId = 3,
-    };
-
-    const transition = map.takePending().?;
-    try std.testing.expectEqual(component.map.Id.town, transition.target);
-    try std.testing.expectEqual(3, transition.targetId);
-    try std.testing.expectEqual(null, map.pending);
 }

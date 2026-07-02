@@ -29,6 +29,7 @@ const system = struct {
 
 const World = zhu.ecs.World;
 const actor = component.actor;
+const Transition = component.map.Transition;
 const Position = component.Position;
 
 const MapFade = struct {
@@ -52,7 +53,6 @@ var session: state.Session = .{};
 pub fn init(allocator_: zhu.Allocator) void {
     allocator = allocator_;
 
-    // 组合根只负责装配顺序，具体玩法仍放在各自模块里。
     context.init();
     world = World.init(allocator.raw);
 
@@ -175,7 +175,7 @@ fn updatePlay(delta: f32) void {
     if (session.clock.paused) return;
 
     // 已提交的切图请求先进入过渡，不再瞬时换图。
-    if (context.map.pending != null) {
+    if (world.hasIdentity(actor.Player, Transition)) {
         mapFade.phase = .out;
         mapFade.timer.restart();
         return;
@@ -217,9 +217,11 @@ fn updateMapFade(delta: f32) bool {
 
     switch (phase) {
         .out => {
+            const player = world.getIdentity(actor.Player).?;
+            const request = world.get(player, Transition).?;
             map.change(
                 &world,
-                context.map.takePending().?,
+                request,
                 session.clock.day,
             );
             mapFade.phase = .in;
@@ -237,7 +239,6 @@ fn applyScene() void {
         .title => title.exit(),
         .play => {
             mapFade = .{};
-            context.map.pending = null;
             map.exit(&world, session.clock.day);
         },
     }
