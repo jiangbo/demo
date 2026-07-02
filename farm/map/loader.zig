@@ -105,7 +105,7 @@ fn loadRockTile(ctx: *Context, globalId: u32, index: usize) void {
     if (!ctx.world.has(entity, item.Product)) return;
     std.debug.assert(ctx.world.has(entity, item.Health));
 
-    ctx.loaded.land.tiles[index].setProduct(entity);
+    ctx.loaded.land.tiles[index].set(.product, entity);
 }
 
 fn parseImageLayer(ctx: *Context, layer: *const tiled.Layer) void {
@@ -266,7 +266,7 @@ fn appendVertex(ctx: *Context, position: zhu.Vector2, image: zhu.Image) void {
 fn setProductTiles(ctx: *Context, entity: zhu.ecs.Entity, rect: zhu.Rect) void {
     var iter = ctx.map.grid.cellsInRect(rect);
     while (iter.next()) |index| {
-        ctx.loaded.land.tiles[index].setProduct(entity);
+        ctx.loaded.land.tiles[index].set(.product, entity);
     }
 }
 

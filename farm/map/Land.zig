@@ -10,7 +10,8 @@ grid: tiled.Grid = undefined,
 tiles: []Tile = &.{},
 
 const Object = struct {
-    kind: enum { crop, product, chest } = .crop,
+    const Kind = enum { crop, product, chest };
+    kind: Kind,
     entity: zhu.ecs.Entity,
 };
 
@@ -19,20 +20,14 @@ pub const Tile = struct {
     object: ?Object = null,
     gone: enum { none, product } = .none,
 
-    pub fn crop(self: Tile) ?zhu.ecs.Entity {
+    pub fn get(self: Tile, kind: Object.Kind) ?zhu.ecs.Entity {
         const object = self.object orelse return null;
-        if (object.kind != .crop) return null;
+        if (object.kind != kind) return null;
         return object.entity;
     }
 
-    pub fn product(self: Tile) ?zhu.ecs.Entity {
-        const object = self.object orelse return null;
-        if (object.kind != .product) return null;
-        return object.entity;
-    }
-
-    pub fn setProduct(self: *Tile, entity: zhu.ecs.Entity) void {
-        self.object = .{ .kind = .product, .entity = entity };
+    pub fn set(self: *Tile, kind: Object.Kind, e: zhu.ecs.Entity) void {
+        self.object = .{ .kind = kind, .entity = e };
     }
 };
 
@@ -126,7 +121,7 @@ test "目标格有作物时不会锄地" {
     var land = Land.init(zhu.testing.allocator, grid);
     defer land.deinit(zhu.testing.allocator);
 
-    land.getTile(.xy(32, 48)).?.object = .{ .entity = 1 };
+    land.getTile(.xy(32, 48)).?.set(.crop, 1);
 
     try std.testing.expect(!land.hoe(.xy(32, 48)));
     try std.testing.expectEqual(null, land.getTile(.xy(32, 48)).?.ground);
@@ -145,7 +140,7 @@ test "锄地要求地块为空" {
     try std.testing.expect(!land.canHoe(position));
 
     land.getTile(position).?.ground = null;
-    land.getTile(position).?.object = .{ .entity = 1 };
+    land.getTile(position).?.set(.crop, 1);
     try std.testing.expect(!land.canHoe(position));
 }
 
@@ -162,7 +157,7 @@ test "种植只要求已有耕地且没有对象" {
     tile.ground = .dry;
     try std.testing.expect(land.canPlant(position));
 
-    tile.object = .{ .entity = 1 };
+    tile.set(.crop, 1);
     try std.testing.expect(!land.canPlant(position));
 }
 
@@ -180,6 +175,6 @@ test "浇水要求已有耕地" {
     try std.testing.expect(land.water(position));
     try std.testing.expectEqual(.wet, tile.ground.?);
 
-    tile.object = .{ .entity = 1 };
+    tile.set(.crop, 1);
     try std.testing.expect(land.water(position));
 }

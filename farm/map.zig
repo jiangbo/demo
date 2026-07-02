@@ -99,7 +99,7 @@ pub fn update(world: *World) void {
             // 当前地图和离线地图一致：每天结束湿地变干。
             if (tile.ground == .wet) tile.ground = .dry;
 
-            const entity = tile.crop() orelse continue;
+            const entity = tile.get(.crop) orelse continue;
             const crop = world.getPtr(entity, farm.Crop).?;
             if (advanceCropOneDay(crop, watered)) {
                 refreshCropSprite(world, entity, crop.*);
@@ -151,11 +151,6 @@ pub fn saveState(world: *World) void {
     state.day = context.clock.day;
 }
 
-pub fn canHoe(position: zhu.Vector2) bool {
-    if (!spatial.canHoeTile(position)) return false;
-    return land.canHoe(position);
-}
-
 pub fn hoe(position: zhu.Vector2) bool {
     if (!spatial.canHoeTile(position)) return false;
     return land.hoe(position);
@@ -169,29 +164,8 @@ pub fn water(position: zhu.Vector2) bool {
     return land.water(position);
 }
 
-pub fn cropAt(position: zhu.Vector2) ?zhu.ecs.Entity {
-    const tile = land.getTile(position) orelse return null;
-    return tile.crop();
-}
-
-pub fn productAt(index: usize) ?zhu.ecs.Entity {
-    if (index >= land.tiles.len) return null;
-    return land.tiles[index].product();
-}
-
-pub fn setCropAt(position: zhu.Vector2, entity: zhu.ecs.Entity) void {
-    const tile = land.getTile(position).?;
-    tile.object = .{ .entity = entity };
-}
-
-pub fn setProductAt(position: zhu.Vector2, entity: zhu.ecs.Entity) void {
-    const tile = land.getTile(position).?;
-    tile.setProduct(entity);
-}
-
-pub fn clearObjectAt(position: zhu.Vector2) void {
-    const tile = land.getTile(position).?;
-    tile.object = null;
+pub fn getTile(position: zhu.Vector2) ?*Land.Tile {
+    return land.getTile(position);
 }
 
 pub fn hasAnyBlockAt(position: zhu.Vector2) bool {
@@ -237,7 +211,7 @@ fn restoreThing(world: *World, index: usize, thing: Thing) void {
             const entity = factory.spawnCrop(world, position, crop.kind);
             world.getPtr(entity, farm.Crop).?.* = crop;
             refreshCropSprite(world, entity, crop);
-            land.tiles[index].object = .{ .entity = entity };
+            land.tiles[index].set(.crop, entity);
         },
         .chest => |saved| {
             const object = land.tiles[index].object.?;
@@ -280,7 +254,7 @@ pub fn clearProductAt(world: *World, index: usize) void {
 // 只清引用，不写 gone；gone 只记录在触发销毁的那一个格子上。
 fn clearProductTiles(entity: zhu.ecs.Entity) void {
     for (land.tiles) |*tile| {
-        if (tile.product() == entity) tile.object = null;
+        if (tile.get(.product) == entity) tile.object = null;
     }
 }
 
@@ -535,7 +509,7 @@ test "当前地图跨天推进作物后刷新贴图和渲染层" {
     world.add(crop, render.Render{ .layer = .crop });
     const tile = land.getTile(target).?;
     tile.ground = .dry;
-    tile.object = .{ .entity = crop };
+    tile.set(.crop, crop);
     world.addEvent(component.event.DayChanged{ .day = 2 });
 
     update(&world);
@@ -571,7 +545,7 @@ test "当前地图和离线地图跨天推进规则一致" {
     world.add(cropEntity, render.Render{ .layer = .crop });
     const tile = land.getTile(target).?;
     tile.ground = .wet;
-    tile.object = .{ .entity = cropEntity };
+    tile.set(.crop, cropEntity);
     world.addEvent(component.event.DayChanged{ .day = 2 });
 
     var tiles = [_]context.map.Tile{.{
@@ -795,7 +769,7 @@ test "对象层产出对象按碰撞范围占用格子" {
     spatial.tiles[0].insert(.arable);
     spatial.tiles[1].insert(.arable);
 
-    const product = land.tiles[1].product().?;
+    const product = land.tiles[1].get(.product).?;
     try std.testing.expectEqual(null, land.tiles[0].object);
     try std.testing.expect(land.hoe(.xy(8, 8)));
     try std.testing.expect(!land.hoe(.xy(24, 8)));
@@ -827,7 +801,7 @@ test "当前地图跨天会推进作物并清干湿地" {
     });
     const tile = land.getTile(target).?;
     tile.ground = .wet;
-    tile.object = .{ .entity = crop };
+    tile.set(.crop, crop);
     world.addEvent(component.event.DayChanged{ .day = 2 });
 
     update(&world);

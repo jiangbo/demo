@@ -23,8 +23,7 @@ pub fn update(world: *World) void {
     const player = world.getIdentity(Player).?;
     if (!world.has(player, UseFrame)) return;
 
-    const want = world.get(player, WantUse).?;
-    useItem(world, want);
+    useItem(world, world.get(player, WantUse).?);
 
     // 一次动作只结算一次，结算后清理关键帧标记和意图。
     world.remove(player, UseFrame);
@@ -37,24 +36,25 @@ fn useItem(world: *World, want: WantUse) void {
         .hoe => if (map.hoe(want.target)) {
             world.addEvent(event.SoundPlay{ .id = .hoe });
         },
-        .water => waterTarget(world, want.target),
-        .sickle => harvestTarget(world, want.target),
+        .water => water(world, want.target),
+        .sickle => harvest(world, want.target),
         .strawberrySeed => useSeed(world, want, .strawberry),
         .potatoSeed => useSeed(world, want, .potato),
-        .pickaxe, .axe => hitProductTarget(world, want.target, want.item),
+        .pickaxe, .axe => hitProduct(world, want),
         .strawberry, .potato, .timber, .stone => unreachable,
     }
 }
 
-fn harvestTarget(world: *World, position: zhu.Vector2) void {
-    const entity = map.cropAt(position) orelse return;
+fn harvest(world: *World, position: zhu.Vector2) void {
+    const tile = map.getTile(position) orelse return;
+    const entity = tile.get(.crop) orelse return;
     const crop = world.get(entity, Crop).?;
     if (crop.stage != .mature) return;
 
     // 成熟作物先从地块移除，再生成一个可拾取产物。
     const item = factory.harvestItem(crop.kind);
     world.destroyEntity(entity);
-    map.clearObjectAt(position);
+    tile.object = null;
     factory.spawnPickup(world, .{
         .item = item,
         .origin = position.add(map.grid.halfCell()),
@@ -67,27 +67,25 @@ fn useSeed(world: *World, want: WantUse, kind: CropEnum) void {
     if (!inventory.use(want.item, 1)) return;
 
     const crop = factory.spawnCrop(world, want.target, kind);
-    map.setCropAt(want.target, crop);
+    map.getTile(want.target).?.set(.crop, crop);
     world.addEvent(event.SoundPlay{ .id = .plant });
 }
 
-fn waterTarget(world: *World, position: zhu.Vector2) void {
+fn water(world: *World, position: zhu.Vector2) void {
     if (!map.water(position)) return;
 
-    if (map.cropAt(position)) |entity| {
+    const tile = map.getTile(position).?;
+    if (tile.get(.crop)) |entity| {
         if (world.getPtr(entity, Crop)) |crop| crop.watered = true;
     }
     world.addEvent(event.SoundPlay{ .id = .water });
 }
 
-fn hitProductTarget(
-    world: *World,
-    position: zhu.Vector2,
-    tool: ItemEnum,
-) void {
-    const hit = factory.itemConfig(tool).hit.?;
-    const index = map.grid.worldToIndex(position) orelse return;
-    const entity = map.productAt(index) orelse return;
+fn hitProduct(world: *World, want: WantUse) void {
+    const hit = factory.itemConfig(want.item).hit.?;
+    const index = map.grid.worldToIndex(want.target) orelse return;
+    const tile = map.getTile(want.target) orelse return;
+    const entity = tile.get(.product) orelse return;
     const product = world.get(entity, Product).?;
     if (product.item != hit.target) return;
 
@@ -97,14 +95,14 @@ fn hitProductTarget(
     // reset 后动画系统会在下一次 update 立即处理第一帧。
     if (world.getPtr(entity, Animation)) |a| a.reset();
 
-    world.addEvent(event.SoundPlay{ .id = toolSound(tool) });
+    world.addEvent(event.SoundPlay{ .id = toolSound(want.item) });
     if (health.value != 0) return;
 
     // product.count 表示最大掉落数量，实际掉落 1 到 count 个，
     // 合并为一个带数量的掉落物，拾取时一次性获得全部。
     std.debug.assert(product.count > 0);
     const dropCount = zhu.random.intMost(u32, 1, product.count);
-    const origin = position.add(map.grid.halfCell());
+    const origin = want.target.add(map.grid.halfCell());
     factory.spawnPickup(world, .{
         .item = product.item,
         .count = dropCount,
@@ -193,7 +191,7 @@ fn addProductEntity(
     const entity = world.createEntity();
     world.add(entity, product);
     world.add(entity, Health{ .value = health });
-    map.setProductAt(target, entity);
+    map.getTile(target).?.set(.product, entity);
     return entity;
 }
 
@@ -259,7 +257,7 @@ test "seedPlant 会种植并扣种子" {
     const index = inventory.bar.refs[inventory.bar.active].?;
     try std.testing.expectEqual(1, inventory.store.stacks[index].count);
 
-    const cropEntity = map.cropAt(target).?;
+    const cropEntity = map.getTile(target).?.get(.crop).?;
     try std.testing.expectEqual(
         CropEnum.strawberry,
         world.get(cropEntity, Crop).?.kind,
@@ -289,7 +287,7 @@ test "seedPlant 没有种子时不会种植" {
 
     update(&world);
 
-    try std.testing.expectEqual(null, map.cropAt(target));
+    try std.testing.expectEqual(null, map.getTile(target).?.get(.crop));
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
 }
 
@@ -313,7 +311,7 @@ test "seedPlant 无耕地时不扣种子" {
 
     const index = inventory.bar.refs[inventory.bar.active].?;
     try std.testing.expectEqual(2, inventory.store.stacks[index].count);
-    try std.testing.expectEqual(null, map.cropAt(target));
+    try std.testing.expectEqual(null, map.getTile(target).?.get(.crop));
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
 }
 
@@ -328,7 +326,7 @@ test "seedPlant 已有作物时不扣种子" {
     try std.testing.expect(map.hoe(target));
     const oldCrop = world.createEntity();
     world.add(oldCrop, Crop{ .kind = .potato });
-    map.setCropAt(target, oldCrop);
+    map.getTile(target).?.set(.crop, oldCrop);
 
     const player = world.createIdentity(Player);
     world.add(player, WantUse{
@@ -341,7 +339,7 @@ test "seedPlant 已有作物时不扣种子" {
 
     const index = inventory.bar.refs[inventory.bar.active].?;
     try std.testing.expectEqual(2, inventory.store.stacks[index].count);
-    try std.testing.expectEqual(oldCrop, map.cropAt(target).?);
+    try std.testing.expectEqual(oldCrop, map.getTile(target).?.get(.crop).?);
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
 }
 
@@ -355,7 +353,7 @@ test "toolHit 会浇水并标记作物" {
     try std.testing.expect(map.hoe(target));
     const crop = world.createEntity();
     world.add(crop, Crop{});
-    map.setCropAt(target, crop);
+    map.getTile(target).?.set(.crop, crop);
 
     const player = world.createIdentity(Player);
     world.add(player, WantUse{ .item = .water, .target = target });
@@ -389,8 +387,7 @@ test "斧头命中木材产出对象会减少生命" {
 
     update(&world);
 
-    const index = map.grid.worldToIndex(target).?;
-    try std.testing.expectEqual(entity, map.productAt(index).?);
+    try std.testing.expectEqual(entity, map.getTile(target).?.get(.product).?);
     try std.testing.expectEqual(1, world.get(entity, Health).?.value);
     try std.testing.expectEqual(0, world.values(Pickup).len);
 
@@ -451,8 +448,7 @@ test "错误工具不会命中产出对象" {
 
     update(&world);
 
-    const index = map.grid.worldToIndex(target).?;
-    try std.testing.expectEqual(entity, map.productAt(index).?);
+    try std.testing.expectEqual(entity, map.getTile(target).?.get(.product).?);
     try std.testing.expectEqual(2, world.get(entity, Health).?.value);
     try std.testing.expectEqual(0, world.values(Pickup).len);
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
@@ -469,7 +465,6 @@ test "镐子击碎石头会生成掉落并清理阻挡" {
     map.load(zhu.testing.allocator, &world, testMap);
     defer map.unload();
 
-    const index = map.grid.worldToIndex(target).?;
     const entity = addProductEntity(
         &world,
         target,
@@ -482,7 +477,7 @@ test "镐子击碎石头会生成掉落并清理阻挡" {
 
     update(&world);
 
-    try std.testing.expectEqual(null, map.productAt(index));
+    try std.testing.expectEqual(null, map.getTile(target).?.get(.product));
     try std.testing.expect(!world.has(entity, Product));
     try std.testing.expect(!map.hasAnyBlockAt(target.add(.xy(1, 1))));
 
@@ -510,7 +505,7 @@ test "sickle 会收获成熟作物并生成掉落物" {
     try std.testing.expect(map.hoe(target));
     const crop = world.createEntity();
     world.add(crop, Crop{ .stage = .mature, .kind = .potato });
-    map.setCropAt(target, crop);
+    map.getTile(target).?.set(.crop, crop);
 
     const player = world.createIdentity(Player);
     world.add(player, WantUse{ .item = .sickle, .target = target });
@@ -518,7 +513,7 @@ test "sickle 会收获成熟作物并生成掉落物" {
 
     update(&world);
 
-    try std.testing.expectEqual(null, map.cropAt(target));
+    try std.testing.expectEqual(null, map.getTile(target).?.get(.crop));
     try std.testing.expectEqual(null, world.get(crop, Crop));
 
     const pickups = world.values(Pickup);
@@ -540,7 +535,7 @@ test "hoe 不会收获成熟作物" {
     try std.testing.expect(map.hoe(target));
     const crop = world.createEntity();
     world.add(crop, Crop{ .stage = .mature, .kind = .potato });
-    map.setCropAt(target, crop);
+    map.getTile(target).?.set(.crop, crop);
 
     const player = world.createIdentity(Player);
     world.add(player, WantUse{ .item = .hoe, .target = target });
@@ -548,7 +543,7 @@ test "hoe 不会收获成熟作物" {
 
     update(&world);
 
-    try std.testing.expectEqual(crop, map.cropAt(target).?);
+    try std.testing.expectEqual(crop, map.getTile(target).?.get(.crop).?);
     try std.testing.expectEqual(0, world.values(Pickup).len);
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
 }
