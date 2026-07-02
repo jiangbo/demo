@@ -338,27 +338,6 @@ pub fn drawFront() void {
     zhu.batch.drawVertices(front, null);
 }
 
-// 对应 CPP 的 PROBE_PADDING_PX
-const probePadding: f32 = 4;
-
-/// 标记玩家正前方探测框范围内所有实体的 Hit 组件。
-pub fn markFacingHits(world: *World) void {
-    const player = world.getIdentity(actor.Player).?;
-    const pos = world.get(player, Position).?;
-    const facing = world.get(player, actor.Actor).?.facing;
-
-    const ts = grid.cellSize().x; // 当前地图格子大小
-    const probeSize = ts + probePadding * 2;
-    const half = probeSize / 2;
-    const origin = pos.add(switch (facing) {
-        .down => zhu.Vector2.xy(-half, ts - half),
-        .up => zhu.Vector2.xy(-half, -ts - half),
-        .right => zhu.Vector2.xy(ts - half, -half),
-        .left => zhu.Vector2.xy(-ts - half, -half),
-    });
-    Spatial.markHits(world, .init(origin, .square(probeSize)));
-}
-
 fn triggerSpawnPosition(trigger: Trigger) zhu.Vector2 {
     const center = trigger.rect.center();
     return switch (trigger.startOffset) {
@@ -811,34 +790,6 @@ test "当前地图跨天会推进作物并清干湿地" {
     const result = world.get(crop, farm.Crop).?;
     try std.testing.expectEqual(@as(f32, 2), result.next);
     try std.testing.expectEqual(component.farm.Ground.dry, tile.ground);
-}
-
-test "玩家紧贴 NPC 上方朝下时探测框能命中" {
-    const testMap = tiled.Map{
-        .grid = .{ .width = 3, .height = 3, .cell = 16 },
-        .layers = &.{},
-    };
-    grid = testMap.grid;
-    defer grid = maps[@intFromEnum(current)].grid;
-
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
-
-    // 玩家朝下站在 NPC 正上方，两圆相切：NPC 脚底恰在 pos.y+10。
-    const player = world.createIdentity(actor.Player);
-    world.add(player, Position.xy(0, 0));
-    world.add(player, actor.Actor{ .facing = .down });
-    world.add(player, motion.Shape{ .circle = .init(.xy(0, -5), 5) });
-
-    const npc = world.createEntity();
-    world.add(npc, Position.xy(0, 10));
-    world.add(npc, motion.Shape{ .circle = .init(.xy(0, -5), 5) });
-
-    markFacingHits(&world);
-    defer world.clear(Hit);
-
-    // 修复前 down 探测框近边在 pos.y+12，会漏掉相切的 NPC。
-    try std.testing.expect(world.has(npc, Hit));
 }
 
 fn putMockCropImages() void {

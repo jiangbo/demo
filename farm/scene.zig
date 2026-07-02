@@ -4,7 +4,6 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const factory = @import("factory.zig");
 const inventory = @import("inventory.zig");
-const interact = @import("interact.zig");
 const map = @import("map.zig");
 const save = @import("save.zig");
 const state = @import("state.zig");
@@ -13,13 +12,17 @@ const ui = @import("ui.zig");
 
 const system = struct {
     const animation = @import("system/animation.zig");
+    const chest = @import("system/chest.zig");
     const control = @import("system/control.zig");
+    const dialog = @import("system/dialog.zig");
     const farm = @import("system/farm.zig");
+    const interact = @import("system/interact.zig");
     const life = @import("system/life.zig");
     const light = @import("system/light.zig");
     const movement = @import("system/movement.zig");
     const pickup = @import("system/pickup.zig");
     const render = @import("system/render.zig");
+    const rest = @import("system/rest.zig");
     const sound = @import("system/sound.zig");
     const time = @import("system/time.zig");
     const transition = @import("system/transition.zig");
@@ -196,7 +199,10 @@ fn updatePlay(delta: f32) void {
 
     // 按 F 的处理、相机跟随、动画和排序都读取本帧已结算的位置。
     session.notice.update(delta);
-    interact.update(&world, &session.notice);
+    system.interact.update(&world);
+    system.dialog.update(&world);
+    system.chest.update(&world, &session.notice);
+    system.rest.update(&world);
     cameraFollowPlayer(delta);
     system.animation.update(&world, delta);
     system.farm.update(&world);

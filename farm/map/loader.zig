@@ -186,6 +186,7 @@ fn loadTrigger(ctx: *Context, object: tiled.Object) void {
 fn loadRest(ctx: *Context, object: tiled.Object) void {
     const entity = ctx.world.createEntity();
     ctx.world.add(entity, object.position);
+    ctx.world.add(entity, component.actor.Interact{});
     ctx.world.add(entity, component.map.Rest{});
     ctx.world.add(entity, motion.Shape{
         .rect = object.rect().move(object.position.neg()),
@@ -286,6 +287,7 @@ test "actor 点对象会生成 NPC，player 点对象只保留标记" {
     var query = world.query(.{
         Position,
         actor.Npc,
+        actor.Interact,
         actor.Wander,
         actor.Dialog,
     });
@@ -335,6 +337,7 @@ test "rest 对象会创建可交互实体" {
 
     var query = world.query(.{
         Position,
+        actor.Interact,
         component.map.Rest,
         motion.Shape,
     });

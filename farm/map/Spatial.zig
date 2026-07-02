@@ -10,7 +10,6 @@ const Blocking = component.motion.Blocking;
 const World = zhu.ecs.World;
 const Entity = zhu.ecs.Entity;
 const SolidRange = component.map.SolidRange;
-const Hit = component.map.Hit;
 
 const Spatial = @This();
 
@@ -189,53 +188,6 @@ pub fn canMove(self: Spatial, world: *World, entity: Entity, to: zhu.Vector2) bo
     }
 
     return true;
-}
-
-/// 用临时 Hit 标记所有和查询矩形相交的实体。
-pub fn markHits(world: *World, rect: zhu.Rect) void {
-    world.clear(Hit);
-
-    var query = world.query(.{ Position, Shape });
-    while (query.next()) |entity| {
-        const position = query.get(entity, Position);
-        const body = query.get(entity, Shape);
-        if (body.move(position).intersect(rect)) {
-            query.add(world, entity, Hit{});
-        }
-    }
-}
-
-test "markHits 会标记相交的 Shape" {
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const hit = world.createEntity();
-    world.add(hit, Position.xy(4, 0));
-    world.add(hit, Shape{ .rect = .init(.zero, .xy(8, 8)) });
-
-    const miss = world.createEntity();
-    world.add(miss, Position.xy(32, 0));
-    world.add(miss, Shape{ .rect = .init(.zero, .xy(8, 8)) });
-
-    markHits(&world, .init(.zero, .xy(16, 16)));
-
-    try std.testing.expect(world.has(hit, Hit));
-    try std.testing.expect(!world.has(miss, Hit));
-}
-
-test "markHits 会清理上一次命中结果" {
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
-
-    const entity = world.createEntity();
-    world.add(entity, Position.xy(4, 0));
-    world.add(entity, Shape{ .rect = .init(.zero, .xy(8, 8)) });
-
-    markHits(&world, .init(.zero, .xy(16, 16)));
-    try std.testing.expect(world.has(entity, Hit));
-
-    markHits(&world, .init(.xy(32, 0), .xy(8, 8)));
-    try std.testing.expect(!world.has(entity, Hit));
 }
 
 test "isBlocked 检测碰撞框是否与 solid 格子重叠" {

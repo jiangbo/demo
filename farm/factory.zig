@@ -194,6 +194,7 @@ fn spawnNpc(world: *World, config: Character, sources: Sources) Entity {
         .speed = config.speed,
     });
     if (config.dialog.len != 0) {
+        world.add(entity, actor.Interact{});
         world.add(entity, actor.Dialog{ .lines = config.dialog });
     }
 
@@ -243,6 +244,7 @@ pub fn spawnMapObject(
     // Tiled 转换数据沿用 obj_type，值为 chest 时挂宝箱组件。
     if (tile.getProperty("obj_type", []const u8)) |kind| {
         if (std.mem.eql(u8, kind, "chest")) {
+            world.add(entity, actor.Interact{});
             world.add(entity, item.Chest{ .items = chestItems(object) });
         }
     }
@@ -539,6 +541,7 @@ test "spawnFriend 会创建可对话 NPC 实体" {
 
     try std.testing.expect(world.has(entity, actor.Npc));
     try std.testing.expect(world.has(entity, actor.Wander));
+    try std.testing.expect(world.has(entity, actor.Interact));
     const dialog = world.get(entity, actor.Dialog).?;
     try std.testing.expect(dialog.lines.len != 0);
 }
