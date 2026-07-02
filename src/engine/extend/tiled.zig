@@ -117,6 +117,7 @@ pub const Map = struct {
             const tile = tileSet.getTileByLocalId(localId).?;
             return assets.getImage(tile.id);
         }
+        if (tileSet.image == 0) return null;
 
         const x: f32 = @floatFromInt(localId % tileSet.columns);
         const y: f32 = @floatFromInt(localId / tileSet.columns);

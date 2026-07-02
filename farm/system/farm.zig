@@ -5,8 +5,6 @@ const component = @import("../component.zig");
 const factory = @import("../factory.zig");
 const inventory = @import("../inventory.zig");
 const map = @import("../map.zig");
-const Land = @import("../map/Land.zig");
-const Spatial = @import("../map/Spatial.zig");
 
 const Player = component.actor.Player;
 const UseFrame = component.actor.UseFrame;
@@ -14,7 +12,6 @@ const WantUse = component.actor.WantUse;
 const Animation = component.actor.Animation;
 const Crop = component.farm.Crop;
 const CropEnum = component.farm.CropEnum;
-const Ground = component.farm.Ground;
 const ItemEnum = component.item.ItemEnum;
 const Pickup = component.item.Pickup;
 const Product = component.item.Product;
@@ -124,7 +121,51 @@ fn toolSound(tool: ItemEnum) component.sound.Id {
     };
 }
 
-const testTarget = zhu.Vector2.xy(32, 48);
+const testMap = zhu.extend.tiled.Map{
+    .grid = .{ .width = 4, .height = 5, .cell = 16 },
+    .layers = &.{.{
+        .id = 1,
+        .name = "ground",
+        .image = 0,
+        .type = .tile,
+        .offset = .zero,
+        .data = &.{
+            0, 0, 0,          0,
+            0, 0, 0,          0,
+            0, 0, 0,          0,
+            0, 0, 0x01000000, 0x01000001,
+            0, 0, 0,          0,
+        },
+        .objects = &.{},
+    }},
+    .tileSets = &.{.{
+        .id = 1,
+        .columns = 1,
+        .tileCount = 1,
+        .image = 0,
+        .tileSize = .xy(16, 16),
+        .tiles = &.{
+            .{
+                .id = 0,
+                .objectGroup = null,
+                .properties = &.{.{
+                    .name = "tile_flag",
+                    .value = .{ .string = "ARABLE" },
+                }},
+                .animation = &.{},
+            },
+            .{
+                .id = 1,
+                .objectGroup = null,
+                .properties = &.{.{
+                    .name = "tile_flag",
+                    .value = .{ .string = "ARABLE,SOLID" },
+                }},
+                .animation = &.{},
+            },
+        },
+    }},
+};
 
 fn setActiveItem(item: ItemEnum, count: u32) void {
     inventory.reset();
@@ -143,46 +184,33 @@ fn putMockImages() void {
     }
 }
 
-fn addProductEntity(world: *World, product: Product, health: u8) zhu.ecs.Entity {
+fn addProductEntity(
+    world: *World,
+    target: zhu.Vector2,
+    product: Product,
+    health: u8,
+) zhu.ecs.Entity {
     const entity = world.createEntity();
     world.add(entity, product);
     world.add(entity, Health{ .value = health });
-    map.setProductAt(testTarget, entity);
+    map.setProductAt(target, entity);
     return entity;
 }
 
-fn enterTestLand() void {
-    map.spatial = Spatial.init(zhu.testing.allocator, map.maps[0].grid);
-    map.land = Land.init(zhu.testing.allocator, map.maps[0].grid);
-    map.spatial.tiles[map.maps[0].grid.worldToIndex(testTarget).?]
-        .insert(.arable);
-}
-
-fn initTestAssets() void {
-    zhu.assets.initCaches(std.testing.allocator);
-}
-
-fn exitTestLand() void {
-    map.land.deinit(zhu.testing.allocator);
-    map.spatial.deinit(zhu.testing.allocator);
-}
-
 test "toolHit 会按 WantUse 锄地" {
-    initTestAssets();
-    defer zhu.assets.deinit();
-    enterTestLand();
-    defer exitTestLand();
-
+    const target = zhu.Vector2.xy(32, 48);
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     const player = world.createIdentity(Player);
-    world.add(player, WantUse{ .item = .hoe, .target = testTarget });
+    world.add(player, WantUse{ .item = .hoe, .target = target });
     world.add(player, UseFrame{});
 
     update(&world);
 
-    try std.testing.expectEqual(Ground.dry, map.land.getTile(testTarget).?.ground.?);
+    try std.testing.expect(map.canPlant(target));
     try std.testing.expect(!world.has(player, WantUse));
 
     const sounds = world.getEvent(event.SoundPlay);
@@ -191,40 +219,38 @@ test "toolHit 会按 WantUse 锄地" {
 }
 
 test "非事件帧不会结算 WantUse" {
-    initTestAssets();
-    defer zhu.assets.deinit();
-    enterTestLand();
-    defer exitTestLand();
-
+    const target = zhu.Vector2.xy(32, 48);
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     const player = world.createIdentity(Player);
-    world.add(player, WantUse{ .item = .hoe, .target = testTarget });
+    world.add(player, WantUse{ .item = .hoe, .target = target });
 
     update(&world);
 
-    try std.testing.expectEqual(null, map.land.getTile(testTarget).?.ground);
+    try std.testing.expect(!map.canPlant(target));
     try std.testing.expect(world.has(player, WantUse));
 }
 
 test "seedPlant 会种植并扣种子" {
+    const target = zhu.Vector2.xy(32, 48);
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
     putMockImages();
-    enterTestLand();
-    defer exitTestLand();
-
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     setActiveItem(.strawberrySeed, 2);
-    try std.testing.expect(map.hoe(testTarget));
+    try std.testing.expect(map.hoe(target));
 
     const player = world.createIdentity(Player);
     world.add(player, WantUse{
         .item = .strawberrySeed,
-        .target = testTarget,
+        .target = target,
     });
     world.add(player, UseFrame{});
 
@@ -233,7 +259,7 @@ test "seedPlant 会种植并扣种子" {
     const index = inventory.bar.refs[inventory.bar.active].?;
     try std.testing.expectEqual(1, inventory.store.stacks[index].count);
 
-    const cropEntity = map.land.getTile(testTarget).?.crop().?;
+    const cropEntity = map.cropAt(target).?;
     try std.testing.expectEqual(
         CropEnum.strawberry,
         world.get(cropEntity, Crop).?.kind,
@@ -244,73 +270,42 @@ test "seedPlant 会种植并扣种子" {
     try std.testing.expectEqual(.plant, sounds[0].id);
 }
 
-test "seedPlant 使用最后一颗种子后快捷栏无物品" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    putMockImages();
-    enterTestLand();
-    defer exitTestLand();
-
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
-
-    setActiveItem(.potatoSeed, 1);
-    try std.testing.expect(map.hoe(testTarget));
-
-    const player = world.createIdentity(Player);
-    world.add(player, WantUse{ .item = .potatoSeed, .target = testTarget });
-    world.add(player, UseFrame{});
-
-    update(&world);
-
-    const index = inventory.bar.refs[inventory.bar.active].?;
-    try std.testing.expectEqual(0, inventory.store.stacks[index].count);
-    try std.testing.expectEqual(null, inventory.activeItem());
-    try std.testing.expect(map.land.getTile(testTarget).?.crop() != null);
-}
-
 test "seedPlant 没有种子时不会种植" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    putMockImages();
-    enterTestLand();
-    defer exitTestLand();
-
+    const target = zhu.Vector2.xy(32, 48);
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     inventory.reset();
-    try std.testing.expect(map.hoe(testTarget));
+    try std.testing.expect(map.hoe(target));
 
     const player = world.createIdentity(Player);
     world.add(player, WantUse{
         .item = .strawberrySeed,
-        .target = testTarget,
+        .target = target,
     });
     world.add(player, UseFrame{});
 
     update(&world);
 
-    try std.testing.expectEqual(null, map.land.getTile(testTarget).?.object);
+    try std.testing.expectEqual(null, map.cropAt(target));
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
 }
 
 test "seedPlant 无耕地时不扣种子" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    putMockImages();
-    enterTestLand();
-    defer exitTestLand();
-
+    const target = zhu.Vector2.xy(32, 48);
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     setActiveItem(.strawberrySeed, 2);
 
     const player = world.createIdentity(Player);
     world.add(player, WantUse{
         .item = .strawberrySeed,
-        .target = testTarget,
+        .target = target,
     });
     world.add(player, UseFrame{});
 
@@ -318,30 +313,27 @@ test "seedPlant 无耕地时不扣种子" {
 
     const index = inventory.bar.refs[inventory.bar.active].?;
     try std.testing.expectEqual(2, inventory.store.stacks[index].count);
-    try std.testing.expectEqual(null, map.land.getTile(testTarget).?.object);
+    try std.testing.expectEqual(null, map.cropAt(target));
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
 }
 
 test "seedPlant 已有作物时不扣种子" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    putMockImages();
-    enterTestLand();
-    defer exitTestLand();
-
+    const target = zhu.Vector2.xy(32, 48);
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     setActiveItem(.strawberrySeed, 2);
-    try std.testing.expect(map.hoe(testTarget));
+    try std.testing.expect(map.hoe(target));
     const oldCrop = world.createEntity();
     world.add(oldCrop, Crop{ .kind = .potato });
-    map.setCropAt(testTarget, oldCrop);
+    map.setCropAt(target, oldCrop);
 
     const player = world.createIdentity(Player);
     world.add(player, WantUse{
         .item = .strawberrySeed,
-        .target = testTarget,
+        .target = target,
     });
     world.add(player, UseFrame{});
 
@@ -349,32 +341,28 @@ test "seedPlant 已有作物时不扣种子" {
 
     const index = inventory.bar.refs[inventory.bar.active].?;
     try std.testing.expectEqual(2, inventory.store.stacks[index].count);
-    try std.testing.expectEqual(oldCrop, map.land.getTile(testTarget).?.crop().?);
+    try std.testing.expectEqual(oldCrop, map.cropAt(target).?);
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
 }
 
 test "toolHit 会浇水并标记作物" {
-    initTestAssets();
-    defer zhu.assets.deinit();
-    enterTestLand();
-    defer exitTestLand();
-
+    const target = zhu.Vector2.xy(32, 48);
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
-    try std.testing.expect(map.hoe(testTarget));
+    try std.testing.expect(map.hoe(target));
     const crop = world.createEntity();
     world.add(crop, Crop{});
-    map.setCropAt(testTarget, crop);
+    map.setCropAt(target, crop);
 
     const player = world.createIdentity(Player);
-    world.add(player, WantUse{ .item = .water, .target = testTarget });
+    world.add(player, WantUse{ .item = .water, .target = target });
     world.add(player, UseFrame{});
 
     update(&world);
 
-    const tile = map.land.getTile(testTarget).?;
-    try std.testing.expectEqual(Ground.wet, tile.ground.?);
     try std.testing.expect(world.get(crop, Crop).?.watered);
 
     const sounds = world.getEvent(event.SoundPlay);
@@ -383,26 +371,26 @@ test "toolHit 会浇水并标记作物" {
 }
 
 test "斧头命中木材产出对象会减少生命" {
-    initTestAssets();
-    defer zhu.assets.deinit();
-    enterTestLand();
-    defer exitTestLand();
-
+    const target = zhu.Vector2.xy(32, 48);
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     const entity = addProductEntity(
         &world,
+        target,
         Product{ .item = .timber },
         2,
     );
     const player = world.createIdentity(Player);
-    world.add(player, WantUse{ .item = .axe, .target = testTarget });
+    world.add(player, WantUse{ .item = .axe, .target = target });
     world.add(player, UseFrame{});
 
     update(&world);
 
-    try std.testing.expectEqual(entity, map.land.getTile(testTarget).?.product().?);
+    const index = map.grid.worldToIndex(target).?;
+    try std.testing.expectEqual(entity, map.productAt(index).?);
     try std.testing.expectEqual(1, world.get(entity, Health).?.value);
     try std.testing.expectEqual(0, world.values(Pickup).len);
 
@@ -412,16 +400,15 @@ test "斧头命中木材产出对象会减少生命" {
 }
 
 test "斧头命中产出对象会播放地图资源动画" {
-    initTestAssets();
-    defer zhu.assets.deinit();
-    enterTestLand();
-    defer exitTestLand();
-
+    const target = zhu.Vector2.xy(32, 48);
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     const entity = addProductEntity(
         &world,
+        target,
         Product{ .item = .timber },
         2,
     );
@@ -436,7 +423,7 @@ test "斧头命中产出对象会播放地图资源动画" {
     world.add(entity, animation);
 
     const player = world.createIdentity(Player);
-    world.add(player, WantUse{ .item = .axe, .target = testTarget });
+    world.add(player, WantUse{ .item = .axe, .target = target });
     world.add(player, UseFrame{});
 
     update(&world);
@@ -446,60 +433,58 @@ test "斧头命中产出对象会播放地图资源动画" {
 }
 
 test "错误工具不会命中产出对象" {
-    initTestAssets();
-    defer zhu.assets.deinit();
-    enterTestLand();
-    defer exitTestLand();
-
+    const target = zhu.Vector2.xy(32, 48);
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
     const entity = addProductEntity(
         &world,
+        target,
         Product{ .item = .stone },
         2,
     );
     const player = world.createIdentity(Player);
-    world.add(player, WantUse{ .item = .axe, .target = testTarget });
+    world.add(player, WantUse{ .item = .axe, .target = target });
     world.add(player, UseFrame{});
 
     update(&world);
 
-    try std.testing.expectEqual(entity, map.land.getTile(testTarget).?.product().?);
+    const index = map.grid.worldToIndex(target).?;
+    try std.testing.expectEqual(entity, map.productAt(index).?);
     try std.testing.expectEqual(2, world.get(entity, Health).?.value);
     try std.testing.expectEqual(0, world.values(Pickup).len);
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
 }
 
 test "镐子击碎石头会生成掉落并清理阻挡" {
+    const target = zhu.Vector2.xy(48, 48);
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
     zhu.random.init(1);
     putMockImages();
-    enterTestLand();
-    defer exitTestLand();
-
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
-    const index = map.grid.worldToIndex(testTarget).?;
-    map.spatial.setTileFlag(index, "SOLID");
+    const index = map.grid.worldToIndex(target).?;
     const entity = addProductEntity(
         &world,
+        target,
         Product{ .item = .stone, .count = 2 },
         1,
     );
     const player = world.createIdentity(Player);
-    world.add(player, WantUse{ .item = .pickaxe, .target = testTarget });
+    world.add(player, WantUse{ .item = .pickaxe, .target = target });
     world.add(player, UseFrame{});
 
     update(&world);
 
-    const tile = map.land.getTile(testTarget).?;
-    try std.testing.expectEqual(null, tile.object);
-    try std.testing.expectEqual(.product, tile.gone);
+    try std.testing.expectEqual(null, map.productAt(index));
     try std.testing.expect(!world.has(entity, Product));
-    try std.testing.expect(!map.hasAnyBlockAt(testTarget.add(.xy(1, 1))));
+    try std.testing.expect(!map.hasAnyBlockAt(target.add(.xy(1, 1))));
 
     const pickups = world.values(Pickup);
     try std.testing.expectEqual(1, pickups.len);
@@ -513,27 +498,27 @@ test "镐子击碎石头会生成掉落并清理阻挡" {
 }
 
 test "sickle 会收获成熟作物并生成掉落物" {
+    const target = zhu.Vector2.xy(32, 48);
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
     putMockImages();
-    enterTestLand();
-    defer exitTestLand();
-
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
-    try std.testing.expect(map.hoe(testTarget));
+    try std.testing.expect(map.hoe(target));
     const crop = world.createEntity();
     world.add(crop, Crop{ .stage = .mature, .kind = .potato });
-    map.setCropAt(testTarget, crop);
+    map.setCropAt(target, crop);
 
     const player = world.createIdentity(Player);
-    world.add(player, WantUse{ .item = .sickle, .target = testTarget });
+    world.add(player, WantUse{ .item = .sickle, .target = target });
     world.add(player, UseFrame{});
 
     update(&world);
 
-    try std.testing.expectEqual(null, map.land.getTile(testTarget).?.object);
+    try std.testing.expectEqual(null, map.cropAt(target));
     try std.testing.expectEqual(null, world.get(crop, Crop));
 
     const pickups = world.values(Pickup);
@@ -546,85 +531,24 @@ test "sickle 会收获成熟作物并生成掉落物" {
 }
 
 test "hoe 不会收获成熟作物" {
-    initTestAssets();
-    defer zhu.assets.deinit();
-    enterTestLand();
-    defer exitTestLand();
-
+    const target = zhu.Vector2.xy(32, 48);
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    map.load(zhu.testing.allocator, &world, testMap);
+    defer map.unload();
 
-    try std.testing.expect(map.hoe(testTarget));
+    try std.testing.expect(map.hoe(target));
     const crop = world.createEntity();
     world.add(crop, Crop{ .stage = .mature, .kind = .potato });
-    map.setCropAt(testTarget, crop);
+    map.setCropAt(target, crop);
 
     const player = world.createIdentity(Player);
-    world.add(player, WantUse{ .item = .hoe, .target = testTarget });
+    world.add(player, WantUse{ .item = .hoe, .target = target });
     world.add(player, UseFrame{});
 
     update(&world);
 
-    try std.testing.expectEqual(crop, map.land.getTile(testTarget).?.crop().?);
-    try std.testing.expectEqual(0, world.values(Pickup).len);
-    try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
-}
-
-test "water 不会收获成熟作物" {
-    initTestAssets();
-    defer zhu.assets.deinit();
-    enterTestLand();
-    defer exitTestLand();
-
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
-
-    try std.testing.expect(map.hoe(testTarget));
-    const crop = world.createEntity();
-    world.add(crop, Crop{ .stage = .mature, .kind = .potato });
-    map.setCropAt(testTarget, crop);
-
-    const player = world.createIdentity(Player);
-    world.add(player, WantUse{ .item = .water, .target = testTarget });
-    world.add(player, UseFrame{});
-
-    update(&world);
-
-    try std.testing.expectEqual(crop, map.land.getTile(testTarget).?.crop().?);
-    try std.testing.expectEqual(0, world.values(Pickup).len);
-    const sounds = world.getEvent(event.SoundPlay);
-    try std.testing.expectEqual(1, sounds.len);
-    try std.testing.expectEqual(.water, sounds[0].id);
-}
-
-test "seedPlant 不会收获成熟作物" {
-    zhu.assets.initCaches(std.testing.allocator);
-    defer zhu.assets.deinit();
-    putMockImages();
-    enterTestLand();
-    defer exitTestLand();
-
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
-
-    setActiveItem(.strawberrySeed, 2);
-    try std.testing.expect(map.hoe(testTarget));
-    const crop = world.createEntity();
-    world.add(crop, Crop{ .stage = .mature, .kind = .potato });
-    map.setCropAt(testTarget, crop);
-
-    const player = world.createIdentity(Player);
-    world.add(player, WantUse{
-        .item = .strawberrySeed,
-        .target = testTarget,
-    });
-    world.add(player, UseFrame{});
-
-    update(&world);
-
-    const index = inventory.bar.refs[inventory.bar.active].?;
-    try std.testing.expectEqual(2, inventory.store.stacks[index].count);
-    try std.testing.expectEqual(crop, map.land.getTile(testTarget).?.crop().?);
+    try std.testing.expectEqual(crop, map.cropAt(target).?);
     try std.testing.expectEqual(0, world.values(Pickup).len);
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
 }

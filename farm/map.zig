@@ -39,8 +39,8 @@ var mapImage: zhu.Image = undefined;
 var dryLandImage: zhu.Image = undefined;
 var wetLandImage: zhu.Image = undefined;
 var gpa: zhu.Allocator = undefined;
-pub var land: Land = .{};
-pub var spatial: Spatial = .{};
+var land: Land = .{};
+var spatial: Spatial = .{};
 
 pub fn isOutdoor(id: Id) bool {
     // 硬编码室内外规则。如需扩展可改为从 ZON 配置读取。
