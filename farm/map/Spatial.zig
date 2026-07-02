@@ -140,6 +140,7 @@ pub fn isBlocked(self: Spatial, position: zhu.Vector2, collider: Shape) bool {
         if (marks.supersetOf(solid)) {
             // 精确检测：圆形用圆-矩形相交，矩形用矩形相交
             if (shape.intersect(tileRect)) return true;
+            continue;
         }
 
         // 方向标记表示半格阻挡，目标碰撞体进入半格区域就被挡住。

@@ -277,14 +277,6 @@ pub fn clearProductAt(world: *World, index: usize) void {
     land.tiles[index].gone = .product;
 }
 
-// 对象层产出按碰撞范围登记；没有碰撞范围时退回到传入矩形。
-fn setProductTiles(entity: zhu.ecs.Entity, rect: zhu.Rect) void {
-    var iter = grid.cellsInRect(rect);
-    while (iter.next()) |index| {
-        land.tiles[index].setProduct(entity);
-    }
-}
-
 // 只清引用，不写 gone；gone 只记录在触发销毁的那一个格子上。
 fn clearProductTiles(entity: zhu.ecs.Entity) void {
     for (land.tiles) |*tile| {
