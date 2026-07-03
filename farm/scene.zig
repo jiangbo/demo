@@ -11,6 +11,10 @@ const state = @import("state.zig");
 const title = @import("title.zig");
 const ui = @import("ui.zig");
 
+const resource = struct {
+    const Clock = @import("resource/Clock.zig");
+};
+
 const system = struct {
     const animation = @import("system/animation.zig");
     const chest = @import("system/chest.zig");
@@ -43,6 +47,9 @@ const MapFade = struct {
 };
 
 const Scene = union(enum) { title, play: ?u8 };
+const Config = struct {
+    speed: f32 = 1,
+};
 
 var world: World = undefined;
 var allocator: zhu.Allocator = undefined;
@@ -52,18 +59,21 @@ var debug = false;
 var current: Scene = .title;
 var pending: ?Scene = null;
 var session: state.Session = .{};
+var config: Config = .{};
 
 pub fn init(allocator_: zhu.Allocator) void {
     allocator = allocator_;
 
     world = World.init(allocator.raw);
+    world.entity = world.createEntity();
+    world.add(world.entity, resource.Clock{});
 
     // 存档状态先就位，UI 只持有这份长期有效的槽位切片。
     save.init(allocator);
     session.notice.init();
     ui.init(.{
         .slots = &save.slots,
-        .speed = &session.clock.speed,
+        .speed = &config.speed,
     });
     title.init();
     map.init(allocator);
@@ -80,7 +90,10 @@ pub fn init(allocator_: zhu.Allocator) void {
 pub fn deinit() void {
     switch (current) {
         .title => {},
-        .play => map.exit(&world, &session.maps, session.clock.day),
+        .play => {
+            const clock = world.getPtr(world.entity, resource.Clock).?;
+            map.exit(&world, &session.maps, clock.day);
+        },
     }
     map.deinit();
     session.maps.deinit();
@@ -150,19 +163,20 @@ fn drawDebug() void {
 }
 
 fn updatePlayUi(req: ui.UiRequest) void {
+    const clock = world.getPtr(world.entity, resource.Clock).?;
     switch (req) {
         .block => {},
         .title => pending = .title,
-        .rest => |hours| session.clock.restHours = hours,
+        .rest => |hours| clock.restHours = hours,
         .save => |slot| {
-            if (!save.saveSlot(&world, &session.clock, &session.maps, slot)) {
+            if (!save.saveSlot(&world, &session.maps, slot)) {
                 ui.showMessage(.{ .text = "保存失败", .fail = true });
                 return;
             }
             ui.showMessage(.{ .text = "保存成功", .fail = false });
         },
         .load => |slot| {
-            if (!save.loadSlot(&world, &session.clock, &session.maps, slot)) {
+            if (!save.loadSlot(&world, &session.maps, slot)) {
                 ui.showMessage(.{ .text = "读取失败", .fail = true });
                 return;
             }
@@ -172,9 +186,11 @@ fn updatePlayUi(req: ui.UiRequest) void {
 }
 
 fn updatePlay(delta: f32) void {
+    const clock = world.getPtr(world.entity, resource.Clock).?;
+
     // 农场主循环顺序在这里显式编排，新增系统需要在这里确定位置。
     if (pending != null) return;
-    if (session.clock.paused) return;
+    if (clock.paused) return;
 
     // 已提交的切图请求先进入过渡，不再瞬时换图。
     if (world.hasIdentity(actor.Player, Transition)) {
@@ -184,14 +200,14 @@ fn updatePlay(delta: f32) void {
     }
 
     // 时间先推进，地图跨天逻辑和灯光都依赖本帧最新时间事件。
-    system.time.update(&world, &session.clock, delta);
+    system.time.update(&world, config.speed, delta);
     map.update(&world);
-    system.light.update(&world, session.clock.isDark());
+    system.light.update(&world);
 
     // 输入先写入意图，移动系统统一结算位置和碰撞。
     inventory.update(&session.notice);
     system.control.update(&world);
-    system.life.update(&world, session.clock.period, delta);
+    system.life.update(&world, delta);
     system.wander.update(&world, delta);
     system.movement.update(&world, delta);
 
@@ -222,13 +238,18 @@ fn updateMapFade(delta: f32) bool {
 
     switch (phase) {
         .out => {
+            const clock = world.getPtr(world.entity, resource.Clock).?;
             const player = world.getIdentity(actor.Player).?;
             const request = world.get(player, Transition).?;
-            map.change(
+            map.exit(&world, &session.maps, clock.day);
+            world.resetKeep(.{resource.Clock});
+            world.entity = world.createEntity();
+            map.enter(
                 &world,
                 &session.maps,
-                request,
-                session.clock.day,
+                request.target,
+                request.targetId,
+                clock.day,
             );
             mapFade.phase = .in;
             mapFade.timer.restart();
@@ -244,8 +265,9 @@ fn applyScene() void {
     switch (current) {
         .title => title.exit(),
         .play => {
+            const clock = world.getPtr(world.entity, resource.Clock).?;
             mapFade = .{};
-            map.exit(&world, &session.maps, session.clock.day);
+            map.exit(&world, &session.maps, clock.day);
         },
     }
     current, pending = .{ next, null };
@@ -260,15 +282,20 @@ fn enterScene(next: Scene) void {
 }
 
 fn enterPlay(loadSlot: ?u8) void {
+    const clock = world.getPtr(world.entity, resource.Clock).?;
+
     zhu.camera.main.scale = .square(2);
     if (loadSlot == null) {
         // 新游戏重置世界级状态；读档会在基础地图创建后覆盖状态。
-        session.clock.reset();
+        clock.reset();
+        config = .{};
         session.notice.reset();
         session.maps.reset();
     }
 
-    map.enter(&world, &session.maps, .exterior, -1, session.clock.day);
+    world.resetKeep(.{resource.Clock});
+    world.entity = world.createEntity();
+    map.enter(&world, &session.maps, .exterior, -1, clock.day);
     inventory.reset();
     if (loadSlot == null) {
         _ = inventory.add(.hoe, 1);
@@ -280,7 +307,7 @@ fn enterPlay(loadSlot: ?u8) void {
 
     if (loadSlot) |slot| {
         // 存档恢复依赖已经存在的 world/map/player 基础结构。
-        if (!save.loadSlot(&world, &session.clock, &session.maps, slot)) {
+        if (!save.loadSlot(&world, &session.maps, slot)) {
             pending = .title;
             return;
         }
@@ -304,11 +331,11 @@ fn drawPlay() void {
     map.drawFront();
 
     system.control.draw(&world);
-    system.light.draw(&world, session.clock.hour, session.clock.minute);
+    system.light.draw(&world);
 
     zhu.camera.push(.window);
     defer zhu.camera.pop();
-    system.time.draw(&session.clock);
+    system.time.draw(&world);
     ui.draw(&world);
     session.notice.draw();
 }

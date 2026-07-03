@@ -3,8 +3,6 @@ const component = @import("../component.zig");
 pub const Period = component.time.Period;
 
 paused: bool = false,
-// 时钟倍率，只影响游戏内时间流逝。
-speed: f32 = 1,
 day: u32 = 1,
 hour: u8 = 6,
 minute: f32 = 0.0,
@@ -13,7 +11,6 @@ restHours: ?u8 = null,
 
 pub fn reset(self: *@This()) void {
     self.paused = false;
-    self.speed = 1;
     self.day = 1;
     self.hour = 6;
     self.minute = 0.0;

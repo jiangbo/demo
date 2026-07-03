@@ -21,7 +21,6 @@ pub const Id = component.map.Id;
 pub const StartOffset = component.map.StartOffset;
 pub const Hit = component.map.Hit;
 const Trigger = component.map.Trigger;
-const Transition = component.map.Transition;
 const Thing = Maps.Thing;
 
 pub const maps = tiled.bind(@import("zon/map/tileSet.zon"), &.{
@@ -73,8 +72,6 @@ pub fn enter(
     targetId: i32,
     day: u32,
 ) void {
-    world.reset();
-
     current = id;
     load(gpa, world, maps[@intFromEnum(id)]);
     restoreState(world, savedMaps, day);
@@ -93,16 +90,6 @@ pub fn enter(
     const position = spawn orelse zhu.Vector2.xy(311, 168);
     factory.spawnPlayer(world, position);
     zhu.camera.directFollow(position);
-}
-
-pub fn change(
-    world: *World,
-    savedMaps: *Maps,
-    request: Transition,
-    day: u32,
-) void {
-    exit(world, savedMaps, day);
-    enter(world, savedMaps, request.target, request.targetId, day);
 }
 
 pub fn update(world: *World) void {

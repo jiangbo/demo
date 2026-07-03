@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const map = @import("../map.zig");
+const Clock = @import("../resource/Clock.zig");
 
 const event = component.event;
 const Position = component.Position;
@@ -32,8 +33,10 @@ pub fn init() void {
     glowImage = zhu.getImage("light.png").?;
 }
 
-pub fn update(world: *zhu.ecs.World, dark: bool) void {
-    updatePending(world, dark);
+pub fn update(world: *zhu.ecs.World) void {
+    const clock = world.getPtr(world.entity, Clock).?;
+
+    updatePending(world, clock.isDark());
 
     // 室内地图光源始终启用，不做时间切换
     if (!map.isOutdoor(map.current)) {
@@ -45,7 +48,7 @@ pub fn update(world: *zhu.ecs.World, dark: bool) void {
     if (world.getEvent(event.HourChanged).len == 0) return;
 
     world.clear(Disabled);
-    if (dark) {
+    if (clock.isDark()) {
         var query = world.query(.{Day});
         while (query.next()) |e| query.add(world, e, Disabled{});
     } else {
@@ -65,8 +68,10 @@ fn updatePending(world: *zhu.ecs.World, dark: bool) void {
     world.clear(Pending);
 }
 
-pub fn draw(world: *zhu.ecs.World, hour: u8, minute: f32) void {
-    drawOverlay(hour, minute);
+pub fn draw(world: *zhu.ecs.World) void {
+    const clock = world.getPtr(world.entity, Clock).?;
+
+    drawOverlay(clock.hour, clock.minute);
     drawLights(world);
 }
 
@@ -153,6 +158,10 @@ test "light update 夜晚启用夜灯禁用日灯" {
     map.current = .exterior; // 设置为室外地图
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
+    world.entity = world.createEntity();
+    world.add(world.entity, Clock{});
+    const clock = world.getPtr(world.entity, Clock).?;
+    clock.hour = 18;
 
     const night = world.createEntity();
     world.add(night, Night{});
@@ -163,7 +172,7 @@ test "light update 夜晚启用夜灯禁用日灯" {
 
     world.addEvent(event.HourChanged{});
 
-    update(&world, true);
+    update(&world);
 
     try std.testing.expect(!world.has(night, Disabled));
     try std.testing.expect(world.has(day, Disabled));
@@ -173,6 +182,8 @@ test "light update 白天启用日灯禁用夜灯" {
     map.current = .exterior; // 设置为室外地图
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
+    world.entity = world.createEntity();
+    world.add(world.entity, Clock{ .hour = 12 });
 
     const night = world.createEntity();
     world.add(night, Night{});
@@ -183,7 +194,7 @@ test "light update 白天启用日灯禁用夜灯" {
 
     world.addEvent(event.HourChanged{});
 
-    update(&world, false);
+    update(&world);
 
     try std.testing.expect(world.has(night, Disabled));
     try std.testing.expect(!world.has(day, Disabled));

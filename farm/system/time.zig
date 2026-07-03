@@ -2,7 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
-const Clock = @import("../state.zig").Clock;
+const Clock = @import("../resource/Clock.zig");
 
 const event = component.event;
 
@@ -34,7 +34,9 @@ pub fn init() void {
     };
 }
 
-pub fn update(world: *zhu.ecs.World, clock: *Clock, delta: f32) void {
+pub fn update(world: *zhu.ecs.World, speed: f32, delta: f32) void {
+    const clock = world.getPtr(world.entity, Clock).?;
+
     world.clearEvent(event.HourChanged);
     world.clearEvent(event.DayChanged);
     world.clearEvent(event.PeriodChanged);
@@ -45,7 +47,7 @@ pub fn update(world: *zhu.ecs.World, clock: *Clock, delta: f32) void {
         return;
     }
 
-    clock.minute += delta * clock.speed * 10.0;
+    clock.minute += delta * speed * 10.0;
     while (clock.minute >= 60.0) {
         clock.minute -= 60.0;
         advanceOneHour(world, clock);
@@ -78,7 +80,9 @@ fn updatePeriod(world: *zhu.ecs.World, clock: *Clock) void {
     }
 }
 
-pub fn draw(clock: *const Clock) void {
+pub fn draw(world: *zhu.ecs.World) void {
+    const clock = world.getPtr(world.entity, Clock).?;
+
     zhu.camera.push(.windowScale(.xy(10, 10), .square(uiScale)));
     defer zhu.camera.pop();
 
@@ -120,14 +124,15 @@ fn currentPeriod(hour: u8) component.time.Period {
 }
 
 test "时间推进到整点会发出小时事件" {
-    var clock: Clock = .{};
-
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
+    world.entity = world.createEntity();
+    world.add(world.entity, Clock{});
+    const clock = world.getPtr(world.entity, Clock).?;
     clock.hour = 6;
     clock.minute = 59.0;
-    update(&world, &clock, 0.2);
+    update(&world, 1, 0.2);
 
     try std.testing.expectEqual(7, clock.hour);
     try std.testing.expectEqual(1.0, clock.minute);
@@ -137,15 +142,16 @@ test "时间推进到整点会发出小时事件" {
 }
 
 test "时间推进跨天会发出新一天事件" {
-    var clock: Clock = .{};
-
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
+    world.entity = world.createEntity();
+    world.add(world.entity, Clock{});
+    const clock = world.getPtr(world.entity, Clock).?;
     clock.hour = 23;
     clock.minute = 59.0;
     clock.period = .night;
-    update(&world, &clock, 0.2);
+    update(&world, 1, 0.2);
 
     try std.testing.expectEqual(2, clock.day);
     try std.testing.expectEqual(0, clock.hour);
@@ -160,16 +166,17 @@ test "时间推进跨天会发出新一天事件" {
 }
 
 test "按小时推进会清零分钟并逐小时发事件" {
-    var clock: Clock = .{};
-
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
+    world.entity = world.createEntity();
+    world.add(world.entity, Clock{});
+    const clock = world.getPtr(world.entity, Clock).?;
     clock.hour = 22;
     clock.minute = 37.0;
     clock.period = .night;
     clock.restHours = 3;
-    update(&world, &clock, 0);
+    update(&world, 1, 0);
 
     try std.testing.expectEqual(2, clock.day);
     try std.testing.expectEqual(1, clock.hour);
@@ -185,15 +192,16 @@ test "按小时推进会清零分钟并逐小时发事件" {
 }
 
 test "时段跨过边界会发出时段事件" {
-    var clock: Clock = .{};
-
     var world = zhu.ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
+    world.entity = world.createEntity();
+    world.add(world.entity, Clock{});
+    const clock = world.getPtr(world.entity, Clock).?;
     clock.hour = 7;
     clock.minute = 59.0;
     clock.period = .dawn;
-    update(&world, &clock, 0.2);
+    update(&world, 1, 0.2);
 
     try std.testing.expectEqual(currentPeriod(8), clock.period);
 

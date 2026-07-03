@@ -4,7 +4,7 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const inventory = @import("inventory.zig");
 const map = @import("map.zig");
-const Clock = @import("state.zig").Clock;
+const Clock = @import("resource/Clock.zig");
 const Maps = @import("state.zig").Maps;
 
 const World = zhu.ecs.World;
@@ -34,7 +34,6 @@ var allocator: std.mem.Allocator = undefined;
 
 const TimeSave = struct {
     paused: bool = false,
-    scale: f32 = 1,
     day: u32 = 1,
     hour: u8 = 6,
     minute: f32 = 0,
@@ -85,23 +84,24 @@ pub fn init(allocator_: zhu.Allocator) void {
     }
 }
 
-pub fn saveSlot(world: *World, clock: *Clock, maps: *Maps, slot: u8) bool {
-    saveSlotInner(world, clock, maps, slot) catch |err| {
+pub fn saveSlot(world: *World, maps: *Maps, slot: u8) bool {
+    saveSlotInner(world, maps, slot) catch |err| {
         std.log.err("save slot {} failed: {}", .{ slot, err });
         return false;
     };
     return true;
 }
 
-pub fn loadSlot(world: *World, clock: *Clock, maps: *Maps, slot: u8) bool {
-    loadSlotInner(world, clock, maps, slot) catch |err| {
+pub fn loadSlot(world: *World, maps: *Maps, slot: u8) bool {
+    loadSlotInner(world, maps, slot) catch |err| {
         std.log.err("load slot {} failed: {}", .{ slot, err });
         return false;
     };
     return true;
 }
 
-fn saveSlotInner(world: *World, clock: *Clock, maps: *Maps, slot: u8) !void {
+fn saveSlotInner(world: *World, maps: *Maps, slot: u8) !void {
+    const clock = world.getPtr(world.entity, Clock).?;
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
@@ -123,7 +123,8 @@ fn saveSlotInner(world: *World, clock: *Clock, maps: *Maps, slot: u8) !void {
     std.log.info("game saved: {s}", .{path});
 }
 
-fn loadSlotInner(world: *World, clock: *Clock, maps: *Maps, slot: u8) !void {
+fn loadSlotInner(world: *World, maps: *Maps, slot: u8) !void {
+    const clock = world.getPtr(world.entity, Clock).?;
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
@@ -200,7 +201,6 @@ fn capture(world: *World, clock: *const Clock, maps: *const Maps) !SaveData {
         .timestamp = zhu.window.timestamp().toSeconds(),
         .time = .{
             .paused = clock.paused,
-            .scale = clock.speed,
             .day = clock.day,
             .hour = clock.hour,
             .minute = clock.minute,
@@ -265,7 +265,6 @@ fn captureTiles(state: *const Maps.Entry) ![]const TileSave {
 
 fn apply(world: *World, clock: *Clock, maps: *Maps, data: SaveData) !void {
     clock.paused = data.time.paused;
-    clock.speed = data.time.scale;
     clock.day = data.time.day;
     clock.hour = data.time.hour;
     clock.minute = data.time.minute;
@@ -275,6 +274,8 @@ fn apply(world: *World, clock: *Clock, maps: *Maps, data: SaveData) !void {
     maps.reset();
     restoreMaps(data, maps, clock.day);
 
+    world.resetKeep(.{Clock});
+    world.entity = world.createEntity();
     map.enter(world, maps, data.player.map, -1, clock.day);
     restorePlayer(world, data.player);
     inventory.restore(data.inventory);
