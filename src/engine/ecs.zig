@@ -216,7 +216,7 @@ pub const World = struct {
         try new.map.ensureTotalCapacity(new.allocator, Types.len);
         inline for (Types) |T| {
             const r = self.map.fetchRemove(typeId(T)) orelse continue;
-            try new.map.putAssumeCapacityNoClobber(r.key, r.value);
+            new.map.putAssumeCapacityNoClobber(r.key, r.value);
         }
         self.deinit();
         self.* = new;
