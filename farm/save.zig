@@ -5,7 +5,7 @@ const component = @import("component.zig");
 const inventory = @import("global/Inventory.zig");
 const map = @import("map.zig");
 const Clock = @import("global/Clock.zig");
-const Maps = @import("state.zig").Maps;
+const Maps = @import("global/Maps.zig");
 const Notice = @import("global/Notice.zig");
 
 const World = zhu.ecs.World;
@@ -105,16 +105,16 @@ pub fn update(config: Config) void {
     savedConfig = config;
 }
 
-pub fn saveSlot(world: *World, maps: *Maps, slot: u8) bool {
-    saveSlotInner(world, maps, slot) catch |err| {
+pub fn saveSlot(world: *World, slot: u8) bool {
+    saveSlotInner(world, slot) catch |err| {
         std.log.err("save slot {} failed: {}", .{ slot, err });
         return false;
     };
     return true;
 }
 
-pub fn loadSlot(world: *World, maps: *Maps, slot: u8) bool {
-    loadSlotInner(world, maps, slot) catch |err| {
+pub fn loadSlot(world: *World, slot: u8) bool {
+    loadSlotInner(world, slot) catch |err| {
         std.log.err("load slot {} failed: {}", .{ slot, err });
         return false;
     };
@@ -148,8 +148,9 @@ fn applyConfig(config: Config) void {
     zhu.audio.soundVolume.store(config.sound, .release);
 }
 
-fn saveSlotInner(world: *World, maps: *Maps, slot: u8) !void {
+fn saveSlotInner(world: *World, slot: u8) !void {
     const clock = world.getPtr(world.entity, Clock).?;
+    const maps = world.getPtr(world.entity, Maps).?;
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
@@ -171,8 +172,9 @@ fn saveSlotInner(world: *World, maps: *Maps, slot: u8) !void {
     std.log.info("game saved: {s}", .{path});
 }
 
-fn loadSlotInner(world: *World, maps: *Maps, slot: u8) !void {
+fn loadSlotInner(world: *World, slot: u8) !void {
     const clock = world.getPtr(world.entity, Clock).?;
+    const maps = world.getPtr(world.entity, Maps).?;
     var pathBuffer: [32]u8 = undefined;
     const path = try slotPath(slot, &pathBuffer);
 
@@ -323,9 +325,10 @@ fn apply(world: *World, clock: *Clock, maps: *Maps, data: SaveData) !void {
     maps.reset();
     restoreMaps(data, maps, clock.day);
 
-    world.resetKeep(.{ Clock, inventory.Inventory, Notice });
+    world.resetKeep(.{ Clock, Maps, inventory.Inventory, Notice });
     world.entity = world.createEntity();
-    map.enter(world, maps, data.player.map, -1, clock.day);
+    const savedMaps = world.getPtr(world.entity, Maps).?;
+    map.enter(world, savedMaps, data.player.map, -1, clock.day);
     restorePlayer(world, data.player);
     world.getPtr(world.entity, inventory.Inventory).?.restore(data.inventory);
 }

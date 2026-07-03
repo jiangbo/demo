@@ -104,7 +104,7 @@ fn buildNative(b: *std.Build, options: Options) !void {
     });
 
     const testModule = b.createModule(.{
-        .root_source_file = b.path("farm/tests.zig"),
+        .root_source_file = b.path("farm/main.zig"),
         .target = target,
         .optimize = optimize,
     });

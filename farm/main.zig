@@ -50,3 +50,7 @@ pub fn main(initInfo: std.process.Init) void {
         .scaleEnum = .fit,
     });
 }
+
+test {
+    std.testing.refAllDecls(scene);
+}

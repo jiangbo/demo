@@ -6,7 +6,7 @@ const factory = @import("factory.zig");
 const loader = @import("map/loader.zig");
 const Spatial = @import("map/Spatial.zig");
 const Land = @import("map/Land.zig");
-const Maps = @import("state.zig").Maps;
+const Maps = @import("global/Maps.zig");
 
 const tiled = zhu.extend.tiled;
 const World = zhu.ecs.World;

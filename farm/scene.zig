@@ -7,12 +7,12 @@ const input = @import("input.zig");
 const inventory = @import("global/Inventory.zig");
 const map = @import("map.zig");
 const save = @import("save.zig");
-const state = @import("state.zig");
 const title = @import("title.zig");
 const ui = @import("ui.zig");
 
 const global = struct {
     const Clock = @import("global/Clock.zig");
+    const Maps = @import("global/Maps.zig");
     const Notice = @import("global/Notice.zig");
 };
 
@@ -56,7 +56,6 @@ var mapFade: MapFade = .{};
 var debug = false;
 var current: Scene = .title;
 var pending: ?Scene = null;
-var session: state.Session = .{};
 var config: save.Config = .{};
 
 pub fn init(allocator_: zhu.Allocator) void {
@@ -65,6 +64,7 @@ pub fn init(allocator_: zhu.Allocator) void {
     world = World.init(allocator.raw);
     world.entity = world.createEntity();
     world.add(world.entity, global.Clock{});
+    world.add(world.entity, global.Maps{});
     world.add(world.entity, inventory.Inventory{});
     world.add(world.entity, global.Notice{});
 
@@ -91,11 +91,12 @@ pub fn deinit() void {
         .title => {},
         .play => {
             const clock = world.getPtr(world.entity, global.Clock).?;
-            map.exit(&world, &session.maps, clock.day);
+            const maps = world.getPtr(world.entity, global.Maps).?;
+            map.exit(&world, maps, clock.day);
         },
     }
     map.deinit();
-    session.maps.deinit();
+    world.getPtr(world.entity, global.Maps).?.deinit();
     ui.deinit();
     world.deinit();
 }
@@ -169,14 +170,14 @@ fn updatePlayUi(req: ui.UiRequest) void {
         .title => pending = .title,
         .rest => |hours| clock.restHours = hours,
         .save => |slot| {
-            if (!save.saveSlot(&world, &session.maps, slot)) {
+            if (!save.saveSlot(&world, slot)) {
                 ui.showMessage(.{ .text = "保存失败", .fail = true });
                 return;
             }
             ui.showMessage(.{ .text = "保存成功", .fail = false });
         },
         .load => |slot| {
-            if (!save.loadSlot(&world, &session.maps, slot)) {
+            if (!save.loadSlot(&world, slot)) {
                 ui.showMessage(.{ .text = "读取失败", .fail = true });
                 return;
             }
@@ -240,13 +241,20 @@ fn updateMapFade(delta: f32) bool {
             const clock = world.getPtr(world.entity, global.Clock).?;
             const player = world.getIdentity(actor.Player).?;
             const request = world.get(player, Transition).?;
-            map.exit(&world, &session.maps, clock.day);
-            const keep = .{ global.Clock, inventory.Inventory, global.Notice };
+            const maps = world.getPtr(world.entity, global.Maps).?;
+            map.exit(&world, maps, clock.day);
+            const keep = .{
+                global.Clock,
+                global.Maps,
+                inventory.Inventory,
+                global.Notice,
+            };
             world.resetKeep(keep);
             world.entity = world.createEntity();
+            const savedMaps = world.getPtr(world.entity, global.Maps).?;
             map.enter(
                 &world,
-                &session.maps,
+                savedMaps,
                 request.target,
                 request.targetId,
                 clock.day,
@@ -266,8 +274,9 @@ fn applyScene() void {
         .title => title.exit(),
         .play => {
             const clock = world.getPtr(world.entity, global.Clock).?;
+            const maps = world.getPtr(world.entity, global.Maps).?;
             mapFade = .{};
-            map.exit(&world, &session.maps, clock.day);
+            map.exit(&world, maps, clock.day);
         },
     }
     current, pending = .{ next, null };
@@ -289,13 +298,19 @@ fn enterPlay(loadSlot: ?u8) void {
         // 新游戏重置世界级状态；读档会在基础地图创建后覆盖状态。
         clock.reset();
         world.getPtr(world.entity, global.Notice).?.reset();
-        session.maps.reset();
+        world.getPtr(world.entity, global.Maps).?.reset();
     }
 
-    const keep = .{ global.Clock, inventory.Inventory, global.Notice };
+    const keep = .{
+        global.Clock,
+        global.Maps,
+        inventory.Inventory,
+        global.Notice,
+    };
     world.resetKeep(keep);
     world.entity = world.createEntity();
-    map.enter(&world, &session.maps, .exterior, -1, clock.day);
+    const maps = world.getPtr(world.entity, global.Maps).?;
+    map.enter(&world, maps, .exterior, -1, clock.day);
     const inv = world.getPtr(world.entity, inventory.Inventory).?;
     inv.reset();
     if (loadSlot == null) {
@@ -308,7 +323,7 @@ fn enterPlay(loadSlot: ?u8) void {
 
     if (loadSlot) |slot| {
         // 存档恢复依赖已经存在的 world/map/player 基础结构。
-        if (!save.loadSlot(&world, &session.maps, slot)) {
+        if (!save.loadSlot(&world, slot)) {
             pending = .title;
             return;
         }
