@@ -7,6 +7,7 @@ const input = @import("input.zig");
 const inventory = @import("global/Inventory.zig");
 const map = @import("map.zig");
 const save = @import("save.zig");
+const system = @import("system/system.zig");
 const title = @import("title.zig");
 const ui = @import("ui.zig");
 
@@ -14,25 +15,6 @@ const global = struct {
     const Clock = @import("global/Clock.zig");
     const Maps = @import("global/Maps.zig");
     const Notice = @import("global/Notice.zig");
-};
-
-const system = struct {
-    const animation = @import("system/animation.zig");
-    const chest = @import("system/chest.zig");
-    const control = @import("system/control.zig");
-    const dialog = @import("system/dialog.zig");
-    const farm = @import("system/farm.zig");
-    const interact = @import("system/interact.zig");
-    const life = @import("system/life.zig");
-    const light = @import("system/light.zig");
-    const movement = @import("system/movement.zig");
-    const pickup = @import("system/pickup.zig");
-    const render = @import("system/render.zig");
-    const rest = @import("system/rest.zig");
-    const sound = @import("system/sound.zig");
-    const time = @import("system/time.zig");
-    const transition = @import("system/transition.zig");
-    const wander = @import("system/wander.zig");
 };
 
 const World = zhu.ecs.World;
@@ -80,9 +62,7 @@ pub fn init(allocator_: zhu.Allocator) void {
 
     canvas = zhu.graphics.createRenderTarget(zhu.window.size);
 
-    // 有独立资源或初始状态的系统在进入首个场景前完成初始化。
-    system.time.init();
-    system.light.init();
+    system.init();
     enterScene(current);
 }
 
