@@ -5,8 +5,11 @@ const input = @import("input.zig");
 const inventory = @import("global/Inventory.zig");
 const notice = @import("ui/notice.zig");
 const store = @import("save.zig");
+const rest = @import("ui/rest.zig");
 const time = @import("ui/time.zig");
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
+
+pub const pause = @import("ui/pause.zig");
 
 pub const Message = struct { text: []const u8, fail: bool };
 pub const UiRequest = union(enum) {
@@ -31,7 +34,7 @@ pub fn init(args: Init) void {
     time.init();
     pause.cfg = args.config;
     save.init(args.slots);
-    rest.menu.centerInWindow();
+    rest.init();
 }
 
 pub fn deinit() void {}
@@ -133,35 +136,6 @@ pub fn draw(world: *zhu.ecs.World) void {
 
     notice.draw(world);
 }
-
-pub const rest = struct {
-    const MenuEvent = enum(u8) { minus, plus, ok, cancel };
-    pub const Request = union(enum) { close, rest: u8 };
-
-    var hours: u8 = 8;
-    var menu: zhu.widget.Menu = menus[5];
-
-    pub fn update() ?Request {
-        const event = menu.update(.{}) orelse return null;
-        switch (@as(MenuEvent, @enumFromInt(event))) {
-            .minus => hours -= 1,
-            .plus => hours += 1,
-            .ok => return .{ .rest = hours },
-            .cancel => return .close,
-        }
-        hours = std.math.clamp(hours, 1, 24);
-        return null;
-    }
-
-    pub fn draw() void {
-        menu.draw();
-
-        const position = menu.position.add(.xy(140, 82));
-        zhu.text.drawFmt("{d}h", .{hours}, position, .{
-            .anchor = .center,
-        });
-    }
-};
 
 pub const save = struct {
     pub const Mode = enum { load, save };
@@ -284,72 +258,5 @@ pub const save = struct {
             .empty => false,
             .invalid, .valid => true,
         };
-    }
-};
-
-pub const pause = struct {
-    const panelSize: zhu.Vector2 = .{ .x = 208, .y = 344 };
-    const Mode = enum { title, play };
-    pub const Request = enum { close, save, load, title };
-
-    var cfg: *store.Config = undefined;
-    var menu: zhu.widget.Menu = menus[2];
-
-    pub fn open(mode: Mode) void {
-        menu.disabled = switch (mode) {
-            .title => &.{ 1, 2, 3 },
-            .play => &.{},
-        };
-        menu.position = zhu.window.size.sub(panelSize).scale(0.5);
-    }
-
-    pub fn update() ?Request {
-        if (menu.update(.{})) |event| switch (event) {
-            0 => return .close,
-            1 => return .save, // 选择槽位后保存
-            2 => return .load, // 选择槽位后读取
-            3 => return .title,
-            4 => cfg.speed = @max(0.1, cfg.speed - 0.1),
-            5 => cfg.speed += 0.1, // 加速
-            6 => cfg.music = zhu.clamp(cfg.music - 0.1, 0, 1),
-            7 => cfg.music = zhu.clamp(cfg.music + 0.1, 0, 1),
-            8 => cfg.sound = zhu.clamp(cfg.sound - 0.1, 0, 1),
-            9 => cfg.sound = zhu.clamp(cfg.sound + 0.1, 0, 1),
-            else => unreachable,
-        };
-        return null;
-    }
-
-    pub fn draw() void {
-        // 全屏覆盖
-        const overlayRect = zhu.Rect.init(.zero, zhu.window.size);
-        zhu.batch.drawRect(overlayRect, .{ .color = .gray(0, 0.35) });
-
-        // 暂停面板背景
-        const back = zhu.Rect.init(menu.position, panelSize);
-        zhu.batch.drawRect(back, .{ .color = .gray(0, 0.45) });
-
-        menu.draw();
-
-        for (0..3) |index| {
-            var buffer: [40]u8 = undefined;
-            const string: []const u8 = switch (index) {
-                0 => zhu.format(&buffer, "Speed {d:.2}x", .{cfg.speed}),
-                1 => zhu.format(&buffer, "Music {d:.0}%", .{
-                    cfg.music * 100,
-                }),
-                2 => zhu.format(&buffer, "SFX {d:.0}%", .{
-                    cfg.sound * 100,
-                }),
-                else => unreachable,
-            };
-
-            const y = 212 + @as(f32, @floatFromInt(index)) * 38;
-            const rect = zhu.Rect.init(.xy(24, y), .xy(160, 32));
-            const pos = rect.move(menu.position).center();
-            zhu.text.draw(string, pos, .{
-                .anchor = .center,
-            });
-        }
     }
 };

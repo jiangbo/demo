@@ -106,14 +106,14 @@ pub fn draw(world: *World) void {
     if (dialog.index >= dialog.lines.len) return;
 
     const position = world.get(entity, Position).?;
+    const head = zhu.camera.toWindow(position.addY(-24));
     zhu.camera.push(.window);
     defer zhu.camera.pop();
-    drawBubble(position, dialog.lines[dialog.index]);
+    drawBubble(head, dialog.lines[dialog.index]);
 }
 
-fn drawBubble(position: zhu.Vector2, text: []const u8) void {
-    // 锚点跟随 NPC 世界位置，气泡和文字按窗口尺寸绘制，避免相机缩放放大 UI。
-    const head = zhu.camera.toWindow(position.addY(-24));
+fn drawBubble(head: zhu.Vector2, text: []const u8) void {
+    // head 是 NPC 头顶的窗口坐标，气泡和文字按窗口尺寸绘制。
     const option = zhu.text.Option{ .color = .black, .max = 144 };
     const textSize = zhu.text.measure(text, option);
     const size = textSize.add(.xy(16, 16)).max(.xy(160, 48));
