@@ -43,14 +43,6 @@ var gpa: zhu.Allocator = undefined;
 var land: Land = .{};
 var spatial: Spatial = .{};
 
-pub fn isOutdoor(id: Id) bool {
-    // 硬编码室内外规则。如需扩展可改为从 ZON 配置读取。
-    return switch (id) {
-        .town, .exterior => true,
-        .school, .interior => false,
-    };
-}
-
 pub fn init(gpa_: zhu.Allocator) void {
     gpa = gpa_;
     mapImage = zhu.getImage("circle.png").?;

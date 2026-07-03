@@ -17,6 +17,7 @@ pub const wander = @import("wander.zig");
 
 pub fn init() void {
     // 有独立资源或初始状态的系统在进入首个场景前完成初始化。
+    dialog.init();
     time.init();
     light.init();
 }

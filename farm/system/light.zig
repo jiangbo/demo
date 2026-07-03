@@ -6,6 +6,7 @@ const map = @import("../map.zig");
 const Clock = @import("../global/Clock.zig");
 
 const event = component.event;
+const MapId = component.map.Id;
 const Position = component.Position;
 const Point = component.light.Point;
 const Spot = component.light.Spot;
@@ -39,7 +40,7 @@ pub fn update(world: *zhu.ecs.World) void {
     updatePending(world, clock.isDark());
 
     // 室内地图光源始终启用，不做时间切换
-    if (!map.isOutdoor(map.current)) {
+    if (!isOutdoor(map.current)) {
         world.clear(Disabled);
         return;
     }
@@ -76,7 +77,7 @@ pub fn draw(world: *zhu.ecs.World) void {
 }
 
 fn drawOverlay(hourValue: u8, minute: f32) void {
-    if (!map.isOutdoor(map.current)) return;
+    if (!isOutdoor(map.current)) return;
 
     const hour = @as(f32, @floatFromInt(hourValue)) + minute / 60;
     const overlay = overlayAt(hour);
@@ -126,6 +127,14 @@ fn overlayAt(hour: f32) zhu.Color {
     }
 
     return keyframes[keyframes.len - 1].color;
+}
+
+fn isOutdoor(id: MapId) bool {
+    // 光照系统只关心昼夜是否影响当前地图。
+    return switch (id) {
+        .town, .exterior => true,
+        .school, .interior => false,
+    };
 }
 
 fn drawGlow(center: zhu.Vector2, size: f32, color: zhu.Color) void {

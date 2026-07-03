@@ -327,6 +327,7 @@ fn drawPlay() void {
     map.drawFront();
 
     system.control.draw(&world);
+    system.dialog.draw(&world);
     system.light.draw(&world);
 
     zhu.camera.push(.window);

@@ -1,14 +1,11 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const component = @import("component.zig");
 const input = @import("input.zig");
 const inventory = @import("global/Inventory.zig");
 const notice = @import("ui/notice.zig");
 const store = @import("save.zig");
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
-
-var bubbleImage: zhu.NineImage = undefined;
 
 pub const Message = struct { text: []const u8, fail: bool };
 pub const UiRequest = union(enum) {
@@ -29,12 +26,6 @@ pub const Init = struct {
 };
 
 pub fn init(args: Init) void {
-    const image = zhu.getImage("farm-rpg/UI/dialogue box.png").?;
-    bubbleImage = zhu.NineImage.from(image, .{
-        .rect = .init(.xy(0, 48), .xy(48, 48)),
-        .patch = .{ .min = .xy(3, 4), .max = .xy(3, 3) },
-    });
-
     notice.init();
     pause.cfg = args.config;
     save.init(args.slots);
@@ -118,7 +109,6 @@ pub fn close() void {
 }
 
 pub fn draw(world: *zhu.ecs.World) void {
-    dialog.draw(world);
     world.getPtr(world.entity, inventory.Inventory).?.draw();
 
     if (activePopup) |active| {
@@ -360,33 +350,3 @@ pub const pause = struct {
         }
     }
 };
-
-pub const dialog = struct {
-    // 对话气泡只读取 talk 系统维护的当前对话状态。
-    pub fn draw(world: *zhu.ecs.World) void {
-        const Dialog = component.actor.Dialog;
-
-        const entity = world.getIdentity(Dialog) orelse return;
-        const dialogState = world.get(entity, Dialog).?;
-        if (dialogState.index >= dialogState.lines.len) return;
-
-        const text = dialogState.lines[dialogState.index];
-
-        const pos = world.get(entity, component.Position).?;
-        drawBubble(pos, text);
-    }
-};
-
-fn drawBubble(position: zhu.Vector2, text: []const u8) void {
-    const head = zhu.camera.toWindow(position.addY(-24));
-    const option = zhu.text.Option{ .color = .black, .max = 144 };
-    const textSize = zhu.text.measure(text, option);
-    const size = textSize.add(.xy(16, 16)).max(.xy(160, 48));
-
-    // 对话气泡在窗口坐标取整，避免位图文字亚像素闪烁。
-    const bubblePos = head.addXY(-size.x / 2, -4 - size.y).round();
-    const bubbleRect: zhu.Rect = .init(bubblePos, size);
-    zhu.batch.drawNine(bubbleImage, bubbleRect);
-
-    zhu.text.draw(text, bubbleRect.min.add(.xy(8, 8)), option);
-}
