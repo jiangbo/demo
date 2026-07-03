@@ -332,7 +332,6 @@ fn drawPlay() void {
 
     zhu.camera.push(.window);
     defer zhu.camera.pop();
-    system.time.draw(&world);
     ui.draw(&world);
 }
 

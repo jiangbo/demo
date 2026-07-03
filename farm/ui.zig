@@ -5,6 +5,7 @@ const input = @import("input.zig");
 const inventory = @import("global/Inventory.zig");
 const notice = @import("ui/notice.zig");
 const store = @import("save.zig");
+const time = @import("ui/time.zig");
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
 
 pub const Message = struct { text: []const u8, fail: bool };
@@ -27,6 +28,7 @@ pub const Init = struct {
 
 pub fn init(args: Init) void {
     notice.init();
+    time.init();
     pause.cfg = args.config;
     save.init(args.slots);
     rest.menu.centerInWindow();
@@ -109,6 +111,7 @@ pub fn close() void {
 }
 
 pub fn draw(world: *zhu.ecs.World) void {
+    time.draw(world);
     world.getPtr(world.entity, inventory.Inventory).?.draw();
 
     if (activePopup) |active| {
