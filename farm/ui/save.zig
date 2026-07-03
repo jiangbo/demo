@@ -9,89 +9,54 @@ pub const Request = union(enum) { close, save: u8, load: u8 };
 pub const Slot = store.Slot;
 
 var mode: Mode = .load;
-var slots: []const Slot = &.{};
-var confirmSlot: ?u8 = null;
-var confirmTitleBuffer: [40]u8 = undefined;
+var records: []const Slot = &.{};
 var disabledBuffer: [menus[0].buttons.len]usize = undefined;
 var disabled: std.ArrayList(usize) = .initBuffer(&disabledBuffer);
-var slotMenu: zhu.widget.Menu = menus[0];
-var confirmMenu: zhu.widget.Menu = menus[1];
+var menu: zhu.widget.Menu = menus[0];
 
-pub fn init(slotStates: []const Slot) void {
-    slots = slotStates;
-    slotMenu.centerInWindow();
-    confirmMenu.centerInWindow();
+pub fn init(records_: []const Slot) void {
+    records = records_;
+    menu.centerInWindow();
+    popup.popupMenu.centerInWindow();
 }
 
 pub fn open(next: Mode) void {
-    disabled.clearRetainingCapacity();
-    for (0..slots.len) |index| {
-        if (slotEnabled(index)) continue;
-        disabled.appendAssumeCapacity(index);
-    }
-    slotMenu.disabled = disabled.items;
-
     mode = next;
-    confirmSlot = null;
-    slotMenu.title.text = switch (mode) {
-        .load => "Load Game",
-        .save => "Save Game",
-    };
-    confirmMenu.title.text = "";
+    popup.slot = null;
+
+    menu.disabled = &.{};
+    switch (mode) {
+        .load => load.open(),
+        .save => menu.title.text = "Save Game",
+    }
 }
 
 pub fn update() ?Request {
-    if (confirmSlot) |slot| {
-        if (confirmMenu.update(.{})) |event| {
-            switch (event) {
-                0 => {
-                    confirmSlot = null;
-                    return .{ .save = slot };
-                },
-                1 => confirmSlot = null,
-                else => unreachable,
-            }
-        }
+    if (popup.slot != null) {
+        if (popup.update()) |slot| return .{ .save = slot };
         return null;
     }
 
-    if (slotMenu.update(.{})) |event| {
-        const backEvent: u8 = @intCast(slots.len);
-        if (event == backEvent) {
-            return .close;
-        }
-        return chooseSlot(event);
+    if (menu.update(.{})) |event| {
+        if (event == records.len) return .close;
+
+        return switch (mode) {
+            .load => .{ .load = @intCast(event) },
+            .save => save.choose(event),
+        };
     }
     return null;
 }
 
 pub fn draw() void {
-    slotMenu.draw();
-    for (0..slots.len) |index| drawSlot(index);
-    if (confirmSlot != null) confirmMenu.draw();
-}
-
-fn chooseSlot(slot: usize) ?Request {
-    switch (mode) {
-        .load => return .{ .load = @intCast(slot) },
-        .save => {
-            if (slotHasFile(slot)) {
-                confirmSlot = @intCast(slot);
-                confirmMenu.title.text = zhu.format(
-                    &confirmTitleBuffer,
-                    "Overwrite slot {d}?",
-                    .{slot + 1},
-                );
-                return null;
-            }
-            return .{ .save = @intCast(slot) };
-        },
-    }
+    menu.draw();
+    for (0..records.len) |index| drawSlot(index);
+    popup.draw();
 }
 
 fn drawSlot(index: usize) void {
     var buffer: [56]u8 = undefined;
-    const label = switch (slots[index]) {
+    const label = switch (records[index]) {
         .empty => zhu.format(&buffer, "Slot {d} Empty", .{index + 1}),
         .invalid => zhu.format(&buffer, "Slot {d} Invalid", .{
             index + 1,
@@ -102,22 +67,54 @@ fn drawSlot(index: usize) void {
         }),
     };
 
-    slotMenu.drawText(index, label);
+    menu.drawText(index, label);
 }
 
-fn slotEnabled(index: usize) bool {
-    return switch (mode) {
-        .save => true,
-        .load => switch (slots[index]) {
-            .valid => true,
-            .empty, .invalid => false,
-        },
-    };
-}
+const load = struct {
+    fn open() void {
+        disabled.clearRetainingCapacity();
+        for (0..records.len) |index| switch (records[index]) {
+            .valid => {},
+            .empty, .invalid => disabled.appendAssumeCapacity(index),
+        };
+        menu.disabled = disabled.items;
+        menu.title.text = "Load Game";
+    }
+};
 
-fn slotHasFile(index: usize) bool {
-    return switch (slots[index]) {
-        .empty => false,
-        .invalid, .valid => true,
-    };
-}
+const save = struct {
+    fn choose(slot: usize) ?Request {
+        switch (records[slot]) {
+            .empty => return .{ .save = @intCast(slot) },
+            .invalid, .valid => popup.slot = @intCast(slot),
+        }
+        return null;
+    }
+};
+
+const popup = struct {
+    var slot: ?u8 = null;
+    var popupMenu: zhu.widget.Menu = menus[1];
+
+    fn update() ?u8 {
+        const current = slot orelse return null;
+
+        if (popupMenu.update(.{})) |event| {
+            slot = null;
+            if (event == 0) return current;
+            if (event == 1) return null;
+            unreachable;
+        }
+        return null;
+    }
+
+    fn draw() void {
+        const current = slot orelse return;
+
+        var buffer: [40]u8 = undefined;
+        var copy = popupMenu;
+        const fmt = "Overwrite slot {d}?";
+        copy.title.text = zhu.format(&buffer, fmt, .{current + 1});
+        copy.draw();
+    }
+};
