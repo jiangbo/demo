@@ -207,18 +207,16 @@ pub const World = struct {
         self.* = .init(self.allocator);
     }
 
-    pub fn resetKeepOwn(self: *World, Types: anytype) void {
-        self.tryResetKeepOwn(Types) catch @panic("oom");
+    pub fn resetKeep(self: *World, Types: anytype) void {
+        self.tryResetKeep(Types) catch @panic("oom");
     }
 
-    pub fn tryResetKeepOwn(self: *World, Types: anytype) Error!void {
-        std.debug.assert(self.entity != invalid);
-
+    pub fn tryResetKeep(self: *World, Types: anytype) Error!void {
         var new = World.init(self.allocator);
-        new.entity = try new.tryCreateEntity();
+        try new.map.ensureTotalCapacity(new.allocator, Types.len);
         inline for (Types) |T| {
-            const value = self.get(self.entity, T) orelse continue;
-            try new.add(new.entity, value);
+            const r = self.map.fetchRemove(typeId(T)) orelse continue;
+            try new.map.putAssumeCapacityNoClobber(r.key, r.value);
         }
         self.deinit();
         self.* = new;
