@@ -6,21 +6,20 @@ const factory = @import("factory.zig");
 const input = @import("input.zig");
 const inventory = @import("global/Inventory.zig");
 const map = @import("map.zig");
-const save = @import("save.zig");
+const player = @import("player.zig");
+const storage = @import("storage.zig");
 const system = @import("system/system.zig");
 const title = @import("title.zig");
 const ui = @import("ui.zig");
 
 const global = struct {
     const Clock = @import("global/Clock.zig");
-    const Maps = @import("global/Maps.zig");
     const Notice = @import("global/Notice.zig");
 };
 
 const World = zhu.ecs.World;
 const actor = component.actor;
 const Transition = component.map.Transition;
-const Position = component.Position;
 
 const MapFade = struct {
     const Phase = enum { out, in };
@@ -38,7 +37,7 @@ var mapFade: MapFade = .{};
 var debug = false;
 var current: Scene = .title;
 var pending: ?Scene = null;
-var config: save.Config = .{};
+var config: storage.Config = .{};
 
 pub fn init(allocator_: zhu.Allocator) void {
     allocator = allocator_;
@@ -46,14 +45,13 @@ pub fn init(allocator_: zhu.Allocator) void {
     world = World.init(allocator.raw);
     world.entity = world.createEntity();
     world.add(world.entity, global.Clock{});
-    world.add(world.entity, global.Maps{});
     world.add(world.entity, inventory.Inventory{});
     world.add(world.entity, global.Notice{});
 
     // 存档状态先就位，UI 只持有这份长期有效的槽位切片。
-    config = save.init(allocator);
+    config = storage.init();
     ui.init(.{
-        .slots = &save.slots,
+        .slots = &config.slots,
         .config = &config,
     });
     title.init();
@@ -71,19 +69,17 @@ pub fn deinit() void {
         .title => {},
         .play => {
             const clock = world.getPtr(world.entity, global.Clock).?;
-            const maps = world.getPtr(world.entity, global.Maps).?;
-            map.exit(&world, maps, clock.day);
+            map.exit(&world, clock.day);
         },
     }
     map.deinit();
-    world.getPtr(world.entity, global.Maps).?.deinit();
     ui.deinit();
     world.deinit();
 }
 
 pub fn update(delta: f32) void {
     if (zhu.key.released(.X)) debug = !debug;
-    defer save.update(config);
+    defer storage.update(config);
 
     input.mouseCaptured = false;
     applyScene();
@@ -150,14 +146,14 @@ fn updatePlayUi(req: ui.UiRequest) void {
         .title => pending = .title,
         .rest => |hours| clock.restHours = hours,
         .save => |slot| {
-            if (!save.saveSlot(&world, slot)) {
+            if (!savePlay(slot)) {
                 ui.showMessage(.{ .text = "保存失败", .fail = true });
                 return;
             }
             ui.showMessage(.{ .text = "保存成功", .fail = false });
         },
         .load => |slot| {
-            if (!save.loadSlot(&world, slot)) {
+            if (!loadPlay(slot)) {
                 ui.showMessage(.{ .text = "读取失败", .fail = true });
                 return;
             }
@@ -200,7 +196,7 @@ fn updatePlay(delta: f32) void {
     system.dialog.update(&world);
     system.chest.update(&world);
     system.rest.update(&world);
-    cameraFollowPlayer(delta);
+    player.follow(&world, delta);
     system.animation.update(&world, delta);
     system.farm.update(&world);
     system.render.update(&world);
@@ -219,22 +215,18 @@ fn updateMapFade(delta: f32) bool {
     switch (phase) {
         .out => {
             const clock = world.getPtr(world.entity, global.Clock).?;
-            const player = world.getIdentity(actor.Player).?;
-            const request = world.get(player, Transition).?;
-            const maps = world.getPtr(world.entity, global.Maps).?;
-            map.exit(&world, maps, clock.day);
+            const playerEntity = world.getIdentity(actor.Player).?;
+            const request = world.get(playerEntity, Transition).?;
+            map.exit(&world, clock.day);
             const keep = .{
                 global.Clock,
-                global.Maps,
                 inventory.Inventory,
                 global.Notice,
             };
             world.resetKeep(keep);
             world.entity = world.createEntity();
-            const savedMaps = world.getPtr(world.entity, global.Maps).?;
             map.enter(
                 &world,
-                savedMaps,
                 request.target,
                 request.targetId,
                 clock.day,
@@ -254,9 +246,8 @@ fn applyScene() void {
         .title => title.exit(),
         .play => {
             const clock = world.getPtr(world.entity, global.Clock).?;
-            const maps = world.getPtr(world.entity, global.Maps).?;
             mapFade = .{};
-            map.exit(&world, maps, clock.day);
+            map.exit(&world, clock.day);
         },
     }
     current, pending = .{ next, null };
@@ -278,19 +269,17 @@ fn enterPlay(loadSlot: ?u8) void {
         // 新游戏重置世界级状态；读档会在基础地图创建后覆盖状态。
         clock.reset();
         world.getPtr(world.entity, global.Notice).?.reset();
-        world.getPtr(world.entity, global.Maps).?.reset();
+        map.resetState();
     }
 
     const keep = .{
         global.Clock,
-        global.Maps,
         inventory.Inventory,
         global.Notice,
     };
     world.resetKeep(keep);
     world.entity = world.createEntity();
-    const maps = world.getPtr(world.entity, global.Maps).?;
-    map.enter(&world, maps, .exterior, -1, clock.day);
+    map.enter(&world, .exterior, -1, clock.day);
     const inv = world.getPtr(world.entity, inventory.Inventory).?;
     inv.reset();
     if (loadSlot == null) {
@@ -303,7 +292,7 @@ fn enterPlay(loadSlot: ?u8) void {
 
     if (loadSlot) |slot| {
         // 存档恢复依赖已经存在的 world/map/player 基础结构。
-        if (!save.loadSlot(&world, slot)) {
+        if (!loadPlay(slot)) {
             pending = .title;
             return;
         }
@@ -311,14 +300,77 @@ fn enterPlay(loadSlot: ?u8) void {
     zhu.audio.playMusic("audio/01_spring_journey.ogg");
 }
 
-fn cameraFollowPlayer(delta: f32) void {
-    const player = world.getIdentity(actor.Player).?;
-    const position = world.get(player, Position).?;
+fn savePlay(slot: u8) bool {
+    const clock = world.getPtr(world.entity, global.Clock).?;
 
-    // 平滑值交给引擎相机限制范围，这里只表达速度随 delta 缩放。
-    const speed: f32 = 9;
-    zhu.camera.smoothFollow(position, speed * delta);
-    zhu.camera.roundPosition();
+    map.saveState(&world, clock.day);
+    const record = captureRecord(clock) catch |err| {
+        std.log.err("capture save slot {} failed: {}", .{ slot, err });
+        return false;
+    };
+    defer freeRecord(record);
+
+    storage.write(slot, record, &config) catch |err| {
+        std.log.err("save slot {} failed: {}", .{ slot, err });
+        return false;
+    };
+    return true;
+}
+
+fn loadPlay(slot: u8) bool {
+    var record = storage.read(slot) catch |err| {
+        std.log.err("load slot {} failed: {}", .{ slot, err });
+        return false;
+    };
+    defer record.deinit();
+
+    restoreRecord(record.value) catch |err| {
+        std.log.err("restore slot {} failed: {}", .{ slot, err });
+        return false;
+    };
+    return true;
+}
+
+fn captureRecord(
+    clock: *const global.Clock,
+) !storage.Record {
+    const inv = world.getPtr(world.entity, inventory.Inventory).?;
+    const savedInventory = try inv.capture(allocator.raw);
+    errdefer allocator.raw.free(savedInventory.slots);
+
+    return .{
+        .timestamp = zhu.window.timestamp().toSeconds(),
+        .time = clock.*,
+        .player = player.capture(&world, map.current),
+        .inventory = savedInventory,
+        .maps = try map.captureState(allocator.raw),
+    };
+}
+
+fn freeRecord(record: storage.Record) void {
+    allocator.raw.free(record.inventory.slots);
+    map.freeCapture(allocator.raw, record.maps);
+}
+
+fn restoreRecord(record: storage.Record) !void {
+    const clock = world.getPtr(world.entity, global.Clock).?;
+
+    clock.* = record.time;
+    clock.restHours = null;
+
+    map.exit(&world, clock.day);
+    try map.restoreSaved(record.maps, clock.day);
+
+    const keep = .{
+        global.Clock,
+        inventory.Inventory,
+        global.Notice,
+    };
+    world.resetKeep(keep);
+    world.entity = world.createEntity();
+    map.enter(&world, record.player.map, -1, clock.day);
+    player.restore(&world, record.player);
+    world.getPtr(world.entity, inventory.Inventory).?.restore(record.inventory);
 }
 
 fn drawPlay() void {

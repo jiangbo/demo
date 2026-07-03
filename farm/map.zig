@@ -4,9 +4,9 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const factory = @import("factory.zig");
 const loader = @import("map/loader.zig");
+const storage = @import("storage.zig");
 const Spatial = @import("map/Spatial.zig");
 const Land = @import("map/Land.zig");
-const Maps = @import("global/Maps.zig");
 
 const tiled = zhu.extend.tiled;
 const World = zhu.ecs.World;
@@ -21,7 +21,49 @@ pub const Id = component.map.Id;
 pub const StartOffset = component.map.StartOffset;
 pub const Hit = component.map.Hit;
 const Trigger = component.map.Trigger;
-const Thing = Maps.Thing;
+
+const Thing = storage.Thing;
+
+pub const Tile = struct {
+    ground: ?component.farm.Ground = null,
+    thing: ?Thing = null,
+};
+
+pub const Entry = struct {
+    day: u32 = 1,
+    tiles: []Tile = &.{},
+};
+
+const SaveTile = storage.MapTile;
+const Save = storage.Map;
+
+const State = struct {
+    items: std.EnumArray(Id, Entry) = .initFill(.{}),
+
+    fn ensure(self: *State, id: Id, tileCount: usize, day: u32) *Entry {
+        const entry = self.items.getPtr(id);
+        if (entry.tiles.len != 0) return entry;
+
+        entry.tiles = zhu.assets.oomAlloc(Tile, tileCount);
+        @memset(entry.tiles, .{});
+        entry.day = day;
+        return entry;
+    }
+
+    fn reset(self: *State) void {
+        for (std.enums.values(Id)) |id| {
+            const entry = self.items.getPtr(id);
+            if (entry.tiles.len != 0) @memset(entry.tiles, .{});
+            entry.day = 1;
+        }
+    }
+
+    fn deinit(self: *State) void {
+        for (std.enums.values(Id)) |id| {
+            zhu.assets.free(self.items.getPtr(id).tiles);
+        }
+    }
+};
 
 pub const maps = tiled.bind(@import("zon/map/tileSet.zon"), &.{
     @import("zon/map/school.zon"),
@@ -42,6 +84,7 @@ var wetLandImage: zhu.Image = undefined;
 var gpa: zhu.Allocator = undefined;
 var land: Land = .{};
 var spatial: Spatial = .{};
+var states: State = .{};
 
 pub fn init(gpa_: zhu.Allocator) void {
     gpa = gpa_;
@@ -55,18 +98,13 @@ pub fn init(gpa_: zhu.Allocator) void {
 
 pub fn deinit() void {
     vertexes.clearAndFree(gpa.raw);
+    states.deinit();
 }
 
-pub fn enter(
-    world: *World,
-    savedMaps: *Maps,
-    id: Id,
-    targetId: i32,
-    day: u32,
-) void {
+pub fn enter(world: *World, id: Id, targetId: i32, day: u32) void {
     current = id;
     load(gpa, world, maps[@intFromEnum(id)]);
-    restoreState(world, savedMaps, day);
+    restoreState(world, day);
 
     var spawn: ?zhu.Vector2 = null;
     var query = world.query(.{Trigger});
@@ -101,8 +139,8 @@ pub fn update(world: *World) void {
     }
 }
 
-pub fn exit(world: *World, savedMaps: *Maps, day: u32) void {
-    saveState(world, savedMaps, day);
+pub fn exit(world: *World, day: u32) void {
+    saveState(world, day);
     unload();
 }
 
@@ -125,10 +163,14 @@ pub fn unload() void {
     vertexes.clearAndFree(gpa.raw);
 }
 
-pub fn saveState(world: *World, savedMaps: *Maps, day: u32) void {
+pub fn resetState() void {
+    states.reset();
+}
+
+pub fn saveState(world: *World, day: u32) void {
     if (land.tiles.len == 0) return;
 
-    const state = savedMaps.ensure(current, land.tiles.len, day);
+    const state = states.ensure(current, land.tiles.len, day);
     for (land.tiles, 0..) |tile, index| {
         var saved = &state.tiles[index];
         saved.ground = tile.ground;
@@ -141,6 +183,75 @@ pub fn saveState(world: *World, savedMaps: *Maps, day: u32) void {
         }
     }
     state.day = day;
+}
+
+pub fn captureState(allocator: std.mem.Allocator) ![]const Save {
+    const ids = std.enums.values(Id);
+    var result = try std.ArrayList(Save).initCapacity(allocator, ids.len);
+    errdefer {
+        for (result.items) |saved| allocator.free(saved.tiles);
+        result.deinit(allocator);
+    }
+
+    for (ids) |id| {
+        const state = states.items.getPtrConst(id);
+        try result.append(allocator, .{
+            .id = id,
+            .day = state.day,
+            .tiles = try captureTiles(allocator, state),
+        });
+    }
+
+    return try result.toOwnedSlice(allocator);
+}
+
+pub fn freeCapture(allocator: std.mem.Allocator, saved: []const Save) void {
+    for (saved) |entry| allocator.free(entry.tiles);
+    allocator.free(saved);
+}
+
+pub fn restoreSaved(savedMaps: []const Save, day: u32) !void {
+    states.reset();
+    for (savedMaps) |saved| try restoreSavedMap(saved, day);
+}
+
+fn captureTiles(
+    allocator: std.mem.Allocator,
+    state: *const Entry,
+) ![]const SaveTile {
+    var list: std.ArrayList(SaveTile) = .empty;
+    errdefer list.deinit(allocator);
+
+    if (state.tiles.len == 0) return try list.toOwnedSlice(allocator);
+
+    for (state.tiles, 0..) |tile, index| {
+        if (tile.ground == null and tile.thing == null) continue;
+
+        try list.append(allocator, .{
+            .index = @intCast(index),
+            .land = tile.ground,
+            .thing = tile.thing,
+        });
+    }
+
+    return try list.toOwnedSlice(allocator);
+}
+
+fn restoreSavedMap(saved: Save, day: u32) !void {
+    const mapData = &maps[@intFromEnum(saved.id)];
+    const tileCount = mapData.grid.count();
+    const state = states.ensure(saved.id, tileCount, day);
+
+    for (saved.tiles) |tileSave| {
+        if (tileSave.index >= state.tiles.len) return error.InvalidSaveTile;
+
+        const index: usize = @intCast(tileSave.index);
+        const tile = &state.tiles[index];
+        tile.ground = tileSave.land;
+        tile.thing = tileSave.thing;
+    }
+
+    state.day = saved.day;
 }
 
 pub fn hoe(position: zhu.Vector2) bool {
@@ -168,7 +279,7 @@ pub fn canMove(world: *World, entity: zhu.ecs.Entity, to: zhu.Vector2) bool {
     return spatial.canMove(world, entity, to);
 }
 
-fn thingAt(world: *World, tile: Land.Tile) ?Maps.Thing {
+fn thingAt(world: *World, tile: Land.Tile) ?Thing {
     const object = tile.object orelse return null;
     return switch (object.kind) {
         .crop => .{ .crop = world.get(object.entity, farm.Crop).? },
@@ -180,8 +291,8 @@ fn thingAt(world: *World, tile: Land.Tile) ?Maps.Thing {
     };
 }
 
-fn restoreState(world: *World, savedMaps: *Maps, day: u32) void {
-    const state = savedMaps.ensure(current, land.tiles.len, day);
+fn restoreState(world: *World, day: u32) void {
+    const state = states.ensure(current, land.tiles.len, day);
     advanceState(state, day);
 
     for (state.tiles, 0..) |saved, index| {
@@ -254,7 +365,7 @@ fn clearProductTiles(entity: zhu.ecs.Entity) void {
     }
 }
 
-fn advanceState(state: *Maps.Entry, day: u32) void {
+fn advanceState(state: *Entry, day: u32) void {
     if (day <= state.day) return;
 
     const days = day - state.day;
@@ -262,7 +373,7 @@ fn advanceState(state: *Maps.Entry, day: u32) void {
     state.day = day;
 }
 
-fn advanceStateOneDay(state: *Maps.Entry) void {
+fn advanceStateOneDay(state: *Entry) void {
     for (state.tiles) |*tile| {
         const watered = tile.ground == .wet;
         // 浇水只影响当天，跨天后湿地统一变回干地。
@@ -384,7 +495,7 @@ test "触发器落点会按 start_offset 放到区域外侧" {
 }
 
 test "地图状态作物会按离线天数推进" {
-    var tiles = [_]Maps.Tile{.{
+    var tiles = [_]Tile{.{
         .ground = .wet,
         .thing = .{ .crop = .{
             .kind = .strawberry,
@@ -393,7 +504,7 @@ test "地图状态作物会按离线天数推进" {
             .next = 2,
         } },
     }};
-    var state = Maps.Entry{
+    var state = Entry{
         .day = 1,
         .tiles = &tiles,
     };
@@ -409,12 +520,15 @@ test "地图状态作物会按离线天数推进" {
         factory.cropStage(.strawberry, .sprout).duration,
         crop.next,
     );
-    try std.testing.expectEqual(component.farm.Ground.dry, state.tiles[0].ground);
+    try std.testing.expectEqual(
+        component.farm.Ground.dry,
+        state.tiles[0].ground,
+    );
     try std.testing.expectEqual(@as(u32, 2), state.day);
 }
 
 test "湿地离线跨天只加速一天" {
-    var tiles = [_]Maps.Tile{.{
+    var tiles = [_]Tile{.{
         .ground = .wet,
         .thing = .{ .crop = .{
             .kind = .strawberry,
@@ -423,7 +537,7 @@ test "湿地离线跨天只加速一天" {
             .next = 4,
         } },
     }};
-    var state = Maps.Entry{
+    var state = Entry{
         .day = 1,
         .tiles = &tiles,
     };
@@ -435,7 +549,10 @@ test "湿地离线跨天只加速一天" {
     };
     try std.testing.expectEqual(farm.GrowthEnum.seed, crop.stage);
     try std.testing.expectEqual(@as(f32, 1), crop.next);
-    try std.testing.expectEqual(component.farm.Ground.dry, state.tiles[0].ground);
+    try std.testing.expectEqual(
+        component.farm.Ground.dry,
+        state.tiles[0].ground,
+    );
 }
 
 test "成熟作物跨天不会继续推进" {
@@ -482,8 +599,14 @@ test "当前地图跨天推进作物后刷新贴图和渲染层" {
     const stage = factory.cropStage(.strawberry, .sprout);
     try std.testing.expectEqual(farm.GrowthEnum.sprout, result.stage);
     try std.testing.expectEqual(stage.duration, result.next);
-    try std.testing.expectEqual(stage.sprite.offset, world.get(crop, render.Sprite).?.offset);
-    try std.testing.expectEqual(render.Layer.actor, world.get(crop, render.Render).?.layer);
+    try std.testing.expectEqual(
+        stage.sprite.offset,
+        world.get(crop, render.Sprite).?.offset,
+    );
+    try std.testing.expectEqual(
+        render.Layer.actor,
+        world.get(crop, render.Render).?.layer,
+    );
 }
 
 test "当前地图和离线地图跨天推进规则一致" {
@@ -510,7 +633,7 @@ test "当前地图和离线地图跨天推进规则一致" {
     tile.set(.crop, cropEntity);
     world.addEvent(component.event.DayChanged{ .day = 2 });
 
-    var tiles = [_]Maps.Tile{.{
+    var tiles = [_]Tile{.{
         .ground = .wet,
         .thing = .{ .crop = .{
             .kind = .strawberry,
@@ -518,7 +641,7 @@ test "当前地图和离线地图跨天推进规则一致" {
             .next = 2,
         } },
     }};
-    var state = Maps.Entry{
+    var state = Entry{
         .day = 1,
         .tiles = &tiles,
     };
@@ -561,7 +684,10 @@ test "恢复已打开宝箱会移除动画组件" {
 
     try std.testing.expect(world.get(chest, item.Chest).?.opened);
     try std.testing.expect(!world.has(chest, actor.Animation));
-    try std.testing.expectEqual(16, world.get(chest, render.Sprite).?.image.offset.x);
+    try std.testing.expectEqual(
+        16,
+        world.get(chest, render.Sprite).?.image.offset.x,
+    );
 }
 
 test "恢复地图产出对象会写回保存的产物和生命" {
@@ -629,14 +755,14 @@ test "保存已消失产出对象会写成 gone" {
     current = .school;
     defer current = old;
 
-    var mapsData: Maps = .{};
-    const state = mapsData.ensure(current, land.tiles.len, 1);
+    states.reset();
+    const state = states.ensure(current, land.tiles.len, 1);
     defer {
         zhu.assets.free(state.tiles);
         state.* = .{};
     }
     land.tiles[0].gone = .product;
-    saveState(&world, &mapsData, 1);
+    saveState(&world, 1);
 
     switch (state.tiles[0].thing.?) {
         .gone => {},

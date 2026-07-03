@@ -1,12 +1,12 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const store = @import("../save.zig");
+const storage = @import("../storage.zig");
 const menus: []const zhu.widget.Menu = @import("save.zon");
 
 pub const Mode = enum { load, save };
 pub const Request = union(enum) { close, save: u8, load: u8 };
-pub const Slot = store.Slot;
+pub const Slot = storage.Slot;
 
 var mode: Mode = .load;
 var records: []const Slot = &.{};

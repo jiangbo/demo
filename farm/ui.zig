@@ -9,7 +9,7 @@ const time = @import("ui/time.zig");
 const pause = @import("ui/pause.zig");
 const save = @import("ui/save.zig");
 
-const Config = @import("save.zig").Config;
+const Config = @import("storage.zig").Config;
 
 pub const Message = struct { text: []const u8, fail: bool };
 pub const UiRequest = union(enum) {

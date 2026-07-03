@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
 const input = @import("../input.zig");
+const storage = @import("../storage.zig");
 const Notice = @import("Notice.zig");
 
 const ItemEnum = component.item.ItemEnum;
@@ -20,12 +21,6 @@ const World = zhu.ecs.World;
 pub const Stack = Store.Stack;
 pub const Item = Stack;
 pub const UseResult = union(enum) { none, full, item: Stack };
-pub const Save = struct {
-    activeHotbar: usize = 0,
-    activePage: usize = 0,
-    slots: []const Stack = &.{},
-    hotbar: [Bar.zon.slots.len]?usize = @splat(null),
-};
 
 const Hover = union(enum) { body, slot: usize, prev, next, close };
 
@@ -119,7 +114,12 @@ const Bag = struct {
         };
     }
 
-    fn move(self: *Bag, inv: *Inventory, fromIndex: usize, toIndex: usize) void {
+    fn move(
+        self: *Bag,
+        inv: *Inventory,
+        fromIndex: usize,
+        toIndex: usize,
+    ) void {
         _ = self;
         if (fromIndex == toIndex) return;
 
@@ -297,7 +297,12 @@ const Bar = struct {
         return inv.store.getPtr(self.refs[self.active] orelse return null);
     }
 
-    fn bind(self: *Bar, inv: *Inventory, barIndex: usize, bagIndex: usize) void {
+    fn bind(
+        self: *Bar,
+        inv: *Inventory,
+        barIndex: usize,
+        bagIndex: usize,
+    ) void {
         self.clearItemRefs(inv, inv.store.get(bagIndex).?.item);
         self.refs[barIndex] = bagIndex;
     }
@@ -402,7 +407,8 @@ const Bar = struct {
 
         for (self.refs, zon.slots, 0..) |slotIndex, offset, i| {
             const rect = zhu.Rect.init(offset, zon.slotSize);
-            const slot = inv.store.get(slotIndex orelse continue) orelse continue;
+            const slotIndexValue = slotIndex orelse continue;
+            const slot = inv.store.get(slotIndexValue) orelse continue;
             if (inv.itemDrag.hideBar(i)) continue;
 
             drawItemIcon(slot.item, rect.center());
@@ -410,7 +416,8 @@ const Bar = struct {
 
         for (self.refs, zon.slots, 0..) |slotIndex, offset, i| {
             const rect = zhu.Rect.init(offset, zon.slotSize);
-            const slot = inv.store.get(slotIndex orelse continue) orelse continue;
+            const slotIndexValue = slotIndex orelse continue;
+            const slot = inv.store.get(slotIndexValue) orelse continue;
             if (slot.count <= 1) continue;
             if (inv.itemDrag.hideBar(i)) continue;
 
@@ -577,20 +584,34 @@ pub const Inventory = struct {
         input.mouseCaptured = false;
     }
 
-    pub fn capture(self: *Inventory) Save {
+    pub fn capture(
+        self: *Inventory,
+        allocator: std.mem.Allocator,
+    ) !storage.Inventory {
+        const slots = try allocator.alloc(storage.Item, self.store.stacks.len);
+        for (self.store.stacks, slots) |source, *target| {
+            target.* = .{
+                .item = source.item,
+                .count = source.count,
+            };
+        }
+
         return .{
             .activeHotbar = self.bar.active,
             .activePage = self.bag.activePage,
-            .slots = self.store.stacks[0..],
+            .slots = slots,
             .hotbar = self.bar.refs,
         };
     }
 
-    pub fn restore(self: *Inventory, data: Save) void {
+    pub fn restore(self: *Inventory, data: storage.Inventory) void {
         self.reset();
         for (data.slots, 0..) |slot, index| {
             if (index >= self.store.stacks.len) break;
-            self.store.stacks[index] = slot;
+            self.store.stacks[index] = .{
+                .item = slot.item,
+                .count = slot.count,
+            };
         }
         self.bar.refs = data.hotbar;
         self.bar.active = data.activeHotbar;
@@ -747,6 +768,33 @@ test "添加物品会合并并自动绑定快捷栏" {
     try std.testing.expectEqual(.strawberry, inv.activeItem().?);
     const index = inv.bar.refs[inv.bar.active].?;
     try std.testing.expectEqual(10, inv.store.stacks[index].count);
+}
+
+test "restore 会恢复库存槽和快捷栏" {
+    var inv: Inventory = .{};
+    inv.reset();
+
+    const stacks = [_]storage.Item{
+        .{ .item = .strawberrySeed, .count = 7 },
+    };
+    var data = storage.Inventory{
+        .activeHotbar = 3,
+        .activePage = 1,
+        .slots = &stacks,
+    };
+    data.hotbar[3] = 0;
+
+    inv.restore(data);
+
+    try std.testing.expectEqual(
+        component.item.ItemEnum.strawberrySeed,
+        inv.activeItem().?,
+    );
+    const index = inv.bar.refs[inv.bar.active].?;
+    try std.testing.expectEqual(7, inv.store.stacks[index].count);
+    try std.testing.expectEqual(0, inv.bar.refs[3].?);
+    try std.testing.expectEqual(3, inv.bar.active);
+    try std.testing.expectEqual(1, inv.bag.activePage);
 }
 
 test "新增工具会占用独立槽位" {

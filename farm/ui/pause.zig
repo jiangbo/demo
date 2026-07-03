@@ -1,12 +1,12 @@
 const zhu = @import("zhu");
 
-const save = @import("../save.zig");
+const storage = @import("../storage.zig");
 
 const panelSize: zhu.Vector2 = .{ .x = 208, .y = 344 };
 const Mode = enum { title, play };
 pub const Request = enum { close, save, load, title };
 
-pub var cfg: *save.Config = undefined;
+pub var cfg: *storage.Config = undefined;
 var menu: zhu.widget.Menu = @import("pause.zon");
 
 pub fn open(mode: Mode) void {
