@@ -12,8 +12,8 @@ var mode: Mode = .load;
 var slots: []const Slot = &.{};
 var confirmSlot: ?u8 = null;
 var confirmTitleBuffer: [40]u8 = undefined;
-var disabledSlots: [store.slotCount]usize = undefined;
-var disabledCount: usize = 0;
+var disabledBuffer: [menus[0].buttons.len]usize = undefined;
+var disabled: std.ArrayList(usize) = .initBuffer(&disabledBuffer);
 var slotMenu: zhu.widget.Menu = menus[0];
 var confirmMenu: zhu.widget.Menu = menus[1];
 
@@ -24,9 +24,15 @@ pub fn init(slotStates: []const Slot) void {
 }
 
 pub fn open(next: Mode) void {
+    disabled.clearRetainingCapacity();
+    for (0..slots.len) |index| {
+        if (slotEnabled(index)) continue;
+        disabled.appendAssumeCapacity(index);
+    }
+    slotMenu.disabled = disabled.items;
+
     mode = next;
     confirmSlot = null;
-    rebuildDisabled();
     slotMenu.title.text = switch (mode) {
         .load => "Load Game",
         .save => "Save Game",
@@ -63,16 +69,6 @@ pub fn draw() void {
     slotMenu.draw();
     for (0..slots.len) |index| drawSlot(index);
     if (confirmSlot != null) confirmMenu.draw();
-}
-
-fn rebuildDisabled() void {
-    disabledCount = 0;
-    for (0..slots.len) |index| {
-        if (slotEnabled(index)) continue;
-        disabledSlots[disabledCount] = index;
-        disabledCount += 1;
-    }
-    slotMenu.disabled = disabledSlots[0..disabledCount];
 }
 
 fn chooseSlot(slot: usize) ?Request {
