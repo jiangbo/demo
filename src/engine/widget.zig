@@ -116,7 +116,7 @@ pub fn popupPosition(popup: Popup) Vector2 {
     return pos.clamp(.zero, bounds.sub(popup.size).max(.zero));
 }
 
-pub fn StackStore(T: type, patchSize: usize, limitOf: fn (T) u32) type {
+pub fn StackStore(T: type, len: usize, limitOf: fn (T) u32) type {
     return struct {
         pub const Stack = struct { item: T, count: u32 = 0 };
         pub const Count = struct { item: T, count: u32 = 1 };
@@ -141,7 +141,7 @@ pub fn StackStore(T: type, patchSize: usize, limitOf: fn (T) u32) type {
             items: []const Count,
         };
 
-        stacks: []Stack,
+        stacks: [len]Stack = @splat(.{ .item = undefined }),
 
         pub fn add(self: *@This(), item: T, count: u32) u32 {
             const args: Count = .{ .item = item, .count = count };
@@ -154,7 +154,7 @@ pub fn StackStore(T: type, patchSize: usize, limitOf: fn (T) u32) type {
         }
 
         pub fn addAll(self: *@This(), item: T, count: u32) bool {
-            var patches: [patchSize]Patch = undefined;
+            var patches: [len + 1]Patch = undefined;
 
             const args: Count = .{ .item = item, .count = count };
             const done = self.put(&patches, .{ .adds = &.{args} });
@@ -165,7 +165,7 @@ pub fn StackStore(T: type, patchSize: usize, limitOf: fn (T) u32) type {
         }
 
         pub fn subAll(self: *@This(), item: T, count: u32) bool {
-            var patches: [patchSize]Patch = undefined;
+            var patches: [len + 1]Patch = undefined;
 
             const args: Count = .{ .item = item, .count = count };
             const done = self.put(&patches, .{ .subs = &.{args} });
@@ -185,7 +185,7 @@ pub fn StackStore(T: type, patchSize: usize, limitOf: fn (T) u32) type {
         }
 
         pub fn first(self: *const @This(), item: T) ?usize {
-            for (self.stacks, 0..) |*stack, index| {
+            for (&self.stacks, 0..) |*stack, index| {
                 if (stack.count == 0) continue;
                 if (std.meta.eql(stack.item, item)) return index;
             }
@@ -204,7 +204,7 @@ pub fn StackStore(T: type, patchSize: usize, limitOf: fn (T) u32) type {
         }
 
         pub fn clear(self: *@This()) void {
-            for (self.stacks) |*stack| stack.count = 0;
+            for (&self.stacks) |*stack| stack.count = 0;
         }
 
         pub fn move(self: *@This(), from: usize, to: usize) ?Move {
@@ -269,7 +269,7 @@ pub fn StackStore(T: type, patchSize: usize, limitOf: fn (T) u32) type {
                 if (entry.count == 0) continue;
 
                 var remaining = entry.count;
-                for (self.stacks, 0..) |*stack, index| {
+                for (&self.stacks, 0..) |*stack, index| {
                     if (remaining == 0) break;
                     if (stack.count == 0) continue;
                     if (!std.meta.eql(stack.item, entry.item)) continue;
@@ -314,7 +314,7 @@ pub fn StackStore(T: type, patchSize: usize, limitOf: fn (T) u32) type {
         }
 
         pub fn useAt(self: *@This(), index: usize, count: Count) bool {
-            var patches: [patchSize]Patch = undefined;
+            var patches: [len + 1]Patch = undefined;
             var buffer = std.ArrayList(Patch).initBuffer(&patches);
 
             const taken = self.subAt(index, 1) orelse return false;
@@ -341,7 +341,7 @@ pub fn StackStore(T: type, patchSize: usize, limitOf: fn (T) u32) type {
         }
 
         fn fill(self: *@This(), args: Count, limit: u32) ?Entry {
-            for (self.stacks, 0..) |*stack, index| {
+            for (&self.stacks, 0..) |*stack, index| {
                 if (stack.count != 0) continue;
 
                 const moved = @min(limit, args.count);

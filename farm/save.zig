@@ -2,7 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("component.zig");
-const inventory = @import("inventory.zig");
+const inventory = @import("global/Inventory.zig");
 const map = @import("map.zig");
 const Clock = @import("global/Clock.zig");
 const Maps = @import("state.zig").Maps;
@@ -258,7 +258,7 @@ fn capture(world: *World, clock: *const Clock, maps: *const Maps) !SaveData {
             .position = position,
             .facing = actor.facing,
         },
-        .inventory = inventory.capture(),
+        .inventory = world.getPtr(world.entity, inventory.Inventory).?.capture(),
         .maps = try captureMaps(maps),
     };
 }
@@ -325,7 +325,7 @@ fn apply(world: *World, clock: *Clock, maps: *Maps, data: SaveData) !void {
     world.entity = world.createEntity();
     map.enter(world, maps, data.player.map, -1, clock.day);
     restorePlayer(world, data.player);
-    inventory.restore(data.inventory);
+    world.getPtr(world.entity, inventory.Inventory).?.restore(data.inventory);
 }
 
 fn restoreMaps(data: SaveData, maps: *Maps, day: u32) void {
@@ -416,8 +416,8 @@ test "parseSlotSummary 会忽略完整存档的其它字段" {
 }
 
 test "inventory.restore 会恢复库存槽和快捷栏" {
-    inventory.reset();
-    defer inventory.reset();
+    var inv: inventory.Inventory = .{};
+    inv.reset();
 
     const stacks = [_]inventory.Stack{
         .{ .item = .strawberrySeed, .count = 7 },
@@ -429,15 +429,15 @@ test "inventory.restore 会恢复库存槽和快捷栏" {
     };
     data.hotbar[3] = 0;
 
-    inventory.restore(data);
+    inv.restore(data);
 
     try std.testing.expectEqual(
         component.item.ItemEnum.strawberrySeed,
-        inventory.activeItem().?,
+        inv.activeItem().?,
     );
-    const index = inventory.bar.refs[inventory.bar.active].?;
-    try std.testing.expectEqual(7, inventory.store.stacks[index].count);
-    try std.testing.expectEqual(0, inventory.bar.refs[3].?);
-    try std.testing.expectEqual(3, inventory.bar.active);
-    try std.testing.expectEqual(1, inventory.bag.activePage);
+    const index = inv.bar.refs[inv.bar.active].?;
+    try std.testing.expectEqual(7, inv.store.stacks[index].count);
+    try std.testing.expectEqual(0, inv.bar.refs[3].?);
+    try std.testing.expectEqual(3, inv.bar.active);
+    try std.testing.expectEqual(1, inv.bag.activePage);
 }

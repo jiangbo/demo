@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 const input = @import("input.zig");
-const inventory = @import("inventory.zig");
+const inventory = @import("global/Inventory.zig");
 const store = @import("save.zig");
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
 
@@ -115,7 +115,7 @@ pub fn close() void {
 
 pub fn draw(world: *zhu.ecs.World) void {
     dialog.draw(world);
-    inventory.draw();
+    world.getPtr(world.entity, inventory.Inventory).?.draw();
 
     if (activePopup) |active| {
         switch (active) {

@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const input = @import("../input.zig");
-const inventory = @import("../inventory.zig");
+const inventory = @import("../global/Inventory.zig");
 const map = @import("../map.zig");
 
 const Actor = component.actor.Actor;
@@ -91,7 +91,8 @@ fn updateTargetAction(world: *World, player: Entity) void {
     const target = world.getPtr(player, Target).?;
     target.active = false;
 
-    const item = inventory.activeItem() orelse return;
+    const inv = world.getPtr(world.entity, inventory.Inventory).?;
+    const item = inv.activeItem() orelse return;
     if (!isTargetItem(item)) return;
 
     const position = targetPosition(world, player) orelse return;
@@ -142,9 +143,18 @@ fn facingFromDirection(direction: zhu.Vector2) Facing {
     return if (direction.y < 0) .up else .down;
 }
 
-fn setActiveItem(item: ItemEnum, count: u32) void {
-    inventory.reset();
-    _ = inventory.add(item, count);
+fn testInventory(world: *World) *inventory.Inventory {
+    if (world.getPtr(world.entity, inventory.Inventory)) |inv| return inv;
+
+    world.entity = world.createEntity();
+    world.add(world.entity, inventory.Inventory{});
+    return world.getPtr(world.entity, inventory.Inventory).?;
+}
+
+fn setActiveItem(world: *World, item: ItemEnum, count: u32) void {
+    const inv = testInventory(world);
+    inv.reset();
+    _ = inv.add(item, count);
 }
 
 fn addTestPlayer(world: *World, position: zhu.Vector2) Entity {
@@ -167,9 +177,10 @@ test "玩家控制会把方向键写入速度" {
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    _ = testInventory(&world);
 
     const player = addTestPlayer(&world, .xy(24, 40));
-    setActiveItem(.strawberry, 1);
+    setActiveItem(&world, .strawberry, 1);
 
     update(&world);
 
@@ -192,6 +203,7 @@ test "忙碌状态会跳过输入并保持动作" {
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    _ = testInventory(&world);
 
     const player = addTestPlayer(&world, .xy(24, 40));
     world.getPtr(player, Actor).?.action = .hoe;
@@ -216,12 +228,12 @@ test "目标框只在工具或种子选中时显示" {
     defer world.deinit();
 
     const player = addTestPlayer(&world, .xy(24, 40));
-    setActiveItem(.strawberry, 1);
+    setActiveItem(&world, .strawberry, 1);
 
     update(&world);
     try std.testing.expect(!world.get(player, Target).?.active);
 
-    setActiveItem(.hoe, 1);
+    setActiveItem(&world, .hoe, 1);
     update(&world);
     try std.testing.expect(world.get(player, Target).?.active);
 }
@@ -232,11 +244,10 @@ test "点击目标只写入使用意图" {
 
     zhu.camera.init(.xy(640, 360));
     zhu.window.mouse = testTarget;
-    setActiveItem(.hoe, 1);
-    zhu.mouse.set(.LEFT, true);
-
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    setActiveItem(&world, .hoe, 1);
+    zhu.mouse.set(.LEFT, true);
 
     const player = addTestPlayer(&world, .xy(24, 40));
 

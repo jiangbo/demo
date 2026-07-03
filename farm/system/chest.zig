@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
-const inventory = @import("../inventory.zig");
+const inventory = @import("../global/Inventory.zig");
 const Notice = @import("../state.zig").Notice;
 
 const World = zhu.ecs.World;
@@ -25,7 +25,8 @@ pub fn update(world: *World, notice: *Notice) void {
         const count = chest.items.get(itemType);
         if (count == 0) continue;
 
-        const remaining = inventory.add(itemType, count);
+        const inv = world.getPtr(world.entity, inventory.Inventory).?;
+        const remaining = inv.add(itemType, count);
         chest.items.set(itemType, remaining);
         taken.items.set(itemType, count - remaining);
     }
@@ -97,13 +98,18 @@ fn addTestChest(world: *World, itemType: ItemEnum, count: u32) zhu.ecs.Entity {
     return chest;
 }
 
+fn addTestInventory(world: *World) *inventory.Inventory {
+    world.entity = world.createEntity();
+    world.add(world.entity, inventory.Inventory{});
+    return world.getPtr(world.entity, inventory.Inventory).?;
+}
+
 test "chest 交互会打开宝箱并移除碰撞" {
-    inventory.reset();
-    defer inventory.reset();
     var notice: Notice = .{};
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    _ = addTestInventory(&world);
 
     const chest = addTestChest(&world, .potato, 2);
     world.addIdentity(chest, Interact);
@@ -122,14 +128,13 @@ test "chest 交互会打开宝箱并移除碰撞" {
 }
 
 test "chest 背包满时奖励留在宝箱里" {
-    inventory.reset();
-    defer inventory.reset();
     var notice: Notice = .{};
 
     var world = World.init(std.testing.allocator);
     defer world.deinit();
+    const inv = addTestInventory(&world);
 
-    for (inventory.store.stacks) |*stack| {
+    for (&inv.store.stacks) |*stack| {
         stack.* = .{ .item = .hoe, .count = 1 };
     }
 

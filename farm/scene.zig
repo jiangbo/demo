@@ -4,7 +4,7 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const factory = @import("factory.zig");
 const input = @import("input.zig");
-const inventory = @import("inventory.zig");
+const inventory = @import("global/Inventory.zig");
 const map = @import("map.zig");
 const save = @import("save.zig");
 const state = @import("state.zig");
@@ -64,6 +64,7 @@ pub fn init(allocator_: zhu.Allocator) void {
     world = World.init(allocator.raw);
     world.entity = world.createEntity();
     world.add(world.entity, global.Clock{});
+    world.add(world.entity, inventory.Inventory{});
 
     // 存档状态先就位，UI 只持有这份长期有效的槽位切片。
     config = save.init(allocator);
@@ -203,7 +204,7 @@ fn updatePlay(delta: f32) void {
     system.light.update(&world);
 
     // 输入先写入意图，移动系统统一结算位置和碰撞。
-    inventory.update(&session.notice);
+    world.getPtr(world.entity, inventory.Inventory).?.update(&session.notice);
     system.control.update(&world);
     system.life.update(&world, delta);
     system.wander.update(&world, delta);
@@ -240,7 +241,7 @@ fn updateMapFade(delta: f32) bool {
             const player = world.getIdentity(actor.Player).?;
             const request = world.get(player, Transition).?;
             map.exit(&world, &session.maps, clock.day);
-            world.resetKeep(.{global.Clock});
+            world.resetKeep(.{ global.Clock, inventory.Inventory });
             world.entity = world.createEntity();
             map.enter(
                 &world,
@@ -290,16 +291,17 @@ fn enterPlay(loadSlot: ?u8) void {
         session.maps.reset();
     }
 
-    world.resetKeep(.{global.Clock});
+    world.resetKeep(.{ global.Clock, inventory.Inventory });
     world.entity = world.createEntity();
     map.enter(&world, &session.maps, .exterior, -1, clock.day);
-    inventory.reset();
+    const inv = world.getPtr(world.entity, inventory.Inventory).?;
+    inv.reset();
     if (loadSlot == null) {
-        _ = inventory.add(.hoe, 1);
-        _ = inventory.add(.water, 1);
-        _ = inventory.add(.pickaxe, 1);
-        _ = inventory.add(.axe, 1);
-        _ = inventory.add(.sickle, 1);
+        _ = inv.add(.hoe, 1);
+        _ = inv.add(.water, 1);
+        _ = inv.add(.pickaxe, 1);
+        _ = inv.add(.axe, 1);
+        _ = inv.add(.sickle, 1);
     }
 
     if (loadSlot) |slot| {
