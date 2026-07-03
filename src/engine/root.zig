@@ -33,6 +33,7 @@ pub const Animation = graphics.Animation;
 pub const EnumAnimation = graphics.EnumAnimation;
 pub const Allocator = assets.memory.OomAllocator;
 
+pub const clamp = std.math.clamp;
 pub const format = text.format;
 pub const getImage = assets.getImageByPath;
 pub const oom = assets.memory.oom;

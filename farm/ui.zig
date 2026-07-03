@@ -24,7 +24,7 @@ var popupMessage: ?Message = null;
 
 pub const Init = struct {
     slots: []const save.Slot,
-    speed: *f32,
+    config: *store.Config,
 };
 
 pub fn init(args: Init) void {
@@ -34,8 +34,8 @@ pub fn init(args: Init) void {
         .patch = .{ .min = .xy(3, 4), .max = .xy(3, 3) },
     });
 
+    pause.cfg = args.config;
     save.init(args.slots);
-    pause.speed = args.speed;
     rest.menu.centerInWindow();
 }
 
@@ -292,7 +292,7 @@ pub const pause = struct {
     const Mode = enum { title, play };
     pub const Request = enum { close, save, load, title };
 
-    var speed: *f32 = undefined;
+    var cfg: *store.Config = undefined;
     var menu: zhu.widget.Menu = menus[2];
 
     pub fn open(mode: Mode) void {
@@ -309,15 +309,12 @@ pub const pause = struct {
             1 => return .save, // 选择槽位后保存
             2 => return .load, // 选择槽位后读取
             3 => return .title,
-            4 => {
-                // 时钟倍率不能减到 0，否则游戏时间会停止推进。
-                speed.* = @max(0.1, speed.* - 0.1);
-            },
-            5 => speed.* += 0.1, // 加速
-            6 => zhu.audio.changeMusicVolume(-0.1), // 减小音乐
-            7 => zhu.audio.changeMusicVolume(0.1), // 增大音乐
-            8 => zhu.audio.changeSoundVolume(-0.1), // 减小音效
-            9 => zhu.audio.changeSoundVolume(0.1), // 增加音效
+            4 => cfg.speed = @max(0.1, cfg.speed - 0.1),
+            5 => cfg.speed += 0.1, // 加速
+            6 => cfg.music = zhu.clamp(cfg.music - 0.1, 0, 1),
+            7 => cfg.music = zhu.clamp(cfg.music + 0.1, 0, 1),
+            8 => cfg.sound = zhu.clamp(cfg.sound - 0.1, 0, 1),
+            9 => cfg.sound = zhu.clamp(cfg.sound + 0.1, 0, 1),
             else => unreachable,
         };
         return null;
@@ -337,12 +334,12 @@ pub const pause = struct {
         for (0..3) |index| {
             var buffer: [40]u8 = undefined;
             const string: []const u8 = switch (index) {
-                0 => zhu.format(&buffer, "Speed {d:.2}x", .{speed.*}),
+                0 => zhu.format(&buffer, "Speed {d:.2}x", .{cfg.speed}),
                 1 => zhu.format(&buffer, "Music {d:.0}%", .{
-                    zhu.audio.musicVolume.load(.acquire) * 100,
+                    cfg.music * 100,
                 }),
                 2 => zhu.format(&buffer, "SFX {d:.0}%", .{
-                    zhu.audio.soundVolume.load(.acquire) * 100,
+                    cfg.sound * 100,
                 }),
                 else => unreachable,
             };

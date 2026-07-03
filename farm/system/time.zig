@@ -2,7 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("../component.zig");
-const Clock = @import("../resource/Clock.zig");
+const Clock = @import("../global/Clock.zig");
 
 const event = component.event;
 

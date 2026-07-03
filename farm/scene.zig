@@ -11,8 +11,8 @@ const state = @import("state.zig");
 const title = @import("title.zig");
 const ui = @import("ui.zig");
 
-const resource = struct {
-    const Clock = @import("resource/Clock.zig");
+const global = struct {
+    const Clock = @import("global/Clock.zig");
 };
 
 const system = struct {
@@ -47,9 +47,6 @@ const MapFade = struct {
 };
 
 const Scene = union(enum) { title, play: ?u8 };
-const Config = struct {
-    speed: f32 = 1,
-};
 
 var world: World = undefined;
 var allocator: zhu.Allocator = undefined;
@@ -59,21 +56,21 @@ var debug = false;
 var current: Scene = .title;
 var pending: ?Scene = null;
 var session: state.Session = .{};
-var config: Config = .{};
+var config: save.Config = .{};
 
 pub fn init(allocator_: zhu.Allocator) void {
     allocator = allocator_;
 
     world = World.init(allocator.raw);
     world.entity = world.createEntity();
-    world.add(world.entity, resource.Clock{});
+    world.add(world.entity, global.Clock{});
 
     // 存档状态先就位，UI 只持有这份长期有效的槽位切片。
-    save.init(allocator);
+    config = save.init(allocator);
     session.notice.init();
     ui.init(.{
         .slots = &save.slots,
-        .speed = &config.speed,
+        .config = &config,
     });
     title.init();
     map.init(allocator);
@@ -91,7 +88,7 @@ pub fn deinit() void {
     switch (current) {
         .title => {},
         .play => {
-            const clock = world.getPtr(world.entity, resource.Clock).?;
+            const clock = world.getPtr(world.entity, global.Clock).?;
             map.exit(&world, &session.maps, clock.day);
         },
     }
@@ -103,6 +100,7 @@ pub fn deinit() void {
 
 pub fn update(delta: f32) void {
     if (zhu.key.released(.X)) debug = !debug;
+    defer save.update(config);
 
     input.mouseCaptured = false;
     applyScene();
@@ -163,7 +161,7 @@ fn drawDebug() void {
 }
 
 fn updatePlayUi(req: ui.UiRequest) void {
-    const clock = world.getPtr(world.entity, resource.Clock).?;
+    const clock = world.getPtr(world.entity, global.Clock).?;
     switch (req) {
         .block => {},
         .title => pending = .title,
@@ -186,7 +184,7 @@ fn updatePlayUi(req: ui.UiRequest) void {
 }
 
 fn updatePlay(delta: f32) void {
-    const clock = world.getPtr(world.entity, resource.Clock).?;
+    const clock = world.getPtr(world.entity, global.Clock).?;
 
     // 农场主循环顺序在这里显式编排，新增系统需要在这里确定位置。
     if (pending != null) return;
@@ -238,11 +236,11 @@ fn updateMapFade(delta: f32) bool {
 
     switch (phase) {
         .out => {
-            const clock = world.getPtr(world.entity, resource.Clock).?;
+            const clock = world.getPtr(world.entity, global.Clock).?;
             const player = world.getIdentity(actor.Player).?;
             const request = world.get(player, Transition).?;
             map.exit(&world, &session.maps, clock.day);
-            world.resetKeep(.{resource.Clock});
+            world.resetKeep(.{global.Clock});
             world.entity = world.createEntity();
             map.enter(
                 &world,
@@ -265,7 +263,7 @@ fn applyScene() void {
     switch (current) {
         .title => title.exit(),
         .play => {
-            const clock = world.getPtr(world.entity, resource.Clock).?;
+            const clock = world.getPtr(world.entity, global.Clock).?;
             mapFade = .{};
             map.exit(&world, &session.maps, clock.day);
         },
@@ -282,18 +280,17 @@ fn enterScene(next: Scene) void {
 }
 
 fn enterPlay(loadSlot: ?u8) void {
-    const clock = world.getPtr(world.entity, resource.Clock).?;
+    const clock = world.getPtr(world.entity, global.Clock).?;
 
     zhu.camera.main.scale = .square(2);
     if (loadSlot == null) {
         // 新游戏重置世界级状态；读档会在基础地图创建后覆盖状态。
         clock.reset();
-        config = .{};
         session.notice.reset();
         session.maps.reset();
     }
 
-    world.resetKeep(.{resource.Clock});
+    world.resetKeep(.{global.Clock});
     world.entity = world.createEntity();
     map.enter(&world, &session.maps, .exterior, -1, clock.day);
     inventory.reset();

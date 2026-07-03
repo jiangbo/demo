@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const map = @import("../map.zig");
-const Clock = @import("../resource/Clock.zig");
+const Clock = @import("../global/Clock.zig");
 
 const event = component.event;
 const Position = component.Position;
