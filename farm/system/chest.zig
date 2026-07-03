@@ -4,7 +4,7 @@ const zhu = @import("zhu");
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
 const inventory = @import("../global/Inventory.zig");
-const Notice = @import("../state.zig").Notice;
+const Notice = @import("../global/Notice.zig");
 
 const World = zhu.ecs.World;
 const Interact = component.actor.Interact;
@@ -13,11 +13,12 @@ const Chest = component.item.Chest;
 const Animation = component.actor.Animation;
 const Shape = component.motion.Shape;
 
-pub fn update(world: *World, notice: *Notice) void {
+pub fn update(world: *World) void {
     const target = world.getIdentity(Interact) orelse return;
     if (!world.has(target, Chest)) return;
 
     const chest = world.getPtr(target, Chest).?;
+    const notice = world.getPtr(world.entity, Notice).?;
 
     // 宝箱奖励允许部分领取，背包满时剩余数量留在宝箱里。
     var taken = Chest{ .items = .initFill(0) };
@@ -101,12 +102,11 @@ fn addTestChest(world: *World, itemType: ItemEnum, count: u32) zhu.ecs.Entity {
 fn addTestInventory(world: *World) *inventory.Inventory {
     world.entity = world.createEntity();
     world.add(world.entity, inventory.Inventory{});
+    world.add(world.entity, Notice{});
     return world.getPtr(world.entity, inventory.Inventory).?;
 }
 
 test "chest 交互会打开宝箱并移除碰撞" {
-    var notice: Notice = .{};
-
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     _ = addTestInventory(&world);
@@ -114,10 +114,11 @@ test "chest 交互会打开宝箱并移除碰撞" {
     const chest = addTestChest(&world, .potato, 2);
     world.addIdentity(chest, Interact);
 
-    update(&world, &notice);
+    update(&world);
 
     const chestState = world.get(chest, Chest).?;
     const animation = world.get(chest, Animation).?;
+    const notice = world.getPtr(world.entity, Notice).?;
 
     try std.testing.expectEqual(chest, world.getIdentity(Interact).?);
     try std.testing.expect(chestState.opened);
@@ -128,8 +129,6 @@ test "chest 交互会打开宝箱并移除碰撞" {
 }
 
 test "chest 背包满时奖励留在宝箱里" {
-    var notice: Notice = .{};
-
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     const inv = addTestInventory(&world);
@@ -141,9 +140,10 @@ test "chest 背包满时奖励留在宝箱里" {
     const chest = addTestChest(&world, .potato, 2);
     world.addIdentity(chest, Interact);
 
-    update(&world, &notice);
+    update(&world);
 
     const result = world.get(chest, Chest).?;
+    const notice = world.getPtr(world.entity, Notice).?;
     try std.testing.expect(!result.opened);
     try std.testing.expectEqual(2, result.items.get(.potato));
     try std.testing.expect(world.has(chest, Shape));

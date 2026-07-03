@@ -6,6 +6,7 @@ const inventory = @import("global/Inventory.zig");
 const map = @import("map.zig");
 const Clock = @import("global/Clock.zig");
 const Maps = @import("state.zig").Maps;
+const Notice = @import("global/Notice.zig");
 
 const World = zhu.ecs.World;
 const Actor = component.actor.Actor;
@@ -243,6 +244,7 @@ fn capture(world: *World, clock: *const Clock, maps: *const Maps) !SaveData {
         return error.MissingPlayerPosition;
     };
     const actor = world.get(player, Actor) orelse Actor{};
+    const inv = world.getPtr(world.entity, inventory.Inventory).?;
 
     return .{
         .timestamp = zhu.window.timestamp().toSeconds(),
@@ -258,7 +260,7 @@ fn capture(world: *World, clock: *const Clock, maps: *const Maps) !SaveData {
             .position = position,
             .facing = actor.facing,
         },
-        .inventory = world.getPtr(world.entity, inventory.Inventory).?.capture(),
+        .inventory = inv.capture(),
         .maps = try captureMaps(maps),
     };
 }
@@ -321,7 +323,7 @@ fn apply(world: *World, clock: *Clock, maps: *Maps, data: SaveData) !void {
     maps.reset();
     restoreMaps(data, maps, clock.day);
 
-    world.resetKeep(.{Clock});
+    world.resetKeep(.{ Clock, inventory.Inventory, Notice });
     world.entity = world.createEntity();
     map.enter(world, maps, data.player.map, -1, clock.day);
     restorePlayer(world, data.player);

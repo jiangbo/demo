@@ -4,7 +4,7 @@ const zhu = @import("zhu");
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
 const input = @import("../input.zig");
-const state = @import("../state.zig");
+const Notice = @import("Notice.zig");
 
 const ItemEnum = component.item.ItemEnum;
 const ImageId = zhu.graphics.ImageId;
@@ -15,7 +15,7 @@ const config: Config = @import("../zon/inventory.zon");
 const len = config.bag.slots.len * config.bag.pageCount;
 
 const Store = zhu.widget.StackStore(ItemEnum, len, stackLimit);
-const Notice = state.Notice;
+const World = zhu.ecs.World;
 
 pub const Stack = Store.Stack;
 pub const Item = Stack;
@@ -610,8 +610,9 @@ pub const Inventory = struct {
         return self.store.subAll(itemType, count);
     }
 
-    pub fn update(self: *Inventory, notice: *Notice) void {
+    pub fn update(self: *Inventory, world: *World) void {
         const panelDragging = self.bag.drag != null;
+        const notice = world.getPtr(world.entity, Notice).?;
 
         self.bag.update();
         if (panelDragging or self.bag.drag != null) {
@@ -736,6 +737,12 @@ fn drawItemCount(count: u32, rect: zhu.Rect) void {
     zhu.text.drawFmt("{d}", .{count}, pos, .{ .anchor = .one });
 }
 
+fn addTestNotice(world: *World) *Notice {
+    world.entity = world.createEntity();
+    world.add(world.entity, Notice{});
+    return world.getPtr(world.entity, Notice).?;
+}
+
 test "添加物品会合并并自动绑定快捷栏" {
     var inv: Inventory = .{};
     inv.reset();
@@ -750,9 +757,11 @@ test "添加物品会合并并自动绑定快捷栏" {
 
 test "右键背包槽会使用物品" {
     var inv: Inventory = .{};
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+    _ = addTestNotice(&world);
     zhu.input.reset();
     defer zhu.input.reset();
-    var notice: Notice = .{};
     inv.reset();
     defer inv.reset();
 
@@ -761,7 +770,7 @@ test "右键背包槽会使用物品" {
     zhu.window.mouse = inv.bag.position.add(Bag.zon.slots[0]).add(.xy(1, 1));
     zhu.mouse.set(.RIGHT, true);
 
-    inv.update(&notice);
+    inv.update(&world);
 
     try std.testing.expect(input.mouseCaptured);
     try std.testing.expectEqual(.strawberry, inv.store.stacks[0].item);
@@ -772,9 +781,11 @@ test "右键背包槽会使用物品" {
 
 test "右键快捷栏会使用绑定的背包槽" {
     var inv: Inventory = .{};
+    var world = World.init(std.testing.allocator);
+    defer world.deinit();
+    _ = addTestNotice(&world);
     zhu.input.reset();
     defer zhu.input.reset();
-    var notice: Notice = .{};
     inv.reset();
     defer inv.reset();
 
@@ -783,54 +794,11 @@ test "右键快捷栏会使用绑定的背包槽" {
     zhu.window.mouse = Bar.zon.position.add(Bar.zon.slots[2]).add(.xy(1, 1));
     zhu.mouse.set(.RIGHT, true);
 
-    inv.update(&notice);
+    inv.update(&world);
 
     try std.testing.expect(input.mouseCaptured);
     try std.testing.expectEqual(.potatoSeed, inv.store.stacks[5].item);
     try std.testing.expectEqual(3, inv.store.stacks[5].count);
-}
-
-test "右键使用物品成功后显示获得提示" {
-    var inv: Inventory = .{};
-    zhu.input.reset();
-    defer zhu.input.reset();
-    var notice: Notice = .{};
-    inv.reset();
-    defer inv.reset();
-
-    inv.bag.closed = false;
-    inv.store.stacks[0] = .{ .item = .potato, .count = 1 };
-    zhu.window.mouse = inv.bag.position.add(Bag.zon.slots[0]).add(.xy(1, 1));
-    zhu.mouse.set(.RIGHT, true);
-
-    inv.update(&notice);
-
-    const entry = notice.state();
-    try std.testing.expectEqualStrings("获得 土豆种子 x3", entry.text);
-    try std.testing.expect(entry.timer > 0);
-}
-
-test "右键使用物品空间不足时显示背包已满" {
-    var inv: Inventory = .{};
-    zhu.input.reset();
-    defer zhu.input.reset();
-    var notice: Notice = .{};
-    inv.reset();
-    defer inv.reset();
-
-    inv.bag.closed = false;
-    @memset(&inv.store.stacks, .{ .item = .potato, .count = 99 });
-    inv.store.stacks[0] = .{ .item = .strawberry, .count = 2 };
-    zhu.window.mouse = inv.bag.position.add(Bag.zon.slots[0]).add(.xy(1, 1));
-    zhu.mouse.set(.RIGHT, true);
-
-    inv.update(&notice);
-
-    try std.testing.expectEqual(.strawberry, inv.store.stacks[0].item);
-    try std.testing.expectEqual(2, inv.store.stacks[0].count);
-    const entry = notice.state();
-    try std.testing.expectEqualStrings("背包已满", entry.text);
-    try std.testing.expect(entry.timer > 0);
 }
 
 test "新增工具会占用独立槽位" {

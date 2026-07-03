@@ -13,6 +13,7 @@ const ui = @import("ui.zig");
 
 const global = struct {
     const Clock = @import("global/Clock.zig");
+    const Notice = @import("global/Notice.zig");
 };
 
 const system = struct {
@@ -65,10 +66,10 @@ pub fn init(allocator_: zhu.Allocator) void {
     world.entity = world.createEntity();
     world.add(world.entity, global.Clock{});
     world.add(world.entity, inventory.Inventory{});
+    world.add(world.entity, global.Notice{});
 
     // 存档状态先就位，UI 只持有这份长期有效的槽位切片。
     config = save.init(allocator);
-    session.notice.init();
     ui.init(.{
         .slots = &save.slots,
         .config = &config,
@@ -115,7 +116,7 @@ pub fn update(delta: f32) void {
                 .load => |slot| pending = .{ .play = slot },
             }
         },
-        .play => if (ui.update()) |req| {
+        .play => if (ui.update(&world, delta)) |req| {
             return updatePlayUi(req);
         } else updatePlay(delta),
     }
@@ -204,20 +205,19 @@ fn updatePlay(delta: f32) void {
     system.light.update(&world);
 
     // 输入先写入意图，移动系统统一结算位置和碰撞。
-    world.getPtr(world.entity, inventory.Inventory).?.update(&session.notice);
+    world.getPtr(world.entity, inventory.Inventory).?.update(&world);
     system.control.update(&world);
     system.life.update(&world, delta);
     system.wander.update(&world, delta);
     system.movement.update(&world, delta);
 
     // 控制系统可能生成拾取物，所以拾取放在控制之后。
-    system.pickup.update(&world, &session.notice, delta);
+    system.pickup.update(&world, delta);
 
     // 按 F 的处理、相机跟随、动画和排序都读取本帧已结算的位置。
-    session.notice.update(delta);
     system.interact.update(&world);
     system.dialog.update(&world);
-    system.chest.update(&world, &session.notice);
+    system.chest.update(&world);
     system.rest.update(&world);
     cameraFollowPlayer(delta);
     system.animation.update(&world, delta);
@@ -241,7 +241,8 @@ fn updateMapFade(delta: f32) bool {
             const player = world.getIdentity(actor.Player).?;
             const request = world.get(player, Transition).?;
             map.exit(&world, &session.maps, clock.day);
-            world.resetKeep(.{ global.Clock, inventory.Inventory });
+            const keep = .{ global.Clock, inventory.Inventory, global.Notice };
+            world.resetKeep(keep);
             world.entity = world.createEntity();
             map.enter(
                 &world,
@@ -287,11 +288,12 @@ fn enterPlay(loadSlot: ?u8) void {
     if (loadSlot == null) {
         // 新游戏重置世界级状态；读档会在基础地图创建后覆盖状态。
         clock.reset();
-        session.notice.reset();
+        world.getPtr(world.entity, global.Notice).?.reset();
         session.maps.reset();
     }
 
-    world.resetKeep(.{ global.Clock, inventory.Inventory });
+    const keep = .{ global.Clock, inventory.Inventory, global.Notice };
+    world.resetKeep(keep);
     world.entity = world.createEntity();
     map.enter(&world, &session.maps, .exterior, -1, clock.day);
     const inv = world.getPtr(world.entity, inventory.Inventory).?;
@@ -336,7 +338,6 @@ fn drawPlay() void {
     defer zhu.camera.pop();
     system.time.draw(&world);
     ui.draw(&world);
-    session.notice.draw();
 }
 
 fn drawMapFade(phase: MapFade.Phase) void {

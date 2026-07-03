@@ -4,6 +4,7 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const input = @import("input.zig");
 const inventory = @import("global/Inventory.zig");
+const notice = @import("ui/notice.zig");
 const store = @import("save.zig");
 const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
 
@@ -34,6 +35,7 @@ pub fn init(args: Init) void {
         .patch = .{ .min = .xy(3, 4), .max = .xy(3, 3) },
     });
 
+    notice.init();
     pause.cfg = args.config;
     save.init(args.slots);
     rest.menu.centerInWindow();
@@ -51,7 +53,9 @@ pub fn openRest() void {
     activePopup = .rest;
 }
 
-pub fn update() ?UiRequest {
+pub fn update(world: *zhu.ecs.World, delta: f32) ?UiRequest {
+    notice.update(world, delta);
+
     if (activePopup) |active| {
         if (updatePopup(active)) |req| return req;
         return .block;
@@ -125,13 +129,16 @@ pub fn draw(world: *zhu.ecs.World) void {
         }
     }
 
-    const current = popupMessage orelse return;
-    var color = zhu.Color.rgb(0.25, 1.0, 0.25);
-    if (current.fail) color = .rgb(1.0, 0.25, 0.25);
-    zhu.text.draw(current.text, .xy(zhu.window.size.x * 0.5, 32), .{
-        .anchor = .center,
-        .color = color,
-    });
+    if (popupMessage) |current| {
+        var color = zhu.Color.rgb(0.25, 1.0, 0.25);
+        if (current.fail) color = .rgb(1.0, 0.25, 0.25);
+        zhu.text.draw(current.text, .xy(zhu.window.size.x * 0.5, 32), .{
+            .anchor = .center,
+            .color = color,
+        });
+    }
+
+    notice.draw(world);
 }
 
 pub const rest = struct {
