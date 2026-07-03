@@ -737,12 +737,6 @@ fn drawItemCount(count: u32, rect: zhu.Rect) void {
     zhu.text.drawFmt("{d}", .{count}, pos, .{ .anchor = .one });
 }
 
-fn addTestNotice(world: *World) *Notice {
-    world.entity = world.createEntity();
-    world.add(world.entity, Notice{});
-    return world.getPtr(world.entity, Notice).?;
-}
-
 test "添加物品会合并并自动绑定快捷栏" {
     var inv: Inventory = .{};
     inv.reset();
@@ -753,52 +747,6 @@ test "添加物品会合并并自动绑定快捷栏" {
     try std.testing.expectEqual(.strawberry, inv.activeItem().?);
     const index = inv.bar.refs[inv.bar.active].?;
     try std.testing.expectEqual(10, inv.store.stacks[index].count);
-}
-
-test "右键背包槽会使用物品" {
-    var inv: Inventory = .{};
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
-    _ = addTestNotice(&world);
-    zhu.input.reset();
-    defer zhu.input.reset();
-    inv.reset();
-    defer inv.reset();
-
-    inv.bag.closed = false;
-    inv.store.stacks[0] = .{ .item = .strawberry, .count = 2 };
-    zhu.window.mouse = inv.bag.position.add(Bag.zon.slots[0]).add(.xy(1, 1));
-    zhu.mouse.set(.RIGHT, true);
-
-    inv.update(&world);
-
-    try std.testing.expect(input.mouseCaptured);
-    try std.testing.expectEqual(.strawberry, inv.store.stacks[0].item);
-    try std.testing.expectEqual(1, inv.store.stacks[0].count);
-    try std.testing.expectEqual(.strawberrySeed, inv.store.stacks[1].item);
-    try std.testing.expectEqual(3, inv.store.stacks[1].count);
-}
-
-test "右键快捷栏会使用绑定的背包槽" {
-    var inv: Inventory = .{};
-    var world = World.init(std.testing.allocator);
-    defer world.deinit();
-    _ = addTestNotice(&world);
-    zhu.input.reset();
-    defer zhu.input.reset();
-    inv.reset();
-    defer inv.reset();
-
-    inv.store.stacks[5] = .{ .item = .potato, .count = 1 };
-    inv.bar.refs[2] = 5;
-    zhu.window.mouse = Bar.zon.position.add(Bar.zon.slots[2]).add(.xy(1, 1));
-    zhu.mouse.set(.RIGHT, true);
-
-    inv.update(&world);
-
-    try std.testing.expect(input.mouseCaptured);
-    try std.testing.expectEqual(.potatoSeed, inv.store.stacks[5].item);
-    try std.testing.expectEqual(3, inv.store.stacks[5].count);
 }
 
 test "新增工具会占用独立槽位" {

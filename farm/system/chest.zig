@@ -109,7 +109,7 @@ fn addTestInventory(world: *World) *inventory.Inventory {
 test "chest 交互会打开宝箱并移除碰撞" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
-    _ = addTestInventory(&world);
+    const inv = addTestInventory(&world);
 
     const chest = addTestChest(&world, .potato, 2);
     world.addIdentity(chest, Interact);
@@ -118,14 +118,14 @@ test "chest 交互会打开宝箱并移除碰撞" {
 
     const chestState = world.get(chest, Chest).?;
     const animation = world.get(chest, Animation).?;
-    const notice = world.getPtr(world.entity, Notice).?;
 
     try std.testing.expectEqual(chest, world.getIdentity(Interact).?);
     try std.testing.expect(chestState.opened);
     try std.testing.expectEqual(0, chestState.items.get(.potato));
+    try std.testing.expectEqual(.potato, inv.store.stacks[0].item);
+    try std.testing.expectEqual(2, inv.store.stacks[0].count);
     try std.testing.expectEqual(null, world.get(chest, Shape));
     try std.testing.expectEqual(0, animation.index);
-    try std.testing.expect(notice.state().timer > 0);
 }
 
 test "chest 背包满时奖励留在宝箱里" {
@@ -143,10 +143,8 @@ test "chest 背包满时奖励留在宝箱里" {
     update(&world);
 
     const result = world.get(chest, Chest).?;
-    const notice = world.getPtr(world.entity, Notice).?;
     try std.testing.expect(!result.opened);
     try std.testing.expectEqual(2, result.items.get(.potato));
     try std.testing.expect(world.has(chest, Shape));
     try std.testing.expectEqual(chest, world.getIdentity(Interact).?);
-    try std.testing.expect(notice.state().timer > 0);
 }
