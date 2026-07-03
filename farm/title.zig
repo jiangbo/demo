@@ -2,9 +2,10 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const input = @import("input.zig");
-const ui = @import("ui.zig");
+const pause = @import("ui/pause.zig");
+const save = @import("ui/save.zig");
 
-const menus: []const zhu.widget.Menu = @import("zon/menu.zon");
+const menus: []const zhu.widget.Menu = @import("zon/title.zon");
 
 pub const Request = union(enum) { start, load: u8 };
 const Button = enum(u8) { start, load, exit };
@@ -43,7 +44,7 @@ pub fn update(delta: f32) ?Request {
 
     const pauseKey = input.pressed(.pause);
     if (pauseKey or pauseButton.update(.{}) != null) {
-        ui.pause.open(.title);
+        pause.open(.title);
         popup = .pause;
         return null;
     }
@@ -52,7 +53,7 @@ pub fn update(delta: f32) ?Request {
         switch (@as(Button, @enumFromInt(value))) {
             .start => return .start,
             .load => {
-                ui.save.open(.load);
+                save.open(.load);
                 popup = .save;
             },
             .exit => zhu.window.exit(),
@@ -64,14 +65,14 @@ pub fn update(delta: f32) ?Request {
 fn updatePopup(active: Popup) ?Request {
     switch (active) {
         .pause => {
-            if (ui.pause.update()) |req| switch (req) {
+            if (pause.update()) |req| switch (req) {
                 .close => popup = null,
                 .save, .load => unreachable,
                 .title => unreachable,
             };
         },
         .save => {
-            if (ui.save.update()) |req| switch (req) {
+            if (save.update()) |req| switch (req) {
                 .close => popup = null,
                 .load => |slot| return .{ .load = slot },
                 .save => unreachable,
@@ -94,7 +95,7 @@ pub fn draw() void {
     mainMenu.draw();
     pauseButton.draw();
     switch (popup orelse return) {
-        .pause => ui.pause.draw(),
-        .save => ui.save.draw(),
+        .pause => pause.draw(),
+        .save => save.draw(),
     }
 }
