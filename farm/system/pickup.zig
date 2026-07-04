@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
-const inventory = @import("../global/Inventory.zig");
+const Inventory = @import("../global/Inventory.zig");
 const Notice = @import("../global/Notice.zig");
 
 const Player = component.actor.Player;
@@ -31,7 +31,7 @@ pub fn update(world: *World, delta: f32) void {
         const pickupShape = worldShape(world, entity) orelse continue;
         if (!playerShape.intersect(pickupShape)) continue;
 
-        const inv = world.getPtr(world.entity, inventory.Inventory).?;
+        const inv = world.getPtr(world.entity, Inventory).?;
         const remaining = inv.add(pickup.item, pickup.count);
         const taken = pickup.count - remaining;
         pickup.count = remaining;
@@ -85,11 +85,11 @@ fn worldShape(world: *World, entity: zhu.ecs.Entity) ?Shape {
     return shape.move(position);
 }
 
-fn addTestInventory(world: *World) *inventory.Inventory {
+fn addTestInventory(world: *World) *Inventory {
     world.entity = world.createEntity();
-    world.add(world.entity, inventory.Inventory{});
+    world.add(world.entity, Inventory{});
     world.add(world.entity, Notice{});
-    return world.getPtr(world.entity, inventory.Inventory).?;
+    return world.getPtr(world.entity, Inventory).?;
 }
 
 test "pickup 飞散期间不会被拾取" {

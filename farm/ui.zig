@@ -2,7 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const input = @import("input.zig");
-const inventory = @import("global/Inventory.zig");
+const inventory = @import("ui/inventory.zig");
 const notice = @import("ui/notice.zig");
 const rest = @import("ui/rest.zig");
 const time = @import("ui/time.zig");
@@ -30,6 +30,7 @@ pub const Init = struct {
 };
 
 pub fn init(args: Init) void {
+    inventory.init();
     notice.init();
     time.init();
     pause.cfg = args.config;
@@ -38,6 +39,10 @@ pub fn init(args: Init) void {
 }
 
 pub fn deinit() void {}
+
+pub fn resetInventory() void {
+    inventory.reset();
+}
 
 pub fn openPause() void {
     pause.open(.play);
@@ -57,9 +62,13 @@ pub fn update(world: *zhu.ecs.World, delta: f32) ?UiRequest {
         return .block;
     }
 
-    if (!input.pressed(.pause)) return null;
-    openPause();
-    return .block;
+    if (input.pressed(.pause)) {
+        openPause();
+        return .block;
+    }
+
+    inventory.update(world);
+    return null;
 }
 
 fn updatePopup(active: Popup) ?UiRequest {
@@ -115,7 +124,7 @@ pub fn close() void {
 
 pub fn draw(world: *zhu.ecs.World) void {
     time.draw(world);
-    world.getPtr(world.entity, inventory.Inventory).?.draw();
+    inventory.draw(world);
 
     if (activePopup) |active| {
         switch (active) {

@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
-const inventory = @import("../global/Inventory.zig");
+const Inventory = @import("../global/Inventory.zig");
 const Notice = @import("../global/Notice.zig");
 
 const World = zhu.ecs.World;
@@ -26,7 +26,7 @@ pub fn update(world: *World) void {
         const count = chest.items.get(itemType);
         if (count == 0) continue;
 
-        const inv = world.getPtr(world.entity, inventory.Inventory).?;
+        const inv = world.getPtr(world.entity, Inventory).?;
         const remaining = inv.add(itemType, count);
         chest.items.set(itemType, remaining);
         taken.items.set(itemType, count - remaining);
@@ -99,11 +99,11 @@ fn addTestChest(world: *World, itemType: ItemEnum, count: u32) zhu.ecs.Entity {
     return chest;
 }
 
-fn addTestInventory(world: *World) *inventory.Inventory {
+fn addTestInventory(world: *World) *Inventory {
     world.entity = world.createEntity();
-    world.add(world.entity, inventory.Inventory{});
+    world.add(world.entity, Inventory{});
     world.add(world.entity, Notice{});
-    return world.getPtr(world.entity, inventory.Inventory).?;
+    return world.getPtr(world.entity, Inventory).?;
 }
 
 test "chest 交互会打开宝箱并移除碰撞" {

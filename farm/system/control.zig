@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const input = @import("../input.zig");
-const inventory = @import("../global/Inventory.zig");
+const Inventory = @import("../global/Inventory.zig");
 const map = @import("../map.zig");
 
 const Actor = component.actor.Actor;
@@ -91,7 +91,7 @@ fn updateTargetAction(world: *World, player: Entity) void {
     const target = world.getPtr(player, Target).?;
     target.active = false;
 
-    const inv = world.getPtr(world.entity, inventory.Inventory).?;
+    const inv = world.getPtr(world.entity, Inventory).?;
     const item = inv.activeItem() orelse return;
     if (!isTargetItem(item)) return;
 
@@ -143,12 +143,12 @@ fn facingFromDirection(direction: zhu.Vector2) Facing {
     return if (direction.y < 0) .up else .down;
 }
 
-fn testInventory(world: *World) *inventory.Inventory {
-    if (world.getPtr(world.entity, inventory.Inventory)) |inv| return inv;
+fn testInventory(world: *World) *Inventory {
+    if (world.getPtr(world.entity, Inventory)) |inv| return inv;
 
     world.entity = world.createEntity();
-    world.add(world.entity, inventory.Inventory{});
-    return world.getPtr(world.entity, inventory.Inventory).?;
+    world.add(world.entity, Inventory{});
+    return world.getPtr(world.entity, Inventory).?;
 }
 
 fn setActiveItem(world: *World, item: ItemEnum, count: u32) void {

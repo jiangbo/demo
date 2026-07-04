@@ -87,6 +87,11 @@ pub fn toIndex(T: type, value: anytype) T {
 
 pub const enums = struct {
     const Array = std.EnumArray;
+
+    pub fn len(comptime E: type) usize {
+        return std.meta.fields(E).len;
+    }
+
     pub fn inRange(e: anytype, min: @TypeOf(e), max: @TypeOf(e)) bool {
         const v = @intFromEnum(e);
         return v >= @intFromEnum(min) and v <= @intFromEnum(max);

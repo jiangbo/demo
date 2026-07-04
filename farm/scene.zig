@@ -4,7 +4,6 @@ const zhu = @import("zhu");
 const component = @import("component.zig");
 const factory = @import("factory.zig");
 const input = @import("input.zig");
-const inventory = @import("global/Inventory.zig");
 const map = @import("map.zig");
 const player = @import("player.zig");
 const storage = @import("storage.zig");
@@ -14,6 +13,7 @@ const ui = @import("ui.zig");
 
 const global = struct {
     const Clock = @import("global/Clock.zig");
+    const Inventory = @import("global/Inventory.zig");
     const Notice = @import("global/Notice.zig");
 };
 
@@ -45,7 +45,7 @@ pub fn init(allocator_: zhu.Allocator) void {
     world = World.init(allocator.raw);
     world.entity = world.createEntity();
     world.add(world.entity, global.Clock{});
-    world.add(world.entity, inventory.Inventory{});
+    world.add(world.entity, global.Inventory{});
     world.add(world.entity, global.Notice{});
 
     // 存档状态先就位，UI 只持有这份长期有效的槽位切片。
@@ -181,8 +181,7 @@ fn updatePlay(delta: f32) void {
     map.update(&world);
     system.light.update(&world);
 
-    // 输入先写入意图，移动系统统一结算位置和碰撞。
-    world.getPtr(world.entity, inventory.Inventory).?.update(&world);
+    // 控制系统先写入意图，移动系统统一结算位置和碰撞。
     system.control.update(&world);
     system.life.update(&world, delta);
     system.wander.update(&world, delta);
@@ -220,7 +219,7 @@ fn updateMapFade(delta: f32) bool {
             map.exit(&world, clock.day);
             const keep = .{
                 global.Clock,
-                inventory.Inventory,
+                global.Inventory,
                 global.Notice,
             };
             world.resetKeep(keep);
@@ -274,14 +273,15 @@ fn enterPlay(loadSlot: ?u8) void {
 
     const keep = .{
         global.Clock,
-        inventory.Inventory,
+        global.Inventory,
         global.Notice,
     };
     world.resetKeep(keep);
     world.entity = world.createEntity();
     map.enter(&world, .exterior, -1, clock.day);
-    const inv = world.getPtr(world.entity, inventory.Inventory).?;
+    const inv = world.getPtr(world.entity, global.Inventory).?;
     inv.reset();
+    ui.resetInventory();
     if (loadSlot == null) {
         _ = inv.add(.hoe, 1);
         _ = inv.add(.water, 1);
@@ -334,7 +334,7 @@ fn loadPlay(slot: u8) bool {
 fn captureRecord(
     clock: *const global.Clock,
 ) !storage.Record {
-    const inv = world.getPtr(world.entity, inventory.Inventory).?;
+    const inv = world.getPtr(world.entity, global.Inventory).?;
     const savedInventory = try inv.capture(allocator.raw);
     errdefer allocator.raw.free(savedInventory.slots);
 
@@ -363,14 +363,15 @@ fn restoreRecord(record: storage.Record) !void {
 
     const keep = .{
         global.Clock,
-        inventory.Inventory,
+        global.Inventory,
         global.Notice,
     };
     world.resetKeep(keep);
     world.entity = world.createEntity();
     map.enter(&world, record.player.map, -1, clock.day);
     player.restore(&world, record.player);
-    world.getPtr(world.entity, inventory.Inventory).?.restore(record.inventory);
+    ui.resetInventory();
+    world.getPtr(world.entity, global.Inventory).?.restore(record.inventory);
 }
 
 fn drawPlay() void {

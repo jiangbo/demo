@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
-const inventory = @import("../global/Inventory.zig");
+const Inventory = @import("../global/Inventory.zig");
 const map = @import("../map.zig");
 
 const Player = component.actor.Player;
@@ -64,7 +64,7 @@ fn harvest(world: *World, position: zhu.Vector2) void {
 
 fn useSeed(world: *World, want: WantUse, kind: CropEnum) void {
     if (!map.canPlant(want.target)) return;
-    const inv = world.getPtr(world.entity, inventory.Inventory).?;
+    const inv = world.getPtr(world.entity, Inventory).?;
     if (!inv.use(want.item, 1)) return;
 
     const crop = factory.spawnCrop(world, want.target, kind);
@@ -165,12 +165,12 @@ const testMap = zhu.extend.tiled.Map{
     }},
 };
 
-fn testInventory(world: *World) *inventory.Inventory {
-    if (world.getPtr(world.entity, inventory.Inventory)) |inv| return inv;
+fn testInventory(world: *World) *Inventory {
+    if (world.getPtr(world.entity, Inventory)) |inv| return inv;
 
     world.entity = world.createEntity();
-    world.add(world.entity, inventory.Inventory{});
-    return world.getPtr(world.entity, inventory.Inventory).?;
+    world.add(world.entity, Inventory{});
+    return world.getPtr(world.entity, Inventory).?;
 }
 
 fn setActiveItem(world: *World, item: ItemEnum, count: u32) void {
@@ -264,7 +264,7 @@ test "seedPlant 会种植并扣种子" {
 
     update(&world);
 
-    const index = inv.bar.refs[inv.bar.active].?;
+    const index = inv.hotbar[inv.activeHotbar].?;
     try std.testing.expectEqual(1, inv.store.stacks[index].count);
 
     const cropEntity = map.getTile(target).?.get(.crop).?;
@@ -320,7 +320,7 @@ test "seedPlant 无耕地时不扣种子" {
 
     update(&world);
 
-    const index = inv.bar.refs[inv.bar.active].?;
+    const index = inv.hotbar[inv.activeHotbar].?;
     try std.testing.expectEqual(2, inv.store.stacks[index].count);
     try std.testing.expectEqual(null, map.getTile(target).?.get(.crop));
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
@@ -349,7 +349,7 @@ test "seedPlant 已有作物时不扣种子" {
 
     update(&world);
 
-    const index = inv.bar.refs[inv.bar.active].?;
+    const index = inv.hotbar[inv.activeHotbar].?;
     try std.testing.expectEqual(2, inv.store.stacks[index].count);
     try std.testing.expectEqual(oldCrop, map.getTile(target).?.get(.crop).?);
     try std.testing.expectEqual(0, world.getEvent(event.SoundPlay).len);
