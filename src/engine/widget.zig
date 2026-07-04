@@ -116,9 +116,13 @@ pub fn popupPosition(popup: Popup) Vector2 {
     return pos.clamp(.zero, bounds.sub(popup.size).max(.zero));
 }
 
+pub fn StackT(T: type) type {
+    return struct { item: T, count: u32 = 0 };
+}
+
 pub fn StackStore(T: type, len: usize, limitOf: fn (T) u32) type {
     return struct {
-        pub const Stack = struct { item: T, count: u32 = 0 };
+        pub const Stack = StackT(T);
         pub const Count = struct { item: T, count: u32 = 1 };
         pub const Put = struct {
             subs: []const Count = &.{},

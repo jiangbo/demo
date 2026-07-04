@@ -5,7 +5,6 @@ const component = @import("component.zig");
 const Clock = @import("global/Clock.zig");
 
 pub const slotCount: usize = 10;
-const hotbarCount = 10;
 const maxSaveSize = 128 * 1024;
 
 pub const SlotSummary = struct {
@@ -32,16 +31,13 @@ pub const Player = struct {
     facing: component.actor.Facing = .down,
 };
 
-pub const Item = struct {
-    item: component.item.ItemEnum = .hoe,
-    count: u32 = 0,
-};
+pub const Item = zhu.widget.StackT(component.item.ItemEnum);
 
 pub const Inventory = struct {
     activeHotbar: usize = 0,
     activePage: usize = 0,
     slots: []const Item = &.{},
-    hotbar: [hotbarCount]?usize = @splat(null),
+    hotbar: []const ?usize = &.{},
 };
 
 pub const Product = struct {

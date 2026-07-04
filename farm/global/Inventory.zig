@@ -11,8 +11,8 @@ const Self = @This();
 
 pub const Stack = Store.Stack;
 pub const Item = Stack;
-pub const MoveResult = Store.Move;
-pub const UseResult = union(enum) { none, full, item: Stack };
+const Move = Store.Move;
+pub const Use = union(enum) { none, full, item: Stack };
 
 store: Store = .{},
 hotbar: [10]?usize = @splat(null),
@@ -31,36 +31,19 @@ pub fn reset(self: *Self) void {
     self.activePage = 0;
 }
 
-pub fn capture(
-    self: *Self,
-    allocator: std.mem.Allocator,
-) !storage.Inventory {
-    const slots = try allocator.alloc(storage.Item, self.store.stacks.len);
-    for (self.store.stacks, slots) |source, *target| {
-        target.* = .{
-            .item = source.item,
-            .count = source.count,
-        };
-    }
-
+pub fn capture(self: *Self) storage.Inventory {
     return .{
         .activeHotbar = self.activeHotbar,
         .activePage = self.activePage,
-        .slots = slots,
-        .hotbar = self.hotbar,
+        .slots = self.store.stacks[0..],
+        .hotbar = self.hotbar[0..],
     };
 }
 
 pub fn restore(self: *Self, data: storage.Inventory) void {
     self.reset();
-    for (data.slots, 0..) |slot, index| {
-        if (index >= self.store.stacks.len) break;
-        self.store.stacks[index] = .{
-            .item = slot.item,
-            .count = slot.count,
-        };
-    }
-    self.hotbar = data.hotbar;
+    @memcpy(self.store.stacks[0..], data.slots);
+    @memcpy(self.hotbar[0..], data.hotbar);
     self.activeHotbar = data.activeHotbar;
     self.activePage = data.activePage;
 }
@@ -83,7 +66,7 @@ pub fn use(self: *Self, itemType: ItemEnum, count: u32) bool {
     return self.store.subAll(itemType, count);
 }
 
-pub fn useAt(self: *Self, index: usize) UseResult {
+pub fn useAt(self: *Self, index: usize) Use {
     std.debug.assert(index < self.store.stacks.len);
 
     const slot = self.store.getPtr(index) orelse return .none;
@@ -108,7 +91,7 @@ pub fn moveSlot(
     self: *Self,
     fromIndex: usize,
     toIndex: usize,
-) ?MoveResult {
+) ?Move {
     if (fromIndex == toIndex) return null;
 
     const moved = self.store.move(fromIndex, toIndex) orelse return null;
@@ -223,15 +206,16 @@ test "restore 会恢复库存槽和快捷栏" {
     var inv: Self = .{};
     inv.reset();
 
-    const stacks = [_]storage.Item{
-        .{ .item = .strawberrySeed, .count = 7 },
-    };
-    var data = storage.Inventory{
+    var stacks: [40]storage.Item = @splat(.{ .item = .hoe });
+    stacks[0] = .{ .item = .strawberrySeed, .count = 7 };
+    var hotbar: [10]?usize = @splat(null);
+    hotbar[3] = 0;
+    const data = storage.Inventory{
         .activeHotbar = 3,
         .activePage = 1,
         .slots = &stacks,
+        .hotbar = &hotbar,
     };
-    data.hotbar[3] = 0;
 
     inv.restore(data);
 
@@ -483,7 +467,7 @@ test "使用物品空间不足时不会修改背包" {
 
     const result = inv.useAt(0);
 
-    try std.testing.expectEqual(UseResult.full, result);
+    try std.testing.expectEqual(Use.full, result);
     try std.testing.expectEqual(.strawberry, inv.store.stacks[0].item);
     try std.testing.expectEqual(2, inv.store.stacks[0].count);
     try std.testing.expectEqual(.potato, inv.store.stacks[1].item);

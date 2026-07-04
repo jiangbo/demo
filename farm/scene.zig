@@ -335,20 +335,17 @@ fn captureRecord(
     clock: *const global.Clock,
 ) !storage.Record {
     const inv = world.getPtr(world.entity, global.Inventory).?;
-    const savedInventory = try inv.capture(allocator.raw);
-    errdefer allocator.raw.free(savedInventory.slots);
 
     return .{
         .timestamp = zhu.window.timestamp().toSeconds(),
         .time = clock.*,
         .player = player.capture(&world, map.current),
-        .inventory = savedInventory,
+        .inventory = inv.capture(),
         .maps = try map.captureState(allocator.raw),
     };
 }
 
 fn freeRecord(record: storage.Record) void {
-    allocator.raw.free(record.inventory.slots);
     map.freeCapture(allocator.raw, record.maps);
 }
 
