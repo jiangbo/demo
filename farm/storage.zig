@@ -31,7 +31,7 @@ pub const Player = struct {
     facing: component.actor.Facing = .down,
 };
 
-pub const Item = zhu.widget.StackT(component.item.ItemEnum);
+pub const Item = component.item.Stack;
 
 pub const Inventory = struct {
     activeHotbar: usize = 0,

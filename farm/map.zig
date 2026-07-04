@@ -700,19 +700,19 @@ test "恢复地图产出对象会写回保存的产物和生命" {
     defer world.deinit();
 
     const entity = world.createEntity();
-    world.add(entity, item.Product{ .item = .stone });
+    world.add(entity, item.Product{ .value = .one(.stone) });
     world.add(entity, item.Health{ .value = 1 });
     land.tiles[0].object = .{ .kind = .product, .entity = entity };
 
     restoreThing(&world, 0, .{ .product = .{
-        .product = .{ .item = .timber, .count = 2 },
+        .product = .{ .value = .{ .item = .timber, .count = 2 } },
         .health = .{ .value = 4 },
     } });
 
     const product = world.get(entity, item.Product).?;
     const health = world.get(entity, item.Health).?;
-    try std.testing.expectEqual(.timber, product.item);
-    try std.testing.expectEqual(2, product.count);
+    try std.testing.expectEqual(.timber, product.value.item);
+    try std.testing.expectEqual(2, product.value.count);
     try std.testing.expectEqual(4, health.value);
 }
 
@@ -728,7 +728,7 @@ test "恢复 gone 会删除默认产出对象并清 tile 阻挡" {
     defer world.deinit();
 
     const entity = world.createEntity();
-    world.add(entity, item.Product{ .item = .stone });
+    world.add(entity, item.Product{ .value = .one(.stone) });
     world.add(entity, item.Health{ .value = 1 });
     land.tiles[0].object = .{ .kind = .product, .entity = entity };
     spatial.setTileFlag(0, "SOLID");

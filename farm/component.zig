@@ -165,8 +165,9 @@ pub const item = struct {
         stone,
     };
 
+    pub const Stack = zhu.widget.StackT(ItemEnum);
     // Product 只表示动作完成后产出的物品，生命值单独放在 Health。
-    pub const Product = struct { item: ItemEnum, count: u32 = 1 };
+    pub const Product = struct { value: Stack };
     pub const Health = struct { value: u8 };
     pub const Hit = struct { target: ItemEnum };
 

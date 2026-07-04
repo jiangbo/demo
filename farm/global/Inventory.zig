@@ -54,11 +54,10 @@ pub fn add(self: *Self, itemType: ItemEnum, count: u32) u32 {
     return remaining;
 }
 
-pub fn activeItem(self: *Self) ?ItemEnum {
-    return if (self.hotbarItem(self.activeHotbar)) |stack|
-        stack.item
-    else
-        null;
+pub fn active(self: *Self) ?ItemEnum {
+    const index = self.hotbar[self.activeHotbar] orelse return null;
+    const stack = self.store.getPtr(index) orelse return null;
+    return stack.item;
 }
 
 pub fn use(self: *Self, itemType: ItemEnum, count: u32) bool {
@@ -72,19 +71,18 @@ pub fn useAt(self: *Self, index: usize) Use {
     const slot = self.store.getPtr(index) orelse return .none;
     const cfg = factory.itemConfig(slot.item);
     const effect = cfg.product orelse return .none;
+    const product = effect.value;
 
     if (slot.count == 1) {
-        slot.* = .{ .item = effect.item, .count = effect.count };
-        self.autoBind(effect.item);
+        slot.* = product;
+        self.autoBind(product.item);
         return .{ .item = slot.* };
     }
 
-    if (!self.store.useAt(index, addArgs(effect.item, effect.count))) {
-        return .full;
-    }
+    if (!self.store.useAt(index, product)) return .full;
 
-    self.autoBind(effect.item);
-    return .{ .item = .{ .item = effect.item, .count = effect.count } };
+    self.autoBind(product.item);
+    return .{ .item = product };
 }
 
 pub fn moveSlot(
@@ -101,10 +99,6 @@ pub fn moveSlot(
         .clear => self.replaceHotbarRefs(fromIndex, toIndex),
     }
     return moved;
-}
-
-pub fn hotbarItem(self: *Self, index: usize) ?*Stack {
-    return self.store.getPtr(self.hotbar[index] orelse return null);
 }
 
 pub fn bindHotbar(
@@ -130,13 +124,6 @@ pub fn moveHotbarBinding(
     const from = self.hotbar[fromIndex] orelse return;
     self.hotbar[fromIndex] = self.hotbar[toIndex];
     self.hotbar[toIndex] = from;
-}
-
-fn addArgs(itemType: ItemEnum, count: u32) Store.Count {
-    return .{
-        .item = itemType,
-        .count = count,
-    };
 }
 
 fn autoBind(self: *Self, itemType: ItemEnum) void {
@@ -197,7 +184,7 @@ test "添加物品会合并并自动绑定快捷栏" {
     _ = inv.add(.strawberry, 7);
     _ = inv.add(.strawberry, 3);
 
-    try std.testing.expectEqual(.strawberry, inv.activeItem().?);
+    try std.testing.expectEqual(.strawberry, inv.active().?);
     const index = inv.hotbar[inv.activeHotbar].?;
     try std.testing.expectEqual(10, inv.store.stacks[index].count);
 }
@@ -206,7 +193,7 @@ test "restore 会恢复库存槽和快捷栏" {
     var inv: Self = .{};
     inv.reset();
 
-    var stacks: [40]storage.Item = @splat(.{ .item = .hoe });
+    var stacks: [40]storage.Item = @splat(.empty);
     stacks[0] = .{ .item = .strawberrySeed, .count = 7 };
     var hotbar: [10]?usize = @splat(null);
     hotbar[3] = 0;
@@ -221,7 +208,7 @@ test "restore 会恢复库存槽和快捷栏" {
 
     try std.testing.expectEqual(
         component.item.ItemEnum.strawberrySeed,
-        inv.activeItem().?,
+        inv.active().?,
     );
     const index = inv.hotbar[inv.activeHotbar].?;
     try std.testing.expectEqual(7, inv.store.stacks[index].count);
@@ -264,11 +251,11 @@ test "当前物品通过快捷栏引用读取库存槽" {
     inv.store.stacks[5] = .{ .item = .potatoSeed, .count = 2 };
     inv.hotbar[1] = 5;
 
-    try std.testing.expectEqual(.potatoSeed, inv.activeItem().?);
+    try std.testing.expectEqual(.potatoSeed, inv.active().?);
     try std.testing.expectEqual(2, inv.store.stacks[5].count);
 
     inv.store.stacks[5].count = 0;
-    try std.testing.expectEqual(null, inv.activeItem());
+    try std.testing.expectEqual(null, inv.active());
 }
 
 test "同一种物品只能绑定到一个快捷栏槽位" {
@@ -324,7 +311,7 @@ test "拖动物品到空槽后快捷栏继续指向该物品" {
 
     _ = inv.moveSlot(0, 5);
 
-    try std.testing.expectEqual(.strawberry, inv.activeItem().?);
+    try std.testing.expectEqual(.strawberry, inv.active().?);
     try std.testing.expectEqual(5, inv.store.stacks[5].count);
 }
 
@@ -340,11 +327,11 @@ test "交换不同物品后快捷栏继续指向原物品" {
     _ = inv.moveSlot(0, 1);
 
     inv.activeHotbar = 0;
-    try std.testing.expectEqual(.strawberry, inv.activeItem().?);
+    try std.testing.expectEqual(.strawberry, inv.active().?);
     try std.testing.expectEqual(5, inv.store.stacks[inv.hotbar[0].?].count);
 
     inv.activeHotbar = 1;
-    try std.testing.expectEqual(.potato, inv.activeItem().?);
+    try std.testing.expectEqual(.potato, inv.active().?);
     try std.testing.expectEqual(3, inv.store.stacks[inv.hotbar[1].?].count);
 }
 
@@ -359,7 +346,7 @@ test "合并同类物品后快捷栏继续指向合并物品" {
 
     _ = inv.moveSlot(0, 1);
 
-    try std.testing.expectEqual(.strawberry, inv.activeItem().?);
+    try std.testing.expectEqual(.strawberry, inv.active().?);
     try std.testing.expectEqual(9, inv.store.stacks[inv.hotbar[0].?].count);
 }
 
@@ -396,7 +383,7 @@ test "使用最后一个作物会优先回填原槽" {
     try std.testing.expectEqual(.potatoSeed, inv.store.stacks[0].item);
     try std.testing.expectEqual(3, inv.store.stacks[0].count);
     try std.testing.expectEqual(0, inv.hotbar[0].?);
-    try std.testing.expectEqual(.potatoSeed, inv.activeItem().?);
+    try std.testing.expectEqual(.potatoSeed, inv.active().?);
 
     const item = switch (result) {
         .item => |value| value,

@@ -117,16 +117,23 @@ pub fn popupPosition(popup: Popup) Vector2 {
 }
 
 pub fn StackT(T: type) type {
-    return struct { item: T, count: u32 = 0 };
+    return struct {
+        item: T,
+        count: u32,
+
+        pub const empty: @This() = .{ .item = undefined, .count = 0 };
+        pub fn one(item: T) @This() {
+            return .{ .item = item, .count = 1 };
+        }
+    };
 }
 
 pub fn StackStore(T: type, len: usize, limitOf: fn (T) u32) type {
     return struct {
         pub const Stack = StackT(T);
-        pub const Count = struct { item: T, count: u32 = 1 };
         pub const Put = struct {
-            subs: []const Count = &.{},
-            adds: []const Count = &.{},
+            subs: []const Stack = &.{},
+            adds: []const Stack = &.{},
         };
         pub const Entry = struct {
             index: usize,
@@ -142,25 +149,25 @@ pub fn StackStore(T: type, len: usize, limitOf: fn (T) u32) type {
         pub const Done = struct { ok: bool, patches: []const Patch };
         const Try = struct {
             buffer: ?*std.ArrayList(Patch) = null,
-            items: []const Count,
+            items: []const Stack,
         };
 
-        stacks: [len]Stack = @splat(.{ .item = undefined }),
+        stacks: [len]Stack = @splat(.empty),
 
         pub fn add(self: *@This(), item: T, count: u32) u32 {
-            const args: Count = .{ .item = item, .count = count };
+            const args: Stack = .{ .item = item, .count = count };
             return self.tryAdd(.{ .items = &.{args} }) catch unreachable;
         }
 
         pub fn sub(self: *@This(), item: T, count: u32) u32 {
-            const args: Count = .{ .item = item, .count = count };
+            const args: Stack = .{ .item = item, .count = count };
             return self.trySub(.{ .items = &.{args} }) catch unreachable;
         }
 
         pub fn addAll(self: *@This(), item: T, count: u32) bool {
             var patches: [len + 1]Patch = undefined;
 
-            const args: Count = .{ .item = item, .count = count };
+            const args: Stack = .{ .item = item, .count = count };
             const done = self.put(&patches, .{ .adds = &.{args} });
             if (done.ok) return true;
 
@@ -171,7 +178,7 @@ pub fn StackStore(T: type, len: usize, limitOf: fn (T) u32) type {
         pub fn subAll(self: *@This(), item: T, count: u32) bool {
             var patches: [len + 1]Patch = undefined;
 
-            const args: Count = .{ .item = item, .count = count };
+            const args: Stack = .{ .item = item, .count = count };
             const done = self.put(&patches, .{ .subs = &.{args} });
             if (done.ok) return true;
 
@@ -259,7 +266,7 @@ pub fn StackStore(T: type, len: usize, limitOf: fn (T) u32) type {
             }
         }
 
-        fn addOne(self: *@This(), args: Count) ?Entry {
+        fn addOne(self: *@This(), args: Stack) ?Entry {
             const limit = limitOf(args.item);
             std.debug.assert(limit > 0);
 
@@ -317,7 +324,7 @@ pub fn StackStore(T: type, len: usize, limitOf: fn (T) u32) type {
             return entry;
         }
 
-        pub fn useAt(self: *@This(), index: usize, count: Count) bool {
+        pub fn useAt(self: *@This(), index: usize, count: Stack) bool {
             var patches: [len + 1]Patch = undefined;
             var buffer = std.ArrayList(Patch).initBuffer(&patches);
 
@@ -331,7 +338,7 @@ pub fn StackStore(T: type, len: usize, limitOf: fn (T) u32) type {
             return false;
         }
 
-        fn merge(self: *@This(), args: Count, limit: u32) ?Entry {
+        fn merge(self: *@This(), args: Stack, limit: u32) ?Entry {
             for (0..self.stacks.len) |index| {
                 const stack = self.getPtr(index) orelse continue;
                 if (!std.meta.eql(stack.item, args.item)) continue;
@@ -344,7 +351,7 @@ pub fn StackStore(T: type, len: usize, limitOf: fn (T) u32) type {
             return null;
         }
 
-        fn fill(self: *@This(), args: Count, limit: u32) ?Entry {
+        fn fill(self: *@This(), args: Stack, limit: u32) ?Entry {
             for (&self.stacks, 0..) |*stack, index| {
                 if (stack.count != 0) continue;
 

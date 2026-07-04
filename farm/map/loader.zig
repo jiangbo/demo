@@ -410,11 +410,11 @@ test "加载地图产出对象会按对象和 rock 图层写入目标格" {
 
     try std.testing.expectEqual(.product, tree.kind);
     try std.testing.expectEqual(.none, loaded.land.tiles[0].gone);
-    try std.testing.expectEqual(.timber, treeProd.item);
+    try std.testing.expectEqual(.timber, treeProd.value.item);
     try std.testing.expectEqual(treeCfg.health.?, treeHp.value);
     try std.testing.expectEqual(.product, rock.kind);
     try std.testing.expectEqual(.none, loaded.land.tiles[1].gone);
-    try std.testing.expectEqual(.stone, rockProd.item);
+    try std.testing.expectEqual(.stone, rockProd.value.item);
     try std.testing.expectEqual(rockCfg.health.?, rockHp.value);
     try std.testing.expectEqual(null, loaded.land.tiles[2].object);
 }

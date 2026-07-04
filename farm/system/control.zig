@@ -92,7 +92,7 @@ fn updateTargetAction(world: *World, player: Entity) void {
     target.active = false;
 
     const inv = world.getPtr(world.entity, Inventory).?;
-    const item = inv.activeItem() orelse return;
+    const item = inv.active() orelse return;
     if (!isTargetItem(item)) return;
 
     const position = targetPosition(world, player) orelse return;

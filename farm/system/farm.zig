@@ -87,7 +87,7 @@ fn hitProduct(world: *World, want: WantUse) void {
     const tile = map.getTile(want.target) orelse return;
     const entity = tile.get(.product) orelse return;
     const product = world.get(entity, Product).?;
-    if (product.item != hit.target) return;
+    if (product.value.item != hit.target) return;
 
     const health = world.getPtr(entity, Health).?;
     std.debug.assert(health.value > 0);
@@ -98,13 +98,13 @@ fn hitProduct(world: *World, want: WantUse) void {
     world.addEvent(event.SoundPlay{ .id = toolSound(want.item) });
     if (health.value != 0) return;
 
-    // product.count 表示最大掉落数量，实际掉落 1 到 count 个，
+    // value.count 表示最大掉落数量，实际掉落 1 到 count 个，
     // 合并为一个带数量的掉落物，拾取时一次性获得全部。
-    std.debug.assert(product.count > 0);
-    const dropCount = zhu.random.intMost(u32, 1, product.count);
+    std.debug.assert(product.value.count > 0);
+    const dropCount = zhu.random.intMost(u32, 1, product.value.count);
     const origin = want.target.add(map.grid.halfCell());
     factory.spawnPickup(world, .{
-        .item = product.item,
+        .item = product.value.item,
         .count = dropCount,
         .origin = origin,
     });
@@ -390,7 +390,7 @@ test "斧头命中木材产出对象会减少生命" {
     const entity = addProductEntity(
         &world,
         target,
-        Product{ .item = .timber },
+        Product{ .value = .one(.timber) },
         2,
     );
     const player = world.createIdentity(Player);
@@ -418,7 +418,7 @@ test "斧头命中产出对象会播放地图资源动画" {
     const entity = addProductEntity(
         &world,
         target,
-        Product{ .item = .timber },
+        Product{ .value = .one(.timber) },
         2,
     );
     const image = zhu.Image{ .size = .xy(32, 16) };
@@ -451,7 +451,7 @@ test "错误工具不会命中产出对象" {
     const entity = addProductEntity(
         &world,
         target,
-        Product{ .item = .stone },
+        Product{ .value = .one(.stone) },
         2,
     );
     const player = world.createIdentity(Player);
@@ -480,7 +480,7 @@ test "镐子击碎石头会生成掉落并清理阻挡" {
     const entity = addProductEntity(
         &world,
         target,
-        Product{ .item = .stone, .count = 2 },
+        Product{ .value = .{ .item = .stone, .count = 2 } },
         1,
     );
     const player = world.createIdentity(Player);
