@@ -88,7 +88,7 @@ fn drawOverlay(hourValue: u8, minute: f32) void {
 
 fn drawLights(world: *zhu.ecs.World) void {
     const allPoint = .{ Position, Point };
-    var points = world.queryWithout(allPoint, .{Disabled});
+    var points = world.queryNot(allPoint, .{Disabled});
     while (points.next()) |entity| {
         const position = points.get(entity, Position);
         const point = points.get(entity, Point);
@@ -101,7 +101,7 @@ fn drawLights(world: *zhu.ecs.World) void {
 
     const allSpot = .{ Position, Spot };
     // 第一版不做真实锥形，先退化成圆形占位光圈验证地图数据。
-    var spots = world.queryWithout(allSpot, .{Disabled});
+    var spots = world.queryNot(allSpot, .{Disabled});
     while (spots.next()) |entity| {
         const pos = spots.get(entity, Position);
         const spot = spots.get(entity, Spot);
