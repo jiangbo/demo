@@ -34,13 +34,3 @@ pub fn restore(world: *World, data: storage.Player) void {
     world.remove(entity, actor.Busy);
     zhu.camera.directFollow(data.position);
 }
-
-pub fn follow(world: *World, delta: f32) void {
-    const entity = world.getIdentity(actor.Player).?;
-    const position = world.get(entity, Position).?;
-
-    // 平滑值交给引擎相机限制范围，这里只表达速度随 delta 缩放。
-    const speed: f32 = 9;
-    zhu.camera.smoothFollow(position, speed * delta);
-    zhu.camera.roundPosition();
-}

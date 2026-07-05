@@ -5,6 +5,7 @@ const component = @import("../component.zig");
 const map = @import("../map.zig");
 
 const Position = component.Position;
+const Player = component.actor.Player;
 const Velocity = component.motion.Velocity;
 const Shape = component.motion.Shape;
 const Blocking = component.motion.Blocking;
@@ -29,6 +30,17 @@ pub fn update(world: *World, delta: f32) void {
         const posY = pos.addY(offset.y);
         if (map.canMove(world, entity, posY)) pos.* = posY;
     }
+
+    followPlayer(world, delta);
+}
+
+fn followPlayer(world: *World, delta: f32) void {
+    const entity = world.getIdentity(Player) orelse return;
+    const position = world.get(entity, Position).?;
+
+    const speed: f32 = 9;
+    zhu.camera.smoothFollow(position, speed * delta);
+    zhu.camera.roundPosition();
 }
 
 test "移动系统会按速度更新位置" {
