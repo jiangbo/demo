@@ -120,14 +120,14 @@ fn updatePlayUi(req: ui.Request) void {
         .block => {},
         .title => pending = .title,
         .save => |slot| {
-            if (!savePlay(slot)) {
+            if (!save(slot)) {
                 ui.showMessage(.{ .text = "保存失败", .fail = true });
                 return;
             }
             ui.showMessage(.{ .text = "保存成功", .fail = false });
         },
         .load => |slot| {
-            if (!loadPlay(slot)) {
+            if (!load(slot)) {
                 ui.showMessage(.{ .text = "读取失败", .fail = true });
                 return;
             }
@@ -241,7 +241,7 @@ fn enterPlay(loadSlot: ?u8) void {
 
     if (loadSlot) |slot| {
         // 存档恢复依赖已经存在的 world/map/player 基础结构。
-        if (!loadPlay(slot)) {
+        if (!load(slot)) {
             pending = .title;
             return;
         }
@@ -249,15 +249,9 @@ fn enterPlay(loadSlot: ?u8) void {
     zhu.audio.playMusic("audio/01_spring_journey.ogg");
 }
 
-fn savePlay(slot: u8) bool {
-    const clock = world.getPtr(world.entity, resource.Clock).?;
-
-    map.saveState(&world, clock.day);
-    const record = captureRecord(clock) catch |err| {
-        std.log.err("capture save slot {} failed: {}", .{ slot, err });
-        return false;
-    };
-    defer freeRecord(record);
+fn save(slot: u8) bool {
+    const record = capture();
+    defer record.maps.deinit(allocator);
 
     storage.write(slot, record) catch |err| {
         std.log.err("save slot {} failed: {}", .{ slot, err });
@@ -266,23 +260,22 @@ fn savePlay(slot: u8) bool {
     return true;
 }
 
-fn loadPlay(slot: u8) bool {
+fn load(slot: u8) bool {
     var record = storage.read(slot) catch |err| {
         std.log.err("load slot {} failed: {}", .{ slot, err });
         return false;
     };
     defer record.deinit();
 
-    restoreRecord(record.value) catch |err| {
+    restore(record.value) catch |err| {
         std.log.err("restore slot {} failed: {}", .{ slot, err });
         return false;
     };
     return true;
 }
 
-fn captureRecord(
-    clock: *const resource.Clock,
-) !storage.Record {
+fn capture() storage.Record {
+    const clock = world.getPtr(world.entity, resource.Clock).?;
     const inv = world.getPtr(world.entity, resource.Inventory).?;
 
     return .{
@@ -290,21 +283,17 @@ fn captureRecord(
         .clock = clock.*,
         .player = player.capture(&world, map.current),
         .inventory = inv.capture(),
-        .maps = try map.captureState(allocator.raw),
+        .maps = map.capture(allocator, &world),
     };
 }
 
-fn freeRecord(record: storage.Record) void {
-    map.freeCapture(allocator.raw, record.maps);
-}
-
-fn restoreRecord(record: storage.Record) !void {
+fn restore(record: storage.Record) !void {
     const clock = world.getPtr(world.entity, resource.Clock).?;
 
     clock.* = record.clock;
 
     map.exit(&world, clock.day);
-    try map.restoreSaved(record.maps, clock.day);
+    try map.restore(record.maps, clock.day);
 
     const keep = .{
         resource.Clock,

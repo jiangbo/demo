@@ -22,37 +22,39 @@ pub const Player = struct {
     facing: component.actor.Facing = .down,
 };
 
-pub const Item = component.item.Stack;
-
 pub const Inventory = struct {
     activeHotbar: usize = 0,
     activePage: usize = 0,
-    slots: []const Item = &.{},
+    slots: []const component.item.Stack = &.{},
     hotbar: []const ?usize = &.{},
 };
 
-pub const Product = struct {
-    product: component.item.Product,
-    health: component.item.Health,
-};
-
-pub const Thing = union(enum) {
+pub const Object = union(enum) {
     gone,
     crop: component.farm.Crop,
     chest: component.item.Chest,
-    product: Product,
+    product: component.item.Health,
 };
 
-pub const MapTile = struct {
+pub const Tile = struct {
     index: u32 = 0,
-    land: ?component.farm.Ground = null,
-    thing: ?Thing = null,
+    ground: ?component.farm.Ground = null,
+    object: ?Object = null,
 };
 
 pub const Map = struct {
-    id: component.map.Id = .town,
     day: u32 = 0,
-    tiles: []const MapTile = &.{},
+    tiles: []Tile = &.{},
+};
+
+pub const MapRecord = struct {
+    maps: std.EnumArray(component.map.Id, Map) = .initFill(.{}),
+
+    pub fn deinit(self: MapRecord, gpa: zhu.Allocator) void {
+        for (std.enums.values(component.map.Id)) |id| {
+            gpa.free(self.maps.get(id).tiles);
+        }
+    }
 };
 
 pub const Record = struct {
@@ -60,7 +62,7 @@ pub const Record = struct {
     clock: Clock = .{},
     player: Player = .{},
     inventory: Inventory = .{},
-    maps: []const Map = &.{},
+    maps: MapRecord = .{},
 };
 
 var config: Config = .{};

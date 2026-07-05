@@ -7,6 +7,7 @@ const audio = @import("audio.zig");
 const png = @import("internal/png.zig");
 pub const memory = @import("internal/memory.zig");
 
+const oom = memory.oom;
 const Image = graphics.Image;
 const Path = [:0]const u8;
 const assetRoot = "assets/";
@@ -44,27 +45,7 @@ pub fn deinit() void {
     music.deinit();
     file.deinit();
     if (sk.fetch.valid()) sk.fetch.shutdown();
-    for (&fileBuffer) |buffer| if (buffer.len != 0) free(buffer);
-}
-
-pub fn oomAlloc(comptime T: type, n: usize) []T {
-    return allocator.alloc(T, n) catch oom();
-}
-
-pub fn oomDupe(comptime T: type, m: []const T) []T {
-    return allocator.dupe(T, m) catch oom();
-}
-
-pub fn oomDupeZ(comptime T: type, m: []const T) [:0]T {
-    return allocator.dupeZ(T, m) catch oom();
-}
-
-pub fn free(data: anytype) void {
-    return allocator.free(data);
-}
-
-pub fn oom() noreturn {
-    @panic("out of memory");
+    for (&fileBuffer) |buf| if (buf.len != 0) allocator.free(buf);
 }
 
 pub fn loadImage(path: Path, size: graphics.Vector2) Image {
@@ -128,12 +109,12 @@ const atlas = struct {
 
         const atlasView = sk.gfx.allocView();
         const pageCount = source.imagePaths.len;
-        const pageSize: usize = @intFromFloat(source.size.x * source.size.y);
+        const size: usize = @intFromFloat(source.size.x * source.size.y);
         entry.value_ptr.* = .{
             .view = atlasView,
             .size = source.size,
             .layers = pageCount,
-            .data = oomAlloc(u8, pageSize * 4 * pageCount),
+            .data = allocator.alloc(u8, size * 4 * pageCount) catch oom(),
         };
         for (source.imagePaths, 0..) |path, i| {
             const pageIndex = PageIndex{
@@ -274,7 +255,7 @@ const sound = struct {
 
         const channels: i32 = @intCast(info.channels);
         const size = c.stbAudio.getSampleCount(stbAudio) * channels;
-        const samples = oomAlloc(f32, @intCast(size));
+        const samples = allocator.alloc(f32, @intCast(size)) catch oom();
         _ = c.stbAudio.fillSamples(stbAudio, samples, channels);
 
         cache.put(allocator, id(resp.path), .{
@@ -300,7 +281,7 @@ const music = struct {
     }
 
     fn handler(resp: Response) []const u8 {
-        const data = oomDupe(u8, resp.data.items);
+        const data = allocator.dupe(u8, resp.data.items) catch oom();
         const stbAudio = c.stbAudio.loadFromMemory(data);
         cache.put(allocator, id(resp.path), stbAudio) catch oom();
         audio.playMusicOption(resp.path, resp.index == 1);
@@ -366,7 +347,8 @@ pub const file = struct {
         }
         if (resp.dispatched) {
             std.debug.assert(fileBuffer[resp.lane].len == 0);
-            fileBuffer[resp.lane] = oomAlloc(u8, maxFileSize);
+            const len = maxFileSize;
+            fileBuffer[resp.lane] = allocator.alloc(u8, len) catch oom();
             const buffer = sk.fetch.asRange(fileBuffer[resp.lane]);
             sk.fetch.bindBuffer(resp.handle, buffer);
             return;
@@ -388,7 +370,7 @@ pub const file = struct {
         value.state = .loaded;
         value.managed = value.handler(response);
         value.state = .handled;
-        free(fileBuffer[resp.lane]);
+        allocator.free(fileBuffer[resp.lane]);
         fileBuffer[resp.lane] = &.{};
     }
 

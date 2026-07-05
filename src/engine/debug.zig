@@ -29,7 +29,7 @@ pub fn zon(comptime T: type, comptime path: [:0]const u8) *T {
         std.debug.panic("zon load failed: {s}", .{path});
     }
     const result = zonMap.getOrPut(assets.memory.allocator.raw, //
-        path) catch assets.oom();
+        path) catch assets.memory.oom();
     if (!result.found_existing) {
         result.value_ptr.* = .{
             .path = path,
