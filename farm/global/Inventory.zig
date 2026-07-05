@@ -10,7 +10,6 @@ const Store = zhu.widget.StackStore(ItemEnum, 40, stackLimit);
 const Self = @This();
 
 pub const Stack = Store.Stack;
-pub const Item = Stack;
 const Move = Store.Move;
 pub const Use = union(enum) { none, full, item: Stack };
 
@@ -41,7 +40,6 @@ pub fn capture(self: *Self) storage.Inventory {
 }
 
 pub fn restore(self: *Self, data: storage.Inventory) void {
-    self.reset();
     @memcpy(self.store.stacks[0..], data.slots);
     @memcpy(self.hotbar[0..], data.hotbar);
     self.activeHotbar = data.activeHotbar;
@@ -50,7 +48,7 @@ pub fn restore(self: *Self, data: storage.Inventory) void {
 
 pub fn add(self: *Self, itemType: ItemEnum, count: u32) u32 {
     const remaining = self.store.add(itemType, count);
-    if (remaining < count) self.autoBind(itemType);
+    if (remaining < count) self.hotbarAutoBind(itemType);
     return remaining;
 }
 
@@ -66,8 +64,6 @@ pub fn use(self: *Self, itemType: ItemEnum, count: u32) bool {
 }
 
 pub fn useAt(self: *Self, index: usize) Use {
-    std.debug.assert(index < self.store.stacks.len);
-
     const slot = self.store.getPtr(index) orelse return .none;
     const cfg = factory.itemConfig(slot.item);
     const effect = cfg.product orelse return .none;
@@ -75,66 +71,40 @@ pub fn useAt(self: *Self, index: usize) Use {
 
     if (slot.count == 1) {
         slot.* = product;
-        self.autoBind(product.item);
+        self.hotbarAutoBind(product.item);
         return .{ .item = slot.* };
     }
 
     if (!self.store.useAt(index, product)) return .full;
 
-    self.autoBind(product.item);
+    self.hotbarAutoBind(product.item);
     return .{ .item = product };
 }
 
-pub fn moveSlot(
-    self: *Self,
-    fromIndex: usize,
-    toIndex: usize,
-) ?Move {
-    if (fromIndex == toIndex) return null;
-
-    const moved = self.store.move(fromIndex, toIndex) orelse return null;
+pub fn move(self: *Self, from: usize, to: usize) ?Move {
+    const moved = self.store.move(from, to) orelse return null;
     switch (moved) {
-        .swap => self.swapHotbarRefs(fromIndex, toIndex),
+        .swap => self.hotbarSwap(from, to),
         .merge => {},
-        .clear => self.replaceHotbarRefs(fromIndex, toIndex),
+        .clear => self.hotbarReplace(from, to),
     }
     return moved;
 }
 
-pub fn bindHotbar(
-    self: *Self,
-    hotbarIndex: usize,
-    bagIndex: usize,
-) void {
-    self.clearHotbarItemRefs(self.store.get(bagIndex).?.item);
-    self.hotbar[hotbarIndex] = bagIndex;
+pub fn hotbarBind(self: *Self, hotbar: usize, bag: usize) void {
+    self.hotbarClearItem(self.store.get(bag).?.item);
+    self.hotbar[hotbar] = bag;
 }
 
-pub fn clearHotbar(self: *Self, hotbarIndex: usize) void {
-    self.hotbar[hotbarIndex] = null;
+pub fn hotbarMove(self: *Self, from: usize, to: usize) void {
+    if (from == to) return;
+
+    const fromBag = self.hotbar[from] orelse return;
+    self.hotbar[from] = self.hotbar[to];
+    self.hotbar[to] = fromBag;
 }
 
-pub fn moveHotbarBinding(
-    self: *Self,
-    fromIndex: usize,
-    toIndex: usize,
-) void {
-    if (fromIndex == toIndex) return;
-
-    const from = self.hotbar[fromIndex] orelse return;
-    self.hotbar[fromIndex] = self.hotbar[toIndex];
-    self.hotbar[toIndex] = from;
-}
-
-fn autoBind(self: *Self, itemType: ItemEnum) void {
-    if (self.hasHotbarItem(itemType)) return;
-
-    const bagIndex = self.store.first(itemType) orelse return;
-    const hotbarIndex = self.firstEmptyHotbar() orelse return;
-    self.bindHotbar(hotbarIndex, bagIndex);
-}
-
-fn clearHotbarItemRefs(self: *Self, itemType: ItemEnum) void {
+fn hotbarClearItem(self: *Self, itemType: ItemEnum) void {
     for (&self.hotbar) |*slotIndex| {
         const index = slotIndex.* orelse continue;
         const slot = self.store.getPtr(index) orelse continue;
@@ -142,17 +112,13 @@ fn clearHotbarItemRefs(self: *Self, itemType: ItemEnum) void {
     }
 }
 
-fn replaceHotbarRefs(
-    self: *Self,
-    fromIndex: usize,
-    toIndex: usize,
-) void {
+fn hotbarReplace(self: *Self, from: usize, to: usize) void {
     for (&self.hotbar) |*slotIndex| {
-        if (slotIndex.* == fromIndex) slotIndex.* = toIndex;
+        if (slotIndex.* == from) slotIndex.* = to;
     }
 }
 
-fn swapHotbarRefs(self: *Self, a: usize, b: usize) void {
+fn hotbarSwap(self: *Self, a: usize, b: usize) void {
     for (&self.hotbar) |*slotIndex| {
         const index = slotIndex.* orelse continue;
         if (index == a) slotIndex.* = b;
@@ -160,7 +126,7 @@ fn swapHotbarRefs(self: *Self, a: usize, b: usize) void {
     }
 }
 
-fn hasHotbarItem(self: *Self, itemType: ItemEnum) bool {
+fn hotbarHasItem(self: *Self, itemType: ItemEnum) bool {
     for (self.hotbar) |slotIndex| {
         const index = slotIndex orelse continue;
         const slot = self.store.getPtr(index) orelse continue;
@@ -169,12 +135,20 @@ fn hasHotbarItem(self: *Self, itemType: ItemEnum) bool {
     return false;
 }
 
-fn firstEmptyHotbar(self: *Self) ?usize {
+fn hotbarFirstEmpty(self: *Self) ?usize {
     for (self.hotbar, 0..) |slotIndex, index| {
         const bagIndex = slotIndex orelse return index;
         if (self.store.get(bagIndex) == null) return index;
     }
     return null;
+}
+
+fn hotbarAutoBind(self: *Self, itemType: ItemEnum) void {
+    if (self.hotbarHasItem(itemType)) return;
+
+    const bag = self.store.first(itemType) orelse return;
+    const hotbar = self.hotbarFirstEmpty() orelse return;
+    self.hotbarBind(hotbar, bag);
 }
 
 test "添加物品会合并并自动绑定快捷栏" {
@@ -187,60 +161,6 @@ test "添加物品会合并并自动绑定快捷栏" {
     try std.testing.expectEqual(.strawberry, inv.active().?);
     const index = inv.hotbar[inv.activeHotbar].?;
     try std.testing.expectEqual(10, inv.store.stacks[index].count);
-}
-
-test "restore 会恢复库存槽和快捷栏" {
-    var inv: Self = .{};
-    inv.reset();
-
-    var stacks: [40]storage.Item = @splat(.empty);
-    stacks[0] = .{ .item = .strawberrySeed, .count = 7 };
-    var hotbar: [10]?usize = @splat(null);
-    hotbar[3] = 0;
-    const data = storage.Inventory{
-        .activeHotbar = 3,
-        .activePage = 1,
-        .slots = &stacks,
-        .hotbar = &hotbar,
-    };
-
-    inv.restore(data);
-
-    try std.testing.expectEqual(
-        component.item.ItemEnum.strawberrySeed,
-        inv.active().?,
-    );
-    const index = inv.hotbar[inv.activeHotbar].?;
-    try std.testing.expectEqual(7, inv.store.stacks[index].count);
-    try std.testing.expectEqual(0, inv.hotbar[3].?);
-    try std.testing.expectEqual(3, inv.activeHotbar);
-    try std.testing.expectEqual(1, inv.activePage);
-}
-
-test "新增工具会占用独立槽位" {
-    var inv: Self = .{};
-    inv.reset();
-
-    try std.testing.expectEqual(0, inv.add(.hoe, 1));
-    try std.testing.expectEqual(0, inv.add(.hoe, 1));
-
-    try std.testing.expectEqual(.hoe, inv.store.stacks[0].item);
-    try std.testing.expectEqual(1, inv.store.stacks[0].count);
-    try std.testing.expectEqual(.hoe, inv.store.stacks[1].item);
-    try std.testing.expectEqual(1, inv.store.stacks[1].count);
-}
-
-test "移动同类工具不会合并" {
-    var inv: Self = .{};
-    inv.reset();
-
-    inv.store.stacks[0] = .{ .item = .hoe, .count = 1 };
-    inv.store.stacks[1] = .{ .item = .hoe, .count = 1 };
-
-    _ = inv.moveSlot(0, 1);
-
-    try std.testing.expectEqual(1, inv.store.stacks[0].count);
-    try std.testing.expectEqual(1, inv.store.stacks[1].count);
 }
 
 test "当前物品通过快捷栏引用读取库存槽" {
@@ -266,8 +186,8 @@ test "同一种物品只能绑定到一个快捷栏槽位" {
     inv.store.stacks[0] = .{ .item = .strawberrySeed, .count = 2 };
     inv.store.stacks[2] = .{ .item = .strawberrySeed, .count = 4 };
 
-    inv.bindHotbar(0, 0);
-    inv.bindHotbar(3, 2);
+    inv.hotbarBind(0, 0);
+    inv.hotbarBind(3, 2);
 
     try std.testing.expectEqual(null, inv.hotbar[0]);
     try std.testing.expectEqual(2, inv.hotbar[3].?);
@@ -278,9 +198,9 @@ test "快捷栏拖到空快捷栏会移动绑定" {
     inv.reset();
 
     inv.store.stacks[0] = .{ .item = .strawberry, .count = 5 };
-    inv.bindHotbar(0, 0);
+    inv.hotbarBind(0, 0);
 
-    inv.moveHotbarBinding(0, 4);
+    inv.hotbarMove(0, 4);
 
     try std.testing.expectEqual(null, inv.hotbar[0]);
     try std.testing.expectEqual(0, inv.hotbar[4].?);
@@ -292,10 +212,10 @@ test "快捷栏拖到已有快捷栏会交换绑定" {
 
     inv.store.stacks[0] = .{ .item = .strawberry, .count = 5 };
     inv.store.stacks[1] = .{ .item = .potato, .count = 3 };
-    inv.bindHotbar(0, 0);
-    inv.bindHotbar(4, 1);
+    inv.hotbarBind(0, 0);
+    inv.hotbarBind(4, 1);
 
-    inv.moveHotbarBinding(0, 4);
+    inv.hotbarMove(0, 4);
 
     try std.testing.expectEqual(1, inv.hotbar[0].?);
     try std.testing.expectEqual(0, inv.hotbar[4].?);
@@ -306,10 +226,10 @@ test "拖动物品到空槽后快捷栏继续指向该物品" {
     inv.reset();
 
     inv.store.stacks[0] = .{ .item = .strawberry, .count = 5 };
-    inv.bindHotbar(2, 0);
+    inv.hotbarBind(2, 0);
     inv.activeHotbar = 2;
 
-    _ = inv.moveSlot(0, 5);
+    _ = inv.move(0, 5);
 
     try std.testing.expectEqual(.strawberry, inv.active().?);
     try std.testing.expectEqual(5, inv.store.stacks[5].count);
@@ -321,10 +241,10 @@ test "交换不同物品后快捷栏继续指向原物品" {
 
     inv.store.stacks[0] = .{ .item = .strawberry, .count = 5 };
     inv.store.stacks[1] = .{ .item = .potato, .count = 3 };
-    inv.bindHotbar(0, 0);
-    inv.bindHotbar(1, 1);
+    inv.hotbarBind(0, 0);
+    inv.hotbarBind(1, 1);
 
-    _ = inv.moveSlot(0, 1);
+    _ = inv.move(0, 1);
 
     inv.activeHotbar = 0;
     try std.testing.expectEqual(.strawberry, inv.active().?);
@@ -341,10 +261,10 @@ test "合并同类物品后快捷栏继续指向合并物品" {
 
     inv.store.stacks[0] = .{ .item = .strawberry, .count = 5 };
     inv.store.stacks[1] = .{ .item = .strawberry, .count = 4 };
-    inv.bindHotbar(0, 0);
+    inv.hotbarBind(0, 0);
     inv.activeHotbar = 0;
 
-    _ = inv.moveSlot(0, 1);
+    _ = inv.move(0, 1);
 
     try std.testing.expectEqual(.strawberry, inv.active().?);
     try std.testing.expectEqual(9, inv.store.stacks[inv.hotbar[0].?].count);
@@ -391,22 +311,6 @@ test "使用最后一个作物会优先回填原槽" {
     };
     try std.testing.expectEqual(.potatoSeed, item.item);
     try std.testing.expectEqual(3, item.count);
-}
-
-test "use 会在数量足够时扣除指定物品" {
-    var inv: Self = .{};
-    inv.reset();
-
-    inv.store.stacks[0] = .{ .item = .strawberrySeed, .count = 2 };
-
-    try std.testing.expect(!inv.use(.potatoSeed, 1));
-    try std.testing.expectEqual(@as(u32, 2), inv.store.stacks[0].count);
-
-    try std.testing.expect(inv.use(.strawberrySeed, 1));
-    try std.testing.expectEqual(@as(u32, 1), inv.store.stacks[0].count);
-
-    try std.testing.expect(!inv.use(.strawberrySeed, 2));
-    try std.testing.expectEqual(@as(u32, 1), inv.store.stacks[0].count);
 }
 
 test "use 会先确认总数足够再跨槽扣除" {

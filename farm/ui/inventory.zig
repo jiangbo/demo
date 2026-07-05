@@ -152,10 +152,10 @@ const ItemDrag = struct {
         }
     }
 
-    fn finishBag(self: *ItemDrag, inv: *Inventory, fromIndex: usize) void {
+    fn finishBag(self: *ItemDrag, inv: *Inventory, from: usize) void {
         switch (self.target(inv) orelse return) {
-            .bag => |toIndex| _ = inv.moveSlot(fromIndex, toIndex),
-            .bar => |barIndex| inv.bindHotbar(barIndex, fromIndex),
+            .bag => |to| _ = inv.move(from, to),
+            .bar => |barIndex| inv.hotbarBind(barIndex, from),
         }
     }
 
@@ -166,11 +166,11 @@ const ItemDrag = struct {
         fromBag: usize,
     ) void {
         switch (self.target(inv) orelse {
-            inv.clearHotbar(fromBar);
+            inv.hotbar[fromBar] = null;
             return;
         }) {
-            .bag => |toIndex| _ = inv.moveSlot(fromBag, toIndex),
-            .bar => |toBar| inv.moveHotbarBinding(fromBar, toBar),
+            .bag => |to| _ = inv.move(fromBag, to),
+            .bar => |toBar| inv.hotbarMove(fromBar, toBar),
         }
     }
 

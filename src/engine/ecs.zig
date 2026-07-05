@@ -375,7 +375,8 @@ pub const World = struct {
     }
 
     // zig fmt: off
-    pub fn queryNot(self: *World, All: anytype, None: anytype) Query(All, None) {
+    pub fn queryNot(self: *World, All: anytype, None: anytype)
+        Query(All, None) {
     // zig fmt: on
         comptime std.debug.assert(All.len > 0);
 
