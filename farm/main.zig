@@ -6,6 +6,7 @@ const scene = @import("scene.zig");
 var vertexBuffer: []zhu.batch.Vertex = undefined;
 var commandBuffer: [64]zhu.batch.Command = undefined;
 var soundBuffer: [20]zhu.audio.Sound = undefined;
+var debug = false;
 
 pub fn init(allocator: zhu.Allocator) void {
     vertexBuffer = allocator.alloc(zhu.batch.Vertex, 4096);
@@ -29,11 +30,32 @@ pub fn init(allocator: zhu.Allocator) void {
 }
 
 pub fn frame(delta: f32) void {
+    if (zhu.key.released(.X)) debug = !debug;
+
     scene.update(delta);
 
     zhu.batch.beginDraw();
     scene.draw();
+    if (debug) drawDebug();
     zhu.batch.endDraw();
+}
+
+fn drawDebug() void {
+    const total = scene.world.entities.versions.items.len;
+
+    var entityBuffer: [32]u8 = undefined;
+    var componentBuffer: [32]u8 = undefined;
+    const rows = [_]zhu.debug.Row{.{
+        .label = "世界",
+        .left = zhu.format(&entityBuffer, "实体 {}/{}", .{
+            total - scene.world.entities.deletedCount,
+            total,
+        }),
+        .right = zhu.format(&componentBuffer, "组件 {}", .{
+            scene.world.map.count(),
+        }),
+    }};
+    zhu.debug.draw(&rows);
 }
 
 pub fn deinit(allocator: zhu.Allocator) void {

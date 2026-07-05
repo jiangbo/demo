@@ -3,8 +3,8 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
-const Inventory = @import("../global/Inventory.zig");
-const Notice = @import("../global/Notice.zig");
+const Inventory = @import("../resource/Inventory.zig");
+const Notice = @import("../resource/Notice.zig");
 
 const World = zhu.ecs.World;
 const Interact = component.actor.Interact;

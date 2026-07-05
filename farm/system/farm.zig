@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
-const Inventory = @import("../global/Inventory.zig");
+const Inventory = @import("../resource/Inventory.zig");
 const map = @import("../map.zig");
 
 const Player = component.actor.Player;

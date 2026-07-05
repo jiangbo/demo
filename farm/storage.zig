@@ -2,7 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("component.zig");
-const Clock = @import("global/Clock.zig");
+const Clock = @import("resource/Clock.zig");
 
 pub const slotCount: usize = 10;
 const maxSaveSize = 128 * 1024;

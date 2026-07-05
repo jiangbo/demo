@@ -1,6 +1,6 @@
 const zhu = @import("zhu");
 
-const Notice = @import("../global/Notice.zig");
+const Notice = @import("../resource/Notice.zig");
 
 const World = zhu.ecs.World;
 

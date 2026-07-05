@@ -2,7 +2,7 @@ const zhu = @import("zhu");
 
 const input = @import("../input.zig");
 const item = @import("item.zig");
-const Inventory = @import("../global/Inventory.zig");
+const Inventory = @import("../resource/Inventory.zig");
 
 const ImageId = zhu.graphics.ImageId;
 const NineSource = zhu.NineImage.Source;

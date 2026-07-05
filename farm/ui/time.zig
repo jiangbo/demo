@@ -1,6 +1,6 @@
 const zhu = @import("zhu");
 
-const Clock = @import("../global/Clock.zig");
+const Clock = @import("../resource/Clock.zig");
 
 const World = zhu.ecs.World;
 

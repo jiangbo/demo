@@ -76,10 +76,6 @@ pub const Config = struct {
 
 pub const zon: Config = @import("zon/factory.zon");
 
-pub fn init() void {
-    std.log.info("spawn init", .{});
-}
-
 pub fn itemConfig(itemType: item.ItemEnum) Item {
     return zon.items[@intFromEnum(itemType)];
 }

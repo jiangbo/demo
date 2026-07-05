@@ -5,8 +5,8 @@ const input = @import("../input.zig");
 const item = @import("item.zig");
 const bag = @import("bag.zig");
 const bar = @import("bar.zig");
-const Inventory = @import("../global/Inventory.zig");
-const Notice = @import("../global/Notice.zig");
+const Inventory = @import("../resource/Inventory.zig");
+const Notice = @import("../resource/Notice.zig");
 
 const ItemEnum = @import("../component.zig").item.ItemEnum;
 const Stack = Inventory.Stack;
