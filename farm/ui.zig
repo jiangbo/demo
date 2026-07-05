@@ -12,10 +12,9 @@ const save = @import("ui/save.zig");
 const Config = @import("storage.zig").Config;
 
 pub const Message = struct { text: []const u8, fail: bool };
-pub const UiRequest = union(enum) {
+pub const Request = union(enum) {
     block,
     title,
-    rest: u8,
     save: u8,
     load: u8,
 };
@@ -54,11 +53,11 @@ pub fn openRest() void {
     activePopup = .rest;
 }
 
-pub fn update(world: *zhu.ecs.World, delta: f32) ?UiRequest {
+pub fn update(world: *zhu.ecs.World, delta: f32) ?Request {
     notice.update(world, delta);
 
     if (activePopup) |active| {
-        if (updatePopup(active)) |req| return req;
+        if (updatePopup(world, active)) |req| return req;
         return .block;
     }
 
@@ -71,7 +70,7 @@ pub fn update(world: *zhu.ecs.World, delta: f32) ?UiRequest {
     return null;
 }
 
-fn updatePopup(active: Popup) ?UiRequest {
+fn updatePopup(world: *zhu.ecs.World, active: Popup) ?Request {
     switch (active) {
         .save => {
             if (save.update()) |result| {
@@ -88,12 +87,8 @@ fn updatePopup(active: Popup) ?UiRequest {
                 }
             }
         },
-        .rest => if (rest.update()) |req| switch (req) {
+        .rest => if (rest.update(world)) |req| switch (req) {
             .close => close(),
-            .rest => |hours| {
-                close();
-                return .{ .rest = hours };
-            },
         },
         .pause => if (pause.update()) |req| switch (req) {
             .close => close(),

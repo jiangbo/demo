@@ -1,7 +1,9 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-pub const Request = union(enum) { close, rest: u8 };
+const component = @import("../component.zig");
+
+pub const Request = enum { close };
 
 const MenuEvent = enum(u8) { minus, plus, ok, cancel };
 
@@ -12,12 +14,15 @@ pub fn init() void {
     menu.centerInWindow();
 }
 
-pub fn update() ?Request {
+pub fn update(world: *zhu.ecs.World) ?Request {
     const event = menu.update(.{}) orelse return null;
     switch (@as(MenuEvent, @enumFromInt(event))) {
         .minus => hours -= 1,
         .plus => hours += 1,
-        .ok => return .{ .rest = hours },
+        .ok => {
+            world.addEvent(component.event.Rest{ .hours = hours });
+            return .close;
+        },
         .cancel => return .close,
     }
     hours = std.math.clamp(hours, 1, 24);

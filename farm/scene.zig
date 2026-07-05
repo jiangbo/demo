@@ -15,6 +15,7 @@ const resource = struct {
     const Clock = @import("resource/Clock.zig");
     const Inventory = @import("resource/Inventory.zig");
     const Notice = @import("resource/Notice.zig");
+    const Speed = @import("resource/Speed.zig");
 };
 
 const World = zhu.ecs.World;
@@ -46,13 +47,11 @@ pub fn init(allocator_: zhu.Allocator) void {
     world.add(world.entity, resource.Clock{});
     world.add(world.entity, resource.Inventory{});
     world.add(world.entity, resource.Notice{});
+    world.add(world.entity, resource.Speed{});
 
     // 存档状态先就位，UI 只持有这份长期有效的槽位切片。
-    config = storage.init();
-    ui.init(.{
-        .slots = &config.slots,
-        .config = &config,
-    });
+    config = storage.init(&world);
+    ui.init(.{ .slots = storage.slots(), .config = &config });
     title.init();
     map.init(allocator);
 
@@ -76,7 +75,7 @@ pub fn deinit() void {
 }
 
 pub fn update(delta: f32) void {
-    defer storage.update(config);
+    storage.update(&world, config);
 
     input.mouseCaptured = false;
     applyScene();
@@ -116,12 +115,10 @@ pub fn draw() void {
     }
 }
 
-fn updatePlayUi(req: ui.UiRequest) void {
-    const clock = world.getPtr(world.entity, resource.Clock).?;
+fn updatePlayUi(req: ui.Request) void {
     switch (req) {
         .block => {},
         .title => pending = .title,
-        .rest => |hours| clock.restHours = hours,
         .save => |slot| {
             if (!savePlay(slot)) {
                 ui.showMessage(.{ .text = "保存失败", .fail = true });
@@ -153,35 +150,7 @@ fn updatePlay(delta: f32) void {
         return;
     }
 
-    // 时间先推进，地图跨天逻辑和灯光都依赖本帧最新时间事件。
-    system.time.update(&world, config.speed, delta);
-    map.update(&world);
-    system.light.update(&world);
-
-    // 控制系统先写入意图，移动系统统一结算位置和碰撞。
-    system.control.update(&world);
-    system.life.update(&world, delta);
-    system.wander.update(&world, delta);
-    system.movement.update(&world, delta);
-
-    // 控制系统可能生成拾取物，所以拾取放在控制之后。
-    system.pickup.update(&world, delta);
-
-    // 按 F 的处理、相机跟随、动画和排序都读取本帧已结算的位置。
-    system.interact.update(&world);
-    system.dialog.update(&world);
-    system.chest.update(&world);
-    system.rest.update(&world);
-    player.follow(&world, delta);
-    system.animation.update(&world, delta);
-    system.farm.update(&world);
-    system.render.update(&world);
-
-    // 本帧世界结算完后记录下一帧是否需要切图。
-    system.transition.update(&world);
-
-    // 音效最后播放，统一消费本帧前面系统发出的 SoundPlay 事件。
-    system.sound.update(&world);
+    system.update(&world, delta);
 }
 
 fn updateMapFade(delta: f32) bool {
@@ -198,6 +167,7 @@ fn updateMapFade(delta: f32) bool {
                 resource.Clock,
                 resource.Inventory,
                 resource.Notice,
+                resource.Speed,
             };
             world.resetKeep(keep);
             world.entity = world.createEntity();
@@ -252,6 +222,7 @@ fn enterPlay(loadSlot: ?u8) void {
         resource.Clock,
         resource.Inventory,
         resource.Notice,
+        resource.Speed,
     };
     world.resetKeep(keep);
     world.entity = world.createEntity();
@@ -287,7 +258,7 @@ fn savePlay(slot: u8) bool {
     };
     defer freeRecord(record);
 
-    storage.write(slot, record, &config) catch |err| {
+    storage.write(slot, record) catch |err| {
         std.log.err("save slot {} failed: {}", .{ slot, err });
         return false;
     };
@@ -330,7 +301,6 @@ fn restoreRecord(record: storage.Record) !void {
     const clock = world.getPtr(world.entity, resource.Clock).?;
 
     clock.* = record.time;
-    clock.restHours = null;
 
     map.exit(&world, clock.day);
     try map.restoreSaved(record.maps, clock.day);
@@ -339,6 +309,7 @@ fn restoreRecord(record: storage.Record) !void {
         resource.Clock,
         resource.Inventory,
         resource.Notice,
+        resource.Speed,
     };
     world.resetKeep(keep);
     world.entity = world.createEntity();

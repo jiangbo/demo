@@ -216,6 +216,15 @@ pub fn readZon(T: type, path: [:0]const u8, ops: ZonOption) !Zon(T) {
     return .{ .value = value, .arena = arena };
 }
 
+pub fn saveZon(path: [:0]const u8, value: anytype) !void {
+    const gpa = assets.memory.allocator.raw;
+    var writer: std.Io.Writer.Allocating = .init(gpa);
+    defer writer.deinit();
+
+    try std.zon.stringify.serialize(value, .{}, &writer.writer);
+    try saveAll(path, writer.writer.buffered());
+}
+
 fn terminateBuffer(buffer: []u8, len: usize) [:0]u8 {
     buffer[len] = 0;
     return buffer[0..len :0];

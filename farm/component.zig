@@ -237,6 +237,7 @@ pub const sound = struct {
 
 // 事件类型：系统间通信的一次性消息
 pub const event = struct {
+    pub const Rest = struct { hours: u8 };
     pub const HourChanged = struct {};
     pub const DayChanged = struct { day: u32 };
     pub const PeriodChanged = struct {
