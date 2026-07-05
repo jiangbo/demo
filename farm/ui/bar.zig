@@ -38,13 +38,14 @@ pub fn update(inv: *Inventory) void {
 
     if (!visible) return;
 
-    if (click.update(hoveredSlot())) |index| {
+    if (click.update(hover())) |index| {
         inv.activeHotbar = index;
         zhu.audio.playSound("audio/UI_button08.ogg");
     }
+    if (click.captured) input.mouseCaptured = true;
 }
 
-pub fn hoveredSlot() ?usize {
+pub fn hover() ?usize {
     if (!visible) return null;
 
     const mouse = zhu.window.mouse.sub(zon.position);

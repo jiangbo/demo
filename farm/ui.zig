@@ -29,7 +29,7 @@ pub const Init = struct {
 };
 
 pub fn init(args: Init) void {
-    inventory.init();
+    inventory.reset();
     notice.init();
     time.init();
     pause.cfg = args.config;
@@ -87,9 +87,7 @@ fn updatePopup(world: *zhu.ecs.World, active: Popup) ?Request {
                 }
             }
         },
-        .rest => if (rest.update(world)) |req| switch (req) {
-            .close => close(),
-        },
+        .rest => if (rest.update(world)) close(),
         .pause => if (pause.update()) |req| switch (req) {
             .close => close(),
             .save => {

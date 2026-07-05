@@ -16,7 +16,9 @@ pub const Tooltip = struct {
     panel: NineSource,
 };
 
-pub fn drawTooltip(itemType: ItemEnum, tooltip: Tooltip) void {
+const tooltip: Tooltip = @import("tooltip.zon");
+
+pub fn drawTooltip(itemType: ItemEnum) void {
     const item = factory.itemConfig(itemType);
 
     const option = tooltip.text;

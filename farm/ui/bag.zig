@@ -30,7 +30,6 @@ pub const Zon = struct {
     close: Button,
     panel: NineSource,
     slot: NineSource,
-    tooltip: item.Tooltip,
 };
 
 pub const zon: Zon = @import("bag.zon");
@@ -48,31 +47,39 @@ pub fn reset() void {
     drag = null;
 }
 
-pub fn update(inv: *Inventory) void {
-    if (input.pressed(.inventory)) {
-        closed = !closed;
-        if (closed) click, drag = .{ .empty, null };
+pub fn update(inv: *Inventory) bool {
+    if (input.pressed(.inventory)) closed = !closed;
+    if (closed) {
+        const captured = drag != null;
+        click, drag = .{ .empty, null };
+        if (captured) input.mouseCaptured = true;
+        return captured;
     }
-    if (closed) return;
-    if (updatePanelDrag()) return;
+    if (updatePanelDrag()) return true;
 
-    const clicked = click.update(hovered()) orelse return;
-    inv.activePage = switch (clicked) {
-        .prev => inv.activePage -| 1,
-        .next => @min(inv.activePage + 1, zon.pageCount - 1),
+    const clicked = click.update(hovered()) orelse {
+        if (click.captured) input.mouseCaptured = true;
+        return click.captured;
+    };
+    const max = zon.pageCount - 1;
+    switch (clicked) {
+        .prev => inv.activePage -|= 1,
+        .next => inv.activePage = @min(inv.activePage + 1, max),
         .close => {
             closed, click, drag = .{ true, .empty, null };
-            return;
         },
-        .body, .slot => return,
-    };
+        .body, .slot => {},
+    }
+
+    input.mouseCaptured = true;
+    return true;
 }
 
-pub fn hoveredSlotIndex(inv: *Inventory) ?usize {
+pub fn hover(page: usize) ?usize {
     if (closed) return null;
 
     return switch (hovered() orelse return null) {
-        .slot => |index| inv.activePage * pageSize + index,
+        .slot => |index| page * pageSize + index,
         .body, .prev, .next, .close => null,
     };
 }
@@ -128,6 +135,7 @@ pub fn draw(inv: *Inventory, hidden: ?usize) void {
 
 fn updatePanelDrag() bool {
     if (drag) |offset| {
+        input.mouseCaptured = true;
         if (zhu.mouse.released(.LEFT)) drag = null else {
             position = zhu.window.mouse.sub(offset);
         }
@@ -137,6 +145,7 @@ fn updatePanelDrag() bool {
     if (!zhu.mouse.pressed(.LEFT)) return false;
     if (!std.meta.eql(hovered(), .body)) return false;
 
+    input.mouseCaptured = true;
     drag = zhu.window.mouse.sub(position);
     click = .empty;
     return true;
@@ -160,9 +169,9 @@ fn hovered() ?Hover {
     return .body;
 }
 
-fn drawButton(image: zhu.Image, button: Zon.Button, hover: Hover) void {
+fn drawButton(image: zhu.Image, button: Zon.Button, target: Hover) void {
     var pressed = false;
-    if (click.pressed) |p| pressed = std.meta.eql(p, hover);
+    if (click.pressed) |p| pressed = std.meta.eql(p, target);
 
     const source = if (pressed) button.pressed else button.normal;
     zhu.batch.drawImage(image.sub(source), button.rect.min, .{
