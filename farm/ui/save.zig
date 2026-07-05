@@ -58,9 +58,6 @@ fn drawSlot(index: usize) void {
     var buffer: [56]u8 = undefined;
     const label = switch (records[index]) {
         .empty => zhu.format(&buffer, "Slot {d} Empty", .{index + 1}),
-        .invalid => zhu.format(&buffer, "Slot {d} Invalid", .{
-            index + 1,
-        }),
         .valid => |summary| zhu.format(&buffer, "Slot {d} Day {d}", .{
             index + 1,
             summary.day,
@@ -75,7 +72,7 @@ const load = struct {
         disabled.clearRetainingCapacity();
         for (0..records.len) |index| switch (records[index]) {
             .valid => {},
-            .empty, .invalid => disabled.appendAssumeCapacity(index),
+            .empty => disabled.appendAssumeCapacity(index),
         };
         menu.disabled = disabled.items;
         menu.title.text = "Load Game";
@@ -86,7 +83,7 @@ const save = struct {
     fn choose(slot: usize) ?Request {
         switch (records[slot]) {
             .empty => return .{ .save = @intCast(slot) },
-            .invalid, .valid => popup.slot = @intCast(slot),
+            .valid => popup.slot = @intCast(slot),
         }
         return null;
     }

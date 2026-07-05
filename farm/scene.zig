@@ -51,7 +51,7 @@ pub fn init(allocator_: zhu.Allocator) void {
 
     // 存档状态先就位，UI 只持有这份长期有效的槽位切片。
     config = storage.init(&world);
-    ui.init(.{ .slots = storage.slots(), .config = &config });
+    ui.init(.{ .slots = &storage.slots, .config = &config });
     title.init();
     map.init(allocator);
 
@@ -287,7 +287,7 @@ fn captureRecord(
 
     return .{
         .timestamp = zhu.window.timestamp().toSeconds(),
-        .time = clock.*,
+        .clock = clock.*,
         .player = player.capture(&world, map.current),
         .inventory = inv.capture(),
         .maps = try map.captureState(allocator.raw),
@@ -301,7 +301,7 @@ fn freeRecord(record: storage.Record) void {
 fn restoreRecord(record: storage.Record) !void {
     const clock = world.getPtr(world.entity, resource.Clock).?;
 
-    clock.* = record.time;
+    clock.* = record.clock;
 
     map.exit(&world, clock.day);
     try map.restoreSaved(record.maps, clock.day);

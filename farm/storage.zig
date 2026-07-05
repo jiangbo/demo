@@ -3,26 +3,17 @@ const zhu = @import("zhu");
 
 const component = @import("component.zig");
 const Clock = @import("resource/Clock.zig");
+const Speed = @import("resource/Speed.zig");
+const World = zhu.ecs.World;
 
-pub const slotCount: usize = 10;
-const maxSaveSize = 128 * 1024;
+pub const Summary = struct { day: u32 = 0, timestamp: i64 = 0 };
 
-pub const SlotSummary = struct {
-    day: u32 = 0,
-    timestamp: i64 = 0,
-};
-
-pub const Slot = union(enum) {
-    empty,
-    invalid,
-    valid: SlotSummary,
-};
+pub const Slot = union(enum) { empty, valid: Summary };
 
 pub const Config = struct {
     speed: f32 = 1,
     music: f32 = 1,
     sound: f32 = 1,
-    slots: [slotCount]Slot = @splat(.empty),
 };
 
 pub const Player = struct {
@@ -66,97 +57,67 @@ pub const Map = struct {
 
 pub const Record = struct {
     timestamp: i64 = 0,
-    time: Clock = .{},
+    clock: Clock = .{},
     player: Player = .{},
     inventory: Inventory = .{},
     maps: []const Map = &.{},
 };
 
-var savedConfig: Config = .{};
+var config: Config = .{};
+pub var slots: [10]Slot = @splat(.empty);
 
-pub fn init() Config {
-    const config = loadConfig();
-    savedConfig = config;
-    applyConfig(config);
+pub fn init(world: *World) Config {
+    config = load(Config, "config.zon", .{});
+    slots = load(@TypeOf(slots), "saves/slots.zon", @splat(.empty));
+    sync(world, config);
     return config;
 }
 
-pub fn update(config: Config) void {
-    if (std.meta.eql(savedConfig, config)) return;
+pub fn update(world: *World, cfg: Config) void {
+    if (std.meta.eql(config, cfg)) return;
 
-    applyConfig(config);
-    saveConfig(config);
-    savedConfig = config;
+    sync(world, cfg);
+    zhu.window.saveZon("config.zon", cfg) catch |err| {
+        std.log.err("save config failed: {}", .{err});
+        return;
+    };
+    config = cfg;
 }
 
-pub fn slotPath(slot: u8, buffer: []u8) ![:0]const u8 {
-    if (slot >= slotCount) return error.InvalidSaveSlot;
-    return try std.fmt.bufPrintZ(buffer, "saves/slot{d}.zon", .{slot});
+fn sync(world: *World, cfg: Config) void {
+    world.getPtr(world.entity, Speed).?.value = cfg.speed;
+    zhu.audio.musicVolume.store(cfg.music, .release);
+    zhu.audio.soundVolume.store(cfg.sound, .release);
 }
 
 pub fn read(slot: u8) !zhu.window.Zon(Record) {
-    var pathBuffer: [32]u8 = undefined;
-    const path = try slotPath(slot, &pathBuffer);
+    var buffer: [32]u8 = undefined;
+    const path = zhu.formatZ(&buffer, "saves/slot{d}.zon", .{slot});
     const record = try zhu.window.readZon(Record, path, .{});
     std.log.info("game loaded: {s}", .{path});
     return record;
 }
 
-pub fn write(slot: u8, record: Record, config: *Config) !void {
-    var pathBuffer: [32]u8 = undefined;
-    const path = try slotPath(slot, &pathBuffer);
+pub fn write(slot: u8, record: Record) !void {
+    var buffer: [32]u8 = undefined;
+    const path = zhu.formatZ(&buffer, "saves/slot{d}.zon", .{slot});
 
-    const buffer = zhu.assets.oomAlloc(u8, maxSaveSize);
-    defer zhu.assets.free(buffer);
+    try zhu.window.saveZon(path, record);
 
-    var writer = std.Io.Writer.fixed(buffer);
-    try std.zon.stringify.serialize(record, .{}, &writer);
-    try zhu.window.saveAll(path, buffer[0..writer.end]);
-
-    config.slots[slot] = .{ .valid = .{
-        .day = record.time.day,
+    slots[slot] = .{ .valid = .{
+        .day = record.clock.day,
         .timestamp = record.timestamp,
     } };
-    saveConfig(config.*);
-    savedConfig = config.*;
+    try zhu.window.saveZon("saves/slots.zon", slots);
     std.log.info("game saved: {s}", .{path});
 }
 
-fn loadConfig() Config {
-    var loaded = zhu.window.readZon(Config, "config.zon", .{}) catch |err|
-        switch (err) {
-            error.FileNotFound => return .{},
-            else => std.debug.panic("load config failed: {}", .{err}),
-        };
+fn load(T: type, path: [:0]const u8, default: T) T {
+    var loaded = zhu.window.readZon(T, path, .{}) catch |err| switch (err) {
+        error.FileNotFound => return default,
+        else => std.debug.panic("load {s} failed: {}", .{ path, err }),
+    };
     defer loaded.deinit();
 
     return loaded.value;
-}
-
-fn saveConfig(config: Config) void {
-    var buffer: [4096]u8 = undefined;
-    var writer = std.Io.Writer.fixed(&buffer);
-    std.zon.stringify.serialize(config, .{}, &writer) catch |err| {
-        std.debug.panic("save config failed: {}", .{err});
-    };
-    zhu.window.saveAll("config.zon", buffer[0..writer.end]) catch |err| {
-        std.debug.panic("save config failed: {}", .{err});
-    };
-}
-
-fn applyConfig(config: Config) void {
-    zhu.audio.musicVolume.store(config.music, .release);
-    zhu.audio.soundVolume.store(config.sound, .release);
-}
-
-test "slotPath 会生成存档槽路径" {
-    var buffer: [32]u8 = undefined;
-    const path = try slotPath(3, &buffer);
-    const invalidSlot: u8 = slotCount;
-
-    try std.testing.expectEqualStrings("saves/slot3.zon", path);
-    try std.testing.expectError(
-        error.InvalidSaveSlot,
-        slotPath(invalidSlot, &buffer),
-    );
 }

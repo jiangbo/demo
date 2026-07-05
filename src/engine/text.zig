@@ -244,6 +244,10 @@ pub fn format(buf: []u8, comptime fmt: String, args: anytype) []u8 {
     return std.fmt.bufPrint(buf, fmt, args) catch @panic("text too long");
 }
 
+pub fn formatZ(buf: []u8, comptime fmt: String, args: anytype) [:0]u8 {
+    return std.fmt.bufPrintZ(buf, fmt, args) catch @panic("text too long");
+}
+
 pub fn nextIndex(str: []const u8, index: usize) usize {
     const next = std.unicode.utf8ByteSequenceLength(str[index]);
     return index + (next catch unreachable);
