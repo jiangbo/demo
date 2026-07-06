@@ -20,7 +20,8 @@ pub const Loaded = struct {
     land: Land,
     spatial: Spatial,
     vertexes: std.ArrayList(zhu.batch.Vertex) = .empty,
-    frontLayerStart: usize = 0,
+    frontStart: usize = 0,
+    loaded: bool = false,
 };
 
 const Context = struct {
@@ -34,6 +35,7 @@ pub fn load(gpa: zhu.Allocator, world: *World, map: tiled.Map) Loaded {
     var result = Loaded{
         .land = Land.init(gpa, map.grid),
         .spatial = Spatial.init(gpa, map.grid),
+        .loaded = true,
     };
     var ctx = Context{
         .gpa = gpa,
@@ -55,7 +57,7 @@ fn parseLayers(ctx: *Context) void {
         .object => {
             if (!foundFrontLayer and layer.isNamed("main")) {
                 const start = ctx.loaded.vertexes.items.len;
-                ctx.loaded.frontLayerStart = start;
+                ctx.loaded.frontStart = start;
                 foundFrontLayer = true;
             }
             parseObjectLayer(ctx, layer);
@@ -63,7 +65,7 @@ fn parseLayers(ctx: *Context) void {
     };
 
     if (!foundFrontLayer) {
-        ctx.loaded.frontLayerStart = ctx.loaded.vertexes.items.len;
+        ctx.loaded.frontStart = ctx.loaded.vertexes.items.len;
     }
 
     std.log.info("map loaded: {}x{}, tiles: {}", .{

@@ -53,7 +53,7 @@ pub fn init(allocator_: zhu.Allocator) void {
     config = storage.init(&world);
     ui.init(.{ .slots = &storage.slots, .config = &config });
     title.init();
-    map.init(allocator);
+    map.init();
 
     canvas = zhu.graphics.createRenderTarget(zhu.window.size);
 
@@ -62,14 +62,7 @@ pub fn init(allocator_: zhu.Allocator) void {
 }
 
 pub fn deinit() void {
-    switch (current) {
-        .title => {},
-        .play => {
-            const clock = world.getPtr(world.entity, resource.Clock).?;
-            map.exit(&world, clock.day);
-        },
-    }
-    map.deinit();
+    map.deinit(allocator, &world);
     ui.deinit();
     world.deinit();
 }
@@ -160,10 +153,9 @@ fn updateMapFade(delta: f32) bool {
 
     switch (phase) {
         .out => {
-            const clock = world.getPtr(world.entity, resource.Clock).?;
             const playerEntity = world.getIdentity(actor.Player).?;
             const request = world.get(playerEntity, Transition).?;
-            map.exit(&world, clock.day);
+            map.exit(allocator, &world);
             const keep = .{
                 resource.Clock,
                 resource.Inventory,
@@ -172,12 +164,8 @@ fn updateMapFade(delta: f32) bool {
             };
             world.resetKeep(keep);
             world.entity = world.createEntity();
-            map.enter(
-                &world,
-                request.target,
-                request.targetId,
-                clock.day,
-            );
+            map.enter(allocator, &world, request.target);
+            player.spawn(&world, request.targetId);
             mapFade.phase = .in;
             mapFade.timer.restart();
         },
@@ -192,9 +180,8 @@ fn applyScene() void {
     switch (current) {
         .title => title.exit(),
         .play => {
-            const clock = world.getPtr(world.entity, resource.Clock).?;
             mapFade = .{};
-            map.exit(&world, clock.day);
+            map.exit(allocator, &world);
         },
     }
     current, pending = .{ next, null };
@@ -227,7 +214,8 @@ fn enterPlay(loadSlot: ?u8) void {
     };
     world.resetKeep(keep);
     world.entity = world.createEntity();
-    map.enter(&world, .exterior, -1, clock.day);
+    map.enter(allocator, &world, .exterior);
+    player.spawn(&world, -1);
     const inv = world.getPtr(world.entity, resource.Inventory).?;
     inv.reset();
     ui.resetInventory();
@@ -292,8 +280,8 @@ fn restore(record: storage.Record) !void {
 
     clock.* = record.clock;
 
-    map.exit(&world, clock.day);
-    try map.restore(record.maps, clock.day);
+    map.unload(allocator);
+    try map.restore(allocator, record.maps, clock.day);
 
     const keep = .{
         resource.Clock,
@@ -303,7 +291,8 @@ fn restore(record: storage.Record) !void {
     };
     world.resetKeep(keep);
     world.entity = world.createEntity();
-    map.enter(&world, record.player.map, -1, clock.day);
+    map.enter(allocator, &world, record.player.map);
+    player.spawn(&world, -1);
     player.restore(&world, record.player);
     ui.resetInventory();
     world.getPtr(world.entity, resource.Inventory).?.restore(record.inventory);

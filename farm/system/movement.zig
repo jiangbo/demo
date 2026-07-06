@@ -47,7 +47,7 @@ test "移动系统会按速度更新位置" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const entity = world.createEntity();
     world.add(entity, Position.xy(10, 20));
@@ -86,7 +86,7 @@ test "动态阻挡会忽略自己" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const entity = addMover(&world, .xy(0, 0), .xy(10, 0));
 
@@ -99,7 +99,7 @@ test "带 Blocking 的 Shape 会挡住移动" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const mover = addMover(&world, .xy(0, 0), .xy(10, 0));
     _ = addBlocker(&world, .xy(10, 0), true);
@@ -113,7 +113,7 @@ test "没有 Blocking 的 Shape 不会挡住移动" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const mover = addMover(&world, .xy(0, 0), .xy(10, 0));
     _ = addBlocker(&world, .xy(10, 0), false);
@@ -127,7 +127,7 @@ test "动态阻挡只回退受阻轴" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const mover = addMover(&world, .xy(0, 0), .xy(10, 5));
     _ = addBlocker(&world, .xy(10, 0), true);

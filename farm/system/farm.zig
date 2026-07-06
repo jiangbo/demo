@@ -209,7 +209,7 @@ test "toolHit 会按 WantUse 锄地" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const player = world.createIdentity(Player);
     world.add(player, WantUse{ .item = .hoe, .target = target });
@@ -230,7 +230,7 @@ test "非事件帧不会结算 WantUse" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const player = world.createIdentity(Player);
     world.add(player, WantUse{ .item = .hoe, .target = target });
@@ -249,7 +249,7 @@ test "seedPlant 会种植并扣种子" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const inv = testInventory(&world);
     setActiveItem(&world, .strawberrySeed, 2);
@@ -283,7 +283,7 @@ test "seedPlant 没有种子时不会种植" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     _ = testInventory(&world);
     try std.testing.expect(map.hoe(target));
@@ -306,7 +306,7 @@ test "seedPlant 无耕地时不扣种子" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const inv = testInventory(&world);
     setActiveItem(&world, .strawberrySeed, 2);
@@ -331,7 +331,7 @@ test "seedPlant 已有作物时不扣种子" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const inv = testInventory(&world);
     setActiveItem(&world, .strawberrySeed, 2);
@@ -360,7 +360,7 @@ test "toolHit 会浇水并标记作物" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     try std.testing.expect(map.hoe(target));
     const crop = world.createEntity();
@@ -385,7 +385,7 @@ test "斧头命中木材产出对象会减少生命" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const entity = addProductEntity(
         &world,
@@ -413,7 +413,7 @@ test "斧头命中产出对象会播放地图资源动画" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const entity = addProductEntity(
         &world,
@@ -446,7 +446,7 @@ test "错误工具不会命中产出对象" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const entity = addProductEntity(
         &world,
@@ -475,7 +475,7 @@ test "镐子击碎石头会生成掉落并清理阻挡" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     const entity = addProductEntity(
         &world,
@@ -512,7 +512,7 @@ test "sickle 会收获成熟作物并生成掉落物" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     try std.testing.expect(map.hoe(target));
     const crop = world.createEntity();
@@ -542,7 +542,7 @@ test "hoe 不会收获成熟作物" {
     var world = World.init(std.testing.allocator);
     defer world.deinit();
     map.load(zhu.testing.allocator, &world, testMap);
-    defer map.unload();
+    defer map.unload(zhu.testing.allocator);
 
     try std.testing.expect(map.hoe(target));
     const crop = world.createEntity();
