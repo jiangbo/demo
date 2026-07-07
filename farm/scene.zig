@@ -198,7 +198,8 @@ fn enterPlay(loadSlot: ?u8) void {
 
     if (loadSlot) |slot| {
         if (!load(slot)) {
-            pending = .title;
+            current = .title;
+            title.enter();
             return;
         }
         zhu.audio.playMusic("audio/01_spring_journey.ogg");
