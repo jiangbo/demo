@@ -293,6 +293,7 @@ pub fn flush() void {
                 flipY = target.pass.target != null and
                     !sk.gfx.queryFeatures().origin_top_left;
                 graphics.beginPass(target.color, target.pass);
+                drawState.pipeline = .{};
                 activePass = true;
             },
             .draw => |draw| doDraw(draw, flipY),
@@ -312,8 +313,13 @@ pub fn endDraw() void {
 }
 
 fn doDraw(cmd: DrawCommand, flipY: bool) void {
-    // 绑定流水线
-    sk.gfx.applyPipeline(cmd.pipeline);
+    // 只缓存流水线。
+    // bindings 包含实例起点 offset，每个命令可能不同。
+    // uniforms 依赖相机、目标翻转和纹理大小，保持逐次提交。
+    if (drawState.pipeline.id != cmd.pipeline.id) {
+        sk.gfx.applyPipeline(cmd.pipeline);
+        drawState.pipeline = cmd.pipeline;
+    }
 
     // 处理 uniform 变量
     const size = graphics.queryViewSize(cmd.view);

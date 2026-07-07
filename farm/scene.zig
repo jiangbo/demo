@@ -16,6 +16,8 @@ const resource = struct {
     const Inventory = @import("resource/Inventory.zig");
     const Notice = @import("resource/Notice.zig");
     const Speed = @import("resource/Speed.zig");
+
+    const keep = .{ Clock, Inventory, Notice, Speed };
 };
 
 const World = zhu.ecs.World;
@@ -156,14 +158,7 @@ fn updateMapFade(delta: f32) bool {
             const playerEntity = world.getIdentity(actor.Player).?;
             const request = world.get(playerEntity, Transition).?;
             map.exit(allocator, &world);
-            const keep = .{
-                resource.Clock,
-                resource.Inventory,
-                resource.Notice,
-                resource.Speed,
-            };
-            world.resetKeep(keep);
-            world.entity = world.createEntity();
+            resetWorld();
             map.enter(allocator, &world, request.target);
             player.spawn(&world, request.targetId);
             mapFade.phase = .in;
@@ -182,6 +177,7 @@ fn applyScene() void {
         .play => {
             mapFade = .{};
             map.exit(allocator, &world);
+            resetWorld();
         },
     }
     current, pending = .{ next, null };
@@ -214,14 +210,7 @@ fn enterPlay(loadSlot: ?u8) void {
     world.getPtr(world.entity, resource.Notice).?.reset();
     map.resetState();
 
-    const keep = .{
-        resource.Clock,
-        resource.Inventory,
-        resource.Notice,
-        resource.Speed,
-    };
-    world.resetKeep(keep);
-    world.entity = world.createEntity();
+    resetWorld();
     map.enter(allocator, &world, .exterior);
     player.spawn(&world, -1);
     const inv = world.getPtr(world.entity, resource.Inventory).?;
@@ -278,19 +267,18 @@ fn restore(record: storage.Record) void {
     map.unload(allocator);
     map.restore(allocator, record.maps, clock.day);
 
-    const keep = .{
-        resource.Clock,
-        resource.Inventory,
-        resource.Notice,
-        resource.Speed,
-    };
-    world.resetKeep(keep);
-    world.entity = world.createEntity();
+    resetWorld();
     map.enter(allocator, &world, record.player.map);
     player.spawn(&world, -1);
     player.restore(&world, record.player);
     ui.resetInventory();
     world.getPtr(world.entity, resource.Inventory).?.restore(record.inventory);
+}
+
+fn resetWorld() void {
+    // 资源实体固定为第一个实体，重建后继续使用保留的资源组件。
+    world.resetKeep(resource.keep);
+    world.entity = world.createEntity();
 }
 
 fn drawPlay() void {
