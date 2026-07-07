@@ -11,7 +11,6 @@ pub const camera = @import("camera.zig");
 pub const math = @import("math.zig");
 pub const input = @import("input.zig");
 pub const widget = @import("widget.zig");
-pub const ecs = @import("ecs.zig");
 pub const text = @import("text.zig");
 pub const enums = math.enums;
 pub const random = math.random;

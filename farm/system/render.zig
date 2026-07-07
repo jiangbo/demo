@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const Position = component.Position;
@@ -8,7 +9,7 @@ const Sprite = component.render.Sprite;
 const YSort = component.render.YSort;
 const Hidden = component.render.Hidden;
 
-pub fn update(world: *zhu.ecs.World) void {
+pub fn update(world: *ecs.World) void {
     var query = world.query(.{ Render, Position, YSort });
     while (query.next()) |entity| {
         const position = query.get(entity, Position);
@@ -16,7 +17,7 @@ pub fn update(world: *zhu.ecs.World) void {
     }
 }
 
-pub fn draw(world: *zhu.ecs.World) void {
+pub fn draw(world: *ecs.World) void {
     world.sort(Render, lessThan);
 
     const viewport = zhu.camera.viewport();
@@ -62,7 +63,7 @@ test "混合场景只绘制视口内精灵" {
     zhu.batch.beginDraw();
     const vertexBuffer = &zhu.batch.vertices;
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const inside = world.createEntity();
@@ -81,7 +82,7 @@ test "混合场景只绘制视口内精灵" {
 }
 
 test "YSort 会把位置 y 写入渲染深度" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();

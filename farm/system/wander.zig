@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 
@@ -17,7 +18,7 @@ const Voice = component.sound.Voice;
 // 到达目标的距离阈值（平方），对应实际距离约 2.0
 const arriveDistance2: f32 = 4.0;
 
-pub fn update(world: *zhu.ecs.World, delta: f32) void {
+pub fn update(world: *ecs.World, delta: f32) void {
     const talking = world.getIdentity(Dialog);
     var query = world.query(.{ Position, Velocity, Actor, Wander });
     while (query.next()) |entity| {
@@ -126,7 +127,7 @@ fn stop(actor: *Actor, velocity: *Velocity, wander: *Wander) void {
     wander.moving = false;
 }
 
-fn tryEmitVoice(world: *zhu.ecs.World, entity: zhu.ecs.Entity) void {
+fn tryEmitVoice(world: *ecs.World, entity: ecs.Entity) void {
     const voice = world.getPtr(entity, Voice) orelse return;
     if (voice.remaining > 0) return;
     if (zhu.random.float(0, 1) > voice.probability) return;
@@ -146,7 +147,7 @@ fn facingFromDirection(direction: zhu.Vector2) Facing {
 test "wander 会选择目标并写入速度" {
     zhu.random.init(1);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();
@@ -173,7 +174,7 @@ test "wander 会选择目标并写入速度" {
 test "wander 到达目标后进入等待" {
     zhu.random.init(1);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();
@@ -203,7 +204,7 @@ test "wander 到达目标后进入等待" {
 test "wander 到达目标时挂发声标记" {
     zhu.random.init(1);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();
@@ -228,7 +229,7 @@ test "wander 到达目标时挂发声标记" {
 test "wander 到达目标时遵守发声冷却" {
     zhu.random.init(1);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();
@@ -259,7 +260,7 @@ test "wander 到达目标时遵守发声冷却" {
 }
 
 test "对话中的 NPC 会停止漫游且不影响其它 NPC" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const talking = world.createEntity();
@@ -300,7 +301,7 @@ test "对话中的 NPC 会停止漫游且不影响其它 NPC" {
 }
 
 test "wander 对话停止不会挂发声标记" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();

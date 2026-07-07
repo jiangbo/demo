@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 
@@ -12,7 +13,7 @@ pub fn init() void {
     menu.centerInWindow();
 }
 
-pub fn update(world: *zhu.ecs.World) bool {
+pub fn update(world: *ecs.World) bool {
     const event = menu.update(.{}) orelse return false;
     switch (@as(MenuEvent, @enumFromInt(event))) {
         .minus => hours -= 1,

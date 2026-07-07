@@ -1,11 +1,12 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("component.zig");
 const factory = @import("factory.zig");
 const storage = @import("storage.zig");
 
-const World = zhu.ecs.World;
+const World = ecs.World;
 const actor = component.actor;
 const Position = component.Position;
 const Trigger = component.map.Trigger;

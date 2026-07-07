@@ -1,4 +1,5 @@
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const factory = @import("../factory.zig");
 const input = @import("../input.zig");
@@ -10,7 +11,7 @@ const Inventory = @import("../resource/Inventory.zig");
 const Notice = @import("../resource/Notice.zig");
 
 const ItemEnum = @import("../component.zig").item.ItemEnum;
-const World = zhu.ecs.World;
+const World = ecs.World;
 
 pub fn reset() void {
     bag.reset();

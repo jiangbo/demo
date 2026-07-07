@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("component.zig");
 const factory = @import("factory.zig");
@@ -10,8 +11,8 @@ const Land = @import("map/Land.zig");
 const Clock = @import("resource/Clock.zig");
 
 const tiled = zhu.extend.tiled;
-const World = zhu.ecs.World;
-const Entity = zhu.ecs.Entity;
+const World = ecs.World;
+const Entity = ecs.Entity;
 const actor = component.actor;
 const render = component.render;
 const farm = component.farm;
@@ -151,7 +152,7 @@ pub fn hasAnyBlockAt(position: zhu.Vector2) bool {
     return Spatial.hasAnyBlock(loaded.spatial.marksAt(position));
 }
 
-pub fn canMove(world: *World, entity: zhu.ecs.Entity, to: zhu.Vector2) bool {
+pub fn canMove(world: *World, entity: ecs.Entity, to: zhu.Vector2) bool {
     return loaded.spatial.canMove(world, entity, to);
 }
 
@@ -294,7 +295,7 @@ fn clearProductIndex(world: *World, index: usize) void {
 }
 
 // 只清引用，不写 gone；gone 只记录在触发销毁的那一个格子上。
-fn clearProductTiles(entity: zhu.ecs.Entity) void {
+fn clearProductTiles(entity: ecs.Entity) void {
     for (loaded.land.tiles) |*tile| {
         if (tile.get(.product) == entity) tile.object = null;
     }
@@ -471,7 +472,7 @@ test "当前地图跨天推进作物后刷新贴图和渲染层" {
     loaded.land = Land.init(zhu.testing.allocator, maps[0].grid);
     defer loaded.land.deinit(zhu.testing.allocator);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const target = zhu.Vector2.xy(32, 48);
@@ -511,7 +512,7 @@ test "当前地图和离线地图跨天推进规则一致" {
     loaded.land = Land.init(zhu.testing.allocator, maps[0].grid);
     defer loaded.land.deinit(zhu.testing.allocator);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const target = zhu.Vector2.xy(32, 48);
@@ -560,7 +561,7 @@ test "恢复已打开宝箱会移除动画组件" {
     loaded.land = Land.init(zhu.testing.allocator, maps[0].grid);
     defer loaded.land.deinit(zhu.testing.allocator);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const frames = [_]zhu.graphics.Frame{
@@ -591,7 +592,7 @@ test "恢复地图产出对象只写回生命" {
     loaded.land = Land.init(zhu.testing.allocator, maps[0].grid);
     defer loaded.land.deinit(zhu.testing.allocator);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();
@@ -616,7 +617,7 @@ test "恢复 gone 会删除默认产出对象并清 tile 阻挡" {
     loaded.spatial = Spatial.init(zhu.testing.allocator, maps[0].grid);
     defer loaded.spatial.deinit(zhu.testing.allocator);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();
@@ -708,7 +709,7 @@ test "对象层产出对象按碰撞范围占用格子" {
     grid = testMap.grid;
     defer grid = maps[@intFromEnum(current)].grid;
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     loaded = loader.load(zhu.testing.allocator, &world, testMap);
@@ -739,7 +740,7 @@ test "当前地图跨天会推进作物并清干湿地" {
     loaded.land = Land.init(zhu.testing.allocator, maps[0].grid);
     defer loaded.land.deinit(zhu.testing.allocator);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const target = zhu.Vector2.xy(32, 48);

@@ -4,6 +4,7 @@ const sk = @import("sokol");
 const Options = struct {
     mod: *std.Build.Module,
     sokolModule: *std.Build.Module,
+    ecsModule: *std.Build.Module,
     emsdk: *std.Build.Dependency,
     shader: *std.Build.Module,
 };
@@ -16,6 +17,11 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     const sokolModule = sokol.module("sokol");
+    const migu = b.dependency("migu", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const ecsModule = migu.module("ecs");
     const emsdk = sokol.builder.dependency("emsdk", .{});
     const emsdkStep = sk.emSdkInstallStep(b, emsdk, .{});
     b.step("install-emsdk", "install emsdk").dependOn(emsdkStep);
@@ -27,12 +33,14 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "sokol", .module = sokolModule },
+            .{ .name = "ecs", .module = ecsModule },
         },
     });
 
     const options = Options{
         .mod = exeModule,
         .sokolModule = sokolModule,
+        .ecsModule = ecsModule,
         .emsdk = emsdk,
         .shader = shader,
     };
@@ -109,6 +117,7 @@ fn buildNative(b: *std.Build, options: Options) !void {
         .optimize = optimize,
     });
     testModule.addImport("zhu", zhuModule);
+    testModule.addImport("ecs", options.ecsModule);
 
     const tests = b.addTest(.{ .name = "tests", .root_module = testModule });
 

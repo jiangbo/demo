@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("component.zig");
 const input = @import("input.zig");
@@ -19,7 +20,7 @@ const resource = struct {
     const keep = .{ Clock, Inventory, Notice, Speed };
 };
 
-const World = zhu.ecs.World;
+const World = ecs.World;
 const actor = component.actor;
 const Transition = component.map.Transition;
 

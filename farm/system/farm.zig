@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
@@ -17,7 +18,7 @@ const Pickup = component.item.Pickup;
 const Product = component.item.Product;
 const Health = component.item.Health;
 const event = component.event;
-const World = zhu.ecs.World;
+const World = ecs.World;
 
 pub fn update(world: *World) void {
     const player = world.getIdentity(Player).?;
@@ -196,7 +197,7 @@ fn addProductEntity(
     target: zhu.Vector2,
     product: Product,
     health: u8,
-) zhu.ecs.Entity {
+) ecs.Entity {
     const entity = world.createEntity();
     world.add(entity, product);
     world.add(entity, Health{ .value = health });

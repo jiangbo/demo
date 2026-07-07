@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 
@@ -8,18 +9,18 @@ const Position = component.Position;
 const Emit = component.sound.Emit;
 const Id = component.sound.Id;
 
-pub fn update(world: *zhu.ecs.World) void {
+pub fn update(world: *ecs.World) void {
     playEvents(world);
     playEntities(world);
 }
 
-fn playEvents(world: *zhu.ecs.World) void {
+fn playEvents(world: *ecs.World) void {
     const sounds = world.getEvent(event.SoundPlay);
     for (sounds) |evt| zhu.audio.playSound(path(evt.id));
     world.clearEvent(event.SoundPlay);
 }
 
-fn playEntities(world: *zhu.ecs.World) void {
+fn playEntities(world: *ecs.World) void {
     var query = world.query(.{ Position, Id, Emit });
     while (query.next()) |entity| {
         const position = query.get(entity, Position);
@@ -86,7 +87,7 @@ test "sound id 映射到音频文件" {
 }
 
 test "sound update 消费播放事件" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     world.addEvent(event.SoundPlay{ .id = .hoe });
@@ -101,7 +102,7 @@ test "sound update 消费播放事件" {
 test "sound update 消费实体播放标记" {
     zhu.camera.init(.xy(320, 180));
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();
@@ -117,7 +118,7 @@ test "sound update 消费实体播放标记" {
 test "sound update 消费视野外实体播放标记" {
     zhu.camera.init(.xy(320, 180));
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();

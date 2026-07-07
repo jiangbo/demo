@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const input = @import("../input.zig");
@@ -16,8 +17,8 @@ const Position = component.Position;
 const Target = component.ui.Target;
 const Velocity = component.motion.Velocity;
 const ItemEnum = component.item.ItemEnum;
-const World = zhu.ecs.World;
-const Entity = zhu.ecs.Entity;
+const World = ecs.World;
+const Entity = ecs.Entity;
 
 const playerSpeed: f32 = 60;
 const tileRange: i32 = 1;

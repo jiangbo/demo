@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const input = @import("input.zig");
 const inventory = @import("ui/inventory.zig");
@@ -53,7 +54,7 @@ pub fn openRest() void {
     activePopup = .rest;
 }
 
-pub fn update(world: *zhu.ecs.World, delta: f32) ?Request {
+pub fn update(world: *ecs.World, delta: f32) ?Request {
     notice.update(world, delta);
 
     if (activePopup) |active| {
@@ -70,7 +71,7 @@ pub fn update(world: *zhu.ecs.World, delta: f32) ?Request {
     return null;
 }
 
-fn updatePopup(world: *zhu.ecs.World, active: Popup) ?Request {
+fn updatePopup(world: *ecs.World, active: Popup) ?Request {
     switch (active) {
         .save => {
             if (save.update()) |result| {
@@ -115,7 +116,7 @@ pub fn close() void {
     popupMessage = null;
 }
 
-pub fn draw(world: *zhu.ecs.World) void {
+pub fn draw(world: *ecs.World) void {
     time.draw(world);
     inventory.draw(world);
 

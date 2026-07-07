@@ -1,12 +1,13 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
 const Inventory = @import("../resource/Inventory.zig");
 const Notice = @import("../resource/Notice.zig");
 
-const World = zhu.ecs.World;
+const World = ecs.World;
 const Interact = component.actor.Interact;
 const ItemEnum = component.item.ItemEnum;
 const Chest = component.item.Chest;
@@ -76,7 +77,7 @@ fn showNotice(chest: *const Chest, full: bool, notice: *Notice) void {
     notice.show("{s}", .{buffer[0..len]});
 }
 
-fn addTestChest(world: *World, itemType: ItemEnum, count: u32) zhu.ecs.Entity {
+fn addTestChest(world: *World, itemType: ItemEnum, count: u32) ecs.Entity {
     const frames = [_]zhu.graphics.Frame{
         .{ .offset = .zero },
         .{ .offset = .xy(16, 0) },

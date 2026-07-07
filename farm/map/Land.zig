@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const tiled = zhu.extend.tiled;
@@ -12,7 +13,7 @@ tiles: []Tile = &.{},
 const Object = struct {
     const Kind = enum { crop, product, chest };
     kind: Kind,
-    entity: zhu.ecs.Entity,
+    entity: ecs.Entity,
 };
 
 pub const Tile = struct {
@@ -20,13 +21,13 @@ pub const Tile = struct {
     object: ?Object = null,
     gone: enum { none, product } = .none,
 
-    pub fn get(self: Tile, kind: Object.Kind) ?zhu.ecs.Entity {
+    pub fn get(self: Tile, kind: Object.Kind) ?ecs.Entity {
         const object = self.object orelse return null;
         if (object.kind != kind) return null;
         return object.entity;
     }
 
-    pub fn set(self: *Tile, kind: Object.Kind, e: zhu.ecs.Entity) void {
+    pub fn set(self: *Tile, kind: Object.Kind, e: ecs.Entity) void {
         self.object = .{ .kind = kind, .entity = e };
     }
 };

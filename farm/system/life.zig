@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const Clock = @import("../resource/Clock.zig");
@@ -9,7 +10,7 @@ const Life = component.actor.Life;
 const Velocity = component.motion.Velocity;
 const Wander = component.actor.Wander;
 
-pub fn update(world: *zhu.ecs.World, delta: f32) void {
+pub fn update(world: *ecs.World, delta: f32) void {
     const clock = world.get(world.entity, Clock).?;
     if (clock.period == .night) {
         return updateSleep(world);
@@ -18,7 +19,7 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
     updateDay(world, delta);
 }
 
-fn updateSleep(world: *zhu.ecs.World) void {
+fn updateSleep(world: *ecs.World) void {
     var query = world.query(.{ Actor, Life });
     while (query.next()) |entity| {
         const actor = query.getPtr(entity, Actor);
@@ -33,7 +34,7 @@ fn updateSleep(world: *zhu.ecs.World) void {
     }
 }
 
-fn updateDay(world: *zhu.ecs.World, delta: f32) void {
+fn updateDay(world: *ecs.World, delta: f32) void {
     var query = world.query(.{ Actor, Life });
     while (query.next()) |entity| {
         const actor = query.getPtr(entity, Actor);
@@ -88,7 +89,7 @@ fn enterNormal(life: *Life) void {
     life.timer = zhu.random.float(interval * 0.5, interval);
 }
 
-fn stopMoving(world: *zhu.ecs.World, entity: zhu.ecs.Entity) void {
+fn stopMoving(world: *ecs.World, entity: ecs.Entity) void {
     if (world.getPtr(entity, Velocity)) |velocity| {
         velocity.value = .zero;
     }
@@ -100,7 +101,7 @@ fn stopMoving(world: *zhu.ecs.World, entity: zhu.ecs.Entity) void {
 }
 
 test "夜晚有生活状态的角色会睡觉并停止移动" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
     world.entity = world.createEntity();
     world.add(world.entity, Clock{ .period = .night });
@@ -126,7 +127,7 @@ test "夜晚有生活状态的角色会睡觉并停止移动" {
 test "天亮后退出睡眠并重置进食计时" {
     zhu.random.init(1);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
     world.entity = world.createEntity();
     world.add(world.entity, Clock{ .period = .day });
@@ -151,7 +152,7 @@ test "天亮后退出睡眠并重置进食计时" {
 test "进食冷却结束后进入进食状态" {
     zhu.random.init(1);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
     world.entity = world.createEntity();
     world.add(world.entity, Clock{ .period = .day });
@@ -179,7 +180,7 @@ test "进食冷却结束后进入进食状态" {
 test "进食结束后回到普通状态" {
     zhu.random.init(1);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
     world.entity = world.createEntity();
     world.add(world.entity, Clock{ .period = .day });
@@ -202,7 +203,7 @@ test "进食结束后回到普通状态" {
 }
 
 test "睡觉优先于进食" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
     world.entity = world.createEntity();
     world.add(world.entity, Clock{ .period = .night });
@@ -223,7 +224,7 @@ test "睡觉优先于进食" {
 }
 
 test "睡觉和进食没有背面帧时改用正面方向" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
     world.entity = world.createEntity();
     world.add(world.entity, Clock{ .period = .night });

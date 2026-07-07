@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const map = @import("../map.zig");
@@ -9,8 +10,8 @@ const Player = component.actor.Player;
 const Velocity = component.motion.Velocity;
 const Shape = component.motion.Shape;
 const Blocking = component.motion.Blocking;
-const World = zhu.ecs.World;
-const Entity = zhu.ecs.Entity;
+const World = ecs.World;
+const Entity = ecs.Entity;
 
 pub fn update(world: *World, delta: f32) void {
     var query = world.query(.{ Position, Velocity });

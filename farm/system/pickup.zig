@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
@@ -12,7 +13,7 @@ const Shape = component.motion.Shape;
 const Pickup = component.item.Pickup;
 const PickupMotion = component.item.PickupMotion;
 const event = component.event;
-const World = zhu.ecs.World;
+const World = ecs.World;
 
 const arcHeight: f32 = 6;
 
@@ -79,7 +80,7 @@ fn updateMotion(world: *World, delta: f32) void {
     }
 }
 
-fn worldShape(world: *World, entity: zhu.ecs.Entity) ?Shape {
+fn worldShape(world: *World, entity: ecs.Entity) ?Shape {
     const position = world.get(entity, Position) orelse return null;
     const shape = world.get(entity, Shape) orelse return null;
     return shape.move(position);

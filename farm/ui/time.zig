@@ -1,8 +1,9 @@
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const Clock = @import("../resource/Clock.zig");
 
-const World = zhu.ecs.World;
+const World = ecs.World;
 
 const uiScale: f32 = 2.0;
 const clockSize = zhu.Vector2.xy(32, 32);

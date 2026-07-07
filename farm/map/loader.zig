@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
@@ -7,7 +8,7 @@ const Land = @import("Land.zig");
 const Spatial = @import("Spatial.zig");
 
 const tiled = zhu.extend.tiled;
-const World = zhu.ecs.World;
+const World = ecs.World;
 const Position = component.Position;
 const actor = component.actor;
 const item = component.item;
@@ -266,7 +267,7 @@ fn appendVertex(ctx: *Context, position: zhu.Vector2, image: zhu.Image) void {
 }
 
 // 对象层产出按碰撞范围登记；没有碰撞范围时退回到传入矩形。
-fn setProductTiles(ctx: *Context, entity: zhu.ecs.Entity, rect: zhu.Rect) void {
+fn setProductTiles(ctx: *Context, entity: ecs.Entity, rect: zhu.Rect) void {
     var iter = ctx.map.grid.cellsInRect(rect);
     while (iter.next()) |index| {
         ctx.loaded.land.tiles[index].set(.product, entity);
@@ -278,7 +279,7 @@ test "actor 点对象会生成 NPC，player 点对象只保留标记" {
     defer zhu.assets.deinit();
     putMockNpcImages();
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     var loaded = load(zhu.testing.allocator, &world, mock[0]);
@@ -307,7 +308,7 @@ test "actor 点对象会生成 NPC，player 点对象只保留标记" {
 }
 
 test "trigger 对象会创建 ECS 触发器实体" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     var loaded = load(zhu.testing.allocator, &world, mock[1]);
@@ -329,7 +330,7 @@ test "trigger 对象会创建 ECS 触发器实体" {
 }
 
 test "rest 对象会创建可交互实体" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     var loaded = load(zhu.testing.allocator, &world, mock[2]);
@@ -391,7 +392,7 @@ test "加载地图产出对象会按对象和 rock 图层写入目标格" {
         .tileSize = .xy(16, 16),
         .tiles = &tiles,
     }};
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     var testMap = mock[3];

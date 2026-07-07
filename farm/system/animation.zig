@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const Action = component.actor.Action;
@@ -9,7 +10,7 @@ const UseFrame = component.actor.UseFrame;
 const Animation = component.actor.Animation;
 const Sprite = component.render.Sprite;
 
-pub fn update(world: *zhu.ecs.World, delta: f32) void {
+pub fn update(world: *ecs.World, delta: f32) void {
     updateActor(world);
 
     var query = world.query(.{ Animation, Sprite });
@@ -41,7 +42,7 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
     }
 }
 
-fn updateActor(world: *zhu.ecs.World) void {
+fn updateActor(world: *ecs.World) void {
     var query = world.query(.{ Actor, Animation, Sprite });
     while (query.next()) |entity| {
         const actor = query.getPtr(entity, Actor);
@@ -77,7 +78,7 @@ test "动画系统会按角色方向行更新精灵" {
     const image = zhu.Image{ .size = .xy(32, 32) };
     zhu.assets.putImage(1, image);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();
@@ -106,7 +107,7 @@ test "负数行号表示翻转" {
     const image = zhu.Image{ .size = .xy(32, 32) };
     zhu.assets.putImage(1, image);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();
@@ -138,7 +139,7 @@ test "工具动画结束后解除忙碌状态" {
     const image = zhu.Image{ .size = .xy(32, 32) };
     zhu.assets.putImage(1, image);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();
@@ -176,7 +177,7 @@ test "动画进入关键帧时挂上生效标记" {
     const image = zhu.Image{ .size = .xy(64, 32) };
     zhu.assets.putImage(1, image);
 
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     const entity = world.createEntity();

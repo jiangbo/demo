@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const map = @import("../map.zig");
@@ -34,7 +35,7 @@ pub fn init() void {
     glowImage = zhu.getImage("light.png").?;
 }
 
-pub fn update(world: *zhu.ecs.World) void {
+pub fn update(world: *ecs.World) void {
     const clock = world.getPtr(world.entity, Clock).?;
 
     updatePending(world, clock.isDark());
@@ -58,7 +59,7 @@ pub fn update(world: *zhu.ecs.World) void {
     }
 }
 
-fn updatePending(world: *zhu.ecs.World, dark: bool) void {
+fn updatePending(world: *ecs.World, dark: bool) void {
     // 新生成的灯光只同步一次初始昼夜状态。
     var query = world.query(.{Pending});
     while (query.next()) |entity| {
@@ -69,7 +70,7 @@ fn updatePending(world: *zhu.ecs.World, dark: bool) void {
     world.clear(Pending);
 }
 
-pub fn draw(world: *zhu.ecs.World) void {
+pub fn draw(world: *ecs.World) void {
     const clock = world.getPtr(world.entity, Clock).?;
 
     drawOverlay(clock.hour, clock.minute);
@@ -86,7 +87,7 @@ fn drawOverlay(hourValue: u8, minute: f32) void {
     zhu.batch.drawRect(zhu.camera.viewport(), .{ .color = overlay });
 }
 
-fn drawLights(world: *zhu.ecs.World) void {
+fn drawLights(world: *ecs.World) void {
     const allPoint = .{ Position, Point };
     var points = world.queryNot(allPoint, .{Disabled});
     while (points.next()) |entity| {
@@ -165,7 +166,7 @@ test "light overlay 深夜比白天更明显" {
 
 test "light update 夜晚启用夜灯禁用日灯" {
     map.current = .exterior; // 设置为室外地图
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
     world.entity = world.createEntity();
     world.add(world.entity, Clock{});
@@ -189,7 +190,7 @@ test "light update 夜晚启用夜灯禁用日灯" {
 
 test "light update 白天启用日灯禁用夜灯" {
     map.current = .exterior; // 设置为室外地图
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
     world.entity = world.createEntity();
     world.add(world.entity, Clock{ .hour = 12 });

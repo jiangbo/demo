@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const Clock = @import("../resource/Clock.zig");
@@ -7,7 +8,7 @@ const Speed = @import("../resource/Speed.zig");
 
 const event = component.event;
 
-pub fn update(world: *zhu.ecs.World, delta: f32) void {
+pub fn update(world: *ecs.World, delta: f32) void {
     const clock = world.getPtr(world.entity, Clock).?;
     const speed = world.get(world.entity, Speed).?;
 
@@ -28,7 +29,7 @@ pub fn update(world: *zhu.ecs.World, delta: f32) void {
     }
 }
 
-fn advanceOneHour(world: *zhu.ecs.World, clock: *Clock) void {
+fn advanceOneHour(world: *ecs.World, clock: *Clock) void {
     clock.hour += 1;
 
     if (clock.hour >= 24) {
@@ -42,7 +43,7 @@ fn advanceOneHour(world: *zhu.ecs.World, clock: *Clock) void {
     updatePeriod(world, clock);
 }
 
-fn updatePeriod(world: *zhu.ecs.World, clock: *Clock) void {
+fn updatePeriod(world: *ecs.World, clock: *Clock) void {
     const nextPeriod = currentPeriod(clock.hour);
     if (nextPeriod != clock.period) {
         clock.period = nextPeriod;
@@ -64,7 +65,7 @@ fn currentPeriod(hour: u8) component.time.Period {
 }
 
 test "时间推进到整点会发出小时事件" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     world.entity = world.createEntity();
@@ -81,7 +82,7 @@ test "时间推进到整点会发出小时事件" {
 }
 
 test "时间推进跨天会发出新一天事件" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     world.entity = world.createEntity();
@@ -107,7 +108,7 @@ test "时间推进跨天会发出新一天事件" {
 }
 
 test "按小时推进会清零分钟并逐小时发事件" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     world.entity = world.createEntity();
@@ -134,7 +135,7 @@ test "按小时推进会清零分钟并逐小时发事件" {
 }
 
 test "时段跨过边界会发出时段事件" {
-    var world = zhu.ecs.World.init(std.testing.allocator);
+    var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
     world.entity = world.createEntity();

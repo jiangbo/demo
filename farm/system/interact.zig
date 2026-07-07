@@ -1,12 +1,13 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const input = @import("../input.zig");
 const map = @import("../map.zig");
 
-const World = zhu.ecs.World;
-const Entity = zhu.ecs.Entity;
+const World = ecs.World;
+const Entity = ecs.Entity;
 const Position = component.Position;
 const Player = component.actor.Player;
 const Interact = component.actor.Interact;

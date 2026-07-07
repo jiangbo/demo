@@ -1,10 +1,11 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("component.zig");
 const Clock = @import("resource/Clock.zig");
 const Speed = @import("resource/Speed.zig");
-const World = zhu.ecs.World;
+const World = ecs.World;
 
 pub const Summary = struct { day: u32 = 0, timestamp: i64 = 0 };
 

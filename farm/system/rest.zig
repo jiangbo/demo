@@ -1,9 +1,10 @@
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const ui = @import("../ui.zig");
 
-const World = zhu.ecs.World;
+const World = ecs.World;
 const Interact = component.actor.Interact;
 const Rest = component.map.Rest;
 

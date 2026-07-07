@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("component.zig");
 
@@ -13,8 +14,8 @@ const render = component.render;
 const sound = component.sound;
 const ui = component.ui;
 
-const World = zhu.ecs.World;
-const Entity = zhu.ecs.Entity;
+const World = ecs.World;
+const Entity = ecs.Entity;
 const Sources = []const zhu.Animation.Source;
 const tiled = zhu.extend.tiled;
 const Object = tiled.Object;

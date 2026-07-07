@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 
@@ -7,8 +8,8 @@ const Grid = zhu.extend.tiled.Grid;
 const Position = component.Position;
 const Shape = component.motion.Shape;
 const Blocking = component.motion.Blocking;
-const World = zhu.ecs.World;
-const Entity = zhu.ecs.Entity;
+const World = ecs.World;
+const Entity = ecs.Entity;
 const SolidRange = component.map.SolidRange;
 
 const Spatial = @This();

@@ -1,8 +1,9 @@
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const Notice = @import("../resource/Notice.zig");
 
-const World = zhu.ecs.World;
+const World = ecs.World;
 
 var bubbleImage: zhu.NineImage = undefined;
 

@@ -1,4 +1,5 @@
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 pub const animation = @import("animation.zig");
 pub const chest = @import("chest.zig");
@@ -23,7 +24,7 @@ pub fn init() void {
     light.init();
 }
 
-pub fn update(world: *zhu.ecs.World, delta: f32) void {
+pub fn update(world: *ecs.World, delta: f32) void {
     // 时间先推进，地图跨天逻辑和灯光都依赖本帧最新时间事件。
     time.update(world, delta);
     light.update(world);
