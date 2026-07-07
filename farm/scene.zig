@@ -2,7 +2,6 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const component = @import("component.zig");
-const factory = @import("factory.zig");
 const input = @import("input.zig");
 const map = @import("map.zig");
 const player = @import("player.zig");
@@ -264,6 +263,7 @@ fn restore(record: storage.Record) void {
     const clock = world.getPtr(world.entity, resource.Clock).?;
 
     clock.* = record.clock;
+    world.getPtr(world.entity, resource.Notice).?.reset();
 
     map.unload(allocator);
     map.restore(allocator, record.maps, clock.day);
