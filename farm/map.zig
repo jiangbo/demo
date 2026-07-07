@@ -123,10 +123,10 @@ pub fn capture(gpa: zhu.Allocator, world: *World) storage.MapRecord {
     return result;
 }
 
-pub fn restore(gpa: zhu.Allocator, savedMaps: storage.MapRecord, day: u32) !void {
+pub fn restore(gpa: zhu.Allocator, saved: storage.MapRecord, day: u32) void {
     resetState();
     for (std.enums.values(Id)) |id| {
-        try restoreMap(gpa, id, savedMaps.maps.get(id), day);
+        restoreMap(gpa, id, saved.maps.get(id), day);
     }
 }
 
@@ -218,18 +218,13 @@ fn captureTiles(gpa: zhu.Allocator, state: *const SaveMap) []Tile {
     return list.toOwnedSlice(gpa.raw) catch zhu.oom();
 }
 
-fn restoreMap(
-    gpa: zhu.Allocator,
-    id: Id,
-    saved: SaveMap,
-    day: u32,
-) !void {
+fn restoreMap(gpa: zhu.Allocator, id: Id, saved: SaveMap, day: u32) void {
     const mapData = &maps[@intFromEnum(id)];
     const count = mapData.grid.count();
     const state = ensure(gpa, id, count, day);
 
     for (saved.tiles) |tileSave| {
-        if (tileSave.index >= state.tiles.len) return error.InvalidSaveTile;
+        std.debug.assert(tileSave.index < state.tiles.len);
 
         const index: usize = @intCast(tileSave.index);
         const tile = &state.tiles[index];

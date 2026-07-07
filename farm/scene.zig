@@ -199,12 +199,20 @@ fn enterPlay(loadSlot: ?u8) void {
     const clock = world.getPtr(world.entity, resource.Clock).?;
 
     zhu.camera.main.scale = .square(2);
-    if (loadSlot == null) {
-        // 新游戏重置世界级状态；读档会在基础地图创建后覆盖状态。
-        clock.reset();
-        world.getPtr(world.entity, resource.Notice).?.reset();
-        map.resetState();
+
+    if (loadSlot) |slot| {
+        if (!load(slot)) {
+            pending = .title;
+            return;
+        }
+        zhu.audio.playMusic("audio/01_spring_journey.ogg");
+        return;
     }
+
+    // 新游戏从固定初始地图和基础工具开始。
+    clock.reset();
+    world.getPtr(world.entity, resource.Notice).?.reset();
+    map.resetState();
 
     const keep = .{
         resource.Clock,
@@ -219,21 +227,11 @@ fn enterPlay(loadSlot: ?u8) void {
     const inv = world.getPtr(world.entity, resource.Inventory).?;
     inv.reset();
     ui.resetInventory();
-    if (loadSlot == null) {
-        _ = inv.add(.hoe, 1);
-        _ = inv.add(.water, 1);
-        _ = inv.add(.pickaxe, 1);
-        _ = inv.add(.axe, 1);
-        _ = inv.add(.sickle, 1);
-    }
-
-    if (loadSlot) |slot| {
-        // 存档恢复依赖已经存在的 world/map/player 基础结构。
-        if (!load(slot)) {
-            pending = .title;
-            return;
-        }
-    }
+    _ = inv.add(.hoe, 1);
+    _ = inv.add(.water, 1);
+    _ = inv.add(.pickaxe, 1);
+    _ = inv.add(.axe, 1);
+    _ = inv.add(.sickle, 1);
     zhu.audio.playMusic("audio/01_spring_journey.ogg");
 }
 
@@ -255,10 +253,7 @@ fn load(slot: u8) bool {
     };
     defer record.deinit();
 
-    restore(record.value) catch |err| {
-        std.log.err("restore slot {} failed: {}", .{ slot, err });
-        return false;
-    };
+    restore(record.value);
     return true;
 }
 
@@ -275,13 +270,13 @@ fn capture() storage.Record {
     };
 }
 
-fn restore(record: storage.Record) !void {
+fn restore(record: storage.Record) void {
     const clock = world.getPtr(world.entity, resource.Clock).?;
 
     clock.* = record.clock;
 
     map.unload(allocator);
-    try map.restore(allocator, record.maps, clock.day);
+    map.restore(allocator, record.maps, clock.day);
 
     const keep = .{
         resource.Clock,
