@@ -6,6 +6,16 @@
 zig build -Dtarget=wasm32-emscripten --release=safe
 ```
 
+## Shader 生成
+
+根据 `.glsl` 文件生成 sokol 使用的 Zig shader 文件：
+
+```powershell
+sokol-shdc -i src\engine\shader\quad.glsl -o src\engine\shader\quad.glsl.zig -l glsl410:metal_macos:hlsl5:glsl300es:wgsl -f sokol_zig --reflection
+```
+
+输出文件默认和输入文件同名，扩展名改成 `.glsl.zig`。
+
 ## 字体生成
 
 生成 `0` 到 `30000` 范围的字体贴图：
