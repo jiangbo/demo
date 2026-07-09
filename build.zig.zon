@@ -13,8 +13,8 @@
             .hash = "sokol-0.1.0-pb1HK4RrNwA1QTln_ZtLaEBne8Dn6zgZH4UVA45cGdnM",
         },
         .zhuyu = .{
-            .url = "git+https://github.com/jiangbo/ZhuYu.git#444ed04ebb25d2956b712d89123aa1a77768347d",
-            .hash = "zhuyu-0.1.0-U4gVRk-lAgCU9Wd7J7IASqUJgXUXbl6XR20XJOR8NeaQ",
+            .url = "git+https://github.com/jiangbo/ZhuYu.git#5e38662b23ab42943ff77375183b1fe536710ca6",
+            .hash = "zhuyu-0.1.0-U4gVRqqxAgC_MkzbqgQrbOuJSSDWzI62C0A0lEEhyWkI",
         },
     },
 
