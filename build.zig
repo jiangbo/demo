@@ -1,12 +1,13 @@
 const std = @import("std");
 const sk = @import("sokol");
+const zhuBuild = @import("zhuyu");
 
 const Options = struct {
     mod: *std.Build.Module,
-    sokolModule: *std.Build.Module,
     ecsModule: *std.Build.Module,
     emsdk: *std.Build.Dependency,
-    shader: *std.Build.Module,
+    zhuyu: *std.Build.Dependency,
+    zhuModule: *std.Build.Module,
 };
 
 pub fn build(b: *std.Build) !void {
@@ -16,72 +17,42 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    const sokolModule = sokol.module("sokol");
     const migu = b.dependency("migu", .{
         .target = target,
         .optimize = optimize,
     });
     const ecsModule = migu.module("ecs");
+    const zhuyu = b.dependency("zhuyu", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const zhuModule = zhuyu.module("zhu");
     const emsdk = sokol.builder.dependency("emsdk", .{});
     const emsdkStep = sk.emSdkInstallStep(b, emsdk, .{});
     b.step("install-emsdk", "install emsdk").dependOn(emsdkStep);
 
-    const shader = try createShader(b, sokol, sokolModule);
     const exeModule = b.createModule(.{
         .root_source_file = b.path("farm/main.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
-            .{ .name = "sokol", .module = sokolModule },
             .{ .name = "ecs", .module = ecsModule },
+            .{ .name = "zhu", .module = zhuModule },
         },
     });
 
     const options = Options{
         .mod = exeModule,
-        .sokolModule = sokolModule,
         .ecsModule = ecsModule,
         .emsdk = emsdk,
-        .shader = shader,
+        .zhuyu = zhuyu,
+        .zhuModule = zhuModule,
     };
     if (target.result.cpu.arch.isWasm()) {
         try buildWeb(b, options);
     } else {
         try buildNative(b, options);
     }
-}
-
-fn createShader(
-    b: *std.Build,
-    sokol: *std.Build.Dependency,
-    sokolModule: *std.Build.Module,
-) !*std.Build.Module {
-    return try sk.shdc.createModule(b, "shader", sokolModule, .{
-        .shdc_dep = sokol.builder.dependency("shdc", .{}),
-        .input = "src/engine/shader/quad.glsl",
-        .output = "quad.glsl.zig",
-        .slang = .{
-            .glsl410 = true,
-            .metal_macos = true,
-            .hlsl5 = true,
-            .glsl300es = true,
-            .wgsl = true,
-        },
-        .reflection = true,
-    });
-}
-
-fn createZhu(b: *std.Build, options: Options) *std.Build.Module {
-    const optimize = options.mod.optimize.?;
-    const target = options.mod.resolved_target.?;
-    const zhuModule = b.createModule(.{
-        .root_source_file = b.path("src/engine/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    zhuModule.addImport("sokol", options.sokolModule);
-    zhuModule.addImport("shader", options.shader);
-    return zhuModule;
 }
 
 fn buildNative(b: *std.Build, options: Options) !void {
@@ -94,29 +65,14 @@ fn buildNative(b: *std.Build, options: Options) !void {
     const target = options.mod.resolved_target.?;
     if (optimize != .Debug) exe.subsystem = .Windows;
 
-    const zhuModule = createZhu(b, options);
-    exe.root_module.addImport("zhu", zhuModule);
-
     b.installArtifact(exe);
-
-    const stb = b.dependency("stb", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    zhuModule.addIncludePath(stb.path("."));
-
-    const cFlags = &.{"-O2"};
-    zhuModule.addCSourceFile(.{
-        .file = b.path("src/engine/internal/stb_audio.c"),
-        .flags = cFlags,
-    });
 
     const testModule = b.createModule(.{
         .root_source_file = b.path("farm/main.zig"),
         .target = target,
         .optimize = optimize,
     });
-    testModule.addImport("zhu", zhuModule);
+    testModule.addImport("zhu", options.zhuModule);
     testModule.addImport("ecs", options.ecsModule);
 
     const tests = b.addTest(.{ .name = "tests", .root_module = testModule });
@@ -141,29 +97,10 @@ fn buildWeb(b: *std.Build, options: Options) !void {
         .root_module = options.mod,
     });
 
-    const zhuModule = createZhu(b, options);
-    exe.root_module.addImport("zhu", zhuModule);
-
-    const include = options.emsdk.path(b.pathJoin(&.{
-        "upstream",
-        "emscripten",
-        "cache",
-        "sysroot",
-        "include",
-    }));
-    zhuModule.addSystemIncludePath(include);
-
-    const stb = b.dependency("stb", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    zhuModule.addIncludePath(stb.path("."));
-
-    const cFlags = &.{ "-O2", "-fno-sanitize=undefined" };
-    zhuModule.addCSourceFile(.{
-        .file = b.path("src/engine/internal/stb_audio.c"),
-        .flags = cFlags,
-    });
+    const zhuArgs = try zhuBuild.webArgs(b, options.zhuyu);
+    const extraArgs = try b.allocator.alloc([]const u8, 1 + zhuArgs.len);
+    extraArgs[0] = "-sINITIAL_MEMORY=64MB";
+    @memcpy(extraArgs[1..], zhuArgs);
 
     const link_step = try sk.emLinkStep(b, .{
         .lib_main = exe,
@@ -175,33 +112,10 @@ fn buildWeb(b: *std.Build, options: Options) !void {
         // TODO Zig 0.17 重新验证，能关闭就改回 false。
         // 当前先保持 Web 文件读写可用。
         .use_filesystem = true,
-        .extra_args = &.{
-            "-sINITIAL_MEMORY=64MB",
-            "--js-library",
-            b.pathFromRoot("src/engine/internal/em.js"),
-            // TODO sokol 修复文件依赖刷新后，删除 emJsCacheStamp。
-            // sokol 的 extra_args 不追踪文件输入，用 hash stamp 触发重链。
-            "--pre-js",
-            try emJsCacheStamp(b),
-        },
+        .extra_args = extraArgs,
         .shell_file_path = b.path("index.html"),
     });
 
     // 将 Emscripten 链接输出接到默认安装步骤。
     b.getInstallStep().dependOn(&link_step.step);
-}
-
-// 让 em.js 内容变化体现在 emcc 参数里，避免 Zig 缓存复用旧输出。
-fn emJsCacheStamp(b: *std.Build) ![]const u8 {
-    const bytes = @embedFile("src/engine/internal/em.js");
-    const hash = std.hash.Wyhash.hash(0, bytes);
-    const stamp = b.pathFromRoot(b.fmt(".zig-cache/em-js-{x}.js", .{hash}));
-
-    const cwd = std.Io.Dir.cwd();
-    try cwd.createDirPath(b.graph.io, b.pathFromRoot(".zig-cache"));
-    try cwd.writeFile(b.graph.io, .{
-        .sub_path = stamp,
-        .data = "// em.js cache stamp\n",
-    });
-    return stamp;
 }

@@ -12,9 +12,9 @@
             .url = "git+https://github.com/floooh/sokol-zig#f9b2aa8fc0b0e78c946299e7b418fd04a9ef3559",
             .hash = "sokol-0.1.0-pb1HK4RrNwA1QTln_ZtLaEBne8Dn6zgZH4UVA45cGdnM",
         },
-        .stb = .{
-            .url = "git+https://github.com/nothings/stb#31c1ad37456438565541f4919958214b6e762fb4",
-            .hash = "N-V-__8AAN1DTgAKvlSQnjJwSg4ZY2JP5OHmzKOcA4BewA4Y",
+        .zhuyu = .{
+            .url = "git+https://github.com/jiangbo/ZhuYu.git#444ed04ebb25d2956b712d89123aa1a77768347d",
+            .hash = "zhuyu-0.1.0-U4gVRk-lAgCU9Wd7J7IASqUJgXUXbl6XR20XJOR8NeaQ",
         },
     },
 
