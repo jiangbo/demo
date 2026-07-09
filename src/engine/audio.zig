@@ -104,7 +104,13 @@ pub fn playSoundOption(path: [:0]const u8, option: Sound.Option) ?usize {
     if (@import("builtin").is_test) return null;
     if (!sk.audio.isvalid()) return null;
 
-    const sound = assets.loadSound(path, option.loop);
+    const left = std.math.clamp(option.left, 0.0, 1.0);
+    const right = std.math.clamp(option.right, 0.0, 1.0);
+    const sound = assets.loadSound(path, .{
+        .loop = option.loop,
+        .left = left,
+        .right = right,
+    });
     if (sound == null) return null;
 
     mutex.lockUncancelable(assets.io);
@@ -115,8 +121,8 @@ pub fn playSoundOption(path: [:0]const u8, option: Sound.Option) ?usize {
         .samples = sound.?.samples,
         .channels = sound.?.channels,
         .loop = option.loop,
-        .left = std.math.clamp(option.left, 0.0, 1.0),
-        .right = std.math.clamp(option.right, 0.0, 1.0),
+        .left = left,
+        .right = right,
     };
     return index;
 }

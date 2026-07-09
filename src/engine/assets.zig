@@ -57,8 +57,8 @@ pub fn loadImage(path: Path, size: graphics.Vector2) Image {
     return entry.value_ptr.*;
 }
 
-pub fn loadSound(path: Path, loop: bool) ?audio.Sound {
-    return sound.load(path, loop);
+pub fn loadSound(path: Path, o: audio.Sound.Option) ?audio.Sound {
+    return sound.load(path, o);
 }
 
 pub fn loadMusic(path: Path, loop: bool) ?*c.stbAudio.Audio {
@@ -239,10 +239,22 @@ const view = struct {
 const sound = struct {
     var cache: std.AutoHashMapUnmanaged(Id, audio.Sound) = .empty;
 
-    fn load(path: Path, loop: bool) ?audio.Sound {
+    const SoundIndex = extern struct {
+        left: u16,
+        right: u16,
+        loop: bool,
+        _: [3]u8 = .{ 0, 0, 0 },
+    };
+
+    fn load(path: Path, option: audio.Sound.Option) ?audio.Sound {
         if (cache.get(id(path))) |value| return value;
 
-        _ = file.load(path, if (loop) 1 else 0, handler);
+        const soundIndex = SoundIndex{
+            .left = @intFromFloat(option.left * 65535),
+            .right = @intFromFloat(option.right * 65535),
+            .loop = option.loop,
+        };
+        _ = file.load(path, @bitCast(soundIndex), handler);
         return null;
     }
 
@@ -262,10 +274,13 @@ const sound = struct {
             .samples = samples,
             .channels = @intCast(channels),
         }) catch oom();
-        // 冷加载首次补播只保留 loop，left/right 使用默认值。
-        _ = audio.playSoundOption(resp.path, .{
-            .loop = resp.index == 1,
-        });
+        const soundIndex: SoundIndex = @bitCast(resp.index);
+        const option = audio.Sound.Option{
+            .loop = soundIndex.loop,
+            .left = @as(f32, @floatFromInt(soundIndex.left)) / 65535,
+            .right = @as(f32, @floatFromInt(soundIndex.right)) / 65535,
+        };
+        _ = audio.playSoundOption(resp.path, option);
         return std.mem.sliceAsBytes(samples);
     }
 };
