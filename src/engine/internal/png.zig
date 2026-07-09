@@ -164,28 +164,19 @@ const DataReader = struct {
 
 pub const Image = struct { width: i32, height: i32, data: []u8 };
 
-pub fn loadIcon(allocator: Allocator, file: std.ArrayList(u8)) !Image {
-    if (std.mem.startsWith(u8, file.items, &signature)) {
-        return load(allocator, file);
+pub fn loadIcon(allocator: Allocator, bytes: []const u8) !Image {
+    if (std.mem.startsWith(u8, bytes, &signature)) {
+        return load(allocator, bytes);
     }
 
-    return loadIco(allocator, file.items);
+    return loadIco(allocator, bytes);
 }
 
-pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
-    const bytes = file.items;
-
+pub fn load(allocator: Allocator, bytes: []const u8) !Image {
     var reader = Reader.fixed(bytes);
     const header = try readHeader(&reader);
 
-    // TODO Zig 0.17：改用 std.heap.BufferFirstAllocator。
-    // 0.16 还没有这个类型，先复用 stackFallback 的内部固定分配器。
-    var tempState = std.heap.stackFallback(1, allocator);
-    const backing = tempState.get();
-    // 临时内存优先复用 file 预留空间，不够再走 allocator。
-    tempState.fixed_buffer_allocator = .init(file.unusedCapacitySlice());
-
-    var arena = std.heap.ArenaAllocator.init(backing);
+    var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
     const gpa = arena.allocator();
 
@@ -251,9 +242,9 @@ pub fn load(allocator: Allocator, file: std.ArrayList(u8)) !Image {
     };
 }
 
-const IconEntry = struct { width: usize, height: usize, payload: []u8 };
+const IconEntry = struct { width: usize, height: usize, payload: []const u8 };
 
-fn loadIco(allocator: Allocator, bytes: []u8) !Image {
+fn loadIco(allocator: Allocator, bytes: []const u8) !Image {
     var reader = Reader.fixed(bytes);
     if (try reader.takeInt(u16, .little) != 0) return error.InvalidIcon;
     if (try reader.takeInt(u16, .little) != 1) return error.InvalidIcon;
@@ -298,10 +289,7 @@ fn loadIco(allocator: Allocator, bytes: []u8) !Image {
 
     const entry = best orelse return error.UnsupportedIcon;
     if (std.mem.startsWith(u8, entry.payload, &signature)) {
-        return load(allocator, .{
-            .items = entry.payload,
-            .capacity = entry.payload.len,
-        });
+        return load(allocator, entry.payload);
     }
     return loadDib(allocator, entry);
 }
@@ -694,7 +682,7 @@ test "load rgba png" {
     });
     defer allocator.free(png);
 
-    const image = try load(allocator, .{ .items = png, .capacity = png.len });
+    const image = try load(allocator, png);
     defer allocator.free(image.data);
 
     try std.testing.expectEqual(@as(i32, 2), image.width);
@@ -715,10 +703,7 @@ test "load icon from png" {
     });
     defer allocator.free(png);
 
-    const image = try loadIcon(allocator, .{
-        .items = png,
-        .capacity = png.len,
-    });
+    const image = try loadIcon(allocator, png);
     defer allocator.free(image.data);
 
     try std.testing.expectEqual(@as(i32, 1), image.width);
@@ -739,10 +724,7 @@ test "load icon from ico png payload" {
     const icon = try makeTestIcon(allocator, png);
     defer allocator.free(icon);
 
-    const image = try loadIcon(allocator, .{
-        .items = icon,
-        .capacity = icon.len,
-    });
+    const image = try loadIcon(allocator, icon);
     defer allocator.free(image.data);
 
     try std.testing.expectEqual(@as(i32, 2), image.width);
@@ -758,10 +740,7 @@ test "load icon from ico dib payload" {
     const icon = try makeTestDibIcon(allocator);
     defer allocator.free(icon);
 
-    const image = try loadIcon(allocator, .{
-        .items = icon,
-        .capacity = icon.len,
-    });
+    const image = try loadIcon(allocator, icon);
     defer allocator.free(image.data);
 
     try std.testing.expectEqual(@as(i32, 2), image.width);
@@ -784,7 +763,7 @@ test "load rgb png" {
     });
     defer allocator.free(png);
 
-    const image = try load(allocator, .{ .items = png, .capacity = png.len });
+    const image = try load(allocator, png);
     defer allocator.free(image.data);
 
     try std.testing.expectEqualSlices(u8, &.{
@@ -803,7 +782,7 @@ test "load gray png" {
     });
     defer allocator.free(png);
 
-    const image = try load(allocator, .{ .items = png, .capacity = png.len });
+    const image = try load(allocator, png);
     defer allocator.free(image.data);
 
     try std.testing.expectEqualSlices(u8, &.{
@@ -824,7 +803,7 @@ test "load indexed png with trns" {
     });
     defer allocator.free(png);
 
-    const image = try load(allocator, .{ .items = png, .capacity = png.len });
+    const image = try load(allocator, png);
     defer allocator.free(image.data);
 
     try std.testing.expectEqualSlices(u8, &.{
@@ -845,7 +824,7 @@ test "load magic png with rgba palette" {
     });
     defer allocator.free(png);
 
-    const image = try load(allocator, .{ .items = png, .capacity = png.len });
+    const image = try load(allocator, png);
     defer allocator.free(image.data);
 
     try std.testing.expectEqualSlices(u8, &.{
@@ -865,7 +844,7 @@ test "load png with small tail idat" {
     });
     defer allocator.free(png);
 
-    const image = try load(allocator, .{ .items = png, .capacity = png.len });
+    const image = try load(allocator, png);
     defer allocator.free(image.data);
 
     try std.testing.expectEqualSlices(u8, &.{
@@ -886,10 +865,7 @@ test "reject unsupported png header" {
     defer allocator.free(bitDepthPng);
     try std.testing.expectError(
         error.UnsupportedBitDepth,
-        load(allocator, .{
-            .items = bitDepthPng,
-            .capacity = bitDepthPng.len,
-        }),
+        load(allocator, bitDepthPng),
     );
 
     const interlacePng = try makeTestPng(allocator, .{
@@ -902,9 +878,6 @@ test "reject unsupported png header" {
     defer allocator.free(interlacePng);
     try std.testing.expectError(
         error.UnsupportedInterlace,
-        load(allocator, .{
-            .items = interlacePng,
-            .capacity = interlacePng.len,
-        }),
+        load(allocator, interlacePng),
     );
 }

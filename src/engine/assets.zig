@@ -259,9 +259,7 @@ const sound = struct {
     }
 
     fn handler(resp: Response) []const u8 {
-        const data = resp.data.items;
-
-        const stbAudio = c.stbAudio.loadFromMemory(data);
+        const stbAudio = c.stbAudio.loadFromMemory(resp.data);
         defer c.stbAudio.unload(stbAudio);
         const info = c.stbAudio.getInfo(stbAudio);
 
@@ -296,7 +294,7 @@ const music = struct {
     }
 
     fn handler(resp: Response) []const u8 {
-        const data = allocator.dupe(u8, resp.data.items) catch oom();
+        const data = allocator.dupe(u8, resp.data) catch oom();
         const stbAudio = c.stbAudio.loadFromMemory(data);
         cache.put(allocator, id(resp.path), stbAudio) catch oom();
         audio.playMusicOption(resp.path, resp.index == 1);
@@ -313,7 +311,7 @@ const music = struct {
 pub const Response = struct {
     index: u64 = undefined,
     path: [:0]const u8,
-    data: std.ArrayList(u8) = .empty,
+    data: []const u8 = &.{},
 };
 
 var fileBuffer: [4][]u8 = @splat(&.{});
@@ -377,10 +375,7 @@ pub const file = struct {
         const response: Response = .{
             .index = value.index,
             .path = path,
-            .data = .{
-                .items = fileBuffer[resp.lane][0..resp.data.size],
-                .capacity = fileBuffer[resp.lane].len,
-            },
+            .data = fileBuffer[resp.lane][0..resp.data.size],
         };
         value.state = .loaded;
         value.managed = value.handler(response);
