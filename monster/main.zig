@@ -1,5 +1,4 @@
 const std = @import("std");
-const builtin = @import("builtin");
 const zhu = @import("zhu");
 
 const tiled = zhu.extend.tiled;
@@ -19,10 +18,10 @@ const fontZon: zhu.text.BitMapFont = @import("zon/font.zon");
 var registry: zhu.ecs.Registry = undefined;
 var battleLoaded: bool = false;
 
-pub fn init() void {
+pub fn init(allocator: zhu.Allocator) void {
     zhu.audio.init(44100 / 2, &soundBuffer);
 
-    vertexBuffer = zhu.assets.oomAlloc(zhu.batch.Vertex, 8000);
+    vertexBuffer = allocator.alloc(zhu.batch.Vertex, 8000);
     zhu.graphics.frameStats(true);
     zhu.assets.loadAtlas(atlas);
     zhu.batch.init(vertexBuffer, &commandBuffer);
@@ -35,7 +34,7 @@ pub fn init() void {
     const fontImage = zhu.assets.loadImage("assets/font.png");
     zhu.text.initBitMapFont(fontImage, fontZon, 32);
 
-    registry = .init(zhu.assets.allocator);
+    registry = .init(allocator.raw);
 
     gui.init();
     ctx.init();
@@ -86,14 +85,14 @@ pub fn frame(delta: f32) void {
     zhu.batch.commit();
 }
 
-pub fn deinit() void {
+pub fn deinit(allocator: zhu.Allocator) void {
     scene.deinit();
     hud.deinit();
     title.deinit();
     ctx.deinit();
     gui.deinit();
     registry.deinit();
-    zhu.assets.free(vertexBuffer);
+    allocator.free(vertexBuffer);
     zhu.audio.deinit();
 }
 
@@ -135,21 +134,8 @@ fn switchScene(s: ctx.SceneState) void {
     }
 }
 
-pub fn main() void {
-    var allocator: std.mem.Allocator = undefined;
-    var debugAllocator: std.heap.DebugAllocator(.{}) = undefined;
-    if (builtin.mode == .Debug) {
-        debugAllocator = std.heap.DebugAllocator(.{}).init;
-        allocator = debugAllocator.allocator();
-    } else {
-        allocator = std.heap.c_allocator;
-    }
-
-    defer if (builtin.mode == .Debug) {
-        _ = debugAllocator.deinit();
-    };
-
-    zhu.window.run(allocator, .{
+pub fn main(initInfo: std.process.Init) void {
+    zhu.window.run(initInfo.io, initInfo.gpa, .{
         .title = "怪物战争",
         .size = .xy(1200, 912),
         .logicSize = .xy(1600, 1216),

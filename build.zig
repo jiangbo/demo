@@ -32,7 +32,7 @@ pub fn build(b: *std.Build) !void {
     b.step("install-emsdk", "install emsdk").dependOn(emsdkStep);
 
     const exeModule = b.createModule(.{
-        .root_source_file = b.path("farm/main.zig"),
+        .root_source_file = b.path("monster/main.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
@@ -68,7 +68,7 @@ fn buildNative(b: *std.Build, options: Options) !void {
     b.installArtifact(exe);
 
     const testModule = b.createModule(.{
-        .root_source_file = b.path("farm/main.zig"),
+        .root_source_file = b.path("monster/main.zig"),
         .target = target,
         .optimize = optimize,
     });
