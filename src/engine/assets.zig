@@ -57,7 +57,7 @@ pub fn loadImage(path: Path, size: graphics.Vector2) Image {
     return entry.value_ptr.*;
 }
 
-pub fn loadSound(path: Path, o: audio.Sound.Option) ?audio.Sound {
+pub fn loadSound(path: Path, o: audio.Sound.Option) audio.Sound {
     return sound.load(path, o);
 }
 
@@ -239,23 +239,13 @@ const view = struct {
 const sound = struct {
     var cache: std.AutoHashMapUnmanaged(Id, audio.Sound) = .empty;
 
-    const SoundIndex = extern struct {
-        left: u16,
-        right: u16,
-        loop: bool,
-        _: [3]u8 = .{ 0, 0, 0 },
-    };
+    fn load(path: Path, option: audio.Sound.Option) audio.Sound {
+        const entry = cache.getOrPut(allocator, id(path)) catch oom();
+        if (entry.found_existing) return entry.value_ptr.*;
 
-    fn load(path: Path, option: audio.Sound.Option) ?audio.Sound {
-        if (cache.get(id(path))) |value| return value;
-
-        const soundIndex = SoundIndex{
-            .left = @intFromFloat(option.left * 65535),
-            .right = @intFromFloat(option.right * 65535),
-            .loop = option.loop,
-        };
-        _ = file.load(path, @bitCast(soundIndex), handler);
-        return null;
+        entry.value_ptr.* = .{ .option = option };
+        _ = file.load(path, 0, handler);
+        return entry.value_ptr.*;
     }
 
     fn handler(resp: Response) []const u8 {
@@ -268,15 +258,11 @@ const sound = struct {
         const samples = allocator.alloc(f32, @intCast(size)) catch oom();
         _ = c.stbAudio.fillSamples(stbAudio, samples, channels);
 
-        cache.put(allocator, id(resp.path), .{
+        const soundCache = cache.getPtr(id(resp.path)).?;
+        const option = soundCache.option;
+        soundCache.* = .{
             .samples = samples,
             .channels = @intCast(channels),
-        }) catch oom();
-        const soundIndex: SoundIndex = @bitCast(resp.index);
-        const option = audio.Sound.Option{
-            .loop = soundIndex.loop,
-            .left = @as(f32, @floatFromInt(soundIndex.left)) / 65535,
-            .right = @as(f32, @floatFromInt(soundIndex.right)) / 65535,
         };
         _ = audio.playSoundOption(resp.path, option);
         return std.mem.sliceAsBytes(samples);
@@ -284,11 +270,13 @@ const sound = struct {
 };
 
 const music = struct {
-    var cache: std.AutoHashMapUnmanaged(Id, *c.stbAudio.Audio) = .empty;
+    var cache: std.AutoHashMapUnmanaged(Id, ?*c.stbAudio.Audio) = .empty;
 
     fn load(path: Path, loop: bool) ?*c.stbAudio.Audio {
-        if (cache.get(id(path))) |value| return value;
+        const entry = cache.getOrPut(allocator, id(path)) catch oom();
+        if (entry.found_existing) return entry.value_ptr.*;
 
+        entry.value_ptr.* = null;
         _ = file.load(path, if (loop) 1 else 0, handler);
         return null;
     }
@@ -296,14 +284,14 @@ const music = struct {
     fn handler(resp: Response) []const u8 {
         const data = allocator.dupe(u8, resp.data) catch oom();
         const stbAudio = c.stbAudio.loadFromMemory(data);
-        cache.put(allocator, id(resp.path), stbAudio) catch oom();
+        cache.getPtr(id(resp.path)).?.* = stbAudio;
         audio.playMusicOption(resp.path, resp.index == 1);
         return data;
     }
 
     pub fn deinit() void {
         var iterator = cache.valueIterator();
-        while (iterator.next()) |v| c.stbAudio.unload(v.*);
+        while (iterator.next()) |v| if (v.*) |s| c.stbAudio.unload(s);
         cache.deinit(allocator);
     }
 };

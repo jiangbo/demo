@@ -84,9 +84,7 @@ pub const Sound = struct {
         right: f32 = 1,
     };
     samples: []const f32 = &.{},
-    loop: bool = false,
-    left: f32 = 1,
-    right: f32 = 1,
+    option: Option = .{},
 
     index: usize = 0,
     channels: u8 = 0,
@@ -111,18 +109,16 @@ pub fn playSoundOption(path: [:0]const u8, option: Sound.Option) ?usize {
         .left = left,
         .right = right,
     });
-    if (sound == null) return null;
+    if (sound.channels == 0) return null;
 
     mutex.lockUncancelable(assets.io);
     defer mutex.unlock(assets.io);
 
     const index = allocSoundIndex();
     sounds[index] = .{
-        .samples = sound.?.samples,
-        .channels = sound.?.channels,
-        .loop = option.loop,
-        .left = left,
-        .right = right,
+        .samples = sound.samples,
+        .channels = sound.channels,
+        .option = .{ .loop = option.loop, .left = left, .right = right },
     };
     return index;
 }
@@ -192,7 +188,7 @@ fn mixSamples(buffer: []f32, sound: *Sound, volume: f32) usize {
         std.debug.panic("unsupported channels: {d}", .{sound.channels});
 
     if (sound.index == sound.samples.len) {
-        if (sound.loop) sound.index = 0 else sound.state = .stopped;
+        if (sound.option.loop) sound.index = 0 else sound.state = .stopped;
     }
 
     return len;
@@ -201,8 +197,8 @@ fn mixSamples(buffer: []f32, sound: *Sound, volume: f32) usize {
 fn mixStereoSamples(dstBuffer: []f32, sound: *Sound, volume: f32) usize {
     const srcBuffer = sound.samples[sound.index..];
     const len = @min(dstBuffer.len, srcBuffer.len) / 2 * 2;
-    const left = volume * sound.left;
-    const right = volume * sound.right;
+    const left = volume * sound.option.left;
+    const right = volume * sound.option.right;
 
     var index: usize = 0;
     while (index < len) : (index += 2) {
@@ -216,8 +212,8 @@ fn mixStereoSamples(dstBuffer: []f32, sound: *Sound, volume: f32) usize {
 fn mixMonoSamples(dstBuffer: []f32, sound: *Sound, volume: f32) usize {
     const srcBuffer = sound.samples[sound.index..];
     const len = @min(dstBuffer.len / 2, srcBuffer.len);
-    const left = volume * sound.left;
-    const right = volume * sound.right;
+    const left = volume * sound.option.left;
+    const right = volume * sound.option.right;
 
     for (0..len) |index| {
         const src = srcBuffer[index];
