@@ -304,22 +304,37 @@ pub const Response = struct {
 
 var fileBuffer: [4][]u8 = @splat(&.{});
 pub const file = struct {
+    pub const Data = struct { bytes: []const u8, owned: bool = false };
+
     const FileState = enum { init, loading, loaded, handled };
     const Handler = *const fn (Response) []const u8;
 
     const FileCache = struct {
         state: FileState = .init,
-        index: u64,
+        index: u64 = 0,
+        data: Data = .{ .bytes = &.{} },
         managed: []const u8 = &.{},
         handler: Handler = undefined,
     };
 
     var cache: std.AutoHashMapUnmanaged(Id, FileCache) = .empty;
 
+    pub fn put(path: Path, data: Data) void {
+        const entry = cache.getOrPut(allocator, id(path)) catch oom();
+        std.debug.assert(!entry.found_existing);
+        entry.value_ptr.* = .{ .state = .loaded, .data = data };
+    }
+
     pub fn load(path: Path, index: u64, handler: Handler) *FileCache {
         const entry = cache.getOrPut(allocator, id(path)) catch oom();
         if (entry.found_existing) {
             const value = entry.value_ptr;
+            if (value.state == .loaded) {
+                value.index = index;
+                value.handler = handler;
+                handleLoaded(path, value, value.data.bytes.len);
+                return value;
+            }
             if (value.index != index or value.handler != handler) {
                 std.debug.panic("asset path conflict: {s}", .{path});
             }
@@ -360,21 +375,31 @@ pub const file = struct {
         const path = filePath[assetRoot.len..];
 
         const value = cache.getPtr(id(path)).?;
+        value.data = .{ .bytes = fileBuffer[resp.lane], .owned = true };
+        value.state = .loaded;
+        handleLoaded(path, value, resp.data.size);
+        fileBuffer[resp.lane] = &.{};
+    }
+
+    fn handleLoaded(path: Path, value: *FileCache, size: usize) void {
         const response: Response = .{
             .index = value.index,
             .path = path,
-            .data = fileBuffer[resp.lane][0..resp.data.size],
+            .data = value.data.bytes[0..size],
         };
-        value.state = .loaded;
+
         value.managed = value.handler(response);
         value.state = .handled;
-        allocator.free(fileBuffer[resp.lane]);
-        fileBuffer[resp.lane] = &.{};
+        if (value.data.owned) allocator.free(value.data.bytes);
+        value.data = .{ .bytes = &.{} };
     }
 
     pub fn deinit() void {
         var iterator = cache.valueIterator();
-        while (iterator.next()) |value| allocator.free(value.managed);
+        while (iterator.next()) |value| {
+            allocator.free(value.managed);
+            if (value.data.owned) allocator.free(value.data.bytes);
+        }
         cache.deinit(allocator);
     }
 };
