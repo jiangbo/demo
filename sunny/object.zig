@@ -67,8 +67,10 @@ pub fn init(obj: std.ArrayList(map.Object)) void {
 
     const itemImage = zhu.getImage("textures/FX/item-feedback.png").?;
     itemAnimation = .init(itemImage, .xy(32, 32), &itemFrames);
+    itemAnimation.loop = false;
     const deadImage = zhu.getImage("textures/FX/enemy-deadth.png").?;
     deadAnimation = .init(deadImage, .xy(40, 41), &deadFrames);
+    deadAnimation.loop = false;
     effectAnimations = .initBuffer(&effectArray);
 
     skullImage = getImage(@intFromEnum(map.ObjectEnum.skull)).?;
