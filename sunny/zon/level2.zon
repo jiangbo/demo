@@ -1536,7 +1536,10 @@
                     .position = .{ .x = 881, .y = 71 },
                     .size = .{ .x = 14, .y = 73 },
                     .point = false,
-                    .properties = .{.{ .name = "tag", .value = .{ .string = "next_level" } }},
+                    .properties = .{.{
+                        .name = "tag",
+                        .value = .{ .string = "next_level" },
+                    }},
                     .extend = .{
                         .flipX = false,
                         .flipY = false,

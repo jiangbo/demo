@@ -5361,7 +5361,7 @@
                     .gid = 33554433,
                     .name = "player",
                     .type = "",
-                    .position = .{ .x = 477.17426, .y = 378.12878 },
+                    .position = .{ .x = 78.17424, .y = 155.12878 },
                     .size = .{ .x = 32, .y = 32 },
                     .point = false,
                     .properties = .{},
