@@ -1,11 +1,25 @@
 const std = @import("std");
 
-pub fn run(io: std.Io, gpa: std.mem.Allocator, args: anytype) !void {
+// 把 BMFont 二进制描述转换为引擎使用的 ZON。
+pub fn main(init: std.process.Init) !void {
+    const gpa = init.arena.allocator();
+
+    var args = try std.process.Args.Iterator
+        .initAllocator(init.minimal.args, gpa);
+    defer args.deinit();
+    _ = args.skip();
+
     const inputName = args.next() orelse return error.InvalidArgs;
-    const outputName = args.next() orelse return error.InvalidArgs;
+    if (args.next() != null) return error.InvalidArgs;
+    if (!std.mem.endsWith(u8, inputName, ".fnt")) {
+        return error.InvalidArgs;
+    }
+
+    const outputName = try gpa.dupe(u8, inputName);
+    @memcpy(outputName[outputName.len - 3 ..], "zon");
 
     const content = try std.Io.Dir.cwd().readFileAlloc( //
-        io, inputName, gpa, .unlimited);
+        init.io, inputName, gpa, .unlimited);
     const source = parse(gpa, content);
 
     const pageCount = source.pages.len;
@@ -59,7 +73,7 @@ pub fn run(io: std.Io, gpa: std.mem.Allocator, args: anytype) !void {
         .images = images,
         .pages = pages,
     };
-    try writeZon(io, outputName, result);
+    try writeZon(init.io, outputName, result);
 }
 
 pub fn parse(gpa: std.mem.Allocator, data: []const u8) RawFont {

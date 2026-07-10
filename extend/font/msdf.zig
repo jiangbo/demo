@@ -1,5 +1,6 @@
 const std = @import("std");
 
+// 把 MSDF 的 JSON 描述转换为引擎使用的 ZON。
 pub fn main(init: std.process.Init) !void {
     const gpa = init.arena.allocator();
 
