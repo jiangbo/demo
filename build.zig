@@ -22,7 +22,7 @@ pub fn build(b: *std.Build) !void {
     emLink.shell_file_path = b.path("index.html");
     emLink.extra_args = &.{"-sINITIAL_MEMORY=64MB"};
 
-    // Sunny 是当前迁移目标。
+    // Shooter 是当前迁移目标。
     _ = try zhuBuild.addApp(b, .{
         .name = "demo",
         .root_source_file = b.path("shooter/main.zig"),
@@ -45,5 +45,5 @@ pub fn build(b: *std.Build) !void {
         .root_module = testModule,
     });
     const runTests = b.addRunArtifact(tests);
-    b.step("test", "Run sunny tests").dependOn(&runTests.step);
+    b.step("test", "Run shooter tests").dependOn(&runTests.step);
 }
