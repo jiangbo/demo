@@ -36,7 +36,7 @@ pub fn update(delta: f32) void {
     time += delta;
 
     if (showCredits) {
-        if (zhu.window.isAnyRelease()) showCredits = false;
+        if (zhu.key.changed or zhu.mouse.changed) showCredits = false;
         return;
     }
 

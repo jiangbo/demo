@@ -11,11 +11,11 @@ pub var paused: bool = false;
 var mouse: zhu.window.Cursor = .CUSTOM_1;
 var mouseTimer: zhu.Timer = .init(0.3); // 鼠标切换时间
 
-pub fn init() void {
+pub fn init(allocator: zhu.Allocator) void {
     zhu.camera.worldSize = zhu.window.size.scale(3); // 设置世界大小
 
     player.init();
-    enemy.init();
+    enemy.init(allocator);
     battle.init();
 }
 
@@ -48,7 +48,7 @@ pub fn update(delta: f32) void {
         zhu.window.useMouseIcon(mouse);
     }
 
-    if (zhu.window.isKeyPress(.SPACE)) togglePause();
+    if (zhu.key.pressed(.SPACE)) togglePause();
 
     if (!paused) {
         player.update(delta);

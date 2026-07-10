@@ -17,22 +17,22 @@ const atlas: zhu.Atlas = @import("zon/atlas.zon");
 const sceneType = enum { title, world };
 var currentScene: sceneType = .title;
 
-pub fn init() void {
+pub fn init(allocator: zhu.Allocator) void {
     window.initText(@import("zon/font.zon"), 32);
 
-    vertexBuffer = window.alloc(batch.Vertex, 5000);
+    vertexBuffer = allocator.alloc(batch.Vertex, 5000);
     zhu.graphics.frameStats(true);
     batch.init(window.size, vertexBuffer);
     batch.whiteImage = zhu.graphics.imageId("white.png");
     zhu.assets.loadAtlas(atlas);
 
-    world.init();
+    world.init(allocator);
     title.init();
 }
 
-pub fn deinit() void {
+pub fn deinit(allocator: zhu.Allocator) void {
     world.deinit();
-    window.free(vertexBuffer);
+    allocator.free(vertexBuffer);
 }
 
 pub fn changeScene(newScene: sceneType) void {
@@ -44,10 +44,10 @@ pub fn changeScene(newScene: sceneType) void {
 }
 
 pub fn update(delta: f32) void {
-    if (window.isKeyRelease(.H)) isHelp = !isHelp;
-    if (window.isKeyRelease(.X)) isDebug = !isDebug;
+    if (zhu.key.released(.H)) isHelp = !isHelp;
+    if (zhu.key.released(.X)) isDebug = !isDebug;
 
-    if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
+    if (zhu.key.held(.LEFT_ALT) and zhu.key.released(.ENTER)) {
         return window.toggleFullScreen();
     }
 
@@ -112,8 +112,8 @@ fn drawDebugInfo() void {
         // Debug 信息本身的次数也应该统计进去
         zhu.graphics.textCount + debutTextCount,
         window.countingAllocator.used,
-        window.mousePosition.x,
-        window.mousePosition.y,
+        window.mouse.x,
+        window.mouse.y,
         camera.position.x,
         camera.position.y,
     });

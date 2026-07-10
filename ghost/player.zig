@@ -62,10 +62,10 @@ pub fn update(delta: f32) void {
         velocity = velocity.scale(0.9);
     }
 
-    if (window.isKeyPress(.A)) velocity.x = -maxSpeed;
-    if (window.isKeyPress(.D)) velocity.x = maxSpeed;
-    if (window.isKeyPress(.W)) velocity.y = -maxSpeed;
-    if (window.isKeyPress(.S)) velocity.y = maxSpeed;
+    if (zhu.key.pressed(.A)) velocity.x = -maxSpeed;
+    if (zhu.key.pressed(.D)) velocity.x = maxSpeed;
+    if (zhu.key.pressed(.W)) velocity.y = -maxSpeed;
+    if (zhu.key.pressed(.S)) velocity.y = maxSpeed;
 
     move(delta);
     position = position.clamp(.zero, zhu.camera.worldSize.sub(size));

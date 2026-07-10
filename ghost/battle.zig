@@ -62,9 +62,9 @@ pub fn update(delta: f32) void {
     }
 
     // 角色使用魔法
-    const canCastSpell = zhu.window.isMouseRelease(.LEFT);
+    const canCastSpell = zhu.mouse.released(.LEFT);
     if (canCastSpell and player.stats.health > 0) {
-        playerCastSpell(zhu.camera.toWorld(zhu.window.mousePosition));
+        playerCastSpell(zhu.camera.toWorld(zhu.window.mouse));
     }
 
     for (&spellPositions, &spellAnimations) |pos, *animation| {
@@ -75,7 +75,7 @@ pub fn update(delta: f32) void {
         if (!changed or animation.index != spellDamageIndex) continue;
 
         for (enemy.enemies.items) |*e| {
-            const state = e.animation.getEnumState(enemy.State);
+            const state = e.animation.getEnumExtend(enemy.State);
             if (state == .dead) continue; // 死亡状态不检测碰撞
 
             const len = (spellSize.x + enemy.size.x) * 0.5;

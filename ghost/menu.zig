@@ -28,7 +28,7 @@ var buttonState: ButtonState = .normal;
 
 pub fn update() ?u8 {
     const menu = menus[menuIndex];
-    const mousePos = zhu.window.mousePosition;
+    const mousePos = zhu.window.mouse;
     const position = menu.position;
 
     for (menu.buttons, 0..menu.buttons.len) |button, i| {
@@ -38,13 +38,13 @@ pub fn update() ?u8 {
         const buttonArea = zhu.Rect.init(buttonPos, button.size);
 
         const hover = buttonArea.contains(mousePos);
-        const press = zhu.window.isMouseDown(.LEFT);
+        const press = zhu.mouse.held(.LEFT);
         if (hover) {
             if (buttonIndex == null) {
                 // 刚刚进入悬停状态，播放音效
                 zhu.audio.playSound("assets/sound/UI_button12.ogg");
             }
-            if (zhu.window.isMouseRelease(.LEFT)) return button.event;
+            if (zhu.mouse.released(.LEFT)) return button.event;
             buttonIndex = i;
             buttonState = if (press) .pressed else .hover;
             break;
