@@ -193,13 +193,3 @@ fn drawOver() void {
 
     menu.draw();
 }
-
-fn drawHelpInfo() void {
-    const text =
-        \\按键说明：
-        \\上：W，下：S，左：A，右：D
-        \\确定：F，取消：Q，菜单：E
-        \\帮助：H  按一次打开，再按一次关闭
-    ;
-    zhu.text.draw(text, .xy(10, 10), .{ .color = .green });
-}
