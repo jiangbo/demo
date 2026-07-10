@@ -12,7 +12,7 @@ var mouse: zhu.window.Cursor = .CUSTOM_1;
 var mouseTimer: zhu.Timer = .init(0.3); // 鼠标切换时间
 
 pub fn init(allocator: zhu.Allocator) void {
-    zhu.camera.worldSize = zhu.window.size.scale(3); // 设置世界大小
+    zhu.camera.bound = zhu.window.size.scale(3); // 设置世界大小
 
     player.init();
     enemy.init(allocator);
@@ -25,17 +25,17 @@ pub fn deinit() void {
 }
 
 pub fn enter() void {
-    zhu.window.bindAndUseMouseIcon("assets/29.png", .{
+    zhu.window.useCursor("29.png", .{
         .cursor = .CUSTOM_2,
         .offset = .{ .x = 16, .y = 16 },
     });
-    zhu.window.bindMouseIcon("assets/30.png", .{
+    zhu.window.loadCursor("30.png", .{
         .cursor = .CUSTOM_3,
         .offset = .{ .x = 16, .y = 16 },
     });
 
     zhu.audio.playMusic("assets/bgm/OhMyGhost.ogg");
-    zhu.audio.paused = false;
+    zhu.audio.setMusicState(.playing);
 
     player.enter();
     enemy.enter();
@@ -43,9 +43,9 @@ pub fn enter() void {
 }
 
 pub fn update(delta: f32) void {
-    if (mouseTimer.isFinishedLoopUpdate(delta)) {
+    if (mouseTimer.updateLooped(delta)) {
         mouse = if (mouse == .CUSTOM_2) .CUSTOM_3 else .CUSTOM_2;
-        zhu.window.useMouseIcon(mouse);
+        zhu.window.setCursor(mouse);
     }
 
     if (zhu.key.pressed(.SPACE)) togglePause();
@@ -60,12 +60,12 @@ pub fn update(delta: f32) void {
 
 pub fn togglePause() void {
     paused = !paused;
-    zhu.audio.pauseMusic();
+    zhu.audio.setMusicState(if (paused) .paused else .playing);
 }
 
 pub fn draw() void {
     const gridColor = zhu.graphics.Color.midGray;
-    const area = zhu.Rect.init(.zero, zhu.camera.worldSize);
+    const area = zhu.Rect.init(.zero, zhu.camera.bound);
     drawGrid(area, 80, gridColor);
     batch.drawRectBorder(area, 10, .white);
 
@@ -73,8 +73,8 @@ pub fn draw() void {
     player.draw(); // 玩家绘制
     battle.draw(); // 战斗绘制
 
-    zhu.camera.modeEnum = .window;
-    defer zhu.camera.modeEnum = .world;
+    zhu.camera.push(.window);
+    defer zhu.camera.pop();
     battle.drawUI();
 }
 

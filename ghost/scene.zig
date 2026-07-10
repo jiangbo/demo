@@ -11,6 +11,7 @@ const world = @import("world.zig");
 var isHelp = false;
 var isDebug = false;
 var vertexBuffer: []batch.Vertex = undefined;
+var commandBuffer: [64]batch.Command = undefined;
 
 const atlas: zhu.Atlas = @import("zon/atlas.zon");
 
@@ -21,10 +22,9 @@ pub fn init(allocator: zhu.Allocator) void {
     window.initText(@import("zon/font.zon"), 32);
 
     vertexBuffer = allocator.alloc(batch.Vertex, 5000);
-    zhu.graphics.frameStats(true);
-    batch.init(window.size, vertexBuffer);
-    batch.whiteImage = zhu.graphics.imageId("white.png");
+    batch.init(vertexBuffer, &commandBuffer);
     zhu.assets.loadAtlas(atlas);
+    batch.whiteImage = zhu.getImage("white.png").?;
 
     world.init(allocator);
     title.init();
@@ -58,7 +58,8 @@ pub fn update(delta: f32) void {
 }
 
 pub fn draw() void {
-    zhu.batch.beginDraw(.black);
+    zhu.batch.beginDraw();
+    zhu.batch.useTarget(.black, .{});
     defer zhu.batch.endDraw();
 
     switch (currentScene) {
@@ -76,48 +77,10 @@ fn drawHelpInfo() void {
         \\帮助：H  按一次打开，再按一次关闭
     ;
     debutTextCount = zhu.text.computeTextCount(text);
-    zhu.text.drawColor(text, .xy(10, 10), .green);
+    zhu.text.draw(text, .xy(10, 10), .{ .color = .green });
 }
 
-var debutTextCount: u32 = 0;
+var debutTextCount: usize = 0;
 fn drawDebugInfo() void {
-    var buffer: [1024]u8 = undefined;
-    const format =
-        \\后端：{s}
-        \\帧率：{}
-        \\平滑：{d:.2}
-        \\帧时：{d:.2}
-        \\用时：{d:.2}
-        \\显存：{}
-        \\常量：{}
-        \\绘制：{}
-        \\图片：{}
-        \\文字：{}
-        \\内存：{}
-        \\鼠标：{d:.2}，{d:.2}
-        \\相机：{d:.2}，{d:.2}
-    ;
-
-    const stats = zhu.graphics.queryFrameStats();
-    const text = zhu.text.format(&buffer, format, .{
-        @tagName(zhu.graphics.queryBackend()),
-        window.frameRate,
-        window.currentSmoothTime * 1000,
-        window.frameDeltaPerSecond,
-        window.usedDeltaPerSecond,
-        stats.size_append_buffer + stats.size_update_buffer,
-        stats.size_apply_uniforms,
-        stats.num_draw,
-        zhu.batch.imageDrawCount(),
-        // Debug 信息本身的次数也应该统计进去
-        zhu.graphics.textCount + debutTextCount,
-        window.countingAllocator.used,
-        window.mouse.x,
-        window.mouse.y,
-        camera.position.x,
-        camera.position.y,
-    });
-
-    debutTextCount = zhu.text.computeTextCount(text);
-    zhu.text.drawColor(text, .xy(10, 10), .green);
+    zhu.debug.draw(&.{});
 }

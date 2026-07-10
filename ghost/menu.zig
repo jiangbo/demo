@@ -65,16 +65,19 @@ pub fn draw() void {
 
         if (i == buttonIndex and buttonState != .normal) {
             if (buttonState == .pressed) {
-                batch.drawOption(button.pressed, pos, .{
+                const image = zhu.assets.getImage(button.pressed).?;
+                batch.drawImage(image, pos, .{
                     .size = menu.buttonSize,
                 });
             } else if (buttonState == .hover) {
-                batch.drawOption(button.hover, pos, .{
+                const image = zhu.assets.getImage(button.hover).?;
+                batch.drawImage(image, pos, .{
                     .size = menu.buttonSize,
                 });
             }
         } else {
-            batch.drawOption(button.normal, pos, .{
+            const image = zhu.assets.getImage(button.normal).?;
+            batch.drawImage(image, pos, .{
                 .size = menu.buttonSize,
             });
         }

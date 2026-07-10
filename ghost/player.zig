@@ -7,11 +7,12 @@ const window = zhu.window;
 const battle = @import("battle.zig");
 const menu = @import("menu.zig");
 
-const circle = zhu.graphics.imageId("circle.png"); // 显示碰撞范围
 const maxSpeed = 500;
-const frames = zhu.graphics.framesX(8, .xy(48, 48), 0.1);
-const deadFrames = zhu.graphics.framesX(17, .xy(64, 64), 0.1);
-pub const size = frames[0].area.size;
+const frameSize = zhu.Vector2.xy(48, 48);
+const deadFrameSize = zhu.Vector2.xy(64, 64);
+const frames = zhu.graphics.framesX(8, frameSize, 0.1);
+const deadFrames = zhu.graphics.framesX(17, deadFrameSize, 0.1);
+pub const size = frameSize;
 const Status = enum { idle, move };
 
 var idleImage: zhu.graphics.Image = undefined;
@@ -23,24 +24,25 @@ pub var stats: battle.Stats = .{};
 var hurtTimer: zhu.Timer = .init(1.5); // 无敌时间
 var velocity: zhu.Vector2 = .zero;
 var velocityTimer: zhu.Timer = .init(0.03);
-var animation: zhu.graphics.FrameAnimation = undefined;
-var deadAnimation: zhu.graphics.FrameAnimation = undefined;
+var animation: zhu.Animation = undefined;
+var deadAnimation: zhu.Animation = undefined;
 var status: Status = .idle;
 
 pub fn init() void {
-    idleImage = zhu.graphics.getImage("sprite/ghost-idle.png");
-    moveImage = zhu.graphics.getImage("sprite/ghost-move.png");
+    idleImage = zhu.getImage("sprite/ghost-idle.png").?;
+    moveImage = zhu.getImage("sprite/ghost-move.png").?;
 
-    const deadImage = zhu.graphics.getImage("effect/1764.png");
-    deadAnimation = .init(deadImage, &deadFrames);
+    const deadImage = zhu.getImage("effect/1764.png").?;
+    deadAnimation = .init(deadImage, deadFrameSize, &deadFrames);
+    deadAnimation.loop = false;
 
-    animation = .init(idleImage, &frames);
-    position = zhu.camera.worldSize.scale(0.5);
+    animation = .init(idleImage, frameSize, &frames);
+    position = zhu.camera.bound.scale(0.5);
 }
 
 pub fn enter() void {
     stats.health = 100;
-    position = zhu.camera.worldSize.scale(0.5); // 将玩家移动到世界中心;
+    position = zhu.camera.bound.scale(0.5); // 将玩家移动到世界中心;
     velocity = .zero;
     status = .idle;
     animation.reset();
@@ -51,13 +53,11 @@ pub fn enter() void {
 pub fn update(delta: f32) void {
     if (stats.health == 0) {
         // 角色已死亡
-        if (deadAnimation.isFinishedOnceUpdate(delta)) {
-            menu.menuIndex = 2;
-        }
+        if (deadAnimation.update(delta) == .end) menu.menuIndex = 2;
     }
     hurtTimer.update(delta);
 
-    if (velocityTimer.isFinishedLoopUpdate(delta)) {
+    if (velocityTimer.updateLooped(delta)) {
         // 速度衰减不应该和帧率相关
         velocity = velocity.scale(0.9);
     }
@@ -68,8 +68,8 @@ pub fn update(delta: f32) void {
     if (zhu.key.pressed(.S)) velocity.y = maxSpeed;
 
     move(delta);
-    position = position.clamp(.zero, zhu.camera.worldSize.sub(size));
-    animation.loopUpdate(delta);
+    position = position.clamp(.zero, zhu.camera.bound.sub(size));
+    _ = animation.update(delta);
 }
 
 pub fn hurt(damage: u32) void {
@@ -100,7 +100,7 @@ pub fn draw() void {
     if (stats.health == 0) {
         if (!deadAnimation.isRunning()) return; // 动画结束不需要显示
 
-        const image = deadAnimation.currentImage();
+        const image = deadAnimation.subImage();
         return batch.drawImage(image, position, .{
             .size = size.scale(2), // 和角色的显示区域一样大
             .anchor = .center,
@@ -108,9 +108,10 @@ pub fn draw() void {
     }
 
     if (hurtTimer.isRunning() and hurtTimer.isEvenStep(0.2)) return;
-    batch.drawImage(animation.currentImage(), position, .{
+    const image = animation.subImage();
+    batch.drawImage(image, position, .{
         .size = size.scale(2),
         .anchor = .center,
-        .flipX = velocity.x < 0,
+        .uvRect = if (velocity.x < 0) image.uvFlip(true, false) else null,
     });
 }

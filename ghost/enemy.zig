@@ -15,7 +15,6 @@ const Enemy = struct {
 const normalFrames = zhu.graphics.framesX(4, .xy(32, 32), 0.2);
 const deadFrames = zhu.graphics.framesX(8, .xy(32, 32), 0.1);
 const maxSpeed = 100;
-const circle = zhu.graphics.imageId("circle.png"); // 显示碰撞范围
 pub const size: zhu.Vector2 = .xy(64, 64);
 
 pub var enemies: std.ArrayList(Enemy) = .empty;
@@ -75,7 +74,7 @@ pub fn update(delta: f32) void {
     }
     if (player.stats.health == 0) return;
 
-    if (spawnTimer.isFinishedLoopUpdate(delta)) {
+    if (spawnTimer.updateLooped(delta)) {
         spawnAnimation.reset();
         doSpawnEnemies();
     }
@@ -100,14 +99,14 @@ fn doSpawnEnemies() void {
     zhu.audio.playSound("assets/sound/silly-ghost-sound-242342.ogg");
     for (&spawnEnemies) |*enemy| {
         const windowPos: zhu.Vector2 = .{
-            .x = zhu.randomF32(0, zhu.window.size.x),
-            .y = zhu.randomF32(0, zhu.window.size.y),
+            .x = zhu.random.float(0, zhu.window.size.x),
+            .y = zhu.random.float(0, zhu.window.size.y),
         };
         enemy.position = zhu.camera.toWorld(windowPos);
         enemy.stats = .{};
         enemy.animation = animations.get(.normal);
         const len = normalFrames.len;
-        enemy.animation.index = zhu.randomInt(u8, 0, len);
+        enemy.animation.index = zhu.random.int(u8, 0, @intCast(len));
     }
 }
 

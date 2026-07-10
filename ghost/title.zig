@@ -7,13 +7,13 @@ const scene = @import("scene.zig");
 const menu = @import("menu.zig");
 const battle = @import("battle.zig");
 
-const background = zhu.graphics.imageId("UI/Textfield_01.png");
-
 const creditsText = @embedFile("zon/credits.txt");
 var showCredits: bool = false;
+var background: zhu.Image = undefined;
 
 pub fn init() void {
-    zhu.window.bindAndUseMouseIcon("assets/pointer_c_shaded.png", .{});
+    zhu.window.useCursor("pointer_c_shaded.png", .{});
+    background = zhu.getImage("UI/Textfield_01.png").?;
     enter();
     var buffer: [4]u8 = undefined;
     const bytes = zhu.window.readBuffer("high.save", &buffer) catch {
@@ -24,8 +24,8 @@ pub fn init() void {
 }
 
 pub fn enter() void {
-    zhu.camera.position = .zero;
-    zhu.window.useMouseIcon(.DEFAULT);
+    zhu.camera.main = .window;
+    zhu.window.setCursor(.DEFAULT);
     zhu.audio.playMusic("assets/bgm/Spooky music.ogg");
     menu.menuIndex = 0;
     battle.saveHighScore();
@@ -68,27 +68,29 @@ pub fn draw() void {
     size = zhu.window.size.div(.xy(2, 3));
 
     // 先绘制图片，再绘制文字，减少批量绘制次数
-    batch.drawOption(background, basicPos, .{ .size = size });
+    batch.drawImage(background, basicPos, .{ .size = size });
     if (showCredits) {
         const creditsSize = zhu.Vector2.xy(555, 600);
         const creditsPos = basicPos.addXY(45, -40);
-        batch.drawOption(background, creditsPos, .{ .size = creditsSize });
-        zhu.text.drawOption(creditsText, creditsPos.addXY(20, 40), .{
-            .size = 16,
+        batch.drawImage(background, creditsPos, .{ .size = creditsSize });
+        zhu.text.draw(creditsText, creditsPos.addXY(20, 40), .{
+            .scale = zhu.text.sizeToScale(16),
         });
         return;
     }
 
     menu.draw();
 
-    batch.drawOption(background, basicPos.addXY(200, 285), .{
+    batch.drawImage(background, basicPos.addXY(200, 285), .{
         .size = .xy(232, 60),
     });
 
     var pos = basicPos.addXY(150, 80);
-    zhu.text.drawOption("幽 灵 逃 生", pos, .{ .size = 64 });
+    zhu.text.draw("幽 灵 逃 生", pos, .{
+        .scale = zhu.text.sizeToScale(64),
+    });
 
     pos = basicPos.addXY(220, 300);
-    zhu.text.drawText("最高分：", pos);
-    zhu.text.drawNumber(battle.highScore, pos.addX(125));
+    zhu.text.draw("最高分：", pos, .{});
+    zhu.text.drawNumber(battle.highScore, pos.addX(125), .{});
 }
