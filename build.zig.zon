@@ -4,6 +4,10 @@
     .fingerprint = 0xd642dfa0c0da2385,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
+        .migu = .{
+            .url = "git+https://github.com/jiangbo/MiGu.git#7abdacccc97c6ada8cfdfc8067263eafee4f250d",
+            .hash = "migu-0.1.0-1dj5JkySAADuAXViUtD2d3su6aST__3Bt4DsW5tZYBuC",
+        },
         .zhuyu = .{
             .url = "git+https://github.com/jiangbo/ZhuYu.git#3e3790abc185b49891d53b0fe285a9cbeaffde42",
             .hash = "zhuyu-0.1.0-U4gVRuyuAgDKkU7xOxMpr6IaHPZxWQETRoPQpPWpm3nY",

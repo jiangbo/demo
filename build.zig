@@ -10,8 +10,14 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     const zhuModule = zhuyu.module("zhu");
+    const migu = b.dependency("migu", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const ecsModule = migu.module("ecs");
 
     const imports = [_]std.Build.Module.Import{
+        .{ .name = "ecs", .module = ecsModule },
         .{ .name = "zhu", .module = zhuModule },
     };
 
@@ -22,10 +28,10 @@ pub fn build(b: *std.Build) !void {
     emLink.shell_file_path = b.path("index.html");
     emLink.extra_args = &.{"-sINITIAL_MEMORY=64MB"};
 
-    // Shooter 是当前迁移目标。
+    // Dungeon 是当前迁移目标。
     _ = try zhuBuild.addApp(b, .{
         .name = "demo",
-        .root_source_file = b.path("shooter/main.zig"),
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
         .zhuyu = zhuyu,
@@ -34,7 +40,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     const testModule = b.createModule(.{
-        .root_source_file = b.path("shooter/main.zig"),
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &imports,
@@ -45,5 +51,5 @@ pub fn build(b: *std.Build) !void {
         .root_module = testModule,
     });
     const runTests = b.addRunArtifact(tests);
-    b.step("test", "Run shooter tests").dependOn(&runTests.step);
+    b.step("test", "Run dungeon tests").dependOn(&runTests.step);
 }
