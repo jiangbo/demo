@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) !void {
     // Sunny 是当前迁移目标。
     _ = try zhuBuild.addApp(b, .{
         .name = "demo",
-        .root_source_file = b.path("ghost/main.zig"),
+        .root_source_file = b.path("shooter/main.zig"),
         .target = target,
         .optimize = optimize,
         .zhuyu = zhuyu,
@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     const testModule = b.createModule(.{
-        .root_source_file = b.path("ghost/main.zig"),
+        .root_source_file = b.path("shooter/main.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &imports,
