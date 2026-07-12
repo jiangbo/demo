@@ -1,0 +1,14 @@
+.{
+    .{ .type = .left, .value = .{ .LEFT, .A } },
+    .{ .type = .right, .value = .{ .RIGHT, .D } },
+    .{ .type = .up, .value = .{ .UP, .W } },
+    .{ .type = .down, .value = .{ .DOWN, .S } },
+    .{ .type = .confirm, .value = .{ .F, .SPACE, .ENTER } },
+    .{ .type = .cancel, .value = .{ .Q, .ESCAPE } },
+    .{ .type = .menu, .value = .{.E} },
+    .{ .type = .useItem, .value = .{ .LEFT_CONTROL, .F } },
+    .{ .type = .dropItem, .value = .{.G} },
+    .{ .type = .buyItem, .value = .{ .LEFT_CONTROL, .F, .ENTER } },
+    .{ .type = .help, .value = .{.H} },
+    .{ .type = .debug, .value = .{.X} },
+}
