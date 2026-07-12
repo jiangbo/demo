@@ -2,36 +2,36 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const window = zhu.window;
-const gfx = zhu.gfx;
-const camera = zhu.camera;
 
 const scene = @import("scene.zig");
 const menu = @import("menu.zig");
 const world = @import("world.zig");
+const input = @import("input.zig");
 
-var background: gfx.Texture = undefined;
-var menuBackground: gfx.Texture = undefined;
+var background: zhu.Image = undefined;
+var menuBackground: zhu.Image = undefined;
 
 var displayHeader: bool = false;
-var displayTimer: window.Timer = .init(0.08);
+var displayTimer: zhu.Timer = .init(0.08);
 var textIndex: usize = 0;
 
 pub fn init() void {
-    background = gfx.loadTexture("assets/pic/title.png", .init(640, 480));
-    const path = "assets/pic/mainmenu2.png";
-    menuBackground = gfx.loadTexture(path, .init(150, 200));
+    background = zhu.assets.loadImage("pic/title.png", .{
+        .size = .xy(640, 480),
+    });
+    menuBackground = zhu.getImage("mainmenu2.png").?;
 }
 
 pub fn enter() void {
     menu.active = 4;
-    window.playMusic("assets/voc/title.ogg");
+    zhu.audio.playMusic("voc/title.ogg");
     displayHeader = false;
     textIndex = 0;
     scene.fadeIn();
 }
 
 pub fn exit() void {
-    window.stopMusic();
+    zhu.audio.setMusicState(.stopped);
 }
 
 pub fn update(delta: f32) void {
@@ -40,7 +40,7 @@ pub fn update(delta: f32) void {
     const menuEvent = menu.update();
     if (menuEvent) |event| menuSelected(event);
 
-    if (window.isAnyKeyRelease(&.{ .Q, .ESCAPE })) {
+    if (input.released(.cancel)) {
         menu.active = 4;
     }
 }
@@ -66,27 +66,25 @@ fn menuSelected(index: u8) void {
 
 pub fn draw() void {
     if (displayHeader) return drawHeader();
-    camera.draw(background, .zero);
+    zhu.batch.drawImage(background, .zero, .{});
 
     if (menu.current().background) {
-        camera.draw(menuBackground, menu.current().position);
+        zhu.batch.drawImage(menuBackground, menu.current().position, .{});
     }
     menu.draw();
 }
 
 fn updateHeader(delta: f32) void {
-    if (window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER }) or
-        window.isMouseRelease(.LEFT))
-    {
+    if (input.released(.confirm) or input.mouseReleased(.LEFT)) {
         scene.changeScene(.world);
         return;
     }
 
-    if (displayTimer.isFinishedAfterUpdate(delta)) {
+    if (displayTimer.updateFinished(delta)) {
         if (textIndex >= text.len) return;
         const len = std.unicode.utf8ByteSequenceLength(text[textIndex]);
         textIndex += len catch unreachable;
-        displayTimer.reset();
+        displayTimer.restart();
     }
 }
 
@@ -98,5 +96,7 @@ const text =
 ;
 
 pub fn drawHeader() void {
-    camera.drawText(text[0..textIndex], .init(40, 100));
+    zhu.text.msdf.begin();
+    defer zhu.text.msdf.end();
+    zhu.text.draw(text[0..textIndex], .xy(40, 100), .{});
 }

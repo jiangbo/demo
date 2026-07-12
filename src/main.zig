@@ -1,44 +1,52 @@
 const std = @import("std");
-const ecs = @import("zhu").ecs;
+const zhu = @import("zhu");
 
-const Health = struct { health: u32, maxHealth: u32 };
+const scene = @import("scene.zig");
 
-pub fn main() !void {
-    var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
-    defer _ = gpa.deinit();
+var vertexBuffer: []zhu.batch.Vertex = undefined;
+var commandBuffer: [128]zhu.batch.Command = undefined;
+var soundBuffer: [20]zhu.audio.Sound = undefined;
 
-    var registry = ecs.Registry.init(gpa.allocator());
-    defer registry.deinit();
+pub fn init(allocator: zhu.Allocator) void {
+    vertexBuffer = allocator.alloc(zhu.batch.Vertex, 4096);
+    zhu.batch.init(vertexBuffer, &commandBuffer);
+    zhu.audio.init(8000, &soundBuffer);
+    zhu.assets.loadAtlas(@import("zon/atlas.zon"), .nearest);
+    zhu.text.msdf.init(@import("zon/font.zon"));
+    zhu.text.changeFontSize(18);
 
-    _ = registry.createEntity();
+    zhu.batch.circleImage = zhu.getImage("circle.png").?;
+    const size = zhu.batch.circleImage.size;
+    const rect = zhu.Rect.init(.zero, size).centerScale(0.25);
+    zhu.batch.whiteImage = zhu.batch.circleImage.sub(rect);
 
-    const e1 = registry.toIndex(registry.createEntity()).?;
-    std.log.info("e1: {}", .{e1});
-    registry.add(e1, Health{ .health = 1, .maxHealth = 1 });
-    std.log.info("e1 health: {}", .{registry.get(e1, Health)});
+    scene.init();
+}
 
-    const e2_entity = registry.createEntity();
-    const e2 = registry.toIndex(e2_entity).?;
-    std.log.info("e2: {}", .{e2});
-    registry.add(e2, Health{ .health = 2, .maxHealth = 2 });
-    std.log.info("e2 health: {}", .{registry.get(e2, Health)});
+pub fn frame(delta: f32) void {
+    scene.update(delta);
 
-    const e3 = registry.toIndex(registry.createEntity()).?;
-    std.log.info("e3: {}", .{e3});
-    registry.add(e3, Health{ .health = 3, .maxHealth = 3 });
-    std.log.info("e3 health: {}", .{registry.get(e3, Health)});
+    zhu.batch.beginDraw();
+    zhu.batch.useTarget(.black, .{});
+    scene.draw();
+    zhu.batch.endDraw();
+}
 
-    std.log.info("e3 has health: {}", .{registry.has(e3, Health)});
+pub fn deinit(allocator: zhu.Allocator) void {
+    scene.deinit();
+    zhu.audio.deinit();
+    allocator.free(vertexBuffer);
+}
 
-    const e4 = registry.toIndex(registry.createEntity()).?;
-    std.log.info("e4: {}", .{e4});
-    registry.add(e4, Health{ .health = 4, .maxHealth = 4 });
-    std.log.info("e4 health: {}", .{registry.get(e4, Health)});
+pub fn main(initInfo: std.process.Init) void {
+    zhu.window.run(initInfo.io, initInfo.gpa, .{
+        .title = "英雄救美",
+        .size = .xy(640, 480),
+        .scaleEnum = .fit,
+    });
+}
 
-    registry.remove(e3, Health);
-
-    registry.destroyEntity(e2_entity);
-
-    std.log.info("e4 health: {?}", .{registry.tryGet(e4, Health)});
-    std.log.info("e3 has health: {}", .{registry.has(e3, Health)});
+test "vector" {
+    const value = zhu.Vector2.xy(1, 0);
+    try std.testing.expectEqual(@as(f32, 1), value.x);
 }

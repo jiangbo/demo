@@ -1,37 +1,35 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const window = zhu.window;
-const gfx = zhu.gfx;
-const camera = zhu.camera;
 const math = zhu.math;
 
-const SIZE: math.Vector2 = .init(32, 32);
+const SIZE: zhu.Vector2 = .xy(32, 32);
 const map = @import("map.zig");
 const player = @import("player.zig");
+const Direction = @import("context.zig").Direction;
 
-const Animation = std.EnumArray(math.FourDirection, gfx.FrameAnimation);
+const Animation = zhu.EnumAnimation(Direction);
 pub const zon: []const Character = @import("zon/npc.zon");
 var npcPaths: [15][:0]const u8 = blk: {
     var list: [15][:0]const u8 = undefined;
     for (&list, 1..) |*value, i| {
-        value.* = std.fmt.comptimePrint("assets/pic/npc{:02}.png", .{i});
+        value.* = std.fmt.comptimePrint("npc{:02}.png", .{i});
     }
     break :blk list;
 };
-var npcTextures: [npcPaths.len]gfx.Texture = undefined;
-const frames: [2]gfx.Frame = .{
-    .{ .area = .init(.init(0, 0), SIZE), .interval = 0.5 },
-    .{ .area = .init(.init(32, 0), SIZE), .interval = 0.5 },
+var npcTextures: [npcPaths.len]zhu.Image = undefined;
+const frames: [2]zhu.graphics.Frame = .{
+    .{ .offset = .xy(0, 0), .duration = 0.5 },
+    .{ .offset = .xy(32, 0), .duration = 0.5 },
 };
 pub var dead: std.StaticBitSet(64) = .initEmpty();
 
 const State = struct {
     index: u8,
     position: math.Vector2,
-    facing: gfx.FourDirection = .down,
+    facing: Direction = .down,
     animation: Animation,
-    timer: window.Timer,
+    timer: zhu.Timer,
 };
 
 var npcBuffer: [12]State = undefined;
@@ -39,7 +37,7 @@ var npcArray: std.ArrayListUnmanaged(State) = undefined;
 
 pub fn init() void {
     for (&npcTextures, &npcPaths) |*texture, path| {
-        texture.* = gfx.loadTexture(path, .init(64, 128));
+        texture.* = zhu.assets.getImage(zhu.assets.id(path)).?;
     }
     npcArray = .initBuffer(&npcBuffer);
 }
@@ -54,24 +52,36 @@ pub fn enter() void {
         npcArray.appendAssumeCapacity(.{
             .index = id,
             .facing = if (stop) zon[id].facing else .random(),
-            .position = .init(zon[id].x, zon[id].y),
+            .position = .xy(zon[id].x, zon[id].y),
             .animation = buildAnimation(npcTextures[zon[id].picture]),
-            .timer = .init(math.randF32(3, 5)),
+            .timer = .init(zhu.random.float(3, 5)),
         });
     }
 }
 
-fn buildAnimation(texture: gfx.Texture) Animation {
+fn buildAnimation(texture: zhu.Image) Animation {
     var animation = Animation.initUndefined();
-
-    var tex = texture.subTexture(.init(.zero, .init(64, SIZE.x)));
-    animation.set(.down, gfx.FrameAnimation.init(tex, &frames));
-    tex = texture.subTexture(tex.area.move(.init(0, SIZE.x)));
-    animation.set(.left, gfx.FrameAnimation.init(tex, &frames));
-    tex = texture.subTexture(tex.area.move(.init(0, SIZE.x)));
-    animation.set(.up, gfx.FrameAnimation.init(tex, &frames));
-    tex = texture.subTexture(tex.area.move(.init(0, SIZE.x)));
-    animation.set(.right, gfx.FrameAnimation.init(tex, &frames));
+    const rowSize = zhu.Vector2.xy(64, 32);
+    animation.set(.down, zhu.Animation.init(
+        texture.sub(.init(.xy(0, 0), rowSize)),
+        SIZE,
+        &frames,
+    ));
+    animation.set(.left, zhu.Animation.init(
+        texture.sub(.init(.xy(0, 32), rowSize)),
+        SIZE,
+        &frames,
+    ));
+    animation.set(.up, zhu.Animation.init(
+        texture.sub(.init(.xy(0, 64), rowSize)),
+        SIZE,
+        &frames,
+    ));
+    animation.set(.right, zhu.Animation.init(
+        texture.sub(.init(.xy(0, 96), rowSize)),
+        SIZE,
+        &frames,
+    ));
 
     return animation;
 }
@@ -79,21 +89,21 @@ fn buildAnimation(texture: gfx.Texture) Animation {
 pub fn update(delta: f32) void {
     for (npcArray.items) |*npc| {
         const speed = zon[npc.index].speed * delta;
-        if (npc.timer.isFinishedAfterUpdate(delta) and speed > 0) {
+        if (npc.timer.updateFinished(delta) and speed > 0) {
             npc.facing = .random();
-            npc.timer = .init(math.randF32(3, 5));
+            npc.timer = .init(zhu.random.float(3, 5));
         }
 
-        npc.animation.getPtr(npc.facing).update(delta);
+        _ = npc.animation.getPtr(npc.facing).update(delta);
         const velocity: math.Vector2 = switch (npc.facing) {
-            .down => .init(0, speed),
-            .left => .init(-speed, 0),
-            .up => .init(0, -speed),
-            .right => .init(speed, 0),
+            .down => .xy(0, speed),
+            .left => .xy(-speed, 0),
+            .up => .xy(0, -speed),
+            .right => .xy(speed, 0),
         };
 
         // NPC 和地图的碰撞检测，只检测一半大小
-        const offset = math.Vector2.init(8, 16);
+        const offset = math.Vector2.xy(8, 16);
 
         const pos = npc.position.add(offset);
         const area = math.Rect.init(pos, SIZE.scale(0.5));
@@ -133,7 +143,7 @@ pub fn death(index: u16) void {
     }
 }
 
-pub fn talk(collider: math.Rect, facing: math.FourDirection) ?u8 {
+pub fn talk(collider: math.Rect, facing: Direction) ?u8 {
     for (npcArray.items) |*npc| {
         if (zon[npc.index].enemy) continue;
 
@@ -148,7 +158,7 @@ pub fn talk(collider: math.Rect, facing: math.FourDirection) ?u8 {
     return null;
 }
 
-pub fn battle(collider: math.Rect, facing: math.FourDirection) ?u8 {
+pub fn battle(collider: math.Rect, facing: Direction) ?u8 {
     for (npcArray.items) |*npc| {
         if (!zon[npc.index].enemy) continue;
         // 战斗的时候，将敌人的碰撞范围扩大
@@ -165,30 +175,29 @@ pub fn battle(collider: math.Rect, facing: math.FourDirection) ?u8 {
 
 pub fn draw() void {
     for (npcArray.items) |npc| {
-        const animation = npc.animation.getPtrConst(npc.facing);
-        camera.draw(animation.currentTexture(), npc.position);
+        const current = npc.animation.getPtrConst(npc.facing);
+        zhu.batch.drawImage(current.subImage(), npc.position, .{});
     }
 }
 
 pub fn drawTalk(actor: u8) void {
+    zhu.batch.drawImage(photo(actor), .xy(40, 400), .{});
 
-    // 头像
-    camera.draw(photo(actor), .init(40, 400));
-
-    // 名字
-    const name = zon[actor].name;
-    const nameColor = gfx.color(1, 1, 0, 1);
-    camera.drawColorText(name, .init(25, 445), nameColor);
+    zhu.text.msdf.begin();
+    defer zhu.text.msdf.end();
+    zhu.text.draw(zon[actor].name, .xy(25, 445), .{
+        .color = .yellow,
+    });
 }
 
-pub fn photo(npcIndex: u16) gfx.Texture {
+pub fn photo(npcIndex: u16) zhu.Image {
     const texture = npcTextures[zon[npcIndex].picture];
-    return texture.subTexture(.init(.zero, SIZE));
+    return texture.sub(.init(.zero, SIZE));
 }
 
-pub fn battleTexture(npcIndex: u16) gfx.Texture {
+pub fn battleTexture(npcIndex: u16) zhu.Image {
     const texture = npcTextures[zon[npcIndex].picture];
-    return texture.subTexture(.init(.init(0, SIZE.x), SIZE));
+    return texture.sub(.init(.xy(0, SIZE.x), SIZE));
 }
 
 pub const Character = struct {
@@ -198,7 +207,7 @@ pub const Character = struct {
     x: f32 = 0,
     y: f32 = 0,
     picture: u8 = 0,
-    facing: gfx.FourDirection = .down,
+    facing: Direction = .down,
     // stats: u8,
     level: u16 = 1,
     // exp: u32,

@@ -1,12 +1,9 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const window = zhu.window;
-const gfx = zhu.gfx;
-const camera = zhu.camera;
-
 const player = @import("player.zig");
 const npc = @import("npc.zig");
+const input = @import("input.zig");
 
 const Talk = struct {
     actor: u8 = 0,
@@ -15,7 +12,7 @@ const Talk = struct {
     event: u8 = 0,
 };
 const zon: []const Talk = @import("zon/talk.zon");
-var texture: gfx.Texture = undefined;
+var texture: zhu.Image = undefined;
 
 pub var active: u16 = 0;
 pub var actor: u16 = 0;
@@ -27,7 +24,7 @@ var buffer: [256]u8 = undefined;
 var bufferIndex: usize = 0;
 
 pub fn init() void {
-    texture = gfx.loadTexture("assets/pic/talkbar.png", .init(640, 96));
+    texture = zhu.getImage("talkbar.png").?;
 }
 
 pub fn activeNumber(talkId: u16, number: anytype) void {
@@ -57,7 +54,7 @@ pub fn recentNpc() u16 {
 }
 
 pub fn update() ?u8 {
-    if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return null;
+    if (!input.released(.confirm)) return null;
 
     if (zon[active].event != 0 or zon[active].next == 0) {
         plainText = true;
@@ -69,13 +66,16 @@ pub fn update() ?u8 {
 }
 
 pub fn draw() void {
-    camera.draw(texture, .init(0, 384));
+    zhu.batch.drawImage(texture, .xy(0, 384), .{});
 
     const talk = zon[active];
     if (talk.actor == 0)
         player.drawTalk()
     else if (talk.actor < 200)
         npc.drawTalk(talk.actor);
+
+    zhu.text.msdf.begin();
+    defer zhu.text.msdf.end();
 
     if (plainText) return drawText(talk.content);
 
@@ -87,15 +87,13 @@ pub fn draw() void {
 }
 
 pub fn drawText(content: []const u8) void {
-    camera.drawTextOptions(content, .{
+    zhu.text.draw(content, .xy(123, 400), .{
         .color = .black,
-        .position = .init(123, 400),
-        .width = 593,
+        .max = 593,
     });
-    camera.drawTextOptions(content, .{
+    zhu.text.draw(content, .xy(120, 397), .{
         .color = .white,
-        .position = .init(120, 397),
-        .width = 590,
+        .max = 590,
     });
 }
 

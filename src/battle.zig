@@ -2,7 +2,6 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const window = zhu.window;
-const gfx = zhu.gfx;
 const camera = zhu.camera;
 const math = zhu.math;
 const audio = zhu.audio;
@@ -14,41 +13,41 @@ const npc = @import("npc.zig");
 const player = @import("player.zig");
 const menu = @import("menu.zig");
 const item = @import("item.zig");
+const input = @import("input.zig");
 
 var enemyIndex: u16 = 0;
 var enemy: npc.Character = undefined;
 
-var texture: gfx.Texture = undefined;
+var texture: zhu.Image = undefined;
 
-const bombArray: [10]gfx.Frame = blk: {
-    var array: [10]gfx.Frame = undefined;
-    const size = math.Vector2.init(54, 50);
+const bombArray: [10]zhu.graphics.Frame = blk: {
+    var array: [10]zhu.graphics.Frame = undefined;
     for (&array, 0..) |*value, i| {
         value.* = .{
-            .area = .init(.init(@floatFromInt(54 * i), 0), size),
-            .interval = 0.06,
+            .offset = .xy(@floatFromInt(54 * i), 0),
+            .duration = 0.06,
         };
     }
     break :blk array;
 };
-var bombAnimation: gfx.FrameAnimation = undefined;
+var bombAnimation: zhu.Animation = undefined;
 
 const attackSounds: [3][:0]const u8 = .{
-    "assets/voc/ack_00.ogg",
-    "assets/voc/ack_01.ogg",
-    "assets/voc/ack_02.ogg",
+    "voc/ack_00.ogg",
+    "voc/ack_01.ogg",
+    "voc/ack_02.ogg",
 };
 
 const hurtSounds: [3][:0]const u8 = .{
-    "assets/voc/ao_00.ogg",
-    "assets/voc/ao_01.ogg",
-    "assets/voc/ao_02.ogg",
+    "voc/ao_00.ogg",
+    "voc/ao_01.ogg",
+    "voc/ao_02.ogg",
 };
 
 const deadSounds: [3][:0]const u8 = .{
-    "assets/voc/dead_00.ogg",
-    "assets/voc/dead_01.ogg",
-    "assets/voc/dead_02.ogg",
+    "voc/dead_00.ogg",
+    "voc/dead_01.ogg",
+    "voc/dead_02.ogg",
 };
 
 const enemySounds: [15]u8 = .{ 2, 1, 2, 2, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 2 };
@@ -88,9 +87,9 @@ const Phase = union(enum) {
 var phase: Phase = .menu;
 
 pub fn init() void {
-    texture = gfx.loadTexture("assets/pic/fightbar.png", .init(448, 112));
-    const bombTexture = gfx.loadTexture("assets/pic/bomb.png", .init(540, 50));
-    bombAnimation = .init(bombTexture, &bombArray);
+    texture = zhu.getImage("fightbar.png").?;
+    const bombTexture = zhu.getImage("bomb.png").?;
+    bombAnimation = .init(bombTexture, .xy(54, 50), &bombArray);
     bombAnimation.loop = false;
 }
 
@@ -101,7 +100,7 @@ pub fn enter() void {
     _ = map.enter();
     menu.active = 7;
     changePhase(.menu);
-    camera.position = .zero;
+    camera.main.position = .zero;
 }
 
 pub fn exit() void {
@@ -120,26 +119,31 @@ pub fn update(delta: f32) void {
 pub fn draw() void {
     map.draw();
 
-    camera.mode = .local;
-    defer camera.mode = .world;
+    camera.push(.window);
+    defer camera.pop();
     var buffer: [100]u8 = undefined;
 
     if (phase != .playerHurt and phase != .playerDeath) {
         // 战斗人物
-        camera.draw(player.battleTexture(), .init(130, 220));
+        zhu.batch.drawImage(player.battleTexture(), .xy(130, 220), .{});
     }
 
     if (phase != .enemyHurt and phase != .enemyDeath) {
         // 战斗 NPC
-        camera.draw(npc.battleTexture(enemyIndex), .init(465, 237));
+        zhu.batch.drawImage(npc.battleTexture(enemyIndex), .xy(465, 237), .{});
     }
 
-    const position = gfx.Vector.init(96, 304);
+    const position = zhu.Vector2.xy(96, 304);
 
     // 状态栏背景
-    camera.draw(texture, position);
+    zhu.batch.drawImage(texture, position, .{});
     // 角色的头像
-    camera.draw(player.photo(), position.addXY(10, 10));
+    zhu.batch.drawImage(player.photo(), position.addXY(10, 10), .{});
+    // 敌人的头像
+    const npcTexture = npc.photo(context.battleNpcIndex);
+    zhu.batch.drawImage(npcTexture, position.addXY(265, 26), .{});
+
+    zhu.text.msdf.begin();
 
     const format = "生命：{:8}\n攻击：{:8}\n防御：{:8}\n等级：{:8}";
     var text = zhu.format(&buffer, format, .{
@@ -148,11 +152,7 @@ pub fn draw() void {
         player.defend,
         player.level,
     });
-    camera.drawColorText(text, position.addXY(50, 5), .black);
-
-    // 敌人的头像
-    const npcTexture = npc.photo(context.battleNpcIndex);
-    camera.draw(npcTexture, position.addXY(265, 26));
+    zhu.text.draw(text, position.addXY(50, 5), .{ .color = .black });
 
     text = zhu.format(&buffer, format, .{
         enemy.health,
@@ -160,7 +160,8 @@ pub fn draw() void {
         enemy.defend,
         enemy.level,
     });
-    camera.drawColorText(text, position.addXY(305, 5), .black);
+    zhu.text.draw(text, position.addXY(305, 5), .{ .color = .black });
+    zhu.text.msdf.end();
 
     menu.draw();
     phase.draw();
@@ -170,9 +171,9 @@ fn computeDamage(attack: u16, defend: u16) u16 {
     var damage = attack * 2 -| defend;
 
     if (damage <= 10)
-        damage = math.random().intRangeLessThanBiased(u16, 0, 10)
+        damage = zhu.random.intBiased(u16, 0, 10)
     else {
-        damage += math.random().intRangeLessThanBiased(u16, 0, damage);
+        damage += zhu.random.intBiased(u16, 0, damage);
     }
     return damage;
 }
@@ -185,7 +186,7 @@ const MenuPhase = struct {
             1 => changePhase(.status),
             2 => changePhase(.item),
             3 => {
-                if (enemy.escape > zhu.randU8(0, 100)) {
+                if (enemy.escape > zhu.random.int(u8, 0, 100)) {
                     scene.changeScene(.world);
                 } else {
                     WaitPhase.tip = "逃跑失败！";
@@ -205,18 +206,18 @@ const PlayerAttackPhase = struct {
     }
 
     fn update(delta: f32) void {
-        if (bombAnimation.isFinishedAfterUpdate(delta))
+        if (bombAnimation.update(delta) == .end)
             changePhase(.enemyHurt);
     }
 
     fn draw() void {
-        camera.draw(bombAnimation.currentTexture(), .init(452, 230));
+        zhu.batch.drawImage(bombAnimation.subImage(), .xy(452, 230), .{});
     }
 };
 
 const EnemyHurtPhase = struct {
     var damage: u16 = 0;
-    var timer: window.Timer = .init(0.5);
+    var timer: zhu.Timer = .init(0.5);
     var offset: f32 = 5;
 
     fn enter() void {
@@ -225,11 +226,11 @@ const EnemyHurtPhase = struct {
         damage = computeDamage(player.attack, enemy.defend);
         enemy.health -|= damage;
 
-        timer.reset();
+        timer.restart();
     }
 
     fn update(delta: f32) void {
-        if (timer.isFinishedAfterUpdate(delta)) {
+        if (timer.updateFinished(delta)) {
             if (enemy.health == 0) return changePhase(.enemyDeath);
             WaitPhase.next = .enemyAttack;
             return changePhase(.wait);
@@ -240,27 +241,29 @@ const EnemyHurtPhase = struct {
     }
 
     fn draw() void {
-        const pos = math.Vector2.init(465, 237).addX(offset);
-        camera.draw(npc.battleTexture(enemyIndex), pos);
+        const pos = math.Vector2.xy(465, 237).addX(offset);
+        zhu.batch.drawImage(npc.battleTexture(enemyIndex), pos, .{});
 
         var buffer: [10]u8 = undefined;
         const y = std.math.lerp(230, 190, timer.progress());
         const text = zhu.format(&buffer, "-{}", .{damage});
-        camera.drawText(text, .init(465, y));
+        zhu.text.msdf.begin();
+        defer zhu.text.msdf.end();
+        zhu.text.draw(text, .xy(465, y), .{});
     }
 };
 
 const WaitPhase = struct {
-    var timer: window.Timer = .init(0.5);
+    var timer: zhu.Timer = .init(0.5);
     var next: Phase = .menu;
     var tip: []const u8 = &.{};
 
     fn enter() void {
-        timer.reset();
+        timer.restart();
     }
 
     fn update(delta: f32) void {
-        if (timer.isFinishedAfterUpdate(delta)) {
+        if (timer.updateFinished(delta)) {
             tip = &.{};
             changePhase(next);
         }
@@ -268,7 +271,9 @@ const WaitPhase = struct {
 
     fn draw() void {
         if (tip.len == 0) return;
-        camera.drawText(tip, .init(290, 210));
+        zhu.text.msdf.begin();
+        defer zhu.text.msdf.end();
+        zhu.text.draw(tip, .xy(290, 210), .{});
     }
 };
 
@@ -279,17 +284,17 @@ const EnemyAttackPhase = struct {
     }
 
     fn update(delta: f32) void {
-        if (bombAnimation.isFinishedAfterUpdate(delta)) changePhase(.playerHurt);
+        if (bombAnimation.update(delta) == .end) changePhase(.playerHurt);
     }
 
     fn draw() void {
-        camera.draw(bombAnimation.currentTexture(), .init(120, 220));
+        zhu.batch.drawImage(bombAnimation.subImage(), .xy(120, 220), .{});
     }
 };
 
 const PlayerHurtPhase = struct {
     var damage: u16 = 0;
-    var timer: window.Timer = .init(0.5);
+    var timer: zhu.Timer = .init(0.5);
     var offset: f32 = 5;
 
     fn enter() void {
@@ -298,11 +303,11 @@ const PlayerHurtPhase = struct {
         damage = computeDamage(enemy.attack, player.defend);
         player.health -|= damage;
 
-        timer.reset();
+        timer.restart();
     }
 
     fn update(delta: f32) void {
-        if (timer.isFinishedAfterUpdate(delta)) {
+        if (timer.updateFinished(delta)) {
             changePhase(if (player.health == 0) .playerDeath else .menu);
         }
 
@@ -311,13 +316,15 @@ const PlayerHurtPhase = struct {
     }
 
     fn draw() void {
-        const pos = math.Vector2.init(130, 220).addX(offset);
-        camera.draw(player.battleTexture(), pos);
+        const pos = math.Vector2.xy(130, 220).addX(offset);
+        zhu.batch.drawImage(player.battleTexture(), pos, .{});
 
         var buffer: [10]u8 = undefined;
         const y = std.math.lerp(230, 190, timer.progress());
         const text = zhu.format(&buffer, "-{}", .{damage});
-        camera.drawText(text, .init(130, y));
+        zhu.text.msdf.begin();
+        defer zhu.text.msdf.end();
+        zhu.text.draw(text, .xy(130, y), .{});
     }
 };
 
@@ -327,11 +334,13 @@ const PlayerDeathPhase = struct {
     }
 
     fn update(_: f32) void {
-        if (window.isAnyRelease()) scene.changeScene(.title);
+        if (input.released(.confirm)) scene.changeScene(.title);
     }
 
     fn draw() void {
-        camera.drawText("你死了！", .init(285, 200));
+        zhu.text.msdf.begin();
+        defer zhu.text.msdf.end();
+        zhu.text.draw("你死了！", .xy(285, 200), .{});
     }
 };
 
@@ -346,7 +355,7 @@ const EnemyDeathPhase = struct {
     }
 
     fn update(_: f32) void {
-        if (step == 0 and window.isAnyRelease()) {
+        if (step == 0 and input.released(.confirm)) {
             step += 1;
             player.exp += enemy.level * 20;
             player.money += enemy.money;
@@ -354,18 +363,21 @@ const EnemyDeathPhase = struct {
             return;
         }
 
-        if (step == 1 and window.isAnyRelease()) {
+        if (step == 1 and input.released(.confirm)) {
             if (player.isLevelUp()) {
                 step += 1;
                 return player.levelUp();
             }
         }
 
-        if (window.isAnyRelease()) scene.changeScene(.world);
+        if (input.released(.confirm)) scene.changeScene(.world);
     }
 
     fn draw() void {
-        camera.drawText("胜利了！", .init(285, 175));
+        zhu.text.msdf.begin();
+        defer zhu.text.msdf.end();
+
+        zhu.text.draw("胜利了！", .xy(285, 175), .{});
         if (step < 1) return;
 
         var buffer: [100]u8 = undefined;
@@ -373,32 +385,33 @@ const EnemyDeathPhase = struct {
             enemy.level * 20,
             enemy.money,
         });
-        camera.drawText(text, .init(220, 210));
+        zhu.text.draw(text, .xy(220, 210), .{});
 
         if (enemy.goods.len != 0) {
-            camera.drawText("缴获物品：", .init(220, 240));
+            zhu.text.draw("缴获物品：", .xy(220, 240), .{});
 
             for (enemy.goods) |index| {
                 const name = item.zon[index].name;
-                camera.drawColorText(name, .init(310, 240), .yellow);
+                zhu.text.draw(name, .xy(310, 240), .{ .color = .yellow });
             }
 
             std.debug.assert(enemy.goods.len == 1);
         }
         if (step == 2) {
             text = zhu.format(&buffer, "等级升为({})^_^", .{player.level});
-            camera.drawColorText(text, .init(260, 270), .yellow);
+            zhu.text.draw(text, .xy(260, 270), .{ .color = .yellow });
         }
     }
 };
 
 const StatusPhase = struct {
     fn update(_: f32) void {
-        if (window.isAnyRelease()) changePhase(.menu);
+        if (input.released(.confirm) or input.released(.cancel)) {
+            changePhase(.menu);
+        }
     }
 
     fn draw() void {
-        camera.flushText();
         player.drawStatus();
     }
 };
@@ -408,11 +421,10 @@ const ItemPhase = struct {
         const used = player.openItem();
         if (used) changePhase(.enemyAttack);
 
-        if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q })) changePhase(.menu);
+        if (input.released(.cancel)) changePhase(.menu);
     }
 
     fn draw() void {
-        camera.flushText();
         player.drawOpenItem();
     }
 };

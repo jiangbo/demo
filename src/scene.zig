@@ -2,12 +2,12 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const window = zhu.window;
-const gfx = zhu.gfx;
 const camera = zhu.camera;
 
 const titleScene = @import("title.zig");
 const worldScene = @import("world.zig");
 const battleScene = @import("battle.zig");
+const input = @import("input.zig");
 
 const SceneType = enum { title, world, battle };
 var currentSceneType: SceneType = .title;
@@ -17,15 +17,6 @@ var isHelp: bool = true;
 var isDebug: bool = false;
 
 pub fn init() void {
-    window.initFont(.{
-        .font = @import("zon/font.zon"),
-        .texture = gfx.loadTexture("assets/font.png", .init(960, 960)),
-    });
-
-    camera.frameStats(true);
-
-    camera.init(2000);
-
     titleScene.init();
     worldScene.init();
     battleScene.init();
@@ -49,17 +40,16 @@ fn doChangeScene() void {
 }
 
 pub fn update(delta: f32) void {
-    window.keepAspectRatio();
-    if (window.isKeyRelease(.H)) isHelp = !isHelp;
-    if (window.isKeyRelease(.X)) isDebug = !isDebug;
+    if (input.released(.help)) isHelp = !isHelp;
+    if (input.released(.debug)) isDebug = !isDebug;
 
-    if (window.isKeyDown(.LEFT_ALT) and window.isKeyRelease(.ENTER)) {
+    if (zhu.key.held(.LEFT_ALT) and zhu.key.released(.ENTER)) {
         return window.toggleFullScreen();
     }
 
     if (fadeTimer) |*timer| {
         // 存在淡入淡出效果，地图和角色暂时不更新。
-        if (timer.isRunningAfterUpdate(delta)) return;
+        if (timer.updateRunning(delta)) return;
         if (isFadeIn) {
             fadeTimer = null;
         } else {
@@ -73,20 +63,16 @@ pub fn update(delta: f32) void {
 }
 
 pub fn draw() void {
-    camera.beginDraw();
-    defer camera.endDraw();
-
     sceneCall("draw", .{});
 
-    // 将文字先绘制上，后面的淡入淡出才会生效。
-    camera.flushTextureAndText();
     if (fadeTimer) |*timer| {
-        camera.mode = .local;
-        defer camera.mode = .world;
-        const percent = timer.elapsed / timer.duration;
+        camera.push(.window);
+        defer camera.pop();
+        const percent = timer.progress();
         const alpha = if (isFadeIn) 1 - percent else percent;
-        camera.drawRect(.init(.zero, window.logicSize), .{ .w = alpha });
-        camera.flushTexture();
+        zhu.batch.drawRect(.init(.zero, window.size), .{
+            .color = .rgba(0, 0, 0, alpha),
+        });
     }
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
@@ -107,62 +93,28 @@ fn drawHelpInfo() void {
     }
     debutTextCount = count;
 
-    camera.drawColorText(text, .init(10, 5), .green);
+    zhu.text.msdf.begin();
+    defer zhu.text.msdf.end();
+    zhu.text.draw(text, .xy(10, 5), .{ .color = .green });
 }
 
 var debutTextCount: u32 = 0;
 fn drawDebugInfo() void {
-    var buffer: [1024]u8 = undefined;
-    const format =
-        \\后端：{s}
-        \\帧率：{}
-        \\帧时：{d:.2}
-        \\用时：{d:.2}
-        \\显存：{}
-        \\常量：{}
-        \\绘制：{}
-        \\图片：{}
-        \\文字：{}
-        \\内存：{}
-        \\鼠标：{d:.2}，{d:.2}
-        \\角色：{d:.2}，{d:.2}
-        \\相机：{d:.2}，{d:.2}
-    ;
-
-    const stats = camera.queryFrameStats();
     const player = @import("player.zig");
-    const text = zhu.format(&buffer, format, .{
-        @tagName(camera.queryBackend()),
-        window.frameRate,
-        window.frameDeltaPerSecond,
-        window.usedDeltaPerSecond,
-        stats.size_append_buffer + stats.size_update_buffer,
-        stats.size_apply_uniforms,
-        stats.num_draw,
-        camera.imageDrawCount(),
-        // Debug 信息本身的次数也应该统计进去
-        camera.textDrawCount() + debutTextCount,
-        window.countingAllocator.used,
-        window.mouse.x,
-        window.mouse.y,
+    var buffer: [80]u8 = undefined;
+    const position = zhu.format(&buffer, "{d:.1}, {d:.1}", .{
         player.position.x,
         player.position.y,
-        camera.position.x,
-        camera.position.y,
     });
-
-    var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
-    var count: u32 = 0;
-    while (iterator.nextCodepoint()) |code| {
-        if (code == '\n') continue;
-        count += 1;
-    }
-    debutTextCount = count;
-
-    camera.drawColorText(text, .init(10, 5), .green);
+    zhu.text.msdf.begin();
+    defer zhu.text.msdf.end();
+    zhu.debug.draw(&.{.{
+        .label = "角色",
+        .left = position,
+    }});
 }
 
-var fadeTimer: ?window.Timer = null;
+var fadeTimer: ?zhu.Timer = null;
 var isFadeIn: bool = false;
 var fadeOutEndCallback: ?*const fn () void = null;
 

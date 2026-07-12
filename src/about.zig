@@ -1,22 +1,21 @@
 const std = @import("std");
+const zhu = @import("zhu");
 
-const window = @import("zhu").window;
-const gfx = @import("zhu").gfx;
-const camera = @import("zhu").camera;
+const camera = zhu.camera;
 
-var texture: gfx.Texture = undefined;
+var texture: zhu.Image = undefined;
 
 pub var roll: bool = false;
-var timer: window.Timer = .init(0.05);
+var timer: zhu.Timer = .init(0.05);
 
 pub fn init() void {
-    texture = gfx.loadTexture("assets/pic/sbar.png", .init(420, 320));
+    texture = zhu.getImage("sbar.png").?;
 }
 
 pub fn update(delta: f32) void {
     if (!roll) return;
 
-    if (timer.isFinishedAfterUpdate(delta)) {
+    if (timer.updateFinished(delta)) {
         if (end) return;
         timer.restart();
         rollOffset += 1;
@@ -24,14 +23,17 @@ pub fn update(delta: f32) void {
 }
 
 pub fn draw() void {
-    const position = gfx.Vector.init(120, 90);
-    camera.draw(texture, position.addXY(-10, -10));
+    const position = zhu.Vector2.xy(120, 90);
+    zhu.batch.drawImage(texture, position.addXY(-10, -10), .{});
 
     if (roll) return drawRoll(position);
 
+    zhu.text.msdf.begin();
+    defer zhu.text.msdf.end();
+
     var text: []const u8 = "圣剑英雄传--英雄救美（测试版）";
-    camera.drawColorText(text, position.addXY(62, 17), .{ .w = 1 });
-    camera.drawText(text, position.addXY(60, 15));
+    zhu.text.draw(text, position.addXY(62, 17), .{ .color = .black });
+    zhu.text.draw(text, position.addXY(60, 15), .{});
 
     text =
         \\　　这是我们的第一个RPG游戏，本来只是
@@ -42,16 +44,16 @@ pub fn draw() void {
         \\行动来改变它吧！我们的宗旨是“不求极品，
         \\但求精品！”;
     ;
-    camera.drawColorText(text, position.addXY(25, 52), .{ .w = 1 });
-    camera.drawText(text, position.addXY(23, 50));
+    zhu.text.draw(text, position.addXY(25, 52), .{ .color = .black });
+    zhu.text.draw(text, position.addXY(23, 50), .{});
 
     text =
         \\成都金点工作组 E-mail: wj77@163.net
         \\　　网站 http://goldpoint.126.com
     ;
 
-    camera.drawColorText(text, position.addXY(25, 248), .{ .w = 1 });
-    camera.drawText(text, position.addXY(23, 246));
+    zhu.text.draw(text, position.addXY(25, 248), .{ .color = .black });
+    zhu.text.draw(text, position.addXY(23, 246), .{});
 }
 
 const intro =
@@ -148,19 +150,20 @@ pub fn resetRoll() void {
     roll = false;
     rollOffset = 0;
     end = false;
-    timer.reset();
+    timer.restart();
 }
 
-fn drawRoll(position: gfx.Vector) void {
-    defer camera.resetScissor();
-
-    const size = gfx.Vector.init(380, 280);
-    camera.scissor(.init(position.addXY(20, 12), size));
+fn drawRoll(position: zhu.Vector2) void {
+    const size = zhu.Vector2.xy(380, 280);
+    zhu.batch.useScissor(.init(position.addXY(20, 12), size));
+    defer zhu.batch.useScissor(null);
+    zhu.text.msdf.begin();
+    defer zhu.text.msdf.end();
 
     const offsetY: f32 = @floatFromInt(rollOffset % lineHeight);
 
     if (end) {
-        camera.drawText(intro[start..], position.addXY(25, -offsetY));
+        zhu.text.draw(intro[start..], position.addXY(25, -offsetY), .{});
         return;
     }
 
@@ -183,5 +186,5 @@ fn drawRoll(position: gfx.Vector) void {
         if (line >= startLine + 12) break;
     } else end = true;
 
-    camera.drawText(intro[start..iter.i], position.addXY(25, -offsetY));
+    zhu.text.draw(intro[start..iter.i], position.addXY(25, -offsetY), .{});
 }

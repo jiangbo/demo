@@ -2,7 +2,6 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const window = zhu.window;
-const gfx = zhu.gfx;
 const camera = zhu.camera;
 const math = zhu.math;
 
@@ -13,6 +12,7 @@ const map = @import("map.zig");
 const talk = @import("talk.zig");
 const about = @import("about.zig");
 const item = @import("item.zig");
+const input = @import("input.zig");
 const npc = @import("npc.zig");
 const context = @import("context.zig");
 
@@ -50,17 +50,17 @@ const State = union(enum) {
         }
     }
 };
-var texture: gfx.Texture = undefined;
+var texture: zhu.Image = undefined;
 var state: State = .map;
 pub var back: enum { none, talk, battle, menu } = .none;
 pub var tip: []const u8 = &.{};
 var header: []const u8 = &.{};
 var headerIndex: usize = 0;
-var headerTimer: window.Timer = .init(0.08);
-var headerColor: gfx.Color = .white;
+var headerTimer: zhu.Timer = .init(0.08);
+var headerColor: zhu.Color = .white;
 
 pub fn init() void {
-    texture = gfx.loadTexture("assets/pic/mainmenu1.png", .init(150, 200));
+    texture = zhu.getImage("mainmenu1.png").?;
 
     item.init();
     talk.init();
@@ -71,7 +71,7 @@ pub fn init() void {
 }
 
 pub fn deinit() void {
-    window.stopMusic();
+    zhu.audio.setMusicState(.stopped);
 }
 
 pub fn enter() void {
@@ -93,7 +93,7 @@ pub fn enter() void {
     player.cameraLookAt();
     npc.enter();
     menu.active = 6;
-    window.playMusic("assets/voc/back.ogg");
+    zhu.audio.playMusic("voc/back.ogg");
 }
 
 pub fn changeMap() void {
@@ -106,13 +106,15 @@ pub fn exit() void {}
 
 pub fn update(delta: f32) void {
     if (tip.len != 0) {
-        if (window.isAnyRelease()) tip = &.{} else return;
+        if (input.released(.confirm) or input.released(.cancel)) {
+            tip = &.{};
+        } else return;
     }
 
     if (header.len != 0) {
         if (header.len == headerIndex) {
             // 已经显示结束了，等待按键
-            if (window.isAnyRelease()) {
+            if (input.released(.confirm)) {
                 if (player.progress > 20)
                     // 如果打败了大魔王，跳转到标题界面
                     scene.changeScene(.title)
@@ -121,10 +123,13 @@ pub fn update(delta: f32) void {
                     state = .map;
                 }
             }
-        } else if (headerTimer.isFinishedAfterUpdate(delta)) {
+        } else if (headerTimer.updateFinished(delta)) {
             // 没有显示结束，继续显示
-            headerIndex = zhu.utf8NextIndex(header, headerIndex);
-            headerTimer.reset();
+            const len = std.unicode.utf8ByteSequenceLength(
+                header[headerIndex],
+            ) catch unreachable;
+            headerIndex += len;
+            headerTimer.restart();
         }
         return;
     }
@@ -143,8 +148,8 @@ pub fn update(delta: f32) void {
     if (state == .map or state == .status or state == .item or
         state == .about)
     {
-        if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
-            window.isMouseRelease(.RIGHT))
+        if (input.released(.menu) or input.released(.cancel) or
+            input.mouseReleased(.RIGHT))
         {
             state = .menu;
             return;
@@ -159,19 +164,22 @@ pub fn draw() void {
     npc.draw();
     player.draw();
 
-    camera.mode = .local;
-    defer camera.mode = .world;
+    camera.push(.window);
+    defer camera.pop();
     if (tip.len != 0) {
-        camera.drawColorText(tip, .init(242, 442), .black);
-        camera.drawColorText(tip, .init(240, 440), .yellow);
+        zhu.text.msdf.begin();
+        zhu.text.draw(tip, .xy(242, 442), .{ .color = .black });
+        zhu.text.draw(tip, .xy(240, 440), .{ .color = .yellow });
+        zhu.text.msdf.end();
     }
     state.draw();
     if (header.len != 0) {
-        camera.drawTextOptions(header[0..headerIndex], .{
-            .position = .init(80, 100),
-            .width = 520,
+        zhu.text.msdf.begin();
+        zhu.text.draw(header[0..headerIndex], .xy(80, 100), .{
+            .max = 520,
             .color = headerColor,
         });
+        zhu.text.msdf.end();
     }
 }
 
@@ -205,7 +213,7 @@ const MapState = struct {
         }
 
         // 交互检测
-        if (!window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER })) return;
+        if (!input.released(.confirm)) return;
         // 开启宝箱
         const talkObject = map.talk(player.position, player.facing);
         if (talkObject) |pickupIndex| openChest(pickupIndex);
@@ -249,7 +257,7 @@ const MapState = struct {
         const object = item.pickupZon[pickIndex];
 
         if (object.itemIndex == 0 and object.count == 0) {
-            const gold = math.randU8(10, 100);
+            const gold = zhu.random.int(u8, 10, 100);
             player.money += gold;
             talk.activeNumber(2, gold);
             state = .talk;
@@ -289,15 +297,15 @@ const MenuState = struct {
             else => unreachable,
         };
 
-        if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
-            window.isMouseRelease(.RIGHT))
+        if (input.released(.menu) or input.released(.cancel) or
+            input.mouseReleased(.RIGHT))
         {
             state = .map;
         }
     }
 
     fn draw() void {
-        camera.draw(texture, .init(0, 280));
+        zhu.batch.drawImage(texture, .xy(0, 280), .{});
         menu.draw();
     }
 };
@@ -322,8 +330,8 @@ const LoadState = struct {
             else => unreachable,
         };
 
-        if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
-            window.isMouseRelease(.RIGHT))
+        if (input.released(.menu) or input.released(.cancel) or
+            input.mouseReleased(.RIGHT))
         {
             menu.active = 6;
             state = .menu;
@@ -331,7 +339,7 @@ const LoadState = struct {
     }
 
     pub fn draw() void {
-        camera.draw(texture, .init(0, 280));
+        zhu.batch.drawImage(texture, .xy(0, 280), .{});
         menu.draw();
     }
 };
@@ -342,51 +350,50 @@ pub fn load(index: u8) !void {
     var buf: [20]u8 = undefined;
     const path = zhu.formatZ(&buf, "save/{d}.save", .{index - 2});
     const slice = try window.readBuffer(path, &buffer);
-    var stream = std.io.fixedBufferStream(slice);
-    var reader = stream.reader();
+    var reader = std.Io.Reader.fixed(slice);
 
     // 1. magic
     var magic_buf: [magic.len]u8 = undefined;
-    try reader.readNoEof(&magic_buf);
+    try reader.readSliceAll(&magic_buf);
     if (!std.mem.eql(u8, &magic_buf, &magic)) return error.InvalidMagic;
 
     // 2. 游戏版本号
     var version: [2]u8 = undefined;
-    try reader.readNoEof(&version);
+    try reader.readSliceAll(&version);
 
     // 3. 地图编号
-    map.linkIndex = try reader.readByte();
+    map.linkIndex = try reader.takeByte();
     // 4. 玩家进度
-    player.progress = try reader.readByte();
+    player.progress = try reader.takeByte();
     // 5. 玩家坐标
     var pos = player.position;
-    try reader.readNoEof(std.mem.asBytes(&pos));
+    try reader.readSliceAll(std.mem.asBytes(&pos));
     loadPlayerPosition = pos;
     // 6. 玩家经验
-    try reader.readNoEof(std.mem.asBytes(&player.exp));
+    try reader.readSliceAll(std.mem.asBytes(&player.exp));
     // 7. 玩家等级
-    try reader.readNoEof(std.mem.asBytes(&player.level));
+    try reader.readSliceAll(std.mem.asBytes(&player.level));
     // 8. 玩家生命
-    try reader.readNoEof(std.mem.asBytes(&player.health));
+    try reader.readSliceAll(std.mem.asBytes(&player.health));
     // 9. 玩家最大生命
-    try reader.readNoEof(std.mem.asBytes(&player.maxHealth));
+    try reader.readSliceAll(std.mem.asBytes(&player.maxHealth));
     // 10. 玩家攻击力
-    try reader.readNoEof(std.mem.asBytes(&player.attack));
+    try reader.readSliceAll(std.mem.asBytes(&player.attack));
     // 11. 玩家防御力
-    try reader.readNoEof(std.mem.asBytes(&player.defend));
+    try reader.readSliceAll(std.mem.asBytes(&player.defend));
     // 12. 玩家速度
-    try reader.readNoEof(std.mem.asBytes(&player.speed));
+    try reader.readSliceAll(std.mem.asBytes(&player.speed));
     // 13. 玩家金钱
-    try reader.readNoEof(std.mem.asBytes(&player.money));
+    try reader.readSliceAll(std.mem.asBytes(&player.money));
     // 14. 玩家物品
-    try reader.readNoEof(std.mem.asBytes(&player.items));
+    try reader.readSliceAll(std.mem.asBytes(&player.items));
     // 15. 宝箱状态
-    try reader.readNoEof(std.mem.asBytes(&item.picked));
+    try reader.readSliceAll(std.mem.asBytes(&item.picked));
     // 16. NPC 状态
-    try reader.readNoEof(std.mem.asBytes(&npc.dead));
+    try reader.readSliceAll(std.mem.asBytes(&npc.dead));
     // 17. magic 结尾
     var magic_end: [magic.len]u8 = undefined;
-    try reader.readNoEof(&magic_end);
+    try reader.readSliceAll(&magic_end);
     if (!std.mem.eql(u8, &magic_end, &magic)) return error.InvalidMagic;
 }
 
@@ -408,8 +415,8 @@ const SaveState = struct {
             else => unreachable,
         };
 
-        if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
-            window.isMouseRelease(.RIGHT))
+        if (input.released(.menu) or input.released(.cancel) or
+            input.mouseReleased(.RIGHT))
         {
             menu.active = 6;
             state = .menu;
@@ -417,8 +424,7 @@ const SaveState = struct {
     }
 
     fn save(index: u8) !void {
-        var stream = std.io.fixedBufferStream(&buffer);
-        var writer = stream.writer();
+        var writer = std.Io.Writer.fixed(&buffer);
         try writer.writeAll(&magic);
         //  游戏版本号
         try writer.writeAll(&.{ 0x00, 0x00 });
@@ -454,11 +460,11 @@ const SaveState = struct {
 
         var buf: [20]u8 = undefined;
         const path = zhu.formatZ(&buf, "save/{d}.save", .{index - 2});
-        try window.saveAll(path, buffer[0..stream.pos]);
+        try window.saveAll(path, buffer[0..writer.end]);
     }
 
     pub fn draw() void {
-        camera.draw(texture, .init(0, 280));
+        zhu.batch.drawImage(texture, .xy(0, 280), .{});
         menu.draw();
     }
 };
@@ -483,7 +489,7 @@ const TalkState = struct {
                 // 打败了巫批，对话完成
                 header = "　　太好了！终于找到了失落已久的“圣剑”，就用它的威力把大魔王彻底杀死吧！　";
                 headerColor = .white;
-                headerTimer.reset();
+                headerTimer.restart();
             },
             10 => {
                 // 打败了大魔王
@@ -495,7 +501,7 @@ const TalkState = struct {
                     \\　　　　　　　　　　　　　[THE END]
                 ;
                 headerColor = .red;
-                headerTimer.reset();
+                headerTimer.restart();
             },
             else => unreachable,
         };
@@ -505,8 +511,8 @@ const TalkState = struct {
 const AboutState = struct {
     fn update(delta: f32) void {
         if (about.roll) about.update(delta) //
-        else if (window.isMouseRelease(.LEFT) or
-            window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER }))
+        else if (input.mouseReleased(.LEFT) or
+            input.released(.confirm))
         {
             about.roll = true;
         }
@@ -520,8 +526,8 @@ const SaleState = struct {
         const playerSell = player.sellItem();
         if (!sell) sell = playerSell;
 
-        if (window.isAnyKeyRelease(&.{ .ESCAPE, .Q, .E }) or
-            window.isMouseRelease(.RIGHT))
+        if (input.released(.menu) or input.released(.cancel) or
+            input.mouseReleased(.RIGHT))
         {
             talk.activeNext();
             if (sell) talk.activeNext();
@@ -541,7 +547,7 @@ const Shop = struct {
     pub fn update(self: *Shop) void {
         self.current = item.update(self.items.len, self.current);
 
-        if (window.isAnyKeyRelease(&.{ .LEFT_CONTROL, .F, .ENTER })) {
+        if (input.released(.buyItem)) {
             const itemIndex = self.items[self.current];
             if (itemIndex != 0) {
                 const playerBuy = buy(itemIndex);
@@ -549,7 +555,7 @@ const Shop = struct {
             }
         }
 
-        if (window.isAnyKeyRelease(&.{ .Q, .E, .ESCAPE })) {
+        if (input.released(.menu) or input.released(.cancel)) {
             talk.active = if (bought) self.buyId else self.notBuyId;
             state = .talk;
             bought = false;
@@ -575,13 +581,15 @@ const Shop = struct {
 
     pub fn draw(self: *const Shop) void {
         item.draw(&self.items, self.current);
+        zhu.text.msdf.begin();
+        defer zhu.text.msdf.end();
         var buffer: [20]u8 = undefined;
         // 金币，操作说明
-        camera.drawText("（金=", item.position.addXY(10, 270));
+        zhu.text.draw("（金=", item.position.addXY(10, 270), .{});
         const moneyStr = zhu.format(&buffer, "{d}）", .{player.money});
-        camera.drawText(moneyStr, item.position.addXY(60, 270));
+        zhu.text.draw(moneyStr, item.position.addXY(60, 270), .{});
         const text = "CTRL=购买　　ESC=退出";
-        camera.drawText(text, item.position.addXY(118, 270));
+        zhu.text.draw(text, item.position.addXY(118, 270), .{});
     }
 };
 var weaponShop: Shop = .{

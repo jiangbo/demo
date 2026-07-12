@@ -1,18 +1,16 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const window = zhu.window;
-const gfx = zhu.gfx;
-const camera = zhu.camera;
 const math = zhu.math;
 
 const item = @import("item.zig");
 const npc = @import("npc.zig");
+const Direction = @import("context.zig").Direction;
 
 const SIZE = 32;
-const TILE_SIZE: math.Vector2 = .init(SIZE, SIZE);
+const TILE_SIZE: math.Vector2 = .xy(SIZE, SIZE);
 
-var texture: gfx.Texture = undefined;
+var texture: zhu.Image = undefined;
 var rowTiles: usize = 0;
 
 const Chest = struct { tileIndex: u16, pickupIndex: u16 };
@@ -28,7 +26,7 @@ const Map = struct {
 };
 
 const Link = struct {
-    player: gfx.Vector = .zero,
+    player: zhu.Vector2 = .zero,
     mapId: u8 = 0,
     progress: u8 = 0,
 };
@@ -38,14 +36,16 @@ pub var linkIndex: u8 = 4;
 pub var current: *const Map = undefined;
 pub var size: math.Vector2 = undefined;
 
-var vertexBuffer: [2000]camera.Vertex = undefined;
-var vertexArray: std.ArrayListUnmanaged(camera.Vertex) = undefined;
+var vertexBuffer: [2000]zhu.batch.Vertex = undefined;
+var vertexArray: std.ArrayListUnmanaged(zhu.batch.Vertex) = undefined;
 var backgroundIndex: usize = undefined;
 
 pub fn init() void {
     vertexArray = .initBuffer(&vertexBuffer);
-    texture = gfx.loadTexture("assets/pic/maps.png", .init(640, 1536));
-    rowTiles = @intFromFloat(@divExact(texture.size().x, 32));
+    texture = zhu.assets.loadImage("pic/maps1-sheet.png", .{
+        .size = .xy(680, 1632),
+    });
+    rowTiles = @intFromFloat(@divExact(texture.size.x, 34));
 }
 
 pub fn enter() math.Vector2 {
@@ -53,7 +53,7 @@ pub fn enter() math.Vector2 {
     current = &zon[link.mapId];
     const x: f32 = @floatFromInt(current.width);
     const y: f32 = @floatFromInt(current.height);
-    size = math.Vector2.init(x, y).scale(SIZE);
+    size = math.Vector2.xy(x, y).scale(SIZE);
 
     vertexArray.clearRetainingCapacity();
 
@@ -80,26 +80,27 @@ fn appendVertex(tileIndex: usize, index: usize) void {
     vertexArray.appendAssumeCapacity(buildVertex(tileIndex, index));
 }
 
-fn buildVertex(tileIndex: usize, index: usize) camera.Vertex {
+fn buildVertex(tileIndex: usize, index: usize) zhu.batch.Vertex {
     const row: f32 = @floatFromInt(tileIndex / rowTiles);
     const col: f32 = @floatFromInt(tileIndex % rowTiles);
-    const pos = math.Vector2.init(col, row).mul(TILE_SIZE);
+    const pos = math.Vector2.xy(col * 34 + 1, row * 34 + 1);
 
-    const tile = texture.subTexture(.init(pos, TILE_SIZE));
-    return camera.Vertex{
-        .position = getPositionFromIndex(index).toVector3(0),
+    const tile = texture.sub(.init(pos, TILE_SIZE));
+    return zhu.batch.Vertex{
+        .position = getPositionFromIndex(index),
+        .layer = tile.layer,
         .size = TILE_SIZE,
-        .texture = tile.area.toVector4(),
+        .uvRect = tile.uvRect(),
     };
 }
 
-fn getPositionFromIndex(index: usize) gfx.Vector {
+fn getPositionFromIndex(index: usize) zhu.Vector2 {
     const row: f32 = @floatFromInt(index / current.width);
     const col: f32 = @floatFromInt(index % current.width);
-    return math.Vector.init(col, row).mul(TILE_SIZE);
+    return math.Vector.xy(col, row).mul(TILE_SIZE);
 }
 
-pub fn talk(position: gfx.Vector, direction: math.FourDirection) ?u16 {
+pub fn talk(position: zhu.Vector2, direction: Direction) ?u16 {
     const index: i32 = @intCast(positionIndex(position));
     const talkIndex: i32 = switch (direction) {
         .down => index + current.width,
@@ -135,7 +136,7 @@ pub fn openChest(pickIndex: usize) void {
     unreachable;
 }
 
-pub fn positionIndex(position: gfx.Vector) usize {
+pub fn positionIndex(position: zhu.Vector2) usize {
     const x: u16 = @intFromFloat(@floor(position.x / 32));
     const y: u16 = @intFromFloat(@floor(position.y / 32));
     return x + y * current.width;
@@ -147,7 +148,7 @@ pub fn getObject(index: usize) u8 {
 
 pub fn walkTo(area: math.Rect, velocity: math.Vector2) math.Vector2 {
     if (velocity.x == 0 and velocity.y == 0) return area.min;
-    return .init(walkToX(area, velocity.x), walkToY(area, velocity.y));
+    return .xy(walkToX(area, velocity.x), walkToY(area, velocity.y));
 }
 
 fn walkToX(area: math.Rect, velocity: f32) f32 {
@@ -157,14 +158,14 @@ fn walkToX(area: math.Rect, velocity: f32) f32 {
     if (max.x > size.x) return size.x - 0.1 - area.size.x;
 
     if (velocity > 0) {
-        if (canWalk(.init(max.x, min.y)) and canWalk(max)) return min.x;
+        if (canWalk(.xy(max.x, min.y)) and canWalk(max)) return min.x;
         const index = positionIndex(max) % current.width;
         // 把左上角的位置放到图块的左边缘
         const x: f32 = @floatFromInt(index * SIZE);
         // 平移加容忍，将右边放到图块的左边缘
         return x - area.size.x - 0.1;
     } else {
-        if (canWalk(min) and canWalk(.init(min.x, max.y))) return min.x;
+        if (canWalk(min) and canWalk(.xy(min.x, max.y))) return min.x;
         const index = 1 + positionIndex(min) % current.width;
         return @floatFromInt(index * SIZE);
     }
@@ -177,12 +178,12 @@ fn walkToY(area: math.Rect, velocity: f32) f32 {
     if (max.y > size.y) return size.y - 0.1 - area.size.y;
 
     if (velocity > 0) {
-        if (canWalk(.init(min.x, max.y)) and canWalk(max)) return min.y;
+        if (canWalk(.xy(min.x, max.y)) and canWalk(max)) return min.y;
         const index = positionIndex(max) / current.width;
         const y: f32 = @floatFromInt(index * SIZE);
         return y - area.size.y - 0.1;
     } else {
-        if (canWalk(min) and canWalk(.init(max.x, min.y))) return min.y;
+        if (canWalk(min) and canWalk(.xy(max.x, min.y))) return min.y;
         const index = 1 + positionIndex(min) / current.width;
         return @floatFromInt(index * SIZE);
     }
@@ -198,5 +199,5 @@ fn canWalk(position: math.Vector2) bool {
 }
 
 pub fn draw() void {
-    camera.drawVertices(texture, vertexArray.items);
+    zhu.batch.drawVertices(vertexArray.items, texture);
 }

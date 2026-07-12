@@ -2,18 +2,16 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const window = zhu.window;
-const gfx = zhu.gfx;
-const math = zhu.math;
-const camera = zhu.camera;
+const input = @import("input.zig");
 
 pub const Menu = struct {
     background: bool = false,
-    position: gfx.Vector = .zero,
-    size: gfx.Vector = .zero,
-    color: gfx.Color = .one,
-    textColor: gfx.Color = .one,
+    position: zhu.Vector2 = .zero,
+    size: zhu.Vector2 = .zero,
+    color: zhu.Color = .white,
+    textColor: zhu.Color = .white,
     names: []const []const u8 = &.{},
-    areas: []const gfx.Rect = &.{},
+    areas: []const zhu.Rect = &.{},
     events: []const u8 = &.{},
 };
 
@@ -41,16 +39,16 @@ pub fn update() ?u8 {
         }
     }
 
-    if (window.isAnyKeyRelease(&.{ .DOWN, .S })) {
+    if (input.released(.down)) {
         state.current = (state.current + 1) % menu.names.len;
     }
-    if (window.isAnyKeyRelease(&.{ .UP, .W })) {
+    if (input.released(.up)) {
         state.current += menu.names.len;
         state.current = (state.current - 1) % menu.names.len;
     }
 
-    var confirm = window.isAnyKeyRelease(&.{ .F, .SPACE, .ENTER });
-    if (window.isMouseRelease(.LEFT)) {
+    var confirm = input.released(.confirm);
+    if (input.mouseReleased(.LEFT)) {
         for (menu.areas, 0..) |area, i| {
             if (area.contains(window.mouse)) {
                 state.current = i;
@@ -65,10 +63,13 @@ pub fn draw() void {
     const menu = zon[active];
     const state = &states[active];
 
-    for (menu.areas, menu.names, 0..) |area, name, i| {
-        if (i == state.current) {
-            camera.drawRect(area, menu.color);
-        }
-        camera.drawColorText(name, area.min.addXY(5, -2), menu.textColor);
+    zhu.batch.drawRect(menu.areas[state.current], .{ .color = menu.color });
+    zhu.text.msdf.begin();
+    defer zhu.text.msdf.end();
+
+    for (menu.areas, menu.names) |area, name| {
+        zhu.text.draw(name, area.min.addXY(5, -2), .{
+            .color = menu.textColor,
+        });
     }
 }
