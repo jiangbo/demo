@@ -85,33 +85,16 @@ fn drawHelpInfo() void {
         \\帮助：H  按一次打开，再按一次关掉
         \\作者：jiangbo4444
     ;
-    var iterator = std.unicode.Utf8View.initUnchecked(text).iterator();
-    var count: u32 = 0;
-    while (iterator.nextCodepoint()) |code| {
-        if (code == '\n') continue;
-        count += 1;
-    }
-    debutTextCount = count;
 
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
     zhu.text.draw(text, .xy(10, 5), .{ .color = .green });
 }
 
-var debutTextCount: u32 = 0;
 fn drawDebugInfo() void {
-    const player = @import("player.zig");
-    var buffer: [80]u8 = undefined;
-    const position = zhu.format(&buffer, "{d:.1}, {d:.1}", .{
-        player.position.x,
-        player.position.y,
-    });
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
-    zhu.debug.draw(&.{.{
-        .label = "角色",
-        .left = position,
-    }});
+    zhu.debug.draw(&.{});
 }
 
 var fadeTimer: ?zhu.Timer = null;
