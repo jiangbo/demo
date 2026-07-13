@@ -42,9 +42,7 @@ var backgroundIndex: usize = undefined;
 
 pub fn init() void {
     vertexArray = .initBuffer(&vertexBuffer);
-    texture = zhu.assets.loadImage("pic/maps1-sheet.png", .{
-        .size = .xy(680, 1632),
-    });
+    texture = zhu.getImage("maps1-sheet.png").?;
     rowTiles = @intFromFloat(@divExact(texture.size.x, 34));
 }
 

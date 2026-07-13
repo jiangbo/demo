@@ -16,7 +16,7 @@ var displayTimer: zhu.Timer = .init(0.08);
 var textIndex: usize = 0;
 
 pub fn init() void {
-    background = zhu.assets.loadImage("pic/title.png", .{
+    background = zhu.assets.loadImage("title.png", .{
         .size = .xy(640, 480),
     });
     menuBackground = zhu.getImage("mainmenu2.png").?;
