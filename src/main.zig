@@ -9,16 +9,12 @@ var soundBuffer: [20]zhu.audio.Sound = undefined;
 
 pub fn init(allocator: zhu.Allocator) void {
     vertexBuffer = allocator.alloc(zhu.batch.Vertex, 4096);
-    zhu.batch.init(vertexBuffer, &commandBuffer);
     zhu.audio.init(8000, &soundBuffer);
     zhu.assets.loadAtlas(@import("zon/atlas.zon"), .nearest);
+    zhu.batch.init(vertexBuffer, &commandBuffer);
+
     zhu.text.msdf.init(@import("zon/font.zon"));
     zhu.text.changeFontSize(18);
-
-    zhu.batch.circleImage = zhu.getImage("circle.png").?;
-    const size = zhu.batch.circleImage.size;
-    const rect = zhu.Rect.init(.zero, size).centerScale(0.25);
-    zhu.batch.whiteImage = zhu.batch.circleImage.sub(rect);
 
     scene.init();
 }
