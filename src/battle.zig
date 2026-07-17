@@ -14,22 +14,12 @@ const player = @import("player.zig");
 const menu = @import("menu.zig");
 const item = @import("item.zig");
 const input = @import("input.zig");
+const factory = @import("factory.zig");
 
 var enemyIndex: u16 = 0;
 var enemy: npc.Character = undefined;
 
 var texture: zhu.Image = undefined;
-
-const bombArray: [10]zhu.graphics.Frame = blk: {
-    var array: [10]zhu.graphics.Frame = undefined;
-    for (&array, 0..) |*value, i| {
-        value.* = .{
-            .offset = .xy(@floatFromInt(54 * i), 0),
-            .duration = 0.06,
-        };
-    }
-    break :blk array;
-};
 var bombAnimation: zhu.Animation = undefined;
 
 const attackSounds: [3][:0]const u8 = .{
@@ -88,9 +78,7 @@ var phase: Phase = .menu;
 
 pub fn init() void {
     texture = zhu.getImage("fightbar.png").?;
-    const bombTexture = zhu.getImage("bomb.png").?;
-    bombAnimation = .init(bombTexture, .xy(54, 50), &bombArray);
-    bombAnimation.loop = false;
+    bombAnimation = factory.bombAnimation();
 }
 
 pub fn enter() void {

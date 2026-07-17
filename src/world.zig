@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const window = zhu.window;
 const camera = zhu.camera;
@@ -14,7 +15,10 @@ const about = @import("about.zig");
 const item = @import("item.zig");
 const input = @import("input.zig");
 const npc = @import("npc.zig");
+const system = @import("system/system.zig");
 const context = @import("context.zig");
+
+const World = ecs.World;
 
 const State = union(enum) {
     map: MapState,
@@ -28,8 +32,9 @@ const State = union(enum) {
     shop,
     sale: SaleState,
 
-    pub fn update(self: State, delta: f32) void {
+    pub fn update(self: State, world: *World, delta: f32) void {
         switch (self) {
+            .map => MapState.update(world, delta),
             .status => {},
             .item => _ = player.openItem(),
             .shop => shop.update(),
@@ -74,7 +79,7 @@ pub fn deinit() void {
     zhu.audio.setMusicState(.stopped);
 }
 
-pub fn enter() void {
+pub fn enter(world: *World) void {
     const playerPosition = map.enter();
     switch (back) {
         .none => {
@@ -91,20 +96,20 @@ pub fn enter() void {
     if (loadPlayerPosition) |pos| player.position = pos;
     loadPlayerPosition = null;
     player.cameraLookAt();
-    npc.enter();
+    npc.enter(world);
     menu.active = 6;
     zhu.audio.playMusic("voc/back.ogg");
 }
 
-pub fn changeMap() void {
+pub fn changeMap(world: *World) void {
     const playerPosition = map.enter();
     player.enter(playerPosition);
-    npc.enter();
+    npc.enter(world);
 }
 
 pub fn exit() void {}
 
-pub fn update(delta: f32) void {
+pub fn update(world: *World, delta: f32) void {
     if (tip.len != 0) {
         if (input.released(.confirm) or input.released(.cancel)) {
             tip = &.{};
@@ -156,12 +161,12 @@ pub fn update(delta: f32) void {
         }
     }
 
-    state.update(delta);
+    state.update(world, delta);
 }
 
-pub fn draw() void {
+pub fn draw(world: *World) void {
     map.draw();
-    npc.draw();
+    system.render.draw(world);
     player.draw();
 
     camera.push(.window);
@@ -186,9 +191,10 @@ pub fn draw() void {
 const MapState = struct {
     var warn: bool = false;
 
-    fn update(delta: f32) void {
-        npc.update(delta);
-        player.update(delta);
+    fn update(world: *World, delta: f32) void {
+        npc.update(world, delta);
+        player.update(world, delta);
+        system.update(world, delta);
 
         // 检测是否需要切换地图
         const area = math.Rect.init(player.position, player.SIZE);
@@ -198,7 +204,7 @@ const MapState = struct {
         } else warn = false;
 
         // 遇敌
-        if (npc.battle(area, player.facing)) |npcIndex| {
+        if (npc.battle(world, area, player.facing)) |npcIndex| {
             // 是否需要对话
             if (npc.zon[npcIndex].talks.len != 0) {
                 talk.active = npc.zon[npcIndex].talks[0];
@@ -219,7 +225,11 @@ const MapState = struct {
         if (talkObject) |pickupIndex| openChest(pickupIndex);
 
         // 和 NPC 对话
-        if (npc.talk(player.talkCollider(), player.facing)) |talkId| {
+        if (npc.talk(
+            world,
+            player.talkCollider(),
+            player.facing,
+        )) |talkId| {
             talk.active = talkId;
             state = .talk;
         }

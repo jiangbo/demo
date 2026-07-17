@@ -16,7 +16,7 @@ pub fn init(allocator: zhu.Allocator) void {
     zhu.text.msdf.init(@import("zon/font.zon"));
     zhu.text.changeFontSize(18);
 
-    scene.init();
+    scene.init(allocator);
 }
 
 pub fn frame(delta: f32) void {

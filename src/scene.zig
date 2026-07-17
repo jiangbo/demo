@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const window = zhu.window;
 const camera = zhu.camera;
@@ -15,8 +16,10 @@ var toSceneType: SceneType = .title;
 
 var isHelp: bool = true;
 var isDebug: bool = false;
+var world: ecs.World = undefined;
 
-pub fn init() void {
+pub fn init(allocator: zhu.Allocator) void {
+    world = ecs.World.init(allocator.raw);
     titleScene.init();
     worldScene.init();
     battleScene.init();
@@ -30,7 +33,11 @@ pub fn changeScene(sceneType: SceneType) void {
 }
 
 pub fn changeMap() void {
-    fadeOut(worldScene.changeMap);
+    fadeOut(doChangeMap);
+}
+
+fn doChangeMap() void {
+    worldScene.changeMap(&world);
 }
 
 fn doChangeScene() void {
@@ -74,6 +81,9 @@ pub fn draw() void {
             .color = .rgba(0, 0, 0, alpha),
         });
     }
+
+    camera.push(.window);
+    defer camera.pop();
     if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
 }
 
@@ -114,12 +124,20 @@ pub fn fadeOut(callback: ?*const fn () void) void {
 
 pub fn deinit() void {
     sceneCall("deinit", .{});
+    world.deinit();
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {
     switch (currentSceneType) {
         .title => window.call(titleScene, function, args),
-        .world => window.call(worldScene, function, args),
+        .world => if (comptime std.mem.eql(u8, function, "enter") or
+            std.mem.eql(u8, function, "update") or
+            std.mem.eql(u8, function, "draw"))
+        {
+            window.call(worldScene, function, .{&world} ++ args);
+        } else {
+            window.call(worldScene, function, args);
+        },
         .battle => window.call(battleScene, function, args),
     }
 }

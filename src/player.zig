@@ -1,4 +1,5 @@
 const std = @import("std");
+const ecs = @import("ecs");
 
 const zhu = @import("zhu");
 const window = zhu.window;
@@ -9,15 +10,15 @@ const item = @import("item.zig");
 const input = @import("input.zig");
 const map = @import("map.zig");
 const npc = @import("npc.zig");
-const world = @import("world.zig");
+const worldScene = @import("world.zig");
+const factory = @import("factory.zig");
 const Direction = @import("context.zig").Direction;
 
-const Animation = zhu.EnumAnimation(Direction);
+const Animation = zhu.Animation;
 
 const name = "小飞刀";
 const MOVE_SPEED = 100;
 pub const SIZE: zhu.Vector2 = .xy(16, 16);
-var texture: zhu.Image = undefined;
 var animation: Animation = undefined;
 
 var facings: std.EnumArray(Direction, u64) = undefined;
@@ -40,39 +41,9 @@ pub var progress: u8 = 1; //进度
 
 var bgTexture: zhu.Image = undefined;
 
-const frames: [3]zhu.graphics.Frame = .{
-    .{ .offset = .xy(0, 0), .duration = 0.15 },
-    .{ .offset = .xy(32, 0), .duration = 0.15 },
-    .{ .offset = .xy(64, 0), .duration = 0.15 },
-};
-
 pub fn init() void {
-    texture = zhu.getImage("player.png").?;
     bgTexture = zhu.getImage("sbar.png").?;
-
-    animation = Animation.initUndefined();
-    const rowSize = zhu.Vector2.xy(96, 48);
-    const frameSize = zhu.Vector2.xy(32, 48);
-    animation.set(.down, zhu.Animation.init(
-        texture.sub(.init(.xy(0, 0), rowSize)),
-        frameSize,
-        &frames,
-    ));
-    animation.set(.left, zhu.Animation.init(
-        texture.sub(.init(.xy(0, 48), rowSize)),
-        frameSize,
-        &frames,
-    ));
-    animation.set(.right, zhu.Animation.init(
-        texture.sub(.init(.xy(0, 96), rowSize)),
-        frameSize,
-        &frames,
-    ));
-    animation.set(.up, zhu.Animation.init(
-        texture.sub(.init(.xy(0, 144), rowSize)),
-        frameSize,
-        &frames,
-    ));
+    animation = factory.playerAnimation();
 
     facings = .initFill(0);
     @memset(&items, 0);
@@ -85,17 +56,24 @@ pub fn enter(playerPosition: math.Vector2) void {
 
 pub fn exit() void {}
 
-pub fn update(delta: f32) void {
+pub fn update(world: *ecs.World, delta: f32) void {
 
     // 角色移动和碰撞检测
     const dir = updateFacing();
     if (dir.x == 0 and dir.y == 0) return; // 没有移动
-    _ = animation.getPtr(facing).update(delta);
+    const sourceIndex: u8 = switch (facing) {
+        .down => 0,
+        .left => 1,
+        .right => 2,
+        .up => 3,
+    };
+    if (animation.sourceIndex != sourceIndex) animation.play(sourceIndex);
+    _ = animation.update(delta);
 
     const velocity = dir.normalize().scale(MOVE_SPEED).scale(delta);
 
     const area = math.Rect.init(position, SIZE);
-    if (npc.isCollision(area.move(velocity))) return;
+    if (npc.isCollision(world, area.move(velocity))) return;
 
     position = map.walkTo(area, velocity);
     // 相机跟踪
@@ -193,7 +171,7 @@ pub fn sellItem() bool {
         const usedItem = item.zon[sellItemIndex];
         money += usedItem.money / 2;
         items[itemIndex] = 0;
-        world.tip = "这东西归别人了！";
+        worldScene.tip = "这东西归别人了！";
         return true;
     }
     return false;
@@ -243,8 +221,7 @@ pub fn levelUp() void {
 }
 
 pub fn draw() void {
-    const current = animation.get(facing);
-    zhu.batch.drawImage(current.subImage(), position.addXY(-10, -28), .{});
+    zhu.batch.drawImage(animation.subImage(), position.addXY(-10, -28), .{});
 
     // camera.debugDraw(.init(position, SIZE));
 }
@@ -258,12 +235,14 @@ pub fn drawTalk() void {
 }
 
 pub fn photo() zhu.Image {
-    const down = animation.get(.down);
+    var down = animation;
+    down.source = down.sources[0];
     return down.subImageAt(0);
 }
 
 pub fn battleTexture() zhu.Image {
-    const right = animation.get(.right);
+    var right = animation;
+    right.source = right.sources[2];
     return right.subImageAt(0);
 }
 
@@ -273,8 +252,7 @@ pub fn drawStatus() void {
     zhu.batch.drawImage(bgTexture, pos.addXY(-10, -10), .{});
 
     // 头像
-    const down = animation.get(.down);
-    zhu.batch.drawImage(down.subImageAt(0), pos.addXY(10, 10), .{});
+    zhu.batch.drawImage(photo(), pos.addXY(10, 10), .{});
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
     drawInfo(pos, 30);
