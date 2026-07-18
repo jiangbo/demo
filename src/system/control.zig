@@ -14,7 +14,9 @@ pub fn update(world: *ecs.World) void {
     const facing = world.getPtr(entity, Facing).?;
     const direction = readDirection();
 
-    if (direction.length2() == 0) return;
+    if (direction.length2() == 0) {
+        return world.remove(entity, WantMove);
+    }
 
     world.add(entity, WantMove{ .value = direction });
     if (chooseFacing(direction)) |value| facing.* = value;
@@ -67,7 +69,6 @@ test "斜向移动使用最后按下的方向" {
 
     zhu.input.update();
     zhu.key.set(.D, true);
-    world.clear(WantMove);
     update(&world);
     facing = world.get(entity, Facing).?;
     wantMove = world.get(entity, WantMove).?;
@@ -76,7 +77,6 @@ test "斜向移动使用最后按下的方向" {
 
     zhu.input.update();
     zhu.key.set(.D, false);
-    world.clear(WantMove);
     update(&world);
     facing = world.get(entity, Facing).?;
     wantMove = world.get(entity, WantMove).?;
@@ -85,7 +85,6 @@ test "斜向移动使用最后按下的方向" {
 
     zhu.input.update();
     zhu.key.set(.W, false);
-    world.clear(WantMove);
     update(&world);
     try std.testing.expect(!world.has(entity, WantMove));
 }
