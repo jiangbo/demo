@@ -14,14 +14,12 @@ pub fn update(world: *ecs.World) void {
     const actor = world.getPtr(entity, Actor).?;
     const wantMove = world.getPtr(entity, WantMove).?;
 
-    const direction = readDirection();
-    if (direction.length2() == 0) {
-        wantMove.direction = .zero;
-        return;
-    }
+    wantMove.direction = readDirection();
+    if (wantMove.direction.length2() == 0) return;
 
-    if (chooseFacing(direction)) |facing| actor.facing = facing;
-    wantMove.direction = direction.normalize();
+    if (chooseFacing(wantMove.direction)) |facing| {
+        actor.facing = facing;
+    }
 }
 
 fn readDirection() zhu.Vector2 {
@@ -31,7 +29,9 @@ fn readDirection() zhu.Vector2 {
     if (input.held(.down)) direction.y += 1;
     if (input.held(.left)) direction.x -= 1;
     if (input.held(.right)) direction.x += 1;
-    return direction;
+
+    if (direction.length2() == 0) return .zero;
+    return direction.normalize();
 }
 
 fn chooseFacing(direction: zhu.Vector2) ?component.Facing {
