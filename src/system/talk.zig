@@ -20,12 +20,7 @@ pub fn update(world: *ecs.World) void {
 
     const player = world.getIdentity(Player).?;
     const facing = world.get(player, Facing).?;
-    world.add(entity, switch (facing) {
-        .down => Facing.up,
-        .left => Facing.right,
-        .up => Facing.down,
-        .right => Facing.left,
-    });
+    world.add(entity, component.oppositeFacing(facing));
     world.remove(entity, WantMove);
     world.addIdentity(entity, Talk);
 }
