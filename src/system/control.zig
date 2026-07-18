@@ -12,14 +12,14 @@ const WantMove = component.WantMove;
 pub fn update(world: *ecs.World) void {
     const entity = world.getIdentity(Player).?;
     const actor = world.getPtr(entity, Actor).?;
-    const wantMove = world.getPtr(entity, WantMove).?;
+    const direction = readDirection();
 
-    wantMove.direction = readDirection();
-    if (wantMove.direction.length2() == 0) return;
+    if (direction.length2() == 0) return;
 
-    if (chooseFacing(wantMove.direction)) |facing| {
+    if (chooseFacing(direction)) |facing| {
         actor.facing = facing;
     }
+    world.add(entity, WantMove{ .value = direction });
 }
 
 fn readDirection() zhu.Vector2 {
@@ -59,28 +59,35 @@ test "斜向移动使用最后按下的方向" {
     const entity = world.createIdentity(Player);
     world.add(entity, Player{});
     world.add(entity, Actor{ .position = .zero, .facing = .down });
-    world.add(entity, WantMove{});
 
     zhu.key.set(.W, true);
     update(&world);
     var actor = world.get(entity, Actor).?;
     var wantMove = world.get(entity, WantMove).?;
-    try std.testing.expect(wantMove.direction.approxEqual(.xy(0, -1)));
+    try std.testing.expect(wantMove.value.approxEqual(.xy(0, -1)));
     try std.testing.expectEqual(component.Facing.up, actor.facing);
 
     zhu.input.update();
     zhu.key.set(.D, true);
+    world.clear(WantMove);
     update(&world);
     actor = world.get(entity, Actor).?;
     wantMove = world.get(entity, WantMove).?;
-    try std.testing.expectApproxEqAbs(1, wantMove.direction.length(), 0.001);
+    try std.testing.expectApproxEqAbs(1, wantMove.value.length(), 0.001);
     try std.testing.expectEqual(component.Facing.right, actor.facing);
 
     zhu.input.update();
     zhu.key.set(.D, false);
+    world.clear(WantMove);
     update(&world);
     actor = world.get(entity, Actor).?;
     wantMove = world.get(entity, WantMove).?;
-    try std.testing.expect(wantMove.direction.approxEqual(.xy(0, -1)));
+    try std.testing.expect(wantMove.value.approxEqual(.xy(0, -1)));
     try std.testing.expectEqual(component.Facing.up, actor.facing);
+
+    zhu.input.update();
+    zhu.key.set(.W, false);
+    world.clear(WantMove);
+    update(&world);
+    try std.testing.expect(!world.has(entity, WantMove));
 }
