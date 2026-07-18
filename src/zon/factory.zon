@@ -18,15 +18,6 @@
                 .{ .offset = .{ .x = 64, .y = 48 }, .duration = 0.15 },
             },
         },
-        .{ // right
-            .imageId = 587090341,
-            .size = .{ .x = 32, .y = 48 },
-            .frames = .{
-                .{ .offset = .{ .x = 0, .y = 96 }, .duration = 0.15 },
-                .{ .offset = .{ .x = 32, .y = 96 }, .duration = 0.15 },
-                .{ .offset = .{ .x = 64, .y = 96 }, .duration = 0.15 },
-            },
-        },
         .{ // up
             .imageId = 587090341,
             .size = .{ .x = 32, .y = 48 },
@@ -34,6 +25,15 @@
                 .{ .offset = .{ .x = 0, .y = 144 }, .duration = 0.15 },
                 .{ .offset = .{ .x = 32, .y = 144 }, .duration = 0.15 },
                 .{ .offset = .{ .x = 64, .y = 144 }, .duration = 0.15 },
+            },
+        },
+        .{ // right
+            .imageId = 587090341,
+            .size = .{ .x = 32, .y = 48 },
+            .frames = .{
+                .{ .offset = .{ .x = 0, .y = 96 }, .duration = 0.15 },
+                .{ .offset = .{ .x = 32, .y = 96 }, .duration = 0.15 },
+                .{ .offset = .{ .x = 64, .y = 96 }, .duration = 0.15 },
             },
         },
     },
