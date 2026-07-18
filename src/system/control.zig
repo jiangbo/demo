@@ -5,21 +5,19 @@ const ecs = @import("ecs");
 const component = @import("../component.zig");
 const input = @import("../input.zig");
 
-const Actor = component.Actor;
+const Facing = component.Facing;
 const Player = component.Player;
 const WantMove = component.WantMove;
 
 pub fn update(world: *ecs.World) void {
     const entity = world.getIdentity(Player).?;
-    const actor = world.getPtr(entity, Actor).?;
+    const facing = world.getPtr(entity, Facing).?;
     const direction = readDirection();
 
     if (direction.length2() == 0) return;
 
-    if (chooseFacing(direction)) |facing| {
-        actor.facing = facing;
-    }
     world.add(entity, WantMove{ .value = direction });
+    if (chooseFacing(direction)) |value| facing.* = value;
 }
 
 fn readDirection() zhu.Vector2 {
@@ -34,7 +32,7 @@ fn readDirection() zhu.Vector2 {
     return direction.normalize();
 }
 
-fn chooseFacing(direction: zhu.Vector2) ?component.Facing {
+fn chooseFacing(direction: zhu.Vector2) ?Facing {
     if (@abs(direction.x) > @abs(direction.y)) {
         return if (direction.x < 0) .left else .right;
     } else if (@abs(direction.y) > @abs(direction.x)) {
@@ -58,32 +56,32 @@ test "斜向移动使用最后按下的方向" {
 
     const entity = world.createIdentity(Player);
     world.add(entity, Player{});
-    world.add(entity, Actor{ .position = .zero, .facing = .down });
+    world.add(entity, Facing.down);
 
     zhu.key.set(.W, true);
     update(&world);
-    var actor = world.get(entity, Actor).?;
+    var facing = world.get(entity, Facing).?;
     var wantMove = world.get(entity, WantMove).?;
     try std.testing.expect(wantMove.value.approxEqual(.xy(0, -1)));
-    try std.testing.expectEqual(component.Facing.up, actor.facing);
+    try std.testing.expectEqual(Facing.up, facing);
 
     zhu.input.update();
     zhu.key.set(.D, true);
     world.clear(WantMove);
     update(&world);
-    actor = world.get(entity, Actor).?;
+    facing = world.get(entity, Facing).?;
     wantMove = world.get(entity, WantMove).?;
     try std.testing.expectApproxEqAbs(1, wantMove.value.length(), 0.001);
-    try std.testing.expectEqual(component.Facing.right, actor.facing);
+    try std.testing.expectEqual(Facing.right, facing);
 
     zhu.input.update();
     zhu.key.set(.D, false);
     world.clear(WantMove);
     update(&world);
-    actor = world.get(entity, Actor).?;
+    facing = world.get(entity, Facing).?;
     wantMove = world.get(entity, WantMove).?;
     try std.testing.expect(wantMove.value.approxEqual(.xy(0, -1)));
-    try std.testing.expectEqual(component.Facing.up, actor.facing);
+    try std.testing.expectEqual(Facing.up, facing);
 
     zhu.input.update();
     zhu.key.set(.W, false);
