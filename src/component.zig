@@ -8,6 +8,15 @@ pub const Position = zhu.Vector2;
 // 实体当前面对的方向。
 pub const Facing = enum { down, left, up, right };
 
+pub fn oppositeFacing(facing: Facing) Facing {
+    return switch (facing) {
+        .down => .up,
+        .left => .right,
+        .up => .down,
+        .right => .left,
+    };
+}
+
 // 相对实体逻辑位置的碰撞区域。
 pub const Collider = zhu.Rect;
 
@@ -16,6 +25,8 @@ pub const RenderOffset = struct { value: zhu.Vector2 };
 
 pub const Player = struct {};
 pub const Npc = struct { index: u8 };
+// 敌人相对实体逻辑位置的战斗触发区域。
+pub const Enemy = struct { value: zhu.Rect };
 // 可对话实体；Identity 指向当前对话对象。
 pub const Talk = struct {};
 pub const Wander = struct { value: zhu.Timer };
