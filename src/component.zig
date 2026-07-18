@@ -2,32 +2,22 @@ const zhu = @import("zhu");
 
 pub const Animation = zhu.Animation;
 
-// 实体图片底边的中心位置。
+// 实体碰撞区域底边的中心位置。
 pub const Position = zhu.Vector2;
 
 // 实体当前面对的方向。
 pub const Facing = enum { down, left, up, right };
 
-pub const Collider = struct {
-    size: zhu.Vector2,
-    offset: zhu.Vector2 = .zero,
+// 相对实体逻辑位置的碰撞区域。
+pub const Collider = zhu.Rect;
 
-    // 根据角色底边中心计算碰撞区域。
-    pub fn rect(self: Collider, entityPosition: zhu.Vector2) zhu.Rect {
-        const center = entityPosition.add(self.offset);
-        const min = center.addXY(-self.size.x * 0.5, -self.size.y);
-        return .init(min, self.size);
-    }
-
-    // 根据碰撞区域左上角计算角色底边中心。
-    pub fn position(self: Collider, min: zhu.Vector2) zhu.Vector2 {
-        const center = min.addXY(self.size.x * 0.5, self.size.y);
-        return center.sub(self.offset);
-    }
-};
+// 图片相对实体逻辑位置的绘制偏移。
+pub const RenderOffset = struct { value: zhu.Vector2 };
 
 pub const Player = struct {};
 pub const Npc = struct { index: u8 };
+// 可对话实体；Identity 指向当前对话对象。
+pub const Talk = struct {};
 pub const Wander = struct { value: zhu.Timer };
 
 // 实体希望移动的单位方向。

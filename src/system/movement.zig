@@ -39,11 +39,11 @@ fn updateMove(world: *ecs.World) void {
         const position = query.getPtr(entity, Position);
         const collider = query.get(entity, Collider);
         const moveTo = query.get(entity, MoveTo);
-        const area = collider.rect(position.*);
+        const area = collider.move(position.*);
         const offset = moveTo.value.sub(position.*);
-        const min = map.walkTo(area, offset);
-        const target = collider.position(min);
-        const moveArea = collider.rect(target);
+        const moveMin = map.walkTo(area, offset);
+        const target = moveMin.sub(collider.min);
+        const moveArea = collider.move(target);
 
         var others = world.query(.{ Position, Collider });
         while (others.next()) |other| {
@@ -51,7 +51,7 @@ fn updateMove(world: *ecs.World) void {
 
             const otherPosition = others.get(other, Position);
             const otherCollider = others.get(other, Collider);
-            const otherArea = otherCollider.rect(otherPosition);
+            const otherArea = otherCollider.move(otherPosition);
             if (moveArea.intersect(otherArea)) continue :blk;
         }
         position.* = target;

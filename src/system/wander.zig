@@ -5,12 +5,16 @@ const ecs = @import("ecs");
 const component = @import("../component.zig");
 
 const Facing = component.Facing;
+const Talk = component.Talk;
 const Wander = component.Wander;
 const WantMove = component.WantMove;
 
 pub fn update(world: *ecs.World, delta: f32) void {
+    const talking = world.getIdentity(Talk);
     var query = world.query(.{Wander});
     while (query.next()) |entity| {
+        if (entity == talking) continue;
+
         const wander = query.getPtr(entity, Wander);
         if (wander.value.updateRunning(delta)) continue;
 
@@ -50,4 +54,21 @@ test "漫游转向时更新移动意图" {
         .right => .xy(1, 0),
     };
     try std.testing.expect(wantMove.value.approxEqual(direction));
+}
+
+test "漫游跳过正在对话的实体" {
+    var world = ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    const entity = world.createEntity();
+    world.addAll(entity, .{
+        Facing.left,
+        Talk{},
+        Wander{ .value = .init(0) },
+    });
+    world.addIdentity(entity, Talk);
+
+    update(&world, 1);
+
+    try std.testing.expect(!world.has(entity, WantMove));
 }
