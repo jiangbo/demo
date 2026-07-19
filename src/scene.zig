@@ -21,7 +21,7 @@ var world: ecs.World = undefined;
 pub fn init(allocator: zhu.Allocator) void {
     world = ecs.World.init(allocator.raw);
     titleScene.init();
-    worldScene.init();
+    worldScene.init(&world);
     battleScene.init();
 
     sceneCall("enter", .{});

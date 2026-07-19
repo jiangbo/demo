@@ -4,8 +4,8 @@ const zhu = @import("zhu");
 const math = zhu.math;
 
 const item = @import("item.zig");
-const npc = @import("npc.zig");
-const Direction = @import("context.zig").Direction;
+const factory = @import("factory.zig");
+const Facing = @import("component.zig").Facing;
 
 const SIZE = 32;
 const TILE_SIZE: math.Vector2 = .xy(SIZE, SIZE);
@@ -22,7 +22,7 @@ const Map = struct {
     ground: []const u16,
     object: []const u8,
     chests: []const Chest = &.{},
-    npcs: []const u8 = &.{},
+    actors: []const factory.Key = &.{},
 };
 
 const Link = struct {
@@ -98,9 +98,9 @@ fn getPositionFromIndex(index: usize) zhu.Vector2 {
     return math.Vector.xy(col, row).mul(TILE_SIZE);
 }
 
-pub fn talk(position: zhu.Vector2, direction: Direction) ?u16 {
+pub fn talk(position: zhu.Vector2, facing: Facing) ?u16 {
     const index: i32 = @intCast(positionIndex(position));
-    const talkIndex: i32 = switch (direction) {
+    const talkIndex: i32 = switch (facing) {
         .down => index + current.width,
         .left => index - 1,
         .right => index + 1,

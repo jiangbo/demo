@@ -1,4 +1,3 @@
-const std = @import("std");
 const ecs = @import("ecs");
 
 const zhu = @import("zhu");
@@ -6,24 +5,16 @@ const window = zhu.window;
 const camera = zhu.camera;
 const math = zhu.math;
 
+const component = @import("component.zig");
 const item = @import("item.zig");
 const input = @import("input.zig");
 const map = @import("map.zig");
-const npc = @import("npc.zig");
 const worldScene = @import("world.zig");
 const factory = @import("factory.zig");
-const Direction = @import("context.zig").Direction;
 
-const Animation = zhu.Animation;
-
-const name = "小飞刀";
-const MOVE_SPEED = 100;
-pub const SIZE: zhu.Vector2 = .xy(16, 16);
-var animation: Animation = undefined;
-
-var facings: std.EnumArray(Direction, u64) = undefined;
-pub var facing: Direction = .down;
-pub var position: zhu.Vector2 = undefined;
+const Collider = component.Collider;
+const Player = component.Player;
+const Position = component.Position;
 
 pub var money: u32 = 50; // 金钱
 pub var items: [16]u8 = undefined;
@@ -43,77 +34,11 @@ var bgTexture: zhu.Image = undefined;
 
 pub fn init() void {
     bgTexture = zhu.getImage("sbar.png").?;
-    animation = factory.playerAnimation();
 
-    facings = .initFill(0);
     @memset(&items, 0);
 }
 
-pub fn enter(playerPosition: math.Vector2) void {
-    position = playerPosition;
-    cameraLookAt();
-}
-
 pub fn exit() void {}
-
-pub fn update(world: *ecs.World, delta: f32) void {
-
-    // 角色移动和碰撞检测
-    const dir = updateFacing();
-    if (dir.x == 0 and dir.y == 0) return; // 没有移动
-    const sourceIndex: u8 = switch (facing) {
-        .down => 0,
-        .left => 1,
-        .right => 2,
-        .up => 3,
-    };
-    if (animation.sourceIndex != sourceIndex) animation.play(sourceIndex);
-    _ = animation.update(delta);
-
-    const velocity = dir.normalize().scale(MOVE_SPEED).scale(delta);
-
-    const area = math.Rect.init(position, SIZE);
-    if (npc.isCollision(world, area.move(velocity))) return;
-
-    position = map.walkTo(area, velocity);
-    // 相机跟踪
-    cameraLookAt();
-}
-
-fn updateFacing() math.Vector2 {
-    const count = window.frameCount();
-    var dir = zhu.Vector2.zero;
-
-    if (input.held(.up)) {
-        dir.y -= 1;
-        if (facings.get(.up) == 0) facings.set(.up, count);
-    } else facings.set(.up, 0);
-
-    if (input.held(.down)) {
-        dir.y += 1;
-        if (facings.get(.down) == 0) facings.set(.down, count);
-    } else facings.set(.down, 0);
-
-    if (input.held(.left)) {
-        dir.x -= 1;
-        if (facings.get(.left) == 0) facings.set(.left, count);
-    } else facings.set(.left, 0);
-
-    if (input.held(.right)) {
-        dir.x += 1;
-        if (facings.get(.right) == 0) facings.set(.right, count);
-    } else facings.set(.right, 0);
-
-    var max: u64 = 0;
-    var iterator = facings.iterator();
-    while (iterator.next()) |entry| {
-        if (entry.value.* > max) {
-            max = entry.value.*;
-            facing = entry.key;
-        }
-    }
-    return dir;
-}
 
 pub fn openItem() bool {
     if (needDrawInfo and
@@ -177,23 +102,18 @@ pub fn sellItem() bool {
     return false;
 }
 
-pub fn cameraLookAt() void {
+pub fn cameraLookAt(world: *ecs.World) void {
+    const area = collider(world);
     const half = window.size.scale(0.5);
     const max = map.size.sub(window.size);
-    camera.main.position = position.sub(half).clamp(.zero, max);
+    camera.main.position = area.min.sub(half).clamp(.zero, max);
 }
 
-pub fn collider() math.Rect {
-    return math.Rect.init(position, SIZE);
-}
-
-pub fn talkCollider() math.Rect {
-    return switch (facing) {
-        .up => .init(position.addXY(-3, -28), .xy(20, 20)),
-        .down => .init(position.addXY(-3, 20), .xy(20, 20)),
-        .left => .init(position.addXY(-28, -10), .xy(20, 20)),
-        .right => .init(position.addXY(20, -10), .xy(20, 20)),
-    };
+pub fn collider(world: *ecs.World) math.Rect {
+    const entity = world.getIdentity(Player).?;
+    const position = world.get(entity, Position).?;
+    const value = world.get(entity, Collider).?;
+    return value.move(position);
 }
 
 pub fn addItem(itemId: u8) bool {
@@ -220,39 +140,13 @@ pub fn levelUp() void {
     health = maxHealth;
 }
 
-pub fn draw() void {
-    zhu.batch.drawImage(animation.subImage(), position.addXY(-10, -28), .{});
-
-    // camera.debugDraw(.init(position, SIZE));
-}
-
-pub fn drawTalk() void {
-    zhu.batch.drawImage(photo(), .xy(35, 396), .{});
-
-    zhu.text.msdf.begin();
-    defer zhu.text.msdf.end();
-    zhu.text.draw(name, .xy(25, 445), .{ .color = .yellow });
-}
-
-pub fn photo() zhu.Image {
-    var down = animation;
-    down.source = down.sources[0];
-    return down.subImageAt(0);
-}
-
-pub fn battleTexture() zhu.Image {
-    var right = animation;
-    right.source = right.sources[2];
-    return right.subImageAt(0);
-}
-
 pub fn drawStatus() void {
     const pos = zhu.Vector2.xy(120, 90);
     // 背景
     zhu.batch.drawImage(bgTexture, pos.addXY(-10, -10), .{});
 
     // 头像
-    zhu.batch.drawImage(photo(), pos.addXY(10, 10), .{});
+    zhu.batch.drawImage(factory.playerPhoto(), pos.addXY(10, 10), .{});
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
     drawInfo(pos, 30);

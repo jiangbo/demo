@@ -7,6 +7,7 @@ const camera = zhu.camera;
 const math = zhu.math;
 
 const scene = @import("scene.zig");
+const component = @import("component.zig");
 const menu = @import("menu.zig");
 const player = @import("player.zig");
 const map = @import("map.zig");
@@ -14,11 +15,17 @@ const talk = @import("talk.zig");
 const about = @import("about.zig");
 const item = @import("item.zig");
 const input = @import("input.zig");
-const npc = @import("npc.zig");
+const factory = @import("factory.zig");
 const system = @import("system/system.zig");
 const context = @import("context.zig");
 
-const World = ecs.World;
+const Collider = component.Collider;
+const Enemy = component.Enemy;
+const Facing = component.Facing;
+const Actor = component.Actor;
+const Player = component.Player;
+const Position = component.Position;
+const Talk = component.Talk;
 
 const State = union(enum) {
     map: MapState,
@@ -32,9 +39,11 @@ const State = union(enum) {
     shop,
     sale: SaleState,
 
-    pub fn update(self: State, world: *World, delta: f32) void {
+    pub fn update(self: State, world: *ecs.World, delta: f32) void {
         switch (self) {
             .map => MapState.update(world, delta),
+            .save => SaveState.update(world, delta),
+            .talk => TalkState.update(world, delta),
             .status => {},
             .item => _ = player.openItem(),
             .shop => shop.update(),
@@ -63,8 +72,14 @@ var header: []const u8 = &.{};
 var headerIndex: usize = 0;
 var headerTimer: zhu.Timer = .init(0.08);
 var headerColor: zhu.Color = .white;
+// 已经死亡的 NPC 在地图重建后不再生成。
+var deadActors: std.StaticBitSet(64) = .initEmpty();
 
-pub fn init() void {
+pub fn killActor(key: factory.Key) void {
+    deadActors.set(@intFromEnum(key));
+}
+
+pub fn init(_: *ecs.World) void {
     texture = zhu.getImage("mainmenu1.png").?;
 
     item.init();
@@ -72,44 +87,58 @@ pub fn init() void {
     about.init();
     map.init();
     player.init();
-    npc.init();
 }
 
 pub fn deinit() void {
     zhu.audio.setMusicState(.stopped);
 }
 
-pub fn enter(world: *World) void {
-    const playerPosition = map.enter();
+pub fn enter(world: *ecs.World) void {
+    var playerPosition = map.enter();
+    if (loadPlayerPosition) |position| {
+        playerPosition = position;
+    } else if (back != .none) {
+        playerPosition = player.collider(world).min;
+    }
+    loadPlayerPosition = null;
+
     switch (back) {
         .none => {
-            player.enter(playerPosition);
-            context.battleNpcIndex = 0;
             context.oldMapIndex = 0;
-            talk.active = 4;
+            talk.start(2);
             state = .talk;
         },
-        .talk => talk.activeNext(),
+        .talk => talk.next(),
         .battle => state = .map,
         .menu => state = .menu,
     }
-    if (loadPlayerPosition) |pos| player.position = pos;
-    loadPlayerPosition = null;
-    player.cameraLookAt();
-    npc.enter(world);
+    rebuildMap(world, playerPosition);
     menu.active = 6;
     zhu.audio.playMusic("voc/back.ogg");
 }
 
-pub fn changeMap(world: *World) void {
+pub fn changeMap(world: *ecs.World) void {
     const playerPosition = map.enter();
-    player.enter(playerPosition);
-    npc.enter(world);
+    rebuildMap(world, playerPosition);
+}
+
+// 清空旧地图并创建新地图的实体。
+fn rebuildMap(world: *ecs.World, playerPosition: zhu.Vector2) void {
+    world.reset();
+    factory.spawnPlayer(world, playerPosition);
+
+    for (map.current.actors) |key| {
+        const index = @intFromEnum(key);
+        if (deadActors.isSet(index)) continue;
+        if (factory.get(key).progress < player.progress) continue;
+        factory.spawnActor(world, key);
+    }
+    player.cameraLookAt(world);
 }
 
 pub fn exit() void {}
 
-pub fn update(world: *World, delta: f32) void {
+pub fn update(world: *ecs.World, delta: f32) void {
     if (tip.len != 0) {
         if (input.released(.confirm) or input.released(.cancel)) {
             tip = &.{};
@@ -164,10 +193,9 @@ pub fn update(world: *World, delta: f32) void {
     state.update(world, delta);
 }
 
-pub fn draw(world: *World) void {
+pub fn draw(world: *ecs.World) void {
     map.draw();
     system.render.draw(world);
-    player.draw();
 
     camera.push(.window);
     defer camera.pop();
@@ -191,48 +219,52 @@ pub fn draw(world: *World) void {
 const MapState = struct {
     var warn: bool = false;
 
-    fn update(world: *World, delta: f32) void {
-        npc.update(world, delta);
-        player.update(world, delta);
+    fn update(world: *ecs.World, delta: f32) void {
         system.update(world, delta);
+        player.cameraLookAt(world);
 
         // 检测是否需要切换地图
-        const area = math.Rect.init(player.position, player.SIZE);
+        const entity = world.getIdentity(Player).?;
+        const position = world.get(entity, Position).?;
+        const facing = world.get(entity, Facing).?;
+        const collider = world.get(entity, Collider).?;
+        const area = collider.move(position);
         const object = map.getObject(map.positionIndex(area.center()));
         if (object > 4) {
             if (!warn) return changeMapIfNeed(object);
         } else warn = false;
 
-        // 遇敌
-        if (npc.battle(world, area, player.facing)) |npcIndex| {
+        if (world.getIdentity(Enemy)) |target| {
+            world.removeIdentity(Enemy);
+            const targetActor = world.get(target, Actor).?;
+            const actor = factory.get(targetActor.key);
             // 是否需要对话
-            if (npc.zon[npcIndex].talks.len != 0) {
-                talk.active = npc.zon[npcIndex].talks[0];
+            if (actor.dialogues.len != 0) {
+                talk.start(actor.dialogues[0]);
                 state = .talk;
             } else {
                 context.oldMapIndex = map.linkIndex;
-                context.battleNpcIndex = npcIndex;
+                context.battleActorKey = targetActor.key;
                 back = .battle;
                 scene.changeScene(.battle);
             }
             return;
         }
 
+        if (world.getIdentity(Talk)) |target| {
+            const targetActor = world.get(target, Actor).?;
+            const index: u8 = if (player.progress > 4) 1 else 0;
+            const actor = factory.get(targetActor.key);
+            talk.start(actor.dialogues[index]);
+            state = .talk;
+            return;
+        }
+
         // 交互检测
         if (!input.released(.confirm)) return;
         // 开启宝箱
-        const talkObject = map.talk(player.position, player.facing);
+        const talkObject = map.talk(area.min, facing);
         if (talkObject) |pickupIndex| openChest(pickupIndex);
-
-        // 和 NPC 对话
-        if (npc.talk(
-            world,
-            player.talkCollider(),
-            player.facing,
-        )) |talkId| {
-            talk.active = talkId;
-            state = .talk;
-        }
     }
 
     fn changeMapIfNeed(object: u8) void {
@@ -246,19 +278,19 @@ const MapState = struct {
 
         if (player.progress == 1) {
             warn = true;
-            talk.active = 17;
+            talk.start(5);
             state = .talk;
         }
 
         if (player.progress == 4) {
             player.progress += 1;
-            talk.active = 143;
+            talk.start(32);
             state = .talk;
         }
 
         if (player.progress == 10) {
             warn = true;
-            talk.active = 172;
+            talk.start(37);
             state = .talk;
         }
     }
@@ -269,7 +301,7 @@ const MapState = struct {
         if (object.itemIndex == 0 and object.count == 0) {
             const gold = zhu.random.int(u8, 10, 100);
             player.money += gold;
-            talk.activeNumber(2, gold);
+            talk.startNumber(0, gold);
             state = .talk;
         } else {
             const added = player.addItem(object.itemIndex);
@@ -277,7 +309,7 @@ const MapState = struct {
                 tip = "你已经带满了！";
                 return;
             }
-            talk.activeText(3, item.zon[object.itemIndex].name);
+            talk.startText(1, item.zon[object.itemIndex].name);
             state = .talk;
         }
         map.openChest(pickIndex);
@@ -376,7 +408,7 @@ pub fn load(index: u8) !void {
     // 4. 玩家进度
     player.progress = try reader.takeByte();
     // 5. 玩家坐标
-    var pos = player.position;
+    var pos: math.Vector2 = undefined;
     try reader.readSliceAll(std.mem.asBytes(&pos));
     loadPlayerPosition = pos;
     // 6. 玩家经验
@@ -400,7 +432,7 @@ pub fn load(index: u8) !void {
     // 15. 宝箱状态
     try reader.readSliceAll(std.mem.asBytes(&item.picked));
     // 16. NPC 状态
-    try reader.readSliceAll(std.mem.asBytes(&npc.dead));
+    try reader.readSliceAll(std.mem.asBytes(&deadActors));
     // 17. magic 结尾
     var magic_end: [magic.len]u8 = undefined;
     try reader.readSliceAll(&magic_end);
@@ -410,13 +442,13 @@ pub fn load(index: u8) !void {
 const SaveState = struct {
     var buffer: [100]u8 = undefined;
 
-    pub fn update(_: f32) void {
+    pub fn update(world: *ecs.World, _: f32) void {
         const saveEvent = menu.update();
         if (saveEvent) |event| switch (event) {
             3...7 => |index| {
                 back = .menu;
                 scene.changeScene(.world);
-                save(index) catch @panic("save failed");
+                save(world, index) catch @panic("save failed");
             },
             8 => {
                 menu.active = 6;
@@ -433,7 +465,7 @@ const SaveState = struct {
         }
     }
 
-    fn save(index: u8) !void {
+    fn save(world: *ecs.World, index: u8) !void {
         var writer = std.Io.Writer.fixed(&buffer);
         try writer.writeAll(&magic);
         //  游戏版本号
@@ -443,7 +475,8 @@ const SaveState = struct {
         //  玩家进度
         try writer.writeByte(player.progress);
         //  玩家坐标
-        try writer.writeAll(std.mem.asBytes(&player.position));
+        const position = player.collider(world).min;
+        try writer.writeAll(std.mem.asBytes(&position));
         //  玩家经验
         try writer.writeAll(std.mem.asBytes(&player.exp));
         //  玩家等级
@@ -465,7 +498,7 @@ const SaveState = struct {
         //  宝箱状态
         try writer.writeAll(std.mem.asBytes(&item.picked));
         //  NPC 状态
-        try writer.writeAll(std.mem.asBytes(&npc.dead));
+        try writer.writeAll(std.mem.asBytes(&deadActors));
         try writer.writeAll(&magic);
 
         var buf: [20]u8 = undefined;
@@ -480,28 +513,40 @@ const SaveState = struct {
 };
 
 const TalkState = struct {
-    fn update(_: f32) void {
+    fn update(world: *ecs.World, _: f32) void {
         const talkEvent = talk.update();
         if (talkEvent) |event| switch (event) {
-            0 => state = .map,
-            4, 5 => |t| {
-                state = .shop;
-                shop = if (t == 4) &weaponShop else &potionShop;
+            .finish => {
+                world.removeIdentity(Talk);
+                state = .map;
             },
-            6 => state = .sale,
-            7, 8 => |e| {
+            .openWeaponShop, .openPotionShop => {
+                state = .shop;
+                shop = if (event == .openWeaponShop)
+                    &weaponShop
+                else
+                    &potionShop;
+            },
+            .openSale => state = .sale,
+            .startBattleThenTalk, .startBattleThenMap => {
+                world.removeIdentity(Talk);
                 context.oldMapIndex = map.linkIndex;
-                context.battleNpcIndex = talk.recentNpc();
-                back = if (e == 7) .talk else .battle;
+                context.battleActorKey = talk.recentActor();
+                back = if (event == .startBattleThenTalk)
+                    .talk
+                else
+                    .battle;
                 scene.changeScene(.battle);
             },
-            9 => {
+            .showSwordTip => {
+                world.removeIdentity(Talk);
                 // 打败了巫批，对话完成
                 header = "　　太好了！终于找到了失落已久的“圣剑”，就用它的威力把大魔王彻底杀死吧！　";
                 headerColor = .white;
                 headerTimer.restart();
             },
-            10 => {
+            .showEnding => {
+                world.removeIdentity(Talk);
                 // 打败了大魔王
                 header =
                     \\　　祝贺你成功打爆试玩版！详细情况请看Readme.txt
@@ -513,7 +558,6 @@ const TalkState = struct {
                 headerColor = .red;
                 headerTimer.restart();
             },
-            else => unreachable,
         };
     }
 };
@@ -539,8 +583,7 @@ const SaleState = struct {
         if (input.released(.menu) or input.released(.cancel) or
             input.mouseReleased(.RIGHT))
         {
-            talk.activeNext();
-            if (sell) talk.activeNext();
+            talk.start(if (sell) 27 else 26);
             state = .talk;
             sell = false;
         }
@@ -551,8 +594,8 @@ const Shop = struct {
     var bought: bool = false;
     items: [16]u8,
     current: u8 = 0,
-    notBuyId: u16,
-    buyId: u16,
+    notBoughtDialogue: u16,
+    boughtDialogue: u16,
 
     pub fn update(self: *Shop) void {
         self.current = item.update(self.items.len, self.current);
@@ -566,7 +609,11 @@ const Shop = struct {
         }
 
         if (input.released(.menu) or input.released(.cancel)) {
-            talk.active = if (bought) self.buyId else self.notBuyId;
+            const dialogue = if (bought)
+                self.boughtDialogue
+            else
+                self.notBoughtDialogue;
+            talk.start(dialogue);
             state = .talk;
             bought = false;
         }
@@ -607,15 +654,15 @@ var weaponShop: Shop = .{
         12, 12, 13, 13, 14, 14, 9, 9, //
         10, 10, 8,  8,  16, 16, 0, 0,
     },
-    .notBuyId = 83,
-    .buyId = 85,
+    .notBoughtDialogue = 18,
+    .boughtDialogue = 19,
 };
 var potionShop: Shop = .{
     .items = .{
         5,  5,  6,  6,  7, 7, 4, 4, //
         17, 17, 18, 18, 0, 0, 0, 0,
     },
-    .notBuyId = 96,
-    .buyId = 98,
+    .notBoughtDialogue = 22,
+    .boughtDialogue = 23,
 };
 var shop: *Shop = undefined;

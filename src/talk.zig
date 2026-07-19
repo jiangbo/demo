@@ -1,21 +1,45 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const player = @import("player.zig");
-const npc = @import("npc.zig");
+const factory = @import("factory.zig");
 const input = @import("input.zig");
 
-const Talk = struct {
-    actor: u8 = 0,
-    content: []const u8 = &.{},
-    next: u16 = 1, // 0：表示结束，1：表示下一条
-    event: u8 = 0,
+pub const Event = enum {
+    finish,
+    openWeaponShop,
+    openPotionShop,
+    openSale,
+    startBattleThenTalk,
+    startBattleThenMap,
+    showSwordTip,
+    showEnding,
 };
-const zon: []const Talk = @import("zon/talk.zon");
+
+const Line = struct {
+    actor: ?factory.Key,
+    content: []const u8 = &.{},
+    event: ?Event = null,
+};
+
+const Dialogue = struct {
+    id: u16,
+    lines: []const Line,
+};
+
+const dialogues: []const Dialogue = @import("zon/talk.zon");
+
+comptime {
+    for (dialogues, 0..) |dialogue, id| {
+        if (dialogue.id != id) {
+            @compileError("对话 ID 必须连续并按顺序排列");
+        }
+    }
+}
+
 var texture: zhu.Image = undefined;
 
-pub var active: u16 = 0;
-pub var actor: u16 = 0;
+var activeDialogue: u16 = undefined;
+var activeLine: usize = 0;
 var textIndex: usize = 0;
 var text: [50]u8 = undefined;
 var plainText: bool = true;
@@ -27,63 +51,91 @@ pub fn init() void {
     texture = zhu.getImage("talkbar.png").?;
 }
 
-pub fn activeNumber(talkId: u16, number: anytype) void {
+pub fn startNumber(dialogueId: u16, number: anytype) void {
     const content = zhu.format(text[20..], "{d}", .{number});
-    activeText(talkId, content);
+    startText(dialogueId, content);
 }
 
-pub fn activeText(talkId: u16, content: []const u8) void {
-    active = talkId;
+pub fn startText(dialogueId: u16, content: []const u8) void {
+    start(dialogueId);
     @memcpy(text[0..content.len], content);
     textIndex = content.len;
     bufferIndex = 0;
     plainText = false;
 }
 
-pub fn activeNext() void {
-    active += 1;
-    actor = zon[active].actor;
+pub fn start(dialogueId: u16) void {
+    activeDialogue = dialogueId;
+    activeLine = 0;
+    plainText = true;
 }
 
-pub fn recentNpc() u16 {
-    var npcIndex = active;
-    while (zon[npcIndex].actor == 0) {
-        npcIndex -= 1;
+pub fn next() void {
+    activeLine += 1;
+}
+
+pub fn recentActor() factory.Key {
+    const dialogue = dialogues[activeDialogue];
+    var lineIndex = activeLine;
+    while (dialogue.lines[lineIndex].actor == .player) {
+        lineIndex -= 1;
     }
-    return zon[npcIndex].actor;
+    return dialogue.lines[lineIndex].actor.?;
 }
 
-pub fn update() ?u8 {
+pub fn update() ?Event {
     if (!input.released(.confirm)) return null;
 
-    if (zon[active].event != 0 or zon[active].next == 0) {
+    const dialogue = dialogues[activeDialogue];
+    const line = dialogue.lines[activeLine];
+    if (line.event) |event| {
         plainText = true;
-        return zon[active].event;
+        return event;
     }
-    active += zon[active].next;
-    actor = zon[active].actor;
+    if (activeLine + 1 == dialogue.lines.len) {
+        plainText = true;
+        return .finish;
+    }
+    activeLine += 1;
     return null;
 }
 
 pub fn draw() void {
     zhu.batch.drawImage(texture, .xy(0, 384), .{});
 
-    const talk = zon[active];
-    if (talk.actor == 0)
-        player.drawTalk()
-    else if (talk.actor < 200)
-        npc.drawTalk(talk.actor);
+    const dialogue = dialogues[activeDialogue];
+    const line = dialogue.lines[activeLine];
+    if (line.actor) |key| {
+        const data = factory.get(key);
+        if (key == .player) {
+            drawActor(factory.playerPhoto(), .xy(35, 396), data.name);
+        } else {
+            drawActor(
+                factory.npcPhoto(key),
+                .xy(40, 400),
+                data.name,
+            );
+        }
+    }
 
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
 
-    if (plainText) return drawText(talk.content);
+    if (plainText) return drawText(line.content);
 
     if (bufferIndex != 0) {
         drawText(buffer[0..bufferIndex]);
     } else {
-        drawText(formatStr(talk.content));
+        drawText(formatStr(line.content));
     }
+}
+
+fn drawActor(image: zhu.Image, position: zhu.Vector2, name: []const u8) void {
+    zhu.batch.drawImage(image, position, .{});
+
+    zhu.text.msdf.begin();
+    defer zhu.text.msdf.end();
+    zhu.text.draw(name, .xy(25, 445), .{ .color = .yellow });
 }
 
 pub fn drawText(content: []const u8) void {

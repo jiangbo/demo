@@ -7,17 +7,17 @@ const math = zhu.math;
 const audio = zhu.audio;
 
 const scene = @import("scene.zig");
+const worldScene = @import("world.zig");
 const map = @import("map.zig");
 const context = @import("context.zig");
-const npc = @import("npc.zig");
 const player = @import("player.zig");
 const menu = @import("menu.zig");
 const item = @import("item.zig");
 const input = @import("input.zig");
 const factory = @import("factory.zig");
 
-var enemyIndex: u16 = 0;
-var enemy: npc.Character = undefined;
+var enemyKey: factory.Key = undefined;
+var enemy: factory.ActorConfig = undefined;
 
 var texture: zhu.Image = undefined;
 var bombAnimation: zhu.Animation = undefined;
@@ -82,8 +82,8 @@ pub fn init() void {
 }
 
 pub fn enter() void {
-    enemyIndex = context.battleNpcIndex;
-    enemy = npc.zon[enemyIndex];
+    enemyKey = context.battleActorKey;
+    enemy = factory.get(enemyKey).*;
     map.linkIndex = 15;
     _ = map.enter();
     menu.active = 7;
@@ -113,12 +113,16 @@ pub fn draw() void {
 
     if (phase != .playerHurt and phase != .playerDeath) {
         // 战斗人物
-        zhu.batch.drawImage(player.battleTexture(), .xy(130, 220), .{});
+        zhu.batch.drawImage(factory.playerBattleImage(), .xy(130, 220), .{});
     }
 
     if (phase != .enemyHurt and phase != .enemyDeath) {
         // 战斗 NPC
-        zhu.batch.drawImage(npc.battleTexture(enemyIndex), .xy(465, 237), .{});
+        zhu.batch.drawImage(
+            factory.npcBattleImage(enemyKey),
+            .xy(465, 237),
+            .{},
+        );
     }
 
     const position = zhu.Vector2.xy(96, 304);
@@ -126,10 +130,13 @@ pub fn draw() void {
     // 状态栏背景
     zhu.batch.drawImage(texture, position, .{});
     // 角色的头像
-    zhu.batch.drawImage(player.photo(), position.addXY(10, 10), .{});
+    zhu.batch.drawImage(factory.playerPhoto(), position.addXY(10, 10), .{});
     // 敌人的头像
-    const npcTexture = npc.photo(context.battleNpcIndex);
-    zhu.batch.drawImage(npcTexture, position.addXY(265, 26), .{});
+    zhu.batch.drawImage(
+        factory.npcPhoto(enemyKey),
+        position.addXY(265, 26),
+        .{},
+    );
 
     zhu.text.msdf.begin();
 
@@ -230,7 +237,7 @@ const EnemyHurtPhase = struct {
 
     fn draw() void {
         const pos = math.Vector2.xy(465, 237).addX(offset);
-        zhu.batch.drawImage(npc.battleTexture(enemyIndex), pos, .{});
+        zhu.batch.drawImage(factory.npcBattleImage(enemyKey), pos, .{});
 
         var buffer: [10]u8 = undefined;
         const y = std.math.lerp(230, 190, timer.progress());
@@ -305,7 +312,7 @@ const PlayerHurtPhase = struct {
 
     fn draw() void {
         const pos = math.Vector2.xy(130, 220).addX(offset);
-        zhu.batch.drawImage(player.battleTexture(), pos, .{});
+        zhu.batch.drawImage(factory.playerBattleImage(), pos, .{});
 
         var buffer: [10]u8 = undefined;
         const y = std.math.lerp(230, 190, timer.progress());
@@ -338,7 +345,7 @@ const EnemyDeathPhase = struct {
     fn enter() void {
         audio.playSound(deadSounds[enemySounds[enemy.picture]]);
         step = 0;
-        npc.death(enemyIndex);
+        worldScene.killActor(enemyKey);
         if (enemy.progress != 0xFF) player.progress = enemy.progress + 1;
     }
 
