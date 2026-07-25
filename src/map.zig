@@ -8,6 +8,23 @@ const item = @import("item.zig");
 const zon = @import("zon.zig");
 const Facing = @import("component.zig").Facing;
 
+const MapCell = union(enum) {
+    open,
+    solid,
+    chest,
+    link: u8,
+
+    // 将地图文件中的数字转换为游戏语义。
+    fn from(value: u8) MapCell {
+        return switch (value) {
+            0 => .open,
+            2 => .chest,
+            1, 3, 4 => .solid,
+            else => .{ .link = value },
+        };
+    }
+};
+
 var texture: zhu.Image = undefined;
 var rowTiles: usize = 0;
 var objectField: tiled.Field(u8) = undefined;
@@ -80,7 +97,10 @@ pub fn talk(position: zhu.Vector2, facing: Facing) ?u16 {
     }
 
     const index = current.grid.cellToIndex(cell) orelse return null;
-    if (current.object[index] != 2) return null;
+    switch (MapCell.from(current.object[index])) {
+        .chest => {},
+        else => return null,
+    }
 
     for (current.chests) |chest| {
         if (index != chest.tileIndex) continue;
@@ -105,30 +125,31 @@ pub fn openChest(pickIndex: usize) void {
     unreachable;
 }
 
-pub fn objectAt(position: zhu.Vector2) u8 {
+pub fn linkAt(position: zhu.Vector2) ?u8 {
     const cell = current.grid.worldToCell(position);
-    return objectField.tileAt(cell).?;
+    return switch (MapCell.from(objectField.tileAt(cell).?)) {
+        .link => |index| index,
+        else => null,
+    };
 }
 
 pub fn walkTo(area: math.Rect, velocity: math.Vector2) math.Vector2 {
     var moved = area;
-    var scan = objectField.scanX(moved, velocity.x);
-    moved.min.x = scan.dest;
-    while (scan.next()) |object| {
-        if (object == 0 or object > 4) continue;
-        moved.min.x = scan.touch;
-        break;
-    }
-
-    scan = objectField.scanY(moved, velocity.y);
-    moved.min.y = scan.dest;
-    while (scan.next()) |object| {
-        if (object == 0 or object > 4) continue;
-        moved.min.y = scan.touch;
-        break;
-    }
-
+    moved.min.x = limit(objectField.scanX(moved, velocity.x));
+    moved.min.y = limit(objectField.scanY(moved, velocity.y));
     return moved.min;
+}
+
+// 当前地图采用碰撞后移动到瓦片边缘的策略。
+fn limit(scanValue: tiled.Scan(u8)) f32 {
+    var scan = scanValue;
+    while (scan.next()) |value| {
+        switch (MapCell.from(value)) {
+            .open, .link => continue,
+            .solid, .chest => return scan.touch,
+        }
+    }
+    return scan.dest;
 }
 
 pub fn draw() void {
@@ -138,7 +159,7 @@ pub fn draw() void {
 test "地图瓦片移动" {
     const objects = [_]u8{
         1, 1, 1,
-        1, 0, 1,
+        1, 0, 2,
         1, 1, 1,
     };
     objectField = .{

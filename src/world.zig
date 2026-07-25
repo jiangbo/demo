@@ -363,9 +363,8 @@ const MapState = struct {
         const facing = world.get(entity, Facing).?;
         const collider = world.get(entity, Collider).?;
         const area = collider.move(position);
-        const object = map.objectAt(area.center());
-        if (object > 4) {
-            if (!warn) return changeMapIfNeed(world, object);
+        if (map.linkAt(area.center())) |index| {
+            if (!warn) return changeMapIfNeed(world, index);
         } else warn = false;
 
         if (world.getIdentity(Enemy)) |target| {
