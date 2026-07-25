@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 const ecs = @import("ecs");
 
 const component = @import("../component.zig");
-const input = @import("../input.zig");
+const input = @import("../zon.zig").input;
 
 const Facing = component.Facing;
 const Player = component.Player;

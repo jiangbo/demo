@@ -8,7 +8,7 @@ const camera = zhu.camera;
 const titleScene = @import("title.zig");
 const worldScene = @import("world.zig");
 const battleScene = @import("battle.zig");
-const input = @import("input.zig");
+const input = @import("zon.zig").input;
 
 const SceneType = enum { title, world, battle };
 var currentSceneType: SceneType = .title;

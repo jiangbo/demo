@@ -4,7 +4,7 @@ const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
-const input = @import("../input.zig");
+const input = @import("../zon.zig").input;
 
 const Dialog = component.dialog.Dialog;
 const Interact = component.Interact;

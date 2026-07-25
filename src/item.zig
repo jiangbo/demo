@@ -1,7 +1,7 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const input = @import("input.zig");
+const input = @import("zon.zig").input;
 
 pub const Item = struct {
     id: u16,

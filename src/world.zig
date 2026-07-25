@@ -13,7 +13,7 @@ const player = @import("player.zig");
 const map = @import("map.zig");
 const about = @import("about.zig");
 const item = @import("item.zig");
-const input = @import("input.zig");
+const input = @import("zon.zig").input;
 const factory = @import("factory.zig");
 const system = @import("system/system.zig");
 const context = @import("context.zig");
@@ -317,7 +317,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
         state == .about)
     {
         if (input.released(.menu) or input.released(.cancel) or
-            input.mouseReleased(.RIGHT))
+            zhu.mouse.released(.RIGHT))
         {
             state = .menu;
             return;
@@ -495,7 +495,7 @@ const MenuState = struct {
         };
 
         if (input.released(.menu) or input.released(.cancel) or
-            input.mouseReleased(.RIGHT))
+            zhu.mouse.released(.RIGHT))
         {
             state = .map;
         }
@@ -528,7 +528,7 @@ const LoadState = struct {
         };
 
         if (input.released(.menu) or input.released(.cancel) or
-            input.mouseReleased(.RIGHT))
+            zhu.mouse.released(.RIGHT))
         {
             menu.active = 6;
             state = .menu;
@@ -613,7 +613,7 @@ const SaveState = struct {
         };
 
         if (input.released(.menu) or input.released(.cancel) or
-            input.mouseReleased(.RIGHT))
+            zhu.mouse.released(.RIGHT))
         {
             menu.active = 6;
             state = .menu;
@@ -713,7 +713,7 @@ const TalkState = struct {
 const AboutState = struct {
     fn update(delta: f32) void {
         if (about.roll) about.update(delta) //
-        else if (input.mouseReleased(.LEFT) or
+        else if (zhu.mouse.released(.LEFT) or
             input.released(.confirm))
         {
             about.roll = true;
@@ -729,7 +729,7 @@ const SaleState = struct {
         if (!sell) sell = playerSell;
 
         if (input.released(.menu) or input.released(.cancel) or
-            input.mouseReleased(.RIGHT))
+            zhu.mouse.released(.RIGHT))
         {
             world.add(world.entity, Dialog{
                 .lines = factory.dialogues[

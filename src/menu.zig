@@ -2,7 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const window = zhu.window;
-const input = @import("input.zig");
+const input = @import("zon.zig").input;
 
 pub const Menu = struct {
     background: bool = false,
@@ -48,7 +48,7 @@ pub fn update() ?u8 {
     }
 
     var confirm = input.released(.confirm);
-    if (input.mouseReleased(.LEFT)) {
+    if (zhu.mouse.released(.LEFT)) {
         for (menu.areas, 0..) |area, i| {
             if (area.contains(window.mouse)) {
                 state.current = i;

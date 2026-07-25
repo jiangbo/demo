@@ -6,7 +6,7 @@ const window = zhu.window;
 const scene = @import("scene.zig");
 const menu = @import("menu.zig");
 const world = @import("world.zig");
-const input = @import("input.zig");
+const input = @import("zon.zig").input;
 
 var background: zhu.Image = undefined;
 var menuBackground: zhu.Image = undefined;
@@ -75,7 +75,7 @@ pub fn draw() void {
 }
 
 fn updateHeader(delta: f32) void {
-    if (input.released(.confirm) or input.mouseReleased(.LEFT)) {
+    if (input.released(.confirm) or zhu.mouse.released(.LEFT)) {
         world.back = .none;
         scene.changeScene(.world);
         return;

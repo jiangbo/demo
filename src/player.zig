@@ -7,7 +7,7 @@ const math = zhu.math;
 
 const component = @import("component.zig");
 const item = @import("item.zig");
-const input = @import("input.zig");
+const input = @import("zon.zig").input;
 const map = @import("map.zig");
 const worldScene = @import("world.zig");
 const factory = @import("factory.zig");

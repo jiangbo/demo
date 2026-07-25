@@ -13,7 +13,7 @@ const context = @import("context.zig");
 const player = @import("player.zig");
 const menu = @import("menu.zig");
 const item = @import("item.zig");
-const input = @import("input.zig");
+const input = @import("zon.zig").input;
 const factory = @import("factory.zig");
 
 var enemyKey: factory.Key = undefined;
