@@ -47,13 +47,13 @@ pub fn playerBattleImage() zhu.Image {
 }
 
 // 获取非玩家人物在对话和状态界面使用的头像。
-pub fn npcPhoto(key: zon.Key) zhu.Image {
-    return firstImage(npcAnimation(zon.getActor(key).picture), .down);
+pub fn npcPhoto(key: zon.Actor.Key) zhu.Image {
+    return firstImage(npcAnimation(zon.Actor.get(key).picture), .down);
 }
 
 // 获取非玩家人物在战斗场景使用的图片。
-pub fn npcBattleImage(key: zon.Key) zhu.Image {
-    return firstImage(npcAnimation(zon.getActor(key).picture), .left);
+pub fn npcBattleImage(key: zon.Actor.Key) zhu.Image {
+    return firstImage(npcAnimation(zon.Actor.get(key).picture), .left);
 }
 
 fn firstImage(animation: Animation, facing: component.Facing) zhu.Image {
@@ -82,8 +82,8 @@ pub fn spawnPlayer(world: *ecs.World, position: zhu.Vector2) void {
 }
 
 // 根据配置创建一个 NPC 实体。
-pub fn spawnActor(world: *ecs.World, key: zon.Key) void {
-    const data = zon.getActor(key);
+pub fn spawnActor(world: *ecs.World, key: zon.Actor.Key) void {
+    const data = zon.Actor.get(key);
     const entity = world.createEntity();
     world.addAll(entity, .{
         component.Actor{ .key = key },

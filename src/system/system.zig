@@ -6,6 +6,7 @@ pub const dialog = @import("dialog.zig");
 pub const enemy = @import("enemy.zig");
 pub const interact = @import("interact.zig");
 pub const movement = @import("movement.zig");
+pub const portal = @import("portal.zig");
 pub const render = @import("render.zig");
 pub const wander = @import("wander.zig");
 
@@ -13,6 +14,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
     wander.update(world, delta);
     control.update(world);
     movement.update(world, delta);
+    portal.update(world);
     enemy.update(world, delta);
     interact.update(world);
     animation.update(world, delta);

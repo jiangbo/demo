@@ -27,7 +27,12 @@ pub const RenderOffset = struct { value: zhu.Vector2 };
 
 pub const Player = struct {};
 // 实体对应的稳定人物标识。
-pub const Actor = struct { key: zon.Key };
+pub const Actor = struct { key: zon.Actor.Key };
+// 玩家进入后切换地图的区域。
+pub const Portal = struct {
+    key: zon.Portal.Key,
+    area: zhu.Rect,
+};
 // 敌人相对实体逻辑位置的战斗触发区域。
 pub const Enemy = struct {
     value: zhu.Rect,

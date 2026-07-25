@@ -16,8 +16,8 @@ const item = @import("item.zig");
 const factory = @import("factory.zig");
 const zon = @import("zon.zig");
 
-var enemyKey: zon.Key = undefined;
-var enemy: zon.ActorConfig = undefined;
+var enemyKey: zon.Actor.Key = undefined;
+var enemy: zon.Actor = undefined;
 
 var texture: zhu.Image = undefined;
 var bombAnimation: zhu.Animation = undefined;
@@ -83,8 +83,8 @@ pub fn init() void {
 
 pub fn enter() void {
     enemyKey = context.battle.actor;
-    enemy = zon.getActor(enemyKey).*;
-    map.linkIndex = 15;
+    enemy = zon.Actor.get(enemyKey).*;
+    map.portalKey = .battle;
     _ = map.enter();
     menu.active = 7;
     changePhase(.menu);
@@ -92,7 +92,7 @@ pub fn enter() void {
 }
 
 pub fn exit() void {
-    map.linkIndex = context.battle.mapIndex;
+    map.portalKey = context.battle.portalKey;
 }
 
 fn changePhase(newPhase: Phase) void {

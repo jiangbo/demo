@@ -27,6 +27,7 @@ const Facing = component.Facing;
 const Actor = component.Actor;
 const Interact = component.Interact;
 const Player = component.Player;
+const Portal = component.Portal;
 const Position = component.Position;
 
 const State = union(enum) {
@@ -78,7 +79,7 @@ var headerColor: zhu.Color = .white;
 // 已经死亡的 NPC 在地图重建后不再生成。
 var deadActors: std.StaticBitSet(64) = .initEmpty();
 
-pub fn killActor(key: zon.Key) void {
+pub fn killActor(key: zon.Actor.Key) void {
     deadActors.set(@intFromEnum(key));
 }
 
@@ -135,11 +136,12 @@ fn rebuildMap(world: *ecs.World, playerPosition: zhu.Vector2) void {
     world.reset();
     world.entity = world.createEntity();
     factory.spawnPlayer(world, playerPosition);
+    map.spawnPortals(world);
 
     for (map.current.actors) |key| {
         const index = @intFromEnum(key);
         if (deadActors.isSet(index)) continue;
-        if (zon.getActor(key).progress < player.progress) continue;
+        if (zon.Actor.get(key).progress < player.progress) continue;
         factory.spawnActor(world, key);
     }
     player.cameraLookAt(world);
@@ -197,7 +199,7 @@ test "战斗胜利后保留对话并删除人物实体" {
 
     context.battle = .{
         .actor = .wuPi,
-        .mapIndex = 0,
+        .portalKey = .start,
         .result = .win,
     };
 
@@ -219,7 +221,7 @@ test "战斗胜利后没有对话则返回地图" {
 
     context.battle = .{
         .actor = .senLin_feiJiangJun1,
-        .mapIndex = 0,
+        .portalKey = .start,
         .result = .win,
     };
 
@@ -249,7 +251,7 @@ test "逃跑后关闭对话并保留冷却中的敌人" {
 
     context.battle = .{
         .actor = .wuPi,
-        .mapIndex = 0,
+        .portalKey = .start,
         .result = .escape,
     };
 
@@ -363,14 +365,15 @@ const MapState = struct {
         const facing = world.get(entity, Facing).?;
         const collider = world.get(entity, Collider).?;
         const area = collider.move(position);
-        if (map.linkAt(area.center())) |index| {
-            if (!warn) return changeMapIfNeed(world, index);
+        if (world.getIdentity(Portal)) |portalEntity| {
+            const portal = world.get(portalEntity, Portal).?;
+            if (!warn) return changeMapIfNeed(world, portal.key);
         } else warn = false;
 
         if (world.getIdentity(Enemy)) |target| {
             world.removeIdentity(Enemy);
             const targetActor = world.get(target, Actor).?;
-            const actor = zon.getActor(targetActor.key);
+            const actor = zon.Actor.get(targetActor.key);
             // 是否需要对话
             if (actor.dialogues.len != 0) {
                 world.add(world.entity, Dialog{
@@ -381,7 +384,7 @@ const MapState = struct {
             } else {
                 context.battle = .{
                     .actor = targetActor.key,
-                    .mapIndex = map.linkIndex,
+                    .portalKey = map.portalKey,
                 };
                 back = .battle;
                 scene.changeScene(.battle);
@@ -402,11 +405,11 @@ const MapState = struct {
         if (talkObject) |pickupIndex| openChest(world, pickupIndex);
     }
 
-    fn changeMapIfNeed(world: *ecs.World, object: u8) void {
-        const link = zon.links[object];
-        if (player.progress > link.progress) {
-            std.log.info("change map link index: {d}", .{object});
-            map.linkIndex = object;
+    fn changeMapIfNeed(world: *ecs.World, key: zon.Portal.Key) void {
+        const portal = zon.Portal.get(key);
+        if (player.progress > portal.progress) {
+            std.log.info("change map portal: {s}", .{@tagName(key)});
+            map.portalKey = key;
             scene.changeMap();
             return;
         }
@@ -557,8 +560,8 @@ pub fn load(index: u8) !void {
     var version: [2]u8 = undefined;
     try reader.readSliceAll(&version);
 
-    // 3. 地图编号
-    map.linkIndex = try reader.takeByte();
+    // 3. 地图入口
+    map.portalKey = @enumFromInt(try reader.takeByte());
     // 4. 玩家进度
     player.progress = try reader.takeByte();
     // 5. 玩家坐标
@@ -624,8 +627,8 @@ const SaveState = struct {
         try writer.writeAll(&magic);
         //  游戏版本号
         try writer.writeAll(&.{ 0x00, 0x00 });
-        //  地图编号
-        try writer.writeByte(map.linkIndex);
+        //  地图入口
+        try writer.writeByte(@intFromEnum(map.portalKey));
         //  玩家进度
         try writer.writeByte(player.progress);
         //  玩家坐标
@@ -682,7 +685,7 @@ const TalkState = struct {
             .battle => |actorKey| {
                 context.battle = .{
                     .actor = actorKey,
-                    .mapIndex = map.linkIndex,
+                    .portalKey = map.portalKey,
                 };
                 back = .battle;
                 scene.changeScene(.battle);

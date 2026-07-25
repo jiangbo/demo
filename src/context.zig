@@ -4,9 +4,9 @@ const zon = @import("zon.zig");
 pub const Battle = struct {
     pub const Result = enum { fighting, win, escape };
 
-    // 战斗人物和进入战斗前的地图。
-    actor: zon.Key,
-    mapIndex: u8,
+    // 战斗人物和进入战斗前的地图入口。
+    actor: zon.Actor.Key,
+    portalKey: zon.Portal.Key,
     // 战斗场景在返回世界前写入结果。
     result: Result = .fighting,
 };

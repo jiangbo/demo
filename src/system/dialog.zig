@@ -46,7 +46,7 @@ test "交互对话人物后添加对话状态" {
     world.addAll(target, .{
         Facing.down,
         Interact{},
-        Talk{ .dialogues = zon.getActor(.xiaoChunChun).dialogues },
+        Talk{ .dialogues = zon.Actor.get(.xiaoChunChun).dialogues },
         WantMove{ .value = .xy(0, 1) },
     });
     world.addIdentity(target, Interact);

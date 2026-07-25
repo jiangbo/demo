@@ -18,7 +18,7 @@ const Factory = struct {
 
 pub const Facing = enum { down, left, up, right };
 
-pub const ActorConfig = struct {
+pub const Actor = struct {
     key: [:0]const u8,
     enemy: bool = false,
     dialogues: []const u16 = &.{},
@@ -36,14 +36,14 @@ pub const ActorConfig = struct {
     money: u16 = 0,
     progress: u8 = 0xFF,
     escape: u8 = 50,
+
+    pub const list: []const Actor = @import("zon/actor.zon");
+    pub const Key = zhu.enums.fromField(list, "key");
+
+    pub fn get(key: Key) *const Actor {
+        return &list[@intFromEnum(key)];
+    }
 };
-
-pub const actors: []const ActorConfig = @import("zon/actor.zon");
-pub const Key = zhu.enums.fromField(actors, "key");
-
-pub fn getActor(key: Key) *const ActorConfig {
-    return &actors[@intFromEnum(key)];
-}
 
 pub const dialog = struct {
     pub const Event = union(enum) {
@@ -51,13 +51,13 @@ pub const dialog = struct {
         openWeaponShop,
         openPotionShop,
         openSale,
-        battle: Key,
+        battle: Actor.Key,
         showSwordTip,
         showEnding,
     };
 
     pub const Line = struct {
-        actor: ?Key,
+        actor: ?Actor.Key,
         content: []const u8 = &.{},
         event: ?Event = null,
     };
@@ -81,17 +81,25 @@ pub const Map = struct {
     ground: []const u16,
     object: []const u8,
     chests: []const Chest = &.{},
-    actors: []const Key = &.{},
+    actors: []const Actor.Key = &.{},
 };
 
-pub const Link = struct {
+pub const Portal = struct {
+    key: Key,
     player: zhu.Vector2 = .zero,
     mapId: u8 = 0,
     progress: u8 = 0,
+
+    const source = @import("zon/portal.zon");
+    pub const Key = zhu.enums.fromField(source, "key");
+    pub const list: []const Portal = @import("zon/portal.zon");
+
+    pub fn get(value: Key) *const Portal {
+        return &list[@intFromEnum(value)];
+    }
 };
 
 pub const maps: []const Map = @import("zon/map.zon");
-pub const links: []const Link = @import("zon/link.zon");
 
 comptime {
     for (dialogues, 0..) |dialogue, id| {
@@ -102,10 +110,10 @@ comptime {
 }
 
 test "通过 key 查找角色配置" {
-    try std.testing.expectEqualStrings("小飞刀", getActor(.player).name);
+    try std.testing.expectEqualStrings("小飞刀", Actor.get(.player).name);
     try std.testing.expectEqualStrings(
         "小春春",
-        getActor(.xiaoChunChun).name,
+        Actor.get(.xiaoChunChun).name,
     );
-    try std.testing.expectEqualStrings("公  主", getActor(.gongZhu).name);
+    try std.testing.expectEqualStrings("公  主", Actor.get(.gongZhu).name);
 }

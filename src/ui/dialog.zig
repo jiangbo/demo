@@ -57,7 +57,7 @@ pub fn draw(world: *ecs.World) void {
 
     zhu.batch.drawImage(texture, .xy(0, 384), .{});
     if (line.actor) |key| {
-        const actor = zon.getActor(key);
+        const actor = zon.Actor.get(key);
         if (key == .player) {
             drawActor(factory.playerPhoto(), .xy(35, 396), actor.name);
         } else {

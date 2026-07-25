@@ -1,18 +1,21 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const math = zhu.math;
 const tiled = zhu.extend.tiled;
 
 const item = @import("item.zig");
 const zon = @import("zon.zig");
-const Facing = @import("component.zig").Facing;
+const component = @import("component.zig");
+const Facing = component.Facing;
+const Portal = component.Portal;
 
 const MapCell = union(enum) {
     open,
     solid,
     chest,
-    link: u8,
+    portal: zon.Portal.Key,
 
     // 将地图文件中的数字转换为游戏语义。
     fn from(value: u8) MapCell {
@@ -20,7 +23,7 @@ const MapCell = union(enum) {
             0 => .open,
             2 => .chest,
             1, 3, 4 => .solid,
-            else => .{ .link = value },
+            else => .{ .portal = @enumFromInt(value - 4) },
         };
     }
 };
@@ -29,7 +32,7 @@ var texture: zhu.Image = undefined;
 var rowTiles: usize = 0;
 var objectField: tiled.Field(u8) = undefined;
 
-pub var linkIndex: u8 = 4;
+pub var portalKey: zon.Portal.Key = .start;
 pub var current: *const zon.Map = undefined;
 
 var vertexBuffer: [2000]zhu.batch.Vertex = undefined;
@@ -43,8 +46,8 @@ pub fn init() void {
 }
 
 pub fn enter() math.Vector2 {
-    const link = zon.links[linkIndex];
-    current = &zon.maps[link.mapId];
+    const portal = zon.Portal.get(portalKey);
+    current = &zon.maps[portal.mapId];
     objectField = .{ .grid = current.grid, .data = current.object };
 
     vertexArray.clearRetainingCapacity();
@@ -59,7 +62,7 @@ pub fn enter() math.Vector2 {
             appendVertex(301, chest.tileIndex);
     }
 
-    return link.player;
+    return portal.player;
 }
 
 fn buildVertexBuffer(tiles: []const u16) void {
@@ -125,12 +128,29 @@ pub fn openChest(pickIndex: usize) void {
     unreachable;
 }
 
-pub fn linkAt(position: zhu.Vector2) ?u8 {
-    const cell = current.grid.worldToCell(position);
-    return switch (MapCell.from(objectField.tileAt(cell).?)) {
-        .link => |index| index,
-        else => null,
-    };
+// 将当前地图中的传送区域创建为实体。
+pub fn spawnPortals(world: *ecs.World) void {
+    var areas = std.EnumMap(zon.Portal.Key, math.Rect).init(.{});
+    for (current.object, 0..) |value, index| {
+        const key = switch (MapCell.from(value)) {
+            .portal => |key| key,
+            else => continue,
+        };
+        const tile = current.grid.indexToRect(index);
+        if (areas.getPtr(key)) |area| {
+            const min = area.min.min(tile.min);
+            const max = area.max().max(tile.max());
+            area.* = .fromMax(min, max);
+        } else areas.put(key, tile);
+    }
+
+    var iterator = areas.iterator();
+    while (iterator.next()) |portal| {
+        world.add(world.createEntity(), Portal{
+            .key = portal.key,
+            .area = portal.value.*,
+        });
+    }
 }
 
 pub fn walkTo(area: math.Rect, velocity: math.Vector2) math.Vector2 {
@@ -145,7 +165,7 @@ fn limit(scanValue: tiled.Scan(u8)) f32 {
     var scan = scanValue;
     while (scan.next()) |value| {
         switch (MapCell.from(value)) {
-            .open, .link => continue,
+            .open, .portal => continue,
             .solid, .chest => return scan.touch,
         }
     }
@@ -154,6 +174,32 @@ fn limit(scanValue: tiled.Scan(u8)) f32 {
 
 pub fn draw() void {
     zhu.batch.drawVertices(vertexArray.items, texture);
+}
+
+test "相邻瓦片创建一个传送区域实体" {
+    const objects = [_]u8{
+        1, 5, 5,
+        1, 1, 1,
+    };
+    const mapData = zon.Map{
+        .grid = .{ .width = 3, .height = 2, .cell = 32 },
+        .back = &.{},
+        .ground = &.{},
+        .object = &objects,
+    };
+    current = &mapData;
+
+    var world = ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+    spawnPortals(&world);
+
+    var query = world.query(.{Portal});
+    const entity = query.next().?;
+    const portal = query.get(entity, Portal);
+    try std.testing.expectEqual(zon.Portal.Key.cityToHome, portal.key);
+    try std.testing.expectEqual(math.Vector2.xy(32, 0), portal.area.min);
+    try std.testing.expectEqual(math.Vector2.xy(64, 32), portal.area.size);
+    try std.testing.expectEqual(null, query.next());
 }
 
 test "地图瓦片移动" {
