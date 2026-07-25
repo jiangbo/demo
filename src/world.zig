@@ -30,6 +30,11 @@ const Player = component.Player;
 const Portal = component.Portal;
 const Position = component.Position;
 
+const PlayerSpawn = union(enum) {
+    position: math.Vector2,
+    portal: zon.Portal.Key,
+};
+
 const State = union(enum) {
     map: MapState,
     menu: MenuState,
@@ -98,10 +103,10 @@ pub fn deinit() void {
 }
 
 pub fn enter(world: *ecs.World) void {
-    const playerPosition = map.enter();
+    map.enter();
     switch (back) {
         .none => {
-            rebuildMap(world, playerPosition);
+            rebuildMap(world, .{ .position = .xy(180, 164) });
             world.add(world.entity, Dialog{
                 .lines = zon.dialogues[2].lines,
             });
@@ -110,12 +115,12 @@ pub fn enter(world: *ecs.World) void {
         },
         .battle => finishBattle(world),
         .load => {
-            rebuildMap(world, loadPlayerPosition.?);
+            rebuildMap(world, .{ .position = loadPlayerPosition.? });
             state = .map;
         },
         .menu => {
             if (loadPlayerPosition) |position| {
-                rebuildMap(world, position);
+                rebuildMap(world, .{ .position = position });
             }
             state = .menu;
         },
@@ -127,16 +132,19 @@ pub fn enter(world: *ecs.World) void {
 }
 
 pub fn changeMap(world: *ecs.World) void {
-    const playerPosition = map.enter();
-    rebuildMap(world, playerPosition);
+    map.enter();
+    rebuildMap(world, .{ .portal = map.portalKey });
 }
 
 // 清空旧地图并创建新地图的实体。
-fn rebuildMap(world: *ecs.World, playerPosition: zhu.Vector2) void {
+fn rebuildMap(world: *ecs.World, spawn: PlayerSpawn) void {
     world.reset();
     world.entity = world.createEntity();
-    factory.spawnPlayer(world, playerPosition);
     map.spawnPortals(world);
+    switch (spawn) {
+        .position => |position| factory.spawnPlayer(world, position, .down),
+        .portal => |key| spawnPlayerAtPortal(world, key),
+    }
 
     for (map.current.actors) |key| {
         const index = @intFromEnum(key);
@@ -145,6 +153,34 @@ fn rebuildMap(world: *ecs.World, playerPosition: zhu.Vector2) void {
         factory.spawnActor(world, key);
     }
     player.cameraLookAt(world);
+}
+
+// 在目标传送区域外创建玩家。
+fn spawnPlayerAtPortal(world: *ecs.World, key: zon.Portal.Key) void {
+    const config = zon.Portal.get(key);
+    var query = world.query(.{Portal});
+    while (query.next()) |entity| {
+        const portal = query.get(entity, Portal);
+        if (portal.key != key) continue;
+
+        const center = portal.area.center();
+        const max = portal.area.max();
+        const position = switch (config.facing) {
+            .down => math.Vector2.xy(center.x - 8, max.y + 8),
+            .left => math.Vector2.xy(
+                portal.area.min.x - 16 - 8,
+                center.y - 8,
+            ),
+            .up => math.Vector2.xy(
+                center.x - 8,
+                portal.area.min.y - 16 - 8,
+            ),
+            .right => math.Vector2.xy(max.x + 8, center.y - 8),
+        };
+        factory.spawnPlayer(world, position, config.facing);
+        return;
+    }
+    unreachable;
 }
 
 // 处理战斗结果并继续使用进入战斗前的地图实体。
@@ -409,7 +445,7 @@ const MapState = struct {
         const portal = zon.Portal.get(key);
         if (player.progress > portal.progress) {
             std.log.info("change map portal: {s}", .{@tagName(key)});
-            map.portalKey = key;
+            map.portalKey = portal.target;
             scene.changeMap();
             return;
         }

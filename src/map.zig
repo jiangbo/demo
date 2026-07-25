@@ -45,7 +45,7 @@ pub fn init() void {
     rowTiles = @intFromFloat(@divExact(texture.size.x, 34));
 }
 
-pub fn enter() math.Vector2 {
+pub fn enter() void {
     const portal = zon.Portal.get(portalKey);
     current = &zon.maps[portal.mapId];
     objectField = .{ .grid = current.grid, .data = current.object };
@@ -61,8 +61,6 @@ pub fn enter() math.Vector2 {
         else
             appendVertex(301, chest.tileIndex);
     }
-
-    return portal.player;
 }
 
 fn buildVertexBuffer(tiles: []const u16) void {

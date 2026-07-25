@@ -85,7 +85,7 @@ pub fn enter() void {
     enemyKey = context.battle.actor;
     enemy = zon.Actor.get(enemyKey).*;
     map.portalKey = .battle;
-    _ = map.enter();
+    map.enter();
     menu.active = 7;
     changePhase(.menu);
     camera.main.position = .zero;

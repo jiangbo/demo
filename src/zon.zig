@@ -86,8 +86,9 @@ pub const Map = struct {
 
 pub const Portal = struct {
     key: Key,
-    player: zhu.Vector2 = .zero,
-    mapId: u8 = 0,
+    target: Key,
+    mapId: u8,
+    facing: Facing,
     progress: u8 = 0,
 
     const source = @import("zon/portal.zon");

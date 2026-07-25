@@ -2,83 +2,101 @@
     // 开始游戏
     .{
         .key = .start,
-        .player = .{ .x = 180, .y = 164 },
+        .target = .start,
         .mapId = 1,
+        .facing = .down,
     },
     // 城市回家
     .{
         .key = .cityToHome,
-        .player = .{ .x = 424, .y = 395 },
-        .mapId = 1,
+        .target = .homeToCity,
+        .mapId = 2,
+        .facing = .down,
     },
     // 家里出门
     .{
         .key = .homeToCity,
-        .player = .{ .x = 840, .y = 70 },
-        .mapId = 2,
+        .target = .cityToHome,
+        .mapId = 1,
+        .facing = .up,
     },
     // 城市进入武器铺
     .{
         .key = .cityToWeaponShop,
-        .player = .{ .x = 310, .y = 390 },
-        .mapId = 3,
+        .target = .weaponShopToCity,
+        .mapId = 2,
+        .facing = .down,
     },
     // 武器铺返回城市
     .{
         .key = .weaponShopToCity,
-        .player = .{ .x = 840, .y = 250 },
-        .mapId = 2,
+        .target = .cityToWeaponShop,
+        .mapId = 3,
+        .facing = .up,
     },
     // 城市进入药店
     .{
         .key = .cityToPotionShop,
-        .player = .{ .x = 315, .y = 390 },
-        .mapId = 4,
+        .target = .potionShopToCity,
+        .mapId = 2,
+        .facing = .down,
     },
     // 药店返回城市
     .{
         .key = .potionShopToCity,
-        .player = .{ .x = 105, .y = 510 },
-        .mapId = 2,
+        .target = .cityToPotionShop,
+        .mapId = 4,
+        .facing = .up,
     },
     // 城市进入酒店
     .{
         .key = .cityToHotel,
-        .player = .{ .x = 215, .y = 395 },
-        .mapId = 5,
+        .target = .hotelToCity,
+        .mapId = 2,
+        .facing = .down,
     },
     // 酒店返回城市
     .{
         .key = .hotelToCity,
-        .player = .{ .x = 840, .y = 445 },
-        .mapId = 2,
+        .target = .cityToHotel,
+        .mapId = 5,
+        .facing = .up,
     },
     // 城市前往森林
     .{
         .key = .cityToForest,
-        .player = .{ .x = 40, .y = 45 },
-        .mapId = 7,
+        .target = .forestToCity,
+        .mapId = 2,
+        .facing = .up,
         .progress = 4,
     },
     // 森林返回城市
     .{
         .key = .forestToCity,
-        .player = .{ .x = 595, .y = 780 },
-        .mapId = 2,
+        .target = .cityToForest,
+        .mapId = 7,
+        .facing = .down,
     },
     // 进入战斗
-    .{ .key = .battle, .mapId = 6 },
+    .{
+        .key = .battle,
+        .target = .battle,
+        .mapId = 6,
+        .facing = .down,
+    },
     // 森林进入宫殿
     .{
         .key = .forestToPalace,
-        .player = .{ .x = 310, .y = 1385 },
-        .mapId = 8,
+        .target = .palaceToForest,
+        .mapId = 7,
+        .facing = .up,
         .progress = 10,
     },
     // 宫殿返回森林
     .{
         .key = .palaceToForest,
-        .player = .{ .x = 1060, .y = 780 },
-        .mapId = 7,
+        .target = .forestToPalace,
+        .mapId = 8,
+        .facing = .up,
     },
 }

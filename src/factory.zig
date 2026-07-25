@@ -63,21 +63,27 @@ fn firstImage(animation: Animation, facing: component.Facing) zhu.Image {
 }
 
 // 在当前地图创建玩家实体。
-pub fn spawnPlayer(world: *ecs.World, position: zhu.Vector2) void {
+pub fn spawnPlayer(
+    world: *ecs.World,
+    position: zhu.Vector2,
+    facing: component.Facing,
+) void {
     const collider = component.Collider.init(
         .xy(-8, -16),
         .xy(16, 16),
     );
+    var animation = playerAnimation();
+    animation.play(facing);
     const entity = world.createIdentity(component.Player);
     world.addAll(entity, .{
         component.Actor{ .key = .player },
         component.Player{},
         position.sub(collider.min),
-        component.Facing.down,
+        facing,
         collider,
         component.RenderOffset{ .value = .xy(-2, 4) },
         component.Speed{ .value = 100 },
-        playerAnimation(),
+        animation,
     });
 }
 
