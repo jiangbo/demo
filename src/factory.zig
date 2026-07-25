@@ -46,16 +46,7 @@ pub const dialogues: []const component.dialog.Script =
     @import("zon/talk.zon");
 
 // 根据 ZON 中的 key 生成稳定、可读的角色引用。
-pub const Key = blk: {
-    var names: [actors.len][]const u8 = undefined;
-    var values: [actors.len]u16 = undefined;
-    for (actors, 0..) |actor, actorIndex| {
-        names[actorIndex] = actor.key;
-        values[actorIndex] = actorIndex;
-    }
-
-    break :blk @Enum(u16, .exhaustive, &names, &values);
-};
+pub const Key = zhu.enums.fromField(actors, "key");
 
 comptime {
     for (dialogues, 0..) |dialogue, id| {

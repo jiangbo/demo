@@ -31,7 +31,7 @@ pub fn update() ?u8 {
     const menu = zon[active];
     const state = &states[active];
 
-    if (zhu.mouse.changed) {
+    if (zhu.mouse.moved) {
         for (menu.areas, 0..) |area, i| {
             if (area.contains(window.mouse)) {
                 state.current = i;

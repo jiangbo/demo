@@ -11,4 +11,5 @@
 5. 出现的数值，字符串，直接写到使用的地方，禁止提取常量，避免上下文查找。
 6. 优先使用 Zig 风格的简单直接实现，避免照搬 C++ 的强封装、继承和复杂框架。
 
-Shell 使用 Git Bash，直接执行 Bash 命令，禁止 PowerShell。
+Shell 命令使用 `bash -lc '<command>'` 执行，`<command>` 使用 Bash 语法，
+禁止使用 PowerShell 语法。
