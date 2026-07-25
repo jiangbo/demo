@@ -2,20 +2,18 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const math = zhu.math;
+const tiled = zhu.extend.tiled;
 
 const item = @import("item.zig");
 const zon = @import("zon.zig");
 const Facing = @import("component.zig").Facing;
 
-const SIZE = 32;
-const TILE_SIZE: math.Vector2 = .xy(SIZE, SIZE);
-
 var texture: zhu.Image = undefined;
 var rowTiles: usize = 0;
+var objectField: tiled.Field(u8) = undefined;
 
 pub var linkIndex: u8 = 4;
 pub var current: *const zon.Map = undefined;
-pub var size: math.Vector2 = undefined;
 
 var vertexBuffer: [2000]zhu.batch.Vertex = undefined;
 var vertexArray: std.ArrayListUnmanaged(zhu.batch.Vertex) = undefined;
@@ -30,9 +28,7 @@ pub fn init() void {
 pub fn enter() math.Vector2 {
     const link = zon.links[linkIndex];
     current = &zon.maps[link.mapId];
-    const x: f32 = @floatFromInt(current.width);
-    const y: f32 = @floatFromInt(current.height);
-    size = math.Vector2.xy(x, y).scale(SIZE);
+    objectField = .{ .grid = current.grid, .data = current.object };
 
     vertexArray.clearRetainingCapacity();
 
@@ -63,37 +59,31 @@ fn buildVertex(tileIndex: usize, index: usize) zhu.batch.Vertex {
     const row: f32 = @floatFromInt(tileIndex / rowTiles);
     const col: f32 = @floatFromInt(tileIndex % rowTiles);
     const pos = math.Vector2.xy(col * 34 + 1, row * 34 + 1);
+    const tileSize = current.grid.cellSize();
 
-    const tile = texture.sub(.init(pos, TILE_SIZE));
+    const tile = texture.sub(.init(pos, tileSize));
     return zhu.batch.Vertex{
-        .position = getPositionFromIndex(index),
+        .position = current.grid.indexToWorld(index),
         .layer = tile.layer,
-        .size = TILE_SIZE,
+        .size = tileSize,
         .uvRect = tile.uvRect(),
     };
 }
 
-fn getPositionFromIndex(index: usize) zhu.Vector2 {
-    const row: f32 = @floatFromInt(index / current.width);
-    const col: f32 = @floatFromInt(index % current.width);
-    return math.Vector.xy(col, row).mul(TILE_SIZE);
-}
-
 pub fn talk(position: zhu.Vector2, facing: Facing) ?u16 {
-    const index: i32 = @intCast(positionIndex(position));
-    const talkIndex: i32 = switch (facing) {
-        .down => index + current.width,
-        .left => index - 1,
-        .right => index + 1,
-        .up => index - current.width,
-    };
+    var cell = current.grid.worldToCell(position);
+    switch (facing) {
+        .down => cell.y += 1,
+        .left => cell.x -= 1,
+        .right => cell.x += 1,
+        .up => cell.y -= 1,
+    }
 
-    if (talkIndex < 0 or talkIndex > current.object.len) return null;
-    const talkObject = current.object[@intCast(talkIndex)];
-    if (talkObject != 2) return null;
+    const index = current.grid.cellToIndex(cell) orelse return null;
+    if (current.object[index] != 2) return null;
 
     for (current.chests) |chest| {
-        if (talkIndex != chest.tileIndex) continue;
+        if (index != chest.tileIndex) continue;
         // 宝箱已经被打开，不需要处理任何东西
         if (item.picked.isSet(chest.pickupIndex)) return null;
         return @intCast(chest.pickupIndex);
@@ -115,68 +105,68 @@ pub fn openChest(pickIndex: usize) void {
     unreachable;
 }
 
-pub fn positionIndex(position: zhu.Vector2) usize {
-    const x: u16 = @intFromFloat(@floor(position.x / 32));
-    const y: u16 = @intFromFloat(@floor(position.y / 32));
-    return x + y * current.width;
-}
-
-pub fn getObject(index: usize) u8 {
-    return current.object[index];
+pub fn objectAt(position: zhu.Vector2) u8 {
+    const cell = current.grid.worldToCell(position);
+    return objectField.tileAt(cell).?;
 }
 
 pub fn walkTo(area: math.Rect, velocity: math.Vector2) math.Vector2 {
-    if (velocity.x == 0 and velocity.y == 0) return area.min;
-    return .xy(walkToX(area, velocity.x), walkToY(area, velocity.y));
-}
-
-fn walkToX(area: math.Rect, velocity: f32) f32 {
-    const min = area.min.addX(velocity);
-    if (min.x < 0) return 0;
-    const max = area.max().addX(velocity);
-    if (max.x > size.x) return size.x - 0.1 - area.size.x;
-
-    if (velocity > 0) {
-        if (canWalk(.xy(max.x, min.y)) and canWalk(max)) return min.x;
-        const index = positionIndex(max) % current.width;
-        // 把左上角的位置放到图块的左边缘
-        const x: f32 = @floatFromInt(index * SIZE);
-        // 平移加容忍，将右边放到图块的左边缘
-        return x - area.size.x - 0.1;
-    } else {
-        if (canWalk(min) and canWalk(.xy(min.x, max.y))) return min.x;
-        const index = 1 + positionIndex(min) % current.width;
-        return @floatFromInt(index * SIZE);
+    var moved = area;
+    var scan = objectField.scanX(moved, velocity.x);
+    moved.min.x = scan.dest;
+    while (scan.next()) |object| {
+        if (object == 0 or object > 4) continue;
+        moved.min.x = scan.touch;
+        break;
     }
-}
 
-fn walkToY(area: math.Rect, velocity: f32) f32 {
-    const min = area.min.addY(velocity);
-    if (min.y < 0) return 0;
-    const max = area.max().addY(velocity);
-    if (max.y > size.y) return size.y - 0.1 - area.size.y;
-
-    if (velocity > 0) {
-        if (canWalk(.xy(min.x, max.y)) and canWalk(max)) return min.y;
-        const index = positionIndex(max) / current.width;
-        const y: f32 = @floatFromInt(index * SIZE);
-        return y - area.size.y - 0.1;
-    } else {
-        if (canWalk(min) and canWalk(.xy(max.x, min.y))) return min.y;
-        const index = 1 + positionIndex(min) / current.width;
-        return @floatFromInt(index * SIZE);
+    scan = objectField.scanY(moved, velocity.y);
+    moved.min.y = scan.dest;
+    while (scan.next()) |object| {
+        if (object == 0 or object > 4) continue;
+        moved.min.y = scan.touch;
+        break;
     }
-}
 
-fn canWalk(position: math.Vector2) bool {
-    if (position.x < 0 or position.y < 0) return false;
-    if (position.x > size.x or position.y > size.y) return false;
-    const index = positionIndex(position);
-    if (index > current.object.len) return false;
-    // 场景切换的图块也应该能通过
-    return current.object[index] == 0 or current.object[index] > 4;
+    return moved.min;
 }
 
 pub fn draw() void {
     zhu.batch.drawVertices(vertexArray.items, texture);
+}
+
+test "地图瓦片移动" {
+    const objects = [_]u8{
+        1, 1, 1,
+        1, 0, 1,
+        1, 1, 1,
+    };
+    objectField = .{
+        .grid = .{ .width = 3, .height = 3, .cell = 32 },
+        .data = &objects,
+    };
+
+    const area = math.Rect.init(.xy(40, 40), .square(16));
+
+    var moved = walkTo(area, .xy(20, 0));
+    try std.testing.expectEqual(@as(f32, 48), moved.x);
+    try std.testing.expectEqual(@as(f32, 40), moved.y);
+
+    moved = walkTo(area, .xy(-20, 0));
+    try std.testing.expectEqual(@as(f32, 32), moved.x);
+
+    moved = walkTo(area, .xy(0, 20));
+    try std.testing.expectEqual(@as(f32, 48), moved.y);
+
+    moved = walkTo(area, .xy(0, -20));
+    try std.testing.expectEqual(@as(f32, 32), moved.y);
+
+    const passable = [_]u8{
+        1, 1, 1,
+        1, 0, 5,
+        1, 1, 1,
+    };
+    objectField.data = &passable;
+    moved = walkTo(area, .xy(20, 0));
+    try std.testing.expectEqual(@as(f32, 60), moved.x);
 }

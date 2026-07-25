@@ -2,6 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const Animation = zhu.Animation;
+const tiled = zhu.extend.tiled;
 
 const NpcAnimation = struct {
     images: [15]zhu.graphics.ImageId,
@@ -75,8 +76,7 @@ pub const input = zhu.key.bind(@import("zon/input.zon"));
 pub const Chest = struct { tileIndex: u16, pickupIndex: u16 };
 
 pub const Map = struct {
-    width: u16,
-    height: u16,
+    grid: tiled.Grid,
     back: []const u16,
     ground: []const u16,
     object: []const u8,

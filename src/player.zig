@@ -105,7 +105,7 @@ pub fn sellItem() bool {
 pub fn cameraLookAt(world: *ecs.World) void {
     const area = collider(world);
     const half = window.size.scale(0.5);
-    const max = map.size.sub(window.size);
+    const max = map.current.grid.size().sub(window.size);
     camera.main.position = area.min.sub(half).clamp(.zero, max);
 }
 
