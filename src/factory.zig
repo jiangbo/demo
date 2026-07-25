@@ -1,73 +1,19 @@
-const std = @import("std");
 const zhu = @import("zhu");
 const ecs = @import("ecs");
 
 const component = @import("component.zig");
+const zon = @import("zon.zig");
 
 const Animation = zhu.Animation;
-
-const NpcAnimation = struct {
-    images: [15]zhu.graphics.ImageId,
-    size: zhu.Vector2,
-    frames: [4]Animation.Frames,
-};
-
-const Config = struct {
-    player: []const Animation.Source,
-    bomb: []const Animation.Source,
-    npc: NpcAnimation,
-};
-
-// 实体和运行对象的创建配置。
-const zon: Config = @import("zon/factory.zon");
-
-pub const ActorConfig = struct {
-    key: [:0]const u8,
-    enemy: bool = false,
-    dialogues: []const u16 = &.{},
-    name: []const u8 = &.{},
-    x: f32 = 0,
-    y: f32 = 0,
-    picture: u8 = 0,
-    facing: component.Facing = .down,
-    level: u16 = 1,
-    health: u16 = 0,
-    attack: u16 = 0,
-    defend: u16 = 0,
-    speed: f32 = 0,
-    goods: []const u8 = &.{},
-    money: u16 = 0,
-    progress: u8 = 0xFF,
-    escape: u8 = 50,
-};
-
-pub const actors: []const ActorConfig = @import("zon/actor.zon");
-pub const dialogues: []const component.dialog.Script =
-    @import("zon/talk.zon");
-
-// 根据 ZON 中的 key 生成稳定、可读的角色引用。
-pub const Key = zhu.enums.fromField(actors, "key");
-
-comptime {
-    for (dialogues, 0..) |dialogue, id| {
-        if (dialogue.id != id) {
-            @compileError("对话 ID 必须连续并按顺序排列");
-        }
-    }
-}
-
-pub fn get(key: Key) *const ActorConfig {
-    return &actors[@intFromEnum(key)];
-}
 
 // 所有 NPC 共用相同的素材布局。
 const npcSources: [15][4]Animation.Source = blk: {
     var sources: [15][4]Animation.Source = undefined;
-    for (zon.npc.images, 0..) |imageId, imageIndex| {
-        for (zon.npc.frames, 0..) |frames, sourceIndex| {
+    for (zon.factory.npc.images, 0..) |imageId, imageIndex| {
+        for (zon.factory.npc.frames, 0..) |frames, sourceIndex| {
             sources[imageIndex][sourceIndex] = .{
                 .imageId = imageId,
-                .size = zon.npc.size,
+                .size = zon.factory.npc.size,
                 .frames = frames,
             };
         }
@@ -77,12 +23,12 @@ const npcSources: [15][4]Animation.Source = blk: {
 
 // 创建角色动画。
 pub fn playerAnimation() Animation {
-    return .initSource(zon.player);
+    return .initSource(zon.factory.player);
 }
 
 // 创建爆炸动画。
 pub fn bombAnimation() Animation {
-    return .initSource(zon.bomb);
+    return .initSource(zon.factory.bomb);
 }
 
 // 创建指定素材的 NPC 动画。
@@ -101,13 +47,13 @@ pub fn playerBattleImage() zhu.Image {
 }
 
 // 获取非玩家人物在对话和状态界面使用的头像。
-pub fn npcPhoto(key: Key) zhu.Image {
-    return firstImage(npcAnimation(get(key).picture), .down);
+pub fn npcPhoto(key: zon.Key) zhu.Image {
+    return firstImage(npcAnimation(zon.getActor(key).picture), .down);
 }
 
 // 获取非玩家人物在战斗场景使用的图片。
-pub fn npcBattleImage(key: Key) zhu.Image {
-    return firstImage(npcAnimation(get(key).picture), .left);
+pub fn npcBattleImage(key: zon.Key) zhu.Image {
+    return firstImage(npcAnimation(zon.getActor(key).picture), .left);
 }
 
 fn firstImage(animation: Animation, facing: component.Facing) zhu.Image {
@@ -136,8 +82,8 @@ pub fn spawnPlayer(world: *ecs.World, position: zhu.Vector2) void {
 }
 
 // 根据配置创建一个 NPC 实体。
-pub fn spawnActor(world: *ecs.World, key: Key) void {
-    const data = get(key);
+pub fn spawnActor(world: *ecs.World, key: zon.Key) void {
+    const data = zon.getActor(key);
     const entity = world.createEntity();
     world.addAll(entity, .{
         component.Actor{ .key = key },
@@ -165,13 +111,4 @@ pub fn spawnActor(world: *ecs.World, key: Key) void {
         component.Speed{ .value = data.speed },
         component.Wander{ .value = .init(0) },
     });
-}
-
-test "通过 key 查找角色配置" {
-    try std.testing.expectEqualStrings("小飞刀", get(.player).name);
-    try std.testing.expectEqualStrings(
-        "小春春",
-        get(.xiaoChunChun).name,
-    );
-    try std.testing.expectEqualStrings("公  主", get(.gongZhu).name);
 }

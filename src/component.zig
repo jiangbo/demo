@@ -1,6 +1,6 @@
 const zhu = @import("zhu");
 
-const factory = @import("factory.zig");
+const zon = @import("zon.zig");
 
 pub const Animation = zhu.Animation;
 
@@ -8,7 +8,7 @@ pub const Animation = zhu.Animation;
 pub const Position = zhu.Vector2;
 
 // 实体当前面对的方向。
-pub const Facing = enum { down, left, up, right };
+pub const Facing = zon.Facing;
 
 pub fn oppositeFacing(facing: Facing) Facing {
     return switch (facing) {
@@ -27,7 +27,7 @@ pub const RenderOffset = struct { value: zhu.Vector2 };
 
 pub const Player = struct {};
 // 实体对应的稳定人物标识。
-pub const Actor = struct { key: factory.Key };
+pub const Actor = struct { key: zon.Key };
 // 敌人相对实体逻辑位置的战斗触发区域。
 pub const Enemy = struct {
     value: zhu.Rect,
@@ -43,33 +43,11 @@ pub const dialog = struct {
     // 由对话系统处理的可交互实体。
     pub const Talk = struct { dialogues: []const u16 };
 
-    pub const Event = union(enum) {
-        finish,
-        openWeaponShop,
-        openPotionShop,
-        openSale,
-        battle: factory.Key,
-        showSwordTip,
-        showEnding,
-    };
-
-    pub const Line = struct {
-        actor: ?factory.Key,
-        content: []const u8 = &.{},
-        event: ?Event = null,
-    };
-
-    // 一段完整的对话脚本。
-    pub const Script = struct {
-        id: u16,
-        lines: []const Line,
-    };
-
     pub const Value = union(enum) { number: u32, text: []const u8 };
 
     // 当前活动的对话，挂在 world.entity 上。
     pub const Dialog = struct {
-        lines: []const Line,
+        lines: []const zon.dialog.Line,
         // 当前显示行。
         line: usize = 0,
         // UI 当前绘制的文本。

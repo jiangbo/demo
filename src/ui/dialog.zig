@@ -4,7 +4,7 @@ const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
-const input = @import("../zon.zig").input;
+const zon = @import("../zon.zig");
 
 const Dialog = component.dialog.Dialog;
 const Interact = component.Interact;
@@ -18,13 +18,13 @@ pub fn init() void {
     texture = zhu.getImage("talkbar.png").?;
 }
 
-pub fn update(world: *ecs.World) ?component.dialog.Event {
+pub fn update(world: *ecs.World) ?zon.dialog.Event {
     const dialog = world.getPtr(world.entity, Dialog) orelse return null;
     if (dialog.text == null) {
         prepareText(dialog);
         return null;
     }
-    if (!input.released(.confirm)) return null;
+    if (!zon.input.released(.confirm)) return null;
 
     const line = dialog.lines[dialog.line];
     if (line.event) |event| {
@@ -57,7 +57,7 @@ pub fn draw(world: *ecs.World) void {
 
     zhu.batch.drawImage(texture, .xy(0, 384), .{});
     if (line.actor) |key| {
-        const actor = factory.get(key);
+        const actor = zon.getActor(key);
         if (key == .player) {
             drawActor(factory.playerPhoto(), .xy(35, 396), actor.name);
         } else {

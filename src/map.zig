@@ -4,7 +4,7 @@ const zhu = @import("zhu");
 const math = zhu.math;
 
 const item = @import("item.zig");
-const factory = @import("factory.zig");
+const zon = @import("zon.zig");
 const Facing = @import("component.zig").Facing;
 
 const SIZE = 32;
@@ -13,27 +13,8 @@ const TILE_SIZE: math.Vector2 = .xy(SIZE, SIZE);
 var texture: zhu.Image = undefined;
 var rowTiles: usize = 0;
 
-const Chest = struct { tileIndex: u16, pickupIndex: u16 };
-
-const Map = struct {
-    width: u16,
-    height: u16,
-    back: []const u16,
-    ground: []const u16,
-    object: []const u8,
-    chests: []const Chest = &.{},
-    actors: []const factory.Key = &.{},
-};
-
-const Link = struct {
-    player: zhu.Vector2 = .zero,
-    mapId: u8 = 0,
-    progress: u8 = 0,
-};
-const zon: []const Map = @import("zon/map.zon");
-pub const links: []const Link = @import("zon/link.zon");
 pub var linkIndex: u8 = 4;
-pub var current: *const Map = undefined;
+pub var current: *const zon.Map = undefined;
 pub var size: math.Vector2 = undefined;
 
 var vertexBuffer: [2000]zhu.batch.Vertex = undefined;
@@ -47,8 +28,8 @@ pub fn init() void {
 }
 
 pub fn enter() math.Vector2 {
-    const link = links[linkIndex];
-    current = &zon[link.mapId];
+    const link = zon.links[linkIndex];
+    current = &zon.maps[link.mapId];
     const x: f32 = @floatFromInt(current.width);
     const y: f32 = @floatFromInt(current.height);
     size = math.Vector2.xy(x, y).scale(SIZE);

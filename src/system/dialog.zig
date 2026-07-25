@@ -3,8 +3,8 @@ const zhu = @import("zhu");
 const ecs = @import("ecs");
 
 const component = @import("../component.zig");
-const factory = @import("../factory.zig");
 const playerData = @import("../player.zig");
+const zon = @import("../zon.zig");
 
 const dialog = component.dialog;
 const Dialog = dialog.Dialog;
@@ -25,7 +25,7 @@ pub fn update(world: *ecs.World) void {
     world.remove(target, WantMove);
 
     world.add(world.entity, Dialog{
-        .lines = factory.dialogues[talk.dialogues[index]].lines,
+        .lines = zon.dialogues[talk.dialogues[index]].lines,
     });
     world.add(player, Interact.Disabled{});
 }
@@ -46,7 +46,7 @@ test "交互对话人物后添加对话状态" {
     world.addAll(target, .{
         Facing.down,
         Interact{},
-        Talk{ .dialogues = factory.get(.xiaoChunChun).dialogues },
+        Talk{ .dialogues = zon.getActor(.xiaoChunChun).dialogues },
         WantMove{ .value = .xy(0, 1) },
     });
     world.addIdentity(target, Interact);
@@ -59,7 +59,7 @@ test "交互对话人物后添加对话状态" {
     try std.testing.expect(world.has(world.entity, Dialog));
     try std.testing.expect(world.hasIdentity(Player, Interact.Disabled));
     try std.testing.expectEqual(
-        factory.dialogues[3].lines.len,
+        zon.dialogues[3].lines.len,
         world.get(world.entity, Dialog).?.lines.len,
     );
     try std.testing.expect(!world.has(target, Dialog));

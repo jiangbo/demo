@@ -13,11 +13,11 @@ const context = @import("context.zig");
 const player = @import("player.zig");
 const menu = @import("menu.zig");
 const item = @import("item.zig");
-const input = @import("zon.zig").input;
 const factory = @import("factory.zig");
+const zon = @import("zon.zig");
 
-var enemyKey: factory.Key = undefined;
-var enemy: factory.ActorConfig = undefined;
+var enemyKey: zon.Key = undefined;
+var enemy: zon.ActorConfig = undefined;
 
 var texture: zhu.Image = undefined;
 var bombAnimation: zhu.Animation = undefined;
@@ -83,7 +83,7 @@ pub fn init() void {
 
 pub fn enter() void {
     enemyKey = context.battle.actor;
-    enemy = factory.get(enemyKey).*;
+    enemy = zon.getActor(enemyKey).*;
     map.linkIndex = 15;
     _ = map.enter();
     menu.active = 7;
@@ -330,7 +330,7 @@ const PlayerDeathPhase = struct {
     }
 
     fn update(_: f32) void {
-        if (input.released(.confirm)) scene.changeScene(.title);
+        if (zon.input.released(.confirm)) scene.changeScene(.title);
     }
 
     fn draw() void {
@@ -351,7 +351,7 @@ const EnemyDeathPhase = struct {
     }
 
     fn update(_: f32) void {
-        if (step == 0 and input.released(.confirm)) {
+        if (step == 0 and zon.input.released(.confirm)) {
             step += 1;
             player.exp += enemy.level * 20;
             player.money += enemy.money;
@@ -359,14 +359,14 @@ const EnemyDeathPhase = struct {
             return;
         }
 
-        if (step == 1 and input.released(.confirm)) {
+        if (step == 1 and zon.input.released(.confirm)) {
             if (player.isLevelUp()) {
                 step += 1;
                 return player.levelUp();
             }
         }
 
-        if (input.released(.confirm)) {
+        if (zon.input.released(.confirm)) {
             context.battle.result = .win;
             scene.changeScene(.world);
         }
@@ -405,7 +405,7 @@ const EnemyDeathPhase = struct {
 
 const StatusPhase = struct {
     fn update(_: f32) void {
-        if (input.released(.confirm) or input.released(.cancel)) {
+        if (zon.input.released(.confirm) or zon.input.released(.cancel)) {
             changePhase(.menu);
         }
     }
@@ -420,7 +420,7 @@ const ItemPhase = struct {
         const used = player.openItem();
         if (used) changePhase(.enemyAttack);
 
-        if (input.released(.cancel)) changePhase(.menu);
+        if (zon.input.released(.cancel)) changePhase(.menu);
     }
 
     fn draw() void {
