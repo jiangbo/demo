@@ -7,46 +7,44 @@ const input = @import("../input.zig");
 
 const Collider = component.Collider;
 const Facing = component.Facing;
+const Interact = component.Interact;
 const Player = component.Player;
 const Position = component.Position;
-const Talk = component.Talk;
-const WantMove = component.WantMove;
 
 pub fn update(world: *ecs.World) void {
-    if (world.getIdentity(Talk) != null) return;
+    world.removeIdentity(Interact);
+
+    if (world.hasIdentity(Player, Interact.Disabled)) return;
     if (!input.released(.confirm)) return;
 
-    const entity = nearestEntity(world) orelse return;
-
-    const player = world.getIdentity(Player).?;
-    const facing = world.get(player, Facing).?;
-    world.add(entity, component.oppositeFacing(facing));
-    world.remove(entity, WantMove);
-    world.addIdentity(entity, Talk);
+    const target = nearestEntity(world) orelse return;
+    world.addIdentity(target, Interact);
 }
 
-// 获取玩家对话区域内距离中心最近的实体。
+// 获取玩家交互区域内距离中心最近的实体。
 fn nearestEntity(world: *ecs.World) ?ecs.Entity {
-    const area = getPlayerArea(world);
+    const area = playerArea(world);
     var nearest: ?ecs.Entity = null;
     var distance2 = std.math.inf(f32);
-    var query = world.query(.{ Position, Collider, Talk });
+    var query = world.query(.{ Position, Collider, Interact });
     while (query.next()) |entity| {
         const position = query.get(entity, Position);
         const collider = query.get(entity, Collider);
         const targetArea = collider.move(position);
         if (!area.intersect(targetArea)) continue;
 
-        const d2 = area.center().sub(targetArea.center()).length2();
-        if (d2 >= distance2) continue;
+        const nextDistance2 = area.center().sub(
+            targetArea.center(),
+        ).length2();
+        if (nextDistance2 >= distance2) continue;
         nearest = entity;
-        distance2 = d2;
+        distance2 = nextDistance2;
     }
     return nearest;
 }
 
-// 从玩家碰撞区域的中心向当前朝向生成对话区域。
-fn getPlayerArea(world: *ecs.World) zhu.Rect {
+// 从玩家碰撞区域的中心向当前朝向生成交互区域。
+fn playerArea(world: *ecs.World) zhu.Rect {
     const player = world.getIdentity(Player).?;
     const position = world.get(player, Position).?;
     const collider = world.get(player, Collider).?;
@@ -63,13 +61,14 @@ fn getPlayerArea(world: *ecs.World) zhu.Rect {
     return .init(min, size);
 }
 
-test "选择玩家正前方最近的对话对象" {
+test "交互系统选择玩家正前方最近的实体" {
     zhu.input.reset();
     defer zhu.input.reset();
 
     var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
+    world.entity = world.createEntity();
     const player = world.createIdentity(Player);
     world.addAll(player, .{
         Position.zero,
@@ -81,17 +80,14 @@ test "选择玩家正前方最近的对话对象" {
     world.addAll(near, .{
         Position.xy(0, 32),
         Collider.init(.xy(-8, -16), .xy(16, 16)),
-        Facing.down,
-        Talk{},
-        WantMove{ .value = .xy(0, 1) },
+        Interact{},
     });
 
     const far = world.createEntity();
     world.addAll(far, .{
         Position.xy(0, 48),
         Collider.init(.xy(-8, -16), .xy(16, 16)),
-        Facing.down,
-        Talk{},
+        Interact{},
     });
 
     zhu.key.set(.F, true);
@@ -99,18 +95,17 @@ test "选择玩家正前方最近的对话对象" {
     zhu.key.set(.F, false);
     update(&world);
 
-    try std.testing.expectEqual(near, world.getIdentity(Talk).?);
-    try std.testing.expectEqual(Facing.up, world.get(near, Facing).?);
-    try std.testing.expect(!world.has(near, WantMove));
+    try std.testing.expectEqual(near, world.getIdentity(Interact).?);
 }
 
-test "使用 NPC 碰撞区域检测对话" {
+test "禁止交互时不产生新的交互对象" {
     zhu.input.reset();
     defer zhu.input.reset();
 
     var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
+    world.entity = world.createEntity();
     const player = world.createIdentity(Player);
     world.addAll(player, .{
         Position.zero,
@@ -118,12 +113,13 @@ test "使用 NPC 碰撞区域检测对话" {
         Facing.down,
     });
 
+    world.add(player, Interact.Disabled{});
+
     const target = world.createEntity();
     world.addAll(target, .{
-        Position.xy(0, 36),
+        Position.xy(0, 32),
         Collider.init(.xy(-8, -16), .xy(16, 16)),
-        Facing.down,
-        Talk{},
+        Interact{},
     });
 
     zhu.key.set(.F, true);
@@ -131,5 +127,5 @@ test "使用 NPC 碰撞区域检测对话" {
     zhu.key.set(.F, false);
     update(&world);
 
-    try std.testing.expectEqual(target, world.getIdentity(Talk).?);
+    try std.testing.expectEqual(null, world.getIdentity(Interact));
 }

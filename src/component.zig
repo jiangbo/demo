@@ -29,9 +29,54 @@ pub const Player = struct {};
 // 实体对应的稳定人物标识。
 pub const Actor = struct { key: factory.Key };
 // 敌人相对实体逻辑位置的战斗触发区域。
-pub const Enemy = struct { value: zhu.Rect };
-// 可对话实体；Identity 指向当前对话对象。
-pub const Talk = struct {};
+pub const Enemy = struct {
+    value: zhu.Rect,
+    // 逃跑后暂时停止触发战斗。
+    wait: f32 = 0,
+};
+// 可交互实体；Identity 指向当前交互对象。
+pub const Interact = struct {
+    // 暂时禁止产生新的交互对象。
+    pub const Disabled = struct {};
+};
+pub const dialog = struct {
+    // 由对话系统处理的可交互实体。
+    pub const Talk = struct { dialogues: []const u16 };
+
+    pub const Event = union(enum) {
+        finish,
+        openWeaponShop,
+        openPotionShop,
+        openSale,
+        battle: factory.Key,
+        showSwordTip,
+        showEnding,
+    };
+
+    pub const Line = struct {
+        actor: ?factory.Key,
+        content: []const u8 = &.{},
+        event: ?Event = null,
+    };
+
+    // 一段完整的对话脚本。
+    pub const Script = struct {
+        id: u16,
+        lines: []const Line,
+    };
+
+    pub const Value = union(enum) { number: u32, text: []const u8 };
+
+    // 当前活动的对话，挂在 world.entity 上。
+    pub const Dialog = struct {
+        lines: []const Line,
+        // 当前显示行。
+        line: usize = 0,
+        // UI 当前绘制的文本。
+        text: ?[]const u8 = null,
+        value: ?Value = null,
+    };
+};
 pub const Wander = struct { value: zhu.Timer };
 
 // 实体希望移动的单位方向。

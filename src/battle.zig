@@ -82,7 +82,7 @@ pub fn init() void {
 }
 
 pub fn enter() void {
-    enemyKey = context.battleActorKey;
+    enemyKey = context.battle.actor;
     enemy = factory.get(enemyKey).*;
     map.linkIndex = 15;
     _ = map.enter();
@@ -92,7 +92,7 @@ pub fn enter() void {
 }
 
 pub fn exit() void {
-    map.linkIndex = context.oldMapIndex;
+    map.linkIndex = context.battle.mapIndex;
 }
 
 fn changePhase(newPhase: Phase) void {
@@ -182,6 +182,7 @@ const MenuPhase = struct {
             2 => changePhase(.item),
             3 => {
                 if (enemy.escape > zhu.random.int(u8, 0, 100)) {
+                    context.battle.result = .escape;
                     scene.changeScene(.world);
                 } else {
                     WaitPhase.tip = "逃跑失败！";
@@ -365,7 +366,10 @@ const EnemyDeathPhase = struct {
             }
         }
 
-        if (input.released(.confirm)) scene.changeScene(.world);
+        if (input.released(.confirm)) {
+            context.battle.result = .win;
+            scene.changeScene(.world);
+        }
     }
 
     fn draw() void {

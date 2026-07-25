@@ -11,21 +11,23 @@ const component = @import("component.zig");
 const menu = @import("menu.zig");
 const player = @import("player.zig");
 const map = @import("map.zig");
-const talk = @import("talk.zig");
 const about = @import("about.zig");
 const item = @import("item.zig");
 const input = @import("input.zig");
 const factory = @import("factory.zig");
 const system = @import("system/system.zig");
 const context = @import("context.zig");
+const dialogUi = @import("ui/dialog.zig");
 
+const dialog = component.dialog;
 const Collider = component.Collider;
+const Dialog = dialog.Dialog;
 const Enemy = component.Enemy;
 const Facing = component.Facing;
 const Actor = component.Actor;
+const Interact = component.Interact;
 const Player = component.Player;
 const Position = component.Position;
-const Talk = component.Talk;
 
 const State = union(enum) {
     map: MapState,
@@ -43,21 +45,22 @@ const State = union(enum) {
         switch (self) {
             .map => MapState.update(world, delta),
             .save => SaveState.update(world, delta),
-            .talk => TalkState.update(world, delta),
+            .talk => {},
             .status => {},
             .item => _ = player.openItem(),
-            .shop => shop.update(),
+            .shop => shop.update(world),
+            .sale => SaleState.update(world, delta),
             inline else => |case| @TypeOf(case).update(delta),
         }
     }
 
-    pub fn draw(self: State) void {
+    pub fn draw(self: State, world: *ecs.World) void {
         switch (self) {
             .map => {},
             .status => player.drawStatus(),
             .item => player.drawOpenItem(),
             .about => about.draw(),
-            .talk => talk.draw(),
+            .talk => dialogUi.draw(world),
             .sale => player.drawSellItem(),
             .shop => shop.draw(),
             inline else => |case| @TypeOf(case).draw(),
@@ -66,7 +69,7 @@ const State = union(enum) {
 };
 var texture: zhu.Image = undefined;
 var state: State = .map;
-pub var back: enum { none, talk, battle, menu } = .none;
+pub var back: enum { none, battle, load, menu } = .none;
 pub var tip: []const u8 = &.{};
 var header: []const u8 = &.{};
 var headerIndex: usize = 0;
@@ -83,7 +86,7 @@ pub fn init(_: *ecs.World) void {
     texture = zhu.getImage("mainmenu1.png").?;
 
     item.init();
-    talk.init();
+    dialogUi.init();
     about.init();
     map.init();
     player.init();
@@ -94,25 +97,30 @@ pub fn deinit() void {
 }
 
 pub fn enter(world: *ecs.World) void {
-    var playerPosition = map.enter();
-    if (loadPlayerPosition) |position| {
-        playerPosition = position;
-    } else if (back != .none) {
-        playerPosition = player.collider(world).min;
-    }
-    loadPlayerPosition = null;
-
+    const playerPosition = map.enter();
     switch (back) {
         .none => {
-            context.oldMapIndex = 0;
-            talk.start(2);
+            rebuildMap(world, playerPosition);
+            world.add(world.entity, Dialog{
+                .lines = factory.dialogues[2].lines,
+            });
+            world.add(world.getIdentity(Player).?, Interact.Disabled{});
             state = .talk;
         },
-        .talk => talk.next(),
-        .battle => state = .map,
-        .menu => state = .menu,
+        .battle => finishBattle(world),
+        .load => {
+            rebuildMap(world, loadPlayerPosition.?);
+            state = .map;
+        },
+        .menu => {
+            if (loadPlayerPosition) |position| {
+                rebuildMap(world, position);
+            }
+            state = .menu;
+        },
     }
-    rebuildMap(world, playerPosition);
+    loadPlayerPosition = null;
+    player.cameraLookAt(world);
     menu.active = 6;
     zhu.audio.playMusic("voc/back.ogg");
 }
@@ -125,6 +133,7 @@ pub fn changeMap(world: *ecs.World) void {
 // 清空旧地图并创建新地图的实体。
 fn rebuildMap(world: *ecs.World, playerPosition: zhu.Vector2) void {
     world.reset();
+    world.entity = world.createEntity();
     factory.spawnPlayer(world, playerPosition);
 
     for (map.current.actors) |key| {
@@ -134,6 +143,126 @@ fn rebuildMap(world: *ecs.World, playerPosition: zhu.Vector2) void {
         factory.spawnActor(world, key);
     }
     player.cameraLookAt(world);
+}
+
+// 处理战斗结果并继续使用进入战斗前的地图实体。
+fn finishBattle(world: *ecs.World) void {
+    const actorEntity = findBattleActor(world);
+
+    switch (context.battle.result) {
+        .fighting => unreachable,
+        .win => {
+            if (world.getIdentity(Interact)) |entity| {
+                if (entity == actorEntity) {
+                    world.removeIdentity(Interact);
+                }
+            }
+            world.destroyEntity(actorEntity);
+            state = if (world.has(world.entity, Dialog)) .talk else .map;
+        },
+        .escape => {
+            world.getPtr(actorEntity, Enemy).?.wait = 0.5;
+            if (world.has(world.entity, Dialog)) {
+                world.remove(world.entity, Dialog);
+                world.remove(world.getIdentity(Player).?, Interact.Disabled);
+            }
+            world.removeIdentity(Interact);
+            state = .map;
+        },
+    }
+}
+
+// 根据稳定人物标识查找当前地图中的战斗实体。
+fn findBattleActor(world: *ecs.World) ecs.Entity {
+    var query = world.query(.{Actor});
+    while (query.next()) |entity| {
+        const actor = query.get(entity, Actor);
+        if (actor.key == context.battle.actor) return entity;
+    }
+    unreachable;
+}
+
+test "战斗胜利后保留对话并删除人物实体" {
+    var world = ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    world.entity = world.createEntity();
+    const playerEntity = world.createIdentity(Player);
+    world.add(world.entity, Dialog{
+        .lines = factory.dialogues[36].lines,
+    });
+    world.add(playerEntity, Interact.Disabled{});
+    const actorEntity = world.createEntity();
+    world.add(actorEntity, Actor{ .key = .wuPi });
+
+    context.battle = .{
+        .actor = .wuPi,
+        .mapIndex = 0,
+        .result = .win,
+    };
+
+    finishBattle(&world);
+
+    try std.testing.expect(state == .talk);
+    try std.testing.expect(world.has(world.entity, Dialog));
+    try std.testing.expect(world.has(playerEntity, Interact.Disabled));
+    try std.testing.expect(!world.has(actorEntity, Actor));
+}
+
+test "战斗胜利后没有对话则返回地图" {
+    var world = ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    world.entity = world.createEntity();
+    const actorEntity = world.createEntity();
+    world.add(actorEntity, Actor{ .key = .senLin_feiJiangJun1 });
+
+    context.battle = .{
+        .actor = .senLin_feiJiangJun1,
+        .mapIndex = 0,
+        .result = .win,
+    };
+
+    finishBattle(&world);
+
+    try std.testing.expect(state == .map);
+    try std.testing.expect(!world.has(actorEntity, Actor));
+}
+
+test "逃跑后关闭对话并保留冷却中的敌人" {
+    var world = ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    world.entity = world.createEntity();
+    const playerEntity = world.createIdentity(Player);
+    world.add(world.entity, Dialog{
+        .lines = factory.dialogues[36].lines,
+    });
+    world.add(playerEntity, Interact.Disabled{});
+    const actorEntity = world.createEntity();
+    world.addAll(actorEntity, .{
+        Actor{ .key = .wuPi },
+        Enemy{ .value = .init(.zero, .xy(48, 48)) },
+        Interact{},
+    });
+    world.addIdentity(actorEntity, Interact);
+
+    context.battle = .{
+        .actor = .wuPi,
+        .mapIndex = 0,
+        .result = .escape,
+    };
+
+    finishBattle(&world);
+
+    try std.testing.expect(state == .map);
+    try std.testing.expect(!world.has(world.entity, Dialog));
+    try std.testing.expect(!world.has(playerEntity, Interact.Disabled));
+    try std.testing.expectEqual(null, world.getIdentity(Interact));
+    try std.testing.expectEqual(
+        @as(f32, 0.5),
+        world.get(actorEntity, Enemy).?.wait,
+    );
 }
 
 pub fn exit() void {}
@@ -165,6 +294,11 @@ pub fn update(world: *ecs.World, delta: f32) void {
             headerIndex += len;
             headerTimer.restart();
         }
+        return;
+    }
+
+    if (dialogUi.update(world)) |event| {
+        TalkState.handle(event);
         return;
     }
 
@@ -205,7 +339,7 @@ pub fn draw(world: *ecs.World) void {
         zhu.text.draw(tip, .xy(240, 440), .{ .color = .yellow });
         zhu.text.msdf.end();
     }
-    state.draw();
+    state.draw(world);
     if (header.len != 0) {
         zhu.text.msdf.begin();
         zhu.text.draw(header[0..headerIndex], .xy(80, 100), .{
@@ -231,7 +365,7 @@ const MapState = struct {
         const area = collider.move(position);
         const object = map.getObject(map.positionIndex(area.center()));
         if (object > 4) {
-            if (!warn) return changeMapIfNeed(object);
+            if (!warn) return changeMapIfNeed(world, object);
         } else warn = false;
 
         if (world.getIdentity(Enemy)) |target| {
@@ -240,22 +374,24 @@ const MapState = struct {
             const actor = factory.get(targetActor.key);
             // 是否需要对话
             if (actor.dialogues.len != 0) {
-                talk.start(actor.dialogues[0]);
+                world.add(world.entity, Dialog{
+                    .lines = factory.dialogues[actor.dialogues[0]].lines,
+                });
+                world.add(world.getIdentity(Player).?, Interact.Disabled{});
                 state = .talk;
             } else {
-                context.oldMapIndex = map.linkIndex;
-                context.battleActorKey = targetActor.key;
+                context.battle = .{
+                    .actor = targetActor.key,
+                    .mapIndex = map.linkIndex,
+                };
                 back = .battle;
                 scene.changeScene(.battle);
             }
             return;
         }
 
-        if (world.getIdentity(Talk)) |target| {
-            const targetActor = world.get(target, Actor).?;
-            const index: u8 = if (player.progress > 4) 1 else 0;
-            const actor = factory.get(targetActor.key);
-            talk.start(actor.dialogues[index]);
+        system.dialog.update(world);
+        if (world.has(world.entity, Dialog)) {
             state = .talk;
             return;
         }
@@ -264,10 +400,10 @@ const MapState = struct {
         if (!input.released(.confirm)) return;
         // 开启宝箱
         const talkObject = map.talk(area.min, facing);
-        if (talkObject) |pickupIndex| openChest(pickupIndex);
+        if (talkObject) |pickupIndex| openChest(world, pickupIndex);
     }
 
-    fn changeMapIfNeed(object: u8) void {
+    fn changeMapIfNeed(world: *ecs.World, object: u8) void {
         const link = map.links[object];
         if (player.progress > link.progress) {
             std.log.info("change map link index: {d}", .{object});
@@ -278,30 +414,43 @@ const MapState = struct {
 
         if (player.progress == 1) {
             warn = true;
-            talk.start(5);
+            world.add(world.entity, Dialog{
+                .lines = factory.dialogues[5].lines,
+            });
+            world.add(world.getIdentity(Player).?, Interact.Disabled{});
             state = .talk;
         }
 
         if (player.progress == 4) {
             player.progress += 1;
-            talk.start(32);
+            world.add(world.entity, Dialog{
+                .lines = factory.dialogues[32].lines,
+            });
+            world.add(world.getIdentity(Player).?, Interact.Disabled{});
             state = .talk;
         }
 
         if (player.progress == 10) {
             warn = true;
-            talk.start(37);
+            world.add(world.entity, Dialog{
+                .lines = factory.dialogues[37].lines,
+            });
+            world.add(world.getIdentity(Player).?, Interact.Disabled{});
             state = .talk;
         }
     }
 
-    fn openChest(pickIndex: u16) void {
+    fn openChest(world: *ecs.World, pickIndex: u16) void {
         const object = item.pickupZon[pickIndex];
 
         if (object.itemIndex == 0 and object.count == 0) {
             const gold = zhu.random.int(u8, 10, 100);
             player.money += gold;
-            talk.startNumber(0, gold);
+            world.add(world.entity, Dialog{
+                .lines = factory.dialogues[0].lines,
+                .value = .{ .number = gold },
+            });
+            world.add(world.getIdentity(Player).?, Interact.Disabled{});
             state = .talk;
         } else {
             const added = player.addItem(object.itemIndex);
@@ -309,7 +458,13 @@ const MapState = struct {
                 tip = "你已经带满了！";
                 return;
             }
-            talk.startText(1, item.zon[object.itemIndex].name);
+            world.add(world.entity, Dialog{
+                .lines = factory.dialogues[1].lines,
+                .value = .{
+                    .text = item.zon[object.itemIndex].name,
+                },
+            });
+            world.add(world.getIdentity(Player).?, Interact.Disabled{});
             state = .talk;
         }
         map.openChest(pickIndex);
@@ -513,40 +668,33 @@ const SaveState = struct {
 };
 
 const TalkState = struct {
-    fn update(world: *ecs.World, _: f32) void {
-        const talkEvent = talk.update();
-        if (talkEvent) |event| switch (event) {
-            .finish => {
-                world.removeIdentity(Talk);
-                state = .map;
-            },
-            .openWeaponShop, .openPotionShop => {
+    fn handle(event: dialog.Event) void {
+        switch (event) {
+            .finish => state = .map,
+            .openWeaponShop => {
                 state = .shop;
-                shop = if (event == .openWeaponShop)
-                    &weaponShop
-                else
-                    &potionShop;
+                shop = &weaponShop;
+            },
+            .openPotionShop => {
+                state = .shop;
+                shop = &potionShop;
             },
             .openSale => state = .sale,
-            .startBattleThenTalk, .startBattleThenMap => {
-                world.removeIdentity(Talk);
-                context.oldMapIndex = map.linkIndex;
-                context.battleActorKey = talk.recentActor();
-                back = if (event == .startBattleThenTalk)
-                    .talk
-                else
-                    .battle;
+            .battle => |actorKey| {
+                context.battle = .{
+                    .actor = actorKey,
+                    .mapIndex = map.linkIndex,
+                };
+                back = .battle;
                 scene.changeScene(.battle);
             },
             .showSwordTip => {
-                world.removeIdentity(Talk);
                 // 打败了巫批，对话完成
                 header = "　　太好了！终于找到了失落已久的“圣剑”，就用它的威力把大魔王彻底杀死吧！　";
                 headerColor = .white;
                 headerTimer.restart();
             },
             .showEnding => {
-                world.removeIdentity(Talk);
                 // 打败了大魔王
                 header =
                     \\　　祝贺你成功打爆试玩版！详细情况请看Readme.txt
@@ -558,7 +706,7 @@ const TalkState = struct {
                 headerColor = .red;
                 headerTimer.restart();
             },
-        };
+        }
     }
 };
 
@@ -576,14 +724,19 @@ const AboutState = struct {
 const SaleState = struct {
     var sell: bool = false;
 
-    fn update(_: f32) void {
+    fn update(world: *ecs.World, _: f32) void {
         const playerSell = player.sellItem();
         if (!sell) sell = playerSell;
 
         if (input.released(.menu) or input.released(.cancel) or
             input.mouseReleased(.RIGHT))
         {
-            talk.start(if (sell) 27 else 26);
+            world.add(world.entity, Dialog{
+                .lines = factory.dialogues[
+                    if (sell) 27 else 26
+                ].lines,
+            });
+            world.add(world.getIdentity(Player).?, Interact.Disabled{});
             state = .talk;
             sell = false;
         }
@@ -597,7 +750,7 @@ const Shop = struct {
     notBoughtDialogue: u16,
     boughtDialogue: u16,
 
-    pub fn update(self: *Shop) void {
+    pub fn update(self: *Shop, world: *ecs.World) void {
         self.current = item.update(self.items.len, self.current);
 
         if (input.released(.buyItem)) {
@@ -609,11 +762,14 @@ const Shop = struct {
         }
 
         if (input.released(.menu) or input.released(.cancel)) {
-            const dialogue = if (bought)
+            const dialogId = if (bought)
                 self.boughtDialogue
             else
                 self.notBoughtDialogue;
-            talk.start(dialogue);
+            world.add(world.entity, Dialog{
+                .lines = factory.dialogues[dialogId].lines,
+            });
+            world.add(world.getIdentity(Player).?, Interact.Disabled{});
             state = .talk;
             bought = false;
         }

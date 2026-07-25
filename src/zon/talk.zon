@@ -338,13 +338,13 @@
             .{
                 .actor = .tuYing,
                 .content = "他妈的，你小子是不是活的不耐烦了？给老子敬酒不吃吃罚酒，好！今天就修理修理你！",
-                .event = .startBattleThenTalk,
+                .event = .{ .battle = .tuYing },
             },
             .{ .actor = .daoBa, .content = "好家伙，还有两下子嘛！" },
             .{
                 .actor = .daoBa,
                 .content = "看我的",
-                .event = .startBattleThenTalk,
+                .event = .{ .battle = .daoBa },
             },
             .{ .actor = .player, .content = "柔儿你没事吧？" },
             .{ .actor = .rouEr, .content = "呜……幸好你来了，不然……不然……" },
@@ -405,7 +405,7 @@
             .{
                 .actor = .player,
                 .content = "哼！有本事就来拿吧。",
-                .event = .startBattleThenMap,
+                .event = .{ .battle = .senLin_feiJiangJun1 },
             },
         },
     },
@@ -422,7 +422,7 @@
             .{
                 .actor = .player,
                 .content = "看刀！",
-                .event = .startBattleThenMap,
+                .event = .{ .battle = .senLin_wuLingYun },
             },
         },
     },
@@ -434,7 +434,7 @@
             .{
                 .actor = .senLin_wuDi1,
                 .content = "小子，你不想活了。先过我这关吧！",
-                .event = .startBattleThenMap,
+                .event = .{ .battle = .senLin_wuDi1 },
             },
         },
     },
@@ -449,7 +449,7 @@
             .{
                 .actor = .wuPi,
                 .content = "气死我了，看招。",
-                .event = .startBattleThenTalk,
+                .event = .{ .battle = .wuPi },
             },
             .{ .actor = .wuPi, .content = "啊……" },
             .{ .actor = .player, .content = "死吧！罪大恶极的强盗。" },
@@ -502,7 +502,7 @@
             .{
                 .actor = .daMoWang,
                 .content = "……既然被你看穿了，那我就送你下地狱去吧！！！",
-                .event = .startBattleThenTalk,
+                .event = .{ .battle = .daMoWang },
             },
             .{ .actor = .daMoWang, .content = "什么？这……这……" },
             .{ .actor = .daMoWang, .content = "不！不可能的！！绝对不可能的！！！" },

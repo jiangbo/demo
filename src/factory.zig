@@ -42,6 +42,8 @@ pub const ActorConfig = struct {
 };
 
 pub const actors: []const ActorConfig = @import("zon/actor.zon");
+pub const dialogues: []const component.dialog.Script =
+    @import("zon/talk.zon");
 
 // 根据 ZON 中的 key 生成稳定、可读的角色引用。
 pub const Key = blk: {
@@ -54,6 +56,14 @@ pub const Key = blk: {
 
     break :blk @Enum(u16, .exhaustive, &names, &values);
 };
+
+comptime {
+    for (dialogues, 0..) |dialogue, id| {
+        if (dialogue.id != id) {
+            @compileError("对话 ID 必须连续并按顺序排列");
+        }
+    }
+}
 
 pub fn get(key: Key) *const ActorConfig {
     return &actors[@intFromEnum(key)];
@@ -147,7 +157,10 @@ pub fn spawnActor(world: *ecs.World, key: Key) void {
     });
 
     if (!data.enemy and data.dialogues.len != 0) {
-        world.add(entity, component.Talk{});
+        world.addAll(entity, .{
+            component.Interact{},
+            component.dialog.Talk{ .dialogues = data.dialogues },
+        });
     }
 
     if (data.enemy) {

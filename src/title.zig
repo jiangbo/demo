@@ -56,7 +56,7 @@ fn menuSelected(index: u8) void {
         2 => window.exit(),
         3, 4, 5, 6, 7 => |event| {
             world.load(event) catch return;
-            world.back = .battle;
+            world.back = .load;
             scene.changeScene(.world);
         },
         8 => menu.active = 4,
@@ -76,6 +76,7 @@ pub fn draw() void {
 
 fn updateHeader(delta: f32) void {
     if (input.released(.confirm) or input.mouseReleased(.LEFT)) {
+        world.back = .none;
         scene.changeScene(.world);
         return;
     }
