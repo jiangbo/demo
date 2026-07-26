@@ -464,7 +464,7 @@ const MapState = struct {
         if (!zon.input.released(.confirm)) return;
         // 开启宝箱
         const talkObject = map.talk(area.min, facing);
-        if (talkObject) |pickupIndex| openChest(world, pickupIndex);
+        if (talkObject) |chestId| openChest(world, chestId);
     }
 
     fn changeMapIfNeed(world: *ecs.World, key: zon.Portal.Key) void {
@@ -508,12 +508,26 @@ const MapState = struct {
         }
     }
 
-    fn openChest(world: *ecs.World, pickIndex: u16) void {
-        const object = item.pickupZon[pickIndex];
+    fn openChest(world: *ecs.World, chestId: u16) void {
+        const chest = zon.Chest.get(chestId);
         const data = world.getPtr(world.entity, storage.Player).?;
         const inventory = &data.inventory;
 
-        if (object.itemIndex == 0 and object.count == 0) {
+        if (chest.item) |key| {
+            const added = player.addItem(inventory, key);
+            if (!added) {
+                tip = "你已经带满了！";
+                return;
+            }
+            world.add(world.entity, Dialog{
+                .lines = zon.dialogues[1].lines,
+                .value = .{
+                    .text = zon.Item.get(key).name,
+                },
+            });
+            world.add(world.getIdentity(Player).?, Interact.Disabled{});
+            state = .talk;
+        } else {
             const gold = zhu.random.int(u8, 10, 100);
             inventory.money += gold;
             world.add(world.entity, Dialog{
@@ -522,22 +536,8 @@ const MapState = struct {
             });
             world.add(world.getIdentity(Player).?, Interact.Disabled{});
             state = .talk;
-        } else {
-            const added = player.addItem(inventory, object.itemIndex);
-            if (!added) {
-                tip = "你已经带满了！";
-                return;
-            }
-            world.add(world.entity, Dialog{
-                .lines = zon.dialogues[1].lines,
-                .value = .{
-                    .text = item.zon[object.itemIndex].name,
-                },
-            });
-            world.add(world.getIdentity(Player).?, Interact.Disabled{});
-            state = .talk;
         }
-        map.openChest(pickIndex);
+        map.openChest(chestId);
     }
 };
 
@@ -624,8 +624,8 @@ pub fn load(world: *ecs.World, index: u8) !void {
     };
 
     item.picked = .initEmpty();
-    for (record.openedChests) |pickupIndex| {
-        item.picked.set(pickupIndex);
+    for (record.openedChests) |chestId| {
+        item.picked.set(chestId);
     }
 
     const deadActors = world.getPtr(world.entity, storage.DeadActors).?;
@@ -660,11 +660,11 @@ const SaveState = struct {
     }
 
     fn save(world: *ecs.World, index: u8) !void {
-        var openedChestBuffer: [32]u16 = undefined;
+        var openedChestBuffer: [zon.Chest.list.len]u16 = undefined;
         var openedChestCount: usize = 0;
         var chestIterator = item.picked.iterator(.{});
-        while (chestIterator.next()) |pickupIndex| {
-            openedChestBuffer[openedChestCount] = @intCast(pickupIndex);
+        while (chestIterator.next()) |chestId| {
+            openedChestBuffer[openedChestCount] = @intCast(chestId);
             openedChestCount += 1;
         }
 
@@ -773,7 +773,7 @@ const SaleState = struct {
 
 const Shop = struct {
     var bought: bool = false;
-    items: [16]u8,
+    items: [16]?zon.Item.Key,
     current: u8 = 0,
     notBoughtDialogue: u16,
     boughtDialogue: u16,
@@ -784,9 +784,8 @@ const Shop = struct {
         self.current = item.update(self.items.len, self.current);
 
         if (zon.input.released(.buyItem)) {
-            const itemIndex = self.items[self.current];
-            if (itemIndex != 0) {
-                const playerBuy = buy(inventory, itemIndex);
+            if (self.items[self.current]) |key| {
+                const playerBuy = buy(inventory, key);
                 if (!bought) bought = playerBuy;
             }
         }
@@ -805,15 +804,15 @@ const Shop = struct {
         }
     }
 
-    fn buy(inventory: *storage.Inventory, itemIndex: u8) bool {
-        const buyItem = item.zon[itemIndex];
+    fn buy(inventory: *storage.Inventory, key: zon.Item.Key) bool {
+        const buyItem = zon.Item.get(key);
 
         if (buyItem.money > inventory.money) {
             tip = "兄弟，你的钱不够！";
             return false;
         }
 
-        const bagEnough = player.addItem(inventory, itemIndex);
+        const bagEnough = player.addItem(inventory, key);
         if (!bagEnough) {
             tip = "你已经带满了！";
             return false;
@@ -840,16 +839,28 @@ const Shop = struct {
 };
 var weaponShop: Shop = .{
     .items = .{
-        12, 12, 13, 13, 14, 14, 9, 9, //
-        10, 10, 8,  8,  16, 16, 0, 0,
+        .biShou,          .biShou,
+        .ningShuangJian,  .ningShuangJian,
+        .guWenMingKuiJia, .guWenMingKuiJia,
+        .changQuanQuanPu, .changQuanQuanPu,
+        .zhongJian,       .zhongJian,
+        .fenKuLou,        .fenKuLou,
+        .piJia,           .piJia,
+        null,             null,
     },
     .notBoughtDialogue = 18,
     .boughtDialogue = 19,
 };
 var potionShop: Shop = .{
     .items = .{
-        5,  5,  6,  6,  7, 7, 4, 4, //
-        17, 17, 18, 18, 0, 0, 0, 0,
+        .huaMoGu,       .huaMoGu,
+        .zhiXueCao,     .zhiXueCao,
+        .huanHunCao,    .huanHunCao,
+        .hongMeiGui,    .hongMeiGui,
+        .hongSeYaoPing, .hongSeYaoPing,
+        .yaoPing,       .yaoPing,
+        null,           null,
+        null,           null,
     },
     .notBoughtDialogue = 22,
     .boughtDialogue = 23,

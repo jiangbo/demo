@@ -21,7 +21,7 @@ pub const Stats = struct {
 // 玩家持有的金钱和物品。
 pub const Inventory = struct {
     money: u32 = 50, // 金钱
-    items: [16]u8 = @splat(0), // 物品
+    items: [16]?zon.Item.Key = @splat(null), // 物品
 };
 
 // 玩家跨地图和战斗长期保留的数据。

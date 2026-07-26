@@ -18,8 +18,46 @@ const Factory = struct {
 
 pub const Facing = enum { down, left, up, right };
 
+// 可持有、使用或交易的物品配置。
+pub const Item = struct {
+    key: []const u8,
+    name: []const u8,
+    icon: u8, // goods.png 中的图片格子
+    about: []const u8 = &.{},
+    money: u32 = 0,
+    exp: i32 = 0,
+    health: i32 = 0,
+    attack: i32 = 0,
+    defend: i32 = 0,
+
+    pub const list: []const Item = @import("zon/item.zon");
+    pub const Key = zhu.enums.fromField(list, "key");
+
+    // 根据稳定标识取得物品配置。
+    pub fn get(key: Key) *const Item {
+        return &list[@intFromEnum(key)];
+    }
+};
+
+pub const Chest = struct {
+    id: u16,
+    item: ?Item.Key = null,
+
+    pub const Place = struct {
+        id: u16,
+        tileIndex: u16,
+    };
+
+    pub const list: []const ?Chest = @import("zon/chest.zon");
+
+    // 根据稳定 ID 取得宝箱配置。
+    pub fn get(id: u16) *const Chest {
+        return &list[id].?;
+    }
+};
+
 pub const Actor = struct {
-    key: [:0]const u8,
+    key: []const u8,
     enemy: bool = false,
     dialogues: ?[2]u16 = null,
     name: []const u8 = &.{},
@@ -33,7 +71,7 @@ pub const Actor = struct {
     defend: u16 = 0,
     speed: f32 = 0,
     panicSpeed: ?f32 = null, // 慌乱时的移动速度
-    goods: []const u8 = &.{},
+    goods: []const Item.Key = &.{},
     money: u16 = 0,
     progress: u8 = 0xFF,
     escape: u8 = 50,
@@ -74,14 +112,12 @@ pub const dialogues: []const dialog.Script = @import("zon/talk.zon");
 pub const factory: Factory = @import("zon/factory.zon");
 pub const input = zhu.key.bind(@import("zon/input.zon"));
 
-pub const Chest = struct { tileIndex: u16, pickupIndex: u16 };
-
 pub const Map = struct {
     grid: tiled.Grid,
     back: []const u16,
     ground: []const u16,
     object: []const u8,
-    chests: []const Chest = &.{},
+    chests: []const Chest.Place = &.{},
     actors: []const Actor.Key = &.{},
 };
 
@@ -105,9 +141,10 @@ pub const maps: []const Map = @import("zon/map.zon");
 
 comptime {
     for (dialogues, 0..) |dialogue, id| {
-        if (dialogue.id != id) {
-            @compileError("对话 ID 必须连续并按顺序排列");
-        }
+        std.debug.assert(dialogue.id == id);
+    }
+    for (Chest.list, 0..) |chest, id| {
+        if (chest) |value| std.debug.assert(value.id == id);
     }
 }
 

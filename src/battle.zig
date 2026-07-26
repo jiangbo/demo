@@ -12,7 +12,6 @@ const map = @import("map.zig");
 const context = @import("context.zig");
 const player = @import("player.zig");
 const menu = @import("menu.zig");
-const item = @import("item.zig");
 const factory = @import("factory.zig");
 const storage = @import("storage.zig");
 const zon = @import("zon.zig");
@@ -373,8 +372,8 @@ const EnemyDeathPhase = struct {
             step += 1;
             data.stats.exp += enemy.level * 20;
             data.inventory.money += enemy.money;
-            for (enemy.goods) |index| {
-                _ = player.addItem(&data.inventory, index);
+            for (enemy.goods) |key| {
+                _ = player.addItem(&data.inventory, key);
             }
             return;
         }
@@ -409,8 +408,8 @@ const EnemyDeathPhase = struct {
         if (enemy.goods.len != 0) {
             zhu.text.draw("缴获物品：", .xy(220, 240), .{});
 
-            for (enemy.goods) |index| {
-                const name = item.zon[index].name;
+            for (enemy.goods) |key| {
+                const name = zon.Item.get(key).name;
                 zhu.text.draw(name, .xy(310, 240), .{ .color = .yellow });
             }
 

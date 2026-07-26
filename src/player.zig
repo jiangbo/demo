@@ -7,7 +7,8 @@ const math = zhu.math;
 
 const component = @import("component.zig");
 const item = @import("item.zig");
-const input = @import("zon.zig").input;
+const zon = @import("zon.zig");
+const input = zon.input;
 const map = @import("map.zig");
 const worldScene = @import("world.zig");
 const factory = @import("factory.zig");
@@ -39,12 +40,12 @@ pub fn openItem(data: *storage.Player) bool {
     }
     itemIndex = item.update(inventory.items.len, itemIndex);
 
-    if (inventory.items[itemIndex] == 0) return false;
+    const key = inventory.items[itemIndex] orelse return false;
 
     if (input.released(.useItem)) {
         //  使用物品
         // TODO 绘制状态
-        const usedItem = item.zon[inventory.items[itemIndex]];
+        const usedItem = zon.Item.get(key);
 
         addStatusValue(&stats.exp, usedItem.exp);
         addStatusValue(&stats.health, usedItem.health);
@@ -53,13 +54,13 @@ pub fn openItem(data: *storage.Player) bool {
         if (stats.health > stats.maxHealth) {
             stats.health = stats.maxHealth;
         }
-        inventory.items[itemIndex] = 0;
+        inventory.items[itemIndex] = null;
         needDrawInfo = true;
 
         return true;
     } else if (input.released(.dropItem)) {
         // 丢弃物品
-        inventory.items[itemIndex] = 0;
+        inventory.items[itemIndex] = null;
     }
 
     return false;
@@ -70,25 +71,25 @@ fn addStatusValue(value: *u16, add: i32) void {
     value.* = if (tmp < 0) 0 else @intCast(tmp);
 }
 
-var sellItemIndex: u16 = 0;
+var sellItemKey: ?zon.Item.Key = null;
 pub fn sellItem(inventory: *storage.Inventory) bool {
-    if (sellItemIndex != 0) {
+    if (sellItemKey != null) {
         if (input.released(.confirm) or input.released(.cancel)) {
-            sellItemIndex = 0;
+            sellItemKey = null;
         }
         return false;
     }
 
     itemIndex = item.update(inventory.items.len, itemIndex);
 
-    if (inventory.items[itemIndex] == 0) return false;
+    const key = inventory.items[itemIndex] orelse return false;
 
     if (input.released(.useItem)) {
         // 卖出物品
-        sellItemIndex = inventory.items[itemIndex];
-        const usedItem = item.zon[sellItemIndex];
+        sellItemKey = key;
+        const usedItem = zon.Item.get(key);
         inventory.money += usedItem.money / 2;
-        inventory.items[itemIndex] = 0;
+        inventory.items[itemIndex] = null;
         worldScene.tip = "这东西归别人了！";
         return true;
     }
@@ -109,10 +110,10 @@ pub fn collider(world: *ecs.World) math.Rect {
     return value.move(position);
 }
 
-pub fn addItem(inventory: *storage.Inventory, itemId: u8) bool {
+pub fn addItem(inventory: *storage.Inventory, key: zon.Item.Key) bool {
     for (&inventory.items) |*value| {
-        if (value.* == 0) {
-            value.* = itemId;
+        if (value.* == null) {
+            value.* = key;
             return true;
         }
     }
@@ -255,8 +256,8 @@ pub fn drawSellItem(inventory: *const storage.Inventory) void {
     defer zhu.text.msdf.end();
 
     var buffer: [50]u8 = undefined;
-    if (sellItemIndex != 0) {
-        const itemInfo = item.zon[sellItemIndex];
+    if (sellItemKey) |key| {
+        const itemInfo = zon.Item.get(key);
         const sellTip = zhu.format(&buffer, "卖掉[{s}]得到：{d}", .{
             itemInfo.name,
             itemInfo.money / 2,

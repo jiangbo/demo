@@ -1,26 +1,11 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const input = @import("zon.zig").input;
-
-pub const Item = struct {
-    id: u16,
-    name: []const u8 = &.{},
-    about: []const u8 = &.{},
-    money: u32 = 0,
-    exp: i32 = 0,
-    health: i32 = 0,
-    attack: i32 = 0,
-    defend: i32 = 0,
-};
-
-pub const Pickup = struct { itemIndex: u8, count: u8 };
-
-pub const zon: []const Item = @import("zon/item.zon");
-pub const pickupZon: []const Pickup = @import("zon/pickup.zon");
+const zon = @import("zon.zig");
+const input = zon.input;
 pub const position: zhu.Vector2 = .xy(120, 90);
 
-pub var picked: std.StaticBitSet(32) = .initEmpty();
+pub var picked: std.StaticBitSet(zon.Chest.list.len) = .initEmpty();
 
 var texture: zhu.Image = undefined;
 var bgTexture: zhu.Image = undefined;
@@ -51,13 +36,13 @@ pub fn update(len: u8, index: u8) u8 {
     return itemIndex;
 }
 
-pub fn draw(items: []const u8, itemIndex: usize) void {
+pub fn draw(items: []const ?zon.Item.Key, itemIndex: usize) void {
     zhu.batch.drawImage(bgTexture, position.addXY(-10, -10), .{});
 
     // 当前选中物品
     var buffer: [32]u8 = undefined;
-    if (items[itemIndex] != 0) {
-        const current = zon[items[itemIndex]];
+    if (items[itemIndex]) |key| {
+        const current = zon.Item.get(key);
         zhu.text.msdf.begin();
 
         zhu.text.draw(current.name, position.addXY(70, 20), .{});
@@ -84,8 +69,8 @@ pub fn draw(items: []const u8, itemIndex: usize) void {
         zhu.text.msdf.end();
     }
 
-    const itemBg = getIconFromIndex(0);
-    const itemSelected = getIconFromIndex(1);
+    const itemBg = getIcon(0);
+    const itemSelected = getIcon(1);
 
     const offset = position.addXY(5, 170);
 
@@ -100,10 +85,10 @@ pub fn draw(items: []const u8, itemIndex: usize) void {
             defer if (itemIndex == index) {
                 zhu.batch.drawImage(itemSelected, itemPos, .{});
             };
-            if (items[index] == 0) continue;
+            const key = items[index] orelse continue;
 
             zhu.batch.drawImage(
-                getIconFromIndex(items[index] - 2),
+                getIcon(zon.Item.get(key).icon),
                 itemPos,
                 .{},
             );
@@ -111,9 +96,9 @@ pub fn draw(items: []const u8, itemIndex: usize) void {
     }
 }
 
-fn getIconFromIndex(index: usize) zhu.Image {
-    const row: f32 = @floatFromInt(index / 8);
-    const col: f32 = @floatFromInt(index % 8);
+fn getIcon(icon: usize) zhu.Image {
+    const row: f32 = @floatFromInt(icon / 8);
+    const col: f32 = @floatFromInt(icon % 8);
     const pos = zhu.Vector2.xy(col * 48, row * 48);
     return texture.sub(.init(pos, .xy(48, 48)));
 }

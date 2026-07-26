@@ -56,7 +56,7 @@ pub fn enter() void {
     buildVertexBuffer(current.ground);
     backgroundIndex = vertexArray.items.len;
     for (current.chests) |chest| {
-        if (item.picked.isSet(chest.pickupIndex))
+        if (item.picked.isSet(chest.id))
             appendVertex(302, chest.tileIndex)
         else
             appendVertex(301, chest.tileIndex);
@@ -106,19 +106,19 @@ pub fn talk(position: zhu.Vector2, facing: Facing) ?u16 {
     for (current.chests) |chest| {
         if (index != chest.tileIndex) continue;
         // 宝箱已经被打开，不需要处理任何东西
-        if (item.picked.isSet(chest.pickupIndex)) return null;
-        return @intCast(chest.pickupIndex);
+        if (item.picked.isSet(chest.id)) return null;
+        return chest.id;
     }
     unreachable;
 }
 
-pub fn openChest(pickIndex: usize) void {
+pub fn openChest(chestId: u16) void {
     // back 和 ground 已经填充的顶点不需要修改，修改宝箱的顶点
 
     for (current.chests, 0..) |chest, index| {
-        if (pickIndex != chest.pickupIndex) continue;
+        if (chestId != chest.id) continue;
 
-        item.picked.set(pickIndex);
+        item.picked.set(chestId);
         const vertex = buildVertex(302, chest.tileIndex);
         vertexArray.items[backgroundIndex + index] = vertex;
         return;
