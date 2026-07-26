@@ -11,11 +11,11 @@ const scene = @import("scene.zig");
 const map = @import("map.zig");
 const context = @import("context.zig");
 const player = @import("player.zig");
-const menu = @import("menu.zig");
 const factory = @import("factory.zig");
 const component = @import("component.zig");
 const storage = @import("storage.zig");
 const zon = @import("zon.zig");
+const ui = @import("ui/ui.zig");
 
 const Story = component.event.Story;
 
@@ -89,7 +89,7 @@ pub fn enter(world: *ecs.World) void {
     enemy = zon.Actor.get(enemyKey).*;
     map.portalKey = .battle;
     map.enter();
-    menu.active = 0;
+    ui.battle.reset();
     changePhase(world, .menu);
     camera.main.position = .zero;
 }
@@ -162,7 +162,7 @@ pub fn draw(world: *ecs.World) void {
     zhu.text.draw(text, position.addXY(305, 5), .{ .color = .black });
     zhu.text.msdf.end();
 
-    menu.draw();
+    ui.battle.draw();
     phase.draw(world);
 }
 
@@ -179,12 +179,11 @@ fn computeDamage(attack: u16, defend: u16) u16 {
 
 const MenuPhase = struct {
     fn update(world: *ecs.World, _: f32) void {
-        const optionalEvent = menu.update();
-        if (optionalEvent) |event| switch (event) {
-            0 => changePhase(world, .playerAttack),
-            1 => changePhase(world, .status),
-            2 => changePhase(world, .item),
-            3 => {
+        if (ui.battle.update()) |req| switch (req) {
+            .attack => changePhase(world, .playerAttack),
+            .status => changePhase(world, .status),
+            .item => changePhase(world, .item),
+            .escape => {
                 if (enemy.escape > zhu.random.int(u8, 0, 100)) {
                     context.battle.result = .escape;
                     scene.changeScene(.world);
@@ -194,7 +193,6 @@ const MenuPhase = struct {
                     changePhase(world, .wait);
                 }
             },
-            else => unreachable,
         };
     }
 };

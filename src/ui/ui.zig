@@ -11,6 +11,8 @@ const tip = @import("tip.zig");
 
 const Dialog = component.dialog.Dialog;
 
+pub const battle = @import("battle.zig");
+
 pub const Request = union(enum) {
     block,
     dialog: zon.dialog.Event,
