@@ -128,7 +128,10 @@ pub fn enter(world: *ecs.World) void {
             world.add(world.getIdentity(Player).?, Interact.Disabled{});
             state = .talk;
         },
-        .battle => finishBattle(world),
+        .battle => {
+            system.story.update(world);
+            finishBattle(world);
+        },
         .load => {
             rebuildMap(world, .{ .location = loadPlayerLocation.? });
             state = .map;
@@ -487,9 +490,8 @@ const MapState = struct {
         }
 
         if (data.progress == 4) {
-            data.progress += 1;
             world.addEvent(component.event.Story{
-                .demonAppeared = data.progress,
+                .progress = data.progress,
             });
             world.add(world.entity, Dialog{
                 .lines = zon.dialogues[32].lines,

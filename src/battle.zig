@@ -13,8 +13,11 @@ const context = @import("context.zig");
 const player = @import("player.zig");
 const menu = @import("menu.zig");
 const factory = @import("factory.zig");
+const component = @import("component.zig");
 const storage = @import("storage.zig");
 const zon = @import("zon.zig");
+
+const Story = component.event.Story;
 
 var enemyKey: zon.Actor.Key = undefined;
 var enemy: zon.Actor = undefined;
@@ -361,8 +364,7 @@ const EnemyDeathPhase = struct {
         audio.playSound(deadSounds[enemySounds[enemy.picture]]);
         step = 0;
         if (enemy.progress != 0xFF) {
-            const data = world.getPtr(world.entity, storage.Player).?;
-            data.progress = enemy.progress + 1;
+            world.addEvent(Story{ .progress = enemy.progress });
         }
     }
 

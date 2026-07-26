@@ -71,8 +71,8 @@ pub const Speed = struct { value: f32 };
 
 // 系统间通信的一次性消息。
 pub const event = struct {
-    // 剧情发生时携带新的剧情进度。
-    pub const Story = union(enum) {
-        demonAppeared: u8,
+    // 已经越过的剧情进度。
+    pub const Story = struct {
+        progress: u8,
     };
 };

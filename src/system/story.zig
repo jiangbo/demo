@@ -3,6 +3,7 @@ const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const factory = @import("../factory.zig");
+const storage = @import("../storage.zig");
 
 const Actor = component.actor.Actor;
 const Speed = component.Speed;
@@ -11,8 +12,15 @@ const Talk = component.dialog.Talk;
 
 pub fn update(world: *ecs.World) void {
     for (world.getEvent(Story)) |story| {
-        switch (story) {
-            .demonAppeared => |p| demonAppeared(world, p),
+        const data = world.getPtr(world.entity, storage.Player).?;
+        const progress = story.progress + 1;
+        std.debug.assert(data.progress <= progress);
+        data.progress = progress;
+
+        switch (progress) {
+            // 进度 5：大魔王出现。
+            5 => demonAppeared(world, progress),
+            else => {},
         }
     }
     world.clearEvent(Story);
@@ -34,6 +42,8 @@ test "大魔王出现后更新人物的对话和速度" {
     var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
+    world.entity = world.createEntity();
+    world.add(world.entity, storage.Player{ .progress = 4 });
     const entity = world.createEntity();
     const oldTalk: Talk = &.{
         .{ .actor = null, .content = "旧对话" },
@@ -43,12 +53,14 @@ test "大魔王出现后更新人物的对话和速度" {
         oldTalk,
         Speed{ .value = 14 },
     });
-    world.addEvent(Story{ .demonAppeared = 5 });
+    world.addEvent(Story{ .progress = 4 });
 
     update(&world);
 
+    const data = world.get(world.entity, storage.Player).?;
     const talk = world.get(entity, Talk).?;
     const speed = world.get(entity, Speed).?;
+    try std.testing.expectEqual(5, data.progress);
     try std.testing.expect(talk.ptr != oldTalk.ptr);
     try std.testing.expect(speed.value != 14);
 }
