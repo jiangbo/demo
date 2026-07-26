@@ -79,7 +79,17 @@ pub fn update(delta: f32) void {
         }
         return;
     }
-    sceneCall("update", .{delta});
+    switch (currentSceneType) {
+        .title => if (titleScene.update(delta)) |req| switch (req) {
+            .load => |index| {
+                worldScene.load(&world, index) catch return;
+                worldScene.back = .load;
+                changeScene(.world);
+            },
+        },
+        .world => worldScene.update(&world, delta),
+        .battle => battleScene.update(&world, delta),
+    }
 }
 
 pub fn draw() void {
