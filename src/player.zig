@@ -10,7 +10,6 @@ const item = @import("item.zig");
 const zon = @import("zon.zig");
 const input = zon.input;
 const map = @import("map.zig");
-const worldScene = @import("world.zig");
 const factory = @import("factory.zig");
 const storage = @import("storage.zig");
 
@@ -91,7 +90,6 @@ pub fn sellItem(inventory: *storage.Inventory) bool {
         const usedItem = zon.Item.get(key);
         inventory.money += usedItem.money / 2;
         inventory.items[itemIndex] = null;
-        worldScene.tip = "这东西归别人了！";
         return true;
     }
     return false;

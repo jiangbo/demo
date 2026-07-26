@@ -17,7 +17,7 @@ const factory = @import("factory.zig");
 const zon = @import("zon.zig");
 const system = @import("system/system.zig");
 const context = @import("context.zig");
-const dialogUi = @import("ui/dialog.zig");
+const ui = @import("ui/ui.zig");
 const storage = @import("storage.zig");
 
 const actorComponent = component.actor;
@@ -74,7 +74,7 @@ const State = union(enum) {
 
     pub fn draw(self: State, world: *ecs.World) void {
         switch (self) {
-            .map => {},
+            .map, .talk => {},
             .status => player.drawStatus(
                 world.getGlobal(storage.Stats).?,
                 world.getGlobal(storage.Inventory).?,
@@ -84,7 +84,6 @@ const State = union(enum) {
                 world.getGlobal(storage.Inventory).?,
             ),
             .about => about.draw(),
-            .talk => dialogUi.draw(world),
             .sale => player.drawSellItem(
                 world.getGlobal(storage.Inventory).?,
             ),
@@ -98,7 +97,6 @@ const State = union(enum) {
 var texture: zhu.Image = undefined;
 var state: State = .map;
 pub var back: enum { none, battle, load, menu } = .none;
-pub var tip: []const u8 = &.{};
 var header: []const u8 = &.{};
 var headerIndex: usize = 0;
 var headerTimer: zhu.Timer = .init(0.08);
@@ -107,7 +105,7 @@ pub fn init(_: *ecs.World) void {
     texture = zhu.getImage("mainmenu1.png").?;
 
     item.init();
-    dialogUi.init();
+    ui.init();
     about.init();
     map.init();
     player.init();
@@ -119,6 +117,7 @@ pub fn deinit() void {
 
 pub fn enter(world: *ecs.World) void {
     map.enter();
+    ui.reset();
     switch (back) {
         .none => {
             world.addAll(world.entity, .{
@@ -349,12 +348,6 @@ pub fn exit() void {}
 
 pub fn update(world: *ecs.World, delta: f32) void {
     const progress = world.getGlobal(storage.Progress).?.value;
-    if (tip.len != 0) {
-        if (zon.input.released(.confirm) or zon.input.released(.cancel)) {
-            tip = &.{};
-        } else return;
-    }
-
     if (header.len != 0) {
         if (header.len == headerIndex) {
             // 已经显示结束了，等待按键
@@ -378,7 +371,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
         return;
     }
 
-    if (dialogUi.update(world)) |event| {
+    if (ui.update(world, delta)) |event| {
         TalkState.handle(event);
         return;
     }
@@ -406,8 +399,6 @@ pub fn update(world: *ecs.World, delta: f32) void {
     }
 
     state.update(world, delta);
-    for (world.getEvent(Tip)) |event| tip = event.text;
-    world.clearEvent(Tip);
 }
 
 pub fn draw(world: *ecs.World) void {
@@ -416,13 +407,8 @@ pub fn draw(world: *ecs.World) void {
 
     camera.push(.window);
     defer camera.pop();
-    if (tip.len != 0) {
-        zhu.text.msdf.begin();
-        zhu.text.draw(tip, .xy(242, 442), .{ .color = .black });
-        zhu.text.draw(tip, .xy(240, 440), .{ .color = .yellow });
-        zhu.text.msdf.end();
-    }
     state.draw(world);
+    ui.draw(world);
     if (header.len != 0) {
         zhu.text.msdf.begin();
         zhu.text.draw(header[0..headerIndex], .xy(80, 100), .{
@@ -735,6 +721,9 @@ const SaleState = struct {
     fn update(world: *ecs.World, _: f32) void {
         const inventory = world.getGlobal(storage.Inventory).?;
         const playerSell = player.sellItem(inventory);
+        if (playerSell) {
+            world.addEvent(Tip{ .text = "这东西归别人了！" });
+        }
         if (!sell) sell = playerSell;
 
         if (zon.input.released(.menu) or zon.input.released(.cancel) or
@@ -765,7 +754,7 @@ const Shop = struct {
 
         if (zon.input.released(.buyItem)) {
             if (self.items[self.current]) |key| {
-                const playerBuy = buy(inventory, key);
+                const playerBuy = buy(world, inventory, key);
                 if (!bought) bought = playerBuy;
             }
         }
@@ -784,17 +773,21 @@ const Shop = struct {
         }
     }
 
-    fn buy(inventory: *storage.Inventory, key: zon.Item.Key) bool {
+    fn buy(
+        world: *ecs.World,
+        inventory: *storage.Inventory,
+        key: zon.Item.Key,
+    ) bool {
         const buyItem = zon.Item.get(key);
 
         if (buyItem.money > inventory.money) {
-            tip = "兄弟，你的钱不够！";
+            world.addEvent(Tip{ .text = "兄弟，你的钱不够！" });
             return false;
         }
 
         const bagEnough = inventory.add(key);
         if (!bagEnough) {
-            tip = "你已经带满了！";
+            world.addEvent(Tip{ .text = "你已经带满了！" });
             return false;
         }
         inventory.money -= buyItem.money;
