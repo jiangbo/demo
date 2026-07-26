@@ -30,9 +30,10 @@ pub fn init() void {
 
 pub fn exit() void {}
 
-pub fn openItem(data: *storage.Player) bool {
-    const stats = &data.stats;
-    const inventory = &data.inventory;
+pub fn openItem(
+    stats: *storage.Stats,
+    inventory: *storage.Inventory,
+) bool {
     if (needDrawInfo and
         (input.released(.confirm) or input.released(.cancel)))
     {
@@ -124,7 +125,10 @@ pub fn levelUp(stats: *storage.Stats) void {
     stats.health = stats.maxHealth;
 }
 
-pub fn drawStatus(data: *const storage.Player) void {
+pub fn drawStatus(
+    stats: *const storage.Stats,
+    inventory: *const storage.Inventory,
+) void {
     const pos = zhu.Vector2.xy(120, 90);
     // 背景
     zhu.batch.drawImage(bgTexture, pos.addXY(-10, -10), .{});
@@ -133,15 +137,15 @@ pub fn drawStatus(data: *const storage.Player) void {
     zhu.batch.drawImage(factory.playerPhoto(), pos.addXY(10, 10), .{});
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
-    drawInfo(data, pos, 30);
+    drawInfo(stats, inventory, pos, 30);
 }
 
 fn drawInfo(
-    data: *const storage.Player,
+    stats: *const storage.Stats,
+    inventory: *const storage.Inventory,
     pos: math.Vector2,
     offsetY: f32,
 ) void {
-    const stats = data.stats;
     // 等级
     var y = 22 + offsetY;
     zhu.text.draw("等级：", pos.addXY(122, y), .{ .color = .black });
@@ -205,17 +209,20 @@ fn drawInfo(
     y += offsetY;
     zhu.text.draw("金币：", pos.addXY(122, y), .{ .color = .black });
     zhu.text.draw("金币：", pos.addXY(120, y - 2), .{ .color = .yellow });
-    zhu.text.drawNumber(data.inventory.money, pos.addXY(232, y), .{
+    zhu.text.drawNumber(inventory.money, pos.addXY(232, y), .{
         .color = .black,
     });
-    zhu.text.drawNumber(data.inventory.money, pos.addXY(230, y - 2), .{
+    zhu.text.drawNumber(inventory.money, pos.addXY(230, y - 2), .{
         .color = .yellow,
     });
 }
 
 var needDrawInfo: bool = false;
-pub fn drawOpenItem(data: *const storage.Player) void {
-    item.draw(&data.inventory.items, itemIndex);
+pub fn drawOpenItem(
+    stats: *const storage.Stats,
+    inventory: *const storage.Inventory,
+) void {
+    item.draw(&inventory.items, itemIndex);
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
 
@@ -224,7 +231,7 @@ pub fn drawOpenItem(data: *const storage.Player) void {
         zhu.text.draw("现在的状态：", .xy(270, 90), .{
             .color = .yellow,
         });
-        drawInfo(data, .xy(120, 73), 20);
+        drawInfo(stats, inventory, .xy(120, 73), 20);
     }
 
     var buffer: [20]u8 = undefined;
@@ -233,7 +240,7 @@ pub fn drawOpenItem(data: *const storage.Player) void {
     const moneyStr = zhu.format(
         &buffer,
         "{d}）",
-        .{data.inventory.money},
+        .{inventory.money},
     );
     zhu.text.draw(moneyStr, item.position.addXY(60, 270), .{});
     const text = " F=使用  G=丢弃  ESC=退出";

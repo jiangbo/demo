@@ -18,10 +18,10 @@ pub fn update(world: *ecs.World) void {
     const entity = world.getIdentity(Interact) orelse return;
     const chest = world.get(entity, Chest) orelse return;
     const config = zon.Chest.get(chest.id);
-    const data = world.getPtr(world.entity, storage.Player).?;
+    const inventory = world.getGlobal(storage.Inventory);
 
     if (config.item) |key| {
-        if (!data.inventory.add(key)) {
+        if (!inventory.add(key)) {
             world.addEvent(Tip{ .text = "你已经带满了！" });
             return;
         }
@@ -31,14 +31,14 @@ pub fn update(world: *ecs.World) void {
         });
     } else {
         const gold = zhu.random.int(u8, 10, 100);
-        data.inventory.money += gold;
+        inventory.money += gold;
         world.add(world.entity, Dialog{
             .lines = zon.dialogues[0].lines,
             .value = .{ .number = gold },
         });
     }
 
-    const opened = world.getPtr(world.entity, storage.OpenedChests).?;
+    const opened = world.getGlobal(storage.OpenedChests);
     opened.set(chest.id);
     const images = world.get(entity, ChestImages).?;
     world.getPtr(entity, Sprite).?.image = images.opened;
@@ -51,11 +51,11 @@ test "背包已满时不打开宝箱" {
     defer world.deinit();
 
     world.entity = world.createEntity();
-    var data = storage.Player{};
-    for (&data.inventory.items) |*item| item.* = .zhiXueCao;
+    var inventory = storage.Inventory{};
+    for (&inventory.items) |*item| item.* = .zhiXueCao;
     world.addAll(world.entity, .{
         storage.OpenedChests.initEmpty(),
-        data,
+        inventory,
     });
 
     const entity = world.createEntity();
@@ -67,7 +67,7 @@ test "背包已满时不打开宝箱" {
 
     update(&world);
 
-    const opened = world.get(world.entity, storage.OpenedChests).?;
+    const opened = world.getGlobal(storage.OpenedChests);
     try std.testing.expect(!opened.isSet(6));
     try std.testing.expect(world.has(entity, Interact));
     try std.testing.expectEqual(1, world.getEvent(Tip).len);

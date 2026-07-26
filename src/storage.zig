@@ -21,6 +21,9 @@ pub const Stats = struct {
     agility: u16 = 8, // 敏捷
 };
 
+// 玩家已经越过的剧情进度。
+pub const Progress = struct { value: u8 = 1 };
+
 // 玩家持有的金钱和物品。
 pub const Inventory = struct {
     money: u32 = 50, // 金钱
@@ -37,18 +40,13 @@ pub const Inventory = struct {
     }
 };
 
-// 玩家跨地图和战斗长期保留的数据。
-pub const Player = struct {
-    progress: u8 = 1, // 剧情进度
-    stats: Stats = .{},
-    inventory: Inventory = .{},
-};
-
 // 切换地图时保留的长期数据类型。
 pub const keep = .{
     DeadActors,
     OpenedChests,
-    Player,
+    Progress,
+    Stats,
+    Inventory,
 };
 
 // ZON 存档的完整结构。
@@ -56,7 +54,9 @@ pub const Record = struct {
     portal: zon.Portal.Key = .start,
     position: zhu.Vector2 = .zero,
     facing: component.actor.Facing = .down,
-    player: Player = .{},
+    progress: Progress = .{},
+    stats: Stats = .{},
+    inventory: Inventory = .{},
     openedChests: []const u16 = &.{},
     deadActors: []const zon.Actor.Key = &.{},
 };

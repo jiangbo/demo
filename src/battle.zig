@@ -143,7 +143,7 @@ pub fn draw(world: *ecs.World) void {
 
     zhu.text.msdf.begin();
 
-    const stats = world.get(world.entity, storage.Player).?.stats;
+    const stats = world.getGlobal(storage.Stats);
     const format = "生命：{:8}\n攻击：{:8}\n防御：{:8}\n等级：{:8}";
     var text = zhu.format(&buffer, format, .{
         stats.health,
@@ -223,7 +223,7 @@ const EnemyHurtPhase = struct {
     fn enter(world: *ecs.World) void {
         audio.playSound(hurtSounds[enemySounds[enemy.picture]]);
 
-        const stats = world.get(world.entity, storage.Player).?.stats;
+        const stats = world.getGlobal(storage.Stats);
         damage = computeDamage(stats.attack, enemy.defend);
         enemy.health -|= damage;
 
@@ -305,8 +305,7 @@ const PlayerHurtPhase = struct {
     fn enter(world: *ecs.World) void {
         audio.playSound(hurtSounds[0]);
 
-        const data = world.getPtr(world.entity, storage.Player).?;
-        const stats = &data.stats;
+        const stats = world.getGlobal(storage.Stats);
         damage = computeDamage(enemy.attack, stats.defend);
         stats.health -|= damage;
 
@@ -315,8 +314,7 @@ const PlayerHurtPhase = struct {
 
     fn update(world: *ecs.World, delta: f32) void {
         if (timer.updateFinished(delta)) {
-            const data = world.get(world.entity, storage.Player).?;
-            const stats = data.stats;
+            const stats = world.getGlobal(storage.Stats);
             const next: Phase = if (stats.health == 0)
                 .playerDeath
             else
@@ -369,21 +367,22 @@ const EnemyDeathPhase = struct {
     }
 
     fn update(world: *ecs.World, _: f32) void {
-        const data = world.getPtr(world.entity, storage.Player).?;
+        const stats = world.getGlobal(storage.Stats);
+        const inventory = world.getGlobal(storage.Inventory);
         if (step == 0 and zon.input.released(.confirm)) {
             step += 1;
-            data.stats.exp += enemy.level * 20;
-            data.inventory.money += enemy.money;
+            stats.exp += enemy.level * 20;
+            inventory.money += enemy.money;
             for (enemy.goods) |key| {
-                _ = data.inventory.add(key);
+                _ = inventory.add(key);
             }
             return;
         }
 
         if (step == 1 and zon.input.released(.confirm)) {
-            if (player.isLevelUp(data.stats)) {
+            if (player.isLevelUp(stats.*)) {
                 step += 1;
-                return player.levelUp(&data.stats);
+                return player.levelUp(stats);
             }
         }
 
@@ -418,8 +417,7 @@ const EnemyDeathPhase = struct {
             std.debug.assert(enemy.goods.len == 1);
         }
         if (step == 2) {
-            const data = world.get(world.entity, storage.Player).?;
-            const level = data.stats.level;
+            const level = world.getGlobal(storage.Stats).level;
             text = zhu.format(&buffer, "等级升为({})^_^", .{level});
             zhu.text.draw(text, .xy(260, 270), .{ .color = .yellow });
         }
@@ -434,22 +432,27 @@ const StatusPhase = struct {
     }
 
     fn draw(world: *ecs.World) void {
-        const data = world.getPtr(world.entity, storage.Player).?;
-        player.drawStatus(data);
+        player.drawStatus(
+            world.getGlobal(storage.Stats),
+            world.getGlobal(storage.Inventory),
+        );
     }
 };
 
 const ItemPhase = struct {
     fn update(world: *ecs.World, _: f32) void {
-        const data = world.getPtr(world.entity, storage.Player).?;
-        const used = player.openItem(data);
+        const stats = world.getGlobal(storage.Stats);
+        const inventory = world.getGlobal(storage.Inventory);
+        const used = player.openItem(stats, inventory);
         if (used) changePhase(world, .enemyAttack);
 
         if (zon.input.released(.cancel)) changePhase(world, .menu);
     }
 
     fn draw(world: *ecs.World) void {
-        const data = world.getPtr(world.entity, storage.Player).?;
-        player.drawOpenItem(data);
+        player.drawOpenItem(
+            world.getGlobal(storage.Stats),
+            world.getGlobal(storage.Inventory),
+        );
     }
 };
