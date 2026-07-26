@@ -2,13 +2,11 @@ const std = @import("std");
 const zhu = @import("zhu");
 const ecs = @import("ecs");
 
-const window = zhu.window;
 const camera = zhu.camera;
 const math = zhu.math;
 
 const scene = @import("scene.zig");
 const component = @import("component.zig");
-const menu = @import("menu.zig");
 const player = @import("player.zig");
 const map = @import("map.zig");
 const about = @import("about.zig");
@@ -44,11 +42,8 @@ const PlayerSpawn = union(enum) {
 
 const State = union(enum) {
     map: MapState,
-    menu: MenuState,
     status,
     item,
-    load: LoadState,
-    save: SaveState,
     about: AboutState,
     talk: TalkState,
     shop,
@@ -57,8 +52,6 @@ const State = union(enum) {
     pub fn update(self: State, world: *ecs.World, delta: f32) void {
         switch (self) {
             .map => MapState.update(world, delta),
-            .load => LoadState.update(world, delta),
-            .save => SaveState.update(world, delta),
             .talk => {},
             .status => {},
             .item => {
@@ -90,11 +83,9 @@ const State = union(enum) {
             .shop => shop.draw(
                 world.getGlobal(storage.Inventory).?,
             ),
-            inline else => |case| @TypeOf(case).draw(),
         }
     }
 };
-var texture: zhu.Image = undefined;
 var state: State = .map;
 pub var back: enum { none, battle, load, menu } = .none;
 var header: []const u8 = &.{};
@@ -102,8 +93,6 @@ var headerIndex: usize = 0;
 var headerTimer: zhu.Timer = .init(0.08);
 var headerColor: zhu.Color = .white;
 pub fn init(_: *ecs.World) void {
-    texture = zhu.getImage("mainmenu1.png").?;
-
     item.init();
     ui.init();
     about.init();
@@ -151,12 +140,12 @@ pub fn enter(world: *ecs.World) void {
             if (loadPlayerLocation) |location| {
                 rebuildMap(world, .{ .location = location });
             }
-            state = .menu;
+            ui.openPause();
+            state = .map;
         },
     }
     loadPlayerLocation = null;
     player.cameraLookAt(world);
-    menu.active = 5;
     zhu.audio.playMusic("voc/back.ogg");
 }
 
@@ -371,21 +360,26 @@ pub fn update(world: *ecs.World, delta: f32) void {
         return;
     }
 
-    if (ui.update(world, delta)) |event| {
-        TalkState.handle(event);
+    if (ui.update(world, delta)) |req| {
+        switch (req) {
+            .block => {},
+            .dialog => |event| TalkState.handle(event),
+            .status => state = .status,
+            .item => state = .item,
+            .load => |index| {
+                load(world, index) catch return;
+                back = .menu;
+                scene.changeScene(.world);
+            },
+            .save => |index| save(world, index) catch
+                @panic("save failed"),
+            .about => {
+                about.resetRoll();
+                state = .about;
+            },
+        }
         return;
     }
-
-    //  map: MapState,
-    // menu: MenuState,
-    // status,
-    // item,
-    // load: LoadState,
-    // save: SaveState,
-    // about: AboutState,
-    // talk: TalkState,
-    // shop,
-    // sale: SaleState,
 
     if (state == .map or state == .status or state == .item or
         state == .about)
@@ -393,7 +387,8 @@ pub fn update(world: *ecs.World, delta: f32) void {
         if (zon.input.released(.menu) or zon.input.released(.cancel) or
             zhu.mouse.released(.RIGHT))
         {
-            state = .menu;
+            ui.openPause();
+            state = .map;
             return;
         }
     }
@@ -501,76 +496,7 @@ const MapState = struct {
     }
 };
 
-const MenuState = struct {
-    fn update(_: f32) void {
-        const menuEvent = menu.update();
-        if (menuEvent) |event| switch (event) {
-            0 => state = .status,
-            1 => state = .item,
-            2 => {
-                menu.active = 4;
-                state = .load;
-            },
-            3 => {
-                menu.active = 4;
-                state = .save;
-            },
-            4 => {
-                about.resetRoll();
-                state = .about;
-            },
-            5 => window.exit(),
-            6 => state = .map,
-            else => unreachable,
-        };
-
-        if (zon.input.released(.menu) or zon.input.released(.cancel) or
-            zhu.mouse.released(.RIGHT))
-        {
-            state = .map;
-        }
-    }
-
-    fn draw() void {
-        zhu.batch.drawImage(texture, .xy(0, 280), .{});
-        menu.draw();
-    }
-};
-
 var loadPlayerLocation: ?PlayerLocation = null;
-const LoadState = struct {
-    pub fn update(world: *ecs.World, _: f32) void {
-        const loadEvent = menu.update();
-        if (loadEvent) |event| switch (event) {
-            3...7 => |index| {
-                back = .menu;
-                scene.changeScene(.world);
-                load(world, index) catch {
-                    menu.active = 5;
-                    state = .menu;
-                };
-            },
-            8 => {
-                menu.active = 5;
-                state = .menu;
-            },
-            else => unreachable,
-        };
-
-        if (zon.input.released(.menu) or zon.input.released(.cancel) or
-            zhu.mouse.released(.RIGHT))
-        {
-            menu.active = 5;
-            state = .menu;
-        }
-    }
-
-    pub fn draw() void {
-        zhu.batch.drawImage(texture, .xy(0, 280), .{});
-        menu.draw();
-    }
-};
-
 pub fn load(world: *ecs.World, index: u8) !void {
     var loaded = try storage.read(index);
     defer loaded.deinit();
@@ -600,66 +526,36 @@ pub fn load(world: *ecs.World, index: u8) !void {
     }
 }
 
-const SaveState = struct {
-    pub fn update(world: *ecs.World, _: f32) void {
-        const saveEvent = menu.update();
-        if (saveEvent) |event| switch (event) {
-            3...7 => |index| {
-                back = .menu;
-                scene.changeScene(.world);
-                save(world, index) catch @panic("save failed");
-            },
-            8 => {
-                menu.active = 5;
-                state = .menu;
-            },
-            else => unreachable,
-        };
-
-        if (zon.input.released(.menu) or zon.input.released(.cancel) or
-            zhu.mouse.released(.RIGHT))
-        {
-            menu.active = 5;
-            state = .menu;
-        }
+fn save(world: *ecs.World, index: u8) !void {
+    var openedChestBuffer: [zon.Chest.list.len]u16 = undefined;
+    var openedChestCount: usize = 0;
+    const opened = world.getGlobal(storage.OpenedChests).?;
+    var chestIterator = opened.iterator(.{});
+    while (chestIterator.next()) |chestId| {
+        openedChestBuffer[openedChestCount] = @intCast(chestId);
+        openedChestCount += 1;
     }
 
-    fn save(world: *ecs.World, index: u8) !void {
-        var openedChestBuffer: [zon.Chest.list.len]u16 = undefined;
-        var openedChestCount: usize = 0;
-        const opened = world.getGlobal(storage.OpenedChests).?;
-        var chestIterator = opened.iterator(.{});
-        while (chestIterator.next()) |chestId| {
-            openedChestBuffer[openedChestCount] = @intCast(chestId);
-            openedChestCount += 1;
-        }
-
-        var deadKeys: [storage.DeadActors.len]zon.Actor.Key = undefined;
-        var deadActorCount: usize = 0;
-        const deadActors = world.getGlobal(storage.DeadActors).?;
-        var actorIterator = deadActors.iterator();
-        while (actorIterator.next()) |key| {
-            deadKeys[deadActorCount] = key;
-            deadActorCount += 1;
-        }
-
-        try storage.write(index, .{
-            .portal = map.portalKey,
-            .position = player.collider(world).min,
-            .facing = world.get(world.getIdentity(Player).?, Facing).?,
-            .progress = world.getGlobal(storage.Progress).?.*,
-            .stats = world.getGlobal(storage.Stats).?.*,
-            .inventory = world.getGlobal(storage.Inventory).?.*,
-            .openedChests = openedChestBuffer[0..openedChestCount],
-            .deadActors = deadKeys[0..deadActorCount],
-        });
+    var deadKeys: [storage.DeadActors.len]zon.Actor.Key = undefined;
+    var deadActorCount: usize = 0;
+    const deadActors = world.getGlobal(storage.DeadActors).?;
+    var actorIterator = deadActors.iterator();
+    while (actorIterator.next()) |key| {
+        deadKeys[deadActorCount] = key;
+        deadActorCount += 1;
     }
 
-    pub fn draw() void {
-        zhu.batch.drawImage(texture, .xy(0, 280), .{});
-        menu.draw();
-    }
-};
+    try storage.write(index, .{
+        .portal = map.portalKey,
+        .position = player.collider(world).min,
+        .facing = world.get(world.getIdentity(Player).?, Facing).?,
+        .progress = world.getGlobal(storage.Progress).?.*,
+        .stats = world.getGlobal(storage.Stats).?.*,
+        .inventory = world.getGlobal(storage.Inventory).?.*,
+        .openedChests = openedChestBuffer[0..openedChestCount],
+        .deadActors = deadKeys[0..deadActorCount],
+    });
+}
 
 const TalkState = struct {
     fn handle(event: zon.dialog.Event) void {
