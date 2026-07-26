@@ -156,7 +156,7 @@ pub fn enter(world: *ecs.World) void {
     }
     loadPlayerLocation = null;
     player.cameraLookAt(world);
-    menu.active = 6;
+    menu.active = 5;
     zhu.audio.playMusic("voc/back.ogg");
 }
 
@@ -508,11 +508,11 @@ const MenuState = struct {
             0 => state = .status,
             1 => state = .item,
             2 => {
-                menu.active = 5;
+                menu.active = 4;
                 state = .load;
             },
             3 => {
-                menu.active = 5;
+                menu.active = 4;
                 state = .save;
             },
             4 => {
@@ -546,12 +546,12 @@ const LoadState = struct {
                 back = .menu;
                 scene.changeScene(.world);
                 load(world, index) catch {
-                    menu.active = 6;
+                    menu.active = 5;
                     state = .menu;
                 };
             },
             8 => {
-                menu.active = 6;
+                menu.active = 5;
                 state = .menu;
             },
             else => unreachable,
@@ -560,7 +560,7 @@ const LoadState = struct {
         if (zon.input.released(.menu) or zon.input.released(.cancel) or
             zhu.mouse.released(.RIGHT))
         {
-            menu.active = 6;
+            menu.active = 5;
             state = .menu;
         }
     }
@@ -610,7 +610,7 @@ const SaveState = struct {
                 save(world, index) catch @panic("save failed");
             },
             8 => {
-                menu.active = 6;
+                menu.active = 5;
                 state = .menu;
             },
             else => unreachable,
@@ -619,7 +619,7 @@ const SaveState = struct {
         if (zon.input.released(.menu) or zon.input.released(.cancel) or
             zhu.mouse.released(.RIGHT))
         {
-            menu.active = 6;
+            menu.active = 5;
             state = .menu;
         }
     }

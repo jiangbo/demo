@@ -89,7 +89,7 @@ pub fn enter(world: *ecs.World) void {
     enemy = zon.Actor.get(enemyKey).*;
     map.portalKey = .battle;
     map.enter();
-    menu.active = 7;
+    menu.active = 6;
     changePhase(world, .menu);
     camera.main.position = .zero;
 }

@@ -5,7 +5,7 @@ const ecs = @import("ecs");
 const window = zhu.window;
 const camera = zhu.camera;
 
-const titleScene = @import("title.zig");
+const titleScene = @import("ui/title.zig");
 const worldScene = @import("world.zig");
 const battleScene = @import("battle.zig");
 const input = @import("zon.zig").input;
@@ -34,6 +34,7 @@ pub fn init(allocator: zhu.Allocator) void {
     battleScene.init();
 
     sceneCall("enter", .{});
+    fadeIn();
 }
 
 pub fn loadWorld(index: u8) !void {
@@ -81,6 +82,11 @@ pub fn update(delta: f32) void {
     }
     switch (currentSceneType) {
         .title => if (titleScene.update(delta)) |req| switch (req) {
+            .fadeOut => |done| fadeOut(done),
+            .start => {
+                worldScene.back = .none;
+                changeScene(.world);
+            },
             .load => |index| {
                 worldScene.load(&world, index) catch return;
                 worldScene.back = .load;
@@ -134,12 +140,12 @@ var fadeTimer: ?zhu.Timer = null;
 var isFadeIn: bool = false;
 var fadeOutEndCallback: ?*const fn () void = null;
 
-pub fn fadeIn() void {
+fn fadeIn() void {
     isFadeIn = true;
     fadeTimer = .init(1);
 }
 
-pub fn fadeOut(callback: ?*const fn () void) void {
+fn fadeOut(callback: ?*const fn () void) void {
     isFadeIn = false;
     fadeTimer = .init(1);
     fadeOutEndCallback = callback;
