@@ -5,23 +5,19 @@ const ecs = @import("ecs");
 const math = zhu.math;
 const tiled = zhu.extend.tiled;
 
-const item = @import("item.zig");
 const zon = @import("zon.zig");
 const component = @import("component.zig");
-const Facing = component.actor.Facing;
 const Portal = component.Portal;
 
 const MapCell = union(enum) {
     open,
     solid,
-    chest,
     portal: zon.Portal.Key,
 
     // 将地图文件中的数字转换为游戏语义。
     fn from(value: u8) MapCell {
         return switch (value) {
             0 => .open,
-            2 => .chest,
             1, 3, 4 => .solid,
             else => .{ .portal = @enumFromInt(value - 4) },
         };
@@ -37,7 +33,6 @@ pub var current: *const zon.Map = undefined;
 
 var vertexBuffer: [2000]zhu.batch.Vertex = undefined;
 var vertexArray: std.ArrayListUnmanaged(zhu.batch.Vertex) = undefined;
-var backgroundIndex: usize = undefined;
 
 pub fn init() void {
     vertexArray = .initBuffer(&vertexBuffer);
@@ -54,13 +49,6 @@ pub fn enter() void {
 
     buildVertexBuffer(current.back);
     buildVertexBuffer(current.ground);
-    backgroundIndex = vertexArray.items.len;
-    for (current.chests) |chest| {
-        if (item.picked.isSet(chest.id))
-            appendVertex(302, chest.tileIndex)
-        else
-            appendVertex(301, chest.tileIndex);
-    }
 }
 
 fn buildVertexBuffer(tiles: []const u16) void {
@@ -86,44 +74,6 @@ fn buildVertex(tileIndex: usize, index: usize) zhu.batch.Vertex {
         .size = tileSize,
         .uvRect = tile.uvRect(),
     };
-}
-
-pub fn talk(position: zhu.Vector2, facing: Facing) ?u16 {
-    var cell = current.grid.worldToCell(position);
-    switch (facing) {
-        .down => cell.y += 1,
-        .left => cell.x -= 1,
-        .right => cell.x += 1,
-        .up => cell.y -= 1,
-    }
-
-    const index = current.grid.cellToIndex(cell) orelse return null;
-    switch (MapCell.from(current.object[index])) {
-        .chest => {},
-        else => return null,
-    }
-
-    for (current.chests) |chest| {
-        if (index != chest.tileIndex) continue;
-        // 宝箱已经被打开，不需要处理任何东西
-        if (item.picked.isSet(chest.id)) return null;
-        return chest.id;
-    }
-    unreachable;
-}
-
-pub fn openChest(chestId: u16) void {
-    // back 和 ground 已经填充的顶点不需要修改，修改宝箱的顶点
-
-    for (current.chests, 0..) |chest, index| {
-        if (chestId != chest.id) continue;
-
-        item.picked.set(chestId);
-        const vertex = buildVertex(302, chest.tileIndex);
-        vertexArray.items[backgroundIndex + index] = vertex;
-        return;
-    }
-    unreachable;
 }
 
 // 将当前地图中的传送区域创建为实体。
@@ -164,7 +114,7 @@ fn limit(scanValue: tiled.Scan(u8)) f32 {
     while (scan.next()) |value| {
         switch (MapCell.from(value)) {
             .open, .portal => continue,
-            .solid, .chest => return scan.touch,
+            .solid => return scan.touch,
         }
     }
     return scan.dest;
@@ -203,7 +153,7 @@ test "相邻瓦片创建一个传送区域实体" {
 test "地图瓦片移动" {
     const objects = [_]u8{
         1, 1, 1,
-        1, 0, 2,
+        1, 0, 1,
         1, 1, 1,
     };
     objectField = .{

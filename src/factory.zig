@@ -2,6 +2,7 @@ const zhu = @import("zhu");
 const ecs = @import("ecs");
 
 const component = @import("component.zig");
+const storage = @import("storage.zig");
 const zon = @import("zon.zig");
 
 const actor = component.actor;
@@ -61,6 +62,35 @@ fn firstImage(animation: Animation, facing: actor.Facing) zhu.Image {
     var value = animation;
     value.source = value.sources[@intFromEnum(facing)];
     return value.subImageAt(0);
+}
+
+// 根据当前地图和长期状态创建宝箱实体。
+pub fn spawnChests(
+    world: *ecs.World,
+    mapData: *const zon.Map,
+    opened: storage.OpenedChests,
+) void {
+    const atlas = zhu.getImage("maps1-sheet.png").?;
+    const images = component.ChestImages{
+        .closed = atlas.sub(.init(.xy(35, 511), .square(32))),
+        .opened = atlas.sub(.init(.xy(69, 511), .square(32))),
+    };
+    for (mapData.chests) |place| {
+        const isOpened = opened.isSet(place.id);
+        const image = if (isOpened) images.opened else images.closed;
+        const entity = world.createEntity();
+        world.addAll(entity, .{
+            component.Chest{ .id = place.id },
+            images,
+            mapData.grid.indexToWorld(place.tileIndex),
+            component.Collider.init(
+                .zero,
+                mapData.grid.cellSize(),
+            ),
+            component.Sprite{ .image = image },
+        });
+        if (!isOpened) world.add(entity, component.Interact{});
+    }
 }
 
 // 在当前地图创建玩家实体。

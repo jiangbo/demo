@@ -7,6 +7,9 @@ const zon = @import("zon.zig");
 // 已经死亡、地图重建后不再创建的 NPC。
 pub const DeadActors = std.EnumSet(zon.Actor.Key);
 
+// 已经开启、地图重建后保持开启的宝箱。
+pub const OpenedChests = std.StaticBitSet(zon.Chest.list.len);
+
 // 玩家参与战斗和成长的数值。
 pub const Stats = struct {
     level: u16 = 1, // 等级
@@ -22,6 +25,16 @@ pub const Stats = struct {
 pub const Inventory = struct {
     money: u32 = 50, // 金钱
     items: [16]?zon.Item.Key = @splat(null), // 物品
+
+    // 将物品放入第一个空位。
+    pub fn add(self: *Inventory, key: zon.Item.Key) bool {
+        for (&self.items) |*value| {
+            if (value.* != null) continue;
+            value.* = key;
+            return true;
+        }
+        return false;
+    }
 };
 
 // 玩家跨地图和战斗长期保留的数据。
@@ -34,6 +47,7 @@ pub const Player = struct {
 // 切换地图时保留的长期数据类型。
 pub const keep = .{
     DeadActors,
+    OpenedChests,
     Player,
 };
 

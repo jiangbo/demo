@@ -1,5 +1,6 @@
 const ecs = @import("ecs");
 
+pub const chest = @import("chest.zig");
 pub const control = @import("control.zig");
 pub const dialog = @import("dialog.zig");
 pub const enemy = @import("enemy.zig");
@@ -18,5 +19,6 @@ pub fn update(world: *ecs.World, delta: f32) void {
     portal.update(world);
     enemy.update(world, delta);
     interact.update(world);
+    chest.update(world);
     render.update(world, delta);
 }

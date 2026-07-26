@@ -110,16 +110,6 @@ pub fn collider(world: *ecs.World) math.Rect {
     return value.move(position);
 }
 
-pub fn addItem(inventory: *storage.Inventory, key: zon.Item.Key) bool {
-    for (&inventory.items) |*value| {
-        if (value.* == null) {
-            value.* = key;
-            return true;
-        }
-    }
-    return false;
-}
-
 pub fn isLevelUp(stats: storage.Stats) bool {
     return stats.exp >= maxExp;
 }

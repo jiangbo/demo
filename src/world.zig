@@ -23,15 +23,14 @@ const storage = @import("storage.zig");
 const actorComponent = component.actor;
 const dialog = component.dialog;
 const Actor = actorComponent.Actor;
-const Collider = component.Collider;
 const Dialog = dialog.Dialog;
 const Enemy = actorComponent.Enemy;
 const Facing = actorComponent.Facing;
 const Interact = component.Interact;
 const Player = actorComponent.Player;
 const Portal = component.Portal;
-const Position = component.Position;
 const Talk = dialog.Talk;
+const Tip = component.event.Tip;
 
 const PlayerLocation = struct {
     position: math.Vector2,
@@ -114,6 +113,7 @@ pub fn enter(world: *ecs.World) void {
         .none => {
             world.addAll(world.entity, .{
                 storage.DeadActors.empty,
+                storage.OpenedChests.initEmpty(),
                 storage.Player{},
             });
             rebuildMap(world, .{
@@ -159,6 +159,8 @@ fn rebuildMap(world: *ecs.World, spawn: PlayerSpawn) void {
     world.resetKeep(storage.keep);
     world.entity = world.createEntity();
     map.spawnPortals(world);
+    const opened = world.get(world.entity, storage.OpenedChests).?;
+    factory.spawnChests(world, map.current, opened);
     switch (spawn) {
         .location => |location| factory.spawnPlayer(
             world,
@@ -393,6 +395,8 @@ pub fn update(world: *ecs.World, delta: f32) void {
     }
 
     state.update(world, delta);
+    for (world.getEvent(Tip)) |event| tip = event.text;
+    world.clearEvent(Tip);
 }
 
 pub fn draw(world: *ecs.World) void {
@@ -426,11 +430,6 @@ const MapState = struct {
         player.cameraLookAt(world);
 
         // 检测是否需要切换地图
-        const entity = world.getIdentity(Player).?;
-        const position = world.get(entity, Position).?;
-        const facing = world.get(entity, Facing).?;
-        const collider = world.get(entity, Collider).?;
-        const area = collider.move(position);
         if (world.getIdentity(Portal)) |portalEntity| {
             const portal = world.get(portalEntity, Portal).?;
             if (!warn) return changeMapIfNeed(world, portal.key);
@@ -462,12 +461,6 @@ const MapState = struct {
             state = .talk;
             return;
         }
-
-        // 交互检测
-        if (!zon.input.released(.confirm)) return;
-        // 开启宝箱
-        const talkObject = map.talk(area.min, facing);
-        if (talkObject) |chestId| openChest(world, chestId);
     }
 
     fn changeMapIfNeed(world: *ecs.World, key: zon.Portal.Key) void {
@@ -508,38 +501,6 @@ const MapState = struct {
             world.add(world.getIdentity(Player).?, Interact.Disabled{});
             state = .talk;
         }
-    }
-
-    fn openChest(world: *ecs.World, chestId: u16) void {
-        const chest = zon.Chest.get(chestId);
-        const data = world.getPtr(world.entity, storage.Player).?;
-        const inventory = &data.inventory;
-
-        if (chest.item) |key| {
-            const added = player.addItem(inventory, key);
-            if (!added) {
-                tip = "你已经带满了！";
-                return;
-            }
-            world.add(world.entity, Dialog{
-                .lines = zon.dialogues[1].lines,
-                .value = .{
-                    .text = zon.Item.get(key).name,
-                },
-            });
-            world.add(world.getIdentity(Player).?, Interact.Disabled{});
-            state = .talk;
-        } else {
-            const gold = zhu.random.int(u8, 10, 100);
-            inventory.money += gold;
-            world.add(world.entity, Dialog{
-                .lines = zon.dialogues[0].lines,
-                .value = .{ .number = gold },
-            });
-            world.add(world.getIdentity(Player).?, Interact.Disabled{});
-            state = .talk;
-        }
-        map.openChest(chestId);
     }
 };
 
@@ -625,9 +586,10 @@ pub fn load(world: *ecs.World, index: u8) !void {
         .facing = record.facing,
     };
 
-    item.picked = .initEmpty();
+    const opened = world.getPtr(world.entity, storage.OpenedChests).?;
+    opened.* = .initEmpty();
     for (record.openedChests) |chestId| {
-        item.picked.set(chestId);
+        opened.set(chestId);
     }
 
     const deadActors = world.getPtr(world.entity, storage.DeadActors).?;
@@ -664,7 +626,8 @@ const SaveState = struct {
     fn save(world: *ecs.World, index: u8) !void {
         var openedChestBuffer: [zon.Chest.list.len]u16 = undefined;
         var openedChestCount: usize = 0;
-        var chestIterator = item.picked.iterator(.{});
+        const opened = world.get(world.entity, storage.OpenedChests).?;
+        var chestIterator = opened.iterator(.{});
         while (chestIterator.next()) |chestId| {
             openedChestBuffer[openedChestCount] = @intCast(chestId);
             openedChestCount += 1;
@@ -814,7 +777,7 @@ const Shop = struct {
             return false;
         }
 
-        const bagEnough = player.addItem(inventory, key);
+        const bagEnough = inventory.add(key);
         if (!bagEnough) {
             tip = "你已经带满了！";
             return false;

@@ -24,6 +24,7 @@ pub fn init(allocator: zhu.Allocator) void {
     world.entity = world.createEntity();
     world.addAll(world.entity, .{
         storage.DeadActors.empty,
+        storage.OpenedChests.initEmpty(),
         storage.Player{},
     });
     titleScene.init();

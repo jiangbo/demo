@@ -1,11 +1,8 @@
-const std = @import("std");
 const zhu = @import("zhu");
 
 const zon = @import("zon.zig");
 const input = zon.input;
 pub const position: zhu.Vector2 = .xy(120, 90);
-
-pub var picked: std.StaticBitSet(zon.Chest.list.len) = .initEmpty();
 
 var texture: zhu.Image = undefined;
 var bgTexture: zhu.Image = undefined;

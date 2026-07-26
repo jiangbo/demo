@@ -10,11 +10,22 @@ pub const Sprite = struct {
     anchor: zhu.Vector2 = .zero,
 };
 
-// 实体碰撞区域底边的中心位置。
+// 实体在地图中的逻辑位置。
 pub const Position = zhu.Vector2;
 
 // 相对实体逻辑位置的碰撞区域。
 pub const Collider = zhu.Rect;
+
+// 地图中的宝箱和稳定标识。
+pub const Chest = struct {
+    id: u16,
+};
+
+// 宝箱关闭和开启状态使用的图片。
+pub const ChestImages = struct {
+    closed: zhu.Image,
+    opened: zhu.Image,
+};
 
 pub const actor = struct {
     // 实体当前面对的方向。
@@ -77,5 +88,10 @@ pub const event = struct {
     // 已经越过的剧情进度。
     pub const Story = struct {
         progress: u8,
+    };
+
+    // 系统请求 UI 显示的临时提示。
+    pub const Tip = struct {
+        text: []const u8,
     };
 };
