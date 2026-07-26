@@ -18,7 +18,7 @@ pub fn update(world: *ecs.World) void {
     const entity = world.getIdentity(Interact) orelse return;
     const chest = world.get(entity, Chest) orelse return;
     const config = zon.Chest.get(chest.id);
-    const inventory = world.getGlobal(storage.Inventory);
+    const inventory = world.getGlobal(storage.Inventory).?;
 
     if (config.item) |key| {
         if (!inventory.add(key)) {
@@ -38,7 +38,7 @@ pub fn update(world: *ecs.World) void {
         });
     }
 
-    const opened = world.getGlobal(storage.OpenedChests);
+    const opened = world.getGlobal(storage.OpenedChests).?;
     opened.set(chest.id);
     const images = world.get(entity, ChestImages).?;
     world.getPtr(entity, Sprite).?.image = images.opened;
@@ -67,7 +67,7 @@ test "背包已满时不打开宝箱" {
 
     update(&world);
 
-    const opened = world.getGlobal(storage.OpenedChests);
+    const opened = world.getGlobal(storage.OpenedChests).?;
     try std.testing.expect(!opened.isSet(6));
     try std.testing.expect(world.has(entity, Interact));
     try std.testing.expectEqual(1, world.getEvent(Tip).len);

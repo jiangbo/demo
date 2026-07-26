@@ -12,7 +12,7 @@ const Talk = component.dialog.Talk;
 
 pub fn update(world: *ecs.World) void {
     for (world.getEvent(Story)) |story| {
-        const progress = world.getGlobal(storage.Progress);
+        const progress = world.getGlobal(storage.Progress).?;
         const next = story.progress + 1;
         std.debug.assert(progress.value <= next);
         progress.value = next;
@@ -57,7 +57,7 @@ test "大魔王出现后更新人物的对话和速度" {
 
     update(&world);
 
-    const progress = world.getGlobal(storage.Progress);
+    const progress = world.getGlobal(storage.Progress).?;
     const talk = world.get(entity, Talk).?;
     const speed = world.get(entity, Speed).?;
     try std.testing.expectEqual(5, progress.value);

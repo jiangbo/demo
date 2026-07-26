@@ -143,7 +143,7 @@ pub fn draw(world: *ecs.World) void {
 
     zhu.text.msdf.begin();
 
-    const stats = world.getGlobal(storage.Stats);
+    const stats = world.getGlobal(storage.Stats).?;
     const format = "生命：{:8}\n攻击：{:8}\n防御：{:8}\n等级：{:8}";
     var text = zhu.format(&buffer, format, .{
         stats.health,
@@ -223,7 +223,7 @@ const EnemyHurtPhase = struct {
     fn enter(world: *ecs.World) void {
         audio.playSound(hurtSounds[enemySounds[enemy.picture]]);
 
-        const stats = world.getGlobal(storage.Stats);
+        const stats = world.getGlobal(storage.Stats).?;
         damage = computeDamage(stats.attack, enemy.defend);
         enemy.health -|= damage;
 
@@ -305,7 +305,7 @@ const PlayerHurtPhase = struct {
     fn enter(world: *ecs.World) void {
         audio.playSound(hurtSounds[0]);
 
-        const stats = world.getGlobal(storage.Stats);
+        const stats = world.getGlobal(storage.Stats).?;
         damage = computeDamage(enemy.attack, stats.defend);
         stats.health -|= damage;
 
@@ -314,7 +314,7 @@ const PlayerHurtPhase = struct {
 
     fn update(world: *ecs.World, delta: f32) void {
         if (timer.updateFinished(delta)) {
-            const stats = world.getGlobal(storage.Stats);
+            const stats = world.getGlobal(storage.Stats).?;
             const next: Phase = if (stats.health == 0)
                 .playerDeath
             else
@@ -367,8 +367,8 @@ const EnemyDeathPhase = struct {
     }
 
     fn update(world: *ecs.World, _: f32) void {
-        const stats = world.getGlobal(storage.Stats);
-        const inventory = world.getGlobal(storage.Inventory);
+        const stats = world.getGlobal(storage.Stats).?;
+        const inventory = world.getGlobal(storage.Inventory).?;
         if (step == 0 and zon.input.released(.confirm)) {
             step += 1;
             stats.exp += enemy.level * 20;
@@ -417,7 +417,7 @@ const EnemyDeathPhase = struct {
             std.debug.assert(enemy.goods.len == 1);
         }
         if (step == 2) {
-            const level = world.getGlobal(storage.Stats).level;
+            const level = world.getGlobal(storage.Stats).?.level;
             text = zhu.format(&buffer, "等级升为({})^_^", .{level});
             zhu.text.draw(text, .xy(260, 270), .{ .color = .yellow });
         }
@@ -433,16 +433,16 @@ const StatusPhase = struct {
 
     fn draw(world: *ecs.World) void {
         player.drawStatus(
-            world.getGlobal(storage.Stats),
-            world.getGlobal(storage.Inventory),
+            world.getGlobal(storage.Stats).?,
+            world.getGlobal(storage.Inventory).?,
         );
     }
 };
 
 const ItemPhase = struct {
     fn update(world: *ecs.World, _: f32) void {
-        const stats = world.getGlobal(storage.Stats);
-        const inventory = world.getGlobal(storage.Inventory);
+        const stats = world.getGlobal(storage.Stats).?;
+        const inventory = world.getGlobal(storage.Inventory).?;
         const used = player.openItem(stats, inventory);
         if (used) changePhase(world, .enemyAttack);
 
@@ -451,8 +451,8 @@ const ItemPhase = struct {
 
     fn draw(world: *ecs.World) void {
         player.drawOpenItem(
-            world.getGlobal(storage.Stats),
-            world.getGlobal(storage.Inventory),
+            world.getGlobal(storage.Stats).?,
+            world.getGlobal(storage.Inventory).?,
         );
     }
 };

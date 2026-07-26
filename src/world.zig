@@ -62,8 +62,8 @@ const State = union(enum) {
             .talk => {},
             .status => {},
             .item => {
-                const stats = world.getGlobal(storage.Stats);
-                const inventory = world.getGlobal(storage.Inventory);
+                const stats = world.getGlobal(storage.Stats).?;
+                const inventory = world.getGlobal(storage.Inventory).?;
                 _ = player.openItem(stats, inventory);
             },
             .shop => shop.update(world),
@@ -76,20 +76,20 @@ const State = union(enum) {
         switch (self) {
             .map => {},
             .status => player.drawStatus(
-                world.getGlobal(storage.Stats),
-                world.getGlobal(storage.Inventory),
+                world.getGlobal(storage.Stats).?,
+                world.getGlobal(storage.Inventory).?,
             ),
             .item => player.drawOpenItem(
-                world.getGlobal(storage.Stats),
-                world.getGlobal(storage.Inventory),
+                world.getGlobal(storage.Stats).?,
+                world.getGlobal(storage.Inventory).?,
             ),
             .about => about.draw(),
             .talk => dialogUi.draw(world),
             .sale => player.drawSellItem(
-                world.getGlobal(storage.Inventory),
+                world.getGlobal(storage.Inventory).?,
             ),
             .shop => shop.draw(
-                world.getGlobal(storage.Inventory),
+                world.getGlobal(storage.Inventory).?,
             ),
             inline else => |case| @TypeOf(case).draw(),
         }
@@ -181,8 +181,8 @@ fn rebuildMap(world: *ecs.World, spawn: PlayerSpawn) void {
         .portal => |key| spawnPlayerAtPortal(world, key),
     }
 
-    const deadActors = world.getGlobal(storage.DeadActors);
-    const progress = world.getGlobal(storage.Progress).value;
+    const deadActors = world.getGlobal(storage.DeadActors).?;
+    const progress = world.getGlobal(storage.Progress).?.value;
     for (map.current.actors) |key| {
         if (deadActors.contains(key)) continue;
         if (zon.Actor.get(key).progress < progress) continue;
@@ -226,7 +226,7 @@ fn finishBattle(world: *ecs.World) void {
     switch (context.battle.result) {
         .fighting => unreachable,
         .win => {
-            const dead = world.getGlobal(storage.DeadActors);
+            const dead = world.getGlobal(storage.DeadActors).?;
             dead.insert(context.battle.actor);
             if (world.getIdentity(Interact)) |entity| {
                 if (entity == actorEntity) {
@@ -284,7 +284,7 @@ test "战斗胜利后保留对话并删除人物实体" {
     try std.testing.expect(world.has(world.entity, Dialog));
     try std.testing.expect(world.has(playerEntity, Interact.Disabled));
     try std.testing.expect(!world.has(actorEntity, Actor));
-    const deadActors = world.getGlobal(storage.DeadActors);
+    const deadActors = world.getGlobal(storage.DeadActors).?;
     try std.testing.expect(deadActors.contains(.wuPi));
 }
 
@@ -348,7 +348,7 @@ test "逃跑后关闭对话并保留冷却中的敌人" {
 pub fn exit() void {}
 
 pub fn update(world: *ecs.World, delta: f32) void {
-    const progress = world.getGlobal(storage.Progress).value;
+    const progress = world.getGlobal(storage.Progress).?.value;
     if (tip.len != 0) {
         if (zon.input.released(.confirm) or zon.input.released(.cancel)) {
             tip = &.{};
@@ -476,7 +476,7 @@ const MapState = struct {
 
     fn changeMapIfNeed(world: *ecs.World, key: zon.Portal.Key) void {
         const portal = zon.Portal.get(key);
-        const progress = world.getGlobal(storage.Progress).value;
+        const progress = world.getGlobal(storage.Progress).?.value;
         if (progress > portal.progress) {
             std.log.info("change map portal: {s}", .{@tagName(key)});
             map.portalKey = portal.target;
@@ -601,13 +601,13 @@ pub fn load(world: *ecs.World, index: u8) !void {
         .facing = record.facing,
     };
 
-    const opened = world.getGlobal(storage.OpenedChests);
+    const opened = world.getGlobal(storage.OpenedChests).?;
     opened.* = .initEmpty();
     for (record.openedChests) |chestId| {
         opened.set(chestId);
     }
 
-    const deadActors = world.getGlobal(storage.DeadActors);
+    const deadActors = world.getGlobal(storage.DeadActors).?;
     deadActors.* = .empty;
     for (record.deadActors) |key| {
         deadActors.insert(key);
@@ -641,7 +641,7 @@ const SaveState = struct {
     fn save(world: *ecs.World, index: u8) !void {
         var openedChestBuffer: [zon.Chest.list.len]u16 = undefined;
         var openedChestCount: usize = 0;
-        const opened = world.getGlobal(storage.OpenedChests);
+        const opened = world.getGlobal(storage.OpenedChests).?;
         var chestIterator = opened.iterator(.{});
         while (chestIterator.next()) |chestId| {
             openedChestBuffer[openedChestCount] = @intCast(chestId);
@@ -650,7 +650,7 @@ const SaveState = struct {
 
         var deadKeys: [storage.DeadActors.len]zon.Actor.Key = undefined;
         var deadActorCount: usize = 0;
-        const deadActors = world.getGlobal(storage.DeadActors);
+        const deadActors = world.getGlobal(storage.DeadActors).?;
         var actorIterator = deadActors.iterator();
         while (actorIterator.next()) |key| {
             deadKeys[deadActorCount] = key;
@@ -661,9 +661,9 @@ const SaveState = struct {
             .portal = map.portalKey,
             .position = player.collider(world).min,
             .facing = world.get(world.getIdentity(Player).?, Facing).?,
-            .progress = world.getGlobal(storage.Progress).*,
-            .stats = world.getGlobal(storage.Stats).*,
-            .inventory = world.getGlobal(storage.Inventory).*,
+            .progress = world.getGlobal(storage.Progress).?.*,
+            .stats = world.getGlobal(storage.Stats).?.*,
+            .inventory = world.getGlobal(storage.Inventory).?.*,
             .openedChests = openedChestBuffer[0..openedChestCount],
             .deadActors = deadKeys[0..deadActorCount],
         });
@@ -733,7 +733,7 @@ const SaleState = struct {
     var sell: bool = false;
 
     fn update(world: *ecs.World, _: f32) void {
-        const inventory = world.getGlobal(storage.Inventory);
+        const inventory = world.getGlobal(storage.Inventory).?;
         const playerSell = player.sellItem(inventory);
         if (!sell) sell = playerSell;
 
@@ -760,7 +760,7 @@ const Shop = struct {
     boughtDialogue: u16,
 
     pub fn update(self: *Shop, world: *ecs.World) void {
-        const inventory = world.getGlobal(storage.Inventory);
+        const inventory = world.getGlobal(storage.Inventory).?;
         self.current = item.update(self.items.len, self.current);
 
         if (zon.input.released(.buyItem)) {

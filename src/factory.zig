@@ -66,7 +66,7 @@ fn firstImage(animation: Animation, facing: actor.Facing) zhu.Image {
 
 // 根据当前地图和长期状态创建宝箱实体。
 pub fn spawnChests(world: *ecs.World, mapData: *const zon.Map) void {
-    const opened = world.getGlobal(storage.OpenedChests);
+    const opened = world.getGlobal(storage.OpenedChests).?;
     const atlas = zhu.getImage("maps1-sheet.png").?;
     const images = component.ChestImages{
         .closed = atlas.sub(.init(.xy(35, 511), .square(32))),
