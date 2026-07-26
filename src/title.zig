@@ -55,7 +55,7 @@ fn menuSelected(index: u8) void {
         1 => menu.active = 5,
         2 => window.exit(),
         3, 4, 5, 6, 7 => |event| {
-            world.load(event) catch return;
+            scene.loadWorld(event) catch return;
             world.back = .load;
             scene.changeScene(.world);
         },

@@ -7,7 +7,6 @@ const math = zhu.math;
 const audio = zhu.audio;
 
 const scene = @import("scene.zig");
-const worldScene = @import("world.zig");
 const map = @import("map.zig");
 const context = @import("context.zig");
 const player = @import("player.zig");
@@ -346,7 +345,6 @@ const EnemyDeathPhase = struct {
     fn enter() void {
         audio.playSound(deadSounds[enemySounds[enemy.picture]]);
         step = 0;
-        worldScene.killActor(enemyKey);
         if (enemy.progress != 0xFF) player.progress = enemy.progress + 1;
     }
 

@@ -18,6 +18,7 @@ const zon = @import("zon.zig");
 const system = @import("system/system.zig");
 const context = @import("context.zig");
 const dialogUi = @import("ui/dialog.zig");
+const storage = @import("storage.zig");
 
 const dialog = component.dialog;
 const Collider = component.Collider;
@@ -50,6 +51,7 @@ const State = union(enum) {
     pub fn update(self: State, world: *ecs.World, delta: f32) void {
         switch (self) {
             .map => MapState.update(world, delta),
+            .load => LoadState.update(world, delta),
             .save => SaveState.update(world, delta),
             .talk => {},
             .status => {},
@@ -81,13 +83,6 @@ var header: []const u8 = &.{};
 var headerIndex: usize = 0;
 var headerTimer: zhu.Timer = .init(0.08);
 var headerColor: zhu.Color = .white;
-// 已经死亡的 NPC 在地图重建后不再生成。
-var deadActors: std.StaticBitSet(64) = .initEmpty();
-
-pub fn killActor(key: zon.Actor.Key) void {
-    deadActors.set(@intFromEnum(key));
-}
-
 pub fn init(_: *ecs.World) void {
     texture = zhu.getImage("mainmenu1.png").?;
 
@@ -106,6 +101,7 @@ pub fn enter(world: *ecs.World) void {
     map.enter();
     switch (back) {
         .none => {
+            world.add(world.entity, storage.DeadActors.empty);
             rebuildMap(world, .{ .position = .xy(180, 164) });
             world.add(world.entity, Dialog{
                 .lines = zon.dialogues[2].lines,
@@ -138,7 +134,7 @@ pub fn changeMap(world: *ecs.World) void {
 
 // 清空旧地图并创建新地图的实体。
 fn rebuildMap(world: *ecs.World, spawn: PlayerSpawn) void {
-    world.reset();
+    world.resetKeep(storage.keep);
     world.entity = world.createEntity();
     map.spawnPortals(world);
     switch (spawn) {
@@ -146,9 +142,9 @@ fn rebuildMap(world: *ecs.World, spawn: PlayerSpawn) void {
         .portal => |key| spawnPlayerAtPortal(world, key),
     }
 
+    const deadActors = world.get(world.entity, storage.DeadActors).?;
     for (map.current.actors) |key| {
-        const index = @intFromEnum(key);
-        if (deadActors.isSet(index)) continue;
+        if (deadActors.contains(key)) continue;
         if (zon.Actor.get(key).progress < player.progress) continue;
         factory.spawnActor(world, key);
     }
@@ -190,6 +186,8 @@ fn finishBattle(world: *ecs.World) void {
     switch (context.battle.result) {
         .fighting => unreachable,
         .win => {
+            const dead = world.getPtr(world.entity, storage.DeadActors).?;
+            dead.insert(context.battle.actor);
             if (world.getIdentity(Interact)) |entity| {
                 if (entity == actorEntity) {
                     world.removeIdentity(Interact);
@@ -225,6 +223,7 @@ test "战斗胜利后保留对话并删除人物实体" {
     defer world.deinit();
 
     world.entity = world.createEntity();
+    world.add(world.entity, storage.DeadActors.empty);
     const playerEntity = world.createIdentity(Player);
     world.add(world.entity, Dialog{
         .lines = zon.dialogues[36].lines,
@@ -245,6 +244,8 @@ test "战斗胜利后保留对话并删除人物实体" {
     try std.testing.expect(world.has(world.entity, Dialog));
     try std.testing.expect(world.has(playerEntity, Interact.Disabled));
     try std.testing.expect(!world.has(actorEntity, Actor));
+    const deadActors = world.get(world.entity, storage.DeadActors).?;
+    try std.testing.expect(deadActors.contains(.wuPi));
 }
 
 test "战斗胜利后没有对话则返回地图" {
@@ -252,6 +253,7 @@ test "战斗胜利后没有对话则返回地图" {
     defer world.deinit();
 
     world.entity = world.createEntity();
+    world.add(world.entity, storage.DeadActors.empty);
     const actorEntity = world.createEntity();
     world.add(actorEntity, Actor{ .key = .senLin_feiJiangJun1 });
 
@@ -547,13 +549,13 @@ const MenuState = struct {
 
 var loadPlayerPosition: ?math.Vector2 = null;
 const LoadState = struct {
-    pub fn update(_: f32) void {
+    pub fn update(world: *ecs.World, _: f32) void {
         const loadEvent = menu.update();
         if (loadEvent) |event| switch (event) {
             3...7 => |index| {
                 back = .menu;
                 scene.changeScene(.world);
-                load(index) catch {
+                load(world, index) catch {
                     menu.active = 6;
                     state = .menu;
                 };
@@ -579,62 +581,37 @@ const LoadState = struct {
     }
 };
 
-const magic = [2]u8{ 0xB0, 0x0B };
-pub fn load(index: u8) !void {
-    var buffer: [100]u8 = undefined;
-    var buf: [20]u8 = undefined;
-    const path = zhu.formatZ(&buf, "save/{d}.save", .{index - 2});
-    const slice = try window.readBuffer(path, &buffer);
-    var reader = std.Io.Reader.fixed(slice);
+pub fn load(world: *ecs.World, index: u8) !void {
+    var loaded = try storage.read(index);
+    defer loaded.deinit();
 
-    // 1. magic
-    var magic_buf: [magic.len]u8 = undefined;
-    try reader.readSliceAll(&magic_buf);
-    if (!std.mem.eql(u8, &magic_buf, &magic)) return error.InvalidMagic;
+    const record = loaded.value;
+    map.portalKey = record.portal;
+    player.progress = record.player.progress;
+    loadPlayerPosition = record.player.position;
+    player.exp = record.player.exp;
+    player.level = record.player.level;
+    player.health = record.player.health;
+    player.maxHealth = record.player.maxHealth;
+    player.attack = record.player.attack;
+    player.defend = record.player.defend;
+    player.speed = record.player.speed;
+    player.money = record.player.money;
+    player.items = record.player.items;
 
-    // 2. 游戏版本号
-    var version: [2]u8 = undefined;
-    try reader.readSliceAll(&version);
+    item.picked = .initEmpty();
+    for (record.openedChests) |pickupIndex| {
+        item.picked.set(pickupIndex);
+    }
 
-    // 3. 地图入口
-    map.portalKey = @enumFromInt(try reader.takeByte());
-    // 4. 玩家进度
-    player.progress = try reader.takeByte();
-    // 5. 玩家坐标
-    var pos: math.Vector2 = undefined;
-    try reader.readSliceAll(std.mem.asBytes(&pos));
-    loadPlayerPosition = pos;
-    // 6. 玩家经验
-    try reader.readSliceAll(std.mem.asBytes(&player.exp));
-    // 7. 玩家等级
-    try reader.readSliceAll(std.mem.asBytes(&player.level));
-    // 8. 玩家生命
-    try reader.readSliceAll(std.mem.asBytes(&player.health));
-    // 9. 玩家最大生命
-    try reader.readSliceAll(std.mem.asBytes(&player.maxHealth));
-    // 10. 玩家攻击力
-    try reader.readSliceAll(std.mem.asBytes(&player.attack));
-    // 11. 玩家防御力
-    try reader.readSliceAll(std.mem.asBytes(&player.defend));
-    // 12. 玩家速度
-    try reader.readSliceAll(std.mem.asBytes(&player.speed));
-    // 13. 玩家金钱
-    try reader.readSliceAll(std.mem.asBytes(&player.money));
-    // 14. 玩家物品
-    try reader.readSliceAll(std.mem.asBytes(&player.items));
-    // 15. 宝箱状态
-    try reader.readSliceAll(std.mem.asBytes(&item.picked));
-    // 16. NPC 状态
-    try reader.readSliceAll(std.mem.asBytes(&deadActors));
-    // 17. magic 结尾
-    var magic_end: [magic.len]u8 = undefined;
-    try reader.readSliceAll(&magic_end);
-    if (!std.mem.eql(u8, &magic_end, &magic)) return error.InvalidMagic;
+    const deadActors = world.getPtr(world.entity, storage.DeadActors).?;
+    deadActors.* = .empty;
+    for (record.deadActors) |key| {
+        deadActors.insert(key);
+    }
 }
 
 const SaveState = struct {
-    var buffer: [100]u8 = undefined;
-
     pub fn update(world: *ecs.World, _: f32) void {
         const saveEvent = menu.update();
         if (saveEvent) |event| switch (event) {
@@ -659,44 +636,41 @@ const SaveState = struct {
     }
 
     fn save(world: *ecs.World, index: u8) !void {
-        var writer = std.Io.Writer.fixed(&buffer);
-        try writer.writeAll(&magic);
-        //  游戏版本号
-        try writer.writeAll(&.{ 0x00, 0x00 });
-        //  地图入口
-        try writer.writeByte(@intFromEnum(map.portalKey));
-        //  玩家进度
-        try writer.writeByte(player.progress);
-        //  玩家坐标
-        const position = player.collider(world).min;
-        try writer.writeAll(std.mem.asBytes(&position));
-        //  玩家经验
-        try writer.writeAll(std.mem.asBytes(&player.exp));
-        //  玩家等级
-        try writer.writeAll(std.mem.asBytes(&player.level));
-        //  玩家生命
-        try writer.writeAll(std.mem.asBytes(&player.health));
-        // 玩家最大生命
-        try writer.writeAll(std.mem.asBytes(&player.maxHealth));
-        //  玩家攻击力
-        try writer.writeAll(std.mem.asBytes(&player.attack));
-        //  玩家防御力
-        try writer.writeAll(std.mem.asBytes(&player.defend));
-        //  玩家速度
-        try writer.writeAll(std.mem.asBytes(&player.speed));
-        //  玩家金钱
-        try writer.writeAll(std.mem.asBytes(&player.money));
-        //  玩家物品
-        try writer.writeAll(std.mem.asBytes(&player.items));
-        //  宝箱状态
-        try writer.writeAll(std.mem.asBytes(&item.picked));
-        //  NPC 状态
-        try writer.writeAll(std.mem.asBytes(&deadActors));
-        try writer.writeAll(&magic);
+        var openedChestBuffer: [32]u16 = undefined;
+        var openedChestCount: usize = 0;
+        var chestIterator = item.picked.iterator(.{});
+        while (chestIterator.next()) |pickupIndex| {
+            openedChestBuffer[openedChestCount] = @intCast(pickupIndex);
+            openedChestCount += 1;
+        }
 
-        var buf: [20]u8 = undefined;
-        const path = zhu.formatZ(&buf, "save/{d}.save", .{index - 2});
-        try window.saveAll(path, buffer[0..writer.end]);
+        var deadKeys: [storage.DeadActors.len]zon.Actor.Key = undefined;
+        var deadActorCount: usize = 0;
+        const deadActors = world.get(world.entity, storage.DeadActors).?;
+        var actorIterator = deadActors.iterator();
+        while (actorIterator.next()) |key| {
+            deadKeys[deadActorCount] = key;
+            deadActorCount += 1;
+        }
+
+        try storage.write(index, .{
+            .portal = map.portalKey,
+            .player = .{
+                .progress = player.progress,
+                .position = player.collider(world).min,
+                .exp = player.exp,
+                .level = player.level,
+                .health = player.health,
+                .maxHealth = player.maxHealth,
+                .attack = player.attack,
+                .defend = player.defend,
+                .speed = player.speed,
+                .money = player.money,
+                .items = player.items,
+            },
+            .openedChests = openedChestBuffer[0..openedChestCount],
+            .deadActors = deadKeys[0..deadActorCount],
+        });
     }
 
     pub fn draw() void {

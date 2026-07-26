@@ -9,6 +9,7 @@ const titleScene = @import("title.zig");
 const worldScene = @import("world.zig");
 const battleScene = @import("battle.zig");
 const input = @import("zon.zig").input;
+const storage = @import("storage.zig");
 
 const SceneType = enum { title, world, battle };
 var currentSceneType: SceneType = .title;
@@ -20,11 +21,17 @@ var world: ecs.World = undefined;
 
 pub fn init(allocator: zhu.Allocator) void {
     world = ecs.World.init(allocator.raw);
+    world.entity = world.createEntity();
+    world.add(world.entity, storage.DeadActors.empty);
     titleScene.init();
     worldScene.init(&world);
     battleScene.init();
 
     sceneCall("enter", .{});
+}
+
+pub fn loadWorld(index: u8) !void {
+    try worldScene.load(&world, index);
 }
 
 pub fn changeScene(sceneType: SceneType) void {
