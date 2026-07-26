@@ -14,7 +14,7 @@ pub fn init() void {
 
 // 更新关于界面，关闭后恢复到初始页面。
 pub fn update(delta: f32) bool {
-    const closeKey = input.released(.menu) or input.released(.cancel);
+    const closeKey = input.anyReleased(&.{ .menu, .cancel });
     if (closeKey or zhu.mouse.released(.RIGHT)) {
         reset();
         return true;

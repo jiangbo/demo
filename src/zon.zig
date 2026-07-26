@@ -110,7 +110,7 @@ pub const dialog = struct {
 
 pub const dialogues: []const dialog.Script = @import("zon/talk.zon");
 pub const factory: Factory = @import("zon/factory.zon");
-pub const input = zhu.key.bind(@import("zon/input.zon"));
+pub const input = zhu.input.bind(@import("zon/input.zon"));
 
 pub const Map = struct {
     grid: tiled.Grid,
