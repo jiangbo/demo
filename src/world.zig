@@ -9,7 +9,6 @@ const scene = @import("scene.zig");
 const component = @import("component.zig");
 const player = @import("player.zig");
 const map = @import("map.zig");
-const about = @import("about.zig");
 const item = @import("item.zig");
 const factory = @import("factory.zig");
 const zon = @import("zon.zig");
@@ -44,7 +43,6 @@ const State = union(enum) {
     map: MapState,
     status,
     item,
-    about: AboutState,
     talk: TalkState,
     shop,
     sale: SaleState,
@@ -61,7 +59,6 @@ const State = union(enum) {
             },
             .shop => shop.update(world),
             .sale => SaleState.update(world, delta),
-            inline else => |case| @TypeOf(case).update(delta),
         }
     }
 
@@ -76,7 +73,6 @@ const State = union(enum) {
                 world.getGlobal(storage.Stats).?,
                 world.getGlobal(storage.Inventory).?,
             ),
-            .about => about.draw(),
             .sale => player.drawSellItem(
                 world.getGlobal(storage.Inventory).?,
             ),
@@ -95,7 +91,6 @@ var headerColor: zhu.Color = .white;
 pub fn init(_: *ecs.World) void {
     item.init();
     ui.init();
-    about.init();
     map.init();
     player.init();
 }
@@ -373,17 +368,11 @@ pub fn update(world: *ecs.World, delta: f32) void {
             },
             .save => |index| save(world, index) catch
                 @panic("save failed"),
-            .about => {
-                about.resetRoll();
-                state = .about;
-            },
         }
         return;
     }
 
-    if (state == .map or state == .status or state == .item or
-        state == .about)
-    {
+    if (state == .map or state == .status or state == .item) {
         if (zon.input.released(.menu) or zon.input.released(.cancel) or
             zhu.mouse.released(.RIGHT))
         {
@@ -596,17 +585,6 @@ const TalkState = struct {
                 headerColor = .red;
                 headerTimer.restart();
             },
-        }
-    }
-};
-
-const AboutState = struct {
-    fn update(delta: f32) void {
-        if (about.roll) about.update(delta) //
-        else if (zhu.mouse.released(.LEFT) or
-            zon.input.released(.confirm))
-        {
-            about.roll = true;
         }
     }
 };

@@ -3,6 +3,7 @@ const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const zon = @import("../zon.zig");
+const about = @import("about.zig");
 const dialog = @import("dialog.zig");
 const pause = @import("pause.zig");
 const save = @import("save.zig");
@@ -17,14 +18,14 @@ pub const Request = union(enum) {
     item,
     load: u8,
     save: u8,
-    about,
 };
 
-const Popup = enum { pause, save };
+const Popup = enum { about, pause, save };
 
 var popup: ?Popup = null;
 
 pub fn init() void {
+    about.init();
     dialog.init();
 }
 
@@ -65,13 +66,13 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
                     save.open(.save);
                     popup = .save;
                 },
-                .about => {
-                    popup = null;
-                    return .about;
-                },
+                .about => popup = .about,
                 .exit => zhu.window.exit(),
                 .close => popup = null,
             }
+        },
+        .about => if (about.update(delta)) {
+            popup = .pause;
         },
         .save => {
             const req = save.update() orelse return .block;
@@ -95,6 +96,7 @@ pub fn draw(world: *ecs.World) void {
     dialog.draw(world);
     if (!world.has(world.entity, Dialog)) tip.draw();
     if (popup) |current| switch (current) {
+        .about => about.draw(),
         .pause => pause.draw(),
         .save => save.draw(),
     };

@@ -1,25 +1,38 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
-const camera = zhu.camera;
+const input = @import("../zon.zig").input;
 
 var texture: zhu.Image = undefined;
 
-pub var roll: bool = false;
+var roll: bool = false;
 var timer: zhu.Timer = .init(0.05);
 
 pub fn init() void {
     texture = zhu.getImage("sbar.png").?;
 }
 
-pub fn update(delta: f32) void {
-    if (!roll) return;
+// 更新关于界面，关闭后恢复到初始页面。
+pub fn update(delta: f32) bool {
+    const closeKey = input.released(.menu) or input.released(.cancel);
+    if (closeKey or zhu.mouse.released(.RIGHT)) {
+        reset();
+        return true;
+    }
+
+    if (!roll) {
+        if (zhu.mouse.released(.LEFT) or input.released(.confirm)) {
+            roll = true;
+        }
+        return false;
+    }
 
     if (timer.updateFinished(delta)) {
-        if (end) return;
+        if (end) return false;
         timer.restart();
         rollOffset += 1;
     }
+    return false;
 }
 
 pub fn draw() void {
@@ -146,7 +159,7 @@ const lineHeight = 26;
 var start: usize = 0;
 var end: bool = false;
 
-pub fn resetRoll() void {
+fn reset() void {
     roll = false;
     rollOffset = 0;
     end = false;
