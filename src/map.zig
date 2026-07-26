@@ -8,7 +8,7 @@ const tiled = zhu.extend.tiled;
 const item = @import("item.zig");
 const zon = @import("zon.zig");
 const component = @import("component.zig");
-const Facing = component.Facing;
+const Facing = component.actor.Facing;
 const Portal = component.Portal;
 
 const MapCell = union(enum) {

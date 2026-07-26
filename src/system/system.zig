@@ -8,9 +8,11 @@ pub const interact = @import("interact.zig");
 pub const movement = @import("movement.zig");
 pub const portal = @import("portal.zig");
 pub const render = @import("render.zig");
+pub const story = @import("story.zig");
 pub const wander = @import("wander.zig");
 
 pub fn update(world: *ecs.World, delta: f32) void {
+    story.update(world);
     wander.update(world, delta);
     control.update(world);
     movement.update(world, delta);

@@ -8,7 +8,7 @@ const zon = @import("../zon.zig");
 
 const Dialog = component.dialog.Dialog;
 const Interact = component.Interact;
-const Player = component.Player;
+const Player = component.actor.Player;
 
 var texture: zhu.Image = undefined;
 // 动态文本格式化后存放在此缓冲区。

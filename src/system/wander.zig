@@ -4,8 +4,8 @@ const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 
-const Facing = component.Facing;
-const Wander = component.Wander;
+const Facing = component.actor.Facing;
+const Wander = component.actor.Wander;
 const WantMove = component.WantMove;
 
 pub fn update(world: *ecs.World, delta: f32) void {

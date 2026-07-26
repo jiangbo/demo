@@ -8,6 +8,7 @@
         .x = 500,
         .y = 500,
         .speed = 12,
+        .panicSpeed = 24,
     },
     .{
         .key = "daYou",
@@ -17,6 +18,7 @@
         .x = 200,
         .y = 140,
         .speed = 14,
+        .panicSpeed = 24,
     },
     .{
         .key = "wuEr",
@@ -26,6 +28,7 @@
         .x = 200,
         .y = 300,
         .speed = 12,
+        .panicSpeed = 24,
     },
     .{
         .key = "miEr",
@@ -35,6 +38,7 @@
         .x = 920,
         .y = 260,
         .speed = 12,
+        .panicSpeed = 24,
     },
     .{
         .key = "xiaoLu",
@@ -44,6 +48,7 @@
         .x = 400,
         .y = 400,
         .speed = 14,
+        .panicSpeed = 24,
     },
     .{
         .key = "xiaoTian",
@@ -53,6 +58,7 @@
         .x = 800,
         .y = 500,
         .speed = 12,
+        .panicSpeed = 24,
     },
     .{
         .key = "xiaoFang",
@@ -62,6 +68,7 @@
         .x = 300,
         .y = 700,
         .speed = 12,
+        .panicSpeed = 24,
     },
     .{
         .key = "ganXiaoShi",
@@ -128,7 +135,7 @@
     },
     .{
         .key = "daoBa",
-        .dialogues = .{29},
+        .dialogues = .{ 29, 29 },
         .name = "刀　疤",
         .picture = 7,
         .x = 450,
@@ -144,7 +151,7 @@
     },
     .{
         .key = "tuYing",
-        .dialogues = .{29},
+        .dialogues = .{ 29, 29 },
         .name = "秃　鹰",
         .picture = 6,
         .x = 480,
@@ -162,7 +169,7 @@
     // [20001]
     .{
         .key = "senLin_feiJiangJun1",
-        .dialogues = .{33},
+        .dialogues = .{ 33, 33 },
         .name = "飞将军",
         .picture = 12,
         .x = 110,
@@ -195,7 +202,7 @@
     // [20003]
     .{
         .key = "senLin_wuDi1",
-        .dialogues = .{35},
+        .dialogues = .{ 35, 35 },
         .name = "无　敌",
         .picture = 6,
         .x = 400,
@@ -212,7 +219,7 @@
     // [20004]
     .{
         .key = "senLin_wuLingYun",
-        .dialogues = .{34},
+        .dialogues = .{ 34, 34 },
         .name = "巫凌云",
         .picture = 7,
         .x = 860,
@@ -245,7 +252,7 @@
     // [20006]
     .{
         .key = "wuPi",
-        .dialogues = .{36},
+        .dialogues = .{ 36, 36 },
         .name = "巫　批",
         .picture = 4,
         .x = 890,
@@ -396,7 +403,7 @@
     // 大魔王 ID:40006，34
     .{
         .key = "daMoWang",
-        .dialogues = .{39},
+        .dialogues = .{ 39, 39 },
         .name = "大魔王",
         .picture = 13,
         .x = 90,

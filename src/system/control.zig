@@ -5,8 +5,8 @@ const ecs = @import("ecs");
 const component = @import("../component.zig");
 const input = @import("../zon.zig").input;
 
-const Facing = component.Facing;
-const Player = component.Player;
+const Facing = component.actor.Facing;
+const Player = component.actor.Player;
 const WantMove = component.WantMove;
 
 pub fn update(world: *ecs.World) void {

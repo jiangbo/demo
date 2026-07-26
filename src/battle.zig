@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const window = zhu.window;
 const camera = zhu.camera;
@@ -13,6 +14,7 @@ const player = @import("player.zig");
 const menu = @import("menu.zig");
 const item = @import("item.zig");
 const factory = @import("factory.zig");
+const storage = @import("storage.zig");
 const zon = @import("zon.zig");
 
 var enemyKey: zon.Actor.Key = undefined;
@@ -53,23 +55,23 @@ const Phase = union(enum) {
     status: StatusPhase,
     item: ItemPhase,
 
-    fn enter(self: Phase) void {
+    fn enter(self: Phase, world: *ecs.World) void {
         switch (self) {
             .menu, .status, .item => {},
-            inline else => |case| @TypeOf(case).enter(),
+            inline else => |case| @TypeOf(case).enter(world),
         }
     }
 
-    fn update(self: Phase, delta: f32) void {
+    fn update(self: Phase, world: *ecs.World, delta: f32) void {
         switch (self) {
-            inline else => |case| @TypeOf(case).update(delta),
+            inline else => |case| @TypeOf(case).update(world, delta),
         }
     }
 
-    fn draw(self: Phase) void {
+    fn draw(self: Phase, world: *ecs.World) void {
         switch (self) {
             .menu => {},
-            inline else => |case| @TypeOf(case).draw(),
+            inline else => |case| @TypeOf(case).draw(world),
         }
     }
 };
@@ -80,13 +82,13 @@ pub fn init() void {
     bombAnimation = factory.bombAnimation();
 }
 
-pub fn enter() void {
+pub fn enter(world: *ecs.World) void {
     enemyKey = context.battle.actor;
     enemy = zon.Actor.get(enemyKey).*;
     map.portalKey = .battle;
     map.enter();
     menu.active = 7;
-    changePhase(.menu);
+    changePhase(world, .menu);
     camera.main.position = .zero;
 }
 
@@ -94,16 +96,16 @@ pub fn exit() void {
     map.portalKey = context.battle.portalKey;
 }
 
-fn changePhase(newPhase: Phase) void {
+fn changePhase(world: *ecs.World, newPhase: Phase) void {
     phase = newPhase;
-    phase.enter();
+    phase.enter(world);
 }
 
-pub fn update(delta: f32) void {
-    phase.update(delta);
+pub fn update(world: *ecs.World, delta: f32) void {
+    phase.update(world, delta);
 }
 
-pub fn draw() void {
+pub fn draw(world: *ecs.World) void {
     map.draw();
 
     camera.push(.window);
@@ -139,12 +141,13 @@ pub fn draw() void {
 
     zhu.text.msdf.begin();
 
+    const stats = world.get(world.entity, storage.Player).?.stats;
     const format = "生命：{:8}\n攻击：{:8}\n防御：{:8}\n等级：{:8}";
     var text = zhu.format(&buffer, format, .{
-        player.health,
-        player.attack,
-        player.defend,
-        player.level,
+        stats.health,
+        stats.attack,
+        stats.defend,
+        stats.level,
     });
     zhu.text.draw(text, position.addXY(50, 5), .{ .color = .black });
 
@@ -158,7 +161,7 @@ pub fn draw() void {
     zhu.text.msdf.end();
 
     menu.draw();
-    phase.draw();
+    phase.draw(world);
 }
 
 fn computeDamage(attack: u16, defend: u16) u16 {
@@ -173,12 +176,12 @@ fn computeDamage(attack: u16, defend: u16) u16 {
 }
 
 const MenuPhase = struct {
-    fn update(_: f32) void {
+    fn update(world: *ecs.World, _: f32) void {
         const optionalEvent = menu.update();
         if (optionalEvent) |event| switch (event) {
-            0 => changePhase(.playerAttack),
-            1 => changePhase(.status),
-            2 => changePhase(.item),
+            0 => changePhase(world, .playerAttack),
+            1 => changePhase(world, .status),
+            2 => changePhase(world, .item),
             3 => {
                 if (enemy.escape > zhu.random.int(u8, 0, 100)) {
                     context.battle.result = .escape;
@@ -186,7 +189,7 @@ const MenuPhase = struct {
                 } else {
                     WaitPhase.tip = "逃跑失败！";
                     WaitPhase.next = .enemyAttack;
-                    changePhase(.wait);
+                    changePhase(world, .wait);
                 }
             },
             else => unreachable,
@@ -195,17 +198,17 @@ const MenuPhase = struct {
 };
 
 const PlayerAttackPhase = struct {
-    fn enter() void {
+    fn enter(_: *ecs.World) void {
         audio.playSound(attackSounds[0]);
         bombAnimation.reset();
     }
 
-    fn update(delta: f32) void {
+    fn update(world: *ecs.World, delta: f32) void {
         if (bombAnimation.update(delta) == .end)
-            changePhase(.enemyHurt);
+            changePhase(world, .enemyHurt);
     }
 
-    fn draw() void {
+    fn draw(_: *ecs.World) void {
         zhu.batch.drawImage(bombAnimation.subImage(), .xy(452, 230), .{});
     }
 };
@@ -215,27 +218,30 @@ const EnemyHurtPhase = struct {
     var timer: zhu.Timer = .init(0.5);
     var offset: f32 = 5;
 
-    fn enter() void {
+    fn enter(world: *ecs.World) void {
         audio.playSound(hurtSounds[enemySounds[enemy.picture]]);
 
-        damage = computeDamage(player.attack, enemy.defend);
+        const stats = world.get(world.entity, storage.Player).?.stats;
+        damage = computeDamage(stats.attack, enemy.defend);
         enemy.health -|= damage;
 
         timer.restart();
     }
 
-    fn update(delta: f32) void {
+    fn update(world: *ecs.World, delta: f32) void {
         if (timer.updateFinished(delta)) {
-            if (enemy.health == 0) return changePhase(.enemyDeath);
+            if (enemy.health == 0) {
+                return changePhase(world, .enemyDeath);
+            }
             WaitPhase.next = .enemyAttack;
-            return changePhase(.wait);
+            return changePhase(world, .wait);
         }
 
         const period: u8 = @intFromFloat(@trunc(timer.elapsed / 0.08));
         offset = if (period % 2 == 0) -5 else 5;
     }
 
-    fn draw() void {
+    fn draw(_: *ecs.World) void {
         const pos = math.Vector2.xy(465, 237).addX(offset);
         zhu.batch.drawImage(factory.npcBattleImage(enemyKey), pos, .{});
 
@@ -253,18 +259,18 @@ const WaitPhase = struct {
     var next: Phase = .menu;
     var tip: []const u8 = &.{};
 
-    fn enter() void {
+    fn enter(_: *ecs.World) void {
         timer.restart();
     }
 
-    fn update(delta: f32) void {
+    fn update(world: *ecs.World, delta: f32) void {
         if (timer.updateFinished(delta)) {
             tip = &.{};
-            changePhase(next);
+            changePhase(world, next);
         }
     }
 
-    fn draw() void {
+    fn draw(_: *ecs.World) void {
         if (tip.len == 0) return;
         zhu.text.msdf.begin();
         defer zhu.text.msdf.end();
@@ -273,16 +279,18 @@ const WaitPhase = struct {
 };
 
 const EnemyAttackPhase = struct {
-    fn enter() void {
+    fn enter(_: *ecs.World) void {
         audio.playSound(attackSounds[enemySounds[enemy.picture]]);
         bombAnimation.reset();
     }
 
-    fn update(delta: f32) void {
-        if (bombAnimation.update(delta) == .end) changePhase(.playerHurt);
+    fn update(world: *ecs.World, delta: f32) void {
+        if (bombAnimation.update(delta) == .end) {
+            changePhase(world, .playerHurt);
+        }
     }
 
-    fn draw() void {
+    fn draw(_: *ecs.World) void {
         zhu.batch.drawImage(bombAnimation.subImage(), .xy(120, 220), .{});
     }
 };
@@ -292,25 +300,33 @@ const PlayerHurtPhase = struct {
     var timer: zhu.Timer = .init(0.5);
     var offset: f32 = 5;
 
-    fn enter() void {
+    fn enter(world: *ecs.World) void {
         audio.playSound(hurtSounds[0]);
 
-        damage = computeDamage(enemy.attack, player.defend);
-        player.health -|= damage;
+        const data = world.getPtr(world.entity, storage.Player).?;
+        const stats = &data.stats;
+        damage = computeDamage(enemy.attack, stats.defend);
+        stats.health -|= damage;
 
         timer.restart();
     }
 
-    fn update(delta: f32) void {
+    fn update(world: *ecs.World, delta: f32) void {
         if (timer.updateFinished(delta)) {
-            changePhase(if (player.health == 0) .playerDeath else .menu);
+            const data = world.get(world.entity, storage.Player).?;
+            const stats = data.stats;
+            const next: Phase = if (stats.health == 0)
+                .playerDeath
+            else
+                .menu;
+            changePhase(world, next);
         }
 
         const period: u8 = @intFromFloat(@trunc(timer.elapsed / 0.08));
         offset = if (period % 2 == 0) -5 else 5;
     }
 
-    fn draw() void {
+    fn draw(_: *ecs.World) void {
         const pos = math.Vector2.xy(130, 220).addX(offset);
         zhu.batch.drawImage(factory.playerBattleImage(), pos, .{});
 
@@ -324,15 +340,15 @@ const PlayerHurtPhase = struct {
 };
 
 const PlayerDeathPhase = struct {
-    fn enter() void {
+    fn enter(_: *ecs.World) void {
         audio.playSound(deadSounds[0]);
     }
 
-    fn update(_: f32) void {
+    fn update(_: *ecs.World, _: f32) void {
         if (zon.input.released(.confirm)) scene.changeScene(.title);
     }
 
-    fn draw() void {
+    fn draw(_: *ecs.World) void {
         zhu.text.msdf.begin();
         defer zhu.text.msdf.end();
         zhu.text.draw("你死了！", .xy(285, 200), .{});
@@ -342,25 +358,31 @@ const PlayerDeathPhase = struct {
 const EnemyDeathPhase = struct {
     var step: u8 = 0;
 
-    fn enter() void {
+    fn enter(world: *ecs.World) void {
         audio.playSound(deadSounds[enemySounds[enemy.picture]]);
         step = 0;
-        if (enemy.progress != 0xFF) player.progress = enemy.progress + 1;
+        if (enemy.progress != 0xFF) {
+            const data = world.getPtr(world.entity, storage.Player).?;
+            data.progress = enemy.progress + 1;
+        }
     }
 
-    fn update(_: f32) void {
+    fn update(world: *ecs.World, _: f32) void {
+        const data = world.getPtr(world.entity, storage.Player).?;
         if (step == 0 and zon.input.released(.confirm)) {
             step += 1;
-            player.exp += enemy.level * 20;
-            player.money += enemy.money;
-            for (enemy.goods) |index| _ = player.addItem(index);
+            data.stats.exp += enemy.level * 20;
+            data.inventory.money += enemy.money;
+            for (enemy.goods) |index| {
+                _ = player.addItem(&data.inventory, index);
+            }
             return;
         }
 
         if (step == 1 and zon.input.released(.confirm)) {
-            if (player.isLevelUp()) {
+            if (player.isLevelUp(data.stats)) {
                 step += 1;
-                return player.levelUp();
+                return player.levelUp(&data.stats);
             }
         }
 
@@ -370,7 +392,7 @@ const EnemyDeathPhase = struct {
         }
     }
 
-    fn draw() void {
+    fn draw(world: *ecs.World) void {
         zhu.text.msdf.begin();
         defer zhu.text.msdf.end();
 
@@ -395,33 +417,38 @@ const EnemyDeathPhase = struct {
             std.debug.assert(enemy.goods.len == 1);
         }
         if (step == 2) {
-            text = zhu.format(&buffer, "等级升为({})^_^", .{player.level});
+            const data = world.get(world.entity, storage.Player).?;
+            const level = data.stats.level;
+            text = zhu.format(&buffer, "等级升为({})^_^", .{level});
             zhu.text.draw(text, .xy(260, 270), .{ .color = .yellow });
         }
     }
 };
 
 const StatusPhase = struct {
-    fn update(_: f32) void {
+    fn update(world: *ecs.World, _: f32) void {
         if (zon.input.released(.confirm) or zon.input.released(.cancel)) {
-            changePhase(.menu);
+            changePhase(world, .menu);
         }
     }
 
-    fn draw() void {
-        player.drawStatus();
+    fn draw(world: *ecs.World) void {
+        const data = world.getPtr(world.entity, storage.Player).?;
+        player.drawStatus(data);
     }
 };
 
 const ItemPhase = struct {
-    fn update(_: f32) void {
-        const used = player.openItem();
-        if (used) changePhase(.enemyAttack);
+    fn update(world: *ecs.World, _: f32) void {
+        const data = world.getPtr(world.entity, storage.Player).?;
+        const used = player.openItem(data);
+        if (used) changePhase(world, .enemyAttack);
 
-        if (zon.input.released(.cancel)) changePhase(.menu);
+        if (zon.input.released(.cancel)) changePhase(world, .menu);
     }
 
-    fn draw() void {
-        player.drawOpenItem();
+    fn draw(world: *ecs.World) void {
+        const data = world.getPtr(world.entity, storage.Player).?;
+        player.drawOpenItem(data);
     }
 };

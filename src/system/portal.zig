@@ -4,7 +4,7 @@ const ecs = @import("ecs");
 const component = @import("../component.zig");
 
 const Collider = component.Collider;
-const Player = component.Player;
+const Player = component.actor.Player;
 const Portal = component.Portal;
 const Position = component.Position;
 

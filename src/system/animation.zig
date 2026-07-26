@@ -2,7 +2,7 @@ const ecs = @import("ecs");
 
 const component = @import("../component.zig");
 const Animation = component.Animation;
-const Facing = component.Facing;
+const Facing = component.actor.Facing;
 const WantMove = component.WantMove;
 
 pub fn update(world: *ecs.World, delta: f32) void {

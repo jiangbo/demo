@@ -1,34 +1,47 @@
 const std = @import("std");
 const zhu = @import("zhu");
 
+const component = @import("component.zig");
 const zon = @import("zon.zig");
 
 // 已经死亡、地图重建后不再创建的 NPC。
 pub const DeadActors = std.EnumSet(zon.Actor.Key);
 
+// 玩家参与战斗和成长的数值。
+pub const Stats = struct {
+    level: u16 = 1, // 等级
+    exp: u16 = 0, // 经验
+    health: u16 = 50, // 生命
+    maxHealth: u16 = 50, // 最大生命
+    attack: u16 = 10, // 攻击
+    defend: u16 = 10, // 防御
+    agility: u16 = 8, // 敏捷
+};
+
+// 玩家持有的金钱和物品。
+pub const Inventory = struct {
+    money: u32 = 50, // 金钱
+    items: [16]u8 = @splat(0), // 物品
+};
+
+// 玩家跨地图和战斗长期保留的数据。
+pub const Player = struct {
+    progress: u8 = 1, // 剧情进度
+    stats: Stats = .{},
+    inventory: Inventory = .{},
+};
+
 // 切换地图时保留的长期数据类型。
 pub const keep = .{
     DeadActors,
-};
-
-// 玩家在 ZON 存档中的数据。
-pub const Player = struct {
-    progress: u8 = 1,
-    position: zhu.Vector2 = .zero,
-    exp: u16 = 0,
-    level: u16 = 1,
-    health: u16 = 50,
-    maxHealth: u16 = 50,
-    attack: u16 = 10,
-    defend: u16 = 10,
-    speed: u16 = 8,
-    money: u32 = 50,
-    items: [16]u8 = @splat(0),
+    Player,
 };
 
 // ZON 存档的完整结构。
 pub const Record = struct {
     portal: zon.Portal.Key = .start,
+    position: zhu.Vector2 = .zero,
+    facing: component.actor.Facing = .down,
     player: Player = .{},
     openedChests: []const u16 = &.{},
     deadActors: []const zon.Actor.Key = &.{},

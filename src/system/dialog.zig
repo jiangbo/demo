@@ -3,29 +3,26 @@ const zhu = @import("zhu");
 const ecs = @import("ecs");
 
 const component = @import("../component.zig");
-const playerData = @import("../player.zig");
-const zon = @import("../zon.zig");
 
 const dialog = component.dialog;
 const Dialog = dialog.Dialog;
-const Facing = component.Facing;
+const Facing = component.actor.Facing;
 const Interact = component.Interact;
-const Player = component.Player;
+const Player = component.actor.Player;
 const Talk = dialog.Talk;
 const WantMove = component.WantMove;
 
 pub fn update(world: *ecs.World) void {
     const target = world.getIdentity(Interact) orelse return;
-    const talk = world.get(target, Talk) orelse return;
-    const index: usize = if (playerData.progress > 4) 1 else 0;
+    const lines = world.get(target, Talk) orelse return;
 
     const player = world.getIdentity(Player).?;
     const facing = world.get(player, Facing).?;
-    world.add(target, component.oppositeFacing(facing));
+    world.add(target, component.actor.oppositeFacing(facing));
     world.remove(target, WantMove);
 
     world.add(world.entity, Dialog{
-        .lines = zon.dialogues[talk.dialogues[index]].lines,
+        .lines = lines,
     });
     world.add(player, Interact.Disabled{});
 }
@@ -43,25 +40,22 @@ test "交互对话人物后添加对话状态" {
 
     _ = addTestPlayer(&world);
     const target = world.createEntity();
+    const lines: Talk = &.{
+        .{ .actor = null, .content = "测试对话" },
+    };
     world.addAll(target, .{
         Facing.down,
         Interact{},
-        Talk{ .dialogues = zon.Actor.get(.xiaoChunChun).dialogues },
+        lines,
         WantMove{ .value = .xy(0, 1) },
     });
     world.addIdentity(target, Interact);
 
-    const oldProgress = playerData.progress;
-    defer playerData.progress = oldProgress;
-    playerData.progress = 0;
-
     update(&world);
     try std.testing.expect(world.has(world.entity, Dialog));
     try std.testing.expect(world.hasIdentity(Player, Interact.Disabled));
-    try std.testing.expectEqual(
-        zon.dialogues[3].lines.len,
-        world.get(world.entity, Dialog).?.lines.len,
-    );
+    const current = world.get(world.entity, Dialog).?;
+    try std.testing.expectEqual(lines.ptr, current.lines.ptr);
     try std.testing.expect(!world.has(target, Dialog));
     try std.testing.expectEqual(Facing.up, world.get(target, Facing).?);
     try std.testing.expect(!world.has(target, WantMove));

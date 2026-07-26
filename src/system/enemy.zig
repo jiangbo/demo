@@ -4,9 +4,9 @@ const ecs = @import("ecs");
 const component = @import("../component.zig");
 
 const Collider = component.Collider;
-const Enemy = component.Enemy;
-const Facing = component.Facing;
-const Player = component.Player;
+const Enemy = component.actor.Enemy;
+const Facing = component.actor.Facing;
+const Player = component.actor.Player;
 const Position = component.Position;
 
 pub fn update(world: *ecs.World, delta: f32) void {
@@ -26,7 +26,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
         if (!area.intersect(enemy.value.move(pos))) continue;
 
         const facing = world.get(player, Facing).?;
-        world.add(entity, component.oppositeFacing(facing));
+        world.add(entity, component.actor.oppositeFacing(facing));
         world.addIdentity(entity, Enemy);
         return;
     }

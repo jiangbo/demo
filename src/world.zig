@@ -20,19 +20,26 @@ const context = @import("context.zig");
 const dialogUi = @import("ui/dialog.zig");
 const storage = @import("storage.zig");
 
+const actorComponent = component.actor;
 const dialog = component.dialog;
+const Actor = actorComponent.Actor;
 const Collider = component.Collider;
 const Dialog = dialog.Dialog;
-const Enemy = component.Enemy;
-const Facing = component.Facing;
-const Actor = component.Actor;
+const Enemy = actorComponent.Enemy;
+const Facing = actorComponent.Facing;
 const Interact = component.Interact;
-const Player = component.Player;
+const Player = actorComponent.Player;
 const Portal = component.Portal;
 const Position = component.Position;
+const Talk = dialog.Talk;
+
+const PlayerLocation = struct {
+    position: math.Vector2,
+    facing: Facing,
+};
 
 const PlayerSpawn = union(enum) {
-    position: math.Vector2,
+    location: PlayerLocation,
     portal: zon.Portal.Key,
 };
 
@@ -55,7 +62,10 @@ const State = union(enum) {
             .save => SaveState.update(world, delta),
             .talk => {},
             .status => {},
-            .item => _ = player.openItem(),
+            .item => {
+                const data = world.getPtr(world.entity, storage.Player).?;
+                _ = player.openItem(data);
+            },
             .shop => shop.update(world),
             .sale => SaleState.update(world, delta),
             inline else => |case| @TypeOf(case).update(delta),
@@ -63,14 +73,15 @@ const State = union(enum) {
     }
 
     pub fn draw(self: State, world: *ecs.World) void {
+        const data = world.getPtr(world.entity, storage.Player).?;
         switch (self) {
             .map => {},
-            .status => player.drawStatus(),
-            .item => player.drawOpenItem(),
+            .status => player.drawStatus(data),
+            .item => player.drawOpenItem(data),
             .about => about.draw(),
             .talk => dialogUi.draw(world),
-            .sale => player.drawSellItem(),
-            .shop => shop.draw(),
+            .sale => player.drawSellItem(&data.inventory),
+            .shop => shop.draw(&data.inventory),
             inline else => |case| @TypeOf(case).draw(),
         }
     }
@@ -101,8 +112,16 @@ pub fn enter(world: *ecs.World) void {
     map.enter();
     switch (back) {
         .none => {
-            world.add(world.entity, storage.DeadActors.empty);
-            rebuildMap(world, .{ .position = .xy(180, 164) });
+            world.addAll(world.entity, .{
+                storage.DeadActors.empty,
+                storage.Player{},
+            });
+            rebuildMap(world, .{
+                .location = .{
+                    .position = .xy(180, 164),
+                    .facing = .down,
+                },
+            });
             world.add(world.entity, Dialog{
                 .lines = zon.dialogues[2].lines,
             });
@@ -111,17 +130,17 @@ pub fn enter(world: *ecs.World) void {
         },
         .battle => finishBattle(world),
         .load => {
-            rebuildMap(world, .{ .position = loadPlayerPosition.? });
+            rebuildMap(world, .{ .location = loadPlayerLocation.? });
             state = .map;
         },
         .menu => {
-            if (loadPlayerPosition) |position| {
-                rebuildMap(world, .{ .position = position });
+            if (loadPlayerLocation) |location| {
+                rebuildMap(world, .{ .location = location });
             }
             state = .menu;
         },
     }
-    loadPlayerPosition = null;
+    loadPlayerLocation = null;
     player.cameraLookAt(world);
     menu.active = 6;
     zhu.audio.playMusic("voc/back.ogg");
@@ -138,15 +157,20 @@ fn rebuildMap(world: *ecs.World, spawn: PlayerSpawn) void {
     world.entity = world.createEntity();
     map.spawnPortals(world);
     switch (spawn) {
-        .position => |position| factory.spawnPlayer(world, position, .down),
+        .location => |location| factory.spawnPlayer(
+            world,
+            location.position,
+            location.facing,
+        ),
         .portal => |key| spawnPlayerAtPortal(world, key),
     }
 
     const deadActors = world.get(world.entity, storage.DeadActors).?;
+    const data = world.get(world.entity, storage.Player).?;
     for (map.current.actors) |key| {
         if (deadActors.contains(key)) continue;
-        if (zon.Actor.get(key).progress < player.progress) continue;
-        factory.spawnActor(world, key);
+        if (zon.Actor.get(key).progress < data.progress) continue;
+        factory.spawnActor(world, key, data.progress);
     }
     player.cameraLookAt(world);
 }
@@ -308,6 +332,7 @@ test "逃跑后关闭对话并保留冷却中的敌人" {
 pub fn exit() void {}
 
 pub fn update(world: *ecs.World, delta: f32) void {
+    const data = world.get(world.entity, storage.Player).?;
     if (tip.len != 0) {
         if (zon.input.released(.confirm) or zon.input.released(.cancel)) {
             tip = &.{};
@@ -318,7 +343,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
         if (header.len == headerIndex) {
             // 已经显示结束了，等待按键
             if (zon.input.released(.confirm)) {
-                if (player.progress > 20)
+                if (data.progress > 20)
                     // 如果打败了大魔王，跳转到标题界面
                     scene.changeScene(.title)
                 else {
@@ -411,11 +436,10 @@ const MapState = struct {
         if (world.getIdentity(Enemy)) |target| {
             world.removeIdentity(Enemy);
             const targetActor = world.get(target, Actor).?;
-            const actor = zon.Actor.get(targetActor.key);
             // 是否需要对话
-            if (actor.dialogues.len != 0) {
+            if (world.get(target, Talk)) |lines| {
                 world.add(world.entity, Dialog{
-                    .lines = zon.dialogues[actor.dialogues[0]].lines,
+                    .lines = lines,
                 });
                 world.add(world.getIdentity(Player).?, Interact.Disabled{});
                 state = .talk;
@@ -445,14 +469,15 @@ const MapState = struct {
 
     fn changeMapIfNeed(world: *ecs.World, key: zon.Portal.Key) void {
         const portal = zon.Portal.get(key);
-        if (player.progress > portal.progress) {
+        const data = world.getPtr(world.entity, storage.Player).?;
+        if (data.progress > portal.progress) {
             std.log.info("change map portal: {s}", .{@tagName(key)});
             map.portalKey = portal.target;
             scene.changeMap();
             return;
         }
 
-        if (player.progress == 1) {
+        if (data.progress == 1) {
             warn = true;
             world.add(world.entity, Dialog{
                 .lines = zon.dialogues[5].lines,
@@ -461,8 +486,11 @@ const MapState = struct {
             state = .talk;
         }
 
-        if (player.progress == 4) {
-            player.progress += 1;
+        if (data.progress == 4) {
+            data.progress += 1;
+            world.addEvent(component.event.Story{
+                .demonAppeared = data.progress,
+            });
             world.add(world.entity, Dialog{
                 .lines = zon.dialogues[32].lines,
             });
@@ -470,7 +498,7 @@ const MapState = struct {
             state = .talk;
         }
 
-        if (player.progress == 10) {
+        if (data.progress == 10) {
             warn = true;
             world.add(world.entity, Dialog{
                 .lines = zon.dialogues[37].lines,
@@ -482,10 +510,12 @@ const MapState = struct {
 
     fn openChest(world: *ecs.World, pickIndex: u16) void {
         const object = item.pickupZon[pickIndex];
+        const data = world.getPtr(world.entity, storage.Player).?;
+        const inventory = &data.inventory;
 
         if (object.itemIndex == 0 and object.count == 0) {
             const gold = zhu.random.int(u8, 10, 100);
-            player.money += gold;
+            inventory.money += gold;
             world.add(world.entity, Dialog{
                 .lines = zon.dialogues[0].lines,
                 .value = .{ .number = gold },
@@ -493,7 +523,7 @@ const MapState = struct {
             world.add(world.getIdentity(Player).?, Interact.Disabled{});
             state = .talk;
         } else {
-            const added = player.addItem(object.itemIndex);
+            const added = player.addItem(inventory, object.itemIndex);
             if (!added) {
                 tip = "你已经带满了！";
                 return;
@@ -547,7 +577,7 @@ const MenuState = struct {
     }
 };
 
-var loadPlayerPosition: ?math.Vector2 = null;
+var loadPlayerLocation: ?PlayerLocation = null;
 const LoadState = struct {
     pub fn update(world: *ecs.World, _: f32) void {
         const loadEvent = menu.update();
@@ -587,17 +617,11 @@ pub fn load(world: *ecs.World, index: u8) !void {
 
     const record = loaded.value;
     map.portalKey = record.portal;
-    player.progress = record.player.progress;
-    loadPlayerPosition = record.player.position;
-    player.exp = record.player.exp;
-    player.level = record.player.level;
-    player.health = record.player.health;
-    player.maxHealth = record.player.maxHealth;
-    player.attack = record.player.attack;
-    player.defend = record.player.defend;
-    player.speed = record.player.speed;
-    player.money = record.player.money;
-    player.items = record.player.items;
+    world.add(world.entity, record.player);
+    loadPlayerLocation = .{
+        .position = record.position,
+        .facing = record.facing,
+    };
 
     item.picked = .initEmpty();
     for (record.openedChests) |pickupIndex| {
@@ -655,19 +679,9 @@ const SaveState = struct {
 
         try storage.write(index, .{
             .portal = map.portalKey,
-            .player = .{
-                .progress = player.progress,
-                .position = player.collider(world).min,
-                .exp = player.exp,
-                .level = player.level,
-                .health = player.health,
-                .maxHealth = player.maxHealth,
-                .attack = player.attack,
-                .defend = player.defend,
-                .speed = player.speed,
-                .money = player.money,
-                .items = player.items,
-            },
+            .position = player.collider(world).min,
+            .facing = world.get(world.getIdentity(Player).?, Facing).?,
+            .player = world.get(world.entity, storage.Player).?,
             .openedChests = openedChestBuffer[0..openedChestCount],
             .deadActors = deadKeys[0..deadActorCount],
         });
@@ -737,7 +751,9 @@ const SaleState = struct {
     var sell: bool = false;
 
     fn update(world: *ecs.World, _: f32) void {
-        const playerSell = player.sellItem();
+        const data = world.getPtr(world.entity, storage.Player).?;
+        const inventory = &data.inventory;
+        const playerSell = player.sellItem(inventory);
         if (!sell) sell = playerSell;
 
         if (zon.input.released(.menu) or zon.input.released(.cancel) or
@@ -763,12 +779,14 @@ const Shop = struct {
     boughtDialogue: u16,
 
     pub fn update(self: *Shop, world: *ecs.World) void {
+        const data = world.getPtr(world.entity, storage.Player).?;
+        const inventory = &data.inventory;
         self.current = item.update(self.items.len, self.current);
 
         if (zon.input.released(.buyItem)) {
             const itemIndex = self.items[self.current];
             if (itemIndex != 0) {
-                const playerBuy = buy(itemIndex);
+                const playerBuy = buy(inventory, itemIndex);
                 if (!bought) bought = playerBuy;
             }
         }
@@ -787,31 +805,34 @@ const Shop = struct {
         }
     }
 
-    fn buy(itemIndex: u8) bool {
+    fn buy(inventory: *storage.Inventory, itemIndex: u8) bool {
         const buyItem = item.zon[itemIndex];
 
-        if (buyItem.money > player.money) {
+        if (buyItem.money > inventory.money) {
             tip = "兄弟，你的钱不够！";
             return false;
         }
 
-        const bagEnough = player.addItem(itemIndex);
+        const bagEnough = player.addItem(inventory, itemIndex);
         if (!bagEnough) {
             tip = "你已经带满了！";
             return false;
         }
-        player.money -= buyItem.money;
+        inventory.money -= buyItem.money;
         return true;
     }
 
-    pub fn draw(self: *const Shop) void {
+    pub fn draw(
+        self: *const Shop,
+        inventory: *const storage.Inventory,
+    ) void {
         item.draw(&self.items, self.current);
         zhu.text.msdf.begin();
         defer zhu.text.msdf.end();
         var buffer: [20]u8 = undefined;
         // 金币，操作说明
         zhu.text.draw("（金=", item.position.addXY(10, 270), .{});
-        const moneyStr = zhu.format(&buffer, "{d}）", .{player.money});
+        const moneyStr = zhu.format(&buffer, "{d}）", .{inventory.money});
         zhu.text.draw(moneyStr, item.position.addXY(60, 270), .{});
         const text = "CTRL=购买　　ESC=退出";
         zhu.text.draw(text, item.position.addXY(118, 270), .{});

@@ -21,7 +21,7 @@ pub const Facing = enum { down, left, up, right };
 pub const Actor = struct {
     key: [:0]const u8,
     enemy: bool = false,
-    dialogues: []const u16 = &.{},
+    dialogues: ?[2]u16 = null,
     name: []const u8 = &.{},
     x: f32 = 0,
     y: f32 = 0,
@@ -32,6 +32,7 @@ pub const Actor = struct {
     attack: u16 = 0,
     defend: u16 = 0,
     speed: f32 = 0,
+    panicSpeed: ?f32 = null, // 慌乱时的移动速度
     goods: []const u8 = &.{},
     money: u16 = 0,
     progress: u8 = 0xFF,

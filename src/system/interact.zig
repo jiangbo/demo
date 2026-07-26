@@ -6,9 +6,9 @@ const component = @import("../component.zig");
 const input = @import("../zon.zig").input;
 
 const Collider = component.Collider;
-const Facing = component.Facing;
+const Facing = component.actor.Facing;
 const Interact = component.Interact;
-const Player = component.Player;
+const Player = component.actor.Player;
 const Position = component.Position;
 
 pub fn update(world: *ecs.World) void {

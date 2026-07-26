@@ -22,7 +22,10 @@ var world: ecs.World = undefined;
 pub fn init(allocator: zhu.Allocator) void {
     world = ecs.World.init(allocator.raw);
     world.entity = world.createEntity();
-    world.add(world.entity, storage.DeadActors.empty);
+    world.addAll(world.entity, .{
+        storage.DeadActors.empty,
+        storage.Player{},
+    });
     titleScene.init();
     worldScene.init(&world);
     battleScene.init();
@@ -145,6 +148,13 @@ fn sceneCall(comptime function: []const u8, args: anytype) void {
         } else {
             window.call(worldScene, function, args);
         },
-        .battle => window.call(battleScene, function, args),
+        .battle => if (comptime std.mem.eql(u8, function, "enter") or
+            std.mem.eql(u8, function, "update") or
+            std.mem.eql(u8, function, "draw"))
+        {
+            window.call(battleScene, function, .{&world} ++ args);
+        } else {
+            window.call(battleScene, function, args);
+        },
     }
 }
