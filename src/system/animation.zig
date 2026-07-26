@@ -3,6 +3,7 @@ const ecs = @import("ecs");
 const component = @import("../component.zig");
 const Animation = component.Animation;
 const Facing = component.actor.Facing;
+const Sprite = component.Sprite;
 const WantMove = component.WantMove;
 
 pub fn update(world: *ecs.World, delta: f32) void {
@@ -12,10 +13,12 @@ pub fn update(world: *ecs.World, delta: f32) void {
         const animation = query.getPtr(entity, Animation);
         const sourceIndex: u8 = @intFromEnum(facing);
 
-        if (animation.sourceIndex != sourceIndex) {
-            animation.play(sourceIndex);
+        var changed = animation.sourceIndex != sourceIndex;
+        if (changed) animation.play(sourceIndex);
+        if (world.has(entity, WantMove)) {
+            if (animation.update(delta) != null) changed = true;
         }
-        if (!world.has(entity, WantMove)) continue;
-        _ = animation.update(delta);
+        if (!changed) continue;
+        world.getPtr(entity, Sprite).?.image = animation.subImage();
     }
 }

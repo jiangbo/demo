@@ -82,9 +82,12 @@ pub fn spawnPlayer(
         position.sub(collider.min),
         facing,
         collider,
-        component.RenderOffset{ .value = .xy(-2, 4) },
         component.Speed{ .value = 100 },
         animation,
+        component.Sprite{
+            .image = animation.subImage(),
+            .anchor = .xy(0.5, 1),
+        },
     });
 }
 
@@ -114,12 +117,18 @@ pub fn spawnActor(
 ) void {
     const data = zon.Actor.get(key);
     const entity = world.createEntity();
+    var animation = npcAnimation(data.picture);
+    animation.play(data.facing);
     world.addAll(entity, .{
         actor.Actor{ .key = key },
         component.Position.xy(data.x + 16, data.y + 32),
         data.facing,
         component.Collider.init(.xy(-8, -16), .xy(16, 16)),
-        npcAnimation(data.picture),
+        animation,
+        component.Sprite{
+            .image = animation.subImage(),
+            .anchor = .xy(0.5, 1),
+        },
     });
 
     if (actorTalk(key, progress)) |talk| {

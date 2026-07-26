@@ -4,14 +4,17 @@ const zon = @import("zon.zig");
 
 pub const Animation = zhu.Animation;
 
+// 实体当前绘制的图片和对齐位置。
+pub const Sprite = struct {
+    image: zhu.Image,
+    anchor: zhu.Vector2 = .zero,
+};
+
 // 实体碰撞区域底边的中心位置。
 pub const Position = zhu.Vector2;
 
 // 相对实体逻辑位置的碰撞区域。
 pub const Collider = zhu.Rect;
-
-// 图片相对实体逻辑位置的绘制偏移。
-pub const RenderOffset = struct { value: zhu.Vector2 };
 
 pub const actor = struct {
     // 实体当前面对的方向。
