@@ -5,7 +5,7 @@ const component = @import("../component.zig");
 
 const Collider = component.Collider;
 const Player = component.actor.Player;
-const Portal = component.Portal;
+const Portal = component.map.Portal;
 const Position = component.Position;
 
 pub fn update(world: *ecs.World) void {

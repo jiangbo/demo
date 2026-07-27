@@ -86,15 +86,9 @@ pub fn init() void {
 pub fn enter(world: *ecs.World) void {
     enemyKey = context.battle.actor;
     enemy = zon.Actor.get(enemyKey).*;
-    map.portalKey = .battle;
-    map.enter();
     ui.battle.reset();
     changePhase(world, .menu);
     camera.main.position = .zero;
-}
-
-pub fn exit() void {
-    map.portalKey = context.battle.portalKey;
 }
 
 fn changePhase(world: *ecs.World, newPhase: Phase) void {
@@ -107,7 +101,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
 }
 
 pub fn draw(world: *ecs.World) void {
-    map.draw();
+    map.drawBattle();
 
     camera.push(.window);
     defer camera.pop();

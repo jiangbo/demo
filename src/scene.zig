@@ -18,9 +18,12 @@ var toSceneType: SceneType = .title;
 var isHelp: bool = true;
 var isDebug: bool = false;
 var world: ecs.World = undefined;
+// 场景负责保存应用分配器，并向需要分配内存的模块传递。
+var allocator: zhu.Allocator = undefined;
 
-pub fn init(allocator: zhu.Allocator) void {
-    world = ecs.World.init(allocator.raw);
+pub fn init(allocator_: zhu.Allocator) void {
+    allocator = allocator_;
+    world = ecs.World.init(allocator_.raw);
     world.entity = world.createEntity();
     world.addAll(world.entity, .{
         storage.DeadActors.empty,
@@ -30,7 +33,7 @@ pub fn init(allocator: zhu.Allocator) void {
         storage.Inventory{},
     });
     titleScene.init();
-    worldScene.init(&world);
+    worldScene.init(allocator_);
     battleScene.init();
 
     sceneCall("enter", .{});
@@ -51,7 +54,7 @@ pub fn changeMap() void {
 }
 
 fn doChangeMap() void {
-    worldScene.changeMap(&world);
+    worldScene.changeMap(&world, allocator);
 }
 
 fn doChangeScene() void {
@@ -152,21 +155,24 @@ fn fadeOut(callback: ?*const fn () void) void {
 }
 
 pub fn deinit() void {
-    sceneCall("deinit", .{});
     world.deinit();
+    worldScene.deinit(allocator);
 }
 
 fn sceneCall(comptime function: []const u8, args: anytype) void {
     switch (currentSceneType) {
         .title => window.call(titleScene, function, args),
-        .world => if (comptime std.mem.eql(u8, function, "enter") or
-            std.mem.eql(u8, function, "update") or
+        .world => if (comptime std.mem.eql(u8, function, "enter")) {
+            window.call(
+                worldScene,
+                function,
+                .{ &world, allocator } ++ args,
+            );
+        } else if (comptime std.mem.eql(u8, function, "update") or
             std.mem.eql(u8, function, "draw"))
         {
             window.call(worldScene, function, .{&world} ++ args);
-        } else {
-            window.call(worldScene, function, args);
-        },
+        } else window.call(worldScene, function, args),
         .battle => if (comptime std.mem.eql(u8, function, "enter") or
             std.mem.eql(u8, function, "update") or
             std.mem.eql(u8, function, "draw"))

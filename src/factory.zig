@@ -1,3 +1,4 @@
+const std = @import("std");
 const zhu = @import("zhu");
 const ecs = @import("ecs");
 
@@ -7,6 +8,7 @@ const zon = @import("zon.zig");
 
 const actor = component.actor;
 const Animation = zhu.Animation;
+const Portal = component.map.Portal;
 
 // 所有 NPC 共用相同的素材布局。
 const npcSources: [15][4]Animation.Source = blk: {
@@ -64,8 +66,39 @@ fn firstImage(animation: Animation, facing: actor.Facing) zhu.Image {
     return value.subImageAt(0);
 }
 
+// 根据地图配置和长期状态创建地图对象。
+pub fn spawnMapObjects(world: *ecs.World, key: zon.Map.Key) void {
+    const mapData = zon.Map.get(key);
+    spawnPortals(world, mapData);
+    spawnChests(world, mapData);
+    spawnActors(world, mapData);
+}
+
+// 将地图中的相邻传送瓦片创建为区域实体。
+fn spawnPortals(world: *ecs.World, mapData: *const zon.Map) void {
+    var areas = std.EnumMap(zon.Portal.Key, zhu.Rect).init(.{});
+    for (mapData.object, 0..) |value, index| {
+        if (value < 5) continue;
+        const key: zon.Portal.Key = @enumFromInt(value - 4);
+        const tile = mapData.grid.indexToRect(index);
+        if (areas.getPtr(key)) |area| {
+            const min = area.min.min(tile.min);
+            const max = area.max().max(tile.max());
+            area.* = .fromMax(min, max);
+        } else areas.put(key, tile);
+    }
+
+    var iterator = areas.iterator();
+    while (iterator.next()) |portal| {
+        world.add(world.createEntity(), Portal{
+            .key = portal.key,
+            .area = portal.value.*,
+        });
+    }
+}
+
 // 根据当前地图和长期状态创建宝箱实体。
-pub fn spawnChests(world: *ecs.World, mapData: *const zon.Map) void {
+fn spawnChests(world: *ecs.World, mapData: *const zon.Map) void {
     const opened = world.getGlobal(storage.OpenedChests).?;
     const atlas = zhu.getImage("maps1-sheet.png").?;
     const images = component.ChestImages{
@@ -136,8 +169,19 @@ pub fn actorSpeed(key: zon.Actor.Key, progress: u8) f32 {
     return data.speed;
 }
 
+// 根据地图配置和长期状态创建人物实体。
+fn spawnActors(world: *ecs.World, mapData: *const zon.Map) void {
+    const deadActors = world.getGlobal(storage.DeadActors).?;
+    const progress = world.getGlobal(storage.Progress).?.value;
+    for (mapData.actors) |key| {
+        if (deadActors.contains(key)) continue;
+        if (zon.Actor.get(key).progress < progress) continue;
+        spawnActor(world, key, progress);
+    }
+}
+
 // 根据配置创建一个 NPC 实体。
-pub fn spawnActor(
+fn spawnActor(
     world: *ecs.World,
     key: zon.Actor.Key,
     progress: u8,
@@ -177,4 +221,30 @@ pub fn spawnActor(
         component.Speed{ .value = speed },
         actor.Wander{ .value = .init(0) },
     });
+}
+
+test "相邻瓦片创建一个传送区域实体" {
+    const objects = [_]u8{
+        1, 5, 5,
+        1, 1, 1,
+    };
+    const mapData = zon.Map{
+        .key = "test",
+        .grid = .{ .width = 3, .height = 2, .cell = 32 },
+        .back = &.{},
+        .ground = &.{},
+        .object = &objects,
+    };
+
+    var world = ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+    spawnPortals(&world, &mapData);
+
+    var query = world.query(.{Portal});
+    const entity = query.next().?;
+    const portal = query.get(entity, Portal);
+    try std.testing.expectEqual(zon.Portal.Key.cityToHome, portal.key);
+    try std.testing.expectEqual(zhu.Vector2.xy(32, 0), portal.area.min);
+    try std.testing.expectEqual(zhu.Vector2.xy(64, 32), portal.area.size);
+    try std.testing.expectEqual(null, query.next());
 }

@@ -25,7 +25,7 @@ const Facing = actorComponent.Facing;
 const Interact = component.Interact;
 const Player = actorComponent.Player;
 const Position = component.Position;
-const Portal = component.Portal;
+const Portal = component.map.Portal;
 const Talk = dialog.Talk;
 
 const PlayerLocation = struct {
@@ -39,17 +39,17 @@ const PlayerSpawn = union(enum) {
 };
 
 pub var back: enum { none, battle, load, menu } = .none;
-pub fn init(_: *ecs.World) void {
+pub fn init(allocator: zhu.Allocator) void {
     ui.init();
-    map.init();
+    map.init(allocator);
 }
 
-pub fn deinit() void {
+pub fn deinit(allocator: zhu.Allocator) void {
+    map.deinit(allocator);
     zhu.audio.setMusicState(.stopped);
 }
 
-pub fn enter(world: *ecs.World) void {
-    map.enter();
+pub fn enter(world: *ecs.World, allocator: zhu.Allocator) void {
     ui.reset();
     switch (back) {
         .none => {
@@ -60,7 +60,7 @@ pub fn enter(world: *ecs.World) void {
                 storage.Stats{},
                 storage.Inventory{},
             });
-            rebuildMap(world, .{
+            rebuildMap(world, allocator, .{
                 .location = .{
                     .position = .xy(180, 164),
                     .facing = .down,
@@ -76,11 +76,15 @@ pub fn enter(world: *ecs.World) void {
             finishBattle(world);
         },
         .load => {
-            rebuildMap(world, .{ .location = loadPlayerLocation.? });
+            rebuildMap(
+                world,
+                allocator,
+                .{ .location = loadPlayerLocation.? },
+            );
         },
         .menu => {
             if (loadPlayerLocation) |location| {
-                rebuildMap(world, .{ .location = location });
+                rebuildMap(world, allocator, .{ .location = location });
             }
             ui.openPause();
         },
@@ -90,17 +94,19 @@ pub fn enter(world: *ecs.World) void {
     zhu.audio.playMusic("voc/back.ogg");
 }
 
-pub fn changeMap(world: *ecs.World) void {
-    map.enter();
-    rebuildMap(world, .{ .portal = map.portalKey });
+pub fn changeMap(world: *ecs.World, allocator: zhu.Allocator) void {
+    rebuildMap(world, allocator, .{ .portal = map.portalKey });
 }
 
 // 清空旧地图并创建新地图的实体。
-fn rebuildMap(world: *ecs.World, spawn: PlayerSpawn) void {
+fn rebuildMap(
+    world: *ecs.World,
+    allocator: zhu.Allocator,
+    spawn: PlayerSpawn,
+) void {
     world.resetKeep(storage.keep);
     world.entity = world.createEntity();
-    map.spawnPortals(world);
-    factory.spawnChests(world, map.current);
+    factory.spawnMapObjects(world, map.enter(allocator, world));
     switch (spawn) {
         .location => |location| factory.spawnPlayer(
             world,
@@ -110,13 +116,6 @@ fn rebuildMap(world: *ecs.World, spawn: PlayerSpawn) void {
         .portal => |key| spawnPlayerAtPortal(world, key),
     }
 
-    const deadActors = world.getGlobal(storage.DeadActors).?;
-    const progress = world.getGlobal(storage.Progress).?.value;
-    for (map.current.actors) |key| {
-        if (deadActors.contains(key)) continue;
-        if (zon.Actor.get(key).progress < progress) continue;
-        factory.spawnActor(world, key, progress);
-    }
     camera.directFollow(playerPosition(world));
 }
 
@@ -300,7 +299,6 @@ pub fn update(world: *ecs.World, delta: f32) void {
 }
 
 pub fn draw(world: *ecs.World) void {
-    map.draw();
     system.render.draw(world);
 
     camera.push(.window);

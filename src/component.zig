@@ -4,6 +4,23 @@ const zon = @import("zon.zig");
 
 pub const Animation = zhu.Animation;
 
+pub const map = struct {
+    // 普通地图的图片和只读顶点。
+    pub const Map = struct {
+        image: zhu.Image,
+        vertexes: []const zhu.batch.Vertex,
+    };
+
+    // 普通地图中不会移动的瓦片碰撞。
+    pub const Static = zhu.extend.tiled.Field(u8);
+
+    // 玩家进入后切换地图的区域。
+    pub const Portal = struct {
+        key: zon.Portal.Key,
+        area: zhu.Rect,
+    };
+};
+
 // 实体当前绘制的图片和对齐位置。
 pub const Sprite = struct {
     image: zhu.Image,
@@ -52,11 +69,6 @@ pub const actor = struct {
     pub const Wander = struct { value: zhu.Timer };
 };
 
-// 玩家进入后切换地图的区域。
-pub const Portal = struct {
-    key: zon.Portal.Key,
-    area: zhu.Rect,
-};
 // 可交互实体；Identity 指向当前交互对象。
 pub const Interact = struct {
     // 暂时禁止产生新的交互对象。
