@@ -12,23 +12,24 @@ const tip = @import("tip.zig");
 const Dialog = component.dialog.Dialog;
 
 pub const battle = @import("battle.zig");
+pub const status = @import("status.zig");
 
 pub const Request = union(enum) {
     block,
     dialog: zon.dialog.Event,
-    status,
     item,
     load: u8,
     save: u8,
 };
 
-const Popup = enum { about, pause, save };
+const Popup = enum { about, pause, save, status };
 
 var popup: ?Popup = null;
 
 pub fn init() void {
     about.init();
     dialog.init();
+    status.init();
 }
 
 pub fn reset() void {
@@ -52,10 +53,7 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
         .pause => {
             const req = pause.update() orelse return .block;
             switch (req) {
-                .status => {
-                    popup = null;
-                    return .status;
-                },
+                .status => popup = .status,
                 .item => {
                     popup = null;
                     return .item;
@@ -90,6 +88,9 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
                 },
             }
         },
+        .status => if (status.update()) {
+            popup = .pause;
+        },
     }
     return .block;
 }
@@ -101,5 +102,6 @@ pub fn draw(world: *ecs.World) void {
         .about => about.draw(),
         .pause => pause.draw(),
         .save => save.draw(),
+        .status => status.draw(world),
     };
 }

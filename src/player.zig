@@ -7,10 +7,10 @@ const math = zhu.math;
 
 const component = @import("component.zig");
 const item = @import("item.zig");
+const statsUi = @import("ui/stats.zig");
 const zon = @import("zon.zig");
 const input = zon.input;
 const map = @import("map.zig");
-const factory = @import("factory.zig");
 const storage = @import("storage.zig");
 
 const Collider = component.Collider;
@@ -20,14 +20,6 @@ const Position = component.Position;
 pub var itemIndex: u8 = 0;
 
 const maxExp = 100; // 经验最大值
-
-var bgTexture: zhu.Image = undefined;
-
-pub fn init() void {
-    bgTexture = zhu.getImage("sbar.png").?;
-}
-
-pub fn exit() void {}
 
 pub fn openItem(
     stats: *storage.Stats,
@@ -123,113 +115,19 @@ pub fn levelUp(stats: *storage.Stats) void {
     stats.health = stats.maxHealth;
 }
 
-pub fn drawStatus(
-    stats: *const storage.Stats,
-    inventory: *const storage.Inventory,
-) void {
-    const pos = zhu.Vector2.xy(120, 90);
-    // 背景
-    zhu.batch.drawImage(bgTexture, pos.addXY(-10, -10), .{});
-
-    // 头像
-    zhu.batch.drawImage(factory.playerPhoto(), pos.addXY(10, 10), .{});
-    zhu.text.msdf.begin();
-    defer zhu.text.msdf.end();
-    drawInfo(stats, inventory, pos, 30);
-}
-
-fn drawInfo(
-    stats: *const storage.Stats,
-    inventory: *const storage.Inventory,
-    pos: math.Vector2,
-    offsetY: f32,
-) void {
-    // 等级
-    var y = 22 + offsetY;
-    zhu.text.draw("等级：", pos.addXY(122, y), .{ .color = .black });
-    zhu.text.draw("等级：", pos.addXY(120, y - 2), .{});
-    zhu.text.drawNumber(stats.level, pos.addXY(232, y), .{
-        .color = .black,
-    });
-    zhu.text.drawNumber(stats.level, pos.addXY(230, y - 2), .{});
-
-    // 经验
-    y += offsetY;
-    zhu.text.draw("经验：", pos.addXY(122, y), .{ .color = .black });
-    zhu.text.draw("经验：", pos.addXY(120, y - 2), .{});
-    var buffer: [30]u8 = undefined;
-    const expStr = zhu.format(&buffer, "{d}/{d}", .{
-        stats.exp,
-        maxExp,
-    });
-    zhu.text.draw(expStr, pos.addXY(232, y), .{ .color = .black });
-    zhu.text.draw(expStr, pos.addXY(230, y - 2), .{});
-
-    // 生命
-    y += offsetY;
-    zhu.text.draw("生命：", pos.addXY(122, y), .{ .color = .black });
-    zhu.text.draw("生命：", pos.addXY(120, y - 2), .{});
-    const healthStr = zhu.format(&buffer, "{d}/{d}", .{
-        stats.health,
-        stats.maxHealth,
-    });
-    zhu.text.draw(healthStr, pos.addXY(232, y), .{ .color = .black });
-    zhu.text.draw(healthStr, pos.addXY(230, y - 2), .{});
-
-    // 攻击
-    y += offsetY;
-    zhu.text.draw("攻击：", pos.addXY(122, y), .{ .color = .black });
-    zhu.text.draw("攻击：", pos.addXY(120, y - 2), .{});
-    zhu.text.drawNumber(stats.attack, pos.addXY(232, y), .{
-        .color = .black,
-    });
-    zhu.text.drawNumber(stats.attack, pos.addXY(230, y - 2), .{});
-
-    // 防御
-    y += offsetY;
-    zhu.text.draw("防御：", pos.addXY(122, y), .{ .color = .black });
-    zhu.text.draw("防御：", pos.addXY(120, y - 2), .{});
-    zhu.text.drawNumber(stats.defend, pos.addXY(232, y), .{
-        .color = .black,
-    });
-    zhu.text.drawNumber(stats.defend, pos.addXY(230, y - 2), .{});
-
-    // 速度
-    y += offsetY;
-    zhu.text.draw("速度：", pos.addXY(122, y), .{ .color = .black });
-    zhu.text.draw("速度：", pos.addXY(120, y - 2), .{});
-    zhu.text.drawNumber(stats.agility, pos.addXY(232, y), .{
-        .color = .black,
-    });
-    zhu.text.drawNumber(stats.agility, pos.addXY(230, y - 2), .{});
-
-    // 金币
-    y += offsetY;
-    zhu.text.draw("金币：", pos.addXY(122, y), .{ .color = .black });
-    zhu.text.draw("金币：", pos.addXY(120, y - 2), .{ .color = .yellow });
-    zhu.text.drawNumber(inventory.money, pos.addXY(232, y), .{
-        .color = .black,
-    });
-    zhu.text.drawNumber(inventory.money, pos.addXY(230, y - 2), .{
-        .color = .yellow,
-    });
-}
-
 var needDrawInfo: bool = false;
-pub fn drawOpenItem(
-    stats: *const storage.Stats,
-    inventory: *const storage.Inventory,
-) void {
+pub fn drawOpenItem(world: *ecs.World) void {
+    const inventory = world.getGlobal(storage.Inventory).?;
     item.draw(&inventory.items, itemIndex);
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
 
     if (needDrawInfo) {
-        zhu.text.draw("现在的状态：", .xy(272, 92), .{ .color = .black });
-        zhu.text.draw("现在的状态：", .xy(270, 90), .{
-            .color = .yellow,
-        });
-        drawInfo(stats, inventory, .xy(120, 73), 20);
+        const shadow: zhu.text.Option = .{ .color = .black };
+        const gold: zhu.text.Option = .{ .color = .yellow };
+        zhu.text.draw("现在的状态：", .xy(272, 92), shadow);
+        zhu.text.draw("现在的状态：", .xy(270, 90), gold);
+        statsUi.draw(world, .xy(120, 73), 20);
     }
 
     var buffer: [20]u8 = undefined;

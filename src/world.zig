@@ -41,7 +41,6 @@ const PlayerSpawn = union(enum) {
 
 const State = union(enum) {
     map: MapState,
-    status,
     item,
     talk: TalkState,
     shop,
@@ -51,7 +50,6 @@ const State = union(enum) {
         switch (self) {
             .map => MapState.update(world, delta),
             .talk => {},
-            .status => {},
             .item => {
                 const stats = world.getGlobal(storage.Stats).?;
                 const inventory = world.getGlobal(storage.Inventory).?;
@@ -65,14 +63,7 @@ const State = union(enum) {
     pub fn draw(self: State, world: *ecs.World) void {
         switch (self) {
             .map, .talk => {},
-            .status => player.drawStatus(
-                world.getGlobal(storage.Stats).?,
-                world.getGlobal(storage.Inventory).?,
-            ),
-            .item => player.drawOpenItem(
-                world.getGlobal(storage.Stats).?,
-                world.getGlobal(storage.Inventory).?,
-            ),
+            .item => player.drawOpenItem(world),
             .sale => player.drawSellItem(
                 world.getGlobal(storage.Inventory).?,
             ),
@@ -92,7 +83,6 @@ pub fn init(_: *ecs.World) void {
     item.init();
     ui.init();
     map.init();
-    player.init();
 }
 
 pub fn deinit() void {
@@ -359,7 +349,6 @@ pub fn update(world: *ecs.World, delta: f32) void {
         switch (req) {
             .block => {},
             .dialog => |event| TalkState.handle(event),
-            .status => state = .status,
             .item => state = .item,
             .load => |index| {
                 load(world, index) catch return;
@@ -372,7 +361,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
         return;
     }
 
-    if (state == .map or state == .status or state == .item) {
+    if (state == .map or state == .item) {
         if (zon.input.released(.menu) or zon.input.released(.cancel) or
             zhu.mouse.released(.RIGHT))
         {

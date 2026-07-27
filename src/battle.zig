@@ -424,16 +424,11 @@ const EnemyDeathPhase = struct {
 
 const StatusPhase = struct {
     fn update(world: *ecs.World, _: f32) void {
-        if (zon.input.released(.confirm) or zon.input.released(.cancel)) {
-            changePhase(world, .menu);
-        }
+        if (ui.status.update()) changePhase(world, .menu);
     }
 
     fn draw(world: *ecs.World) void {
-        player.drawStatus(
-            world.getGlobal(storage.Stats).?,
-            world.getGlobal(storage.Inventory).?,
-        );
+        ui.status.draw(world);
     }
 };
 
@@ -448,9 +443,6 @@ const ItemPhase = struct {
     }
 
     fn draw(world: *ecs.World) void {
-        player.drawOpenItem(
-            world.getGlobal(storage.Stats).?,
-            world.getGlobal(storage.Inventory).?,
-        );
+        player.drawOpenItem(world);
     }
 };
