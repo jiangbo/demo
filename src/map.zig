@@ -42,7 +42,7 @@ pub fn init() void {
 
 pub fn enter() void {
     const portal = zon.Portal.get(portalKey);
-    current = &zon.maps[portal.mapId];
+    current = zon.Map.get(portal.map);
     objectField = .{ .grid = current.grid, .data = current.object };
     zhu.camera.bound = current.grid.size();
 
@@ -131,6 +131,7 @@ test "相邻瓦片创建一个传送区域实体" {
         1, 1, 1,
     };
     const mapData = zon.Map{
+        .key = "test",
         .grid = .{ .width = 3, .height = 2, .cell = 32 },
         .back = &.{},
         .ground = &.{},

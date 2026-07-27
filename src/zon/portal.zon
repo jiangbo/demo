@@ -3,70 +3,70 @@
     .{
         .key = .start,
         .target = .start,
-        .mapId = 1,
+        .map = .home,
         .facing = .down,
     },
     // 城市回家
     .{
         .key = .cityToHome,
         .target = .homeToCity,
-        .mapId = 2,
+        .map = .city,
         .facing = .down,
     },
     // 家里出门
     .{
         .key = .homeToCity,
         .target = .cityToHome,
-        .mapId = 1,
+        .map = .home,
         .facing = .up,
     },
     // 城市进入武器铺
     .{
         .key = .cityToWeaponShop,
         .target = .weaponShopToCity,
-        .mapId = 2,
+        .map = .city,
         .facing = .down,
     },
     // 武器铺返回城市
     .{
         .key = .weaponShopToCity,
         .target = .cityToWeaponShop,
-        .mapId = 3,
+        .map = .weaponShop,
         .facing = .up,
     },
     // 城市进入药店
     .{
         .key = .cityToPotionShop,
         .target = .potionShopToCity,
-        .mapId = 2,
+        .map = .city,
         .facing = .down,
     },
     // 药店返回城市
     .{
         .key = .potionShopToCity,
         .target = .cityToPotionShop,
-        .mapId = 4,
+        .map = .potionShop,
         .facing = .up,
     },
     // 城市进入酒店
     .{
         .key = .cityToHotel,
         .target = .hotelToCity,
-        .mapId = 2,
+        .map = .city,
         .facing = .down,
     },
     // 酒店返回城市
     .{
         .key = .hotelToCity,
         .target = .cityToHotel,
-        .mapId = 5,
+        .map = .hotel,
         .facing = .up,
     },
     // 城市前往森林
     .{
         .key = .cityToForest,
         .target = .forestToCity,
-        .mapId = 2,
+        .map = .city,
         .facing = .up,
         .progress = 4,
     },
@@ -74,21 +74,21 @@
     .{
         .key = .forestToCity,
         .target = .cityToForest,
-        .mapId = 7,
+        .map = .forest,
         .facing = .down,
     },
     // 进入战斗
     .{
         .key = .battle,
         .target = .battle,
-        .mapId = 6,
+        .map = .battle,
         .facing = .down,
     },
     // 森林进入宫殿
     .{
         .key = .forestToPalace,
         .target = .palaceToForest,
-        .mapId = 7,
+        .map = .forest,
         .facing = .up,
         .progress = 10,
     },
@@ -96,7 +96,7 @@
     .{
         .key = .palaceToForest,
         .target = .forestToPalace,
-        .mapId = 8,
+        .map = .palace,
         .facing = .up,
     },
 }

@@ -113,18 +113,27 @@ pub const factory: Factory = @import("zon/factory.zon");
 pub const input = zhu.input.bind(@import("zon/input.zon"));
 
 pub const Map = struct {
+    key: []const u8,
     grid: tiled.Grid,
     back: []const u16,
     ground: []const u16,
     object: []const u8,
     chests: []const Chest.Place = &.{},
     actors: []const Actor.Key = &.{},
+
+    pub const list: []const Map = @import("zon/map.zon");
+    pub const Key = zhu.enums.fromField(list, "key");
+
+    // 根据稳定标识取得地图配置。
+    pub fn get(key: Key) *const Map {
+        return &list[@intFromEnum(key)];
+    }
 };
 
 pub const Portal = struct {
     key: Key,
     target: Key,
-    mapId: u8,
+    map: Map.Key,
     facing: Facing,
     progress: u8 = 0,
 
@@ -136,8 +145,6 @@ pub const Portal = struct {
         return &list[@intFromEnum(value)];
     }
 };
-
-pub const maps: []const Map = @import("zon/map.zon");
 
 comptime {
     for (dialogues, 0..) |dialogue, id| {
