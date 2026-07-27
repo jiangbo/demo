@@ -3,6 +3,7 @@ const zhu = @import("zhu");
 
 const save = @import("save.zig");
 const input = @import("../zon.zig").input;
+const Typing = @import("Typing.zig");
 
 pub const Request = union(enum) {
     fadeOut: *const fn () void,
@@ -16,8 +17,8 @@ var background: zhu.Image = undefined;
 var menu: zhu.widget.Menu = @import("title.zon");
 var state: State = .menu;
 
-var introTimer: zhu.Timer = .init(0.08);
-var introIndex: usize = 0;
+// 开场文字的逐字显示状态。
+var introTyping: Typing = .{ .content = introText };
 
 pub fn init() void {
     background = zhu.assets.loadImage("title.png", .{
@@ -30,7 +31,7 @@ pub fn enter() void {
     menu.selected = 0;
     state = .menu;
     zhu.audio.playMusic("voc/title.ogg");
-    introIndex = 0;
+    introTyping.reset();
 }
 
 pub fn exit() void {
@@ -90,11 +91,7 @@ fn updateIntro(delta: f32) ?Request {
         return .start;
     }
 
-    if (introTimer.updateFinished(delta)) {
-        if (introIndex >= introText.len) return null;
-        introIndex = zhu.text.nextIndex(introText, introIndex);
-        introTimer.restart();
-    }
+    introTyping.update(delta);
     return null;
 }
 
@@ -108,5 +105,5 @@ const introText =
 fn drawIntro() void {
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
-    zhu.text.draw(introText[0..introIndex], .xy(40, 100), .{});
+    zhu.text.draw(introTyping.text(), .xy(40, 100), .{});
 }

@@ -16,6 +16,7 @@ const Dialog = component.dialog.Dialog;
 
 pub const battle = @import("battle.zig");
 pub const inventory = @import("inventory.zig");
+pub const story = @import("story.zig");
 pub const status = @import("status.zig");
 
 pub const Request = union(enum) {
@@ -23,6 +24,8 @@ pub const Request = union(enum) {
     dialog: zon.dialog.Event,
     load: u8,
     save: u8,
+    storyClose,
+    title,
 };
 
 const Popup = enum {
@@ -46,6 +49,7 @@ pub fn init() void {
 
 pub fn reset() void {
     popup = null;
+    story.reset();
     tip.reset();
 }
 
@@ -69,6 +73,14 @@ pub fn openSale() void {
 }
 
 pub fn update(world: *ecs.World, delta: f32) ?Request {
+    if (story.isOpen()) {
+        const request = story.update(delta) orelse return .block;
+        return switch (request) {
+            .close => .storyClose,
+            .title => .title,
+        };
+    }
+
     tip.update(world, delta);
     if (world.has(world.entity, Dialog)) tip.reset();
     if (dialog.update(world)) |event| {
@@ -146,4 +158,5 @@ pub fn draw(world: *ecs.World) void {
         .sale => sale.draw(world),
         .shop => shop.draw(world),
     };
+    story.draw();
 }

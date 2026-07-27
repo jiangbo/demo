@@ -50,10 +50,6 @@ const State = union(enum) {
 };
 var state: State = .map;
 pub var back: enum { none, battle, load, menu } = .none;
-var header: []const u8 = &.{};
-var headerIndex: usize = 0;
-var headerTimer: zhu.Timer = .init(0.08);
-var headerColor: zhu.Color = .white;
 pub fn init(_: *ecs.World) void {
     ui.init();
     map.init();
@@ -295,30 +291,6 @@ test "逃跑后关闭对话并保留冷却中的敌人" {
 pub fn exit() void {}
 
 pub fn update(world: *ecs.World, delta: f32) void {
-    const progress = world.getGlobal(storage.Progress).?.value;
-    if (header.len != 0) {
-        if (header.len == headerIndex) {
-            // 已经显示结束了，等待按键
-            if (zon.input.released(.confirm)) {
-                if (progress > 20)
-                    // 如果打败了大魔王，跳转到标题界面
-                    scene.changeScene(.title)
-                else {
-                    header = &.{};
-                    state = .map;
-                }
-            }
-        } else if (headerTimer.updateFinished(delta)) {
-            // 没有显示结束，继续显示
-            const len = std.unicode.utf8ByteSequenceLength(
-                header[headerIndex],
-            ) catch unreachable;
-            headerIndex += len;
-            headerTimer.restart();
-        }
-        return;
-    }
-
     if (ui.update(world, delta)) |req| {
         switch (req) {
             .block => {},
@@ -330,6 +302,8 @@ pub fn update(world: *ecs.World, delta: f32) void {
             },
             .save => |index| save(world, index) catch
                 @panic("save failed"),
+            .storyClose => state = .map,
+            .title => scene.changeScene(.title),
         }
         return;
     }
@@ -354,14 +328,6 @@ pub fn draw(world: *ecs.World) void {
     camera.push(.window);
     defer camera.pop();
     ui.draw(world);
-    if (header.len != 0) {
-        zhu.text.msdf.begin();
-        zhu.text.draw(header[0..headerIndex], .xy(80, 100), .{
-            .max = 520,
-            .color = headerColor,
-        });
-        zhu.text.msdf.end();
-    }
 }
 
 const MapState = struct {
@@ -524,21 +490,11 @@ const TalkState = struct {
             },
             .showSwordTip => {
                 // 打败了巫批，对话完成
-                header = "　　太好了！终于找到了失落已久的“圣剑”，就用它的威力把大魔王彻底杀死吧！　";
-                headerColor = .white;
-                headerTimer.restart();
+                ui.story.open(.sword);
             },
             .showEnding => {
                 // 打败了大魔王
-                header =
-                    \\　　祝贺你成功打爆试玩版！详细情况请看Readme.txt
-                    \\敬请关注该游戏的最新动态：
-                    \\　　http://goldpoint.126.com
-                    \\　　　　　　　　　　　　　成都金点工作组制作
-                    \\　　　　　　　　　　　　　[THE END]
-                ;
-                headerColor = .red;
-                headerTimer.restart();
+                ui.story.open(.ending);
             },
         }
     }

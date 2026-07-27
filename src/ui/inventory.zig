@@ -59,6 +59,7 @@ fn addValue(value: *u16, add: i32) void {
 
 pub fn draw(world: *ecs.World) void {
     const inventory = world.getGlobal(storage.Inventory).?;
+    const pos = item.position;
     item.draw(&inventory.items, index);
 
     zhu.text.msdf.begin();
@@ -73,12 +74,8 @@ pub fn draw(world: *ecs.World) void {
     }
 
     var buffer: [20]u8 = undefined;
-    zhu.text.draw("（金=", item.position.addXY(10, 270), .{});
+    zhu.text.draw("（金=", pos.addXY(10, 270), .{});
     const money = zhu.format(&buffer, "{d}）", .{inventory.money});
-    zhu.text.draw(money, item.position.addXY(60, 270), .{});
-    zhu.text.draw(
-        " F=使用  G=丢弃  ESC=退出",
-        item.position.addXY(118, 270),
-        .{},
-    );
+    zhu.text.draw(money, pos.addXY(60, 270), .{});
+    zhu.text.draw(" F=使用  G=丢弃  ESC=退出", pos.addXY(118, 270), .{});
 }
