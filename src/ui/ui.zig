@@ -7,7 +7,9 @@ const about = @import("about.zig");
 const dialog = @import("dialog.zig");
 const item = @import("item.zig");
 const pause = @import("pause.zig");
+const sale = @import("sale.zig");
 const save = @import("save.zig");
+const shop = @import("shop.zig");
 const tip = @import("tip.zig");
 
 const Dialog = component.dialog.Dialog;
@@ -23,7 +25,15 @@ pub const Request = union(enum) {
     save: u8,
 };
 
-const Popup = enum { about, inventory, pause, save, status };
+const Popup = enum {
+    about,
+    inventory,
+    pause,
+    sale,
+    save,
+    shop,
+    status,
+};
 
 var popup: ?Popup = null;
 
@@ -41,6 +51,21 @@ pub fn reset() void {
 
 pub fn openPause() void {
     popup = .pause;
+}
+
+pub fn openWeaponShop() void {
+    shop.open(.weapon);
+    popup = .shop;
+}
+
+pub fn openPotionShop() void {
+    shop.open(.potion);
+    popup = .shop;
+}
+
+pub fn openSale() void {
+    sale.open();
+    popup = .sale;
 }
 
 pub fn update(world: *ecs.World, delta: f32) ?Request {
@@ -99,6 +124,12 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
                 .used => {},
             }
         },
+        .sale => if (sale.update(world)) {
+            popup = null;
+        },
+        .shop => if (shop.update(world)) {
+            popup = null;
+        },
     }
     return .block;
 }
@@ -112,5 +143,7 @@ pub fn draw(world: *ecs.World) void {
         .save => save.draw(),
         .status => status.draw(world),
         .inventory => inventory.draw(world),
+        .sale => sale.draw(world),
+        .shop => shop.draw(world),
     };
 }

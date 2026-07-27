@@ -9,7 +9,6 @@ const scene = @import("scene.zig");
 const component = @import("component.zig");
 const player = @import("player.zig");
 const map = @import("map.zig");
-const item = @import("ui/item.zig");
 const factory = @import("factory.zig");
 const zon = @import("zon.zig");
 const system = @import("system/system.zig");
@@ -27,7 +26,6 @@ const Interact = component.Interact;
 const Player = actorComponent.Player;
 const Portal = component.Portal;
 const Talk = dialog.Talk;
-const Tip = component.event.Tip;
 
 const PlayerLocation = struct {
     position: math.Vector2,
@@ -42,27 +40,11 @@ const PlayerSpawn = union(enum) {
 const State = union(enum) {
     map: MapState,
     talk: TalkState,
-    shop,
-    sale: SaleState,
 
     pub fn update(self: State, world: *ecs.World, delta: f32) void {
         switch (self) {
             .map => MapState.update(world, delta),
             .talk => {},
-            .shop => shop.update(world),
-            .sale => SaleState.update(world, delta),
-        }
-    }
-
-    pub fn draw(self: State, world: *ecs.World) void {
-        switch (self) {
-            .map, .talk => {},
-            .sale => player.drawSellItem(
-                world.getGlobal(storage.Inventory).?,
-            ),
-            .shop => shop.draw(
-                world.getGlobal(storage.Inventory).?,
-            ),
         }
     }
 };
@@ -371,7 +353,6 @@ pub fn draw(world: *ecs.World) void {
 
     camera.push(.window);
     defer camera.pop();
-    state.draw(world);
     ui.draw(world);
     if (header.len != 0) {
         zhu.text.msdf.begin();
@@ -530,15 +511,9 @@ const TalkState = struct {
     fn handle(event: zon.dialog.Event) void {
         switch (event) {
             .finish => state = .map,
-            .openWeaponShop => {
-                state = .shop;
-                shop = &weaponShop;
-            },
-            .openPotionShop => {
-                state = .shop;
-                shop = &potionShop;
-            },
-            .openSale => state = .sale,
+            .openWeaponShop => ui.openWeaponShop(),
+            .openPotionShop => ui.openPotionShop(),
+            .openSale => ui.openSale(),
             .battle => |actorKey| {
                 context.battle = .{
                     .actor = actorKey,
@@ -568,128 +543,3 @@ const TalkState = struct {
         }
     }
 };
-
-const SaleState = struct {
-    var sell: bool = false;
-
-    fn update(world: *ecs.World, _: f32) void {
-        const inventory = world.getGlobal(storage.Inventory).?;
-        const playerSell = player.sellItem(inventory);
-        if (playerSell) {
-            world.addEvent(Tip{ .text = "这东西归别人了！" });
-        }
-        if (!sell) sell = playerSell;
-
-        if (zon.input.released(.menu) or zon.input.released(.cancel) or
-            zhu.mouse.released(.RIGHT))
-        {
-            world.add(world.entity, Dialog{
-                .lines = zon.dialogues[
-                    if (sell) 27 else 26
-                ].lines,
-            });
-            world.add(world.getIdentity(Player).?, Interact.Disabled{});
-            state = .talk;
-            sell = false;
-        }
-    }
-};
-
-const Shop = struct {
-    var bought: bool = false;
-    items: [16]?zon.Item.Key,
-    current: u8 = 0,
-    notBoughtDialogue: u16,
-    boughtDialogue: u16,
-
-    pub fn update(self: *Shop, world: *ecs.World) void {
-        const inventory = world.getGlobal(storage.Inventory).?;
-        self.current = item.update(self.items.len, self.current);
-
-        if (zon.input.released(.buyItem)) {
-            if (self.items[self.current]) |key| {
-                const playerBuy = buy(world, inventory, key);
-                if (!bought) bought = playerBuy;
-            }
-        }
-
-        if (zon.input.released(.menu) or zon.input.released(.cancel)) {
-            const dialogId = if (bought)
-                self.boughtDialogue
-            else
-                self.notBoughtDialogue;
-            world.add(world.entity, Dialog{
-                .lines = zon.dialogues[dialogId].lines,
-            });
-            world.add(world.getIdentity(Player).?, Interact.Disabled{});
-            state = .talk;
-            bought = false;
-        }
-    }
-
-    fn buy(
-        world: *ecs.World,
-        inventory: *storage.Inventory,
-        key: zon.Item.Key,
-    ) bool {
-        const buyItem = zon.Item.get(key);
-
-        if (buyItem.money > inventory.money) {
-            world.addEvent(Tip{ .text = "兄弟，你的钱不够！" });
-            return false;
-        }
-
-        const bagEnough = inventory.add(key);
-        if (!bagEnough) {
-            world.addEvent(Tip{ .text = "你已经带满了！" });
-            return false;
-        }
-        inventory.money -= buyItem.money;
-        return true;
-    }
-
-    pub fn draw(
-        self: *const Shop,
-        inventory: *const storage.Inventory,
-    ) void {
-        item.draw(&self.items, self.current);
-        zhu.text.msdf.begin();
-        defer zhu.text.msdf.end();
-        var buffer: [20]u8 = undefined;
-        // 金币，操作说明
-        zhu.text.draw("（金=", item.position.addXY(10, 270), .{});
-        const moneyStr = zhu.format(&buffer, "{d}）", .{inventory.money});
-        zhu.text.draw(moneyStr, item.position.addXY(60, 270), .{});
-        const text = "CTRL=购买　　ESC=退出";
-        zhu.text.draw(text, item.position.addXY(118, 270), .{});
-    }
-};
-var weaponShop: Shop = .{
-    .items = .{
-        .biShou,          .biShou,
-        .ningShuangJian,  .ningShuangJian,
-        .guWenMingKuiJia, .guWenMingKuiJia,
-        .changQuanQuanPu, .changQuanQuanPu,
-        .zhongJian,       .zhongJian,
-        .fenKuLou,        .fenKuLou,
-        .piJia,           .piJia,
-        null,             null,
-    },
-    .notBoughtDialogue = 18,
-    .boughtDialogue = 19,
-};
-var potionShop: Shop = .{
-    .items = .{
-        .huaMoGu,       .huaMoGu,
-        .zhiXueCao,     .zhiXueCao,
-        .huanHunCao,    .huanHunCao,
-        .hongMeiGui,    .hongMeiGui,
-        .hongSeYaoPing, .hongSeYaoPing,
-        .yaoPing,       .yaoPing,
-        null,           null,
-        null,           null,
-    },
-    .notBoughtDialogue = 22,
-    .boughtDialogue = 23,
-};
-var shop: *Shop = undefined;
