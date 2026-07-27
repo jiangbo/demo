@@ -7,7 +7,6 @@ const math = zhu.math;
 
 const scene = @import("scene.zig");
 const component = @import("component.zig");
-const player = @import("player.zig");
 const map = @import("map.zig");
 const factory = @import("factory.zig");
 const zon = @import("zon.zig");
@@ -19,11 +18,13 @@ const storage = @import("storage.zig");
 const actorComponent = component.actor;
 const dialog = component.dialog;
 const Actor = actorComponent.Actor;
+const Collider = component.Collider;
 const Dialog = dialog.Dialog;
 const Enemy = actorComponent.Enemy;
 const Facing = actorComponent.Facing;
 const Interact = component.Interact;
 const Player = actorComponent.Player;
+const Position = component.Position;
 const Portal = component.Portal;
 const Talk = dialog.Talk;
 
@@ -85,7 +86,7 @@ pub fn enter(world: *ecs.World) void {
         },
     }
     loadPlayerLocation = null;
-    player.cameraLookAt(world);
+    camera.directFollow(playerPosition(world));
     zhu.audio.playMusic("voc/back.ogg");
 }
 
@@ -116,7 +117,7 @@ fn rebuildMap(world: *ecs.World, spawn: PlayerSpawn) void {
         if (zon.Actor.get(key).progress < progress) continue;
         factory.spawnActor(world, key, progress);
     }
-    player.cameraLookAt(world);
+    camera.directFollow(playerPosition(world));
 }
 
 // 在目标传送区域外创建玩家。
@@ -312,7 +313,7 @@ const MapState = struct {
 
     fn update(world: *ecs.World, delta: f32) void {
         system.update(world, delta);
-        player.cameraLookAt(world);
+        camera.directFollow(playerPosition(world));
 
         // 检测是否需要切换地图
         if (world.getIdentity(Portal)) |portalEntity| {
@@ -432,7 +433,7 @@ fn save(world: *ecs.World, index: u8) !void {
 
     try storage.write(index, .{
         .portal = map.portalKey,
-        .position = player.collider(world).min,
+        .position = playerPosition(world),
         .facing = world.get(world.getIdentity(Player).?, Facing).?,
         .progress = world.getGlobal(storage.Progress).?.*,
         .stats = world.getGlobal(storage.Stats).?.*,
@@ -440,6 +441,14 @@ fn save(world: *ecs.World, index: u8) !void {
         .openedChests = openedChestBuffer[0..openedChestCount],
         .deadActors = deadKeys[0..deadActorCount],
     });
+}
+
+// 返回玩家碰撞区域的位置，用于相机跟随和存档。
+fn playerPosition(world: *ecs.World) math.Vector2 {
+    const entity = world.getIdentity(Player).?;
+    const position = world.get(entity, Position).?;
+    const collider = world.get(entity, Collider).?;
+    return collider.move(position).min;
 }
 
 fn handleDialog(event: zon.dialog.Event) void {

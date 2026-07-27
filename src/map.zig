@@ -44,6 +44,7 @@ pub fn enter() void {
     const portal = zon.Portal.get(portalKey);
     current = &zon.maps[portal.mapId];
     objectField = .{ .grid = current.grid, .data = current.object };
+    zhu.camera.bound = current.grid.size();
 
     vertexArray.clearRetainingCapacity();
 

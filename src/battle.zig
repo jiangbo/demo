@@ -10,7 +10,6 @@ const audio = zhu.audio;
 const scene = @import("scene.zig");
 const map = @import("map.zig");
 const context = @import("context.zig");
-const player = @import("player.zig");
 const factory = @import("factory.zig");
 const component = @import("component.zig");
 const storage = @import("storage.zig");
@@ -381,9 +380,9 @@ const EnemyDeathPhase = struct {
         }
 
         if (step == 1 and zon.input.released(.confirm)) {
-            if (player.isLevelUp(stats.*)) {
+            if (stats.levelUp()) {
                 step += 1;
-                return player.levelUp(stats);
+                return;
             }
         }
 

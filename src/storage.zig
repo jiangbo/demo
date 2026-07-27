@@ -19,6 +19,20 @@ pub const Stats = struct {
     attack: u16 = 10, // 攻击
     defend: u16 = 10, // 防御
     agility: u16 = 8, // 敏捷
+
+    // 使用当前经验升级，返回是否发生升级。
+    pub fn levelUp(self: *Stats) bool {
+        if (self.exp < 100) return false;
+
+        const levelCount = self.exp / 100;
+        self.level += levelCount;
+        self.maxHealth += levelCount * 30;
+        self.attack += levelCount;
+        self.defend += levelCount;
+        self.exp %= 100;
+        self.health = self.maxHealth;
+        return true;
+    }
 };
 
 // 玩家已经越过的剧情进度。
