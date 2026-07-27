@@ -94,4 +94,24 @@
             },
         },
     },
+    .input = .{
+        .{ .action = "left", .keys = .{ .LEFT, .A } },
+        .{ .action = "right", .keys = .{ .RIGHT, .D } },
+        .{ .action = "up", .keys = .{ .UP, .W } },
+        .{ .action = "down", .keys = .{ .DOWN, .S } },
+        .{ .action = "confirm", .keys = .{ .F, .SPACE, .ENTER } },
+        .{ .action = "cancel", .keys = .{ .Q, .ESCAPE } },
+        .{ .action = "menu", .keys = .{.E} },
+        .{
+            .action = "useItem",
+            .keys = .{ .LEFT_CONTROL, .F },
+        },
+        .{ .action = "dropItem", .keys = .{.G} },
+        .{
+            .action = "buyItem",
+            .keys = .{ .LEFT_CONTROL, .F, .ENTER },
+        },
+        .{ .action = "help", .keys = .{.H} },
+        .{ .action = "debug", .keys = .{.X} },
+    },
 }

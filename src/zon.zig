@@ -10,10 +10,11 @@ const NpcAnimation = struct {
     frames: [4]Animation.Frames,
 };
 
-const Factory = struct {
+const Config = struct {
     player: []const Animation.Source,
     bomb: []const Animation.Source,
     npc: NpcAnimation,
+    input: []const zhu.input.Bind,
 };
 
 pub const Facing = enum { down, left, up, right };
@@ -109,8 +110,8 @@ pub const dialog = struct {
 };
 
 pub const dialogues: []const dialog.Script = @import("zon/talk.zon");
-pub const factory: Factory = @import("zon/factory.zon");
-pub const input = zhu.input.bind(@import("zon/input.zon"));
+pub const config: Config = @import("zon/config.zon");
+pub const input = zhu.input.bind(config.input);
 
 pub const Map = struct {
     key: []const u8,

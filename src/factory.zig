@@ -13,11 +13,11 @@ const Portal = component.map.Portal;
 // 所有 NPC 共用相同的素材布局。
 const npcSources: [15][4]Animation.Source = blk: {
     var sources: [15][4]Animation.Source = undefined;
-    for (zon.factory.npc.images, 0..) |imageId, imageIndex| {
-        for (zon.factory.npc.frames, 0..) |frames, sourceIndex| {
+    for (zon.config.npc.images, 0..) |imageId, imageIndex| {
+        for (zon.config.npc.frames, 0..) |frames, sourceIndex| {
             sources[imageIndex][sourceIndex] = .{
                 .imageId = imageId,
-                .size = zon.factory.npc.size,
+                .size = zon.config.npc.size,
                 .frames = frames,
             };
         }
@@ -27,12 +27,7 @@ const npcSources: [15][4]Animation.Source = blk: {
 
 // 创建角色动画。
 pub fn playerAnimation() Animation {
-    return .initSource(zon.factory.player);
-}
-
-// 创建爆炸动画。
-pub fn bombAnimation() Animation {
-    return .initSource(zon.factory.bomb);
+    return .initSource(zon.config.player);
 }
 
 // 创建指定素材的 NPC 动画。

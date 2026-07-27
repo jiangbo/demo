@@ -7,7 +7,7 @@ const camera = zhu.camera;
 
 const titleScene = @import("ui/title.zig");
 const worldScene = @import("world.zig");
-const battleScene = @import("battle.zig");
+const battleScene = @import("battle/battle.zig");
 const input = @import("zon.zig").input;
 const storage = @import("storage.zig");
 

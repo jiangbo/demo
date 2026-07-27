@@ -1,0 +1,165 @@
+const std = @import("std");
+const zhu = @import("zhu");
+const ecs = @import("ecs");
+
+const audio = zhu.audio;
+const math = zhu.math;
+
+const scene = @import("../scene.zig");
+const context = @import("../context.zig");
+const factory = @import("../factory.zig");
+const storage = @import("../storage.zig");
+const zon = @import("../zon.zig");
+const ui = @import("../ui/ui.zig");
+const shared = @import("shared.zig");
+
+pub const Menu = struct {
+    // 处理玩家方的战斗菜单。
+    pub fn update(
+        _: *ecs.World,
+        _: f32,
+        enemyActor: *const zon.Actor,
+    ) ?shared.Phase {
+        if (ui.battle.update()) |request| switch (request) {
+            .attack => return .playerAttack,
+            .status => return .status,
+            .item => {
+                ui.inventory.open();
+                return .item;
+            },
+            .escape => {
+                if (enemyActor.escape > zhu.random.int(u8, 0, 100)) {
+                    context.battle.result = .escape;
+                    scene.changeScene(.world);
+                } else {
+                    shared.Wait.tip = "逃跑失败！";
+                    shared.Wait.next = .enemyAttack;
+                    return .wait;
+                }
+            },
+        };
+        return null;
+    }
+};
+
+pub const Attack = struct {
+    // 开始玩家方攻击动画。
+    pub fn enter(_: *ecs.World) void {
+        audio.playSound(shared.attackSounds[0]);
+        shared.bombAnimation.reset();
+    }
+
+    // 攻击动画结束后进入敌方受伤阶段。
+    pub fn update(_: *ecs.World, delta: f32) ?shared.Phase {
+        if (shared.bombAnimation.update(delta) == .end) {
+            return .enemyHurt;
+        }
+        return null;
+    }
+
+    // 在敌方位置绘制攻击动画。
+    pub fn draw(_: *ecs.World) void {
+        zhu.batch.drawImage(
+            shared.bombAnimation.subImage(),
+            .xy(452, 230),
+            .{},
+        );
+    }
+};
+
+pub const Hurt = struct {
+    var damage: u16 = 0;
+    var timer: zhu.Timer = .init(0.5);
+    var offset: f32 = 5;
+
+    // 计算玩家受到的伤害并开始受伤动画。
+    pub fn enter(world: *ecs.World, enemyActor: *const zon.Actor) void {
+        audio.playSound(shared.hurtSounds[0]);
+
+        const stats = world.getGlobal(storage.Stats).?;
+        damage = shared.computeDamage(enemyActor.attack, stats.defend);
+        stats.health -|= damage;
+        timer.restart();
+    }
+
+    // 受伤动画结束后判断玩家是否死亡。
+    pub fn update(world: *ecs.World, delta: f32) ?shared.Phase {
+        if (timer.updateFinished(delta)) {
+            const stats = world.getGlobal(storage.Stats).?;
+            return if (stats.health == 0) .playerDeath else .menu;
+        }
+
+        const period: u8 = @intFromFloat(
+            @trunc(timer.elapsed / 0.08),
+        );
+        offset = if (period % 2 == 0) -5 else 5;
+        return null;
+    }
+
+    // 绘制玩家抖动和伤害数字。
+    pub fn draw(_: *ecs.World) void {
+        const position = math.Vector2.xy(130, 220).addX(offset);
+        zhu.batch.drawImage(
+            factory.playerBattleImage(),
+            position,
+            .{},
+        );
+
+        var buffer: [10]u8 = undefined;
+        const y = std.math.lerp(230, 190, timer.progress());
+        const text = zhu.format(&buffer, "-{}", .{damage});
+        zhu.text.msdf.begin();
+        defer zhu.text.msdf.end();
+        zhu.text.draw(text, .xy(130, y), .{});
+    }
+};
+
+pub const Death = struct {
+    // 播放玩家死亡声音。
+    pub fn enter(_: *ecs.World) void {
+        audio.playSound(shared.deadSounds[0]);
+    }
+
+    // 确认后返回标题场景。
+    pub fn update(_: *ecs.World, _: f32) ?shared.Phase {
+        if (zon.input.released(.confirm)) {
+            scene.changeScene(.title);
+        }
+        return null;
+    }
+
+    // 绘制玩家死亡提示。
+    pub fn draw(_: *ecs.World) void {
+        zhu.text.msdf.begin();
+        defer zhu.text.msdf.end();
+        zhu.text.draw("你死了！", .xy(285, 200), .{});
+    }
+};
+
+pub const Status = struct {
+    // 状态页关闭后返回战斗菜单。
+    pub fn update(_: *ecs.World, _: f32) ?shared.Phase {
+        return if (ui.status.update()) .menu else null;
+    }
+
+    // 绘制玩家状态页。
+    pub fn draw(world: *ecs.World) void {
+        ui.status.draw(world);
+    }
+};
+
+pub const Item = struct {
+    // 处理战斗中的物品选择。
+    pub fn update(world: *ecs.World, _: f32) ?shared.Phase {
+        const request = ui.inventory.update(world) orelse return null;
+        return switch (request) {
+            .used => .enemyAttack,
+            .close => .menu,
+        };
+    }
+
+    // 绘制战斗物品页。
+    pub fn draw(world: *ecs.World) void {
+        ui.inventory.draw(world);
+    }
+};
