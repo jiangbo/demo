@@ -5,6 +5,7 @@ const component = @import("../component.zig");
 const zon = @import("../zon.zig");
 const about = @import("about.zig");
 const dialog = @import("dialog.zig");
+const item = @import("item.zig");
 const pause = @import("pause.zig");
 const save = @import("save.zig");
 const tip = @import("tip.zig");
@@ -12,23 +13,24 @@ const tip = @import("tip.zig");
 const Dialog = component.dialog.Dialog;
 
 pub const battle = @import("battle.zig");
+pub const inventory = @import("inventory.zig");
 pub const status = @import("status.zig");
 
 pub const Request = union(enum) {
     block,
     dialog: zon.dialog.Event,
-    item,
     load: u8,
     save: u8,
 };
 
-const Popup = enum { about, pause, save, status };
+const Popup = enum { about, inventory, pause, save, status };
 
 var popup: ?Popup = null;
 
 pub fn init() void {
     about.init();
     dialog.init();
+    item.init();
     status.init();
 }
 
@@ -55,8 +57,8 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
             switch (req) {
                 .status => popup = .status,
                 .item => {
-                    popup = null;
-                    return .item;
+                    inventory.open();
+                    popup = .inventory;
                 },
                 .load => {
                     save.open(.load);
@@ -91,6 +93,12 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
         .status => if (status.update()) {
             popup = .pause;
         },
+        .inventory => if (inventory.update(world)) |req| {
+            switch (req) {
+                .close => popup = .pause,
+                .used => {},
+            }
+        },
     }
     return .block;
 }
@@ -103,5 +111,6 @@ pub fn draw(world: *ecs.World) void {
         .pause => pause.draw(),
         .save => save.draw(),
         .status => status.draw(world),
+        .inventory => inventory.draw(world),
     };
 }

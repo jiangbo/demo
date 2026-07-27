@@ -182,7 +182,10 @@ const MenuPhase = struct {
         if (ui.battle.update()) |req| switch (req) {
             .attack => changePhase(world, .playerAttack),
             .status => changePhase(world, .status),
-            .item => changePhase(world, .item),
+            .item => {
+                ui.inventory.open();
+                changePhase(world, .item);
+            },
             .escape => {
                 if (enemy.escape > zhu.random.int(u8, 0, 100)) {
                     context.battle.result = .escape;
@@ -434,15 +437,14 @@ const StatusPhase = struct {
 
 const ItemPhase = struct {
     fn update(world: *ecs.World, _: f32) void {
-        const stats = world.getGlobal(storage.Stats).?;
-        const inventory = world.getGlobal(storage.Inventory).?;
-        const used = player.openItem(stats, inventory);
-        if (used) changePhase(world, .enemyAttack);
-
-        if (zon.input.released(.cancel)) changePhase(world, .menu);
+        const req = ui.inventory.update(world) orelse return;
+        switch (req) {
+            .used => changePhase(world, .enemyAttack),
+            .close => changePhase(world, .menu),
+        }
     }
 
     fn draw(world: *ecs.World) void {
-        player.drawOpenItem(world);
+        ui.inventory.draw(world);
     }
 };

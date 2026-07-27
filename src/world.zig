@@ -9,7 +9,7 @@ const scene = @import("scene.zig");
 const component = @import("component.zig");
 const player = @import("player.zig");
 const map = @import("map.zig");
-const item = @import("item.zig");
+const item = @import("ui/item.zig");
 const factory = @import("factory.zig");
 const zon = @import("zon.zig");
 const system = @import("system/system.zig");
@@ -41,7 +41,6 @@ const PlayerSpawn = union(enum) {
 
 const State = union(enum) {
     map: MapState,
-    item,
     talk: TalkState,
     shop,
     sale: SaleState,
@@ -50,11 +49,6 @@ const State = union(enum) {
         switch (self) {
             .map => MapState.update(world, delta),
             .talk => {},
-            .item => {
-                const stats = world.getGlobal(storage.Stats).?;
-                const inventory = world.getGlobal(storage.Inventory).?;
-                _ = player.openItem(stats, inventory);
-            },
             .shop => shop.update(world),
             .sale => SaleState.update(world, delta),
         }
@@ -63,7 +57,6 @@ const State = union(enum) {
     pub fn draw(self: State, world: *ecs.World) void {
         switch (self) {
             .map, .talk => {},
-            .item => player.drawOpenItem(world),
             .sale => player.drawSellItem(
                 world.getGlobal(storage.Inventory).?,
             ),
@@ -80,7 +73,6 @@ var headerIndex: usize = 0;
 var headerTimer: zhu.Timer = .init(0.08);
 var headerColor: zhu.Color = .white;
 pub fn init(_: *ecs.World) void {
-    item.init();
     ui.init();
     map.init();
 }
@@ -349,7 +341,6 @@ pub fn update(world: *ecs.World, delta: f32) void {
         switch (req) {
             .block => {},
             .dialog => |event| TalkState.handle(event),
-            .item => state = .item,
             .load => |index| {
                 load(world, index) catch return;
                 back = .menu;
@@ -361,7 +352,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
         return;
     }
 
-    if (state == .map or state == .item) {
+    if (state == .map) {
         if (zon.input.released(.menu) or zon.input.released(.cancel) or
             zhu.mouse.released(.RIGHT))
         {
