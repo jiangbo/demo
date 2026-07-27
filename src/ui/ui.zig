@@ -24,7 +24,6 @@ pub const Request = union(enum) {
     dialog: zon.dialog.Event,
     load: u8,
     save: u8,
-    storyClose,
     title,
 };
 
@@ -76,7 +75,7 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
     if (story.isOpen()) {
         const request = story.update(delta) orelse return .block;
         return switch (request) {
-            .close => .storyClose,
+            .close => .block,
             .title => .title,
         };
     }
@@ -86,6 +85,7 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
     if (dialog.update(world)) |event| {
         return .{ .dialog = event };
     }
+    if (world.has(world.entity, Dialog)) return .block;
 
     const current = popup orelse return null;
     switch (current) {

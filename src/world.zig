@@ -37,18 +37,6 @@ const PlayerSpawn = union(enum) {
     portal: zon.Portal.Key,
 };
 
-const State = union(enum) {
-    map: MapState,
-    talk: TalkState,
-
-    pub fn update(self: State, world: *ecs.World, delta: f32) void {
-        switch (self) {
-            .map => MapState.update(world, delta),
-            .talk => {},
-        }
-    }
-};
-var state: State = .map;
 pub var back: enum { none, battle, load, menu } = .none;
 pub fn init(_: *ecs.World) void {
     ui.init();
@@ -81,7 +69,6 @@ pub fn enter(world: *ecs.World) void {
                 .lines = zon.dialogues[2].lines,
             });
             world.add(world.getIdentity(Player).?, Interact.Disabled{});
-            state = .talk;
         },
         .battle => {
             system.story.update(world);
@@ -89,14 +76,12 @@ pub fn enter(world: *ecs.World) void {
         },
         .load => {
             rebuildMap(world, .{ .location = loadPlayerLocation.? });
-            state = .map;
         },
         .menu => {
             if (loadPlayerLocation) |location| {
                 rebuildMap(world, .{ .location = location });
             }
             ui.openPause();
-            state = .map;
         },
     }
     loadPlayerLocation = null;
@@ -177,7 +162,6 @@ fn finishBattle(world: *ecs.World) void {
                 }
             }
             world.destroyEntity(actorEntity);
-            state = if (world.has(world.entity, Dialog)) .talk else .map;
         },
         .escape => {
             world.getPtr(actorEntity, Enemy).?.wait = 0.5;
@@ -186,7 +170,6 @@ fn finishBattle(world: *ecs.World) void {
                 world.remove(world.getIdentity(Player).?, Interact.Disabled);
             }
             world.removeIdentity(Interact);
-            state = .map;
         },
     }
 }
@@ -223,7 +206,6 @@ test "战斗胜利后保留对话并删除人物实体" {
 
     finishBattle(&world);
 
-    try std.testing.expect(state == .talk);
     try std.testing.expect(world.has(world.entity, Dialog));
     try std.testing.expect(world.has(playerEntity, Interact.Disabled));
     try std.testing.expect(!world.has(actorEntity, Actor));
@@ -248,7 +230,7 @@ test "战斗胜利后没有对话则返回地图" {
 
     finishBattle(&world);
 
-    try std.testing.expect(state == .map);
+    try std.testing.expect(!world.has(world.entity, Dialog));
     try std.testing.expect(!world.has(actorEntity, Actor));
 }
 
@@ -278,7 +260,6 @@ test "逃跑后关闭对话并保留冷却中的敌人" {
 
     finishBattle(&world);
 
-    try std.testing.expect(state == .map);
     try std.testing.expect(!world.has(world.entity, Dialog));
     try std.testing.expect(!world.has(playerEntity, Interact.Disabled));
     try std.testing.expectEqual(null, world.getIdentity(Interact));
@@ -294,7 +275,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
     if (ui.update(world, delta)) |req| {
         switch (req) {
             .block => {},
-            .dialog => |event| TalkState.handle(event),
+            .dialog => |event| handleDialog(event),
             .load => |index| {
                 load(world, index) catch return;
                 back = .menu;
@@ -302,23 +283,19 @@ pub fn update(world: *ecs.World, delta: f32) void {
             },
             .save => |index| save(world, index) catch
                 @panic("save failed"),
-            .storyClose => state = .map,
             .title => scene.changeScene(.title),
         }
         return;
     }
 
-    if (state == .map) {
-        if (zon.input.released(.menu) or zon.input.released(.cancel) or
-            zhu.mouse.released(.RIGHT))
-        {
-            ui.openPause();
-            state = .map;
-            return;
-        }
+    if (zon.input.released(.menu) or zon.input.released(.cancel) or
+        zhu.mouse.released(.RIGHT))
+    {
+        ui.openPause();
+        return;
     }
 
-    state.update(world, delta);
+    MapState.update(world, delta);
 }
 
 pub fn draw(world: *ecs.World) void {
@@ -352,7 +329,6 @@ const MapState = struct {
                     .lines = lines,
                 });
                 world.add(world.getIdentity(Player).?, Interact.Disabled{});
-                state = .talk;
             } else {
                 context.battle = .{
                     .actor = targetActor.key,
@@ -365,10 +341,6 @@ const MapState = struct {
         }
 
         system.dialog.update(world);
-        if (world.has(world.entity, Dialog)) {
-            state = .talk;
-            return;
-        }
     }
 
     fn changeMapIfNeed(world: *ecs.World, key: zon.Portal.Key) void {
@@ -387,7 +359,6 @@ const MapState = struct {
                 .lines = zon.dialogues[5].lines,
             });
             world.add(world.getIdentity(Player).?, Interact.Disabled{});
-            state = .talk;
         }
 
         if (progress == 4) {
@@ -398,7 +369,6 @@ const MapState = struct {
                 .lines = zon.dialogues[32].lines,
             });
             world.add(world.getIdentity(Player).?, Interact.Disabled{});
-            state = .talk;
         }
 
         if (progress == 10) {
@@ -407,7 +377,6 @@ const MapState = struct {
                 .lines = zon.dialogues[37].lines,
             });
             world.add(world.getIdentity(Player).?, Interact.Disabled{});
-            state = .talk;
         }
     }
 };
@@ -473,29 +442,27 @@ fn save(world: *ecs.World, index: u8) !void {
     });
 }
 
-const TalkState = struct {
-    fn handle(event: zon.dialog.Event) void {
-        switch (event) {
-            .finish => state = .map,
-            .openWeaponShop => ui.openWeaponShop(),
-            .openPotionShop => ui.openPotionShop(),
-            .openSale => ui.openSale(),
-            .battle => |actorKey| {
-                context.battle = .{
-                    .actor = actorKey,
-                    .portalKey = map.portalKey,
-                };
-                back = .battle;
-                scene.changeScene(.battle);
-            },
-            .showSwordTip => {
-                // 打败了巫批，对话完成
-                ui.story.open(.sword);
-            },
-            .showEnding => {
-                // 打败了大魔王
-                ui.story.open(.ending);
-            },
-        }
+fn handleDialog(event: zon.dialog.Event) void {
+    switch (event) {
+        .finish => {},
+        .openWeaponShop => ui.openWeaponShop(),
+        .openPotionShop => ui.openPotionShop(),
+        .openSale => ui.openSale(),
+        .battle => |actorKey| {
+            context.battle = .{
+                .actor = actorKey,
+                .portalKey = map.portalKey,
+            };
+            back = .battle;
+            scene.changeScene(.battle);
+        },
+        .showSwordTip => {
+            // 打败了巫批，对话完成
+            ui.story.open(.sword);
+        },
+        .showEnding => {
+            // 打败了大魔王
+            ui.story.open(.ending);
+        },
     }
-};
+}
