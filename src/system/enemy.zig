@@ -9,6 +9,7 @@ const Facing = component.actor.Facing;
 const Interact = component.Interact;
 const Player = component.actor.Player;
 const Position = component.Position;
+const Request = component.event.Request;
 const Talk = component.dialog.Talk;
 
 pub fn update(world: *ecs.World, delta: f32) void {
@@ -35,6 +36,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
         } else {
             world.removeIdentity(Interact);
             world.addIdentity(entity, Enemy);
+            world.addEvent(Request.battle);
         }
         return;
     }
@@ -61,6 +63,7 @@ test "玩家进入敌人区域后选择战斗对象" {
     update(&world, 1);
 
     try std.testing.expectEqual(entity, world.getIdentity(Enemy).?);
+    try std.testing.expectEqual(Request.battle, world.getEvent(Request)[0]);
     try std.testing.expectEqual(Facing.up, world.get(entity, Facing).?);
 }
 
@@ -90,6 +93,7 @@ test "玩家接触有对话的敌人后选择交互对象" {
 
     try std.testing.expectEqual(entity, world.getIdentity(Interact).?);
     try std.testing.expectEqual(null, world.getIdentity(Enemy));
+    try std.testing.expectEqual(0, world.getEvent(Request).len);
 }
 
 test "玩家在敌人区域外时不选择战斗对象" {

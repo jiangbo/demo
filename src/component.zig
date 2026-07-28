@@ -106,10 +106,8 @@ pub const event = struct {
         progress: u8,
     };
 
-    // 系统请求进入目标传送点。
-    pub const Portal = struct {
-        key: zon.Portal.Key,
-    };
+    // 普通地图系统发给场景的切换请求。
+    pub const Request = enum { map, battle };
 
     // 系统请求 UI 显示的临时提示。
     pub const Tip = struct {

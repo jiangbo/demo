@@ -162,6 +162,9 @@ fn updatePopup(world: *ecs.World, delta: f32) Request {
 }
 
 pub fn draw(world: *ecs.World) void {
+    zhu.camera.push(.window);
+    defer zhu.camera.pop();
+
     dialog.draw(world);
     if (popup) |current| switch (current) {
         .about => about.draw(),

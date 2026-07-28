@@ -11,6 +11,7 @@ const Interact = component.Interact;
 const Player = component.actor.Player;
 const Portal = component.map.Portal;
 const Position = component.Position;
+const Request = component.event.Request;
 const Story = component.event.Story;
 
 pub fn update(world: *ecs.World) void {
@@ -37,13 +38,9 @@ pub fn update(world: *ecs.World) void {
         const data = zon.Portal.get(portal.key);
         const progress = world.getGlobal(storage.Progress).?.value;
         if (progress > data.progress) {
-            std.log.info(
-                "change map portal: {s}",
-                .{@tagName(portal.key)},
-            );
-            world.addEvent(component.event.Portal{
-                .key = data.target,
-            });
+            const fmt = "change map portal: {s}";
+            std.log.info(fmt, .{@tagName(portal.key)});
+            world.addEvent(Request.map);
             return;
         }
 

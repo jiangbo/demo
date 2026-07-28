@@ -5,8 +5,8 @@ const ecs = @import("ecs");
 const window = zhu.window;
 const camera = zhu.camera;
 
-const titleScene = @import("ui/title.zig");
-const battleScene = @import("battle/battle.zig");
+const title = @import("ui/title.zig");
+const battle = @import("battle/battle.zig");
 const component = @import("component.zig");
 const map = @import("map.zig");
 const system = @import("system/system.zig");
@@ -14,24 +14,14 @@ const ui = @import("ui/ui.zig");
 const zon = @import("zon.zig");
 
 const Dialog = component.dialog.Dialog;
-const Enemy = component.actor.Enemy;
 const Interact = component.Interact;
 const Player = component.actor.Player;
+const Portal = component.map.Portal;
+const Request = component.event.Request;
 
-const WorldEntry = union(enum) {
-    start,
-    battle,
-    load: u8,
-    loadPause: u8,
-};
+const Scene = enum { title, world, battle };
 
-const Scene = union(enum) {
-    title,
-    world: WorldEntry,
-    battle,
-};
-
-const SceneType = std.meta.Tag(Scene);
+const WorldEntry = union(enum) { start, battle, load: u8 };
 
 // 管理场景切换时的淡入淡出状态。
 const Fade = struct {
@@ -53,7 +43,7 @@ const Fade = struct {
 
     // 推进淡入淡出，并返回本帧是否由它占用。
     fn update(self: *Fade, delta: f32) bool {
-        const timer = if (self.timer) |*value| value else return false;
+        const timer = if (self.timer) |*v| v else return false;
         if (timer.updateRunning(delta)) return true;
 
         if (self.isIn) {
@@ -66,7 +56,7 @@ const Fade = struct {
     }
 
     fn draw(self: *Fade) void {
-        const timer = if (self.timer) |*value| value else return;
+        const timer = if (self.timer) |*v| v else return;
         camera.push(.window);
         defer camera.pop();
 
@@ -78,9 +68,9 @@ const Fade = struct {
     }
 };
 
-var currentSceneType: SceneType = .title;
-var pendingScene: Scene = .title;
-var pendingPortalKey: zon.Portal.Key = undefined;
+var current: Scene = .title;
+var pending: Scene = .title;
+var entry: WorldEntry = undefined;
 var fade: Fade = .{};
 
 var isHelp: bool = true;
@@ -93,46 +83,48 @@ pub fn init(allocator_: zhu.Allocator) void {
     allocator = allocator_;
     world = ecs.World.init(allocator_.raw);
     world.entity = world.createEntity();
-    titleScene.init();
+    title.init();
     ui.init();
     map.init(&world);
-    battleScene.init(allocator_);
+    battle.init(allocator_);
 
-    titleScene.enter();
+    title.enter();
     fade.startIn();
 }
 
 fn changeScene(next: Scene) void {
-    pendingScene = next;
+    pending = next;
     fade.startOut(doChangeScene);
 }
 
-fn changeMap(portalKey: zon.Portal.Key) void {
-    pendingPortalKey = portalKey;
-    fade.startOut(doChangeMap);
+fn changeWorld(next: WorldEntry) void {
+    entry = next;
+    changeScene(.world);
 }
 
 fn doChangeMap() void {
+    const entity = world.getIdentity(Portal).?;
+    const portal = world.get(entity, Portal).?;
     map.enter(&world, allocator, .{
-        .portal = pendingPortalKey,
+        .portal = zon.Portal.get(portal.key).target,
     });
 }
 
 fn doChangeScene() void {
-    switch (currentSceneType) {
-        .title => titleScene.exit(),
+    switch (current) {
+        .title => title.exit(),
         .world => {},
         .battle => {},
     }
-    currentSceneType = std.meta.activeTag(pendingScene);
-    switch (pendingScene) {
-        .title => titleScene.enter(),
-        .world => |entry| enterWorld(entry),
-        .battle => battleScene.enter(&world),
+    current = pending;
+    switch (current) {
+        .title => title.enter(),
+        .world => enterWorld(),
+        .battle => battle.enter(&world),
     }
 }
 
-fn enterWorld(entry: WorldEntry) void {
+fn enterWorld() void {
     ui.reset();
     switch (entry) {
         .start => {
@@ -162,12 +154,6 @@ fn enterWorld(entry: WorldEntry) void {
                 @panic("load failed");
             map.enter(&world, allocator, .{ .location = location });
         },
-        .loadPause => |index| {
-            const location = map.load(&world, index) catch
-                @panic("load failed");
-            map.enter(&world, allocator, .{ .location = location });
-            ui.openPause();
-        },
     }
     zhu.audio.playMusic("voc/back.ogg");
 }
@@ -181,18 +167,16 @@ pub fn update(delta: f32) void {
     }
 
     if (fade.update(delta)) return;
-    switch (currentSceneType) {
-        .title => if (titleScene.update(delta)) |req| switch (req) {
+    switch (current) {
+        .title => if (title.update(delta)) |req| switch (req) {
             .fadeOut => |done| fade.startOut(done),
-            .start => changeScene(.{ .world = .start }),
-            .load => |index| changeScene(.{
-                .world = .{ .load = index },
-            }),
+            .start => changeWorld(.start),
+            .load => |index| changeWorld(.{ .load = index }),
         },
         .world => updateWorld(delta),
-        .battle => if (battleScene.update(&world, delta)) |request| {
+        .battle => if (battle.update(&world, delta)) |request| {
             switch (request) {
-                .world => changeScene(.{ .world = .battle }),
+                .world => changeWorld(.battle),
                 .title => changeScene(.title),
             }
         },
@@ -204,9 +188,7 @@ fn updateWorld(delta: f32) void {
         switch (request) {
             .block => {},
             .battle => changeScene(.battle),
-            .load => |index| changeScene(.{
-                .world = .{ .loadPause = index },
-            }),
+            .load => |index| changeWorld(.{ .load = index }),
             .save => |index| map.save(&world, index) catch
                 @panic("save failed"),
             .title => changeScene(.title),
@@ -216,30 +198,24 @@ fn updateWorld(delta: f32) void {
 
     system.update(&world, delta);
 
-    const portals = world.getEvent(component.event.Portal);
-    if (portals.len > 0) {
-        const portalKey = portals[0].key;
-        world.clearEvent(component.event.Portal);
-        changeMap(portalKey);
-        return;
+    for (world.getEvent(Request)) |request| {
+        switch (request) {
+            .map => fade.startOut(doChangeMap),
+            .battle => changeScene(.battle),
+        }
+        break;
     }
-
-    if (world.getIdentity(Enemy) != null) {
-        changeScene(.battle);
-    }
+    world.clearEvent(Request);
 }
 
 pub fn draw() void {
-    switch (currentSceneType) {
-        .title => titleScene.draw(),
+    switch (current) {
+        .title => title.draw(),
         .world => {
             system.render.draw(&world);
-
-            camera.push(.window);
             ui.draw(&world);
-            camera.pop();
         },
-        .battle => battleScene.draw(&world),
+        .battle => battle.draw(&world),
     }
 
     fade.draw();
@@ -273,5 +249,5 @@ pub fn deinit() void {
     world.deinit();
     map.deinit(allocator);
     zhu.audio.setMusicState(.stopped);
-    battleScene.deinit(allocator);
+    battle.deinit(allocator);
 }
