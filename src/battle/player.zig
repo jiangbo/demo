@@ -5,21 +5,15 @@ const ecs = @import("ecs");
 const audio = zhu.audio;
 const math = zhu.math;
 
-const scene = @import("../scene.zig");
-const context = @import("../context.zig");
 const factory = @import("../factory.zig");
 const storage = @import("../storage.zig");
-const zon = @import("../zon.zig");
+const input = @import("../zon.zig").input;
 const ui = @import("../ui/ui.zig");
 const shared = @import("shared.zig");
 
 pub const Menu = struct {
     // 处理玩家方的战斗菜单。
-    pub fn update(
-        _: *ecs.World,
-        _: f32,
-        enemyActor: *const zon.Actor,
-    ) ?shared.Phase {
+    pub fn update(_: *ecs.World, _: f32) ?shared.Phase {
         if (ui.battle.update()) |request| switch (request) {
             .attack => return .playerAttack,
             .status => return .status,
@@ -28,9 +22,8 @@ pub const Menu = struct {
                 return .item;
             },
             .escape => {
-                if (enemyActor.escape > zhu.random.int(u8, 0, 100)) {
-                    context.battle.result = .escape;
-                    scene.changeScene(.world);
+                if (shared.enemy.escape > zhu.random.int(u8, 0, 100)) {
+                    return .escape;
                 } else {
                     shared.Wait.tip = "逃跑失败！";
                     shared.Wait.next = .enemyAttack;
@@ -73,11 +66,11 @@ pub const Hurt = struct {
     var offset: f32 = 5;
 
     // 计算玩家受到的伤害并开始受伤动画。
-    pub fn enter(world: *ecs.World, enemyActor: *const zon.Actor) void {
+    pub fn enter(world: *ecs.World) void {
         audio.playSound(shared.hurtSounds[0]);
 
         const stats = world.getGlobal(storage.Stats).?;
-        damage = shared.computeDamage(enemyActor.attack, stats.defend);
+        damage = shared.computeDamage(shared.enemy.attack, stats.defend);
         stats.health -|= damage;
         timer.restart();
     }
@@ -122,10 +115,7 @@ pub const Death = struct {
 
     // 确认后返回标题场景。
     pub fn update(_: *ecs.World, _: f32) ?shared.Phase {
-        if (zon.input.released(.confirm)) {
-            scene.changeScene(.title);
-        }
-        return null;
+        return if (input.released(.confirm)) .title else null;
     }
 
     // 绘制玩家死亡提示。

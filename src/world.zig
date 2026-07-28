@@ -11,7 +11,6 @@ const map = @import("map.zig");
 const factory = @import("factory.zig");
 const zon = @import("zon.zig");
 const system = @import("system/system.zig");
-const context = @import("context.zig");
 const ui = @import("ui/ui.zig");
 const storage = @import("storage.zig");
 
@@ -73,7 +72,6 @@ pub fn enter(world: *ecs.World, allocator: zhu.Allocator) void {
         },
         .battle => {
             system.story.update(world);
-            finishBattle(world);
         },
         .load => {
             rebuildMap(
@@ -147,126 +145,14 @@ fn spawnPlayerAtPortal(world: *ecs.World, key: zon.Portal.Key) void {
     unreachable;
 }
 
-// 处理战斗结果并继续使用进入战斗前的地图实体。
-fn finishBattle(world: *ecs.World) void {
-    const actorEntity = findBattleActor(world);
-
-    switch (context.battle.result) {
-        .fighting => unreachable,
-        .win => {
-            const dead = world.getGlobal(storage.DeadActors).?;
-            dead.insert(context.battle.actor);
-            if (world.getIdentity(Interact)) |entity| {
-                if (entity == actorEntity) {
-                    world.removeIdentity(Interact);
-                }
-            }
-            world.destroyEntity(actorEntity);
-        },
-        .escape => {
-            world.getPtr(actorEntity, Enemy).?.wait = 0.5;
-            if (world.has(world.entity, Dialog)) {
-                world.remove(world.entity, Dialog);
-                world.remove(world.getIdentity(Player).?, Interact.Disabled);
-            }
-            world.removeIdentity(Interact);
-        },
-    }
-}
-
-// 根据稳定人物标识查找当前地图中的战斗实体。
-fn findBattleActor(world: *ecs.World) ecs.Entity {
+// 根据稳定人物标识查找当前地图中的人物实体。
+fn findActor(world: *ecs.World, key: zon.Actor.Key) ecs.Entity {
     var query = world.query(.{Actor});
     while (query.next()) |entity| {
         const actor = query.get(entity, Actor);
-        if (actor.key == context.battle.actor) return entity;
+        if (actor.key == key) return entity;
     }
     unreachable;
-}
-
-test "战斗胜利后保留对话并删除人物实体" {
-    var world = ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    world.entity = world.createEntity();
-    world.add(world.entity, storage.DeadActors.empty);
-    const playerEntity = world.createIdentity(Player);
-    world.add(world.entity, Dialog{
-        .lines = zon.dialogues[36].lines,
-    });
-    world.add(playerEntity, Interact.Disabled{});
-    const actorEntity = world.createEntity();
-    world.add(actorEntity, Actor{ .key = .wuPi });
-
-    context.battle = .{
-        .actor = .wuPi,
-        .portalKey = .start,
-        .result = .win,
-    };
-
-    finishBattle(&world);
-
-    try std.testing.expect(world.has(world.entity, Dialog));
-    try std.testing.expect(world.has(playerEntity, Interact.Disabled));
-    try std.testing.expect(!world.has(actorEntity, Actor));
-    const deadActors = world.getGlobal(storage.DeadActors).?;
-    try std.testing.expect(deadActors.contains(.wuPi));
-}
-
-test "战斗胜利后没有对话则返回地图" {
-    var world = ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    world.entity = world.createEntity();
-    world.add(world.entity, storage.DeadActors.empty);
-    const actorEntity = world.createEntity();
-    world.add(actorEntity, Actor{ .key = .senLin_feiJiangJun1 });
-
-    context.battle = .{
-        .actor = .senLin_feiJiangJun1,
-        .portalKey = .start,
-        .result = .win,
-    };
-
-    finishBattle(&world);
-
-    try std.testing.expect(!world.has(world.entity, Dialog));
-    try std.testing.expect(!world.has(actorEntity, Actor));
-}
-
-test "逃跑后关闭对话并保留冷却中的敌人" {
-    var world = ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    world.entity = world.createEntity();
-    const playerEntity = world.createIdentity(Player);
-    world.add(world.entity, Dialog{
-        .lines = zon.dialogues[36].lines,
-    });
-    world.add(playerEntity, Interact.Disabled{});
-    const actorEntity = world.createEntity();
-    world.addAll(actorEntity, .{
-        Actor{ .key = .wuPi },
-        Enemy{ .value = .init(.zero, .xy(48, 48)) },
-        Interact{},
-    });
-    world.addIdentity(actorEntity, Interact);
-
-    context.battle = .{
-        .actor = .wuPi,
-        .portalKey = .start,
-        .result = .escape,
-    };
-
-    finishBattle(&world);
-
-    try std.testing.expect(!world.has(world.entity, Dialog));
-    try std.testing.expect(!world.has(playerEntity, Interact.Disabled));
-    try std.testing.expectEqual(null, world.getIdentity(Interact));
-    try std.testing.expectEqual(
-        @as(f32, 0.5),
-        world.get(actorEntity, Enemy).?.wait,
-    );
 }
 
 pub fn exit() void {}
@@ -275,7 +161,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
     if (ui.update(world, delta)) |req| {
         switch (req) {
             .block => {},
-            .dialog => |event| handleDialog(event),
+            .dialog => |event| handleDialog(world, event),
             .load => |index| {
                 load(world, index) catch return;
                 back = .menu;
@@ -320,20 +206,14 @@ const MapState = struct {
         } else warn = false;
 
         if (world.getIdentity(Enemy)) |target| {
-            world.removeIdentity(Enemy);
-            const targetActor = world.get(target, Actor).?;
             // 是否需要对话
             if (world.get(target, Talk)) |lines| {
+                world.removeIdentity(Enemy);
                 world.add(world.entity, Dialog{
                     .lines = lines,
                 });
                 world.add(world.getIdentity(Player).?, Interact.Disabled{});
             } else {
-                context.battle = .{
-                    .actor = targetActor.key,
-                    .portalKey = map.portalKey,
-                };
-                back = .battle;
                 scene.changeScene(.battle);
             }
             return;
@@ -449,18 +329,14 @@ fn playerPosition(world: *ecs.World) math.Vector2 {
     return collider.move(position).min;
 }
 
-fn handleDialog(event: zon.dialog.Event) void {
+fn handleDialog(world: *ecs.World, event: zon.dialog.Event) void {
     switch (event) {
         .finish => {},
         .openWeaponShop => ui.openWeaponShop(),
         .openPotionShop => ui.openPotionShop(),
         .openSale => ui.openSale(),
         .battle => |actorKey| {
-            context.battle = .{
-                .actor = actorKey,
-                .portalKey = map.portalKey,
-            };
-            back = .battle;
+            world.addIdentity(findActor(world, actorKey), Enemy);
             scene.changeScene(.battle);
         },
         .showSwordTip => {

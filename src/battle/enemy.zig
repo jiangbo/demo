@@ -5,8 +5,6 @@ const ecs = @import("ecs");
 const audio = zhu.audio;
 const math = zhu.math;
 
-const scene = @import("../scene.zig");
-const context = @import("../context.zig");
 const factory = @import("../factory.zig");
 const component = @import("../component.zig");
 const storage = @import("../storage.zig");
@@ -15,20 +13,13 @@ const shared = @import("shared.zig");
 
 const Story = component.event.Story;
 
-pub var key: zon.Actor.Key = undefined;
-pub var actor: zon.Actor = undefined;
-
-// 根据稳定人物标识重置当前敌方数据。
-pub fn reset(actorKey: zon.Actor.Key) void {
-    key = actorKey;
-    actor = zon.Actor.get(key).*;
-}
-
 pub const Attack = struct {
     // 开始敌方攻击动画。
     pub fn enter(_: *ecs.World) void {
         audio.playSound(
-            shared.attackSounds[shared.enemySounds[actor.picture]],
+            shared.attackSounds[
+                shared.enemySounds[shared.enemy.picture]
+            ],
         );
         shared.bombAnimation.reset();
     }
@@ -59,19 +50,21 @@ pub const Hurt = struct {
     // 计算敌方受到的伤害并开始受伤动画。
     pub fn enter(world: *ecs.World) void {
         audio.playSound(
-            shared.hurtSounds[shared.enemySounds[actor.picture]],
+            shared.hurtSounds[
+                shared.enemySounds[shared.enemy.picture]
+            ],
         );
 
         const stats = world.getGlobal(storage.Stats).?;
-        damage = shared.computeDamage(stats.attack, actor.defend);
-        actor.health -|= damage;
+        damage = shared.computeDamage(stats.attack, shared.enemy.defend);
+        shared.enemy.health -|= damage;
         timer.restart();
     }
 
     // 受伤动画结束后判断敌方是否死亡。
     pub fn update(_: *ecs.World, delta: f32) ?shared.Phase {
         if (timer.updateFinished(delta)) {
-            if (actor.health == 0) return .enemyDeath;
+            if (shared.enemy.health == 0) return .enemyDeath;
 
             shared.Wait.next = .enemyAttack;
             return .wait;
@@ -88,7 +81,7 @@ pub const Hurt = struct {
     pub fn draw(_: *ecs.World) void {
         const position = math.Vector2.xy(465, 237).addX(offset);
         zhu.batch.drawImage(
-            factory.npcBattleImage(key),
+            factory.npcBattleImage(shared.enemyKey),
             position,
             .{},
         );
@@ -108,11 +101,15 @@ pub const Death = struct {
     // 播放敌方死亡声音并发送剧情进度事件。
     pub fn enter(world: *ecs.World) void {
         audio.playSound(
-            shared.deadSounds[shared.enemySounds[actor.picture]],
+            shared.deadSounds[
+                shared.enemySounds[shared.enemy.picture]
+            ],
         );
         step = 0;
-        if (actor.progress != 0xFF) {
-            world.addEvent(Story{ .progress = actor.progress });
+        if (shared.enemy.progress != 0xFF) {
+            world.addEvent(Story{
+                .progress = shared.enemy.progress,
+            });
         }
     }
 
@@ -122,9 +119,9 @@ pub const Death = struct {
         const inventory = world.getGlobal(storage.Inventory).?;
         if (step == 0 and zon.input.released(.confirm)) {
             step += 1;
-            stats.exp += actor.level * 20;
-            inventory.money += actor.money;
-            for (actor.goods) |itemKey| {
+            stats.exp += shared.enemy.level * 20;
+            inventory.money += shared.enemy.money;
+            for (shared.enemy.goods) |itemKey| {
                 _ = inventory.add(itemKey);
             }
             return null;
@@ -138,8 +135,7 @@ pub const Death = struct {
         }
 
         if (zon.input.released(.confirm)) {
-            context.battle.result = .win;
-            scene.changeScene(.world);
+            return .win;
         }
         return null;
     }
@@ -156,14 +152,14 @@ pub const Death = struct {
         var text = zhu.format(
             &buffer,
             "获得：经验=[{}] 金钱=[{}]",
-            .{ actor.level * 20, actor.money },
+            .{ shared.enemy.level * 20, shared.enemy.money },
         );
         zhu.text.draw(text, .xy(220, 210), .{});
 
-        if (actor.goods.len != 0) {
+        if (shared.enemy.goods.len != 0) {
             zhu.text.draw("缴获物品：", .xy(220, 240), .{});
 
-            for (actor.goods) |itemKey| {
+            for (shared.enemy.goods) |itemKey| {
                 const name = zon.Item.get(itemKey).name;
                 zhu.text.draw(
                     name,
@@ -172,7 +168,7 @@ pub const Death = struct {
                 );
             }
 
-            std.debug.assert(actor.goods.len == 1);
+            std.debug.assert(shared.enemy.goods.len == 1);
         }
         if (step == 2) {
             const level = world.getGlobal(storage.Stats).?.level;

@@ -1,6 +1,8 @@
 const zhu = @import("zhu");
 const ecs = @import("ecs");
 
+const zon = @import("../zon.zig");
+
 pub const attackSounds: [3][:0]const u8 = .{
     "voc/ack_00.ogg",
     "voc/ack_01.ogg",
@@ -37,7 +39,14 @@ pub const Phase = enum {
     enemyDeath,
     status,
     item,
+    win,
+    escape,
+    title,
 };
+
+// 当前敌人的稳定标识和可变数据副本。
+pub var enemyKey: zon.Actor.Key = undefined;
+pub var enemy: zon.Actor = undefined;
 
 pub var bombAnimation: zhu.Animation = undefined;
 

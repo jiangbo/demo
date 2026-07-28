@@ -36,7 +36,7 @@ pub fn init(allocator_: zhu.Allocator) void {
     worldScene.init(allocator_);
     battleScene.init();
 
-    sceneCall("enter", .{});
+    titleScene.enter();
     fadeIn();
 }
 
@@ -58,9 +58,17 @@ fn doChangeMap() void {
 }
 
 fn doChangeScene() void {
-    sceneCall("exit", .{});
+    switch (currentSceneType) {
+        .title => titleScene.exit(),
+        .world => worldScene.exit(),
+        .battle => {},
+    }
     currentSceneType = toSceneType;
-    sceneCall("enter", .{});
+    switch (currentSceneType) {
+        .title => titleScene.enter(),
+        .world => worldScene.enter(&world, allocator),
+        .battle => battleScene.enter(&world),
+    }
 }
 
 pub fn update(delta: f32) void {
@@ -97,12 +105,24 @@ pub fn update(delta: f32) void {
             },
         },
         .world => worldScene.update(&world, delta),
-        .battle => battleScene.update(&world, delta),
+        .battle => if (battleScene.update(&world, delta)) |request| {
+            switch (request) {
+                .world => {
+                    worldScene.back = .battle;
+                    changeScene(.world);
+                },
+                .title => changeScene(.title),
+            }
+        },
     }
 }
 
 pub fn draw() void {
-    sceneCall("draw", .{});
+    switch (currentSceneType) {
+        .title => titleScene.draw(),
+        .world => worldScene.draw(&world),
+        .battle => battleScene.draw(&world),
+    }
 
     if (fadeTimer) |*timer| {
         camera.push(.window);
@@ -157,29 +177,4 @@ fn fadeOut(callback: ?*const fn () void) void {
 pub fn deinit() void {
     world.deinit();
     worldScene.deinit(allocator);
-}
-
-fn sceneCall(comptime function: []const u8, args: anytype) void {
-    switch (currentSceneType) {
-        .title => window.call(titleScene, function, args),
-        .world => if (comptime std.mem.eql(u8, function, "enter")) {
-            window.call(
-                worldScene,
-                function,
-                .{ &world, allocator } ++ args,
-            );
-        } else if (comptime std.mem.eql(u8, function, "update") or
-            std.mem.eql(u8, function, "draw"))
-        {
-            window.call(worldScene, function, .{&world} ++ args);
-        } else window.call(worldScene, function, args),
-        .battle => if (comptime std.mem.eql(u8, function, "enter") or
-            std.mem.eql(u8, function, "update") or
-            std.mem.eql(u8, function, "draw"))
-        {
-            window.call(battleScene, function, .{&world} ++ args);
-        } else {
-            window.call(battleScene, function, args);
-        },
-    }
 }
