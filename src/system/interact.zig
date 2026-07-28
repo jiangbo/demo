@@ -12,8 +12,6 @@ const Player = component.actor.Player;
 const Position = component.Position;
 
 pub fn update(world: *ecs.World) void {
-    world.removeIdentity(Interact);
-
     if (world.hasIdentity(Player, Interact.Disabled)) return;
     if (!input.released(.confirm)) return;
 

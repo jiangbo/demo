@@ -17,8 +17,9 @@ pub fn update(world: *ecs.World, delta: f32) void {
     control.update(world);
     movement.update(world, delta);
     portal.update(world);
-    enemy.update(world, delta);
     interact.update(world);
+    enemy.update(world, delta);
     chest.update(world);
+    dialog.update(world);
     render.update(world, delta);
 }

@@ -26,7 +26,7 @@ pub const Spawn = union(enum) {
 
 var image: zhu.Image = undefined;
 
-pub var portalKey: zon.Portal.Key = .start;
+var currentPortalKey: zon.Portal.Key = .start;
 
 var vertexes: []zhu.batch.Vertex = &.{};
 
@@ -63,8 +63,8 @@ pub fn enter(
         .location => |location| location.portal,
         .portal => |portal| portal,
     };
-    portalKey = key;
-    const portal = zon.Portal.get(portalKey);
+    currentPortalKey = key;
+    const portal = zon.Portal.get(currentPortalKey);
     const data = zon.Map.get(portal.map);
     zhu.camera.bound = data.grid.size();
 
@@ -84,6 +84,9 @@ pub fn enter(
             portalKey_,
         ),
     }
+
+    zhu.camera.directFollow(playerPosition(world));
+    zhu.camera.roundPosition(null);
 }
 
 // 读取存档并恢复跨地图长期状态。
@@ -139,7 +142,7 @@ pub fn save(world: *ecs.World, index: u8) !void {
 
     const player = world.getIdentity(Player).?;
     try storage.write(index, .{
-        .portal = portalKey,
+        .portal = currentPortalKey,
         .position = playerPosition(world),
         .facing = world.get(player, Facing).?,
         .progress = world.getGlobal(storage.Progress).?.*,

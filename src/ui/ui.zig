@@ -5,22 +5,21 @@ const component = @import("../component.zig");
 const zon = @import("../zon.zig");
 const about = @import("about.zig");
 const dialog = @import("dialog.zig");
+const inventory = @import("inventory.zig");
 const item = @import("item.zig");
 const pause = @import("pause.zig");
 const sale = @import("sale.zig");
 const save = @import("save.zig");
 const shop = @import("shop.zig");
+const status = @import("status.zig");
+const story = @import("story.zig");
 const tip = @import("tip.zig");
 
 const Dialog = component.dialog.Dialog;
 
-pub const inventory = @import("inventory.zig");
-pub const story = @import("story.zig");
-pub const status = @import("status.zig");
-
 pub const Request = union(enum) {
     block,
-    dialog: zon.dialog.Event,
+    battle,
     load: u8,
     save: u8,
     title,
@@ -55,21 +54,6 @@ pub fn openPause() void {
     popup = .pause;
 }
 
-pub fn openWeaponShop() void {
-    shop.open(.weapon);
-    popup = .shop;
-}
-
-pub fn openPotionShop() void {
-    shop.open(.potion);
-    popup = .shop;
-}
-
-pub fn openSale() void {
-    sale.open();
-    popup = .sale;
-}
-
 pub fn update(world: *ecs.World, delta: f32) ?Request {
     if (story.isOpen()) {
         const request = story.update(delta) orelse return .block;
@@ -80,14 +64,46 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
     }
 
     tip.update(world, delta);
-    if (world.has(world.entity, Dialog)) tip.reset();
-    if (dialog.update(world)) |event| {
-        return .{ .dialog = event };
-    }
+    if (updateDialog(world)) |request| return request;
     if (world.has(world.entity, Dialog)) return .block;
 
-    const current = popup orelse return null;
-    switch (current) {
+    if (popup == null) {
+        const openKey = zon.input.anyReleased(&.{ .menu, .cancel });
+        if (openKey or zhu.mouse.released(.RIGHT)) {
+            openPause();
+            return .block;
+        }
+        return null;
+    }
+
+    return updatePopup(world, delta);
+}
+
+fn updateDialog(world: *ecs.World) ?Request {
+    const event = dialog.update(world) orelse return null;
+    switch (event) {
+        .finish => {},
+        .openWeaponShop => {
+            shop.open(.weapon);
+            popup = .shop;
+        },
+        .openPotionShop => {
+            shop.open(.potion);
+            popup = .shop;
+        },
+        .openSale => {
+            sale.open();
+            popup = .sale;
+        },
+        .battle => return .battle,
+        .showSwordTip => story.open(.sword),
+        .showEnding => story.open(.ending),
+    }
+    return .block;
+}
+
+fn updatePopup(world: *ecs.World, delta: f32) Request {
+    switch (popup.?) {
         .pause => {
             const req = pause.update() orelse return .block;
             switch (req) {
@@ -147,7 +163,6 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
 
 pub fn draw(world: *ecs.World) void {
     dialog.draw(world);
-    if (!world.has(world.entity, Dialog)) tip.draw();
     if (popup) |current| switch (current) {
         .about => about.draw(),
         .pause => pause.draw(),
@@ -157,5 +172,6 @@ pub fn draw(world: *ecs.World) void {
         .sale => sale.draw(world),
         .shop => shop.draw(world),
     };
+    tip.draw();
     story.draw();
 }

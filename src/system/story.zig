@@ -5,7 +5,7 @@ const component = @import("../component.zig");
 const factory = @import("../factory.zig");
 const storage = @import("../storage.zig");
 
-const Actor = component.actor.Actor;
+const Key = component.actor.Key;
 const Speed = component.Speed;
 const Story = component.event.Story;
 const Talk = component.dialog.Talk;
@@ -28,13 +28,13 @@ pub fn update(world: *ecs.World) void {
 
 // 处理大魔王出现后的城市人物变化。
 fn demonAppeared(world: *ecs.World, progress: u8) void {
-    var query = world.query(.{ Actor, Talk, Speed });
+    var query = world.query(.{ Key, Talk, Speed });
     while (query.next()) |entity| {
-        const actor = query.get(entity, Actor);
+        const actorKey = query.get(entity, Key);
         const talk = query.getPtr(entity, Talk);
         const speed = query.getPtr(entity, Speed);
-        talk.* = factory.actorTalk(actor.key, progress).?;
-        speed.value = factory.actorSpeed(actor.key, progress);
+        talk.* = factory.actorTalk(actorKey, progress).?;
+        speed.value = factory.actorSpeed(actorKey, progress);
     }
 }
 
@@ -49,7 +49,7 @@ test "大魔王出现后更新人物的对话和速度" {
         .{ .actor = null, .content = "旧对话" },
     };
     world.addAll(entity, .{
-        Actor{ .key = .daYou },
+        Key.daYou,
         oldTalk,
         Speed{ .value = 14 },
     });

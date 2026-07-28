@@ -48,6 +48,9 @@ pub const ChestImages = struct {
 };
 
 pub const actor = struct {
+    // 地图人物的稳定标识。
+    pub const Key = zon.Actor.Key;
+
     // 实体当前面对的方向。
     pub const Facing = zon.Facing;
 
@@ -61,8 +64,6 @@ pub const actor = struct {
     }
 
     pub const Player = struct {};
-    // 实体对应的稳定人物标识。
-    pub const Actor = struct { key: zon.Actor.Key };
     // 敌人相对实体逻辑位置的战斗触发区域。
     pub const Enemy = struct {
         value: zhu.Rect,

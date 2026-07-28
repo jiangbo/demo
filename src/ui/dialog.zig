@@ -7,7 +7,9 @@ const factory = @import("../factory.zig");
 const zon = @import("../zon.zig");
 
 const Dialog = component.dialog.Dialog;
+const Enemy = component.actor.Enemy;
 const Interact = component.Interact;
+const Key = component.actor.Key;
 const Player = component.actor.Player;
 
 var texture: zhu.Image = undefined;
@@ -29,12 +31,7 @@ pub fn update(world: *ecs.World) ?zon.dialog.Event {
     const line = dialog.lines[dialog.line];
     if (line.event) |event| {
         switch (event) {
-            .battle => {
-                if (dialog.line + 1 == dialog.lines.len) close(world) else {
-                    dialog.line += 1;
-                    prepareText(dialog);
-                }
-            },
+            .battle => |key| startBattle(world, dialog, key),
             else => close(world),
         }
         return event;
@@ -48,6 +45,24 @@ pub fn update(world: *ecs.World) ?zon.dialog.Event {
     dialog.line += 1;
     prepareText(dialog);
     return null;
+}
+
+// 选择对话指定的敌人，并将对话推进到战斗后的内容。
+fn startBattle(world: *ecs.World, dialog: *Dialog, key: Key) void {
+    var query = world.query(.{Key});
+    while (query.next()) |entity| {
+        if (query.get(entity, Key) != key) continue;
+        world.addIdentity(entity, Enemy);
+
+        if (dialog.line + 1 == dialog.lines.len) {
+            close(world);
+        } else {
+            dialog.line += 1;
+            prepareText(dialog);
+        }
+        return;
+    }
+    unreachable;
 }
 
 pub fn draw(world: *ecs.World) void {
@@ -92,11 +107,10 @@ fn prepareText(dialog: *Dialog) void {
 fn close(world: *ecs.World) void {
     world.remove(world.entity, Dialog);
     world.remove(world.getIdentity(Player).?, Interact.Disabled);
-    world.removeIdentity(Interact);
 }
 
-fn drawActor(image: zhu.Image, position: zhu.Vector2, name: []const u8) void {
-    zhu.batch.drawImage(image, position, .{});
+fn drawActor(image: zhu.Image, pos: zhu.Vector2, name: []const u8) void {
+    zhu.batch.drawImage(image, pos, .{});
 
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();

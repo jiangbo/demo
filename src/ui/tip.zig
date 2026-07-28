@@ -29,6 +29,12 @@ pub fn draw() void {
 
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
-    zhu.text.draw(text, .xy(242, 442), .{ .color = .black });
-    zhu.text.draw(text, .xy(240, 440), .{ .color = .yellow });
+    zhu.text.draw(text, .xy(322, 62), .{
+        .anchor = .xy(0.5, 0),
+        .color = .black,
+    });
+    zhu.text.draw(text, .xy(320, 60), .{
+        .anchor = .xy(0.5, 0),
+        .color = .yellow,
+    });
 }

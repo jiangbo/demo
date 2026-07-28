@@ -10,10 +10,10 @@ const player = @import("player.zig");
 const enemy = @import("enemy.zig");
 const shared = @import("shared.zig");
 
-const Actor = component.actor.Actor;
 const Dialog = component.dialog.Dialog;
 const Enemy = component.actor.Enemy;
 const Interact = component.Interact;
+const Key = component.actor.Key;
 const Player = component.actor.Player;
 
 pub const Request = enum { world, title };
@@ -84,9 +84,9 @@ pub fn deinit(allocator: zhu.Allocator) void {
 // 读取选定的敌人并进入战斗场景。
 pub fn enter(world: *ecs.World) void {
     const enemyEntity = world.getIdentity(Enemy).?;
-    const actor = world.get(enemyEntity, Actor).?;
-    shared.enemyKey = actor.key;
-    shared.enemy = zon.Actor.get(actor.key).*;
+    const enemyKey = world.get(enemyEntity, Key).?;
+    shared.enemyKey = enemyKey;
+    shared.enemy = zon.Actor.get(enemyKey).*;
     shared.menu.reset();
     shared.menu.selected = 0;
     changePhase(world, .menu);
@@ -123,11 +123,6 @@ fn finishWin(world: *ecs.World) Request {
     const enemyEntity = world.getIdentity(Enemy).?;
     const dead = world.getGlobal(storage.DeadActors).?;
     dead.insert(shared.enemyKey);
-    if (world.getIdentity(Interact)) |entity| {
-        if (entity == enemyEntity) {
-            world.removeIdentity(Interact);
-        }
-    }
     world.removeIdentity(Enemy);
     world.destroyEntity(enemyEntity);
     return .world;
@@ -142,7 +137,6 @@ fn finishEscape(world: *ecs.World) Request {
         world.remove(world.getIdentity(Player).?, Interact.Disabled);
     }
     world.removeIdentity(Enemy);
-    world.removeIdentity(Interact);
     return .world;
 }
 

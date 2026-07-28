@@ -171,7 +171,7 @@ pub fn spawnPlayer(
     animation.play(facing);
     const entity = world.createIdentity(actor.Player);
     world.addAll(entity, .{
-        actor.Actor{ .key = .player },
+        actor.Key.player,
         actor.Player{},
         position.sub(collider.min),
         facing,
@@ -225,7 +225,7 @@ fn spawnActor(
     var animation = npcAnimation(data.picture);
     animation.play(data.facing);
     world.addAll(entity, .{
-        actor.Actor{ .key = key },
+        key,
         component.Position.xy(data.x + 16, data.y + 32),
         data.facing,
         component.Collider.init(.xy(-8, -16), .xy(16, 16)),
