@@ -16,6 +16,9 @@ pub const map = struct {
 
     // 玩家进入后切换地图的区域。
     pub const Portal = struct {
+        // 玩家仍停留在已经提示过的受阻区域。
+        pub const Wait = struct {};
+
         key: zon.Portal.Key,
         area: zhu.Rect,
     };
@@ -100,6 +103,11 @@ pub const event = struct {
     // 已经越过的剧情进度。
     pub const Story = struct {
         progress: u8,
+    };
+
+    // 系统请求进入目标传送点。
+    pub const Portal = struct {
+        key: zon.Portal.Key,
     };
 
     // 系统请求 UI 显示的临时提示。

@@ -2,13 +2,19 @@ const std = @import("std");
 const ecs = @import("ecs");
 
 const component = @import("../component.zig");
+const storage = @import("../storage.zig");
+const zon = @import("../zon.zig");
 
 const Collider = component.Collider;
+const Dialog = component.dialog.Dialog;
+const Interact = component.Interact;
 const Player = component.actor.Player;
 const Portal = component.map.Portal;
 const Position = component.Position;
+const Story = component.event.Story;
 
 pub fn update(world: *ecs.World) void {
+    const previous = world.getIdentity(Portal);
     world.removeIdentity(Portal);
 
     const player = world.getIdentity(Player).?;
@@ -20,8 +26,55 @@ pub fn update(world: *ecs.World) void {
     while (query.next()) |entity| {
         const portal = query.get(entity, Portal);
         if (!portal.area.contains(center)) continue;
+
+        if (previous) |old| {
+            if (old != entity) world.remove(old, Portal.Wait);
+        }
         world.addIdentity(entity, Portal);
+
+        if (world.has(entity, Portal.Wait)) return;
+
+        const data = zon.Portal.get(portal.key);
+        const progress = world.getGlobal(storage.Progress).?.value;
+        if (progress > data.progress) {
+            std.log.info(
+                "change map portal: {s}",
+                .{@tagName(portal.key)},
+            );
+            world.addEvent(component.event.Portal{
+                .key = data.target,
+            });
+            return;
+        }
+
+        if (progress == 1) {
+            world.add(entity, Portal.Wait{});
+            world.add(world.entity, Dialog{
+                .lines = zon.dialogues[5].lines,
+            });
+            world.add(player, Interact.Disabled{});
+        }
+
+        if (progress == 4) {
+            world.addEvent(Story{ .progress = progress });
+            world.add(world.entity, Dialog{
+                .lines = zon.dialogues[32].lines,
+            });
+            world.add(player, Interact.Disabled{});
+        }
+
+        if (progress == 10) {
+            world.add(entity, Portal.Wait{});
+            world.add(world.entity, Dialog{
+                .lines = zon.dialogues[37].lines,
+            });
+            world.add(player, Interact.Disabled{});
+        }
         return;
+    }
+
+    if (previous) |entity| {
+        world.remove(entity, Portal.Wait);
     }
 }
 
@@ -29,6 +82,8 @@ test "选择玩家当前所在的传送区域" {
     var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
+    world.entity = world.createEntity();
+    world.add(world.entity, storage.Progress{});
     const player = world.createIdentity(Player);
     world.addAll(player, .{
         Position.zero,

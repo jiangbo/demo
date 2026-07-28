@@ -8,8 +8,10 @@ const camera = zhu.camera;
 const titleScene = @import("ui/title.zig");
 const worldScene = @import("world.zig");
 const battleScene = @import("battle/battle.zig");
+const map = @import("map.zig");
+const system = @import("system/system.zig");
+const ui = @import("ui/ui.zig");
 const input = @import("zon.zig").input;
-const storage = @import("storage.zig");
 
 const SceneType = enum { title, world, battle };
 var currentSceneType: SceneType = .title;
@@ -25,23 +27,13 @@ pub fn init(allocator_: zhu.Allocator) void {
     allocator = allocator_;
     world = ecs.World.init(allocator_.raw);
     world.entity = world.createEntity();
-    world.addAll(world.entity, .{
-        storage.DeadActors.empty,
-        storage.OpenedChests.initEmpty(),
-        storage.Progress{},
-        storage.Stats{},
-        storage.Inventory{},
-    });
     titleScene.init();
-    worldScene.init();
+    ui.init();
+    map.init(&world);
     battleScene.init(allocator_);
 
     titleScene.enter();
     fadeIn();
-}
-
-pub fn loadWorld(index: u8) !void {
-    try worldScene.load(&world, index);
 }
 
 pub fn changeScene(sceneType: SceneType) void {
@@ -54,13 +46,17 @@ pub fn changeMap() void {
 }
 
 fn doChangeMap() void {
-    worldScene.changeMap(&world, allocator);
+    map.enter(&world, allocator, .{
+        .portal = map.portalKey,
+    });
+    camera.directFollow(map.playerPosition(&world));
+    camera.roundPosition(null);
 }
 
 fn doChangeScene() void {
     switch (currentSceneType) {
         .title => titleScene.exit(),
-        .world => worldScene.exit(),
+        .world => {},
         .battle => {},
     }
     currentSceneType = toSceneType;
@@ -99,8 +95,7 @@ pub fn update(delta: f32) void {
                 changeScene(.world);
             },
             .load => |index| {
-                worldScene.load(&world, index) catch return;
-                worldScene.back = .load;
+                worldScene.back = .{ .load = index };
                 changeScene(.world);
             },
         },
@@ -120,7 +115,13 @@ pub fn update(delta: f32) void {
 pub fn draw() void {
     switch (currentSceneType) {
         .title => titleScene.draw(),
-        .world => worldScene.draw(&world),
+        .world => {
+            system.render.draw(&world);
+
+            camera.push(.window);
+            ui.draw(&world);
+            camera.pop();
+        },
         .battle => battleScene.draw(&world),
     }
 
@@ -176,6 +177,7 @@ fn fadeOut(callback: ?*const fn () void) void {
 
 pub fn deinit() void {
     world.deinit();
-    worldScene.deinit(allocator);
+    map.deinit(allocator);
+    zhu.audio.setMusicState(.stopped);
     battleScene.deinit(allocator);
 }
