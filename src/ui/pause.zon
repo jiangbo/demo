@@ -4,8 +4,6 @@
         .size = .{ .x = 150, .y = 200 },
         .image = 2742161179,
     },
-    .navKeys = .{ .cancel = .{ .Q, .ESCAPE } },
-    .cancelEvent = 6,
     .selected = 0,
     .buttons = .{
         .{
