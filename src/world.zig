@@ -89,6 +89,7 @@ pub fn enter(world: *ecs.World, allocator: zhu.Allocator) void {
     }
     loadPlayerLocation = null;
     camera.directFollow(playerPosition(world));
+    camera.roundPosition(null);
     zhu.audio.playMusic("voc/back.ogg");
 }
 
@@ -115,6 +116,7 @@ fn rebuildMap(
     }
 
     camera.directFollow(playerPosition(world));
+    camera.roundPosition(null);
 }
 
 // 在目标传送区域外创建玩家。
@@ -198,6 +200,7 @@ const MapState = struct {
     fn update(world: *ecs.World, delta: f32) void {
         system.update(world, delta);
         camera.directFollow(playerPosition(world));
+        camera.roundPosition(null);
 
         // 检测是否需要切换地图
         if (world.getIdentity(Portal)) |portalEntity| {
