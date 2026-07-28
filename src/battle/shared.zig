@@ -44,6 +44,29 @@ pub const Phase = enum {
     title,
 };
 
+pub var menu: zhu.widget.Menu = @import("battle.zon");
+
+pub const Menu = struct {
+    const Command = enum { attack, status, item, escape };
+    // 仅在菜单阶段处理战斗指令。
+    pub fn update(_: *ecs.World, _: f32) ?Phase {
+        const event = menu.update(.{}) orelse return null;
+        switch (@as(Command, @enumFromInt(event))) {
+            .attack => return .playerAttack,
+            .status => return .status,
+            .item => return .item,
+            .escape => {
+                const escape = zhu.random.int(u8, 0, 100);
+                if (enemy.escape > escape) return .escape;
+
+                Wait.tip = "逃跑失败！";
+                Wait.next = .enemyAttack;
+                return .wait;
+            },
+        }
+    }
+};
+
 // 当前敌人的稳定标识和可变数据副本。
 pub var enemyKey: zon.Actor.Key = undefined;
 pub var enemy: zon.Actor = undefined;

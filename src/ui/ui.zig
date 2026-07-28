@@ -14,7 +14,6 @@ const tip = @import("tip.zig");
 
 const Dialog = component.dialog.Dialog;
 
-pub const battle = @import("battle.zig");
 pub const inventory = @import("inventory.zig");
 pub const story = @import("story.zig");
 pub const status = @import("status.zig");

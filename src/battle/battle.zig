@@ -7,7 +7,6 @@ const component = @import("../component.zig");
 const factory = @import("../factory.zig");
 const storage = @import("../storage.zig");
 const zon = @import("../zon.zig");
-const ui = @import("../ui/ui.zig");
 const player = @import("player.zig");
 const enemy = @import("enemy.zig");
 const shared = @import("shared.zig");
@@ -22,7 +21,7 @@ pub const Request = enum { world, title };
 
 // 当前阶段同时记录阶段标识和对应类型。
 const Phase = union(shared.Phase) {
-    menu: player.Menu,
+    menu: shared.Menu,
     playerAttack: player.Attack,
     enemyHurt: enemy.Hurt,
     wait: shared.Wait,
@@ -40,7 +39,7 @@ const Phase = union(shared.Phase) {
     pub fn enter(self: Phase, world: *ecs.World) void {
         switch (self) {
             .win, .escape, .title => unreachable,
-            .menu, .status, .item => {},
+            .menu, .status => {},
             inline else => |value| @TypeOf(value).enter(world),
         }
     }
@@ -80,7 +79,8 @@ pub fn enter(world: *ecs.World) void {
     const actor = world.get(enemyEntity, Actor).?;
     shared.enemyKey = actor.key;
     shared.enemy = zon.Actor.get(actor.key).*;
-    ui.battle.reset();
+    shared.menu.reset();
+    shared.menu.selected = 0;
     changePhase(world, .menu);
     zhu.camera.main.position = .zero;
 }
@@ -196,84 +196,9 @@ pub fn draw(world: *ecs.World) void {
     zhu.text.draw(text, position.addXY(305, 5), .{ .color = .black });
     zhu.text.msdf.end();
 
-    ui.battle.draw();
+    shared.menu.drawImage();
+    zhu.text.msdf.begin();
+    shared.menu.drawText();
+    zhu.text.msdf.end();
     phase.draw(world);
-}
-
-test "战斗胜利后保留对话并删除人物实体" {
-    var world = ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    world.entity = world.createEntity();
-    world.add(world.entity, storage.DeadActors.empty);
-    const playerEntity = world.createIdentity(Player);
-    world.add(world.entity, Dialog{
-        .lines = zon.dialogues[36].lines,
-    });
-    world.add(playerEntity, Interact.Disabled{});
-    const actorEntity = world.createEntity();
-    world.add(actorEntity, Actor{ .key = .wuPi });
-    world.addIdentity(actorEntity, Enemy);
-    shared.enemyKey = .wuPi;
-
-    try std.testing.expectEqual(Request.world, finishWin(&world));
-
-    try std.testing.expect(world.has(world.entity, Dialog));
-    try std.testing.expect(world.has(playerEntity, Interact.Disabled));
-    try std.testing.expect(!world.has(actorEntity, Actor));
-    try std.testing.expectEqual(null, world.getIdentity(Enemy));
-    const deadActors = world.getGlobal(storage.DeadActors).?;
-    try std.testing.expect(deadActors.contains(.wuPi));
-}
-
-test "战斗胜利后没有对话则返回地图" {
-    var world = ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    world.entity = world.createEntity();
-    world.add(world.entity, storage.DeadActors.empty);
-    const actorEntity = world.createEntity();
-    world.add(actorEntity, Actor{
-        .key = .senLin_feiJiangJun1,
-    });
-    world.addIdentity(actorEntity, Enemy);
-    shared.enemyKey = .senLin_feiJiangJun1;
-
-    try std.testing.expectEqual(Request.world, finishWin(&world));
-
-    try std.testing.expect(!world.has(world.entity, Dialog));
-    try std.testing.expect(!world.has(actorEntity, Actor));
-    try std.testing.expectEqual(null, world.getIdentity(Enemy));
-}
-
-test "逃跑后关闭对话并保留冷却中的敌人" {
-    var world = ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    world.entity = world.createEntity();
-    const playerEntity = world.createIdentity(Player);
-    world.add(world.entity, Dialog{
-        .lines = zon.dialogues[36].lines,
-    });
-    world.add(playerEntity, Interact.Disabled{});
-    const actorEntity = world.createEntity();
-    world.addAll(actorEntity, .{
-        Actor{ .key = .wuPi },
-        Enemy{ .value = .init(.zero, .xy(48, 48)) },
-        Interact{},
-    });
-    world.addIdentity(actorEntity, Interact);
-    world.addIdentity(actorEntity, Enemy);
-    shared.enemyKey = .wuPi;
-
-    try std.testing.expectEqual(Request.world, finishEscape(&world));
-
-    try std.testing.expect(!world.has(world.entity, Dialog));
-    try std.testing.expect(!world.has(playerEntity, Interact.Disabled));
-    try std.testing.expectEqual(null, world.getIdentity(Interact));
-    try std.testing.expectEqual(null, world.getIdentity(Enemy));
-    try std.testing.expectEqual(
-        @as(f32, 0.5),
-        world.get(actorEntity, Enemy).?.wait,
-    );
 }

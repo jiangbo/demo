@@ -8,32 +8,7 @@ const math = zhu.math;
 const factory = @import("../factory.zig");
 const storage = @import("../storage.zig");
 const input = @import("../zon.zig").input;
-const ui = @import("../ui/ui.zig");
 const shared = @import("shared.zig");
-
-pub const Menu = struct {
-    // 处理玩家方的战斗菜单。
-    pub fn update(_: *ecs.World, _: f32) ?shared.Phase {
-        if (ui.battle.update()) |request| switch (request) {
-            .attack => return .playerAttack,
-            .status => return .status,
-            .item => {
-                ui.inventory.open();
-                return .item;
-            },
-            .escape => {
-                if (shared.enemy.escape > zhu.random.int(u8, 0, 100)) {
-                    return .escape;
-                } else {
-                    shared.Wait.tip = "逃跑失败！";
-                    shared.Wait.next = .enemyAttack;
-                    return .wait;
-                }
-            },
-        };
-        return null;
-    }
-};
 
 pub const Attack = struct {
     // 开始玩家方攻击动画。
@@ -127,21 +102,30 @@ pub const Death = struct {
 };
 
 pub const Status = struct {
+    const status = @import("../ui/status.zig");
+
     // 状态页关闭后返回战斗菜单。
     pub fn update(_: *ecs.World, _: f32) ?shared.Phase {
-        return if (ui.status.update()) .menu else null;
+        return if (status.update()) .menu else null;
     }
 
     // 绘制玩家状态页。
     pub fn draw(world: *ecs.World) void {
-        ui.status.draw(world);
+        status.draw(world);
     }
 };
 
 pub const Item = struct {
+    const inventory = @import("../ui/inventory.zig");
+
+    // 进入物品阶段时打开背包。
+    pub fn enter(_: *ecs.World) void {
+        inventory.open();
+    }
+
     // 处理战斗中的物品选择。
     pub fn update(world: *ecs.World, _: f32) ?shared.Phase {
-        const request = ui.inventory.update(world) orelse return null;
+        const request = inventory.update(world) orelse return null;
         return switch (request) {
             .used => .enemyAttack,
             .close => .menu,
@@ -150,6 +134,6 @@ pub const Item = struct {
 
     // 绘制战斗物品页。
     pub fn draw(world: *ecs.World) void {
-        ui.inventory.draw(world);
+        inventory.draw(world);
     }
 };
