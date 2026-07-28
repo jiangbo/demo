@@ -38,9 +38,9 @@ const PlayerSpawn = union(enum) {
 };
 
 pub var back: enum { none, battle, load, menu } = .none;
-pub fn init(allocator: zhu.Allocator) void {
+pub fn init() void {
     ui.init();
-    map.init(allocator);
+    map.init();
 }
 
 pub fn deinit(allocator: zhu.Allocator) void {

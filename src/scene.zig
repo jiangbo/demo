@@ -33,8 +33,8 @@ pub fn init(allocator_: zhu.Allocator) void {
         storage.Inventory{},
     });
     titleScene.init();
-    worldScene.init(allocator_);
-    battleScene.init();
+    worldScene.init();
+    battleScene.init(allocator_);
 
     titleScene.enter();
     fadeIn();
@@ -177,4 +177,5 @@ fn fadeOut(callback: ?*const fn () void) void {
 pub fn deinit() void {
     world.deinit();
     worldScene.deinit(allocator);
+    battleScene.deinit(allocator);
 }

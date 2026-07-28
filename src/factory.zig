@@ -61,6 +61,45 @@ fn firstImage(animation: Animation, facing: actor.Facing) zhu.Image {
     return value.subImageAt(0);
 }
 
+// 根据地图配置和图集构建完整顶点。
+pub fn mapVertexes(
+    allocator: zhu.Allocator,
+    image: zhu.Image,
+    key: zon.Map.Key,
+) []zhu.batch.Vertex {
+    const data = zon.Map.get(key);
+    var count: usize = 0;
+    for ([_][]const u16{ data.back, data.ground }) |tiles| {
+        for (tiles) |tileIndex| {
+            if (tileIndex != 0) count += 1;
+        }
+    }
+
+    const result = allocator.alloc(zhu.batch.Vertex, count);
+    const rowTiles: usize = @intFromFloat(@divExact(image.size.x, 34));
+    const tileSize = data.grid.cellSize();
+    var next: usize = 0;
+
+    for ([_][]const u16{ data.back, data.ground }) |tiles| {
+        for (tiles, 0..) |tileIndex, index| {
+            if (tileIndex == 0) continue;
+
+            const row: f32 = @floatFromInt(tileIndex / rowTiles);
+            const col: f32 = @floatFromInt(tileIndex % rowTiles);
+            const position = zhu.Vector2.xy(col * 34 + 1, row * 34 + 1);
+            const tile = image.sub(.init(position, tileSize));
+            result[next] = .{
+                .position = data.grid.indexToWorld(index),
+                .layer = tile.layer,
+                .size = tileSize,
+                .uvRect = tile.uvRect(),
+            };
+            next += 1;
+        }
+    }
+    return result;
+}
+
 // 根据地图配置和长期状态创建地图对象。
 pub fn spawnMapObjects(world: *ecs.World, key: zon.Map.Key) void {
     const mapData = zon.Map.get(key);
