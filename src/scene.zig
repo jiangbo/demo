@@ -22,51 +22,6 @@ const Scene = enum { title, world, battle };
 
 const WorldEntry = union(enum) { start, battle, load: u8 };
 
-// 管理场景切换时的淡入淡出状态。
-const Fade = struct {
-    timer: ?zhu.Timer = null,
-    isIn: bool = false,
-    done: ?*const fn () void = null,
-
-    fn startIn(self: *Fade) void {
-        self.timer = .init(1);
-        self.isIn = true;
-        self.done = null;
-    }
-
-    fn startOut(self: *Fade, done: ?*const fn () void) void {
-        self.timer = .init(1);
-        self.isIn = false;
-        self.done = done;
-    }
-
-    // 推进淡入淡出，并返回本帧是否由它占用。
-    fn update(self: *Fade, delta: f32) bool {
-        const timer = if (self.timer) |*v| v else return false;
-        if (timer.updateRunning(delta)) return true;
-
-        if (self.isIn) {
-            self.timer = null;
-        } else {
-            if (self.done) |done| done();
-            self.startIn();
-        }
-        return true;
-    }
-
-    fn draw(self: *Fade) void {
-        const timer = if (self.timer) |*v| v else return;
-        camera.push(.window);
-        defer camera.pop();
-
-        const percent = timer.progress();
-        const alpha = if (self.isIn) 1 - percent else percent;
-        zhu.batch.drawRect(.init(.zero, window.size), .{
-            .color = .rgba(0, 0, 0, alpha),
-        });
-    }
-};
-
 var current: Scene = .title;
 var pending: Scene = .title;
 var entry: WorldEntry = undefined;
@@ -246,3 +201,48 @@ pub fn deinit() void {
     zhu.audio.setMusicState(.stopped);
     battle.deinit(allocator);
 }
+
+// 管理场景切换时的淡入淡出状态。
+const Fade = struct {
+    timer: ?zhu.Timer = null,
+    isIn: bool = false,
+    done: ?*const fn () void = null,
+
+    fn startIn(self: *Fade) void {
+        self.timer = .init(1);
+        self.isIn = true;
+        self.done = null;
+    }
+
+    fn startOut(self: *Fade, done: ?*const fn () void) void {
+        self.timer = .init(1);
+        self.isIn = false;
+        self.done = done;
+    }
+
+    // 推进淡入淡出，并返回本帧是否由它占用。
+    fn update(self: *Fade, delta: f32) bool {
+        const timer = if (self.timer) |*v| v else return false;
+        if (timer.updateRunning(delta)) return true;
+
+        if (self.isIn) {
+            self.timer = null;
+        } else {
+            if (self.done) |done| done();
+            self.startIn();
+        }
+        return true;
+    }
+
+    fn draw(self: *Fade) void {
+        const timer = if (self.timer) |*v| v else return;
+        camera.push(.window);
+        defer camera.pop();
+
+        const percent = timer.progress();
+        const alpha = if (self.isIn) 1 - percent else percent;
+        zhu.batch.drawRect(.init(.zero, window.size), .{
+            .color = .rgba(0, 0, 0, alpha),
+        });
+    }
+};
