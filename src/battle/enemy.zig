@@ -5,7 +5,6 @@ const ecs = @import("ecs");
 const audio = zhu.audio;
 const math = zhu.math;
 
-const factory = @import("../factory.zig");
 const component = @import("../component.zig");
 const storage = @import("../storage.zig");
 const zon = @import("../zon.zig");
@@ -80,11 +79,8 @@ pub const Hurt = struct {
     // 绘制敌方抖动和伤害数字。
     pub fn draw(_: *ecs.World) void {
         const position = math.Vector2.xy(465, 237).addX(offset);
-        zhu.batch.drawImage(
-            factory.npcBattleImage(shared.enemyKey),
-            position,
-            .{},
-        );
+        const image = zon.Actor.image(shared.enemyKey, .left);
+        zhu.batch.drawImage(image, position, .{});
 
         var buffer: [10]u8 = undefined;
         const y = std.math.lerp(230, 190, timer.progress());

@@ -5,9 +5,8 @@ const ecs = @import("ecs");
 const audio = zhu.audio;
 const math = zhu.math;
 
-const factory = @import("../factory.zig");
 const storage = @import("../storage.zig");
-const input = @import("../zon.zig").input;
+const zon = @import("../zon.zig");
 const shared = @import("shared.zig");
 
 pub const Attack = struct {
@@ -67,11 +66,8 @@ pub const Hurt = struct {
     // 绘制玩家抖动和伤害数字。
     pub fn draw(_: *ecs.World) void {
         const position = math.Vector2.xy(130, 220).addX(offset);
-        zhu.batch.drawImage(
-            factory.playerBattleImage(),
-            position,
-            .{},
-        );
+        const image = zon.Actor.image(.player, .right);
+        zhu.batch.drawImage(image, position, .{});
 
         var buffer: [10]u8 = undefined;
         const y = std.math.lerp(230, 190, timer.progress());
@@ -90,7 +86,7 @@ pub const Death = struct {
 
     // 确认后返回标题场景。
     pub fn update(_: *ecs.World, _: f32) ?shared.Phase {
-        return if (input.released(.confirm)) .title else null;
+        return if (zon.input.released(.confirm)) .title else null;
     }
 
     // 绘制玩家死亡提示。

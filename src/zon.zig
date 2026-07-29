@@ -58,6 +58,34 @@ pub const Chest = struct {
 };
 
 pub const Actor = struct {
+    const Animations = std.EnumArray(Key, []const Animation.Source);
+
+    // 所有 NPC 共用相同的素材布局。
+    const npcSources: [15][4]Animation.Source = blk: {
+        var sources: [15][4]Animation.Source = undefined;
+        for (config.npc.images, 0..) |imageId, imageIndex| {
+            for (config.npc.frames, 0..) |frames, sourceIndex| {
+                sources[imageIndex][sourceIndex] = .{
+                    .imageId = imageId,
+                    .size = config.npc.size,
+                    .frames = frames,
+                };
+            }
+        }
+        break :blk sources;
+    };
+
+    // 编译期生成每个角色对应的动画配置。
+    const animations: Animations = blk: {
+        var result = Animations.initUndefined();
+        result.set(.player, config.player);
+        for (list[1..], 1..) |actor, index| {
+            const key: Key = @enumFromInt(index);
+            result.set(key, &npcSources[actor.picture]);
+        }
+        break :blk result;
+    };
+
     key: []const u8,
     enemy: bool = false,
     dialogues: ?[2]u16 = null,
@@ -82,6 +110,18 @@ pub const Actor = struct {
 
     pub fn get(key: Key) *const Actor {
         return &list[@intFromEnum(key)];
+    }
+
+    // 根据角色标识创建对应的地图动画。
+    pub fn animation(key: Key) Animation {
+        return .initSource(animations.get(key));
+    }
+
+    // 取得角色指定方向的第一帧图片。
+    pub fn image(key: Key, facing: Facing) zhu.Image {
+        const source = animations.get(key)[@intFromEnum(facing)];
+        const atlas = zhu.assets.getImage(source.imageId).?;
+        return atlas.sub(.init(source.frames[0].offset, source.size));
     }
 };
 

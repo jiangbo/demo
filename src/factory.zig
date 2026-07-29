@@ -7,59 +7,7 @@ const storage = @import("storage.zig");
 const zon = @import("zon.zig");
 
 const actor = component.actor;
-const Animation = zhu.Animation;
 const Portal = component.Portal;
-
-// 所有 NPC 共用相同的素材布局。
-const npcSources: [15][4]Animation.Source = blk: {
-    var sources: [15][4]Animation.Source = undefined;
-    for (zon.config.npc.images, 0..) |imageId, imageIndex| {
-        for (zon.config.npc.frames, 0..) |frames, sourceIndex| {
-            sources[imageIndex][sourceIndex] = .{
-                .imageId = imageId,
-                .size = zon.config.npc.size,
-                .frames = frames,
-            };
-        }
-    }
-    break :blk sources;
-};
-
-// 创建角色动画。
-pub fn playerAnimation() Animation {
-    return .initSource(zon.config.player);
-}
-
-// 创建指定素材的 NPC 动画。
-pub fn npcAnimation(picture: u8) Animation {
-    return .initSource(&npcSources[picture]);
-}
-
-// 获取玩家对话和状态界面使用的头像。
-pub fn playerPhoto() zhu.Image {
-    return firstImage(playerAnimation(), .down);
-}
-
-// 获取玩家在战斗场景使用的图片。
-pub fn playerBattleImage() zhu.Image {
-    return firstImage(playerAnimation(), .right);
-}
-
-// 获取非玩家人物在对话和状态界面使用的头像。
-pub fn npcPhoto(key: zon.Actor.Key) zhu.Image {
-    return firstImage(npcAnimation(zon.Actor.get(key).picture), .down);
-}
-
-// 获取非玩家人物在战斗场景使用的图片。
-pub fn npcBattleImage(key: zon.Actor.Key) zhu.Image {
-    return firstImage(npcAnimation(zon.Actor.get(key).picture), .left);
-}
-
-fn firstImage(animation: Animation, facing: actor.Facing) zhu.Image {
-    var value = animation;
-    value.source = value.sources[@intFromEnum(facing)];
-    return value.subImageAt(0);
-}
 
 // 根据地图配置和图集构建完整顶点。
 pub fn mapVertexes(
@@ -167,7 +115,7 @@ pub fn spawnPlayer(
         .xy(-8, -16),
         .xy(16, 16),
     );
-    var animation = playerAnimation();
+    var animation = zon.Actor.animation(.player);
     animation.play(facing);
     const entity = world.createIdentity(actor.Player);
     world.addAll(entity, .{
@@ -222,7 +170,7 @@ fn spawnActor(
 ) void {
     const data = zon.Actor.get(key);
     const entity = world.createEntity();
-    var animation = npcAnimation(data.picture);
+    var animation = zon.Actor.animation(key);
     animation.play(data.facing);
     world.addAll(entity, .{
         key,

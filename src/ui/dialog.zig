@@ -3,7 +3,6 @@ const zhu = @import("zhu");
 const ecs = @import("ecs");
 
 const component = @import("../component.zig");
-const factory = @import("../factory.zig");
 const zon = @import("../zon.zig");
 
 const Dialog = component.dialog.Dialog;
@@ -69,14 +68,7 @@ pub fn draw(world: *ecs.World) void {
     const line = dialog.lines[dialog.line];
 
     zhu.batch.drawImage(texture, .xy(0, 384), .{});
-    if (line.actor) |key| {
-        const actor = zon.Actor.get(key);
-        if (key == .player) {
-            drawActor(factory.playerPhoto(), .xy(35, 396), actor.name);
-        } else {
-            drawActor(factory.npcPhoto(key), .xy(40, 400), actor.name);
-        }
-    }
+    if (line.actor) |key| drawActor(key);
 
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
@@ -106,12 +98,16 @@ fn close(world: *ecs.World) void {
     world.remove(world.entity, Dialog);
 }
 
-fn drawActor(image: zhu.Image, pos: zhu.Vector2, name: []const u8) void {
+fn drawActor(key: zon.Actor.Key) void {
+    const actor = zon.Actor.get(key);
+    var pos: zhu.Vector2 = .xy(40, 400);
+    if (key == .player) pos = .xy(35, 396);
+    const image = zon.Actor.image(key, .down);
     zhu.batch.drawImage(image, pos, .{});
 
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
-    zhu.text.draw(name, .xy(25, 445), .{ .color = .yellow });
+    zhu.text.draw(actor.name, .xy(25, 445), .{ .color = .yellow });
 }
 
 fn drawText(content: []const u8) void {

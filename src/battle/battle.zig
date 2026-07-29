@@ -156,33 +156,21 @@ pub fn draw(world: *ecs.World) void {
     var buffer: [100]u8 = undefined;
 
     if (phase != .playerHurt and phase != .playerDeath) {
-        zhu.batch.drawImage(
-            factory.playerBattleImage(),
-            .xy(130, 220),
-            .{},
-        );
+        const image = zon.Actor.image(.player, .right);
+        zhu.batch.drawImage(image, .xy(130, 220), .{});
     }
 
     if (phase != .enemyHurt and phase != .enemyDeath) {
-        zhu.batch.drawImage(
-            factory.npcBattleImage(shared.enemyKey),
-            .xy(465, 237),
-            .{},
-        );
+        const image = zon.Actor.image(shared.enemyKey, .left);
+        zhu.batch.drawImage(image, .xy(465, 237), .{});
     }
 
     const position = zhu.Vector2.xy(96, 304);
     zhu.batch.drawImage(texture, position, .{});
-    zhu.batch.drawImage(
-        factory.playerPhoto(),
-        position.addXY(10, 10),
-        .{},
-    );
-    zhu.batch.drawImage(
-        factory.npcPhoto(shared.enemyKey),
-        position.addXY(265, 26),
-        .{},
-    );
+    const playerPhoto = zon.Actor.image(.player, .down);
+    zhu.batch.drawImage(playerPhoto, position.addXY(10, 10), .{});
+    const enemyPhoto = zon.Actor.image(shared.enemyKey, .down);
+    zhu.batch.drawImage(enemyPhoto, position.addXY(265, 26), .{});
 
     zhu.text.msdf.begin();
 
