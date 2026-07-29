@@ -90,6 +90,8 @@ pub const Hurt = struct {
 
 pub const Death = struct {
     var step: u8 = 0;
+    // 本次战斗掉落物是否已经放入背包。
+    var itemAdded: bool = false;
 
     // 播放敌方死亡声音并发送剧情进度事件。
     pub fn enter(world: *ecs.World) void {
@@ -99,6 +101,7 @@ pub const Death = struct {
             ],
         );
         step = 0;
+        itemAdded = false;
         if (shared.enemy.progress != 0xFF) {
             world.addEvent(Story{
                 .progress = shared.enemy.progress,
@@ -115,7 +118,7 @@ pub const Death = struct {
             stats.exp += shared.enemy.level * 20;
             inventory.money += shared.enemy.money;
             for (shared.enemy.goods) |itemKey| {
-                _ = inventory.add(itemKey);
+                itemAdded = inventory.add(itemKey);
             }
             return null;
         }
@@ -150,18 +153,13 @@ pub const Death = struct {
         zhu.text.draw(text, .xy(220, 210), .{});
 
         if (shared.enemy.goods.len != 0) {
-            zhu.text.draw("缴获物品：", .xy(220, 240), .{});
-
-            for (shared.enemy.goods) |itemKey| {
-                const name = zon.Item.get(itemKey).name;
-                zhu.text.draw(
-                    name,
-                    .xy(310, 240),
-                    .{ .color = .yellow },
-                );
-            }
-
             std.debug.assert(shared.enemy.goods.len == 1);
+            const name = zon.Item.get(shared.enemy.goods[0]).name;
+            text = if (itemAdded)
+                zhu.format(&buffer, "缴获物品：{s}", .{name})
+            else
+                zhu.format(&buffer, "背包已满，未获得：{s}", .{name});
+            zhu.text.draw(text, .xy(220, 240), .{ .color = .yellow });
         }
         if (step == 2) {
             const level = world.getGlobal(storage.Stats).?.level;
