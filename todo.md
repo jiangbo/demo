@@ -30,8 +30,10 @@
 - [x] 宝箱 ECS 化，一个宝箱对应一个实体。
 - [x] `Portal` 组件位于 `component` 顶层；地图画面和碰撞数据不进入 ECS。
 - [x] 普通地图由 `map` 模块的 `draw` 渲染、`walk` 处理碰撞，不做成 ECS 实体。
-- [x] `factory.spawnMapObjects` 统一生成传送区域、宝箱和地图人物。
+- [x] `map.enter` 直接生成传送区域、宝箱和地图人物。
 - [x] 地图对象（传送区域、宝箱、人物）ECS 化；地图画面和碰撞保持 `map` 模块全局。
+- [x] 删除 `factory.zig`，地图实体生成迁入 `map`，角色配置查询迁入
+  `zon.Actor`。
 
 地图迁移时保持以下设计：
 
@@ -123,5 +125,4 @@
   `storage`。
 - [x] 用 ECS 状态替代 `world` 中的对话状态。
 - [x] 将 `world.tip` 迁入 UI，删除临时的 `event.Tip` 转接逻辑。
-- [ ] 重新评估 `Interact.Disabled`。当前对话由 UI 阻塞，不再依赖该
-  组件；暂时保留，确认后续是否存在非对话的禁用交互需求。
+- [x] 删除不再使用的 `Interact.Disabled`。

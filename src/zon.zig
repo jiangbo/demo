@@ -123,6 +123,19 @@ pub const Actor = struct {
         const atlas = zhu.assets.getImage(source.imageId).?;
         return atlas.sub(.init(source.frames[0].offset, source.size));
     }
+
+    // 根据剧情进度取得角色当前使用的对话。
+    pub fn talk(self: Actor, progress: u8) []const dialog.Line {
+        const ids = self.dialogues.?;
+        const index: usize = if (progress > 4) 1 else 0;
+        return dialogues[ids[index]].lines;
+    }
+
+    // 根据剧情进度取得角色当前的移动速度。
+    pub fn moveSpeed(self: Actor, progress: u8) f32 {
+        if (progress > 4) return self.panicSpeed orelse self.speed;
+        return self.speed;
+    }
 };
 
 pub const dialog = struct {
@@ -168,6 +181,48 @@ pub const Map = struct {
     // 根据稳定标识取得地图配置。
     pub fn get(key: Key) *const Map {
         return &list[@intFromEnum(key)];
+    }
+
+    // 统计地图中需要绘制的瓦片数量。
+    pub fn tileCount(self: Map) usize {
+        var count: usize = 0;
+        for ([_][]const u16{ self.back, self.ground }) |tiles| {
+            for (tiles) |tile| {
+                if (tile != 0) count += 1;
+            }
+        }
+        return count;
+    }
+
+    // 根据地图图层填充已分配的绘制顶点。
+    pub fn fillVertexes(
+        self: Map,
+        image: zhu.Image,
+        result: []zhu.batch.Vertex,
+    ) void {
+        const atlasGrid = tiled.Grid{
+            .width = @intFromFloat(@divExact(image.size.x, 34)),
+            .height = @intFromFloat(@divExact(image.size.y, 34)),
+            .cell = 34,
+        };
+        const tileSize = self.grid.cellSize();
+        var next: usize = 0;
+
+        for ([_][]const u16{ self.back, self.ground }) |tiles| {
+            for (tiles, 0..) |tile, index| {
+                if (tile == 0) continue;
+
+                const pos = atlasGrid.indexToWorld(tile).add(.one);
+                const tileImage = image.sub(.init(pos, tileSize));
+                result[next] = .{
+                    .position = self.grid.indexToWorld(index),
+                    .layer = tileImage.layer,
+                    .size = tileSize,
+                    .uvRect = tileImage.uvRect(),
+                };
+                next += 1;
+            }
+        }
     }
 };
 

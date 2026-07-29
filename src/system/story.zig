@@ -2,8 +2,8 @@ const std = @import("std");
 const ecs = @import("ecs");
 
 const component = @import("../component.zig");
-const factory = @import("../factory.zig");
 const storage = @import("../storage.zig");
+const zon = @import("../zon.zig");
 
 const Key = component.actor.Key;
 const Speed = component.Speed;
@@ -33,8 +33,9 @@ fn demonAppeared(world: *ecs.World, progress: u8) void {
         const actorKey = query.get(entity, Key);
         const talk = query.getPtr(entity, Talk);
         const speed = query.getPtr(entity, Speed);
-        talk.* = factory.actorTalk(actorKey, progress).?;
-        speed.value = factory.actorSpeed(actorKey, progress);
+        const actor = zon.Actor.get(actorKey);
+        talk.* = actor.talk(progress);
+        speed.value = actor.moveSpeed(progress);
     }
 }
 

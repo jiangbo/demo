@@ -26,11 +26,8 @@ pub const Attack = struct {
 
     // 在敌方位置绘制攻击动画。
     pub fn draw(_: *ecs.World) void {
-        zhu.batch.drawImage(
-            shared.bombAnimation.subImage(),
-            .xy(452, 230),
-            .{},
-        );
+        const image = shared.bombAnimation.subImage();
+        zhu.batch.drawImage(image, .xy(452, 230), .{});
     }
 };
 
