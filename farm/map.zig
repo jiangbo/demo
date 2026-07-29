@@ -95,7 +95,7 @@ pub fn unload(gpa: zhu.Allocator) void {
     loaded.land.deinit(gpa);
     loaded.spatial.deinit(gpa);
     loaded.frontStart = 0;
-    loaded.vertexes.clearAndFree(gpa.raw);
+    loaded.vertices.clearAndFree(gpa.raw);
     loaded.loaded = false;
 }
 
@@ -350,8 +350,8 @@ fn refreshCropSprite(world: *World, entity: Entity, crop: farm.Crop) void {
 }
 
 pub fn drawBack() void {
-    if (loaded.vertexes.items.len != 0) {
-        const back = loaded.vertexes.items[0..loaded.frontStart];
+    if (loaded.vertices.items.len != 0) {
+        const back = loaded.vertices.items[0..loaded.frontStart];
         zhu.batch.drawVertices(back, mapImage);
     }
 
@@ -359,29 +359,29 @@ pub fn drawBack() void {
 }
 
 pub fn drawFront() void {
-    if (loaded.frontStart == loaded.vertexes.items.len) return;
-    const front = loaded.vertexes.items[loaded.frontStart..];
+    if (loaded.frontStart == loaded.vertices.items.len) return;
+    const front = loaded.vertices.items[loaded.frontStart..];
     zhu.batch.drawVertices(front, null);
 }
 
 test "地图绘制会把前景留到实体之后" {
     zhu.assets.initCaches(std.testing.allocator);
     defer zhu.assets.deinit();
-    defer loaded.vertexes.clearAndFree(std.testing.allocator);
+    defer loaded.vertices.clearAndFree(std.testing.allocator);
 
-    loaded.vertexes.clearRetainingCapacity();
+    loaded.vertices.clearRetainingCapacity();
     loaded.frontStart = 0;
 
     const image = zhu.Image{ .view = .{ .id = 1 } };
     mapImage = image;
-    try loaded.vertexes.append(std.testing.allocator, .{
+    try loaded.vertices.append(std.testing.allocator, .{
         .position = .xy(1, 0),
         .layer = image.layer,
         .size = image.size,
         .uvRect = image.uvRect(),
     });
-    loaded.frontStart = loaded.vertexes.items.len;
-    try loaded.vertexes.append(std.testing.allocator, .{
+    loaded.frontStart = loaded.vertices.items.len;
+    try loaded.vertices.append(std.testing.allocator, .{
         .position = .xy(2, 0),
         .layer = image.layer,
         .size = image.size,
@@ -715,7 +715,7 @@ test "对象层产出对象按碰撞范围占用格子" {
     loaded = loader.load(zhu.testing.allocator, &world, testMap);
     defer loaded.land.deinit(zhu.testing.allocator);
     defer loaded.spatial.deinit(zhu.testing.allocator);
-    defer loaded.vertexes.clearAndFree(std.testing.allocator);
+    defer loaded.vertices.clearAndFree(std.testing.allocator);
 
     loaded.spatial.tiles[0].insert(.arable);
     loaded.spatial.tiles[1].insert(.arable);

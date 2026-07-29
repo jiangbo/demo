@@ -184,7 +184,7 @@ pub const Map = struct {
     }
 
     // 根据地图图层分配并构建绘制顶点。
-    pub fn buildVertexes(
+    pub fn buildVertices(
         self: Map,
         allocator: zhu.Allocator,
         image: zhu.Image,

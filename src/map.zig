@@ -15,7 +15,7 @@ pub const Spawn = union(enum) {
 };
 
 var image: zhu.Image = undefined;
-var vertexes: []zhu.batch.Vertex = &.{};
+var vertices: []zhu.batch.Vertex = &.{};
 var field: zhu.extend.tiled.Field(u8) = undefined;
 
 pub fn init() void {
@@ -23,7 +23,7 @@ pub fn init() void {
 }
 
 pub fn deinit(allocator: zhu.Allocator) void {
-    allocator.free(vertexes);
+    allocator.free(vertices);
 }
 
 // 清空旧地图并按指定方式创建地图对象和玩家。
@@ -48,8 +48,8 @@ pub fn enter(world: *ecs.World, gpa: zhu.Allocator, spawn: Spawn) void {
     zhu.camera.bound = data.grid.size();
     field = .{ .grid = data.grid, .data = data.object };
 
-    gpa.free(vertexes);
-    vertexes = data.buildVertexes(gpa, image);
+    gpa.free(vertices);
+    vertices = data.buildVertices(gpa, image);
     spawnPortals(world, data);
     spawnChests(world, data);
     spawnActors(world, data);
@@ -67,7 +67,7 @@ pub fn enter(world: *ecs.World, gpa: zhu.Allocator, spawn: Spawn) void {
 
 // 绘制当前普通地图。
 pub fn draw() void {
-    zhu.batch.drawVertices(vertexes, image);
+    zhu.batch.drawVertices(vertices, image);
 }
 
 // 将区域移动到当前地图允许到达的位置。

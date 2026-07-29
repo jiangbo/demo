@@ -64,7 +64,7 @@ const Phase = union(shared.Phase) {
 
 var texture: zhu.Image = undefined;
 var mapImage: zhu.Image = undefined;
-var vertexes: []zhu.batch.Vertex = undefined;
+var vertices: []zhu.batch.Vertex = undefined;
 var phase: Phase = .menu;
 
 // 初始化战斗场景长期使用的资源。
@@ -72,13 +72,13 @@ pub fn init(allocator: zhu.Allocator) void {
     texture = zhu.getImage("fightbar.png").?;
     mapImage = zhu.getImage("maps1-sheet.png").?;
     const data = zon.Map.get(.battle);
-    vertexes = data.buildVertexes(allocator, mapImage);
+    vertices = data.buildVertices(allocator, mapImage);
     shared.bombAnimation = .initSource(zon.config.bomb);
 }
 
 // 释放战斗地图长期持有的顶点。
 pub fn deinit(allocator: zhu.Allocator) void {
-    allocator.free(vertexes);
+    allocator.free(vertices);
 }
 
 // 读取选定的敌人并进入战斗场景。
@@ -146,7 +146,7 @@ fn finishEscape(world: *ecs.World) Request {
 
 // 绘制战斗场景、双方状态和当前阶段。
 pub fn draw(world: *ecs.World) void {
-    zhu.batch.drawVertices(vertexes, mapImage);
+    zhu.batch.drawVertices(vertices, mapImage);
 
     zhu.camera.push(.window);
     defer zhu.camera.pop();

@@ -20,7 +20,7 @@ const mock: []const tiled.Map = @import("../zon/map/mock.zon");
 pub const Loaded = struct {
     land: Land,
     spatial: Spatial,
-    vertexes: std.ArrayList(zhu.batch.Vertex) = .empty,
+    vertices: std.ArrayList(zhu.batch.Vertex) = .empty,
     frontStart: usize = 0,
     loaded: bool = false,
 };
@@ -57,7 +57,7 @@ fn parseLayers(ctx: *Context) void {
         .image => parseImageLayer(ctx, layer),
         .object => {
             if (!foundFrontLayer and layer.isNamed("main")) {
-                const start = ctx.loaded.vertexes.items.len;
+                const start = ctx.loaded.vertices.items.len;
                 ctx.loaded.frontStart = start;
                 foundFrontLayer = true;
             }
@@ -66,13 +66,13 @@ fn parseLayers(ctx: *Context) void {
     };
 
     if (!foundFrontLayer) {
-        ctx.loaded.frontStart = ctx.loaded.vertexes.items.len;
+        ctx.loaded.frontStart = ctx.loaded.vertices.items.len;
     }
 
     std.log.info("map loaded: {}x{}, tiles: {}", .{
         ctx.map.grid.width,
         ctx.map.grid.height,
-        ctx.loaded.vertexes.items.len,
+        ctx.loaded.vertices.items.len,
     });
 }
 
@@ -258,7 +258,7 @@ fn loadLight(ctx: *Context, object: tiled.Object) void {
 }
 
 fn appendVertex(ctx: *Context, position: zhu.Vector2, image: zhu.Image) void {
-    ctx.loaded.vertexes.append(ctx.gpa.raw, .{
+    ctx.loaded.vertices.append(ctx.gpa.raw, .{
         .position = position,
         .layer = image.layer,
         .size = image.size,
@@ -285,7 +285,7 @@ test "actor 点对象会生成 NPC，player 点对象只保留标记" {
     var loaded = load(zhu.testing.allocator, &world, mock[0]);
     defer loaded.land.deinit(zhu.testing.allocator);
     defer loaded.spatial.deinit(zhu.testing.allocator);
-    defer loaded.vertexes.clearAndFree(std.testing.allocator);
+    defer loaded.vertices.clearAndFree(std.testing.allocator);
 
     var query = world.query(.{
         Position,
@@ -314,7 +314,7 @@ test "trigger 对象会创建 ECS 触发器实体" {
     var loaded = load(zhu.testing.allocator, &world, mock[1]);
     defer loaded.land.deinit(zhu.testing.allocator);
     defer loaded.spatial.deinit(zhu.testing.allocator);
-    defer loaded.vertexes.clearAndFree(std.testing.allocator);
+    defer loaded.vertices.clearAndFree(std.testing.allocator);
 
     var query = world.query(.{component.map.Trigger});
     const entity = query.next().?;
@@ -336,7 +336,7 @@ test "rest 对象会创建可交互实体" {
     var loaded = load(zhu.testing.allocator, &world, mock[2]);
     defer loaded.land.deinit(zhu.testing.allocator);
     defer loaded.spatial.deinit(zhu.testing.allocator);
-    defer loaded.vertexes.clearAndFree(std.testing.allocator);
+    defer loaded.vertices.clearAndFree(std.testing.allocator);
 
     var query = world.query(.{
         Position,
@@ -400,7 +400,7 @@ test "加载地图产出对象会按对象和 rock 图层写入目标格" {
     var loaded = load(zhu.testing.allocator, &world, testMap);
     defer loaded.land.deinit(zhu.testing.allocator);
     defer loaded.spatial.deinit(zhu.testing.allocator);
-    defer loaded.vertexes.clearAndFree(std.testing.allocator);
+    defer loaded.vertices.clearAndFree(std.testing.allocator);
 
     const tree = loaded.land.tiles[0].object.?;
     const rock = loaded.land.tiles[1].object.?;
