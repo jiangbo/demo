@@ -52,11 +52,7 @@ fn changeWorld(next: From) void {
 }
 
 fn doChangeMap() void {
-    const entity = world.getIdentity(component.Portal).?;
-    const portal = world.get(entity, component.Portal).?;
-    map.enter(&world, allocator, .{
-        .portal = zon.Portal.get(portal.key).target,
-    });
+    map.enter(&world, allocator, .portal);
 }
 
 fn doChangeScene() void {
@@ -88,7 +84,7 @@ fn enterWorld(location: ?storage.Location) void {
     switch (from) {
         .fromStart => {
             storage.reset(&world);
-            map.enter(&world, allocator, .{ .portal = .start });
+            map.enter(&world, allocator, .start);
             world.add(world.entity, component.dialog.Dialog{
                 .lines = zon.dialogues[2].lines,
             });

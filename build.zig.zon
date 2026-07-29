@@ -5,8 +5,8 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .migu = .{
-            .url = "git+https://github.com/jiangbo/MiGu.git#09410683b01fb68c71cd98010ed334bfc129680a",
-            .hash = "migu-0.1.0-1dj5JvCUAACT8t8ACAMc5a4LTpigW1mm-ceH_78tjhsG",
+            .url = "git+https://github.com/jiangbo/MiGu.git#9962873905f43681e614cce59a76eabbb3089599",
+            .hash = "migu-0.1.0-1dj5JgiXAAC2kuZa9QmCbKFSklmk0aFoJcBwESrcX1Ab",
         },
         .zhuyu = .{
             .url = "git+https://github.com/jiangbo/ZhuYu.git#cf8d05a23713373a8abe80a8038d29cf9ce0908d",

@@ -121,7 +121,7 @@ pub fn load(world: *ecs.World, slot: u8) ?Location {
 
 // 收集玩家位置和长期状态并写入存档。
 pub fn save(world: *ecs.World, slot: u8) void {
-    const player = world.getIdentity(Player).?;
+    const player = world.getIdentityEntity(Player).?;
     const record: Record = .{
         .location = .{
             .map = world.get(player, zon.Map.Key).?,

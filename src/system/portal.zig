@@ -14,10 +14,10 @@ const Request = component.event.Request;
 const Story = component.event.Story;
 
 pub fn update(world: *ecs.World) void {
-    const previous = world.getIdentity(Portal);
+    const previous = world.getIdentityEntity(Portal);
     world.removeIdentity(Portal);
 
-    const player = world.getIdentity(Player).?;
+    const player = world.getIdentityEntity(Player).?;
     const position = world.get(player, Position).?;
     const collider = world.get(player, Collider).?;
     const center = collider.move(position).center();
@@ -90,9 +90,9 @@ test "选择玩家当前所在的传送区域" {
     });
 
     update(&world);
-    try std.testing.expectEqual(portal, world.getIdentity(Portal).?);
+    try std.testing.expect(world.isIdentity(portal, Portal));
 
     world.add(player, Position.xy(32, 0));
     update(&world);
-    try std.testing.expectEqual(null, world.getIdentity(Portal));
+    try std.testing.expect(!world.hasIdentity(Portal));
 }

@@ -7,18 +7,15 @@ const component = @import("component.zig");
 const storage = @import("storage.zig");
 
 const actor = component.actor;
-const Player = actor.Player;
-const Position = component.Position;
 
 pub const Spawn = union(enum) {
+    start,
+    portal,
     location: storage.Location,
-    portal: zon.Portal.Key,
 };
 
 var image: zhu.Image = undefined;
-
 var vertexes: []zhu.batch.Vertex = &.{};
-
 var field: zhu.extend.tiled.Field(u8) = undefined;
 
 pub fn init() void {
@@ -30,37 +27,41 @@ pub fn deinit(allocator: zhu.Allocator) void {
 }
 
 // 清空旧地图并按指定方式创建地图对象和玩家。
-pub fn enter(
-    world: *ecs.World,
-    allocator: zhu.Allocator,
-    spawn: Spawn,
-) void {
+pub fn enter(world: *ecs.World, gpa: zhu.Allocator, spawn: Spawn) void {
+    const portalKey: ?zon.Portal.Key = switch (spawn) {
+        .start => .start,
+        .portal => blk: {
+            const portal = world.getIdentity(component.Portal, null).?;
+            break :blk zon.Portal.get(portal.key).target;
+        },
+        .location => null,
+    };
+    const mapKey = switch (spawn) {
+        .location => |value| value.map,
+        else => zon.Portal.get(portalKey.?).map,
+    };
+
     world.resetKeep(storage.keep);
     world.entity = world.createEntity();
 
-    const mapKey = switch (spawn) {
-        .location => |value| value.map,
-        .portal => |portal| zon.Portal.get(portal).map,
-    };
     const data = zon.Map.get(mapKey);
     zhu.camera.bound = data.grid.size();
     field = .{ .grid = data.grid, .data = data.object };
 
-    allocator.free(vertexes);
-    vertexes = allocator.alloc(zhu.batch.Vertex, data.tileCount());
-    data.fillVertexes(image, vertexes);
+    gpa.free(vertexes);
+    vertexes = data.buildVertexes(gpa, image);
     spawnPortals(world, data);
     spawnChests(world, data);
     spawnActors(world, data);
 
     const location = switch (spawn) {
         .location => |value| value,
-        .portal => |key| portalLocation(world, key),
+        else => portalLocation(world, portalKey.?),
     };
     spawnPlayer(world, location);
 
-    const player = world.getIdentity(Player).?;
-    zhu.camera.directFollow(world.get(player, Position).?);
+    const position = world.getIdentity(actor.Player, component.Position).?;
+    zhu.camera.directFollow(position);
     zhu.camera.roundPosition(null);
 }
 
@@ -183,20 +184,16 @@ fn spawnActor(world: *ecs.World, key: zon.Actor.Key, progress: u8) void {
 }
 
 // 在指定逻辑位置创建玩家实体。
-fn spawnPlayer(
-    world: *ecs.World,
-    location: storage.Location,
-) void {
+fn spawnPlayer(world: *ecs.World, location: storage.Location) void {
     const collider = component.Collider.init(
         .xy(-8, -16),
         .xy(16, 16),
     );
     var animation = zon.Actor.animation(.player);
     animation.play(location.facing);
-    const entity = world.createIdentity(Player);
+    const entity = world.createIdentity(actor.Player);
     world.addAll(entity, .{
         actor.Key.player,
-        Player{},
         location.map,
         location.position,
         location.facing,

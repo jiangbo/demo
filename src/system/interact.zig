@@ -42,7 +42,7 @@ fn nearestEntity(world: *ecs.World) ?ecs.Entity {
 
 // 从玩家碰撞区域的中心向当前朝向生成交互区域。
 fn playerArea(world: *ecs.World) zhu.Rect {
-    const player = world.getIdentity(Player).?;
+    const player = world.getIdentityEntity(Player).?;
     const position = world.get(player, Position).?;
     const collider = world.get(player, Collider).?;
     const facing = world.get(player, Facing).?;
@@ -92,5 +92,5 @@ test "交互系统选择玩家正前方最近的实体" {
     zhu.key.set(.F, false);
     update(&world);
 
-    try std.testing.expectEqual(near, world.getIdentity(Interact).?);
+    try std.testing.expect(world.isIdentity(near, Interact));
 }

@@ -183,23 +183,19 @@ pub const Map = struct {
         return &list[@intFromEnum(key)];
     }
 
-    // 统计地图中需要绘制的瓦片数量。
-    pub fn tileCount(self: Map) usize {
+    // 根据地图图层分配并构建绘制顶点。
+    pub fn buildVertexes(
+        self: Map,
+        allocator: zhu.Allocator,
+        image: zhu.Image,
+    ) []zhu.batch.Vertex {
         var count: usize = 0;
         for ([_][]const u16{ self.back, self.ground }) |tiles| {
             for (tiles) |tile| {
                 if (tile != 0) count += 1;
             }
         }
-        return count;
-    }
-
-    // 根据地图图层填充已分配的绘制顶点。
-    pub fn fillVertexes(
-        self: Map,
-        image: zhu.Image,
-        result: []zhu.batch.Vertex,
-    ) void {
+        const result = allocator.alloc(zhu.batch.Vertex, count);
         const atlasGrid = tiled.Grid{
             .width = @intFromFloat(@divExact(image.size.x, 34)),
             .height = @intFromFloat(@divExact(image.size.y, 34)),
@@ -223,6 +219,7 @@ pub const Map = struct {
                 next += 1;
             }
         }
+        return result;
     }
 };
 

@@ -13,12 +13,11 @@ const Talk = dialog.Talk;
 const WantMove = component.WantMove;
 
 pub fn update(world: *ecs.World) void {
-    const target = world.getIdentity(Interact) orelse return;
+    const target = world.getIdentityEntity(Interact) orelse return;
     const lines = world.get(target, Talk) orelse return;
     world.removeIdentity(Interact);
 
-    const player = world.getIdentity(Player).?;
-    const facing = world.get(player, Facing).?;
+    const facing = world.getIdentity(Player, Facing).?;
     world.add(target, component.actor.oppositeFacing(facing));
     world.remove(target, WantMove);
 
@@ -56,7 +55,7 @@ test "交互对话人物后添加对话状态" {
     try std.testing.expect(!world.has(target, Dialog));
     try std.testing.expectEqual(Facing.up, world.get(target, Facing).?);
     try std.testing.expect(!world.has(target, WantMove));
-    try std.testing.expectEqual(null, world.getIdentity(Interact));
+    try std.testing.expect(!world.hasIdentity(Interact));
 }
 
 test "没有对话能力的交互对象不会开始对话" {

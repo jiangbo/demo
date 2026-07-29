@@ -14,7 +14,7 @@ const Sprite = component.Sprite;
 const Tip = component.event.Tip;
 
 pub fn update(world: *ecs.World) void {
-    const entity = world.getIdentity(Interact) orelse return;
+    const entity = world.getIdentityEntity(Interact) orelse return;
     const chest = world.get(entity, Chest) orelse return;
     world.removeIdentity(Interact);
     const config = zon.Chest.get(chest.id);
@@ -69,7 +69,7 @@ test "背包已满时不打开宝箱" {
     const opened = world.getGlobal(storage.OpenedChests).?;
     try std.testing.expect(!opened.isSet(6));
     try std.testing.expect(world.has(entity, Interact));
-    try std.testing.expectEqual(null, world.getIdentity(Interact));
+    try std.testing.expect(!world.hasIdentity(Interact));
     try std.testing.expectEqual(1, world.getEvent(Tip).len);
     try std.testing.expect(!world.has(world.entity, Dialog));
 }

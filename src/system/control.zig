@@ -10,7 +10,7 @@ const Player = component.actor.Player;
 const WantMove = component.WantMove;
 
 pub fn update(world: *ecs.World) void {
-    const entity = world.getIdentity(Player).?;
+    const entity = world.getIdentityEntity(Player).?;
     const facing = world.getPtr(entity, Facing).?;
     const direction = readDirection();
 
@@ -57,7 +57,6 @@ test "斜向移动使用最后按下的方向" {
     defer world.deinit();
 
     const entity = world.createIdentity(Player);
-    world.add(entity, Player{});
     world.add(entity, Facing.down);
 
     zhu.key.set(.W, true);

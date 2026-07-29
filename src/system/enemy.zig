@@ -13,7 +13,7 @@ const Request = component.event.Request;
 const Talk = component.dialog.Talk;
 
 pub fn update(world: *ecs.World, delta: f32) void {
-    const player = world.getIdentity(Player).?;
+    const player = world.getIdentityEntity(Player).?;
     const position = world.get(player, Position).?;
     const collider = world.get(player, Collider).?;
     const area = collider.move(position);
@@ -62,7 +62,7 @@ test "玩家进入敌人区域后选择战斗对象" {
 
     update(&world, 1);
 
-    try std.testing.expectEqual(entity, world.getIdentity(Enemy).?);
+    try std.testing.expect(world.isIdentity(entity, Enemy));
     try std.testing.expectEqual(Request.battle, world.getEvent(Request)[0]);
     try std.testing.expectEqual(Facing.up, world.get(entity, Facing).?);
 }
@@ -91,8 +91,8 @@ test "玩家接触有对话的敌人后选择交互对象" {
 
     update(&world, 1);
 
-    try std.testing.expectEqual(entity, world.getIdentity(Interact).?);
-    try std.testing.expectEqual(null, world.getIdentity(Enemy));
+    try std.testing.expect(world.isIdentity(entity, Interact));
+    try std.testing.expect(!world.hasIdentity(Enemy));
     try std.testing.expectEqual(0, world.getEvent(Request).len);
 }
 
@@ -116,7 +116,7 @@ test "玩家在敌人区域外时不选择战斗对象" {
 
     update(&world, 1);
 
-    try std.testing.expectEqual(null, world.getIdentity(Enemy));
+    try std.testing.expect(!world.hasIdentity(Enemy));
 }
 
 test "逃跑冷却期间不再触发战斗" {
@@ -142,7 +142,7 @@ test "逃跑冷却期间不再触发战斗" {
 
     update(&world, 0.25);
 
-    try std.testing.expectEqual(null, world.getIdentity(Enemy));
+    try std.testing.expect(!world.hasIdentity(Enemy));
     try std.testing.expectEqual(
         @as(f32, 0.25),
         world.get(entity, Enemy).?.wait,

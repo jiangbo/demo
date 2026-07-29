@@ -72,8 +72,7 @@ pub fn init(allocator: zhu.Allocator) void {
     texture = zhu.getImage("fightbar.png").?;
     mapImage = zhu.getImage("maps1-sheet.png").?;
     const data = zon.Map.get(.battle);
-    vertexes = allocator.alloc(zhu.batch.Vertex, data.tileCount());
-    data.fillVertexes(mapImage, vertexes);
+    vertexes = data.buildVertexes(allocator, mapImage);
     shared.bombAnimation = .initSource(zon.config.bomb);
 }
 
@@ -84,8 +83,7 @@ pub fn deinit(allocator: zhu.Allocator) void {
 
 // 读取选定的敌人并进入战斗场景。
 pub fn enter(world: *ecs.World) void {
-    const enemyEntity = world.getIdentity(Enemy).?;
-    const enemyKey = world.get(enemyEntity, Key).?;
+    const enemyKey = world.getIdentity(Enemy, Key).?;
     shared.enemyKey = enemyKey;
     shared.enemy = zon.Actor.get(enemyKey).*;
     shared.menu.reset();
@@ -96,8 +94,7 @@ pub fn enter(world: *ecs.World) void {
 
 // 离开战斗时恢复普通世界的玩家相机。
 pub fn exit(world: *ecs.World) void {
-    const playerEntity = world.getIdentity(Player).?;
-    const position = world.get(playerEntity, Position).?;
+    const position = world.getIdentity(Player, Position).?;
     zhu.camera.directFollow(position);
     zhu.camera.roundPosition(null);
 }
@@ -129,7 +126,7 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
 
 // 记录死亡并删除普通地图中的敌人。
 fn finishWin(world: *ecs.World) Request {
-    const enemyEntity = world.getIdentity(Enemy).?;
+    const enemyEntity = world.getIdentityEntity(Enemy).?;
     const dead = world.getGlobal(storage.DeadActors).?;
     dead.insert(shared.enemyKey);
     world.removeIdentity(Enemy);
@@ -139,8 +136,7 @@ fn finishWin(world: *ecs.World) Request {
 
 // 设置逃跑冷却并结束战斗前未完成的对话。
 fn finishEscape(world: *ecs.World) Request {
-    const enemyEntity = world.getIdentity(Enemy).?;
-    world.getPtr(enemyEntity, Enemy).?.wait = 0.5;
+    world.getIdentityPtr(Enemy, null).?.wait = 0.5;
     if (world.has(world.entity, Dialog)) {
         world.remove(world.entity, Dialog);
     }

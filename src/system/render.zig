@@ -25,8 +25,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
         world.getPtr(entity, Sprite).?.image = animation.subImage();
     }
 
-    const player = world.getIdentity(Player).?;
-    const position = world.get(player, Position).?;
+    const position = world.getIdentity(Player, Position).?;
     zhu.camera.directFollow(position);
     zhu.camera.roundPosition(null);
 }
