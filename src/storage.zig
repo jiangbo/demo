@@ -5,6 +5,11 @@ const ecs = @import("ecs");
 const component = @import("component.zig");
 const zon = @import("zon.zig");
 
+const Facing = component.actor.Facing;
+const Player = component.actor.Player;
+const Position = component.Position;
+const Tip = component.event.Tip;
+
 // 已经死亡、地图重建后不再创建的 NPC。
 pub const DeadActors = std.EnumSet(zon.Actor.Key);
 
@@ -68,7 +73,7 @@ pub const keep = .{
 pub const Location = struct {
     map: zon.Map.Key,
     position: zhu.Vector2,
-    facing: component.actor.Facing,
+    facing: Facing,
 };
 
 // ZON 存档的完整结构。
@@ -114,10 +119,15 @@ pub fn load(world: *ecs.World, slot: u8) ?Location {
     return record.location;
 }
 
-// 收集长期状态并与当前位置一起写入存档。
-pub fn save(world: *ecs.World, slot: u8, location: Location) !void {
+// 收集玩家位置和长期状态并写入存档。
+pub fn save(world: *ecs.World, slot: u8) void {
+    const player = world.getIdentity(Player).?;
     const record: Record = .{
-        .location = location,
+        .location = .{
+            .map = world.get(player, zon.Map.Key).?,
+            .position = world.get(player, Position).?,
+            .facing = world.get(player, Facing).?,
+        },
         .progress = world.getGlobal(Progress).?.*,
         .stats = world.getGlobal(Stats).?.*,
         .inventory = world.getGlobal(Inventory).?.*,
@@ -126,5 +136,8 @@ pub fn save(world: *ecs.World, slot: u8, location: Location) !void {
     };
     var buffer: [20]u8 = undefined;
     const path = zhu.formatZ(&buffer, "save/{d}.zon", .{slot});
-    try zhu.window.saveZon(path, record);
+    zhu.window.saveZon(path, record) catch |err| {
+        std.log.err("save {s} failed: {}", .{ path, err });
+        world.addEvent(Tip{ .text = "保存失败" });
+    };
 }

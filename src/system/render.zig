@@ -4,7 +4,6 @@ const zhu = @import("zhu");
 const component = @import("../component.zig");
 const Animation = component.Animation;
 const Facing = component.actor.Facing;
-const Map = component.map.Map;
 const Player = component.actor.Player;
 const Position = component.Position;
 const Sprite = component.Sprite;
@@ -33,10 +32,6 @@ pub fn update(world: *ecs.World, delta: f32) void {
 }
 
 pub fn draw(world: *ecs.World) void {
-    const mapEntity = world.getIdentity(Map).?;
-    const map = world.get(mapEntity, Map).?;
-    zhu.batch.drawVertices(map.vertexes, map.image);
-
     world.sort(Position, lessY);
 
     var query = world.queryBy(Position, .{Sprite}, .{});

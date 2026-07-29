@@ -6,10 +6,8 @@ const zon = @import("zon.zig");
 const component = @import("component.zig");
 const factory = @import("factory.zig");
 const storage = @import("storage.zig");
-const Facing = component.actor.Facing;
-const Map = component.map.Map;
 const Player = component.actor.Player;
-const Portal = component.map.Portal;
+const Portal = component.Portal;
 const Position = component.Position;
 
 pub const Spawn = union(enum) {
@@ -19,9 +17,9 @@ pub const Spawn = union(enum) {
 
 var image: zhu.Image = undefined;
 
-var current: zon.Map.Key = .home;
-
 var vertexes: []zhu.batch.Vertex = &.{};
+
+var field: zhu.extend.tiled.Field(u8) = undefined;
 
 pub fn init() void {
     image = zhu.getImage("maps1-sheet.png").?;
@@ -40,17 +38,17 @@ pub fn enter(
     world.resetKeep(storage.keep);
     world.entity = world.createEntity();
 
-    current = switch (spawn) {
+    const key = switch (spawn) {
         .location => |value| value.map,
         .portal => |portal| zon.Portal.get(portal).map,
     };
-    const data = zon.Map.get(current);
+    const data = zon.Map.get(key);
     zhu.camera.bound = data.grid.size();
+    field = .{ .grid = data.grid, .data = data.object };
 
     allocator.free(vertexes);
-    vertexes = factory.mapVertexes(allocator, image, current);
-    spawnMap(world, data, vertexes);
-    factory.spawnMapObjects(world, current);
+    vertexes = factory.mapVertexes(allocator, image, key);
+    factory.spawnMapObjects(world, key);
 
     switch (spawn) {
         .location => |value| factory.spawnPlayer(
@@ -64,18 +62,35 @@ pub fn enter(
         ),
     }
 
-    zhu.camera.directFollow(location(world).position);
+    const player = world.getIdentity(Player).?;
+    world.add(player, key);
+    zhu.camera.directFollow(world.get(player, Position).?);
     zhu.camera.roundPosition(null);
 }
 
-// 返回当前地图和玩家位置。
-pub fn location(world: *ecs.World) storage.Location {
-    const player = world.getIdentity(Player).?;
-    return .{
-        .map = current,
-        .position = world.get(player, Position).?,
-        .facing = world.get(player, Facing).?,
-    };
+// 绘制当前普通地图。
+pub fn draw() void {
+    zhu.batch.drawVertices(vertexes, image);
+}
+
+// 将区域移动到当前地图允许到达的位置。
+pub fn walk(area: zhu.Rect, offset: zhu.Vector2) zhu.Rect {
+    var moved = area;
+    moved.min.x = limit(field.scanX(moved, offset.x));
+    moved.min.y = limit(field.scanY(moved, offset.y));
+    return moved;
+}
+
+// 碰撞后将移动位置限制到瓦片边缘。
+fn limit(scanValue: zhu.extend.tiled.Scan(u8)) f32 {
+    var scan = scanValue;
+    while (scan.next()) |value| {
+        switch (value) {
+            1, 3, 4 => return scan.touch,
+            else => continue,
+        }
+    }
+    return scan.dest;
 }
 
 // 在目标传送区域外创建玩家。
@@ -111,18 +126,38 @@ fn spawnPlayerAtPortal(world: *ecs.World, key: zon.Portal.Key) void {
     unreachable;
 }
 
-// 创建普通地图实体，组件借用 map 持有的顶点。
-fn spawnMap(
-    world: *ecs.World,
-    data: *const zon.Map,
-    value: []const zhu.batch.Vertex,
-) void {
-    const entity = world.createIdentity(Map);
-    world.addAll(entity, .{
-        Map{ .image = image, .vertexes = value },
-        component.map.Static{
-            .grid = data.grid,
-            .data = data.object,
-        },
-    });
+test "地图瓦片移动" {
+    const objects = [_]u8{
+        1, 1, 1,
+        1, 0, 1,
+        1, 1, 1,
+    };
+    field = .{
+        .grid = .{ .width = 3, .height = 3, .cell = 32 },
+        .data = &objects,
+    };
+
+    const area = zhu.Rect.init(.xy(40, 40), .square(16));
+
+    var moved = walk(area, .xy(20, 0));
+    try std.testing.expectEqual(48, moved.min.x);
+    try std.testing.expectEqual(40, moved.min.y);
+
+    moved = walk(area, .xy(-20, 0));
+    try std.testing.expectEqual(32, moved.min.x);
+
+    moved = walk(area, .xy(0, 20));
+    try std.testing.expectEqual(48, moved.min.y);
+
+    moved = walk(area, .xy(0, -20));
+    try std.testing.expectEqual(32, moved.min.y);
+
+    const passable = [_]u8{
+        1, 1, 1,
+        1, 0, 5,
+        1, 1, 1,
+    };
+    field.data = &passable;
+    moved = walk(area, .xy(20, 0));
+    try std.testing.expectEqual(60, moved.min.x);
 }

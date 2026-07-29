@@ -15,8 +15,7 @@ const ui = @import("ui/ui.zig");
 const zon = @import("zon.zig");
 
 const Dialog = component.dialog.Dialog;
-const Player = component.actor.Player;
-const Portal = component.map.Portal;
+const Portal = component.Portal;
 const Request = component.event.Request;
 
 const Scene = enum { title, world, battle };
@@ -185,12 +184,7 @@ fn updateWorld(delta: f32) void {
             .block => {},
             .battle => changeScene(.battle),
             .load => |slot| changeWorld(.{ .load = slot }),
-            .save => |slot| storage.save(
-                &world,
-                slot,
-                map.location(&world),
-            ) catch
-                @panic("save failed"),
+            .save => |slot| storage.save(&world, slot),
             .title => changeScene(.title),
         }
         return;
@@ -212,6 +206,7 @@ pub fn draw() void {
     switch (current) {
         .title => title.draw(),
         .world => {
+            map.draw();
             system.render.draw(&world);
             ui.draw(&world);
         },

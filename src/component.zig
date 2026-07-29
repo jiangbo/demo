@@ -4,24 +4,13 @@ const zon = @import("zon.zig");
 
 pub const Animation = zhu.Animation;
 
-pub const map = struct {
-    // 普通地图的图片和只读顶点。
-    pub const Map = struct {
-        image: zhu.Image,
-        vertexes: []const zhu.batch.Vertex,
-    };
+// 玩家进入后切换地图的区域。
+pub const Portal = struct {
+    // 玩家仍停留在已经提示过的受阻区域。
+    pub const Wait = struct {};
 
-    // 普通地图中不会移动的瓦片碰撞。
-    pub const Static = zhu.extend.tiled.Field(u8);
-
-    // 玩家进入后切换地图的区域。
-    pub const Portal = struct {
-        // 玩家仍停留在已经提示过的受阻区域。
-        pub const Wait = struct {};
-
-        key: zon.Portal.Key,
-        area: zhu.Rect,
-    };
+    key: zon.Portal.Key,
+    area: zhu.Rect,
 };
 
 // 实体当前绘制的图片和对齐位置。

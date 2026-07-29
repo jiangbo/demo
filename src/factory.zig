@@ -8,7 +8,7 @@ const zon = @import("zon.zig");
 
 const actor = component.actor;
 const Animation = zhu.Animation;
-const Portal = component.map.Portal;
+const Portal = component.Portal;
 
 // 所有 NPC 共用相同的素材布局。
 const npcSources: [15][4]Animation.Source = blk: {
