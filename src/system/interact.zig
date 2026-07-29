@@ -12,7 +12,6 @@ const Player = component.actor.Player;
 const Position = component.Position;
 
 pub fn update(world: *ecs.World) void {
-    if (world.hasIdentity(Player, Interact.Disabled)) return;
     if (!input.released(.confirm)) return;
 
     const target = nearestEntity(world) orelse return;
@@ -94,36 +93,4 @@ test "交互系统选择玩家正前方最近的实体" {
     update(&world);
 
     try std.testing.expectEqual(near, world.getIdentity(Interact).?);
-}
-
-test "禁止交互时不产生新的交互对象" {
-    zhu.input.reset();
-    defer zhu.input.reset();
-
-    var world = ecs.World.init(std.testing.allocator);
-    defer world.deinit();
-
-    world.entity = world.createEntity();
-    const player = world.createIdentity(Player);
-    world.addAll(player, .{
-        Position.zero,
-        Collider.init(.xy(-8, -16), .xy(16, 16)),
-        Facing.down,
-    });
-
-    world.add(player, Interact.Disabled{});
-
-    const target = world.createEntity();
-    world.addAll(target, .{
-        Position.xy(0, 32),
-        Collider.init(.xy(-8, -16), .xy(16, 16)),
-        Interact{},
-    });
-
-    zhu.key.set(.F, true);
-    zhu.input.update();
-    zhu.key.set(.F, false);
-    update(&world);
-
-    try std.testing.expectEqual(null, world.getIdentity(Interact));
 }

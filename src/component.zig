@@ -63,10 +63,7 @@ pub const actor = struct {
 };
 
 // 可交互实体；Identity 指向当前交互对象。
-pub const Interact = struct {
-    // 暂时禁止产生新的交互对象。
-    pub const Disabled = struct {};
-};
+pub const Interact = struct {};
 pub const dialog = struct {
     // 由对话系统处理的可交互实体。
     pub const Talk = []const zon.dialog.Line;

@@ -23,7 +23,6 @@ pub fn update(world: *ecs.World) void {
     world.remove(target, WantMove);
 
     world.add(world.entity, Dialog{ .lines = lines });
-    world.add(player, Interact.Disabled{});
 }
 
 fn addTestPlayer(world: *ecs.World) ecs.Entity {
@@ -52,7 +51,6 @@ test "交互对话人物后添加对话状态" {
 
     update(&world);
     try std.testing.expect(world.has(world.entity, Dialog));
-    try std.testing.expect(world.hasIdentity(Player, Interact.Disabled));
     const current = world.get(world.entity, Dialog).?;
     try std.testing.expectEqual(lines.ptr, current.lines.ptr);
     try std.testing.expect(!world.has(target, Dialog));

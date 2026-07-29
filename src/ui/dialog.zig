@@ -8,9 +8,7 @@ const zon = @import("../zon.zig");
 
 const Dialog = component.dialog.Dialog;
 const Enemy = component.actor.Enemy;
-const Interact = component.Interact;
 const Key = component.actor.Key;
-const Player = component.actor.Player;
 
 var texture: zhu.Image = undefined;
 // 动态文本格式化后存放在此缓冲区。
@@ -106,7 +104,6 @@ fn prepareText(dialog: *Dialog) void {
 
 fn close(world: *ecs.World) void {
     world.remove(world.entity, Dialog);
-    world.remove(world.getIdentity(Player).?, Interact.Disabled);
 }
 
 fn drawActor(image: zhu.Image, pos: zhu.Vector2, name: []const u8) void {

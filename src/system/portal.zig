@@ -7,7 +7,6 @@ const zon = @import("../zon.zig");
 
 const Collider = component.Collider;
 const Dialog = component.dialog.Dialog;
-const Interact = component.Interact;
 const Player = component.actor.Player;
 const Portal = component.Portal;
 const Position = component.Position;
@@ -49,7 +48,6 @@ pub fn update(world: *ecs.World) void {
             world.add(world.entity, Dialog{
                 .lines = zon.dialogues[5].lines,
             });
-            world.add(player, Interact.Disabled{});
         }
 
         if (progress == 4) {
@@ -57,7 +55,6 @@ pub fn update(world: *ecs.World) void {
             world.add(world.entity, Dialog{
                 .lines = zon.dialogues[32].lines,
             });
-            world.add(player, Interact.Disabled{});
         }
 
         if (progress == 10) {
@@ -65,7 +62,6 @@ pub fn update(world: *ecs.World) void {
             world.add(world.entity, Dialog{
                 .lines = zon.dialogues[37].lines,
             });
-            world.add(player, Interact.Disabled{});
         }
         return;
     }

@@ -7,8 +7,6 @@ const zon = @import("../zon.zig");
 const item = @import("item.zig");
 
 const Dialog = component.dialog.Dialog;
-const Interact = component.Interact;
-const Player = component.actor.Player;
 const Tip = component.event.Tip;
 
 var index: u8 = 0; // 当前选择的背包格子。
@@ -28,7 +26,6 @@ pub fn update(world: *ecs.World) bool {
     if (closeKey or zhu.mouse.released(.RIGHT)) {
         const lines = zon.dialogues[if (sold) 27 else 26].lines;
         world.add(world.entity, Dialog{ .lines = lines });
-        world.add(world.getIdentity(Player).?, Interact.Disabled{});
         return true;
     }
 

@@ -10,7 +10,6 @@ const Chest = component.Chest;
 const ChestImages = component.ChestImages;
 const Dialog = component.dialog.Dialog;
 const Interact = component.Interact;
-const Player = component.actor.Player;
 const Sprite = component.Sprite;
 const Tip = component.event.Tip;
 
@@ -44,7 +43,6 @@ pub fn update(world: *ecs.World) void {
     const images = world.get(entity, ChestImages).?;
     world.getPtr(entity, Sprite).?.image = images.opened;
     world.remove(entity, Interact);
-    world.add(world.getIdentity(Player).?, Interact.Disabled{});
 }
 
 test "背包已满时不打开宝箱" {

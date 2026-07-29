@@ -12,7 +12,6 @@ const shared = @import("shared.zig");
 
 const Dialog = component.dialog.Dialog;
 const Enemy = component.actor.Enemy;
-const Interact = component.Interact;
 const Key = component.actor.Key;
 const Player = component.actor.Player;
 const Position = component.Position;
@@ -143,7 +142,6 @@ fn finishEscape(world: *ecs.World) Request {
     world.getPtr(enemyEntity, Enemy).?.wait = 0.5;
     if (world.has(world.entity, Dialog)) {
         world.remove(world.entity, Dialog);
-        world.remove(world.getIdentity(Player).?, Interact.Disabled);
     }
     world.removeIdentity(Enemy);
     return .world;

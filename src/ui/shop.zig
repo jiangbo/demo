@@ -7,8 +7,6 @@ const zon = @import("../zon.zig");
 const item = @import("item.zig");
 
 const Dialog = component.dialog.Dialog;
-const Interact = component.Interact;
-const Player = component.actor.Player;
 const Tip = component.event.Tip;
 
 pub const Kind = enum { weapon, potion };
@@ -44,7 +42,6 @@ pub fn update(world: *ecs.World) bool {
         world.add(world.entity, Dialog{
             .lines = zon.dialogues[dialogueId].lines,
         });
-        world.add(world.getIdentity(Player).?, Interact.Disabled{});
         return true;
     }
 
