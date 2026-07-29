@@ -38,11 +38,11 @@ pub fn enter(
     world.resetKeep(storage.keep);
     world.entity = world.createEntity();
 
-    const key = switch (spawn) {
+    const mapKey = switch (spawn) {
         .location => |value| value.map,
         .portal => |portal| zon.Portal.get(portal).map,
     };
-    const data = zon.Map.get(key);
+    const data = zon.Map.get(mapKey);
     zhu.camera.bound = data.grid.size();
     field = .{ .grid = data.grid, .data = data.object };
 
@@ -53,20 +53,13 @@ pub fn enter(
     spawnChests(world, data);
     spawnActors(world, data);
 
-    switch (spawn) {
-        .location => |value| spawnPlayer(
-            world,
-            value.position,
-            value.facing,
-        ),
-        .portal => |portalKey_| spawnPlayerAtPortal(
-            world,
-            portalKey_,
-        ),
-    }
+    const location = switch (spawn) {
+        .location => |value| value,
+        .portal => |key| portalLocation(world, key),
+    };
+    spawnPlayer(world, location);
 
     const player = world.getIdentity(Player).?;
-    world.add(player, key);
     zhu.camera.directFollow(world.get(player, Position).?);
     zhu.camera.roundPosition(null);
 }
@@ -192,21 +185,21 @@ fn spawnActor(world: *ecs.World, key: zon.Actor.Key, progress: u8) void {
 // 在指定逻辑位置创建玩家实体。
 fn spawnPlayer(
     world: *ecs.World,
-    position: zhu.Vector2,
-    facing: actor.Facing,
+    location: storage.Location,
 ) void {
     const collider = component.Collider.init(
         .xy(-8, -16),
         .xy(16, 16),
     );
     var animation = zon.Actor.animation(.player);
-    animation.play(facing);
+    animation.play(location.facing);
     const entity = world.createIdentity(Player);
     world.addAll(entity, .{
         actor.Key.player,
         Player{},
-        position,
-        facing,
+        location.map,
+        location.position,
+        location.facing,
         collider,
         component.Speed{ .value = 100 },
         animation,
@@ -217,12 +210,18 @@ fn spawnPlayer(
     });
 }
 
-// 在目标传送区域外创建玩家。
-fn spawnPlayerAtPortal(world: *ecs.World, key: zon.Portal.Key) void {
+// 取得目标传送区域外的玩家位置。
+fn portalLocation(
+    world: *ecs.World,
+    key: zon.Portal.Key,
+) storage.Location {
     const config = zon.Portal.get(key);
     if (key == .start) {
-        spawnPlayer(world, .xy(188, 180), config.facing);
-        return;
+        return .{
+            .map = config.map,
+            .position = .xy(188, 180),
+            .facing = config.facing,
+        };
     }
 
     var query = world.query(.{component.Portal});
@@ -244,8 +243,11 @@ fn spawnPlayerAtPortal(world: *ecs.World, key: zon.Portal.Key) void {
             ),
             .right => zhu.Vector2.xy(max.x + 16, center.y + 8),
         };
-        spawnPlayer(world, position, config.facing);
-        return;
+        return .{
+            .map = config.map,
+            .position = position,
+            .facing = config.facing,
+        };
     }
     unreachable;
 }

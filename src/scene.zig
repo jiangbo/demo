@@ -14,17 +14,12 @@ const system = @import("system/system.zig");
 const ui = @import("ui/ui.zig");
 const zon = @import("zon.zig");
 
-const Dialog = component.dialog.Dialog;
-const Portal = component.Portal;
-const Request = component.event.Request;
-
 const Scene = enum { title, world, battle };
-
-const WorldEntry = union(enum) { start, battle, load: u8 };
+const From = union(enum) { fromStart, fromBattle, fromLoad: u8 };
 
 var current: Scene = .title;
 var pending: Scene = .title;
-var entry: WorldEntry = undefined;
+var from: From = undefined;
 var fade: Fade = .{};
 
 var isHelp: bool = true;
@@ -51,14 +46,14 @@ fn changeScene(next: Scene) void {
     fade.startOut(doChangeScene);
 }
 
-fn changeWorld(next: WorldEntry) void {
-    entry = next;
+fn changeWorld(next: From) void {
+    from = next;
     changeScene(.world);
 }
 
 fn doChangeMap() void {
-    const entity = world.getIdentity(Portal).?;
-    const portal = world.get(entity, Portal).?;
+    const entity = world.getIdentity(component.Portal).?;
+    const portal = world.get(entity, component.Portal).?;
     map.enter(&world, allocator, .{
         .portal = zon.Portal.get(portal.key).target,
     });
@@ -67,8 +62,8 @@ fn doChangeMap() void {
 fn doChangeScene() void {
     var location: ?storage.Location = null;
     if (pending == .world) {
-        switch (entry) {
-            .load => |slot| {
+        switch (from) {
+            .fromLoad => |slot| {
                 location = storage.load(&world, slot) orelse return;
             },
             else => {},
@@ -90,20 +85,18 @@ fn doChangeScene() void {
 
 fn enterWorld(location: ?storage.Location) void {
     ui.reset();
-    switch (entry) {
-        .start => {
+    switch (from) {
+        .fromStart => {
             storage.reset(&world);
             map.enter(&world, allocator, .{ .portal = .start });
-            world.add(world.entity, Dialog{
+            world.add(world.entity, component.dialog.Dialog{
                 .lines = zon.dialogues[2].lines,
             });
         },
-        .battle => {},
-        .load => {
-            map.enter(&world, allocator, .{
-                .location = location.?,
-            });
-        },
+        .fromBattle => {},
+        .fromLoad => map.enter(&world, allocator, .{
+            .location = location.?,
+        }),
     }
     zhu.audio.playMusic("voc/back.ogg");
 }
@@ -120,13 +113,13 @@ pub fn update(delta: f32) void {
     switch (current) {
         .title => if (title.update(delta)) |req| switch (req) {
             .fadeOut => |done| fade.startOut(done),
-            .start => changeWorld(.start),
-            .load => |slot| changeWorld(.{ .load = slot }),
+            .start => changeWorld(.fromStart),
+            .load => |slot| changeWorld(.{ .fromLoad = slot }),
         },
         .world => updateWorld(delta),
         .battle => if (battle.update(&world, delta)) |request| {
             switch (request) {
-                .world => changeWorld(.battle),
+                .world => changeWorld(.fromBattle),
                 .title => changeScene(.title),
             }
         },
@@ -138,7 +131,7 @@ fn updateWorld(delta: f32) void {
         switch (request) {
             .block => {},
             .battle => changeScene(.battle),
-            .load => |slot| changeWorld(.{ .load = slot }),
+            .load => |slot| changeWorld(.{ .fromLoad = slot }),
             .save => |slot| storage.save(&world, slot),
             .title => changeScene(.title),
         }
@@ -147,14 +140,14 @@ fn updateWorld(delta: f32) void {
 
     system.update(&world, delta);
 
-    for (world.getEvent(Request)) |request| {
-        switch (request) {
+    for (world.getEvent(component.event.Request)) |req| {
+        switch (req) {
             .map => fade.startOut(doChangeMap),
             .battle => changeScene(.battle),
         }
         break;
     }
-    world.clearEvent(Request);
+    world.clearEvent(component.event.Request);
 }
 
 pub fn draw() void {
