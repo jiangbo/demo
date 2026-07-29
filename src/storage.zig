@@ -1,5 +1,6 @@
 const std = @import("std");
 const zhu = @import("zhu");
+const ecs = @import("ecs");
 
 const component = @import("component.zig");
 const zon = @import("zon.zig");
@@ -63,26 +64,67 @@ pub const keep = .{
     Inventory,
 };
 
+// 存档中的当前地图和玩家位置。
+pub const Location = struct {
+    map: zon.Map.Key,
+    position: zhu.Vector2,
+    facing: component.actor.Facing,
+};
+
 // ZON 存档的完整结构。
-pub const Record = struct {
-    portal: zon.Portal.Key = .start,
-    position: zhu.Vector2 = .zero,
-    facing: component.actor.Facing = .down,
+const Record = struct {
+    location: Location,
     progress: Progress = .{},
     stats: Stats = .{},
     inventory: Inventory = .{},
-    openedChests: []const u16 = &.{},
-    deadActors: []const zon.Actor.Key = &.{},
+    openedChests: OpenedChests = .empty,
+    deadActors: DeadActors = .empty,
 };
 
-pub fn read(index: u8) !zhu.window.Zon(Record) {
-    var buffer: [20]u8 = undefined;
-    const path = zhu.formatZ(&buffer, "save/{d}.zon", .{index - 2});
-    return zhu.window.readZon(Record, path, .{});
+// 重置新游戏使用的长期状态。
+pub fn reset(world: *ecs.World) void {
+    world.addAll(world.entity, .{
+        DeadActors.empty,
+        OpenedChests.initEmpty(),
+        Progress{},
+        Stats{},
+        Inventory{},
+    });
 }
 
-pub fn write(index: u8, record: Record) !void {
+// 读取存档并恢复跨地图长期状态。
+pub fn load(world: *ecs.World, slot: u8) ?Location {
     var buffer: [20]u8 = undefined;
-    const path = zhu.formatZ(&buffer, "save/{d}.zon", .{index - 2});
+    const path = zhu.formatZ(&buffer, "save/{d}.zon", .{slot});
+    var loaded = zhu.window.readZon(Record, path, .{}) catch |err| {
+        std.log.err("load {s} failed: {}", .{ path, err });
+        return null;
+    };
+    defer loaded.deinit();
+
+    const record = loaded.value;
+    world.addAll(world.entity, .{
+        record.progress,
+        record.stats,
+        record.inventory,
+        record.openedChests,
+        record.deadActors,
+    });
+
+    return record.location;
+}
+
+// 收集长期状态并与当前位置一起写入存档。
+pub fn save(world: *ecs.World, slot: u8, location: Location) !void {
+    const record: Record = .{
+        .location = location,
+        .progress = world.getGlobal(Progress).?.*,
+        .stats = world.getGlobal(Stats).?.*,
+        .inventory = world.getGlobal(Inventory).?.*,
+        .openedChests = world.getGlobal(OpenedChests).?.*,
+        .deadActors = world.getGlobal(DeadActors).?.*,
+    };
+    var buffer: [20]u8 = undefined;
+    const path = zhu.formatZ(&buffer, "save/{d}.zon", .{slot});
     try zhu.window.saveZon(path, record);
 }

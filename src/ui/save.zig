@@ -13,12 +13,12 @@ pub fn open(next: Mode) void {
 
 pub fn update() ?Request {
     const event = menu.update(.{}) orelse return null;
-    if (event == 5) return .close;
+    if (event == 6) return .close;
 
-    const index: u8 = @intCast(event + 3);
+    const slot: u8 = @intCast(event);
     return switch (mode) {
-        .load => .{ .load = index },
-        .save => .{ .save = index },
+        .load => .{ .load = slot },
+        .save => .{ .save = slot },
     };
 }
 

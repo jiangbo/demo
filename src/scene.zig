@@ -9,12 +9,12 @@ const title = @import("ui/title.zig");
 const battle = @import("battle/battle.zig");
 const component = @import("component.zig");
 const map = @import("map.zig");
+const storage = @import("storage.zig");
 const system = @import("system/system.zig");
 const ui = @import("ui/ui.zig");
 const zon = @import("zon.zig");
 
 const Dialog = component.dialog.Dialog;
-const Interact = component.Interact;
 const Player = component.actor.Player;
 const Portal = component.map.Portal;
 const Request = component.event.Request;
@@ -85,7 +85,7 @@ pub fn init(allocator_: zhu.Allocator) void {
     world.entity = world.createEntity();
     title.init();
     ui.init();
-    map.init(&world);
+    map.init();
     battle.init(allocator_);
 
     title.enter();
@@ -111,48 +111,44 @@ fn doChangeMap() void {
 }
 
 fn doChangeScene() void {
+    var location: ?storage.Location = null;
+    if (pending == .world) {
+        switch (entry) {
+            .load => |slot| {
+                location = storage.load(&world, slot) orelse return;
+            },
+            else => {},
+        }
+    }
+
     switch (current) {
         .title => title.exit(),
         .world => {},
-        .battle => {},
+        .battle => battle.exit(&world),
     }
     current = pending;
     switch (current) {
         .title => title.enter(),
-        .world => enterWorld(),
+        .world => enterWorld(location),
         .battle => battle.enter(&world),
     }
 }
 
-fn enterWorld() void {
+fn enterWorld(location: ?storage.Location) void {
     ui.reset();
     switch (entry) {
         .start => {
-            map.reset(&world);
-            map.enter(&world, allocator, .{
-                .location = .{
-                    .portal = .start,
-                    .position = .xy(180, 164),
-                    .facing = .down,
-                },
-            });
+            storage.reset(&world);
+            map.enter(&world, allocator, .{ .portal = .start });
             world.add(world.entity, Dialog{
                 .lines = zon.dialogues[2].lines,
             });
-            world.add(
-                world.getIdentity(Player).?,
-                Interact.Disabled{},
-            );
         },
-        .battle => {
-            system.story.update(&world);
-            camera.directFollow(map.playerPosition(&world));
-            camera.roundPosition(null);
-        },
-        .load => |index| {
-            const location = map.load(&world, index) catch
-                @panic("load failed");
-            map.enter(&world, allocator, .{ .location = location });
+        .battle => {},
+        .load => {
+            map.enter(&world, allocator, .{
+                .location = location.?,
+            });
         },
     }
     zhu.audio.playMusic("voc/back.ogg");
@@ -171,7 +167,7 @@ pub fn update(delta: f32) void {
         .title => if (title.update(delta)) |req| switch (req) {
             .fadeOut => |done| fade.startOut(done),
             .start => changeWorld(.start),
-            .load => |index| changeWorld(.{ .load = index }),
+            .load => |slot| changeWorld(.{ .load = slot }),
         },
         .world => updateWorld(delta),
         .battle => if (battle.update(&world, delta)) |request| {
@@ -188,8 +184,12 @@ fn updateWorld(delta: f32) void {
         switch (request) {
             .block => {},
             .battle => changeScene(.battle),
-            .load => |index| changeWorld(.{ .load = index }),
-            .save => |index| map.save(&world, index) catch
+            .load => |slot| changeWorld(.{ .load = slot }),
+            .save => |slot| storage.save(
+                &world,
+                slot,
+                map.location(&world),
+            ) catch
                 @panic("save failed"),
             .title => changeScene(.title),
         }

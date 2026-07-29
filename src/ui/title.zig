@@ -27,6 +27,7 @@ pub fn init() void {
 }
 
 pub fn enter() void {
+    zhu.camera.main.position = .zero;
     menu.reset();
     menu.selected = 0;
     state = .menu;
@@ -45,7 +46,7 @@ pub fn update(delta: f32) ?Request {
         },
         .save => if (save.update()) |req| switch (req) {
             .close => state = .menu,
-            .load => |index| return .{ .load = index },
+            .load => |slot| return .{ .load = slot },
             .save => unreachable,
         },
         .intro => if (updateIntro(delta)) |req| return req,

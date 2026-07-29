@@ -5,11 +5,11 @@
         .image = 1628337646,
     },
     .navKeys = .{ .cancel = .{ .Q, .ESCAPE } },
-    .cancelEvent = 5,
+    .cancelEvent = 6,
     .buttons = .{
         .{
             .label = "进度一",
-            .event = 0,
+            .event = 1,
             .rect = .{
                 .min = .{ .x = 45, .y = 20 },
                 .size = .{ .x = 65, .y = 25 },
@@ -23,7 +23,7 @@
         },
         .{
             .label = "进度二",
-            .event = 1,
+            .event = 2,
             .rect = .{
                 .min = .{ .x = 45, .y = 48 },
                 .size = .{ .x = 65, .y = 25 },
@@ -37,7 +37,7 @@
         },
         .{
             .label = "进度三",
-            .event = 2,
+            .event = 3,
             .rect = .{
                 .min = .{ .x = 45, .y = 76 },
                 .size = .{ .x = 65, .y = 25 },
@@ -51,7 +51,7 @@
         },
         .{
             .label = "进度四",
-            .event = 3,
+            .event = 4,
             .rect = .{
                 .min = .{ .x = 45, .y = 104 },
                 .size = .{ .x = 65, .y = 25 },
@@ -65,7 +65,7 @@
         },
         .{
             .label = "进度五",
-            .event = 4,
+            .event = 5,
             .rect = .{
                 .min = .{ .x = 45, .y = 132 },
                 .size = .{ .x = 65, .y = 25 },
@@ -79,7 +79,7 @@
         },
         .{
             .label = "取　消",
-            .event = 5,
+            .event = 6,
             .rect = .{
                 .min = .{ .x = 45, .y = 160 },
                 .size = .{ .x = 65, .y = 25 },

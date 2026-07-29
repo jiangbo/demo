@@ -132,13 +132,13 @@ fn updatePopup(world: *ecs.World, delta: f32) Request {
             const req = save.update() orelse return .block;
             switch (req) {
                 .close => popup = .pause,
-                .load => |index| {
+                .load => |slot| {
                     popup = .pause;
-                    return .{ .load = index };
+                    return .{ .load = slot };
                 },
-                .save => |index| {
+                .save => |slot| {
                     popup = .pause;
-                    return .{ .save = index };
+                    return .{ .save = slot };
                 },
             }
         },

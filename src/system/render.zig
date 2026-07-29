@@ -3,7 +3,6 @@ const zhu = @import("zhu");
 
 const component = @import("../component.zig");
 const Animation = component.Animation;
-const Collider = component.Collider;
 const Facing = component.actor.Facing;
 const Map = component.map.Map;
 const Player = component.actor.Player;
@@ -29,8 +28,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
 
     const player = world.getIdentity(Player).?;
     const position = world.get(player, Position).?;
-    const collider = world.get(player, Collider).?;
-    zhu.camera.directFollow(collider.move(position).min);
+    zhu.camera.directFollow(position);
     zhu.camera.roundPosition(null);
 }
 

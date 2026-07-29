@@ -15,6 +15,7 @@ const Enemy = component.actor.Enemy;
 const Interact = component.Interact;
 const Key = component.actor.Key;
 const Player = component.actor.Player;
+const Position = component.Position;
 
 pub const Request = enum { world, title };
 
@@ -91,6 +92,14 @@ pub fn enter(world: *ecs.World) void {
     shared.menu.selected = 0;
     changePhase(world, .menu);
     zhu.camera.main.position = .zero;
+}
+
+// 离开战斗时恢复普通世界的玩家相机。
+pub fn exit(world: *ecs.World) void {
+    const playerEntity = world.getIdentity(Player).?;
+    const position = world.get(playerEntity, Position).?;
+    zhu.camera.directFollow(position);
+    zhu.camera.roundPosition(null);
 }
 
 // 切换阶段并初始化新阶段。

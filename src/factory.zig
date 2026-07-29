@@ -157,7 +157,7 @@ fn spawnChests(world: *ecs.World, mapData: *const zon.Map) void {
     }
 }
 
-// 在当前地图创建玩家实体。
+// 在指定逻辑位置创建玩家实体。
 pub fn spawnPlayer(
     world: *ecs.World,
     position: zhu.Vector2,
@@ -173,7 +173,7 @@ pub fn spawnPlayer(
     world.addAll(entity, .{
         actor.Key.player,
         actor.Player{},
-        position.sub(collider.min),
+        position,
         facing,
         collider,
         component.Speed{ .value = 100 },
