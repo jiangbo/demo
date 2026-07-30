@@ -8,6 +8,8 @@ const zon = @import("../zon.zig");
 const Dialog = component.dialog.Dialog;
 const Enemy = component.actor.Enemy;
 const Key = component.actor.Key;
+const Portal = component.Portal;
+const Story = component.event.Story;
 
 var texture: zhu.Image = undefined;
 // 动态文本格式化后存放在此缓冲区。
@@ -29,13 +31,18 @@ pub fn update(world: *ecs.World) ?zon.dialog.Event {
     if (line.event) |event| {
         switch (event) {
             .battle => |key| startBattle(world, dialog, key),
-            else => close(world),
+            .unlock => |progress| {
+                world.remove(world.entity, Dialog);
+                world.addEvent(Story{ .progress = progress });
+                world.removeIdentity(Portal);
+            },
+            else => world.remove(world.entity, Dialog),
         }
         return event;
     }
 
     if (dialog.line + 1 == dialog.lines.len) {
-        close(world);
+        world.remove(world.entity, Dialog);
         return .finish;
     }
 
@@ -52,7 +59,7 @@ fn startBattle(world: *ecs.World, dialog: *Dialog, key: Key) void {
         world.addIdentity(entity, Enemy);
 
         if (dialog.line + 1 == dialog.lines.len) {
-            close(world);
+            world.remove(world.entity, Dialog);
         } else {
             dialog.line += 1;
             prepareText(dialog);
@@ -92,10 +99,6 @@ fn prepareText(dialog: *Dialog) void {
     std.debug.assert(times == 1);
     const length = line.content.len - 2 + text.len;
     dialog.text = buffer[0..length];
-}
-
-fn close(world: *ecs.World) void {
-    world.remove(world.entity, Dialog);
 }
 
 fn drawActor(key: zon.Actor.Key) void {

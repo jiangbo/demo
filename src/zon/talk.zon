@@ -391,7 +391,11 @@
             .{ .actor = .player, .content = "怎么样？" },
             .{ .actor = .xiaoTian, .content = "找到失落的‘圣剑’！，不过希望太渺茫了……" },
             .{ .actor = .xiaoTian, .content = "不跟你说了，我还是先到乡下去躲一躲吧。" },
-            .{ .actor = .player, .content = "不行，不能让大魔王得逞。[等着吧。我一定会阻止这场浩劫的]" },
+            .{
+                .actor = .player,
+                .content = "不行，不能让大魔王得逞。[等着吧。我一定会阻止这场浩劫的]",
+                .event = .{ .unlock = 4 },
+            },
         },
     },
     // 飞将军战斗

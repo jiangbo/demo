@@ -96,6 +96,7 @@ fn updateDialog(world: *ecs.World) ?Request {
             popup = .sale;
         },
         .battle => return .battle,
+        .unlock => return null,
         .showSwordTip => story.open(.sword),
         .showEnding => story.open(.ending),
     }

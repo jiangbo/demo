@@ -145,6 +145,7 @@ pub const dialog = struct {
         openPotionShop,
         openSale,
         battle: Actor.Key,
+        unlock: u8,
         showSwordTip,
         showEnding,
     };
@@ -224,11 +225,20 @@ pub const Map = struct {
 };
 
 pub const Portal = struct {
+    pub const Gate = struct {
+        // 当前进度必须大于该值才能通过。
+        progress: u8,
+        // 尚未达到开放条件时显示的对话。
+        blockedDialogue: u16,
+        // 正好达到条件时触发的剧情对话。
+        reachedDialogue: ?u16 = null,
+    };
+
     key: Key,
     target: Key,
     map: Map.Key,
     facing: Facing,
-    progress: u8 = 0,
+    gate: ?Gate = null,
 
     const source = @import("zon/portal.zon");
     pub const Key = zhu.enums.fromField(source, "key");
@@ -245,6 +255,14 @@ comptime {
     }
     for (Chest.list, 0..) |chest, id| {
         if (chest) |value| std.debug.assert(value.id == id);
+    }
+    for (Portal.list) |portal| {
+        if (portal.gate) |gate| {
+            std.debug.assert(gate.blockedDialogue < dialogues.len);
+            if (gate.reachedDialogue) |id| {
+                std.debug.assert(id < dialogues.len);
+            }
+        }
     }
 }
 

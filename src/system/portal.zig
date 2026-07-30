@@ -11,64 +11,50 @@ const Player = component.actor.Player;
 const Portal = component.Portal;
 const Position = component.Position;
 const Request = component.event.Request;
-const Story = component.event.Story;
 
 pub fn update(world: *ecs.World) void {
-    const previous = world.getIdentityEntity(Portal);
-    world.removeIdentity(Portal);
-
     const player = world.getIdentityEntity(Player).?;
     const position = world.get(player, Position).?;
     const collider = world.get(player, Collider).?;
     const center = collider.move(position).center();
 
+    if (world.getIdentity(Portal, null)) |portal| {
+        if (portal.area.contains(center)) return;
+        world.removeIdentity(Portal);
+    }
+
+    const portal = enterPortal(world, center) orelse return;
+    const data = zon.Portal.get(portal.key);
+    const gate = data.gate orelse return requestMap(world);
+
+    const progress = world.getGlobal(storage.Progress).?.value;
+    if (progress > gate.progress) return requestMap(world);
+
+    var dialogueId = gate.blockedDialogue;
+    if (progress == gate.progress) {
+        if (gate.reachedDialogue) |id| dialogueId = id;
+    }
+
+    world.add(world.entity, Dialog{
+        .lines = zon.dialogues[dialogueId].lines,
+    });
+}
+
+// 查找玩家所在的传送区域，并记录为当前传送门。
+fn enterPortal(world: *ecs.World, center: Position) ?Portal {
     var query = world.query(.{Portal});
     while (query.next()) |entity| {
         const portal = query.get(entity, Portal);
         if (!portal.area.contains(center)) continue;
 
-        if (previous) |old| {
-            if (old != entity) world.remove(old, Portal.Wait);
-        }
         world.addIdentity(entity, Portal);
-
-        if (world.has(entity, Portal.Wait)) return;
-
-        const data = zon.Portal.get(portal.key);
-        const progress = world.getGlobal(storage.Progress).?.value;
-        if (progress > data.progress) {
-            const fmt = "change map portal: {s}";
-            std.log.info(fmt, .{@tagName(portal.key)});
-            world.addEvent(Request.map);
-            return;
-        }
-
-        if (progress == 1) {
-            world.add(entity, Portal.Wait{});
-            world.add(world.entity, Dialog{
-                .lines = zon.dialogues[5].lines,
-            });
-        }
-
-        if (progress == 4) {
-            world.addEvent(Story{ .progress = progress });
-            world.add(world.entity, Dialog{
-                .lines = zon.dialogues[32].lines,
-            });
-        }
-
-        if (progress == 10) {
-            world.add(entity, Portal.Wait{});
-            world.add(world.entity, Dialog{
-                .lines = zon.dialogues[37].lines,
-            });
-        }
-        return;
+        return portal;
     }
+    return null;
+}
 
-    if (previous) |entity| {
-        world.remove(entity, Portal.Wait);
-    }
+fn requestMap(world: *ecs.World) void {
+    world.addEvent(Request.map);
 }
 
 test "选择玩家当前所在的传送区域" {
@@ -95,4 +81,79 @@ test "选择玩家当前所在的传送区域" {
     world.add(player, Position.xy(32, 0));
     update(&world);
     try std.testing.expect(!world.hasIdentity(Portal));
+}
+
+test "未击败巫批时宫殿入口显示受阻对话" {
+    var world = ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    world.entity = world.createEntity();
+    world.add(world.entity, storage.Progress{ .value = 5 });
+    const player = world.createIdentity(Player);
+    world.addAll(player, .{
+        Position.zero,
+        Collider.init(.zero, .square(16)),
+    });
+
+    const portal = world.createEntity();
+    world.add(portal, Portal{
+        .key = .forestToPalace,
+        .area = .init(.zero, .square(32)),
+    });
+
+    update(&world);
+
+    const dialog = world.get(world.entity, Dialog).?;
+    try std.testing.expectEqual(
+        zon.dialogues[37].lines.ptr,
+        dialog.lines.ptr,
+    );
+    try std.testing.expect(world.isIdentity(portal, Portal));
+    try std.testing.expectEqual(0, world.getEvent(Request).len);
+
+    world.remove(world.entity, Dialog);
+    update(&world);
+    try std.testing.expect(!world.has(world.entity, Dialog));
+}
+
+test "到达城市出口条件时触发大魔王剧情" {
+    var world = ecs.World.init(std.testing.allocator);
+    defer world.deinit();
+
+    world.entity = world.createEntity();
+    world.add(world.entity, storage.Progress{ .value = 4 });
+    const player = world.createIdentity(Player);
+    world.addAll(player, .{
+        Position.zero,
+        Collider.init(.zero, .square(16)),
+    });
+
+    const portal = world.createEntity();
+    world.add(portal, Portal{
+        .key = .cityToForest,
+        .area = .init(.zero, .square(32)),
+    });
+
+    update(&world);
+
+    const dialog = world.get(world.entity, Dialog).?;
+    try std.testing.expectEqual(
+        zon.dialogues[32].lines.ptr,
+        dialog.lines.ptr,
+    );
+    try std.testing.expectEqual(0, world.getEvent(component.event.Story).len);
+    try std.testing.expect(world.isIdentity(portal, Portal));
+    try std.testing.expectEqual(0, world.getEvent(Request).len);
+
+    world.remove(world.entity, Dialog);
+    world.addEvent(component.event.Story{ .progress = 4 });
+    world.removeIdentity(Portal);
+    @import("story.zig").update(&world);
+    try std.testing.expectEqual(
+        5,
+        world.getGlobal(storage.Progress).?.value,
+    );
+    update(&world);
+    try std.testing.expect(world.isIdentity(portal, Portal));
+    try std.testing.expectEqual(Request.map, world.getEvent(Request)[0]);
 }

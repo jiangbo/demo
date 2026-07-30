@@ -6,9 +6,6 @@ pub const Animation = zhu.Animation;
 
 // 玩家进入后切换地图的区域。
 pub const Portal = struct {
-    // 玩家仍停留在已经提示过的受阻区域。
-    pub const Wait = struct {};
-
     key: zon.Portal.Key,
     area: zhu.Rect,
 };

@@ -68,7 +68,11 @@
         .target = .forestToCity,
         .map = .city,
         .facing = .up,
-        .progress = 4,
+        .gate = .{
+            .progress = 4,
+            .blockedDialogue = 5,
+            .reachedDialogue = 32,
+        },
     },
     // 森林返回城市
     .{
@@ -90,7 +94,10 @@
         .target = .palaceToForest,
         .map = .forest,
         .facing = .up,
-        .progress = 10,
+        .gate = .{
+            .progress = 10,
+            .blockedDialogue = 37,
+        },
     },
     // 宫殿返回森林
     .{
