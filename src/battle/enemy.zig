@@ -55,6 +55,7 @@ pub const Hurt = struct {
         damage = shared.computeDamage(stats.attack, shared.enemy.defend);
         shared.enemy.health -|= damage;
         timer.restart();
+        offset = 0;
     }
 
     // 受伤动画结束后判断敌方是否死亡。

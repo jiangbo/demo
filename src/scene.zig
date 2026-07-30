@@ -136,14 +136,14 @@ fn updateWorld(delta: f32) void {
 
     system.update(&world, delta);
 
-    for (world.getEvent(component.event.Request)) |req| {
-        switch (req) {
-            .map => fade.startOut(doChangeMap),
-            .battle => changeScene(.battle),
-        }
-        break;
+    // 同帧同时请求切图和战斗时，优先完成已经触发的切图。
+    defer world.clearEvent(component.event.Request);
+    var battleRequest: ?component.event.Request = null;
+    for (world.getEvent(component.event.Request)) |request| {
+        if (request == .map) return fade.startOut(doChangeMap);
+        battleRequest = request;
     }
-    world.clearEvent(component.event.Request);
+    if (battleRequest != null) changeScene(.battle);
 }
 
 pub fn draw() void {
