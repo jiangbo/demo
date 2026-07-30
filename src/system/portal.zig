@@ -144,16 +144,4 @@ test "到达城市出口条件时触发大魔王剧情" {
     try std.testing.expectEqual(0, world.getEvent(component.event.Story).len);
     try std.testing.expect(world.isIdentity(portal, Portal));
     try std.testing.expectEqual(0, world.getEvent(Request).len);
-
-    world.remove(world.entity, Dialog);
-    world.addEvent(component.event.Story{ .progress = 4 });
-    world.removeIdentity(Portal);
-    @import("story.zig").update(&world);
-    try std.testing.expectEqual(
-        5,
-        world.getGlobal(storage.Progress).?.value,
-    );
-    update(&world);
-    try std.testing.expect(world.isIdentity(portal, Portal));
-    try std.testing.expectEqual(Request.map, world.getEvent(Request)[0]);
 }

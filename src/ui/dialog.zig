@@ -8,7 +8,7 @@ const zon = @import("../zon.zig");
 const Dialog = component.dialog.Dialog;
 const Enemy = component.actor.Enemy;
 const Key = component.actor.Key;
-const Portal = component.Portal;
+const Request = component.event.Request;
 const Story = component.event.Story;
 
 var texture: zhu.Image = undefined;
@@ -34,7 +34,7 @@ pub fn update(world: *ecs.World) ?zon.dialog.Event {
             .unlock => |progress| {
                 world.remove(world.entity, Dialog);
                 world.addEvent(Story{ .progress = progress });
-                world.removeIdentity(Portal);
+                world.addEvent(Request.map);
             },
             else => world.remove(world.entity, Dialog),
         }
