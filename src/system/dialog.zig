@@ -17,6 +17,9 @@ pub fn update(world: *ecs.World) void {
     const lines = world.get(target, Talk) orelse return;
     world.removeIdentity(Interact);
 
+    // 已有对话优先，丢弃本次人物交互。
+    if (world.has(world.entity, Dialog)) return;
+
     const facing = world.getIdentity(Player, Facing).?;
     world.add(target, component.actor.oppositeFacing(facing));
     world.remove(target, WantMove);

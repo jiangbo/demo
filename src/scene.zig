@@ -123,6 +123,19 @@ pub fn update(delta: f32) void {
 }
 
 fn updateWorld(delta: f32) void {
+    // 上一帧的场景请求在本帧开始处理，切图优先于战斗。
+    var sceneRequest: ?component.event.Request = null;
+    for (world.getEvent(component.event.Request)) |request| {
+        sceneRequest = request;
+        if (request == .map) break;
+    }
+    world.clearEvent(component.event.Request);
+
+    if (sceneRequest) |request| switch (request) {
+        .map => return fade.startOut(doChangeMap),
+        .battle => return changeScene(.battle),
+    };
+
     if (ui.update(&world, delta)) |request| {
         switch (request) {
             .block => {},
@@ -135,15 +148,6 @@ fn updateWorld(delta: f32) void {
     }
 
     system.update(&world, delta);
-
-    // 同帧同时请求切图和战斗时，优先完成已经触发的切图。
-    defer world.clearEvent(component.event.Request);
-    var battleRequest: ?component.event.Request = null;
-    for (world.getEvent(component.event.Request)) |request| {
-        if (request == .map) return fade.startOut(doChangeMap);
-        battleRequest = request;
-    }
-    if (battleRequest != null) changeScene(.battle);
 }
 
 pub fn draw() void {
