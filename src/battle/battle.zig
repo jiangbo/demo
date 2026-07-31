@@ -87,7 +87,6 @@ pub fn enter(world: *ecs.World) void {
     shared.enemyKey = enemyKey;
     shared.enemy = zon.Actor.get(enemyKey).*;
     shared.menu.reset();
-    shared.menu.selected = 0;
     changePhase(world, .menu);
     zhu.camera.main.position = .zero;
 }

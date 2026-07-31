@@ -29,7 +29,6 @@ pub fn init() void {
 pub fn enter() void {
     zhu.camera.main.position = .zero;
     menu.reset();
-    menu.selected = 0;
     state = .menu;
     zhu.audio.playMusic("voc/title.ogg");
     introTyping.reset();
