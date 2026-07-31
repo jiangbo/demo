@@ -27,7 +27,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
 
     const position = world.getIdentity(Player, Position).?;
     zhu.camera.directFollow(position);
-    zhu.camera.roundPosition(null);
+    zhu.camera.roundMainPosition();
 }
 
 pub fn draw(world: *ecs.World) void {
@@ -37,7 +37,8 @@ pub fn draw(world: *ecs.World) void {
     while (query.next()) |entity| {
         const position = query.get(entity, Position);
         const sprite = query.get(entity, Sprite);
-        zhu.batch.drawImage(sprite.image, position, .{
+        const drawPosition = zhu.camera.round(position, null);
+        zhu.batch.drawImage(sprite.image, drawPosition, .{
             .anchor = sprite.anchor,
         });
     }

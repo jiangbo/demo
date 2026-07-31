@@ -62,7 +62,7 @@ pub fn enter(world: *ecs.World, gpa: zhu.Allocator, spawn: Spawn) void {
 
     const position = world.getIdentity(actor.Player, component.Position).?;
     zhu.camera.directFollow(position);
-    zhu.camera.roundPosition(null);
+    zhu.camera.roundMainPosition();
 }
 
 // 绘制当前普通地图。

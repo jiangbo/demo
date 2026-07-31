@@ -96,7 +96,7 @@ pub fn enter(world: *ecs.World) void {
 pub fn exit(world: *ecs.World) void {
     const position = world.getIdentity(Player, Position).?;
     zhu.camera.directFollow(position);
-    zhu.camera.roundPosition(null);
+    zhu.camera.roundMainPosition();
 }
 
 // 切换阶段并初始化新阶段。
