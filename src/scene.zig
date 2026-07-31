@@ -174,7 +174,6 @@ fn drawHelpInfo() void {
         \\上：W，下：S，左：A，右：D
         \\确定：F，取消：Q，菜单：E
         \\帮助：H  按一次打开，再按一次关掉
-        \\作者：jiangbo4444
     ;
 
     zhu.text.msdf.begin();
