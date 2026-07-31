@@ -88,7 +88,7 @@ pub fn draw() void {
 }
 
 fn updateIntro(delta: f32) ?Request {
-    if (input.released(.confirm) or zhu.mouse.released(.LEFT)) {
+    if (input.pressed(.confirm) or zhu.mouse.released(.LEFT)) {
         return .start;
     }
 

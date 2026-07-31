@@ -18,7 +18,7 @@ pub fn open() void {
 
 // 处理背包中的选择、使用、丢弃和关闭操作。
 pub fn update(world: *ecs.World) ?Request {
-    const closeKey = zon.input.anyReleased(&.{ .menu, .cancel });
+    const closeKey = zon.input.anyPressed(&.{ .menu, .cancel });
     if (closeKey or zhu.mouse.released(.RIGHT)) return .close;
 
     if (showStats and (zhu.key.changed or zhu.mouse.changed)) {
@@ -29,7 +29,7 @@ pub fn update(world: *ecs.World) ?Request {
     index = item.update(inventory.items.len, index);
 
     const key = inventory.items[index] orelse return null;
-    if (zon.input.released(.useItem)) {
+    if (zon.input.pressed(.useItem)) {
         const playerStats = world.getGlobal(storage.Stats).?;
         const usedItem = zon.Item.get(key);
 
@@ -46,7 +46,7 @@ pub fn update(world: *ecs.World) ?Request {
         return .used;
     }
 
-    if (zon.input.released(.dropItem)) {
+    if (zon.input.pressed(.dropItem)) {
         inventory.items[index] = null;
     }
     return null;

@@ -45,7 +45,7 @@ pub fn update(delta: f32) ?Request {
         storyTyping.update(delta);
         return null;
     }
-    if (!zon.input.released(.confirm)) return null;
+    if (!zon.input.pressed(.confirm)) return null;
 
     switch (current.?) {
         .sword => {

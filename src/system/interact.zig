@@ -12,7 +12,7 @@ const Player = component.actor.Player;
 const Position = component.Position;
 
 pub fn update(world: *ecs.World) void {
-    if (!input.released(.confirm)) return;
+    if (!input.pressed(.confirm)) return;
 
     const target = nearestEntity(world) orelse return;
     world.addIdentity(target, Interact);

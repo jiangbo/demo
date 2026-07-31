@@ -22,7 +22,7 @@ pub fn open() void {
 
 // 处理出售选择、卖出和关闭操作。
 pub fn update(world: *ecs.World) bool {
-    const closeKey = zon.input.anyReleased(&.{ .menu, .cancel });
+    const closeKey = zon.input.anyPressed(&.{ .menu, .cancel });
     if (closeKey or zhu.mouse.released(.RIGHT)) {
         const lines = zon.dialogues[if (sold) 27 else 26].lines;
         world.add(world.entity, Dialog{ .lines = lines });
@@ -37,7 +37,7 @@ pub fn update(world: *ecs.World) bool {
     index = item.update(inventory.items.len, index);
 
     const key = inventory.items[index] orelse return false;
-    if (!zon.input.released(.useItem)) return false;
+    if (!zon.input.pressed(.useItem)) return false;
 
     const soldItem = zon.Item.get(key);
     inventory.money += soldItem.money / 2;

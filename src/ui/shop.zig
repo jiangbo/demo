@@ -33,7 +33,7 @@ pub fn open(kind: Kind) void {
 
 // 处理商品选择、购买和关闭操作。
 pub fn update(world: *ecs.World) bool {
-    const closeKey = zon.input.anyReleased(&.{ .menu, .cancel });
+    const closeKey = zon.input.anyPressed(&.{ .menu, .cancel });
     if (closeKey or zhu.mouse.released(.RIGHT)) {
         const dialogueId = if (bought)
             current.boughtDialogue
@@ -47,7 +47,7 @@ pub fn update(world: *ecs.World) bool {
 
     index = item.update(current.items.len, index);
 
-    if (!zon.input.released(.buyItem)) return false;
+    if (!zon.input.pressed(.buyItem)) return false;
     const key = current.items[index] orelse return false;
     if (buy(world, key)) bought = true;
     return false;

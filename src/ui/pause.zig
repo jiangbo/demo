@@ -15,7 +15,7 @@ pub const Request = enum {
 var menu: zhu.widget.Menu = @import("pause.zon");
 
 pub fn update() ?Request {
-    const closeKey = input.anyReleased(&.{ .menu, .cancel });
+    const closeKey = input.anyPressed(&.{ .menu, .cancel });
     if (closeKey or zhu.mouse.released(.RIGHT)) {
         return .close;
     }

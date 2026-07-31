@@ -98,10 +98,10 @@ fn enterWorld(location: ?storage.Location) void {
 }
 
 pub fn update(delta: f32) void {
-    if (zon.input.released(.help)) isHelp = !isHelp;
-    if (zon.input.released(.debug)) isDebug = !isDebug;
+    if (zon.input.pressed(.help)) isHelp = !isHelp;
+    if (zon.input.pressed(.debug)) isDebug = !isDebug;
 
-    if (zhu.key.held(.LEFT_ALT) and zhu.key.released(.ENTER)) {
+    if (zhu.key.held(.LEFT_ALT) and zhu.key.pressed(.ENTER)) {
         return window.toggleFullScreen();
     }
 

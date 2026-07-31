@@ -84,7 +84,7 @@ pub const Death = struct {
 
     // 确认后返回标题场景。
     pub fn update(_: *ecs.World, _: f32) ?shared.Phase {
-        return if (zon.input.released(.confirm)) .title else null;
+        return if (zon.input.pressed(.confirm)) .title else null;
     }
 
     // 绘制玩家死亡提示。

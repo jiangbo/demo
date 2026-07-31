@@ -16,19 +16,19 @@ pub fn init() void {
 pub fn update(len: u8, index: u8) u8 {
     var next = index;
 
-    if (zon.input.released(.left)) {
+    if (zon.input.pressed(.left)) {
         next = (next + len - 1) % len;
     }
 
-    if (zon.input.released(.right)) {
+    if (zon.input.pressed(.right)) {
         next = (next + 1) % len;
     }
 
-    if (zon.input.released(.down)) {
+    if (zon.input.pressed(.down)) {
         next = (next + len / 2) % len;
     }
 
-    if (zon.input.released(.up)) {
+    if (zon.input.pressed(.up)) {
         next = (next + len / 2 * 3) % len;
     }
     return next;
