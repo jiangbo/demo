@@ -21,7 +21,7 @@ pub fn update(world: *ecs.World) ?Request {
     const closeKey = zon.input.anyPressed(&.{ .menu, .cancel });
     if (closeKey or zhu.mouse.released(.RIGHT)) return .close;
 
-    if (showStats and (zhu.key.changed or zhu.mouse.changed)) {
+    if (showStats and zhu.input.change.pressed) {
         showStats = false;
     }
 
