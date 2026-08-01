@@ -1,5 +1,7 @@
 const zhu = @import("zhu");
 
+const storage = @import("../storage.zig");
+
 pub const Mode = enum { load, save };
 pub const Request = union(enum) { close, load: u8, save: u8 };
 
@@ -16,6 +18,7 @@ pub fn update() ?Request {
     if (event == 6) return .close;
 
     const slot: u8 = @intCast(event);
+    if (mode == .load and !storage.exists(slot)) return null;
     return switch (mode) {
         .load => .{ .load = slot },
         .save => .{ .save = slot },

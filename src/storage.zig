@@ -97,6 +97,13 @@ pub fn reset(world: *ecs.World) void {
     });
 }
 
+// 检查指定槽位是否已有存档。
+pub fn exists(slot: u8) bool {
+    var buffer: [20]u8 = undefined;
+    const path = zhu.formatZ(&buffer, "save/{d}.sav", .{slot});
+    return zhu.window.exists(path);
+}
+
 // 读取存档并恢复跨地图长期状态。
 pub fn load(world: *ecs.World, gpa: zhu.Allocator, slot: u8) ?Location {
     var buffer: [20]u8 = undefined;
