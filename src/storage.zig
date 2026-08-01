@@ -98,10 +98,17 @@ pub fn reset(world: *ecs.World) void {
 }
 
 // 读取存档并恢复跨地图长期状态。
-pub fn load(world: *ecs.World, slot: u8) ?Location {
+pub fn load(world: *ecs.World, gpa: zhu.Allocator, slot: u8) ?Location {
     var buffer: [20]u8 = undefined;
-    const path = zhu.formatZ(&buffer, "save/{d}.zon", .{slot});
-    var loaded = zhu.window.readZon(Record, path, .{}) catch |err| {
+    const path = zhu.formatZ(&buffer, "save/{d}.sav", .{slot});
+    const source = zhu.window.readAll(gpa.raw, path) catch |err| {
+        std.log.err("load {s} failed: {}", .{ path, err });
+        return null;
+    };
+    defer gpa.free(source);
+    crypt(source);
+
+    var loaded = zhu.window.parseZon(Record, source, .{}) catch |err| {
         std.log.err("load {s} failed: {}", .{ path, err });
         return null;
     };
@@ -120,7 +127,7 @@ pub fn load(world: *ecs.World, slot: u8) ?Location {
 }
 
 // 收集玩家位置和长期状态并写入存档。
-pub fn save(world: *ecs.World, slot: u8) void {
+pub fn save(world: *ecs.World, gpa: zhu.Allocator, slot: u8) void {
     const player = world.getIdentityEntity(Player).?;
     const record: Record = .{
         .location = .{
@@ -135,9 +142,24 @@ pub fn save(world: *ecs.World, slot: u8) void {
         .deadActors = world.getGlobal(DeadActors).?.*,
     };
     var buffer: [20]u8 = undefined;
-    const path = zhu.formatZ(&buffer, "save/{d}.zon", .{slot});
-    zhu.window.saveZon(path, record) catch |err| {
+    const path = zhu.formatZ(&buffer, "save/{d}.sav", .{slot});
+    const content = zhu.window.allocZon(gpa.raw, record) catch |err| {
+        std.log.err("save {s} failed: {}", .{ path, err });
+        world.addEvent(Tip{ .text = "保存失败" });
+        return;
+    };
+    defer gpa.free(content);
+    crypt(content);
+
+    zhu.window.saveAll(path, content) catch |err| {
         std.log.err("save {s} failed: {}", .{ path, err });
         world.addEvent(Tip{ .text = "保存失败" });
     };
+}
+
+// 使用固定参数隐藏存档文本，同一操作同时用于加密和解密。
+fn crypt(data: []u8) void {
+    const xor = std.crypto.stream.chacha.ChaCha20IETF.xor;
+    const key = "ShengJianYingXiongZhuanSaveKey!!".*;
+    xor(data, data, 0, key, "SaveDataDemo".*);
 }
