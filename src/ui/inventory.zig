@@ -34,7 +34,7 @@ pub fn update(world: *ecs.World) ?Request {
         const usedItem = zon.Item.get(key);
 
         addValue(&playerStats.exp, usedItem.exp);
-        addValue(&playerStats.health, usedItem.health);
+        playerStats.health += usedItem.health;
         addValue(&playerStats.attack, usedItem.attack);
         addValue(&playerStats.defend, usedItem.defend);
         if (playerStats.health > playerStats.maxHealth) {

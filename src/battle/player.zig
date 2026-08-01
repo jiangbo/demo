@@ -42,7 +42,7 @@ pub const Hurt = struct {
 
         const stats = world.getGlobal(storage.Stats).?;
         damage = shared.computeDamage(shared.enemy.attack, stats.defend);
-        stats.health -|= damage;
+        stats.health -= @intCast(damage);
         timer.restart();
         offset = 0;
     }
@@ -51,7 +51,7 @@ pub const Hurt = struct {
     pub fn update(world: *ecs.World, delta: f32) ?shared.Phase {
         if (timer.updateFinished(delta)) {
             const stats = world.getGlobal(storage.Stats).?;
-            return if (stats.health == 0) .playerDeath else .menu;
+            return if (stats.health <= 0) .playerDeath else .menu;
         }
 
         const period: u8 = @intFromFloat(
