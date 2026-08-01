@@ -51,6 +51,7 @@ pub fn reset() void {
 }
 
 pub fn openPause() void {
+    pause.open();
     popup = .pause;
 }
 

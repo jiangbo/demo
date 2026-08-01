@@ -11,6 +11,7 @@ var menu: zhu.widget.Menu = @import("save.zon");
 // 打开指定用途的存档槽菜单。
 pub fn open(next: Mode) void {
     mode = next;
+    menu.reset();
 }
 
 pub fn update() ?Request {
