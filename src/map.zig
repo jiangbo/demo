@@ -75,6 +75,8 @@ pub fn walk(area: zhu.Rect, offset: zhu.Vector2) zhu.Rect {
     var moved = area;
     moved.min.x = limit(field.scanX(moved, offset.x));
     moved.min.y = limit(field.scanY(moved, offset.y));
+    const max = field.grid.size().sub(moved.size);
+    moved.min = moved.min.clamp(.zero, max);
     return moved;
 }
 

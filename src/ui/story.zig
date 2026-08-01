@@ -66,7 +66,7 @@ pub fn draw() void {
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
     zhu.text.draw(storyTyping.text(), .xy(80, 100), .{
-        .max = 440,
+        .max = 450,
         .color = color,
     });
 }
