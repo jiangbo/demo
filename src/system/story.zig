@@ -9,6 +9,7 @@ const Key = component.actor.Key;
 const Speed = component.Speed;
 const Story = component.event.Story;
 const Talk = component.dialog.Talk;
+const Wander = component.actor.Wander;
 
 pub fn update(world: *ecs.World) void {
     for (world.getEvent(Story)) |story| {
@@ -18,12 +19,25 @@ pub fn update(world: *ecs.World) void {
         progress.value = next;
 
         switch (next) {
+            // 进度 4：柔儿获救后开始移动。
+            4 => rouErRescued(world),
             // 进度 5：大魔王出现。
             5 => demonAppeared(world, next),
             else => {},
         }
     }
     world.clearEvent(Story);
+}
+
+// 为获救后的柔儿启用漫游行为。
+fn rouErRescued(world: *ecs.World) void {
+    var query = world.query(.{Key});
+    while (query.next()) |entity| {
+        if (query.get(entity, Key) != .rouEr) continue;
+        world.add(entity, Wander{ .value = .init(0) });
+        return;
+    }
+    unreachable;
 }
 
 // 处理大魔王出现后的城市人物变化。

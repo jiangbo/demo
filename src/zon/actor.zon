@@ -132,6 +132,8 @@
         .x = 480,
         .y = 95,
         .facing = .left,
+        .speed = 8,
+        .moveProgress = 4,
     },
     .{
         .key = "daoBa",
@@ -162,7 +164,6 @@
         .health = 50,
         .attack = 8,
         .defend = 10,
-        .progress = 3,
         .escape = 0,
     },
     // 森林

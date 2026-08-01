@@ -99,6 +99,7 @@ pub const Actor = struct {
     attack: u16 = 0,
     defend: u16 = 0,
     speed: f32 = 0,
+    moveProgress: ?u8 = null, // 达到该剧情进度后才能移动
     panicSpeed: ?f32 = null, // 慌乱时的移动速度
     goods: []const Item.Key = &.{},
     money: u16 = 0,

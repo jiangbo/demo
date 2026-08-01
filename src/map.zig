@@ -177,10 +177,11 @@ fn spawnActor(world: *ecs.World, key: zon.Actor.Key, progress: u8) void {
 
     const speed = data.moveSpeed(progress);
     if (speed == 0) return;
-    world.addAll(entity, .{
-        component.Speed{ .value = speed },
-        actor.Wander{ .value = .init(0) },
-    });
+    world.add(entity, component.Speed{ .value = speed });
+    if (data.moveProgress) |moveProgress| {
+        if (progress < moveProgress) return;
+    }
+    world.add(entity, actor.Wander{ .value = .init(0) });
 }
 
 // 在指定逻辑位置创建玩家实体。
