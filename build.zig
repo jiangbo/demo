@@ -38,6 +38,11 @@ pub fn build(b: *std.Build) !void {
         .imports = &imports,
         .em_link = emLink,
     });
+    b.installDirectory(.{
+        .source_dir = b.path("assets"),
+        .install_dir = .bin,
+        .install_subdir = "assets",
+    });
 
     const testModule = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
