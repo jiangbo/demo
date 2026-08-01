@@ -114,6 +114,6 @@ fn drawActor(key: zon.Actor.Key) void {
 }
 
 fn drawText(content: []const u8) void {
-    zhu.text.draw(content, .xy(123, 400), .{ .color = .black, .max = 593 });
-    zhu.text.draw(content, .xy(120, 397), .{ .color = .white, .max = 590 });
+    zhu.text.draw(content, .xy(123, 400), .{ .color = .black, .max = 470 });
+    zhu.text.draw(content, .xy(120, 397), .{ .color = .white, .max = 470 });
 }
