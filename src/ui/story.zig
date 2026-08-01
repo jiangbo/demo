@@ -47,13 +47,12 @@ pub fn update(delta: f32) ?Request {
     }
     if (!zon.input.pressed(.confirm)) return null;
 
-    switch (current.?) {
-        .sword => {
-            current = null;
-            return .close;
-        },
-        .ending => return .title,
-    }
+    // 剧情结束后统一清理当前状态，不依赖各分支各自清理。
+    defer current = null;
+    return switch (current.?) {
+        .sword => .close,
+        .ending => .title,
+    };
 }
 
 pub fn draw() void {
