@@ -1,4 +1,3 @@
-const std = @import("std");
 const zhu = @import("zhu");
 const ecs = @import("ecs");
 
@@ -64,21 +63,40 @@ const Phase = union(shared.Phase) {
 
 var texture: zhu.Image = undefined;
 var mapImage: zhu.Image = undefined;
-var vertices: []zhu.batch.Vertex = undefined;
+var mapImageGrid: zhu.extend.tiled.Grid = undefined;
+var mapWindow: zon.TileWindow = undefined;
 var phase: Phase = .menu;
 
 // 初始化战斗场景长期使用的资源。
 pub fn init(allocator: zhu.Allocator) void {
     texture = zhu.getImage("fightbar.png").?;
     mapImage = zhu.getImage("maps1-sheet.png").?;
+    mapImageGrid = .{
+        .width = @intFromFloat(@divExact(mapImage.size.x, 34)),
+        .height = @intFromFloat(@divExact(mapImage.size.y, 34)),
+        .cell = 34,
+    };
     const data = zon.Map.get(.battle);
-    vertices = data.buildVertices(allocator, mapImage);
+    mapWindow = .{
+        .grid = data.grid,
+        .padding = 0,
+        .area = .init(.zero, data.grid.size()),
+    };
+    mapWindow.vertices.ensureTotalCapacity(
+        allocator.raw,
+        data.grid.count() * 2,
+    ) catch zhu.oom();
+    mapWindow.rebuildImage(
+        mapImage,
+        &.{ data.back, data.ground },
+        mapImageGrid,
+    );
     shared.bombAnimation = .initSource(zon.config.bomb);
 }
 
 // 释放战斗地图长期持有的顶点。
 pub fn deinit(allocator: zhu.Allocator) void {
-    allocator.free(vertices);
+    mapWindow.vertices.deinit(allocator.raw);
 }
 
 // 读取选定的敌人并进入战斗场景。
@@ -145,7 +163,7 @@ fn finishEscape(world: *ecs.World) Request {
 
 // 绘制战斗场景、双方状态和当前阶段。
 pub fn draw(world: *ecs.World) void {
-    zhu.batch.drawVertices(vertices, mapImage);
+    zhu.batch.drawVertices(mapWindow.vertices.items, mapImage);
 
     zhu.camera.push(.window);
     defer zhu.camera.pop();

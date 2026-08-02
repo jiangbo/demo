@@ -15,19 +15,35 @@ pub const Spawn = union(enum) {
 };
 
 var image: zhu.Image = undefined;
-var vertices: []zhu.batch.Vertex = &.{};
+var imageGrid: zhu.extend.tiled.Grid = undefined;
 var field: zhu.extend.tiled.Field(u8) = undefined;
+var tileWindow: zon.TileWindow = undefined;
+var currentMap: *const zon.Map = undefined;
 
-pub fn init() void {
+pub fn init(allocator: zhu.Allocator) void {
     image = zhu.getImage("maps1-sheet.png").?;
+    imageGrid = .{
+        .width = @intFromFloat(@divExact(image.size.x, 34)),
+        .height = @intFromFloat(@divExact(image.size.y, 34)),
+        .cell = 34,
+    };
+    tileWindow = .{ .grid = zon.Map.list[0].grid };
+
+    var max: usize = 0;
+    for (zon.Map.list) |data| {
+        const estimate = zon.TileWindow{ .grid = data.grid };
+        max = @max(max, estimate.maxVertexCount(2));
+    }
+    tileWindow.vertices.ensureTotalCapacity(allocator.raw, max) catch
+        zhu.oom();
 }
 
 pub fn deinit(allocator: zhu.Allocator) void {
-    allocator.free(vertices);
+    tileWindow.vertices.deinit(allocator.raw);
 }
 
 // 清空旧地图并按指定方式创建地图对象和玩家。
-pub fn enter(world: *ecs.World, gpa: zhu.Allocator, spawn: Spawn) void {
+pub fn enter(world: *ecs.World, spawn: Spawn) void {
     const portalKey: ?zon.Portal.Key = switch (spawn) {
         .start => .start,
         .portal => blk: {
@@ -45,11 +61,10 @@ pub fn enter(world: *ecs.World, gpa: zhu.Allocator, spawn: Spawn) void {
     world.entity = world.createEntity();
 
     const data = zon.Map.get(mapKey);
+    currentMap = data;
     zhu.camera.bound = data.grid.size();
     field = .{ .grid = data.grid, .data = data.object };
 
-    gpa.free(vertices);
-    vertices = data.buildVertices(gpa, image);
     spawnPortals(world, data);
     spawnChests(world, data);
     spawnActors(world, data);
@@ -63,11 +78,20 @@ pub fn enter(world: *ecs.World, gpa: zhu.Allocator, spawn: Spawn) void {
     const position = world.getIdentity(actor.Player, component.Position).?;
     zhu.camera.directFollow(position);
     zhu.camera.roundMainPosition();
+    tileWindow.grid = data.grid;
+    tileWindow.area = .init(.zero, .zero);
 }
 
 // 绘制当前普通地图。
 pub fn draw() void {
-    zhu.batch.drawVertices(vertices, image);
+    if (tileWindow.update()) {
+        tileWindow.rebuildImage(
+            image,
+            &.{ currentMap.back, currentMap.ground },
+            imageGrid,
+        );
+    }
+    zhu.batch.drawVertices(tileWindow.vertices.items, image);
 }
 
 // 将区域移动到当前地图允许到达的位置。

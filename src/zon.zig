@@ -168,6 +168,121 @@ pub const dialogues: []const dialog.Script = @import("zon/talk.zon");
 pub const config: Config = @import("zon/config.zon");
 pub const input = zhu.input.bind(config.input);
 
+pub const TileWindow = struct {
+    grid: tiled.Grid = undefined,
+    padding: u32 = 8,
+    area: zhu.Rect = .init(.zero, .zero),
+    vertices: std.ArrayList(zhu.batch.Vertex) = .empty,
+
+    // 计算任意视口位置可能需要的最大顶点容量。
+    pub fn maxVertexCount(self: TileWindow, layers: usize) usize {
+        const viewSize = zhu.camera.viewport().size
+            .div(self.grid.cellSize()).ceil().add(.one)
+            .add(.square(@floatFromInt(self.padding * 2)));
+
+        const size = viewSize.min(.xy(
+            @floatFromInt(self.grid.width),
+            @floatFromInt(self.grid.height),
+        ));
+        return @as(usize, @intFromFloat(size.x * size.y)) * layers;
+    }
+
+    // 视口超出旧范围时，保存并返回新的瓦片窗口。
+    pub fn update(self: *TileWindow) bool {
+        const viewport = zhu.camera.viewport();
+        if (self.area.containsRect(viewport)) return false;
+
+        const cell = self.grid.cellSize();
+        const padding = cell.scale(@floatFromInt(self.padding));
+        const min = viewport.min.div(cell).floor()
+            .mul(cell).sub(padding);
+        const max = viewport.max().div(cell).ceil()
+            .mul(cell).add(padding);
+        self.area = .fromMax(min, max);
+        return true;
+    }
+
+    // 从整数图层和规则图片中重建窗口顶点。
+    pub fn rebuildImage(
+        self: *TileWindow,
+        image: zhu.Image,
+        layers: []const []const u16,
+        grid: tiled.Grid,
+    ) void {
+        self.vertices.clearRetainingCapacity();
+        const tileSize = self.grid.cellSize();
+        const inset = grid.cellSize().sub(tileSize).scale(0.5);
+
+        for (layers) |layer| {
+            var cells = self.grid.cellsInRect(self.area);
+            while (cells.next()) |index| {
+                if (layer[index] == 0) continue;
+
+                const pos = grid.indexToWorld(layer[index]).add(inset);
+                self.appendVertex(
+                    self.grid.indexToWorld(index),
+                    image.sub(.init(pos, tileSize)),
+                );
+            }
+        }
+    }
+
+    // 按传入顺序重建 Tiled 的瓦片层和图片层。
+    pub fn rebuildTiled(
+        self: *TileWindow,
+        map: *const tiled.Map,
+        layers: []const tiled.Layer,
+    ) void {
+        self.vertices.clearRetainingCapacity();
+        for (layers) |layer| switch (layer.type) {
+            .tile => self.appendTileLayer(map, layer),
+            .image => self.appendImageLayer(layer),
+            .object => {},
+        };
+    }
+
+    fn appendTileLayer(
+        self: *TileWindow,
+        map: *const tiled.Map,
+        layer: tiled.Layer,
+    ) void {
+        const grid = layer.grid(self.grid.cell);
+        const area = self.area.move(layer.offset.neg());
+        var cells = grid.cellsInRect(area);
+        while (cells.next()) |index| {
+            const gid = layer.data[index];
+            if (gid == 0) continue;
+
+            const image = map.getImage(gid) orelse continue;
+            const position = grid.indexToWorld(index).add(layer.offset);
+            self.appendVertex(position, image);
+        }
+    }
+
+    fn appendImageLayer(self: *TileWindow, layer: tiled.Layer) void {
+        const size = zhu.Vector2.xy(layer.width, layer.height);
+        const rect = zhu.Rect.init(layer.offset, size);
+        if (!self.area.intersect(rect)) return;
+
+        const image = zhu.assets.getImage(layer.image).?
+            .sub(.init(.zero, size));
+        self.appendVertex(layer.offset, image);
+    }
+
+    fn appendVertex(
+        self: *TileWindow,
+        position: zhu.Vector2,
+        image: zhu.Image,
+    ) void {
+        self.vertices.appendAssumeCapacity(.{
+            .position = position,
+            .layer = image.layer,
+            .size = image.size,
+            .uvRect = image.uvRect(),
+        });
+    }
+};
+
 pub const Map = struct {
     key: []const u8,
     grid: tiled.Grid,
@@ -183,45 +298,6 @@ pub const Map = struct {
     // 根据稳定标识取得地图配置。
     pub fn get(key: Key) *const Map {
         return &list[@intFromEnum(key)];
-    }
-
-    // 根据地图图层分配并构建绘制顶点。
-    pub fn buildVertices(
-        self: Map,
-        allocator: zhu.Allocator,
-        image: zhu.Image,
-    ) []zhu.batch.Vertex {
-        var count: usize = 0;
-        for ([_][]const u16{ self.back, self.ground }) |tiles| {
-            for (tiles) |tile| {
-                if (tile != 0) count += 1;
-            }
-        }
-        const result = allocator.alloc(zhu.batch.Vertex, count);
-        const atlasGrid = tiled.Grid{
-            .width = @intFromFloat(@divExact(image.size.x, 34)),
-            .height = @intFromFloat(@divExact(image.size.y, 34)),
-            .cell = 34,
-        };
-        const tileSize = self.grid.cellSize();
-        var next: usize = 0;
-
-        for ([_][]const u16{ self.back, self.ground }) |tiles| {
-            for (tiles, 0..) |tile, index| {
-                if (tile == 0) continue;
-
-                const pos = atlasGrid.indexToWorld(tile).add(.one);
-                const tileImage = image.sub(.init(pos, tileSize));
-                result[next] = .{
-                    .position = self.grid.indexToWorld(index),
-                    .layer = tileImage.layer,
-                    .size = tileSize,
-                    .uvRect = tileImage.uvRect(),
-                };
-                next += 1;
-            }
-        }
-        return result;
     }
 };
 

@@ -34,7 +34,7 @@ pub fn init(allocator_: zhu.Allocator) void {
     world.entity = world.createEntity();
     title.init();
     ui.init();
-    map.init();
+    map.init(allocator_);
     battle.init(allocator_);
 
     title.enter();
@@ -52,7 +52,7 @@ fn changeWorld(next: From) void {
 }
 
 fn doChangeMap() void {
-    map.enter(&world, allocator, .portal);
+    map.enter(&world, .portal);
 }
 
 fn doChangeScene() void {
@@ -80,13 +80,13 @@ fn enterWorld(location: ?storage.Location) void {
     switch (from) {
         .fromStart => {
             storage.reset(&world);
-            map.enter(&world, allocator, .start);
+            map.enter(&world, .start);
             world.add(world.entity, component.dialog.Dialog{
                 .lines = zon.dialogues[2].lines,
             });
         },
         .fromBattle => {},
-        .fromLoad => map.enter(&world, allocator, .{
+        .fromLoad => map.enter(&world, .{
             .location = location.?,
         }),
     }
