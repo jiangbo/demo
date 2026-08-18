@@ -63,8 +63,7 @@ pub const Hurt = struct {
         if (timer.updateFinished(delta)) {
             if (shared.enemy.health == 0) return .enemyDeath;
 
-            shared.Wait.next = .enemyAttack;
-            return .wait;
+            return shared.wait(.enemyAttack, &.{});
         }
 
         const period: u8 = @intFromFloat(

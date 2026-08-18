@@ -59,9 +59,7 @@ pub const Menu = struct {
                 const escape = zhu.random.int(u8, 0, 100);
                 if (enemy.escape > escape) return .escape;
 
-                Wait.tip = "逃跑失败！";
-                Wait.next = .enemyAttack;
-                return .wait;
+                return wait(.enemyAttack, "逃跑失败！");
             },
         }
     }
@@ -85,10 +83,17 @@ pub fn computeDamage(attack: u16, defend: u16) u16 {
     return damage;
 }
 
+// 设置等待结束后的阶段和提示，并返回等待阶段。
+pub fn wait(next: Phase, tip: []const u8) Phase {
+    Wait.next = next;
+    Wait.tip = tip;
+    return .wait;
+}
+
 pub const Wait = struct {
-    pub var timer: zhu.Timer = .init(0.5);
-    pub var next: Phase = .menu;
-    pub var tip: []const u8 = &.{};
+    var timer: zhu.Timer = .init(0.5);
+    var next: Phase = .menu;
+    var tip: []const u8 = &.{};
 
     // 重新开始阶段等待。
     pub fn enter(_: *ecs.World) void {
@@ -97,10 +102,7 @@ pub const Wait = struct {
 
     // 等待结束后返回预先设置的阶段。
     pub fn update(_: *ecs.World, delta: f32) ?Phase {
-        if (!timer.updateFinished(delta)) return null;
-
-        tip = &.{};
-        return next;
+        return if (timer.updateFinished(delta)) next else null;
     }
 
     // 绘制等待期间的临时提示。
