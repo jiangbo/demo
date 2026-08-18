@@ -114,7 +114,7 @@ pub const Item = struct {
 
     // 进入物品阶段时打开背包。
     pub fn enter(_: *ecs.World) void {
-        inventory.open();
+        _ = inventory.open();
     }
 
     // 处理战斗中的物品选择。

@@ -1,6 +1,7 @@
 const zhu = @import("zhu");
 
 const input = @import("../zon.zig").input;
+const Popup = @import("shared.zig").Popup;
 
 pub const Request = enum {
     status,
@@ -15,8 +16,9 @@ pub const Request = enum {
 var menu: zhu.widget.Menu = @import("pause.zon");
 
 // 打开暂停菜单时将光标重置回第一项。
-pub fn open() void {
+pub fn open() Popup {
     menu.reset();
+    return .pause;
 }
 
 pub fn update() ?Request {

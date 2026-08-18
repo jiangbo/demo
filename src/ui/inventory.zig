@@ -2,6 +2,7 @@ const zhu = @import("zhu");
 const ecs = @import("ecs");
 
 const item = @import("item.zig");
+const Popup = @import("shared.zig").Popup;
 const stats = @import("stats.zig");
 const storage = @import("../storage.zig");
 const zon = @import("../zon.zig");
@@ -12,8 +13,9 @@ var index: u8 = 0; // 当前选择的背包格子。
 var showStats = false; // 是否显示使用物品后的玩家属性。
 
 // 每次打开背包时清除上一次使用物品留下的状态提示。
-pub fn open() void {
+pub fn open() Popup {
     showStats = false;
+    return .inventory;
 }
 
 // 处理背包中的选择、使用、丢弃和关闭操作。

@@ -3,7 +3,7 @@ const zhu = @import("zhu");
 
 const save = @import("save.zig");
 const input = @import("../zon.zig").input;
-const Typing = @import("Typing.zig");
+const Typing = @import("shared.zig").Typing;
 
 pub const Request = union(enum) {
     fadeOut: *const fn () void,
@@ -57,7 +57,7 @@ fn select(button: Button) ?Request {
     switch (button) {
         .start => return .{ .fadeOut = showIntro },
         .load => {
-            save.open(.load);
+            _ = save.open(.load);
             state = .save;
         },
         .exit => zhu.window.exit(),

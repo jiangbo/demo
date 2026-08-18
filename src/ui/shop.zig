@@ -5,6 +5,7 @@ const component = @import("../component.zig");
 const storage = @import("../storage.zig");
 const zon = @import("../zon.zig");
 const item = @import("item.zig");
+const Popup = @import("shared.zig").Popup;
 
 const Dialog = component.dialog.Dialog;
 const Tip = component.event.Tip;
@@ -22,13 +23,14 @@ var bought = false; // 本次购物是否买到过物品。
 var current: *const Shop = undefined; // 当前打开的商店配置。
 
 // 打开指定商店并从第一个商品开始选择。
-pub fn open(kind: Kind) void {
+pub fn open(kind: Kind) Popup {
     index = 0;
     bought = false;
     current = switch (kind) {
         .weapon => &weaponShop,
         .potion => &potionShop,
     };
+    return .shop;
 }
 
 // 处理商品选择、购买和关闭操作。

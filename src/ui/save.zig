@@ -1,6 +1,7 @@
 const zhu = @import("zhu");
 
 const storage = @import("../storage.zig");
+const Popup = @import("shared.zig").Popup;
 
 pub const Mode = enum { load, save };
 pub const Request = union(enum) { close, load: u8, save: u8 };
@@ -9,9 +10,10 @@ var mode: Mode = .load;
 var menu: zhu.widget.Menu = @import("save.zon");
 
 // 打开指定用途的存档槽菜单。
-pub fn open(next: Mode) void {
+pub fn open(next: Mode) Popup {
     mode = next;
     menu.reset();
+    return .save;
 }
 
 pub fn update() ?Request {

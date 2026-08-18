@@ -1,7 +1,7 @@
 const zhu = @import("zhu");
 
 const zon = @import("../zon.zig");
-const Typing = @import("Typing.zig");
+const Typing = @import("shared.zig").Typing;
 
 pub const Kind = enum { sword, ending };
 

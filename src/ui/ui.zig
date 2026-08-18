@@ -10,6 +10,7 @@ const item = @import("item.zig");
 const pause = @import("pause.zig");
 const sale = @import("sale.zig");
 const save = @import("save.zig");
+const Popup = @import("shared.zig").Popup;
 const shop = @import("shop.zig");
 const status = @import("status.zig");
 const story = @import("story.zig");
@@ -25,16 +26,6 @@ pub const Request = union(enum) {
     title,
 };
 
-const Popup = enum {
-    about,
-    inventory,
-    pause,
-    sale,
-    save,
-    shop,
-    status,
-};
-
 var popup: ?Popup = null;
 
 pub fn init() void {
@@ -48,11 +39,6 @@ pub fn reset() void {
     popup = null;
     story.reset();
     tip.reset();
-}
-
-pub fn openPause() void {
-    pause.open();
-    popup = .pause;
 }
 
 pub fn update(world: *ecs.World, delta: f32) ?Request {
@@ -71,7 +57,7 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
     if (popup == null) {
         const openKey = zon.input.anyPressed(&.{ .menu, .cancel });
         if (openKey or zhu.mouse.released(.RIGHT)) {
-            openPause();
+            popup = pause.open();
             return .block;
         }
         return null;
@@ -84,18 +70,9 @@ fn updateDialog(world: *ecs.World) ?Request {
     const event = dialog.update(world) orelse return null;
     switch (event) {
         .finish => {},
-        .openWeaponShop => {
-            shop.open(.weapon);
-            popup = .shop;
-        },
-        .openPotionShop => {
-            shop.open(.potion);
-            popup = .shop;
-        },
-        .openSale => {
-            sale.open();
-            popup = .sale;
-        },
+        .openWeaponShop => popup = shop.open(.weapon),
+        .openPotionShop => popup = shop.open(.potion),
+        .openSale => popup = sale.open(),
         .battle => return .battle,
         .unlock => return null,
         .showSwordTip => story.open(.sword),
@@ -110,19 +87,10 @@ fn updatePopup(world: *ecs.World, delta: f32) Request {
             const req = pause.update() orelse return .block;
             switch (req) {
                 .status => popup = .status,
-                .item => {
-                    inventory.open();
-                    popup = .inventory;
-                },
-                .load => {
-                    save.open(.load);
-                    popup = .save;
-                },
-                .save => {
-                    save.open(.save);
-                    popup = .save;
-                },
-                .about => popup = .about,
+                .item => popup = inventory.open(),
+                .load => popup = save.open(.load),
+                .save => popup = save.open(.save),
+                .about => popup = about.open(),
                 .exit => zhu.window.exit(),
                 .close => popup = null,
             }

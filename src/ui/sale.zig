@@ -5,6 +5,7 @@ const component = @import("../component.zig");
 const storage = @import("../storage.zig");
 const zon = @import("../zon.zig");
 const item = @import("item.zig");
+const Popup = @import("shared.zig").Popup;
 
 const Dialog = component.dialog.Dialog;
 const Tip = component.event.Tip;
@@ -14,10 +15,11 @@ var sold = false; // 本次出售是否卖出过物品。
 var soldKey: ?zon.Item.Key = null; // 最近卖出的物品。
 
 // 开始一次新的出售过程并从第一个格子开始选择。
-pub fn open() void {
+pub fn open() Popup {
     index = 0;
     sold = false;
     soldKey = null;
+    return .sale;
 }
 
 // 处理出售选择、卖出和关闭操作。

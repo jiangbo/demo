@@ -2,6 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const input = @import("../zon.zig").input;
+const Popup = @import("shared.zig").Popup;
 
 var texture: zhu.Image = undefined;
 
@@ -12,11 +13,19 @@ pub fn init() void {
     texture = zhu.getImage("sbar.png").?;
 }
 
-// 更新关于界面，关闭后恢复到初始页面。
+// 打开关于界面并把滚动状态恢复到初始页面。
+pub fn open() Popup {
+    roll = false;
+    rollOffset = 0;
+    end = false;
+    timer.restart();
+    return .about;
+}
+
+// 更新关于界面。
 pub fn update(delta: f32) bool {
     const closeKey = input.anyPressed(&.{ .menu, .cancel });
     if (closeKey or zhu.mouse.released(.RIGHT)) {
-        reset();
         return true;
     }
 
@@ -158,13 +167,6 @@ var rollOffset: usize = 0;
 const lineHeight = 26;
 var start: usize = 0;
 var end: bool = false;
-
-fn reset() void {
-    roll = false;
-    rollOffset = 0;
-    end = false;
-    timer.restart();
-}
 
 fn drawRoll(position: zhu.Vector2) void {
     const size = zhu.Vector2.xy(380, 280);
