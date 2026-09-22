@@ -26,7 +26,6 @@ pub fn build(b: *std.Build) !void {
     emLink.use_emmalloc = true;
     emLink.use_filesystem = true;
     emLink.shell_file_path = b.path("index.html");
-    emLink.extra_args = &.{"-sINITIAL_MEMORY=64MB"};
 
     // Dungeon 是当前迁移目标。
     _ = try zhuBuild.addApp(b, .{
