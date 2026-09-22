@@ -9,8 +9,8 @@
             .hash = "migu-0.1.0-1dj5JgiXAAC2kuZa9QmCbKFSklmk0aFoJcBwESrcX1Ab",
         },
         .zhuyu = .{
-            .url = "git+https://github.com/jiangbo/ZhuYu.git#a6100b664fca6334f90cce6d60b2c4e842996692",
-            .hash = "zhuyu-0.1.0-U4gVRkDgAgDk_zv7wsXZJwqXtG74yQ1zrNEhncarVLYv",
+            .url = "git+https://github.com/jiangbo/ZhuYu.git#e2b3106094e4d07b5b543bd02793d2d0a2722f1d",
+            .hash = "zhuyu-0.1.0-U4gVRq7gAgARO-Qd_u11wU57O6YmofyY9VuDKG95PR-i",
         },
     },
 
