@@ -5,8 +5,8 @@ const storage = @import("../storage.zig");
 
 // 绘制状态页和物品页共用的玩家属性。
 pub fn draw(world: *ecs.World, pos: zhu.Vector2, spacing: f32) void {
-    const stats = world.getGlobal(storage.Stats).?;
-    const inventory = world.getGlobal(storage.Inventory).?;
+    const stats = world.getResourcePtr(storage.Stats).?;
+    const inventory = world.getResourcePtr(storage.Inventory).?;
     const shadow: zhu.text.Option = .{ .color = .black };
     const gold: zhu.text.Option = .{ .color = .yellow };
 

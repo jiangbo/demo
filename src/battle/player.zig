@@ -40,7 +40,7 @@ pub const Hurt = struct {
     pub fn enter(world: *ecs.World) void {
         audio.playSound(shared.hurtSounds[0]);
 
-        const stats = world.getGlobal(storage.Stats).?;
+        const stats = world.getResourcePtr(storage.Stats).?;
         damage = shared.computeDamage(shared.enemy.attack, stats.defend);
         stats.health -= @intCast(damage);
         timer.restart();
@@ -50,7 +50,7 @@ pub const Hurt = struct {
     // 受伤动画结束后判断玩家是否死亡。
     pub fn update(world: *ecs.World, delta: f32) ?shared.Phase {
         if (timer.updateFinished(delta)) {
-            const stats = world.getGlobal(storage.Stats).?;
+            const stats = world.getResourcePtr(storage.Stats).?;
             return if (stats.health <= 0) .playerDeath else .menu;
         }
 

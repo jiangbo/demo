@@ -57,8 +57,7 @@ pub fn enter(world: *ecs.World, spawn: Spawn) void {
         else => zon.Portal.get(portalKey.?).map,
     };
 
-    world.resetKeep(storage.keep);
-    world.entity = world.createEntity();
+    world.resetKeepResources(storage.keep);
 
     const data = zon.Map.get(mapKey);
     currentMap = data;
@@ -141,7 +140,7 @@ fn spawnPortals(world: *ecs.World, data: *const zon.Map) void {
 
 // 根据当前地图和长期状态创建宝箱实体。
 fn spawnChests(world: *ecs.World, data: *const zon.Map) void {
-    const opened = world.getGlobal(storage.OpenedChests).?;
+    const opened = world.getResourcePtr(storage.OpenedChests).?;
     const images = component.ChestImages{
         .closed = image.sub(.init(.xy(35, 511), .square(32))),
         .opened = image.sub(.init(.xy(69, 511), .square(32))),
@@ -163,8 +162,8 @@ fn spawnChests(world: *ecs.World, data: *const zon.Map) void {
 
 // 根据地图配置和长期状态创建人物实体。
 fn spawnActors(world: *ecs.World, data: *const zon.Map) void {
-    const deadActors = world.getGlobal(storage.DeadActors).?;
-    const progress = world.getGlobal(storage.Progress).?.value;
+    const deadActors = world.getResourcePtr(storage.DeadActors).?;
+    const progress = world.getResourcePtr(storage.Progress).?.value;
     for (data.actors) |key| {
         if (deadActors.contains(key)) continue;
         if (zon.Actor.get(key).progress < progress) continue;

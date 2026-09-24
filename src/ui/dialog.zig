@@ -20,7 +20,7 @@ pub fn init() void {
 }
 
 pub fn update(world: *ecs.World) ?zon.dialog.Event {
-    const dialog = world.getPtr(world.entity, Dialog) orelse return null;
+    const dialog = world.getResourcePtr(Dialog) orelse return null;
     if (dialog.text == null) {
         prepareText(dialog);
         return null;
@@ -32,17 +32,17 @@ pub fn update(world: *ecs.World) ?zon.dialog.Event {
         switch (event) {
             .battle => |key| startBattle(world, dialog, key),
             .unlock => |progress| {
-                world.remove(world.entity, Dialog);
+                world.removeResource(Dialog);
                 world.addEvent(Story{ .progress = progress });
                 world.addEvent(Request.map);
             },
-            else => world.remove(world.entity, Dialog),
+            else => world.removeResource(Dialog),
         }
         return event;
     }
 
     if (dialog.line + 1 == dialog.lines.len) {
-        world.remove(world.entity, Dialog);
+        world.removeResource(Dialog);
         return .finish;
     }
 
@@ -59,7 +59,7 @@ fn startBattle(world: *ecs.World, dialog: *Dialog, key: Key) void {
         world.addIdentity(entity, Enemy);
 
         if (dialog.line + 1 == dialog.lines.len) {
-            world.remove(world.entity, Dialog);
+            world.removeResource(Dialog);
         } else {
             dialog.line += 1;
             prepareText(dialog);
@@ -70,7 +70,7 @@ fn startBattle(world: *ecs.World, dialog: *Dialog, key: Key) void {
 }
 
 pub fn draw(world: *ecs.World) void {
-    const dialog = world.get(world.entity, Dialog) orelse return;
+    const dialog = world.getResourcePtr(Dialog) orelse return;
     const text = dialog.text orelse return;
     const line = dialog.lines[dialog.line];
 

@@ -51,7 +51,7 @@ pub const Hurt = struct {
             ],
         );
 
-        const stats = world.getGlobal(storage.Stats).?;
+        const stats = world.getResourcePtr(storage.Stats).?;
         damage = shared.computeDamage(stats.attack, shared.enemy.defend);
         shared.enemy.health -|= damage;
         timer.restart();
@@ -111,8 +111,8 @@ pub const Death = struct {
 
     // 依次结算奖励、升级和战斗结果。
     pub fn update(world: *ecs.World, _: f32) ?shared.Phase {
-        const stats = world.getGlobal(storage.Stats).?;
-        const inventory = world.getGlobal(storage.Inventory).?;
+        const stats = world.getResourcePtr(storage.Stats).?;
+        const inventory = world.getResourcePtr(storage.Inventory).?;
         if (step == 0 and zon.input.pressed(.confirm)) {
             step += 1;
             stats.exp += shared.enemy.level * 20;
@@ -162,7 +162,7 @@ pub const Death = struct {
             zhu.text.draw(text, .xy(220, 240), .{ .color = .yellow });
         }
         if (step == 2) {
-            const level = world.getGlobal(storage.Stats).?.level;
+            const level = world.getResourcePtr(storage.Stats).?.level;
             text = zhu.format(
                 &buffer,
                 "等级升为({})^_^",

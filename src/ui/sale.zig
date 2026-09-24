@@ -27,7 +27,7 @@ pub fn update(world: *ecs.World) bool {
     const closeKey = zon.input.anyPressed(&.{ .menu, .cancel });
     if (closeKey or zhu.mouse.released(.RIGHT)) {
         const lines = zon.dialogues[if (sold) 27 else 26].lines;
-        world.add(world.entity, Dialog{ .lines = lines });
+        world.addResource(Dialog{ .lines = lines });
         return true;
     }
 
@@ -35,7 +35,7 @@ pub fn update(world: *ecs.World) bool {
         soldKey = null;
     }
 
-    const inventory = world.getGlobal(storage.Inventory).?;
+    const inventory = world.getResourcePtr(storage.Inventory).?;
     index = item.update(inventory.items.len, index);
 
     const key = inventory.items[index] orelse return false;
@@ -51,7 +51,7 @@ pub fn update(world: *ecs.World) bool {
 }
 
 pub fn draw(world: *ecs.World) void {
-    const inventory = world.getGlobal(storage.Inventory).?;
+    const inventory = world.getResourcePtr(storage.Inventory).?;
     const pos = item.position;
     item.draw(&inventory.items, index);
 

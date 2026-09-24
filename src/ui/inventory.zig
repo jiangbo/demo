@@ -27,12 +27,12 @@ pub fn update(world: *ecs.World) ?Request {
         showStats = false;
     }
 
-    const inventory = world.getGlobal(storage.Inventory).?;
+    const inventory = world.getResourcePtr(storage.Inventory).?;
     index = item.update(inventory.items.len, index);
 
     const key = inventory.items[index] orelse return null;
     if (zon.input.pressed(.useItem)) {
-        const playerStats = world.getGlobal(storage.Stats).?;
+        const playerStats = world.getResourcePtr(storage.Stats).?;
         const usedItem = zon.Item.get(key);
 
         addValue(&playerStats.exp, usedItem.exp);
@@ -60,7 +60,7 @@ fn addValue(value: *u16, add: i32) void {
 }
 
 pub fn draw(world: *ecs.World) void {
-    const inventory = world.getGlobal(storage.Inventory).?;
+    const inventory = world.getResourcePtr(storage.Inventory).?;
     const pos = item.position;
     item.draw(&inventory.items, index);
 

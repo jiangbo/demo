@@ -27,7 +27,7 @@ pub fn update(world: *ecs.World) void {
     const data = zon.Portal.get(portal.key);
     const gate = data.gate orelse return requestMap(world);
 
-    const progress = world.getGlobal(storage.Progress).?.value;
+    const progress = world.getResourcePtr(storage.Progress).?.value;
     if (progress > gate.progress) return requestMap(world);
 
     var dialogueId = gate.blockedDialogue;
@@ -35,7 +35,7 @@ pub fn update(world: *ecs.World) void {
         if (gate.reachedDialogue) |id| dialogueId = id;
     }
 
-    world.add(world.entity, Dialog{
+    world.addResource(Dialog{
         .lines = zon.dialogues[dialogueId].lines,
     });
 }
@@ -61,8 +61,7 @@ test "选择玩家当前所在的传送区域" {
     var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    world.entity = world.createEntity();
-    world.add(world.entity, storage.Progress{});
+    world.addResource(storage.Progress{});
     const player = world.createIdentity(Player);
     world.addAll(player, .{
         Position.zero,
@@ -87,8 +86,7 @@ test "未击败巫批时宫殿入口显示受阻对话" {
     var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    world.entity = world.createEntity();
-    world.add(world.entity, storage.Progress{ .value = 5 });
+    world.addResource(storage.Progress{ .value = 5 });
     const player = world.createIdentity(Player);
     world.addAll(player, .{
         Position.zero,
@@ -103,7 +101,7 @@ test "未击败巫批时宫殿入口显示受阻对话" {
 
     update(&world);
 
-    const dialog = world.get(world.entity, Dialog).?;
+    const dialog = world.getResourcePtr(Dialog).?;
     try std.testing.expectEqual(
         zon.dialogues[37].lines.ptr,
         dialog.lines.ptr,
@@ -111,17 +109,16 @@ test "未击败巫批时宫殿入口显示受阻对话" {
     try std.testing.expect(world.isIdentity(portal, Portal));
     try std.testing.expectEqual(0, world.getEvent(Request).len);
 
-    world.remove(world.entity, Dialog);
+    world.removeResource(Dialog);
     update(&world);
-    try std.testing.expect(!world.has(world.entity, Dialog));
+    try std.testing.expect(world.getResourcePtr(Dialog) == null);
 }
 
 test "到达城市出口条件时触发大魔王剧情" {
     var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    world.entity = world.createEntity();
-    world.add(world.entity, storage.Progress{ .value = 4 });
+    world.addResource(storage.Progress{ .value = 4 });
     const player = world.createIdentity(Player);
     world.addAll(player, .{
         Position.zero,
@@ -136,7 +133,7 @@ test "到达城市出口条件时触发大魔王剧情" {
 
     update(&world);
 
-    const dialog = world.get(world.entity, Dialog).?;
+    const dialog = world.getResourcePtr(Dialog).?;
     try std.testing.expectEqual(
         zon.dialogues[32].lines.ptr,
         dialog.lines.ptr,

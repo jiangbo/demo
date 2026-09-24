@@ -18,27 +18,27 @@ pub fn update(world: *ecs.World) void {
     const chest = world.get(entity, Chest) orelse return;
     world.removeIdentity(Interact);
     const config = zon.Chest.get(chest.id);
-    const inventory = world.getGlobal(storage.Inventory).?;
+    const inventory = world.getResourcePtr(storage.Inventory).?;
 
     if (config.item) |key| {
         if (!inventory.add(key)) {
             world.addEvent(Tip{ .text = "你已经带满了！" });
             return;
         }
-        world.add(world.entity, Dialog{
+        world.addResource(Dialog{
             .lines = zon.dialogues[1].lines,
             .value = .{ .text = zon.Item.get(key).name },
         });
     } else {
         const gold = zhu.random.int(u8, 10, 100);
         inventory.money += gold;
-        world.add(world.entity, Dialog{
+        world.addResource(Dialog{
             .lines = zon.dialogues[0].lines,
             .value = .{ .number = gold },
         });
     }
 
-    const opened = world.getGlobal(storage.OpenedChests).?;
+    const opened = world.getResourcePtr(storage.OpenedChests).?;
     opened.set(chest.id);
     const images = world.get(entity, ChestImages).?;
     world.getPtr(entity, Sprite).?.image = images.opened;
@@ -49,13 +49,10 @@ test "背包已满时不打开宝箱" {
     var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    world.entity = world.createEntity();
     var inventory = storage.Inventory{};
     for (&inventory.items) |*item| item.* = .zhiXueCao;
-    world.addAll(world.entity, .{
-        storage.OpenedChests.initEmpty(),
-        inventory,
-    });
+    world.addResource(storage.OpenedChests.initEmpty());
+    world.addResource(inventory);
 
     const entity = world.createEntity();
     world.addAll(entity, .{
@@ -66,10 +63,10 @@ test "背包已满时不打开宝箱" {
 
     update(&world);
 
-    const opened = world.getGlobal(storage.OpenedChests).?;
+    const opened = world.getResourcePtr(storage.OpenedChests).?;
     try std.testing.expect(!opened.isSet(6));
     try std.testing.expect(world.has(entity, Interact));
     try std.testing.expect(!world.hasIdentity(Interact));
     try std.testing.expectEqual(1, world.getEvent(Tip).len);
-    try std.testing.expect(!world.has(world.entity, Dialog));
+    try std.testing.expect(world.getResourcePtr(Dialog) == null);
 }

@@ -67,7 +67,7 @@ pub const dialog = struct {
 
     pub const Value = union(enum) { number: u32, text: []const u8 };
 
-    // 当前活动的对话，挂在 world.entity 上。
+    // 当前活动的对话，作为 World 资源保存。
     pub const Dialog = struct {
         lines: Talk,
         // 当前显示行。

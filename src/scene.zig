@@ -31,7 +31,6 @@ var allocator: zhu.Allocator = undefined;
 pub fn init(allocator_: zhu.Allocator) void {
     allocator = allocator_;
     world = ecs.World.init(allocator_.raw);
-    world.entity = world.createEntity();
     title.init();
     ui.init();
     map.init(allocator_);
@@ -81,7 +80,7 @@ fn enterWorld(location: ?storage.Location) void {
         .fromStart => {
             storage.reset(&world);
             map.enter(&world, .start);
-            world.add(world.entity, component.dialog.Dialog{
+            world.addResource(component.dialog.Dialog{
                 .lines = zon.dialogues[2].lines,
             });
         },

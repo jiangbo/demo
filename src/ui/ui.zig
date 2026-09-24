@@ -52,7 +52,7 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
 
     tip.update(world, delta);
     if (updateDialog(world)) |request| return request;
-    if (world.has(world.entity, Dialog)) return .block;
+    if (world.getResourcePtr(Dialog) != null) return .block;
 
     if (popup == null) {
         const openKey = zon.input.anyPressed(&.{ .menu, .cancel });

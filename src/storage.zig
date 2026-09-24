@@ -88,13 +88,11 @@ const Record = struct {
 
 // 重置新游戏使用的长期状态。
 pub fn reset(world: *ecs.World) void {
-    world.addAll(world.entity, .{
-        DeadActors.empty,
-        OpenedChests.initEmpty(),
-        Progress{},
-        Stats{},
-        Inventory{},
-    });
+    world.addResource(DeadActors.empty);
+    world.addResource(OpenedChests.initEmpty());
+    world.addResource(Progress{});
+    world.addResource(Stats{});
+    world.addResource(Inventory{});
 }
 
 // 检查指定槽位是否已有存档。
@@ -122,13 +120,11 @@ pub fn load(world: *ecs.World, gpa: zhu.Allocator, slot: u8) ?Location {
     defer loaded.deinit();
 
     const record = loaded.value;
-    world.addAll(world.entity, .{
-        record.progress,
-        record.stats,
-        record.inventory,
-        record.openedChests,
-        record.deadActors,
-    });
+    world.addResource(record.progress);
+    world.addResource(record.stats);
+    world.addResource(record.inventory);
+    world.addResource(record.openedChests);
+    world.addResource(record.deadActors);
 
     return record.location;
 }
@@ -142,11 +138,11 @@ pub fn save(world: *ecs.World, gpa: zhu.Allocator, slot: u8) void {
             .position = world.get(player, Position).?,
             .facing = world.get(player, Facing).?,
         },
-        .progress = world.getGlobal(Progress).?.*,
-        .stats = world.getGlobal(Stats).?.*,
-        .inventory = world.getGlobal(Inventory).?.*,
-        .openedChests = world.getGlobal(OpenedChests).?.*,
-        .deadActors = world.getGlobal(DeadActors).?.*,
+        .progress = world.getResourcePtr(Progress).?.*,
+        .stats = world.getResourcePtr(Stats).?.*,
+        .inventory = world.getResourcePtr(Inventory).?.*,
+        .openedChests = world.getResourcePtr(OpenedChests).?.*,
+        .deadActors = world.getResourcePtr(DeadActors).?.*,
     };
     var buffer: [20]u8 = undefined;
     const path = zhu.formatZ(&buffer, "save/{d}.sav", .{slot});

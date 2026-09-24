@@ -65,7 +65,6 @@ test "交互系统选择玩家正前方最近的实体" {
     var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    world.entity = world.createEntity();
     const player = world.createIdentity(Player);
     world.addAll(player, .{
         Position.zero,

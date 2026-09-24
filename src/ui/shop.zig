@@ -41,7 +41,7 @@ pub fn update(world: *ecs.World) bool {
             current.boughtDialogue
         else
             current.notBoughtDialogue;
-        world.add(world.entity, Dialog{
+        world.addResource(Dialog{
             .lines = zon.dialogues[dialogueId].lines,
         });
         return true;
@@ -56,7 +56,7 @@ pub fn update(world: *ecs.World) bool {
 }
 
 fn buy(world: *ecs.World, key: zon.Item.Key) bool {
-    const inventory = world.getGlobal(storage.Inventory).?;
+    const inventory = world.getResourcePtr(storage.Inventory).?;
     const product = zon.Item.get(key);
 
     if (product.money > inventory.money) {
@@ -74,7 +74,7 @@ fn buy(world: *ecs.World, key: zon.Item.Key) bool {
 }
 
 pub fn draw(world: *ecs.World) void {
-    const inventory = world.getGlobal(storage.Inventory).?;
+    const inventory = world.getResourcePtr(storage.Inventory).?;
     const pos = item.position;
     item.draw(&current.items, index);
 

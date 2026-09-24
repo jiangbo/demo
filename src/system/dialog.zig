@@ -18,17 +18,16 @@ pub fn update(world: *ecs.World) void {
     world.removeIdentity(Interact);
 
     // 已有对话优先，丢弃本次人物交互。
-    if (world.has(world.entity, Dialog)) return;
+    if (world.getResourcePtr(Dialog) != null) return;
 
     const facing = world.getIdentity(Player, Facing).?;
     world.add(target, component.actor.oppositeFacing(facing));
     world.remove(target, WantMove);
 
-    world.add(world.entity, Dialog{ .lines = lines });
+    world.addResource(Dialog{ .lines = lines });
 }
 
 fn addTestPlayer(world: *ecs.World) ecs.Entity {
-    world.entity = world.createEntity();
     const playerEntity = world.createIdentity(Player);
     world.add(playerEntity, Facing.down);
     return playerEntity;
@@ -52,8 +51,8 @@ test "交互对话人物后添加对话状态" {
     world.addIdentity(target, Interact);
 
     update(&world);
-    try std.testing.expect(world.has(world.entity, Dialog));
-    const current = world.get(world.entity, Dialog).?;
+    try std.testing.expect(world.getResourcePtr(Dialog) != null);
+    const current = world.getResourcePtr(Dialog).?;
     try std.testing.expectEqual(lines.ptr, current.lines.ptr);
     try std.testing.expect(!world.has(target, Dialog));
     try std.testing.expectEqual(Facing.up, world.get(target, Facing).?);
@@ -71,5 +70,5 @@ test "没有对话能力的交互对象不会开始对话" {
     world.addIdentity(target, Interact);
 
     update(&world);
-    try std.testing.expect(!world.has(world.entity, Dialog));
+    try std.testing.expect(world.getResourcePtr(Dialog) == null);
 }

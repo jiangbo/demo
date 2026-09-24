@@ -13,7 +13,7 @@ const Wander = component.actor.Wander;
 
 pub fn update(world: *ecs.World) void {
     for (world.getEvent(Story)) |story| {
-        const progress = world.getGlobal(storage.Progress).?;
+        const progress = world.getResourcePtr(storage.Progress).?;
         const next = story.progress + 1;
         std.debug.assert(progress.value <= next);
         progress.value = next;
@@ -57,8 +57,7 @@ test "大魔王出现后更新人物的对话和速度" {
     var world = ecs.World.init(std.testing.allocator);
     defer world.deinit();
 
-    world.entity = world.createEntity();
-    world.add(world.entity, storage.Progress{ .value = 4 });
+    world.addResource(storage.Progress{ .value = 4 });
     const entity = world.createEntity();
     const oldTalk: Talk = &.{
         .{ .actor = null, .content = "旧对话" },
@@ -72,7 +71,7 @@ test "大魔王出现后更新人物的对话和速度" {
 
     update(&world);
 
-    const progress = world.getGlobal(storage.Progress).?;
+    const progress = world.getResourcePtr(storage.Progress).?;
     const talk = world.get(entity, Talk).?;
     const speed = world.get(entity, Speed).?;
     try std.testing.expectEqual(5, progress.value);

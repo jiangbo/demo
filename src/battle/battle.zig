@@ -144,7 +144,7 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
 // 记录死亡并删除普通地图中的敌人。
 fn finishWin(world: *ecs.World) Request {
     const enemyEntity = world.getIdentityEntity(Enemy).?;
-    const dead = world.getGlobal(storage.DeadActors).?;
+    const dead = world.getResourcePtr(storage.DeadActors).?;
     dead.insert(shared.enemyKey);
     world.removeIdentity(Enemy);
     world.destroyEntity(enemyEntity);
@@ -154,9 +154,7 @@ fn finishWin(world: *ecs.World) Request {
 // 设置逃跑冷却并结束战斗前未完成的对话。
 fn finishEscape(world: *ecs.World) Request {
     world.getIdentityPtr(Enemy, null).?.wait = 0.5;
-    if (world.has(world.entity, Dialog)) {
-        world.remove(world.entity, Dialog);
-    }
+    world.removeResource(Dialog);
     world.removeIdentity(Enemy);
     return .world;
 }
@@ -188,7 +186,7 @@ pub fn draw(world: *ecs.World) void {
 
     zhu.text.msdf.begin();
 
-    const stats = world.getGlobal(storage.Stats).?;
+    const stats = world.getResourcePtr(storage.Stats).?;
     const format = "生命：{:8}\n攻击：{:8}\n防御：{:8}\n等级：{:8}";
     var text = zhu.format(&buffer, format, .{
         stats.health,
