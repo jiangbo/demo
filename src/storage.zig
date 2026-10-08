@@ -89,7 +89,7 @@ const Record = struct {
 // 重置新游戏使用的长期状态。
 pub fn reset(world: *ecs.World) void {
     world.addResource(DeadActors.empty);
-    world.addResource(OpenedChests.initEmpty());
+    world.addResource(OpenedChests.empty);
     world.addResource(Progress{});
     world.addResource(Stats{});
     world.addResource(Inventory{});

@@ -40,8 +40,8 @@ pub fn exit() void {
 
 pub fn update(delta: f32) ?Request {
     switch (state) {
-        .menu => if (menu.update(.{})) |event| {
-            if (select(@enumFromInt(event))) |req| return req;
+        .menu => if (menu.updateEnum(Button, .{})) |button| {
+            if (select(button)) |req| return req;
         },
         .save => if (save.update()) |req| switch (req) {
             .close => state = .menu,

@@ -27,8 +27,7 @@ pub fn update() ?Request {
         return .close;
     }
 
-    const event = menu.update(.{}) orelse return null;
-    return @enumFromInt(event);
+    return menu.updateEnum(Request, .{});
 }
 
 pub fn draw() void {

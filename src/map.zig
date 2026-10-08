@@ -120,7 +120,7 @@ fn spawnPortals(world: *ecs.World, data: *const zon.Map) void {
     var areas = std.EnumMap(zon.Portal.Key, zhu.Rect).init(.{});
     for (data.object, 0..) |value, index| {
         if (value < 5) continue;
-        const key: zon.Portal.Key = @enumFromInt(value - 4);
+        const key: zon.Portal.Key = @fromBackingInt(@intCast(value - 4));
         const tile = data.grid.indexToRect(index);
         if (areas.getPtr(key)) |area| {
             const min = area.min.min(tile.min);

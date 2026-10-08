@@ -51,7 +51,7 @@ test "背包已满时不打开宝箱" {
 
     var inventory = storage.Inventory{};
     for (&inventory.items) |*item| item.* = .zhiXueCao;
-    world.addResource(storage.OpenedChests.initEmpty());
+    world.addResource(storage.OpenedChests.empty);
     world.addResource(inventory);
 
     const entity = world.createEntity();

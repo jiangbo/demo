@@ -36,7 +36,7 @@ pub const Item = struct {
 
     // 根据稳定标识取得物品配置。
     pub fn get(key: Key) *const Item {
-        return &list[@intFromEnum(key)];
+        return &list[@backingInt(key)];
     }
 };
 
@@ -80,7 +80,7 @@ pub const Actor = struct {
         var result = Animations.initUndefined();
         result.set(.player, config.player);
         for (list[1..], 1..) |actor, index| {
-            const key: Key = @enumFromInt(index);
+            const key: Key = @fromBackingInt(@intCast(index));
             result.set(key, &npcSources[actor.picture]);
         }
         break :blk result;
@@ -110,7 +110,7 @@ pub const Actor = struct {
     pub const Key = zhu.enums.fromField(list, "key");
 
     pub fn get(key: Key) *const Actor {
-        return &list[@intFromEnum(key)];
+        return &list[@backingInt(key)];
     }
 
     // 根据角色标识创建对应的地图动画。
@@ -120,7 +120,7 @@ pub const Actor = struct {
 
     // 取得角色指定方向的第一帧图片。
     pub fn image(key: Key, facing: Facing) zhu.Image {
-        const source = animations.get(key)[@intFromEnum(facing)];
+        const source = animations.get(key)[@backingInt(facing)];
         const atlas = zhu.assets.getImage(source.imageId).?;
         return atlas.sub(.init(source.frames[0].offset, source.size));
     }
@@ -297,7 +297,7 @@ pub const Map = struct {
 
     // 根据稳定标识取得地图配置。
     pub fn get(key: Key) *const Map {
-        return &list[@intFromEnum(key)];
+        return &list[@backingInt(key)];
     }
 };
 
@@ -322,7 +322,7 @@ pub const Portal = struct {
     pub const list: []const Portal = @import("zon/portal.zon");
 
     pub fn get(value: Key) *const Portal {
-        return &list[@intFromEnum(value)];
+        return &list[@backingInt(value)];
     }
 };
 

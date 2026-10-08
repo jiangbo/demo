@@ -2,15 +2,15 @@
     .name = .demo,
     .version = "0.0.0",
     .fingerprint = 0xd642dfa0c0da2385,
-    .minimum_zig_version = "0.16.0",
+    .minimum_zig_version = "0.17.0",
     .dependencies = .{
         .migu = .{
-            .url = "git+https://github.com/jiangbo/MiGu.git#fcdf84b32b17fdddbdf3d842b4c05a70459b005a",
-            .hash = "migu-0.1.0-1dj5Js-dAACFMzsCEP84h6mS7LDqzTZoyC8i-ndxGRBV",
+            .url = "git+https://github.com/jiangbo/MiGu.git#866fbac7fbcedd50f5903ec3e6b96a645681b8c2",
+            .hash = "migu-0.1.0-1dj5JkujAAARKTTE_bSeqmQU6cDDcKPBHD4IDP7XqINu",
         },
         .zhuyu = .{
-            .url = "git+https://github.com/jiangbo/ZhuYu.git#e2b3106094e4d07b5b543bd02793d2d0a2722f1d",
-            .hash = "zhuyu-0.1.0-U4gVRq7gAgARO-Qd_u11wU57O6YmofyY9VuDKG95PR-i",
+            .url = "git+https://github.com/jiangbo/ZhuYu.git#c1ac5d38255a580dadcb697fdf205f9e52c20457",
+            .hash = "zhuyu-0.1.0-U4gVRmzmAgCuarxWpLRIWFEh6EnzCC5H1UiVLZbvsnu3",
         },
     },
 

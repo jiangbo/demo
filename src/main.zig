@@ -35,7 +35,9 @@ pub fn deinit(allocator: zhu.Allocator) void {
 }
 
 pub fn main(initInfo: std.process.Init) void {
-    zhu.window.run(initInfo.io, initInfo.gpa, .{
+    // 初始化引擎 IO 和内存，再启动窗口。
+    zhu.init(initInfo.io, initInfo.gpa);
+    zhu.window.run(.{
         .title = "英雄救美",
         .size = .xy(640, 480),
         .scaleEnum = .fit,

@@ -14,7 +14,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
     while (query.next()) |entity| {
         const facing = query.get(entity, Facing);
         const animation = query.getPtr(entity, Animation);
-        const sourceIndex: u8 = @intFromEnum(facing);
+        const sourceIndex: u8 = @backingInt(facing);
 
         var changed = animation.sourceIndex != sourceIndex;
         if (changed) animation.play(sourceIndex);

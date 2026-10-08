@@ -50,8 +50,7 @@ pub const Menu = struct {
     const Command = enum { attack, status, item, escape };
     // 仅在菜单阶段处理战斗指令。
     pub fn update(_: *ecs.World, _: f32) ?Phase {
-        const event = menu.update(.{}) orelse return null;
-        switch (@as(Command, @enumFromInt(event))) {
+        switch (menu.updateEnum(Command, .{}) orelse return null) {
             .attack => return .playerAttack,
             .status => return .status,
             .item => return .item,
