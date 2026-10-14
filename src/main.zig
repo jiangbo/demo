@@ -9,7 +9,7 @@ var soundBuffer: [20]zhu.audio.Sound = undefined;
 
 pub fn init(allocator: zhu.Allocator) void {
     vertexBuffer = allocator.alloc(zhu.batch.Vertex, 4096);
-    zhu.audio.init(8000, &soundBuffer);
+    zhu.audio.init(8000, 1, &soundBuffer);
     zhu.assets.loadAtlas(@import("zon/atlas.zon"), .nearest);
     zhu.batch.init(vertexBuffer, &commandBuffer);
 
