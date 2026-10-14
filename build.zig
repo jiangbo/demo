@@ -48,6 +48,10 @@ pub fn build(b: *std.Build) !void {
 // 构建原生应用，安装产物并提供运行命令。
 fn buildNative(b: *std.Build, mod: *std.Build.Module) void {
     const exe = b.addExecutable(.{ .name = "demo", .root_module = mod });
+    // Windows 所有构建模式都使用窗口子系统，不创建控制台窗口。
+    if (exe.rootModuleTarget().os.tag == .windows) {
+        exe.subsystem = .windows;
+    }
     b.installArtifact(exe);
 
     const run = b.addRunArtifact(exe);
