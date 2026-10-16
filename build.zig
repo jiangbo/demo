@@ -21,6 +21,8 @@ pub fn build(b: *std.Build) !void {
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
+        // 所有平台仅 Debug 保留调试符号。
+        .strip = optimize != .debug,
         .imports = &.{
             .{ .name = "ecs", .module = migu.module("ecs") },
             .{ .name = "zhu", .module = zhuyu.module("zhu") },
