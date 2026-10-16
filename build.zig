@@ -1,9 +1,11 @@
 const std = @import("std");
-const sk = @import("zhuyu").sokol;
+const zhuBuild = @import("zhuyu");
+const sk = zhuBuild.sokol;
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const android = target.result.abi.isAndroid();
 
     const zhuyu = b.dependency("zhuyu", .{
         .target = target,
@@ -34,7 +36,15 @@ pub fn build(b: *std.Build) !void {
     const installEmsdk = sk.emSdkInstallStep(b, emsdk, .{});
     b.step("install-emsdk", "Install Emscripten SDK").dependOn(installEmsdk);
 
-    if (target.result.os.tag == .emscripten) {
+    if (android) {
+        const ndk = b.option([]const u8, "ndk", "Android NDK directory");
+        const lib = try zhuBuild.buildAndroid(b, zhuyu, .{
+            .name = "demo",
+            .root_module = mod,
+            .ndk = ndk orelse @panic("Pass -Dndk=<Android NDK directory>"),
+        });
+        b.installArtifact(lib);
+    } else if (target.result.os.tag == .emscripten) {
         try buildWeb(b, mod, emsdk);
     } else {
         buildNative(b, mod);
