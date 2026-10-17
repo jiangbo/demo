@@ -30,7 +30,7 @@ pub fn update(world: *ecs.World) bool {
         return true;
     }
 
-    if (soldKey != null and zhu.input.change.pressed) {
+    if (soldKey != null and zhu.input.press.pressed) {
         soldKey = null;
     }
 

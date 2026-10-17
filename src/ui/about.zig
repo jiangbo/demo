@@ -29,9 +29,8 @@ pub fn update(delta: f32) bool {
     }
 
     if (!roll) {
-        if (zhu.key.released(.MOUSE_LEFT) or input.pressed(.confirm)) {
-            roll = true;
-        }
+        // 任意键、鼠标按钮或触屏按下后开始滚动。
+        if (zhu.input.press.pressed) roll = true;
         return false;
     }
 

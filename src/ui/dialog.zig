@@ -25,7 +25,7 @@ pub fn update(world: *ecs.World) ?zon.dialog.Event {
         prepareText(dialog);
         return null;
     }
-    if (!zon.input.pressed(.confirm)) return null;
+    if (!zhu.input.press.released) return null;
 
     const line = dialog.lines[dialog.line];
     if (line.event) |event| {
