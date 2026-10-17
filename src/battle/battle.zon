@@ -6,10 +6,10 @@
         .{
             .label = "攻击",
             .event = 0,
-            .rect = .{
+            .shape = .{ .rect = .{
                 .min = .{ .x = 0, .y = 0 },
                 .size = .{ .x = 48, .y = 25 },
-            },
+            } },
             .normal = .{
                 .text = .{
                     .color = .{ .r = 1, .a = 1 },
@@ -31,10 +31,10 @@
         .{
             .label = "状态",
             .event = 1,
-            .rect = .{
+            .shape = .{ .rect = .{
                 .min = .{ .x = 0, .y = 25 },
                 .size = .{ .x = 48, .y = 25 },
-            },
+            } },
             .normal = .{
                 .text = .{
                     .color = .{ .r = 1, .a = 1 },
@@ -56,10 +56,10 @@
         .{
             .label = "物品",
             .event = 2,
-            .rect = .{
+            .shape = .{ .rect = .{
                 .min = .{ .x = 0, .y = 50 },
                 .size = .{ .x = 48, .y = 25 },
-            },
+            } },
             .normal = .{
                 .text = .{
                     .color = .{ .r = 1, .a = 1 },
@@ -81,10 +81,10 @@
         .{
             .label = "逃走",
             .event = 3,
-            .rect = .{
+            .shape = .{ .rect = .{
                 .min = .{ .x = 0, .y = 75 },
                 .size = .{ .x = 48, .y = 25 },
-            },
+            } },
             .normal = .{
                 .text = .{
                     .color = .{ .r = 1, .a = 1 },

@@ -9,10 +9,10 @@
         .{
             .label = "状　　态",
             .event = 0,
-            .rect = .{
+            .shape = .{ .rect = .{
                 .min = .{ .x = 33, .y = 18 },
                 .size = .{ .x = 85, .y = 25 },
-            },
+            } },
             .hover = .{
                 .color = .{ .a = 1 },
             },
@@ -23,10 +23,10 @@
         .{
             .label = "物　　品",
             .event = 1,
-            .rect = .{
+            .shape = .{ .rect = .{
                 .min = .{ .x = 33, .y = 43 },
                 .size = .{ .x = 85, .y = 25 },
-            },
+            } },
             .hover = .{
                 .color = .{ .a = 1 },
             },
@@ -37,10 +37,10 @@
         .{
             .label = "读取进度",
             .event = 2,
-            .rect = .{
+            .shape = .{ .rect = .{
                 .min = .{ .x = 33, .y = 67 },
                 .size = .{ .x = 85, .y = 25 },
-            },
+            } },
             .hover = .{
                 .color = .{ .a = 1 },
             },
@@ -51,10 +51,10 @@
         .{
             .label = "存储进度",
             .event = 3,
-            .rect = .{
+            .shape = .{ .rect = .{
                 .min = .{ .x = 33, .y = 91 },
                 .size = .{ .x = 85, .y = 25 },
-            },
+            } },
             .hover = .{
                 .color = .{ .a = 1 },
             },
@@ -65,10 +65,10 @@
         .{
             .label = "关于游戏",
             .event = 4,
-            .rect = .{
+            .shape = .{ .rect = .{
                 .min = .{ .x = 33, .y = 115 },
                 .size = .{ .x = 85, .y = 25 },
-            },
+            } },
             .hover = .{
                 .color = .{ .a = 1 },
             },
@@ -79,10 +79,10 @@
         .{
             .label = "退　　出",
             .event = 5,
-            .rect = .{
+            .shape = .{ .rect = .{
                 .min = .{ .x = 33, .y = 139 },
                 .size = .{ .x = 85, .y = 25 },
-            },
+            } },
             .hover = .{
                 .color = .{ .a = 1 },
             },
@@ -93,10 +93,10 @@
         .{
             .label = "返回游戏",
             .event = 6,
-            .rect = .{
+            .shape = .{ .rect = .{
                 .min = .{ .x = 33, .y = 163 },
                 .size = .{ .x = 85, .y = 25 },
-            },
+            } },
             .hover = .{
                 .color = .{ .a = 1 },
             },
