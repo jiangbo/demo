@@ -55,8 +55,7 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
     if (world.getResourcePtr(Dialog) != null) return .block;
 
     if (popup == null) {
-        const openKey = zon.input.anyPressed(&.{ .menu, .cancel });
-        if (openKey or zhu.mouse.released(.RIGHT)) {
+        if (zon.input.anyPressed(&.{ .menu, .cancel })) {
             popup = pause.open();
             return .block;
         }

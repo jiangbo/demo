@@ -20,8 +20,7 @@ pub fn open() Popup {
 
 // 处理背包中的选择、使用、丢弃和关闭操作。
 pub fn update(world: *ecs.World) ?Request {
-    const closeKey = zon.input.anyPressed(&.{ .menu, .cancel });
-    if (closeKey or zhu.mouse.released(.RIGHT)) return .close;
+    if (zon.input.anyPressed(&.{ .menu, .cancel })) return .close;
 
     if (showStats and zhu.input.change.pressed) {
         showStats = false;

@@ -100,7 +100,7 @@
         .{ .action = "up", .keys = .{ .UP, .W } },
         .{ .action = "down", .keys = .{ .DOWN, .S } },
         .{ .action = "confirm", .keys = .{ .F, .SPACE, .ENTER } },
-        .{ .action = "cancel", .keys = .{ .Q, .ESCAPE } },
+        .{ .action = "cancel", .keys = .{ .Q, .ESCAPE, .MOUSE_RIGHT } },
         .{ .action = "menu", .keys = .{.E} },
         .{
             .action = "useItem",

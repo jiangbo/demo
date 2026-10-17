@@ -24,8 +24,7 @@ pub fn open() Popup {
 
 // 处理出售选择、卖出和关闭操作。
 pub fn update(world: *ecs.World) bool {
-    const closeKey = zon.input.anyPressed(&.{ .menu, .cancel });
-    if (closeKey or zhu.mouse.released(.RIGHT)) {
+    if (zon.input.anyPressed(&.{ .menu, .cancel })) {
         const lines = zon.dialogues[if (sold) 27 else 26].lines;
         world.addResource(Dialog{ .lines = lines });
         return true;

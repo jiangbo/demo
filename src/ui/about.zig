@@ -24,13 +24,12 @@ pub fn open() Popup {
 
 // 更新关于界面。
 pub fn update(delta: f32) bool {
-    const closeKey = input.anyPressed(&.{ .menu, .cancel });
-    if (closeKey or zhu.mouse.released(.RIGHT)) {
+    if (input.anyPressed(&.{ .menu, .cancel })) {
         return true;
     }
 
     if (!roll) {
-        if (zhu.mouse.released(.LEFT) or input.pressed(.confirm)) {
+        if (zhu.key.released(.MOUSE_LEFT) or input.pressed(.confirm)) {
             roll = true;
         }
         return false;

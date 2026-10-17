@@ -17,8 +17,7 @@ pub fn init() void {
 
 // 状态界面在普通场景和战斗场景中使用相同的关闭操作。
 pub fn update() bool {
-    const closeKey = input.anyPressed(&.{ .confirm, .cancel, .menu });
-    return closeKey or zhu.mouse.released(.RIGHT);
+    return input.anyPressed(&.{ .confirm, .cancel, .menu });
 }
 
 pub fn draw(world: *ecs.World) void {

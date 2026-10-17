@@ -22,8 +22,7 @@ pub fn open() Popup {
 }
 
 pub fn update() ?Request {
-    const closeKey = input.anyPressed(&.{ .menu, .cancel });
-    if (closeKey or zhu.mouse.released(.RIGHT)) {
+    if (input.anyPressed(&.{ .menu, .cancel })) {
         return .close;
     }
 
