@@ -228,7 +228,7 @@ const Fade = struct {
 
         const percent = timer.progress();
         const alpha = if (self.isIn) 1 - percent else percent;
-        zhu.batch.drawRect(.init(.zero, window.size), .{
+        zhu.batch.drawRect(.init(.zero, window.rawSize), .{
             .color = .rgba(0, 0, 0, alpha),
         });
     }
