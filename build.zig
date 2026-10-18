@@ -10,6 +10,7 @@ pub fn build(b: *std.Build) !void {
     const zhuyu = b.dependency("zhuyu", .{
         .target = target,
         .optimize = optimize,
+        .msdf = true,
     });
     const migu = b.dependency("migu", .{
         .target = target,

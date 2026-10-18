@@ -205,9 +205,6 @@ pub fn draw(world: *ecs.World) void {
     zhu.text.draw(text, position.addXY(305, 5), .{ .color = .black });
     zhu.text.msdf.end();
 
-    shared.menu.drawImage();
-    zhu.text.msdf.begin();
-    shared.menu.drawText();
-    zhu.text.msdf.end();
+    shared.menu.draw();
     phase.draw(world);
 }

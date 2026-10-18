@@ -73,10 +73,7 @@ pub fn draw() void {
     switch (state) {
         .menu => {
             zhu.batch.drawImage(background, .zero, .{});
-            menu.drawImage();
-            zhu.text.msdf.begin();
-            defer zhu.text.msdf.end();
-            menu.drawText();
+            menu.draw();
         },
         .save => {
             zhu.batch.drawImage(background, .zero, .{});

@@ -29,8 +29,5 @@ pub fn update() ?Request {
 }
 
 pub fn draw() void {
-    menu.drawImage();
-    zhu.text.msdf.begin();
-    defer zhu.text.msdf.end();
-    menu.drawText();
+    menu.draw();
 }
