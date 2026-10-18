@@ -25,8 +25,8 @@ pub fn update(world: *ecs.World) ?zon.dialog.Event {
         prepareText(dialog);
         return null;
     }
-    // 继续使用按下触发，避免打开对话后松手跳过第一句。
-    if (!zhu.input.press.pressed) return null;
+    // 松开输入后推进对话。
+    if (!zhu.input.press.released) return null;
 
     const line = dialog.lines[dialog.line];
     if (line.event) |event| {

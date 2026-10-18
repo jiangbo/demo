@@ -87,8 +87,8 @@ pub fn draw() void {
 }
 
 fn updateIntro(delta: f32) ?Request {
-    // 任意输入按下后开始，松手不触发开场跳转。
-    if (zhu.input.press.pressed) return .start;
+    // 任意输入松开后进入游戏。
+    if (zhu.input.press.released) return .start;
 
     introTyping.update(delta);
     return null;

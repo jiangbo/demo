@@ -55,7 +55,7 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
     if (world.getResourcePtr(Dialog) != null) return .block;
 
     if (popup == null) {
-        if (zon.input.anyPressed(&.{ .menu, .cancel })) {
+        if (zon.input.anyReleased(&.{ .menu, .cancel })) {
             popup = pause.open();
             return .block;
         }

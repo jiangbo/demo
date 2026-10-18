@@ -24,13 +24,13 @@ pub fn open() Popup {
 
 // 更新关于界面。
 pub fn update(delta: f32) bool {
-    if (input.anyPressed(&.{ .menu, .cancel })) {
+    if (input.anyReleased(&.{ .menu, .cancel })) {
         return true;
     }
 
     if (!roll) {
-        // 任意键、鼠标按钮或触屏按下后开始滚动。
-        if (zhu.input.press.pressed) roll = true;
+        // 任意键、鼠标按钮或触屏松开后开始滚动。
+        if (zhu.input.press.released) roll = true;
         return false;
     }
 

@@ -35,7 +35,7 @@ pub fn open(kind: Kind) Popup {
 
 // 处理商品选择、购买和关闭操作。
 pub fn update(world: *ecs.World) bool {
-    if (zon.input.anyPressed(&.{ .menu, .cancel })) {
+    if (zon.input.anyReleased(&.{ .menu, .cancel })) {
         const dialogueId = if (bought)
             current.boughtDialogue
         else
@@ -48,7 +48,7 @@ pub fn update(world: *ecs.World) bool {
 
     index = item.update(current.items.len, index);
 
-    if (!zon.input.pressed(.buyItem)) return false;
+    if (!zon.input.released(.buyItem)) return false;
     const key = current.items[index] orelse return false;
     if (buy(world, key)) bought = true;
     return false;

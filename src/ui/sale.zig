@@ -24,13 +24,13 @@ pub fn open() Popup {
 
 // 处理出售选择、卖出和关闭操作。
 pub fn update(world: *ecs.World) bool {
-    if (zon.input.anyPressed(&.{ .menu, .cancel })) {
+    if (zon.input.anyReleased(&.{ .menu, .cancel })) {
         const lines = zon.dialogues[if (sold) 27 else 26].lines;
         world.addResource(Dialog{ .lines = lines });
         return true;
     }
 
-    if (soldKey != null and zhu.input.press.pressed) {
+    if (soldKey != null and zhu.input.press.released) {
         soldKey = null;
     }
 
@@ -38,7 +38,7 @@ pub fn update(world: *ecs.World) bool {
     index = item.update(inventory.items.len, index);
 
     const key = inventory.items[index] orelse return false;
-    if (!zon.input.pressed(.useItem)) return false;
+    if (!zon.input.released(.useItem)) return false;
 
     const soldItem = zon.Item.get(key);
     inventory.money += soldItem.money / 2;

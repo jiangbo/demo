@@ -22,7 +22,7 @@ pub fn open() Popup {
 }
 
 pub fn update() ?Request {
-    if (input.anyPressed(&.{ .menu, .cancel })) {
+    if (input.anyReleased(&.{ .menu, .cancel })) {
         return .close;
     }
 

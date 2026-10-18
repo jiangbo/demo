@@ -17,7 +17,7 @@ pub fn init() void {
 
 // 状态界面在普通场景和战斗场景中使用相同的关闭操作。
 pub fn update() bool {
-    return input.anyPressed(&.{ .confirm, .cancel, .menu });
+    return input.anyReleased(&.{ .confirm, .cancel, .menu });
 }
 
 pub fn draw(world: *ecs.World) void {

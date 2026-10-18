@@ -113,7 +113,7 @@ pub const Death = struct {
     pub fn update(world: *ecs.World, _: f32) ?shared.Phase {
         const stats = world.getResourcePtr(storage.Stats).?;
         const inventory = world.getResourcePtr(storage.Inventory).?;
-        if (step == 0 and zon.input.pressed(.confirm)) {
+        if (step == 0 and zon.input.released(.confirm)) {
             step += 1;
             stats.exp += shared.enemy.level * 20;
             inventory.money += shared.enemy.money;
@@ -123,14 +123,14 @@ pub const Death = struct {
             return null;
         }
 
-        if (step == 1 and zon.input.pressed(.confirm)) {
+        if (step == 1 and zon.input.released(.confirm)) {
             if (stats.levelUp()) {
                 step += 1;
                 return null;
             }
         }
 
-        if (zon.input.pressed(.confirm)) {
+        if (zon.input.released(.confirm)) {
             return .win;
         }
         return null;

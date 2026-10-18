@@ -45,7 +45,7 @@ pub fn update(delta: f32) ?Request {
         storyTyping.update(delta);
         return null;
     }
-    if (!zon.input.pressed(.confirm)) return null;
+    if (!zon.input.released(.confirm)) return null;
 
     // 剧情结束后统一清理当前状态，不依赖各分支各自清理。
     defer current = null;
