@@ -13,6 +13,8 @@ var menu: zhu.widget.Menu = @import("save.zon");
 pub fn open(next: Mode) Popup {
     mode = next;
     menu.reset();
+    // 没有键盘时，将存档面板放到游戏画面中央。
+    if (zhu.key.mayNotHave) menu.centerInWindow();
     return .save;
 }
 
