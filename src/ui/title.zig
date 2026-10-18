@@ -2,6 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const save = @import("save.zig");
+const pad = zhu.extend.touch.pad;
 const input = @import("../zon.zig").input;
 const Typing = @import("shared.zig").Typing;
 
@@ -29,6 +30,9 @@ pub fn init() void {
 pub fn enter() void {
     zhu.camera.main.position = .zero;
     menu.reset();
+    // 没有键盘时，将菜单放到“传”字和人物之间。
+    if (zhu.key.mayNotHave) menu.position = .xy(132, -96);
+
     state = .menu;
     zhu.audio.playMusic("voc/title.ogg");
     introTyping.reset();
@@ -39,6 +43,8 @@ pub fn exit() void {
 }
 
 pub fn update(delta: f32) ?Request {
+    // 保留虚拟按键操作菜单，存档页将菜单键改为返回键。
+    pad.update(if (state == .save) .back else null);
     switch (state) {
         .menu => if (menu.updateEnum(Button, .{})) |button| {
             if (select(button)) |req| return req;
@@ -84,8 +90,8 @@ pub fn draw() void {
 }
 
 fn updateIntro(delta: f32) ?Request {
-    // 任意输入松开后进入游戏。
-    if (zhu.input.press.released) return .start;
+    // 确认键松开后进入游戏。
+    if (input.released(.confirm)) return .start;
 
     introTyping.update(delta);
     return null;
