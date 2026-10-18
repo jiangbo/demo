@@ -1,5 +1,6 @@
 const zhu = @import("zhu");
 const ecs = @import("ecs");
+const pad = zhu.extend.touch.pad;
 
 const component = @import("../component.zig");
 const storage = @import("../storage.zig");
@@ -128,7 +129,9 @@ fn changePhase(world: *ecs.World, newPhase: shared.Phase) void {
 
 // 更新当前战斗阶段并返回场景请求。
 pub fn update(world: *ecs.World, delta: f32) ?Request {
-    const newPhase = phase.update(world, delta) orelse return null;
+    const next = phase.update(world, delta);
+    pad.update(); // 阶段内部只修改按钮配置，统一在此暂存下一帧的按键变化。
+    const newPhase = next orelse return null;
     switch (newPhase) {
         .win => return finishWin(world),
         .escape => return finishEscape(world),

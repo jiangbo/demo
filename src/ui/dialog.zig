@@ -25,8 +25,8 @@ pub fn update(world: *ecs.World) ?zon.dialog.Event {
         prepareText(dialog);
         return null;
     }
-    // 松开输入后推进对话。
-    if (!zhu.input.press.released) return null;
+    // 松开确认键后推进对话。
+    if (!zon.input.released(.confirm)) return null;
 
     const line = dialog.lines[dialog.line];
     if (line.event) |event| {

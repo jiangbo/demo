@@ -18,6 +18,8 @@ var menu: zhu.widget.Menu = @import("pause.zon");
 // 打开暂停菜单时将光标重置回第一项。
 pub fn open() Popup {
     menu.reset();
+    // 没有键盘时，将暂停菜单放到游戏画面中央。
+    if (zhu.key.mayNotHave) menu.centerInWindow();
     return .pause;
 }
 

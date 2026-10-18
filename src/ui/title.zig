@@ -44,7 +44,8 @@ pub fn exit() void {
 
 pub fn update(delta: f32) ?Request {
     // 保留虚拟按键操作菜单，存档页将菜单键改为返回键。
-    pad.update(if (state == .save) .back else null);
+    if (state == .save) pad.patch(.back);
+    pad.update();
     switch (state) {
         .menu => if (menu.updateEnum(Button, .{})) |button| {
             if (select(button)) |req| return req;

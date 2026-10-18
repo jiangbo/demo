@@ -8,6 +8,7 @@ const camera = zhu.camera;
 const title = @import("ui/title.zig");
 const battle = @import("battle/battle.zig");
 const component = @import("component.zig");
+const pad = zhu.extend.touch.pad;
 const map = @import("map.zig");
 const storage = @import("storage.zig");
 const system = @import("system/system.zig");
@@ -22,7 +23,8 @@ var pending: Scene = .title;
 var from: From = undefined;
 var fade: Fade = .{};
 
-var isHelp: bool = true;
+// 是否显示键盘操作说明，在初始化时根据输入环境决定。
+var isHelp: bool = undefined;
 var isDebug: bool = false;
 var world: ecs.World = undefined;
 // 场景负责保存应用分配器，并向需要分配内存的模块传递。
@@ -30,7 +32,13 @@ var allocator: zhu.Allocator = undefined;
 
 pub fn init(allocator_: zhu.Allocator) void {
     allocator = allocator_;
+    isHelp = !zhu.key.mayNotHave;
     world = ecs.World.init(allocator_.raw);
+    // 调试功能键作为游戏默认配置，页面补丁可临时覆盖。
+    const extra = pad.defaults.getPtr(.extra);
+    extra.key = .X;
+    extra.label = "调试";
+    pad.init();
     title.init();
     ui.init();
     map.init(allocator_);
@@ -157,6 +165,8 @@ pub fn draw() void {
     }
 
     fade.draw();
+    // 虚拟按钮绘制在遮罩上方，不参与场景淡入淡出。
+    pad.draw();
 
     camera.push(.window);
     defer camera.pop();
@@ -202,6 +212,8 @@ const Fade = struct {
     }
 
     fn startOut(self: *Fade, done: ?*const fn () void) void {
+        // 淡出期间界面停止更新，先释放它留下的虚拟按键。
+        pad.reset();
         self.timer = .init(1);
         self.isIn = false;
         self.done = done;
@@ -228,7 +240,7 @@ const Fade = struct {
 
         const percent = timer.progress();
         const alpha = if (self.isIn) 1 - percent else percent;
-        zhu.batch.drawRect(.init(.zero, window.rawSize), .{
+        zhu.batch.drawRect(.init(.zero, camera.size), .{
             .color = .rgba(0, 0, 0, alpha),
         });
     }

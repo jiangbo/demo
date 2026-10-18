@@ -4,6 +4,7 @@ const ecs = @import("ecs");
 
 const audio = zhu.audio;
 const math = zhu.math;
+const pad = zhu.extend.touch.pad;
 
 const storage = @import("../storage.zig");
 const zon = @import("../zon.zig");
@@ -100,6 +101,7 @@ pub const Status = struct {
 
     // 状态页关闭后返回战斗菜单。
     pub fn update(_: *ecs.World, _: f32) ?shared.Phase {
+        pad.patch(.back);
         return if (status.update()) .menu else null;
     }
 
@@ -119,6 +121,8 @@ pub const Item = struct {
 
     // 处理战斗中的物品选择。
     pub fn update(world: *ecs.World, _: f32) ?shared.Phase {
+        pad.patch(.back);
+        pad.patch(.init(.extra, .G, "丢弃"));
         const request = inventory.update(world) orelse return null;
         return switch (request) {
             .used => .enemyAttack,
