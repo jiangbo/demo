@@ -64,6 +64,12 @@ fn buildNative(b: *std.Build, mod: *std.Build.Module) void {
     // Windows 所有构建模式都使用窗口子系统，不创建控制台窗口。
     if (exe.rootModuleTarget().os.tag == .windows) {
         exe.subsystem = .windows;
+        // 在构建缓存中生成资源脚本，将米白底角色图标嵌入 EXE。
+        const files = b.addWriteFiles();
+        exe.root_module.addWin32ResourceFile(.{
+            .file = files.add("icon.rc", "1 ICON \"window-icon.ico\"\n"),
+            .include_paths = &.{b.path("assets")},
+        });
     }
     b.installArtifact(exe);
 
