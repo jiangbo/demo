@@ -9,6 +9,7 @@ const title = @import("ui/title.zig");
 const battle = @import("battle/battle.zig");
 const component = @import("component.zig");
 const pad = zhu.extend.touch.pad;
+const stick = zhu.extend.touch.stick;
 const map = @import("map.zig");
 const storage = @import("storage.zig");
 const system = @import("system/system.zig");
@@ -38,7 +39,7 @@ pub fn init(allocator_: zhu.Allocator) void {
     const extra = pad.defaults.getPtr(.extra);
     extra.key = .X;
     extra.label = "调试";
-    pad.init();
+    stick.init();
     title.init();
     ui.init();
     map.init(allocator_);
@@ -165,8 +166,8 @@ pub fn draw() void {
     }
 
     fade.draw();
-    // 虚拟按钮绘制在遮罩上方，不参与场景淡入淡出。
-    pad.draw();
+    // 摇杆和功能按钮绘制在遮罩上方，不参与场景淡入淡出。
+    stick.draw();
 
     camera.push(.window);
     defer camera.pop();
@@ -213,7 +214,7 @@ const Fade = struct {
 
     fn startOut(self: *Fade, done: ?*const fn () void) void {
         // 淡出期间界面停止更新，先释放它留下的虚拟按键。
-        pad.reset();
+        stick.reset();
         self.timer = .init(1);
         self.isIn = false;
         self.done = done;

@@ -5,6 +5,7 @@ const component = @import("../component.zig");
 const zon = @import("../zon.zig");
 const about = @import("about.zig");
 const pad = zhu.extend.touch.pad;
+const stick = zhu.extend.touch.stick;
 const dialog = @import("dialog.zig");
 const inventory = @import("inventory.zig");
 const item = @import("item.zig");
@@ -50,7 +51,7 @@ pub fn update(world: *ecs.World, delta: f32) ?Request {
             pad.patch(.init(.extra, .G, "丢弃"));
         }
     }
-    pad.update();
+    stick.updateKeys();
     if (story.isOpen()) {
         const request = story.update(delta) orelse return .block;
         return switch (request) {
