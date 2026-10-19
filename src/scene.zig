@@ -38,7 +38,7 @@ pub fn init(allocator_: zhu.Allocator) void {
     const extra = touch.pad.defaults.getPtr(.extra);
     extra.key = .X;
     extra.label = "调试";
-    touch.init(.stick);
+    touch.init(.pad);
     title.init();
     ui.init();
     map.init(allocator_);
