@@ -8,8 +8,7 @@ const camera = zhu.camera;
 const title = @import("ui/title.zig");
 const battle = @import("battle/battle.zig");
 const component = @import("component.zig");
-const pad = zhu.extend.touch.pad;
-const stick = zhu.extend.touch.stick;
+const touch = zhu.extend.touch;
 const map = @import("map.zig");
 const storage = @import("storage.zig");
 const system = @import("system/system.zig");
@@ -36,10 +35,10 @@ pub fn init(allocator_: zhu.Allocator) void {
     isHelp = !zhu.key.mayNotHave;
     world = ecs.World.init(allocator_.raw);
     // 调试功能键作为游戏默认配置，页面补丁可临时覆盖。
-    const extra = pad.defaults.getPtr(.extra);
+    const extra = touch.pad.defaults.getPtr(.extra);
     extra.key = .X;
     extra.label = "调试";
-    stick.init();
+    touch.init(.stick);
     title.init();
     ui.init();
     map.init(allocator_);
@@ -167,7 +166,7 @@ pub fn draw() void {
 
     fade.draw();
     // 摇杆和功能按钮绘制在遮罩上方，不参与场景淡入淡出。
-    stick.draw();
+    touch.draw();
 
     camera.push(.window);
     defer camera.pop();
@@ -214,7 +213,7 @@ const Fade = struct {
 
     fn startOut(self: *Fade, done: ?*const fn () void) void {
         // 淡出期间界面停止更新，先释放它留下的虚拟按键。
-        stick.reset();
+        touch.reset();
         self.timer = .init(1);
         self.isIn = false;
         self.done = done;

@@ -4,8 +4,7 @@ const ecs = @import("ecs");
 const component = @import("../component.zig");
 const zon = @import("../zon.zig");
 const about = @import("about.zig");
-const pad = zhu.extend.touch.pad;
-const stick = zhu.extend.touch.stick;
+const touch = zhu.extend.touch;
 const dialog = @import("dialog.zig");
 const inventory = @import("inventory.zig");
 const item = @import("item.zig");
@@ -46,12 +45,12 @@ pub fn reset() void {
 pub fn update(world: *ecs.World, delta: f32) ?Request {
     // 保留默认按钮，仅按弹窗用途修改功能键。
     if (popup) |current| {
-        pad.patch(.back);
+        touch.patch(.back);
         if (current == .inventory) {
-            pad.patch(.init(.extra, .G, "丢弃"));
+            touch.patch(.init(.extra, .G, "丢弃"));
         }
     }
-    stick.updateKeys();
+    touch.update();
     if (story.isOpen()) {
         const request = story.update(delta) orelse return .block;
         return switch (request) {

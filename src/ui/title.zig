@@ -2,8 +2,7 @@ const std = @import("std");
 const zhu = @import("zhu");
 
 const save = @import("save.zig");
-const pad = zhu.extend.touch.pad;
-const stick = zhu.extend.touch.stick;
+const touch = zhu.extend.touch;
 const input = @import("../zon.zig").input;
 const Typing = @import("shared.zig").Typing;
 
@@ -45,8 +44,8 @@ pub fn exit() void {
 
 pub fn update(delta: f32) ?Request {
     // 保留虚拟按键操作菜单，存档页将菜单键改为返回键。
-    if (state == .save) pad.patch(.back);
-    stick.updateKeys();
+    if (state == .save) touch.patch(.back);
+    touch.update();
     switch (state) {
         .menu => if (menu.updateEnum(Button, .{})) |button| {
             if (select(button)) |req| return req;
