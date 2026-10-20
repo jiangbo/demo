@@ -88,7 +88,7 @@ fn buildNative(
     b.installArtifact(exe);
 
     // 由引擎注册资源打包命令，普通构建和运行使用原始程序。
-    zhuBuild.packAssets(b, zhuyu, .{ .exe = exe });
+    zhuBuild.addPackStep(b, zhuyu, .{ .exe = exe });
 
     const run = b.addRunArtifact(exe);
     run.step.dependOn(b.getInstallStep());
