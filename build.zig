@@ -64,7 +64,17 @@ fn buildNative(
     zhuyu: *std.Build.Dependency,
     mod: *std.Build.Module,
 ) void {
-    const exe = b.addExecutable(.{ .name = "demo", .root_module = mod });
+    // macOS 只需额外提供 SDK 路径，搜索路径和 libc 配置由引擎生成。
+    const exe = if (mod.resolved_target.?.result.os.tag == .macos)
+        zhuBuild.buildMacOS(b, zhuyu, .{
+            .name = "demo",
+            .root_module = mod,
+            .sdk = b.option([]const u8, "macos-sdk", //
+                "macOS SDK directory") orelse
+                @panic("Pass -Dmacos-sdk=<MacOSX SDK directory>"),
+        })
+    else
+        b.addExecutable(.{ .name = "demo", .root_module = mod });
     // Windows 所有构建模式都使用窗口子系统，不创建控制台窗口。
     if (exe.rootModuleTarget().os.tag == .windows) {
         exe.subsystem = .windows;
