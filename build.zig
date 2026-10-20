@@ -50,7 +50,7 @@ pub fn build(b: *std.Build) !void {
     } else if (target.result.os.tag == .emscripten) {
         try buildWeb(b, mod, emsdk);
     } else {
-        buildNative(b, mod);
+        buildNative(b, zhuyu, mod);
     }
 
     const tests = b.addTest(.{ .name = "tests", .root_module = mod });
@@ -59,7 +59,11 @@ pub fn build(b: *std.Build) !void {
 }
 
 // 构建原生应用，安装产物并提供运行命令。
-fn buildNative(b: *std.Build, mod: *std.Build.Module) void {
+fn buildNative(
+    b: *std.Build,
+    zhuyu: *std.Build.Dependency,
+    mod: *std.Build.Module,
+) void {
     const exe = b.addExecutable(.{ .name = "demo", .root_module = mod });
     // Windows 所有构建模式都使用窗口子系统，不创建控制台窗口。
     if (exe.rootModuleTarget().os.tag == .windows) {
@@ -72,6 +76,9 @@ fn buildNative(b: *std.Build, mod: *std.Build.Module) void {
         });
     }
     b.installArtifact(exe);
+
+    // 由引擎注册资源打包命令，普通构建和运行使用原始程序。
+    zhuBuild.packAssets(b, zhuyu, .{ .exe = exe });
 
     const run = b.addRunArtifact(exe);
     run.step.dependOn(b.getInstallStep());
