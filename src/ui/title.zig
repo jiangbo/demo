@@ -91,8 +91,8 @@ pub fn draw() void {
 }
 
 fn updateIntro(delta: f32) ?Request {
-    // 确认键松开后进入游戏。
-    if (input.released(.confirm)) return .start;
+    // 确认键或鼠标左键松开后进入游戏。
+    if (input.released(.confirm) or zhu.key.released(.MOUSE_LEFT)) return .start;
 
     introTyping.update(delta);
     return null;
@@ -102,7 +102,7 @@ const introText =
     \\　　在很久很久以前，白云城的居民过着富足而安定的生活。不过
     \\一场巨大的灾难即将降临到这里……
     \\　　一天，我们故事的主人翁'小飞刀'一觉醒来，故事就从这里开
-    \\始……　　[按回车键继续]
+    \\始……　　[按回车键 / 点击继续]
 ;
 
 fn drawIntro() void {

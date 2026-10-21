@@ -83,9 +83,10 @@ pub const Death = struct {
         audio.playSound(shared.deadSounds[0]);
     }
 
-    // 确认后返回标题场景。
+    // 确认键或鼠标左键松开后返回标题场景。
     pub fn update(_: *ecs.World, _: f32) ?shared.Phase {
-        return if (zon.input.released(.confirm)) .title else null;
+        return if (zon.input.released(.confirm) or
+            zhu.key.released(.MOUSE_LEFT)) .title else null;
     }
 
     // 绘制玩家死亡提示。

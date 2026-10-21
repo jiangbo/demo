@@ -113,7 +113,10 @@ pub const Death = struct {
     pub fn update(world: *ecs.World, _: f32) ?shared.Phase {
         const stats = world.getResourcePtr(storage.Stats).?;
         const inventory = world.getResourcePtr(storage.Inventory).?;
-        if (step == 0 and zon.input.released(.confirm)) {
+        // 确认键或鼠标左键松开后推进结算。
+        const confirmed = zon.input.released(.confirm) or
+            zhu.key.released(.MOUSE_LEFT);
+        if (step == 0 and confirmed) {
             step += 1;
             stats.exp += shared.enemy.level * 20;
             inventory.money += shared.enemy.money;
@@ -123,14 +126,14 @@ pub const Death = struct {
             return null;
         }
 
-        if (step == 1 and zon.input.released(.confirm)) {
+        if (step == 1 and confirmed) {
             if (stats.levelUp()) {
                 step += 1;
                 return null;
             }
         }
 
-        if (zon.input.released(.confirm)) {
+        if (confirmed) {
             return .win;
         }
         return null;
