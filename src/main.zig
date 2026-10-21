@@ -11,7 +11,7 @@ pub fn init(allocator: zhu.Allocator) void {
     vertexBuffer = allocator.alloc(zhu.batch.Vertex, 4096);
     // 运行时窗口图标使用米白底角色图。
     zhu.window.useWindowIcon("window-icon.png");
-    zhu.audio.init(&soundBuffer, .{ .sample_rate = 8000 });
+    zhu.audio.init(&soundBuffer, .{});
     zhu.assets.loadAtlas(@import("zon/atlas.zon"), .nearest);
     zhu.batch.init(vertexBuffer, &commandBuffer);
 

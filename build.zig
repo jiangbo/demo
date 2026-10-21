@@ -11,6 +11,7 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
         .msdf = true,
+        .midi = true,
     });
     const migu = b.dependency("migu", .{
         .target = target,
