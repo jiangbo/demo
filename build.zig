@@ -10,6 +10,8 @@ pub fn build(b: *std.Build) !void {
     const zhuyu = b.dependency("zhuyu", .{
         .target = target,
         .optimize = optimize,
+        // macOS 本机可省略，交叉编译时指定 MacOSX*.sdk 路径。
+        .macos_sdk = b.option([]const u8, "macos-sdk", "macOS SDK directory"),
         .msdf = true,
         .midi = true,
     });
@@ -41,11 +43,10 @@ pub fn build(b: *std.Build) !void {
     b.step("install-emsdk", "Install Emscripten SDK").dependOn(installEmsdk);
 
     if (android) {
-        const ndk = b.option([]const u8, "ndk", "Android NDK directory");
         const lib = try zhuBuild.buildAndroid(b, zhuyu, .{
             .name = "demo",
             .root_module = mod,
-            .ndk = ndk orelse @panic("Pass -Dndk=<Android NDK directory>"),
+            .sdk = b.option([]const u8, "sdk", "Android SDK directory"),
         });
         b.installArtifact(lib);
     } else if (target.result.os.tag == .emscripten) {
@@ -65,17 +66,7 @@ fn buildNative(
     zhuyu: *std.Build.Dependency,
     mod: *std.Build.Module,
 ) void {
-    // macOS 只需额外提供 SDK 路径，搜索路径和 libc 配置由引擎生成。
-    const exe = if (mod.resolved_target.?.result.os.tag == .macos)
-        zhuBuild.buildMacOS(b, zhuyu, .{
-            .name = "demo",
-            .root_module = mod,
-            .sdk = b.option([]const u8, "macos-sdk", //
-                "macOS SDK directory") orelse
-                @panic("Pass -Dmacos-sdk=<MacOSX SDK directory>"),
-        })
-    else
-        b.addExecutable(.{ .name = "demo", .root_module = mod });
+    const exe = b.addExecutable(.{ .name = "demo", .root_module = mod });
     // Windows 所有构建模式都使用窗口子系统，不创建控制台窗口。
     if (exe.rootModuleTarget().os.tag == .windows) {
         exe.subsystem = .windows;
