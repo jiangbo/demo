@@ -15,7 +15,7 @@ const Button = enum { start, load, exit };
 const State = enum { menu, save, intro };
 
 var background: zhu.Image = undefined;
-var menu: zhu.widget.Menu = @import("title.zon");
+var menu: zhu.extend.widget.Menu = @import("title.zon");
 var state: State = .menu;
 
 // 开场文字的逐字显示状态。

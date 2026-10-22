@@ -44,7 +44,7 @@ pub const Phase = enum {
     title,
 };
 
-pub var menu: zhu.widget.Menu = @import("battle.zon");
+pub var menu: zhu.extend.widget.Menu = @import("battle.zon");
 
 pub const Menu = struct {
     const Command = enum { attack, status, item, escape };

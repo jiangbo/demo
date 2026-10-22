@@ -9,6 +9,7 @@ const title = @import("ui/title.zig");
 const battle = @import("battle/battle.zig");
 const component = @import("component.zig");
 const touch = zhu.extend.touch;
+const debug = zhu.extend.debug;
 const map = @import("map.zig");
 const storage = @import("storage.zig");
 const system = @import("system/system.zig");
@@ -25,7 +26,6 @@ var fade: Fade = .{};
 
 // 是否显示键盘操作说明，在初始化时根据输入环境决定。
 var isHelp: bool = undefined;
-var isDebug: bool = false;
 var world: ecs.World = undefined;
 // 场景负责保存应用分配器，并向需要分配内存的模块传递。
 var allocator: zhu.Allocator = undefined;
@@ -102,7 +102,7 @@ fn enterWorld(location: ?storage.Location) void {
 
 pub fn update(delta: f32) void {
     if (zon.input.released(.help)) isHelp = !isHelp;
-    if (zon.input.released(.debug)) isDebug = !isDebug;
+    if (zon.input.released(.debug)) debug.enabled = !debug.enabled;
 
     if (zhu.key.held(.LEFT_ALT) and zhu.key.released(.ENTER)) {
         return window.toggleFullScreen();
@@ -170,7 +170,7 @@ pub fn draw() void {
 
     camera.push(.window);
     defer camera.pop();
-    if (isHelp) drawHelpInfo() else if (isDebug) drawDebugInfo();
+    if (isHelp) drawHelpInfo() else if (debug.enabled) drawDebugInfo();
 }
 
 fn drawHelpInfo() void {
@@ -189,7 +189,7 @@ fn drawHelpInfo() void {
 fn drawDebugInfo() void {
     zhu.text.msdf.begin();
     defer zhu.text.msdf.end();
-    zhu.debug.draw(&.{});
+    debug.draw(&.{});
 }
 
 pub fn deinit() void {
