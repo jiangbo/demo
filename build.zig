@@ -79,6 +79,13 @@ fn buildNative(
     }
     b.installArtifact(exe);
 
+    // 原生资源安装到可执行文件旁边，供引擎按相对路径读取。
+    b.installDirectory(.{
+        .source_dir = b.path("assets"),
+        .install_dir = .bin,
+        .install_subdir = "assets",
+    });
+
     // 由引擎注册资源打包命令，普通构建和运行使用原始程序。
     zhuBuild.addPackStep(b, zhuyu, .{ .exe = exe });
 
@@ -110,7 +117,7 @@ fn buildWeb(
     });
     b.getInstallStep().dependOn(&link.step);
 
-    // Web 资源随 HTML 一起安装；原生运行直接读取项目目录。
+    // Web 资源随 HTML 一起安装。
     b.installDirectory(.{
         .source_dir = b.path("assets"),
         .install_dir = .prefix,
