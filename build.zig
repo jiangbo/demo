@@ -20,6 +20,25 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    // 生成图片图集，尺寸上限容纳地图素材。
+    zhuBuild.atlas.addStep(b, zhuyu, .{
+        .input = "raw-assets/atlas",
+        .maxSize = 2048,
+    });
+
+    // 从按用途分类的中文原文生成 MSDF，沿用当前生成字号。
+    try zhuBuild.msdf.addStep(b, zhuyu, .{
+        .font = "raw-assets/font/NotoSansCJKsc-Medium.otf",
+        .input = "raw-assets/font/zh",
+        .size = 28,
+    });
+
+    // 转换原始音频并统一采样率，其他格式原样拷贝。
+    try zhuBuild.audio.addStep(b, zhuyu, .{
+        .input = "raw-assets/audio",
+        .rate = 11025,
+    });
+
     // 应用模块同时用于构建产物和测试。
     const mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
@@ -73,8 +92,8 @@ fn buildNative(
         // 在构建缓存中生成资源脚本，将米白底角色图标嵌入 EXE。
         const files = b.addWriteFiles();
         exe.root_module.addWin32ResourceFile(.{
-            .file = files.add("icon.rc", "1 ICON \"window-icon.ico\"\n"),
-            .include_paths = &.{b.path("assets")},
+            .file = files.add("icon.rc", "1 ICON \"icon.ico\"\n"),
+            .include_paths = &.{b.path("raw-assets")},
         });
     }
     b.installArtifact(exe);

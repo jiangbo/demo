@@ -4,21 +4,21 @@ const ecs = @import("ecs");
 const zon = @import("../zon.zig");
 
 pub const attackSounds: [3][:0]const u8 = .{
-    "voc/ack_00.ogg",
-    "voc/ack_01.ogg",
-    "voc/ack_02.ogg",
+    "audio/ack_00.ogg",
+    "audio/ack_01.ogg",
+    "audio/ack_02.ogg",
 };
 
 pub const hurtSounds: [3][:0]const u8 = .{
-    "voc/ao_00.ogg",
-    "voc/ao_01.ogg",
-    "voc/ao_02.ogg",
+    "audio/ao_00.ogg",
+    "audio/ao_01.ogg",
+    "audio/ao_02.ogg",
 };
 
 pub const deadSounds: [3][:0]const u8 = .{
-    "voc/dead_00.ogg",
-    "voc/dead_01.ogg",
-    "voc/dead_02.ogg",
+    "audio/dead_00.ogg",
+    "audio/dead_01.ogg",
+    "audio/dead_02.ogg",
 };
 
 pub const enemySounds: [15]u8 = .{

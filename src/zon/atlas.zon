@@ -1,5 +1,5 @@
 .{
-    .imagePaths = .{"atlas/atlas0.png"},
+    .imagePaths = .{"atlas/442d191272a8b9bc.png"},
     .size = .{ .x = 1324, .y = 1124 },
     .images = .{
         .{

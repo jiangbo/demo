@@ -34,7 +34,7 @@ pub fn enter() void {
     if (zhu.key.mayNotHave) menu.position = .xy(132, -96);
 
     state = .menu;
-    zhu.audio.playMusic("voc/title.mid");
+    zhu.audio.playMusic("audio/title.mid");
     introTyping.reset();
 }
 

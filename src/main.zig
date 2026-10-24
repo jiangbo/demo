@@ -10,8 +10,9 @@ var soundBuffer: [20]zhu.audio.Sound = undefined;
 pub fn init(allocator: zhu.Allocator) void {
     vertexBuffer = allocator.alloc(zhu.batch.Vertex, 4096);
     // 运行时窗口图标使用米白底角色图。
-    zhu.window.useWindowIcon("window-icon.png");
-    zhu.audio.init(&soundBuffer, .{});
+    zhu.window.useWindowIcon("icon.png");
+    // 音频输出与生成的 OGG 使用相同采样率。
+    zhu.audio.init(&soundBuffer, .{ .sample_rate = 11025 });
     zhu.assets.loadAtlas(@import("zon/atlas.zon"), .nearest);
     zhu.batch.init(vertexBuffer, &commandBuffer);
 

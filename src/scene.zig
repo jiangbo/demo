@@ -97,7 +97,7 @@ fn enterWorld(location: ?storage.Location) void {
             .location = location.?,
         }),
     }
-    zhu.audio.playMusic("voc/back.mid");
+    zhu.audio.playMusic("audio/back.mid");
 }
 
 pub fn update(delta: f32) void {
