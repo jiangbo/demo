@@ -66,7 +66,7 @@ fn doChangeScene() void {
     var location: ?storage.Location = null;
     if (pending == .world and from == .fromLoad) {
         const load = from.fromLoad;
-        location = storage.load(&world, allocator, load) orelse return;
+        location = storage.load(&world, load) orelse return;
     }
 
     switch (current) {
@@ -144,7 +144,7 @@ fn updateWorld(delta: f32) void {
             .block => {},
             .battle => changeScene(.battle),
             .load => |slot| changeWorld(.{ .fromLoad = slot }),
-            .save => |slot| storage.save(&world, allocator, slot),
+            .save => |slot| storage.save(&world, slot),
             .title => changeScene(.title),
         }
         return;

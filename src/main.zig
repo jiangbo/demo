@@ -32,13 +32,13 @@ pub fn frame(delta: f32) void {
 
 pub fn deinit(allocator: zhu.Allocator) void {
     scene.deinit();
-    zhu.audio.deinit();
     allocator.free(vertexBuffer);
 }
 
 pub fn main(initInfo: std.process.Init) void {
-    // 初始化引擎 IO 和内存，再启动窗口。
-    zhu.init(initInfo.io, initInfo.gpa);
+    // 初始化引擎和应用存储，再启动窗口。
+    zhu.init(initInfo);
+    zhu.extend.storage.init(initInfo, "sjyxz");
     zhu.window.run(.{
         .title = "英雄救美",
         .size = .xy(640, 480),

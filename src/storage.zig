@@ -76,7 +76,7 @@ pub const Location = struct {
     facing: Facing,
 };
 
-// ZON 存档的完整结构。
+// JSON 存档的完整结构。
 const Record = struct {
     location: Location,
     progress: Progress = .{},
@@ -99,21 +99,18 @@ pub fn reset(world: *ecs.World) void {
 pub fn exists(slot: u8) bool {
     var buffer: [20]u8 = undefined;
     const path = zhu.formatZ(&buffer, "save/{d}.sav", .{slot});
-    return zhu.window.exists(path);
+    return zhu.extend.storage.exists(path);
 }
 
 // 读取存档并恢复跨地图长期状态。
-pub fn load(world: *ecs.World, gpa: zhu.Allocator, slot: u8) ?Location {
+pub fn load(world: *ecs.World, slot: u8) ?Location {
     var buffer: [20]u8 = undefined;
     const path = zhu.formatZ(&buffer, "save/{d}.sav", .{slot});
-    const source = zhu.window.readAll(gpa.raw, path) catch |err| {
-        std.log.err("load {s} failed: {}", .{ path, err });
-        return null;
-    };
-    defer gpa.free(source);
-    crypt(source);
-
-    var loaded = zhu.window.parseZon(Record, source, .{}) catch |err| {
+    var loaded = zhu.extend.storage.readXChaCha(
+        Record,
+        path,
+        "ShengJianYingXiongZhuanSaveKey!!".*,
+    ) catch |err| {
         std.log.err("load {s} failed: {}", .{ path, err });
         return null;
     };
@@ -130,7 +127,7 @@ pub fn load(world: *ecs.World, gpa: zhu.Allocator, slot: u8) ?Location {
 }
 
 // 收集玩家位置和长期状态并写入存档。
-pub fn save(world: *ecs.World, gpa: zhu.Allocator, slot: u8) void {
+pub fn save(world: *ecs.World, slot: u8) void {
     const player = world.getIdentityEntity(Player).?;
     const record: Record = .{
         .location = .{
@@ -146,23 +143,12 @@ pub fn save(world: *ecs.World, gpa: zhu.Allocator, slot: u8) void {
     };
     var buffer: [20]u8 = undefined;
     const path = zhu.formatZ(&buffer, "save/{d}.sav", .{slot});
-    const content = zhu.window.allocZon(gpa.raw, record) catch |err| {
-        std.log.err("save {s} failed: {}", .{ path, err });
-        world.addEvent(Tip{ .text = "保存失败" });
-        return;
-    };
-    defer gpa.free(content);
-    crypt(content);
-
-    zhu.window.saveAll(path, content) catch |err| {
+    zhu.extend.storage.writeXChaCha(
+        path,
+        record,
+        "ShengJianYingXiongZhuanSaveKey!!".*,
+    ) catch |err| {
         std.log.err("save {s} failed: {}", .{ path, err });
         world.addEvent(Tip{ .text = "保存失败" });
     };
-}
-
-// 使用固定参数隐藏存档文本，同一操作同时用于加密和解密。
-fn crypt(data: []u8) void {
-    const xor = std.crypto.stream.chacha.ChaCha20IETF.xor;
-    const key = "ShengJianYingXiongZhuanSaveKey!!".*;
-    xor(data, data, 0, key, "SaveDataDemo".*);
 }
