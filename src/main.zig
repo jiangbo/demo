@@ -16,7 +16,7 @@ pub fn init(allocator: zhu.Allocator) void {
     zhu.assets.loadAtlas(@import("zon/atlas.zon"), .nearest);
     zhu.batch.init(vertexBuffer, &commandBuffer);
 
-    zhu.text.msdf.init(@import("zon/font.zon"));
+    zhu.extend.msdf.init(@import("zon/font.zon"));
     zhu.text.changeFontSize(18);
 
     scene.init(allocator);

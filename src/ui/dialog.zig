@@ -79,8 +79,8 @@ pub fn draw(world: *ecs.World) void {
     zhu.batch.drawImage(texture, .xy(0, 384), .{});
     if (line.actor) |key| drawActor(key);
 
-    zhu.text.msdf.begin();
-    defer zhu.text.msdf.end();
+    zhu.extend.msdf.begin();
+    defer zhu.extend.msdf.end();
 
     drawText(text);
 }
@@ -110,8 +110,8 @@ fn drawActor(key: zon.Actor.Key) void {
     const image = zon.Actor.image(key, .down);
     zhu.batch.drawImage(image, pos, .{});
 
-    zhu.text.msdf.begin();
-    defer zhu.text.msdf.end();
+    zhu.extend.msdf.begin();
+    defer zhu.extend.msdf.end();
     zhu.text.draw(actor.name, .xy(25, 445), .{ .color = .yellow });
 }
 

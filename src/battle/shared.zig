@@ -108,8 +108,8 @@ pub const Wait = struct {
     pub fn draw(_: *ecs.World) void {
         if (tip.len == 0) return;
 
-        zhu.text.msdf.begin();
-        defer zhu.text.msdf.end();
+        zhu.extend.msdf.begin();
+        defer zhu.extend.msdf.end();
         zhu.text.draw(tip, .xy(290, 210), .{});
     }
 };

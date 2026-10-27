@@ -80,7 +80,10 @@ pub fn draw() void {
     switch (state) {
         .menu => {
             zhu.batch.drawImage(background, .zero, .{});
-            menu.draw();
+            menu.drawImage();
+            zhu.extend.msdf.begin();
+            menu.drawText();
+            zhu.extend.msdf.end();
         },
         .save => {
             zhu.batch.drawImage(background, .zero, .{});
@@ -106,7 +109,7 @@ const introText =
 ;
 
 fn drawIntro() void {
-    zhu.text.msdf.begin();
-    defer zhu.text.msdf.end();
+    zhu.extend.msdf.begin();
+    defer zhu.extend.msdf.end();
     zhu.text.draw(introTyping.text(), .xy(40, 100), .{});
 }

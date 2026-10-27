@@ -63,8 +63,8 @@ pub fn draw() void {
         .ending => .red,
     };
 
-    zhu.text.msdf.begin();
-    defer zhu.text.msdf.end();
+    zhu.extend.msdf.begin();
+    defer zhu.extend.msdf.end();
     zhu.text.draw(storyTyping.text(), .xy(80, 100), .{
         .max = 450,
         .color = color,

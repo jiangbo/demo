@@ -166,7 +166,12 @@ pub fn draw() void {
 
     fade.draw();
     // 摇杆和功能按钮绘制在遮罩上方，不参与场景淡入淡出。
-    touch.draw();
+    touch.begin();
+    touch.drawImage();
+    zhu.extend.msdf.begin();
+    touch.drawText();
+    zhu.extend.msdf.end();
+    touch.end();
 
     camera.push(.window);
     defer camera.pop();
@@ -181,14 +186,14 @@ fn drawHelpInfo() void {
         \\帮助：H  按一次打开，再按一次关掉
     ;
 
-    zhu.text.msdf.begin();
-    defer zhu.text.msdf.end();
+    zhu.extend.msdf.begin();
+    defer zhu.extend.msdf.end();
     zhu.text.draw(text, .xy(10, 5), .{ .color = .green });
 }
 
 fn drawDebugInfo() void {
-    zhu.text.msdf.begin();
-    defer zhu.text.msdf.end();
+    zhu.extend.msdf.begin();
+    defer zhu.extend.msdf.end();
     debug.draw(&.{});
 }
 

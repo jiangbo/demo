@@ -32,5 +32,8 @@ pub fn update() ?Request {
 }
 
 pub fn draw() void {
-    menu.draw();
+    menu.drawImage();
+    zhu.extend.msdf.begin();
+    menu.drawText();
+    zhu.extend.msdf.end();
 }

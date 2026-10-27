@@ -12,7 +12,6 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
         // macOS 本机可省略，交叉编译时指定 MacOSX*.sdk 路径。
         .macos_sdk = b.option([]const u8, "macos-sdk", "macOS SDK directory"),
-        .msdf = true,
         .midi = true,
     });
     const migu = b.dependency("migu", .{
