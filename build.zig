@@ -6,12 +6,14 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const android = target.result.abi.isAndroid();
+    const web = target.result.os.tag == .emscripten;
 
     const zhuyu = b.dependency("zhuyu", .{
         .target = target,
         .optimize = optimize,
         // macOS 本机可省略，交叉编译时指定 MacOSX*.sdk 路径。
         .macos_sdk = b.option([]const u8, "macos-sdk", "macOS SDK directory"),
+        .font = web,
         .midi = true,
     });
     const migu = b.dependency("migu", .{
