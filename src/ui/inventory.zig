@@ -63,9 +63,6 @@ pub fn draw(world: *ecs.World) void {
     const pos = item.position;
     item.draw(&inventory.items, index);
 
-    zhu.extend.msdf.begin();
-    defer zhu.extend.msdf.end();
-
     if (showStats) {
         const shadow: zhu.text.Option = .{ .color = .black };
         const gold: zhu.text.Option = .{ .color = .yellow };

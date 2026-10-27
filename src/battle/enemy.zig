@@ -82,8 +82,6 @@ pub const Hurt = struct {
         var buffer: [10]u8 = undefined;
         const y = std.math.lerp(230, 190, timer.progress());
         const text = zhu.format(&buffer, "-{}", .{damage});
-        zhu.extend.msdf.begin();
-        defer zhu.extend.msdf.end();
         zhu.text.draw(text, .xy(465, y), .{});
     }
 };
@@ -141,9 +139,6 @@ pub const Death = struct {
 
     // 绘制胜利、奖励和升级提示。
     pub fn draw(world: *ecs.World) void {
-        zhu.extend.msdf.begin();
-        defer zhu.extend.msdf.end();
-
         zhu.text.draw("胜利了！", .xy(285, 175), .{});
         if (step < 1) return;
 

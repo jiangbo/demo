@@ -54,9 +54,6 @@ pub fn draw(world: *ecs.World) void {
     const pos = item.position;
     item.draw(&inventory.items, index);
 
-    zhu.extend.msdf.begin();
-    defer zhu.extend.msdf.end();
-
     var buffer: [50]u8 = undefined;
     if (soldKey) |key| {
         const soldItem = zon.Item.get(key);

@@ -81,9 +81,7 @@ pub fn draw() void {
         .menu => {
             zhu.batch.drawImage(background, .zero, .{});
             menu.drawImage();
-            zhu.extend.msdf.begin();
             menu.drawText();
-            zhu.extend.msdf.end();
         },
         .save => {
             zhu.batch.drawImage(background, .zero, .{});
@@ -109,7 +107,5 @@ const introText =
 ;
 
 fn drawIntro() void {
-    zhu.extend.msdf.begin();
-    defer zhu.extend.msdf.end();
     zhu.text.draw(introTyping.text(), .xy(40, 100), .{});
 }

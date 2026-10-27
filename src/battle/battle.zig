@@ -187,8 +187,6 @@ pub fn draw(world: *ecs.World) void {
     const enemyPhoto = zon.Actor.image(shared.enemyKey, .down);
     zhu.batch.drawImage(enemyPhoto, position.addXY(265, 26), .{});
 
-    zhu.extend.msdf.begin();
-
     const stats = world.getResourcePtr(storage.Stats).?;
     const format = "生命：{:8}\n攻击：{:8}\n防御：{:8}\n等级：{:8}";
     var text = zhu.format(&buffer, format, .{
@@ -206,14 +204,10 @@ pub fn draw(world: *ecs.World) void {
         shared.enemy.level,
     });
     zhu.text.draw(text, position.addXY(305, 5), .{ .color = .black });
-    zhu.extend.msdf.end();
 
     shared.menu.drawImage();
 
-    zhu.extend.msdf.begin();
-
     shared.menu.drawText();
 
-    zhu.extend.msdf.end();
     phase.draw(world);
 }

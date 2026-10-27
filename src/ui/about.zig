@@ -48,9 +48,6 @@ pub fn draw() void {
 
     if (roll) return drawRoll(position);
 
-    zhu.extend.msdf.begin();
-    defer zhu.extend.msdf.end();
-
     var text: []const u8 = "圣剑英雄传--英雄救美（测试版）";
     zhu.text.draw(text, position.addXY(62, 17), .{ .color = .black });
     zhu.text.draw(text, position.addXY(60, 15), .{});
@@ -170,8 +167,6 @@ fn drawRoll(position: zhu.Vector2) void {
     const size = zhu.Vector2.xy(380, 280);
     zhu.batch.useScissor(.init(position.addXY(20, 12), size));
     defer zhu.batch.useScissor(null);
-    zhu.extend.msdf.begin();
-    defer zhu.extend.msdf.end();
 
     const offsetY: f32 = @floatFromInt(rollOffset % lineHeight);
 

@@ -26,7 +26,5 @@ pub fn draw(world: *ecs.World) void {
     zhu.batch.drawImage(background, position.addXY(-10, -10), .{});
     zhu.batch.drawImage(playerPhoto, position.addXY(10, 10), .{});
 
-    zhu.extend.msdf.begin();
-    defer zhu.extend.msdf.end();
     stats.draw(world, position, 30);
 }

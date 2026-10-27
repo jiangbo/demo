@@ -27,8 +27,6 @@ pub fn update(world: *ecs.World, delta: f32) void {
 pub fn draw() void {
     if (text.len == 0) return;
 
-    zhu.extend.msdf.begin();
-    defer zhu.extend.msdf.end();
     zhu.text.draw(text, .xy(322, 62), .{
         .anchor = .xy(0.5, 0),
         .color = .black,
