@@ -238,9 +238,10 @@ const Fade = struct {
         defer camera.pop();
 
         const percent = timer.progress();
-        const alpha = if (self.isIn) 1 - percent else percent;
+        // 淡入时遮罩逐渐透明，淡出时逐渐不透明。
+        const opacity = if (self.isIn) 1 - percent else percent;
         zhu.batch.drawRect(.init(.zero, camera.size), .{
-            .color = .rgba(0, 0, 0, alpha),
+            .color = zhu.Color.black.withAlpha(opacity),
         });
     }
 };

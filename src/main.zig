@@ -3,26 +3,49 @@ const zhu = @import("zhu");
 
 const scene = @import("scene.zig");
 
-var vertexBuffer: []zhu.batch.Vertex = undefined;
+// 合批命令使用固定缓冲区，由应用持有。
 var commandBuffer: [128]zhu.batch.Command = undefined;
 var soundBuffer: [20]zhu.audio.Sound = undefined;
+var resizeWait: ?f32 = null; // 窗口停止变化后的等待时间。
 
 pub fn init(allocator: zhu.Allocator) void {
-    vertexBuffer = allocator.alloc(zhu.batch.Vertex, 4096);
+    // 仅在渲染时对齐相机，逻辑位置保留小数。
+    zhu.camera.roundPosition = true;
     // 运行时窗口图标使用米白底角色图。
     zhu.window.useWindowIcon("icon.png");
     // 音频输出与生成的 OGG 使用相同采样率。
     zhu.audio.init(&soundBuffer, .{ .sample_rate = 11025 });
     zhu.assets.loadAtlas(@import("zon/atlas.zon"), .nearest);
-    zhu.batch.init(vertexBuffer, &commandBuffer);
+    zhu.batch.init(&commandBuffer, zhu.assets.getImageByPath("circle.png"));
 
-    zhu.extend.msdf.init(@import("zon/font.zon"));
-    zhu.text.changeFontSize(18);
+    zhu.text.init(.{
+        .size = 18,
+        .weight = .normal,
+        .filter = .linear,
+    });
 
     scene.init(allocator);
 }
 
 pub fn frame(delta: f32) void {
+    if (zhu.window.resized) {
+        std.log.info("resized: {d} x {d} px", .{
+            zhu.window.size.x,
+            zhu.window.size.y,
+        });
+        resizeWait = 0.3;
+    } else {
+        if (resizeWait) |wait| {
+            if (wait > delta) {
+                resizeWait = wait - delta;
+            } else {
+                resizeWait = null;
+                if (zhu.window.size.x > 0 and zhu.window.size.y > 0) {
+                    zhu.text.dynamic.resize();
+                }
+            }
+        }
+    }
     scene.update(delta);
 
     zhu.batch.beginDraw();
@@ -31,9 +54,9 @@ pub fn frame(delta: f32) void {
     zhu.batch.endDraw();
 }
 
-pub fn deinit(allocator: zhu.Allocator) void {
+pub fn deinit(_: zhu.Allocator) void {
     scene.deinit();
-    allocator.free(vertexBuffer);
+    zhu.text.dynamic.deinit();
 }
 
 pub fn main(initInfo: std.process.Init) void {

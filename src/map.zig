@@ -76,7 +76,6 @@ pub fn enter(world: *ecs.World, spawn: Spawn) void {
 
     const position = world.getIdentity(actor.Player, component.Position).?;
     zhu.camera.directFollow(position);
-    zhu.camera.roundMainPosition();
     tileWindow.grid = data.grid;
     tileWindow.area = .init(.zero, .zero);
 }

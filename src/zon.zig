@@ -172,11 +172,11 @@ pub const TileWindow = struct {
     grid: tiled.Grid = undefined,
     padding: u32 = 8,
     area: zhu.Rect = .init(.zero, .zero),
-    vertices: std.ArrayList(zhu.batch.Vertex) = .empty,
+    vertices: std.ArrayList(zhu.graphics.Vertex) = .empty,
 
-    // 计算任意视口位置可能需要的最大顶点容量。
+    // 计算主相机处于任意位置时可能需要的最大顶点容量。
     pub fn maxVertexCount(self: TileWindow, layers: usize) usize {
-        const viewSize = zhu.camera.viewport().size
+        const viewSize = zhu.camera.mainWorldRect().size
             .div(self.grid.cellSize()).ceil().add(.one)
             .add(.square(@floatFromInt(self.padding * 2)));
 
@@ -187,16 +187,16 @@ pub const TileWindow = struct {
         return @as(usize, @intFromFloat(size.x * size.y)) * layers;
     }
 
-    // 视口超出旧范围时，保存并返回新的瓦片窗口。
+    // 主相机可见区域超出旧范围时，更新瓦片窗口并返回 true。
     pub fn update(self: *TileWindow) bool {
-        const viewport = zhu.camera.viewport();
-        if (self.area.containsRect(viewport)) return false;
+        const worldRect = zhu.camera.mainWorldRect();
+        if (self.area.containsRect(worldRect)) return false;
 
         const cell = self.grid.cellSize();
         const padding = cell.scale(@floatFromInt(self.padding));
-        const min = viewport.min.div(cell).floor()
+        const min = worldRect.min.div(cell).floor()
             .mul(cell).sub(padding);
-        const max = viewport.max().div(cell).ceil()
+        const max = worldRect.max().div(cell).ceil()
             .mul(cell).add(padding);
         self.area = .fromMax(min, max);
         return true;
