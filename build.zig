@@ -6,6 +6,14 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const android = target.result.abi.isAndroid();
 
+    // 两张独立图片原样复制到资源目录，供运行和打包读取。
+    var dir = try std.Io.Dir.cwd().openDir(b.graph.io, //
+        try b.root.joinString(b.allocator, "."), .{});
+    defer dir.close(b.graph.io);
+    try dir.createDirPath(b.graph.io, "assets");
+    try dir.copyFile("raw-assets/icon.png", dir, "assets/icon.png", b.graph.io, .{});
+    try dir.copyFile("raw-assets/title.png", dir, "assets/title.png", b.graph.io, .{});
+
     const zhuyu = b.dependency("zhuyu", .{
         .target = target,
         .optimize = optimize,
@@ -93,9 +101,9 @@ fn buildNative(
 ) void {
     const exe = b.addExecutable(.{ .name = "demo", .root_module = mod });
     zhuBuild.setLibC(zhuyu, exe);
-    // Windows 所有构建模式都使用窗口子系统，不创建控制台窗口。
+    // Windows 调试时显示控制台日志，发布时不创建控制台窗口。
     if (exe.rootModuleTarget().os.tag == .windows) {
-        exe.subsystem = .windows;
+        exe.subsystem = if (mod.optimize.? == .debug) .console else .windows;
         // 在构建缓存中生成资源脚本，将米白底角色图标嵌入 EXE。
         const files = b.addWriteFiles();
         exe.root_module.addWin32ResourceFile(.{

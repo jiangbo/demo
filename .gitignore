@@ -3,6 +3,5 @@
 zig-out
 zig-pkg
 assets*
-/raw-assets/
 **/font.zon
 save/
