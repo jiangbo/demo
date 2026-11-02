@@ -52,6 +52,16 @@ pub fn build(b: *std.Build) !void {
             .root_module = mod,
         });
         b.installArtifact(lib);
+        // Android 使用从 ICO 提取并补齐留白的专用图标。
+        try zhuBuild.apk.addStep(b, zhuyu, .{
+            .lib = lib,
+            .app = .{
+                .package = "com.example.demo",
+                .label = "英雄救美",
+                .icon = b.path("raw-assets/icon-android.png"),
+                .iconColor = "#FFEEBB",
+            },
+        });
     } else if (target.result.os.tag == .emscripten) {
         const web = try zhuBuild.buildWeb(b, zhuyu, .{
             .name = "demo",
