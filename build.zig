@@ -105,6 +105,10 @@ fn buildNative(
     // Windows 调试时显示控制台日志，发布时不创建控制台窗口。
     if (exe.rootModuleTarget().os.tag == .windows) {
         exe.subsystem = if (mod.optimize.? == .debug) .console else .windows;
+        if (exe.rootModuleTarget().abi == .msvc) {
+            // 窗口模式也由微软 CRT 初始化后调用 Zig 的 main。
+            exe.entry = .{ .symbol_name = "mainCRTStartup" };
+        }
         // 在构建缓存中生成资源脚本，将米白底角色图标嵌入 EXE。
         const files = b.addWriteFiles();
         exe.root_module.addWin32ResourceFile(.{
