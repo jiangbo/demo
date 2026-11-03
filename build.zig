@@ -6,14 +6,6 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const android = target.result.abi.isAndroid();
 
-    // 两张独立图片原样复制到资源目录，供运行和打包读取。
-    var dir = try std.Io.Dir.cwd().openDir(b.graph.io, //
-        try b.root.joinString(b.allocator, "."), .{});
-    defer dir.close(b.graph.io);
-    try dir.createDirPath(b.graph.io, "assets");
-    try dir.copyFile("raw-assets/icon.png", dir, "assets/icon.png", b.graph.io, .{});
-    try dir.copyFile("raw-assets/title.png", dir, "assets/title.png", b.graph.io, .{});
-
     const zhuyu = b.dependency("zhuyu", .{
         .target = target,
         .optimize = optimize,
@@ -54,6 +46,11 @@ pub fn build(b: *std.Build) !void {
     // SDK 安装命令不依赖目标平台，与 Web 链接共用同一份依赖。
     zhuBuild.installEmsdk(b, zhuyu);
 
+    // 原生和 Web 共用图片复制步骤，在资源安装前执行。
+    const copy = b.addUpdateSourceFiles();
+    copy.addCopyFileToSource(b.path("raw-assets/icon.png"), "assets/icon.png");
+    copy.addCopyFileToSource(b.path("raw-assets/title.png"), "assets/title.png");
+
     if (android) {
         const lib = try zhuBuild.buildAndroid(b, zhuyu, .{
             .name = "demo",
@@ -77,14 +74,17 @@ pub fn build(b: *std.Build) !void {
             .shell = b.path("index.html"),
         });
         b.getInstallStep().dependOn(&web.step);
-        // Web 资源随 HTML 一起安装。
-        b.installDirectory(.{
+
+        // Web 资源随 HTML 一起安装，读取目录前先完成图片复制。
+        const assets = b.addInstallDirectory(.{
             .source_dir = b.path("assets"),
             .install_dir = .prefix,
             .install_subdir = "web/assets",
         });
+        assets.step.dependOn(&copy.step);
+        b.getInstallStep().dependOn(&assets.step);
     } else {
-        buildNative(b, zhuyu, mod);
+        buildNative(b, zhuyu, mod, &copy.step);
     }
 
     const tests = b.addTest(.{ .name = "tests", .root_module = mod });
@@ -98,6 +98,7 @@ fn buildNative(
     b: *std.Build,
     zhuyu: *std.Build.Dependency,
     mod: *std.Build.Module,
+    copy: *std.Build.Step,
 ) void {
     const exe = b.addExecutable(.{ .name = "demo", .root_module = mod });
     zhuBuild.setLibC(zhuyu, exe);
@@ -113,12 +114,14 @@ fn buildNative(
     }
     b.installArtifact(exe);
 
-    // 原生资源安装到可执行文件旁边，供引擎按相对路径读取。
-    b.installDirectory(.{
+    // 图片复制完成后，再将资源目录安装到可执行文件旁边。
+    const assets = b.addInstallDirectory(.{
         .source_dir = b.path("assets"),
         .install_dir = .bin,
         .install_subdir = "assets",
     });
+    assets.step.dependOn(copy);
+    b.getInstallStep().dependOn(&assets.step);
 
     // 由引擎注册资源打包命令，普通构建和运行使用原始程序。
     zhuBuild.pack.addStep(b, zhuyu, .{ .exe = exe });
