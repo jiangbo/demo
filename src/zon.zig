@@ -14,7 +14,7 @@ const Config = struct {
     player: []const Animation.Source,
     bomb: []const Animation.Source,
     npc: NpcAnimation,
-    input: []const zhu.input.Bind,
+    input: []const zhu.window.Bind,
 };
 
 pub const Facing = enum { down, left, up, right };
@@ -166,13 +166,13 @@ pub const dialog = struct {
 
 pub const dialogues: []const dialog.Script = @import("zon/talk.zon");
 pub const config: Config = @import("zon/config.zon");
-pub const input = zhu.input.bind(config.input);
+pub const input = zhu.window.bind(config.input);
 
 pub const TileWindow = struct {
     grid: tiled.Grid = undefined,
     padding: u32 = 8,
     area: zhu.Rect = .init(.zero, .zero),
-    vertices: std.ArrayList(zhu.graphics.Vertex) = .empty,
+    vertices: std.ArrayList(zhu.Vertex) = .empty,
 
     // 计算主相机处于任意位置时可能需要的最大顶点容量。
     pub fn maxVertexCount(self: TileWindow, layers: usize) usize {

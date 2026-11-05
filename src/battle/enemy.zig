@@ -3,7 +3,6 @@ const zhu = @import("zhu");
 const ecs = @import("ecs");
 
 const audio = zhu.audio;
-const math = zhu.math;
 
 const component = @import("../component.zig");
 const storage = @import("../storage.zig");
@@ -75,7 +74,7 @@ pub const Hurt = struct {
 
     // 绘制敌方抖动和伤害数字。
     pub fn draw(_: *ecs.World) void {
-        const position = math.Vector2.xy(465, 237).addX(offset);
+        const position = zhu.Vector2.xy(465, 237).addX(offset);
         const image = zon.Actor.image(shared.enemyKey, .left);
         zhu.batch.drawImage(image, position, .{});
 

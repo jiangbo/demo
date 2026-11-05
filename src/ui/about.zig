@@ -7,7 +7,6 @@ const Popup = @import("shared.zig").Popup;
 var texture: zhu.Image = undefined;
 
 var roll: bool = false;
-var timer: zhu.Timer = .init(0.05);
 
 pub fn init() void {
     texture = zhu.getImage("sbar.png").?;
@@ -18,7 +17,6 @@ pub fn open() Popup {
     roll = false;
     rollOffset = 0;
     end = false;
-    timer.restart();
     return .about;
 }
 
@@ -30,15 +28,11 @@ pub fn update(delta: f32) bool {
 
     if (!roll) {
         // 任意键、鼠标按钮或触屏松开后开始滚动。
-        if (zhu.input.press.released) roll = true;
+        if (zhu.window.press.released) roll = true;
         return false;
     }
 
-    if (timer.updateFinished(delta)) {
-        if (end) return false;
-        timer.restart();
-        rollOffset += 1;
-    }
+    if (!end) rollOffset += 20 * delta;
     return false;
 }
 
@@ -158,7 +152,7 @@ const intro =
     \\
 ;
 
-var rollOffset: usize = 0;
+var rollOffset: f32 = 0;
 var start: usize = 0;
 var end: bool = false;
 
@@ -168,15 +162,18 @@ fn drawRoll(position: zhu.Vector2) void {
     defer zhu.batch.useScissor(null);
 
     const lineHeight = zhu.text.lineHeight(.{});
-    const offset: f32 = @floatFromInt(rollOffset);
-    const offsetY = @mod(offset, lineHeight);
+    const offsetY = @mod(rollOffset, lineHeight);
+    // 保留累计距离的小数，只将最终绘制起点对齐到实际像素。
+    const scale = zhu.window.scale.y;
+    var textPosition = position.addXY(25, -offsetY);
+    textPosition.y = @round(textPosition.y * scale) / scale;
 
     if (end) {
-        zhu.text.draw(intro[start..], position.addXY(25, -offsetY), .{});
+        zhu.text.draw(intro[start..], textPosition, .{});
         return;
     }
 
-    const startLine: usize = @intFromFloat(@floor(offset / lineHeight));
+    const startLine: usize = @intFromFloat(@floor(rollOffset / lineHeight));
     var line: u8 = 0;
 
     var iter = std.unicode.Utf8View.initUnchecked(intro).iterator();
@@ -195,5 +192,5 @@ fn drawRoll(position: zhu.Vector2) void {
         if (line >= startLine + 12) break;
     } else end = true;
 
-    zhu.text.draw(intro[start..iter.i], position.addXY(25, -offsetY), .{});
+    zhu.text.draw(intro[start..iter.i], textPosition, .{});
 }

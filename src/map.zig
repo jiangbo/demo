@@ -175,7 +175,7 @@ fn spawnActor(world: *ecs.World, key: zon.Actor.Key, progress: u8) void {
     const data = zon.Actor.get(key);
     const entity = world.createEntity();
     var animation = zon.Actor.animation(key);
-    animation.play(data.facing);
+    animation.playIndex(data.facing);
     world.addAll(entity, .{
         key,
         component.Position.xy(data.x + 16, data.y + 32),
@@ -215,7 +215,7 @@ fn spawnPlayer(world: *ecs.World, location: storage.Location) void {
         .xy(16, 16),
     );
     var animation = zon.Actor.animation(.player);
-    animation.play(location.facing);
+    animation.playIndex(location.facing);
     const entity = world.createIdentity(actor.Player);
     world.addAll(entity, .{
         actor.Key.player,

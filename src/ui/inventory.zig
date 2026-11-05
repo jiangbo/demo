@@ -22,7 +22,7 @@ pub fn open() Popup {
 pub fn update(world: *ecs.World) ?Request {
     if (zon.input.anyReleased(&.{ .menu, .cancel })) return .close;
 
-    if (showStats and zhu.input.press.released) {
+    if (showStats and zhu.window.press.released) {
         showStats = false;
     }
 

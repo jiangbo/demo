@@ -17,7 +17,7 @@ pub fn update(world: *ecs.World, delta: f32) void {
         const sourceIndex: u8 = @backingInt(facing);
 
         var changed = animation.sourceIndex != sourceIndex;
-        if (changed) animation.play(sourceIndex);
+        if (changed) animation.playIndex(sourceIndex);
         if (world.has(entity, WantMove)) {
             if (animation.update(delta) != null) changed = true;
         }
