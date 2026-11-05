@@ -34,12 +34,12 @@ pub fn init(allocator: zhu.Allocator) void {
         const estimate = zon.TileWindow{ .grid = data.grid };
         max = @max(max, estimate.maxVertexCount(2));
     }
-    tileWindow.vertices.ensureTotalCapacity(allocator.raw, max) catch
+    tileWindow.vertices.ensureTotalCapacity(allocator, max) catch
         zhu.oom();
 }
 
 pub fn deinit(allocator: zhu.Allocator) void {
-    tileWindow.vertices.deinit(allocator.raw);
+    tileWindow.vertices.deinit(allocator);
 }
 
 // 清空旧地图并按指定方式创建地图对象和玩家。
@@ -141,8 +141,8 @@ fn spawnPortals(world: *ecs.World, data: *const zon.Map) void {
 fn spawnChests(world: *ecs.World, data: *const zon.Map) void {
     const opened = world.getResourcePtr(storage.OpenedChests).?;
     const images = component.ChestImages{
-        .closed = image.sub(.init(.xy(35, 511), .square(32))),
-        .opened = image.sub(.init(.xy(69, 511), .square(32))),
+        .closed = image.sub(.init(.xy(35, 511), .all(32))),
+        .opened = image.sub(.init(.xy(69, 511), .all(32))),
     };
     for (data.chests) |place| {
         const isOpened = opened.isSet(place.id);
@@ -285,7 +285,7 @@ test "地图瓦片移动" {
         .data = &objects,
     };
 
-    const area = zhu.Rect.init(.xy(40, 40), .square(16));
+    const area = zhu.Rect.init(.xy(40, 40), .all(16));
 
     var moved = walk(area, .xy(20, 0));
     try std.testing.expectEqual(48, moved.min.x);

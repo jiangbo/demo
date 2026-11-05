@@ -33,7 +33,7 @@ var allocator: zhu.Allocator = undefined;
 pub fn init(allocator_: zhu.Allocator) void {
     allocator = allocator_;
     isHelp = !zhu.key.mayNotHave;
-    world = ecs.World.init(allocator_.raw);
+    world = ecs.World.init(allocator_);
     // 调试功能键作为游戏默认配置，页面补丁可临时覆盖。
     const extra = touch.pad.defaults.getPtr(.extra);
     extra.key = .X;
@@ -173,7 +173,7 @@ pub fn draw() void {
 
     camera.push(.window);
     defer camera.pop();
-    if (isHelp) drawHelpInfo() else if (debug.enabled) drawDebugInfo();
+    if (isHelp) drawHelpInfo() else debug.draw(.{});
 }
 
 fn drawHelpInfo() void {
@@ -185,10 +185,6 @@ fn drawHelpInfo() void {
     ;
 
     zhu.text.draw(text, .xy(10, 5), .{ .color = .green });
-}
-
-fn drawDebugInfo() void {
-    debug.draw(&.{});
 }
 
 pub fn deinit() void {

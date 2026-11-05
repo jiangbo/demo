@@ -16,7 +16,7 @@ pub fn init(allocator: zhu.Allocator) void {
     zhu.audio.init(&soundBuffer, .{ .sample_rate = 11025 });
     // 图片和字形共用纹理数组，预留两层存放字形。
     const atlas = zhu.assets.atlas.load(@import("zon/atlas.zon"), 2, .nearest);
-    zhu.batch.init(&commandBuffer, zhu.assets.getImageByPath("circle.png"));
+    zhu.batch.init(&commandBuffer);
 
     zhu.text.init(.{ .size = 18, .atlas = atlas });
 
@@ -26,8 +26,7 @@ pub fn init(allocator: zhu.Allocator) void {
 pub fn frame(delta: f32) void {
     scene.update(delta);
 
-    zhu.batch.beginDraw();
-    zhu.batch.useTarget(.black, .{});
+    zhu.batch.beginDraw(.black, .{});
     scene.draw();
     zhu.batch.endDraw();
 }
@@ -41,9 +40,7 @@ pub fn main(initInfo: std.process.Init) void {
     // 初始化引擎和应用存储，再启动窗口。
     zhu.init(initInfo);
     zhu.extend.storage.init(initInfo, "sjyxz");
-    zhu.window.run(.{
-        .title = "英雄救美",
-        .size = .xy(640, 480),
+    zhu.window.run("英雄救美", .xy(640, 480), .{
         .scaleEnum = .fit,
     });
 }

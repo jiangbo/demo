@@ -159,7 +159,6 @@ const intro =
 ;
 
 var rollOffset: usize = 0;
-const lineHeight = 26;
 var start: usize = 0;
 var end: bool = false;
 
@@ -168,14 +167,16 @@ fn drawRoll(position: zhu.Vector2) void {
     zhu.batch.useScissor(.init(position.addXY(20, 12), size));
     defer zhu.batch.useScissor(null);
 
-    const offsetY: f32 = @floatFromInt(rollOffset % lineHeight);
+    const lineHeight = zhu.text.lineHeight(.{});
+    const offset: f32 = @floatFromInt(rollOffset);
+    const offsetY = @mod(offset, lineHeight);
 
     if (end) {
         zhu.text.draw(intro[start..], position.addXY(25, -offsetY), .{});
         return;
     }
 
-    const startLine = rollOffset / lineHeight;
+    const startLine: usize = @intFromFloat(@floor(offset / lineHeight));
     var line: u8 = 0;
 
     var iter = std.unicode.Utf8View.initUnchecked(intro).iterator();

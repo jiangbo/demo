@@ -178,7 +178,7 @@ pub const TileWindow = struct {
     pub fn maxVertexCount(self: TileWindow, layers: usize) usize {
         const viewSize = zhu.camera.mainWorldRect().size
             .div(self.grid.cellSize()).ceil().add(.one)
-            .add(.square(@floatFromInt(self.padding * 2)));
+            .add(.all(@floatFromInt(self.padding * 2)));
 
         const size = viewSize.min(.xy(
             @floatFromInt(self.grid.width),

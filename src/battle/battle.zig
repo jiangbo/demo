@@ -84,7 +84,7 @@ pub fn init(allocator: zhu.Allocator) void {
         .area = .init(.zero, data.grid.size()),
     };
     mapWindow.vertices.ensureTotalCapacity(
-        allocator.raw,
+        allocator,
         data.grid.count() * 2,
     ) catch zhu.oom();
     mapWindow.rebuildImage(
@@ -97,7 +97,7 @@ pub fn init(allocator: zhu.Allocator) void {
 
 // 释放战斗地图长期持有的顶点。
 pub fn deinit(allocator: zhu.Allocator) void {
-    mapWindow.vertices.deinit(allocator.raw);
+    mapWindow.vertices.deinit(allocator);
 }
 
 // 读取选定的敌人并进入战斗场景。
