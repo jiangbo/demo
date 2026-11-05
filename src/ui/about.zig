@@ -158,7 +158,8 @@ var end: bool = false;
 
 fn drawRoll(position: zhu.Vector2) void {
     const size = zhu.Vector2.xy(380, 280);
-    zhu.batch.useScissor(.init(position.addXY(20, 12), size));
+    const area = zhu.Rect.init(position.addX(20), size);
+    zhu.batch.useScissor(area);
     defer zhu.batch.useScissor(null);
 
     const lineHeight = zhu.text.lineHeight(.{});
@@ -174,7 +175,10 @@ fn drawRoll(position: zhu.Vector2) void {
     }
 
     const startLine: usize = @intFromFloat(@floor(rollOffset / lineHeight));
-    var line: u8 = 0;
+    // 多绘制底部一行，由裁剪逐渐露出，避免补行时整行跳入。
+    const height = area.max().y - textPosition.y;
+    const count: usize = @intFromFloat(@ceil(height / lineHeight));
+    var line: usize = 0;
 
     var iter = std.unicode.Utf8View.initUnchecked(intro).iterator();
     if (startLine == 0)
@@ -189,7 +193,7 @@ fn drawRoll(position: zhu.Vector2) void {
     while (iter.nextCodepoint()) |unicode| {
         if (unicode != '\n') continue;
         line += 1;
-        if (line >= startLine + 12) break;
+        if (line >= startLine + count + 1) break;
     } else end = true;
 
     zhu.text.draw(intro[start..iter.i], textPosition, .{});
