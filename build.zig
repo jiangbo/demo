@@ -11,7 +11,6 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
         .font = .system,
         .midi = true,
-        .append = b.option(bool, "append", "Append asset pack") orelse false,
     });
     const migu = b.dependency("migu", .{
         .target = target,
@@ -19,16 +18,10 @@ pub fn build(b: *std.Build) !void {
     });
 
     // 生成图片图集，尺寸上限容纳地图素材。
-    zhuBuild.atlas.addStep(b, zhuyu, .{
-        .input = "raw-assets/atlas",
-        .maxSize = 2048,
-    });
+    zhuBuild.atlas.addStep(b, zhuyu, .{ .maxSize = 2048 });
 
     // 转换原始音频并统一采样率，其他格式原样拷贝。
-    try zhuBuild.audio.addStep(b, zhuyu, .{
-        .input = "raw-assets/audio",
-        .rate = 11025,
-    });
+    try zhuBuild.audio.addStep(b, zhuyu, .{ .rate = 11025 });
 
     // 应用模块同时用于构建产物和测试。
     const mod = b.createModule(.{
@@ -126,12 +119,9 @@ fn buildNative(
     assets.step.dependOn(copy);
     b.getInstallStep().dependOn(&assets.step);
 
-    // 引擎返回最终程序，应用决定安装名称和运行方式。
-    const program = zhuBuild.pack.addStep(b, zhuyu, .{ .exe = exe });
-    const install = b.addInstallBinFile(program, exe.out_filename);
-    b.getInstallStep().dependOn(&install.step);
+    b.installArtifact(exe);
 
-    const run = b.addRunFile(program);
+    const run = b.addRunArtifact(exe);
     run.step.dependOn(b.getInstallStep());
     run.addPassthruArgs();
     b.step("run", "Run the app").dependOn(&run.step);
