@@ -116,7 +116,6 @@ fn buildNative(
             .include_paths = &.{b.path("raw-assets")},
         });
     }
-    b.installArtifact(exe);
 
     // 图片复制完成后，再将资源目录安装到可执行文件旁边。
     const assets = b.addInstallDirectory(.{
@@ -127,10 +126,12 @@ fn buildNative(
     assets.step.dependOn(copy);
     b.getInstallStep().dependOn(&assets.step);
 
-    // 由引擎注册资源打包命令，普通构建和运行使用原始程序。
-    zhuBuild.pack.addStep(b, zhuyu, .{ .exe = exe });
+    // 引擎返回最终程序，应用决定安装名称和运行方式。
+    const program = zhuBuild.pack.addStep(b, zhuyu, .{ .exe = exe });
+    const install = b.addInstallBinFile(program, exe.out_filename);
+    b.getInstallStep().dependOn(&install.step);
 
-    const run = b.addRunArtifact(exe);
+    const run = b.addRunFile(program);
     run.step.dependOn(b.getInstallStep());
     run.addPassthruArgs();
     b.step("run", "Run the app").dependOn(&run.step);
