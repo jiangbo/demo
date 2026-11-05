@@ -157,12 +157,11 @@ var start: usize = 0;
 var end: bool = false;
 
 fn drawRoll(position: zhu.Vector2) void {
-    const size = zhu.Vector2.xy(380, 280);
-    const area = zhu.Rect.init(position.addX(20), size);
+    const area = zhu.Rect.init(position.addXY(20, 12), .xy(380, 280));
+    const lineHeight = zhu.text.lineHeight(.{});
     zhu.batch.useScissor(area);
     defer zhu.batch.useScissor(null);
 
-    const lineHeight = zhu.text.lineHeight(.{});
     const offsetY = @mod(rollOffset, lineHeight);
     // 保留累计距离的小数，只将最终绘制起点对齐到实际像素。
     const scale = zhu.window.scale.y;
